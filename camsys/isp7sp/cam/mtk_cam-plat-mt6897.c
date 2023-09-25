@@ -771,6 +771,10 @@ static const struct plat_data_hw mt6897_hw_data = {
 	.query_caci_size = query_caci_size,
 	.query_max_exp_support = query_max_exp_support,
 	.query_icc_path_idx = query_icc_path_idx,
+	.max_main_pipe_w = 6632,
+	.max_main_pipe_twin_w = 6200,
+	.pixel_mode_max = 2,
+	.has_pixel_mode_contraints = true,
 };
 
 struct camsys_platform_data mt6897_data = {
