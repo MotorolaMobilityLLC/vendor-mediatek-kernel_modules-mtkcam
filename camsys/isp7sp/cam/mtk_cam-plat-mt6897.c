@@ -786,7 +786,7 @@ static const struct plat_v4l2_data mt6897_v4l2_data = {
 	.reserved_camsv_dev_id = 3,
 
 	.vb2_queues_support_list = vb2_queues_support_list,
-	.vb2_queues_support_list_num = ARRAY_SIZE(vb2_queues_support_list),		
+	.vb2_queues_support_list_num = ARRAY_SIZE(vb2_queues_support_list),
 
 	.set_meta_stats_info = set_meta_stats_info,
 	.get_meta_stats_port_size = get_meta_stats_port_size,

@@ -65,7 +65,6 @@ enum RAW_ICC_PATH_IDX {
 	ICC_PATH_LSCI_R1,
 	ICC_PATH_UFEO_R1,
 	ICC_PATH_LTMSO_R1,
-	ICC_PATH_DRZB2NO_R1,
 	ICC_PATH_AFO_R1,
 	ICC_PATH_AAO_R1,
 	RAW_ICC_PATH_NUM,
@@ -76,7 +75,6 @@ enum YUV_ICC_PATH_IDX {
 	ICC_PATH_YUVO_R3,
 	ICC_PATH_YUVO_R2,
 	ICC_PATH_YUVO_R5,
-	ICC_PATH_RGBWI_R1,
 	ICC_PATH_TSYSO_R1,
 	ICC_PATH_DRZHNO_R3,
 	YUV_ICC_PATH_NUM,
@@ -733,7 +731,6 @@ static u8 vb2_queues_support_list[] = {
 	MTK_RAW_RZH1N2TO_1_OUT,
 	MTK_RAW_RZH1N2TO_2_OUT,
 	MTK_RAW_RZH1N2TO_3_OUT,
-	MTK_RAW_DRZB2NO_1_OUT,
 	MTK_RAW_IPU_OUT,
 	MTK_RAW_MAIN_STREAM_SV_1_OUT,
 	MTK_RAW_MAIN_STREAM_SV_2_OUT,
@@ -772,7 +769,7 @@ static const struct plat_v4l2_data mt6878_v4l2_data = {
 
 	.vb2_queues_support_list = vb2_queues_support_list,
 	.vb2_queues_support_list_num = ARRAY_SIZE(vb2_queues_support_list),
-	
+
 	.set_meta_stats_info = set_meta_stats_info,
 	.get_meta_stats_port_size = get_meta_stats_port_size,
 
