@@ -378,58 +378,58 @@ static int get_sv_dma_th_setting(unsigned int dev_id, unsigned int fifo_img_p1,
 	}
 
 	th_setting->urgent_th =
-		1 << 31 | FIFO_THRESHOLD(img_p1, 6/10, 5/10);
+		1 << 31 | FIFO_THRESHOLD(img_p1, 4/10, 3/10);
 	th_setting->ultra_th =
-		1 << 28 | FIFO_THRESHOLD(img_p1, 4/10, 3/10);
+		1 << 28 | FIFO_THRESHOLD(img_p1, 2/10, 1/10);
 	th_setting->pultra_th =
-		1 << 28 | FIFO_THRESHOLD(img_p1, 3/10, 2/10);
+		1 << 28 | FIFO_THRESHOLD(img_p1, 2/10, 1/10);
 	th_setting->dvfs_th =
 		1 << 31 | FIFO_THRESHOLD(img_p1, 1/10, 0);
 
 	th_setting->urgent_th2 =
-		1 << 31 | FIFO_THRESHOLD(img_p2, 6/10, 5/10);
+		1 << 31 | FIFO_THRESHOLD(img_p2, 4/10, 3/10);
 	th_setting->ultra_th2 =
-		1 << 28 | FIFO_THRESHOLD(img_p2, 4/10, 3/10);
+		1 << 28 | FIFO_THRESHOLD(img_p2, 2/10, 1/10);
 	th_setting->pultra_th2 =
-		1 << 28 | FIFO_THRESHOLD(img_p2, 3/10, 2/10);
+		1 << 28 | FIFO_THRESHOLD(img_p2, 2/10, 1/10);
 	th_setting->dvfs_th2 =
 		1 << 31 | FIFO_THRESHOLD(img_p2, 1/10, 0);
 
 	th_setting->urgent_len1_th =
-		1 << 31 | FIFO_THRESHOLD(len_p1, 6/10, 5/10);
+		1 << 31 | FIFO_THRESHOLD(len_p1, 4/10, 3/10);
 	th_setting->ultra_len1_th =
-		1 << 28 | FIFO_THRESHOLD(len_p1, 4/10, 3/10);
+		1 << 28 | FIFO_THRESHOLD(len_p1, 2/10, 1/10);
 	th_setting->pultra_len1_th =
-		1 << 28 | FIFO_THRESHOLD(len_p1, 3/10, 2/10);
+		1 << 28 | FIFO_THRESHOLD(len_p1, 2/10, 1/10);
 	th_setting->dvfs_len1_th =
 		1 << 31 | FIFO_THRESHOLD(len_p1, 1/10, 0);
 
 	th_setting->urgent_len2_th =
-		1 << 31 | FIFO_THRESHOLD(len_p2, 6/10, 5/10);
+		1 << 31 | FIFO_THRESHOLD(len_p2, 4/10, 3/10);
 	th_setting->ultra_len2_th =
-		1 << 28 | FIFO_THRESHOLD(len_p2, 4/10, 3/10);
+		1 << 28 | FIFO_THRESHOLD(len_p2, 2/10, 1/10);
 	th_setting->pultra_len2_th =
-		1 << 28 | FIFO_THRESHOLD(len_p2, 3/10, 2/10);
+		1 << 28 | FIFO_THRESHOLD(len_p2, 2/10, 1/10);
 	th_setting->dvfs_len2_th =
 		1 << 31 | FIFO_THRESHOLD(len_p2, 1/10, 0);
 
 	th_setting->cq1_fifo_size = (0x10 << 24) | max_fifo_cq1;
 	th_setting->cq1_urgent_th =
-		1 << 31 | FIFO_THRESHOLD(max_fifo_cq1, 6/10, 5/10);
+		1 << 31 | FIFO_THRESHOLD(max_fifo_cq1, 4/10, 3/10);
 	th_setting->cq1_ultra_th =
-		1 << 28 | FIFO_THRESHOLD(max_fifo_cq1, 4/10, 3/10);
+		1 << 28 | FIFO_THRESHOLD(max_fifo_cq1, 2/10, 1/10);
 	th_setting->cq1_pultra_th =
-		1 << 28 | FIFO_THRESHOLD(max_fifo_cq1, 3/10, 2/10);
+		1 << 28 | FIFO_THRESHOLD(max_fifo_cq1, 2/10, 1/10);
 	th_setting->cq1_dvfs_th =
 		1 << 31 | FIFO_THRESHOLD(max_fifo_cq1, 1/10, 0);
 
 	th_setting->cq2_fifo_size = (0x10 << 24) | max_fifo_cq2;
 	th_setting->cq2_urgent_th =
-		1 << 31 | FIFO_THRESHOLD(max_fifo_cq2, 6/10, 5/10);
+		1 << 31 | FIFO_THRESHOLD(max_fifo_cq2, 4/10, 3/10);
 	th_setting->cq2_ultra_th =
-		1 << 28 | FIFO_THRESHOLD(max_fifo_cq2, 4/10, 3/10);
+		1 << 28 | FIFO_THRESHOLD(max_fifo_cq2, 2/10, 1/10);
 	th_setting->cq2_pultra_th =
-		1 << 28 | FIFO_THRESHOLD(max_fifo_cq2, 3/10, 2/10);
+		1 << 28 | FIFO_THRESHOLD(max_fifo_cq2, 2/10, 1/10);
 	th_setting->cq2_dvfs_th =
 		1 << 31 | FIFO_THRESHOLD(max_fifo_cq2, 1/10, 0);
 
