@@ -339,9 +339,10 @@ static int set_sv_meta_stats_info(
 
 	return 0;
 }
-static int get_sv_two_smi_setting(int *sv_two_smi_en)
+static int get_sv_two_smi_setting(int *sv_two_smi_en, int *sv_support_two_smi_out)
 {
 	*sv_two_smi_en = 0;
+	*sv_support_two_smi_out = 0;
 
 	return 0;
 }
