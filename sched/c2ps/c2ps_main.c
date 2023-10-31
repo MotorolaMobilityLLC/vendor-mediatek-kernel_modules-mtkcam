@@ -51,15 +51,19 @@ static DEFINE_MUTEX(notifier_wq_lock);
 static DECLARE_WAIT_QUEUE_HEAD(notifier_wq_queue);
 static void self_uninit_timer_callback(struct timer_list *t);
 static int picked_wl_table = 0;
+static unsigned int background_monitor_duration = BACKGROUND_MONITOR_DURATION;
 
 struct timer_list backgroup_info_update_timer;
 struct timer_list self_uninit_timer;
 
 module_param(picked_wl_table, int, 0644);
+module_param(background_monitor_duration, int, 0644);
 
 static void backgroup_info_update_timer_callback(struct timer_list *t)
 {
-	mod_timer(t, jiffies + BACKGROUND_MONITOR_DURATION*HZ / 1000);
+	if (unlikely(background_monitor_duration == 0))
+		background_monitor_duration = BACKGROUND_MONITOR_DURATION;
+	mod_timer(t, jiffies + background_monitor_duration*HZ / 1000);
 	update_cpu_idle_rate();
 }
 
