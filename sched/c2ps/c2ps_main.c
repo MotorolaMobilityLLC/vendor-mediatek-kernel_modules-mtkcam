@@ -78,7 +78,7 @@ static void c2ps_notifier_wq_cb_init(int camfps)
 	timer_setup(&self_uninit_timer, self_uninit_timer_callback, 0);
 	add_timer(&self_uninit_timer);
 
-	backgroup_info_update_timer.expires = jiffies + 2*HZ;
+	backgroup_info_update_timer.expires = jiffies;
 	timer_setup(&backgroup_info_update_timer,
 				backgroup_info_update_timer_callback, 0);
 	add_timer(&backgroup_info_update_timer);

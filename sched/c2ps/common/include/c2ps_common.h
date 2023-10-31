@@ -29,6 +29,7 @@
 #define BACKGROUND_UCLAMPMAX_ALERT 10
 #define MAX_TASK_NAME_SIZE 10
 #define MAX_UCLAMP 1024
+#define MIN_UCLAMP_MARGIN 50
 
 extern int proc_time_window_size;
 extern int debug_log_on;
@@ -90,19 +91,23 @@ struct global_info {
 	int camfps;
 	u64 vsync_time;
 	struct per_cpu_idle_rate cpu_idle_rates[MAX_CPU_NUM];
+	int last_sum_idle_rate;
 	/**
 	 * need_update_uclamp definition:
 	 * [if any needs update,
 	 *  LCore needs update, MCore needs update, LCore needs update]
 	 *
+	 *  set 2: enter dangerous idle rate status, release uclamp max
 	 *  set 1: need to increase uclamp
 	 *  set 0: no need to modify uclamp
 	 *  set -1: be able to decrease uclamp
+	 *  set -2: decrease uclamp faster
 	 */
 	int need_update_uclamp[1 + NUMBER_OF_CLUSTER];
 	int curr_max_uclamp[NUMBER_OF_CLUSTER];
 	bool use_special_uclamp_max;
 	int special_uclamp_max[NUMBER_OF_CLUSTER];
+	int recovery_uclamp_max[NUMBER_OF_CLUSTER];
 	struct mutex mlock;
 };
 
@@ -170,6 +175,11 @@ void update_cpu_idle_rate(void);
 bool need_update_background(void);
 void reset_need_update_status(void);
 unsigned long c2ps_get_uclamp_freq(int cpu,  unsigned int uclamp);
+bool c2ps_get_cur_cpu_floor(const int cpu, int *floor_uclamp, int *floor_freq);
+int c2ps_get_cpu_min_uclamp(const int cpu);
+int c2ps_get_cpu_max_uclamp(const int cpu);
+bool c2ps_boost_cur_uclamp_max(const int cluster, struct global_info *g_info);
+
 
 extern void set_curr_uclamp_ctrl(int val);
 extern void set_gear_uclamp_ctrl(int val);
@@ -181,5 +191,8 @@ extern void set_wl_type_manual(int val);
 extern int get_nr_wl_type(void);
 // extern void set_rt_aggre_preempt(int val);
 extern unsigned int get_adaptive_margin(int cpu);
+extern struct cpufreq_policy *cpufreq_cpu_get(unsigned int cpu);
+extern void cpufreq_cpu_put(struct cpufreq_policy *policy);
+extern unsigned long pd_get_freq_util(unsigned int cpu, unsigned long freq);
 
 #endif  // C2PS_COMMON_INCLUDE_C2PS_COMMON_H_
