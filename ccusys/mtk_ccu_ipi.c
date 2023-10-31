@@ -22,6 +22,7 @@
 #define MTK_CCU_IPC_NO_ACK 0x66669999
 #define MTK_CCU_IPC_CMD_TIMEOUT_SPEC 30 //3000us = 3ms
 #define MTK_CCU_IPC_IOBUF_CAPACITY (1024*4-16-64-64)
+#define MTK_CCU_IPC_IOBUF_CAPACITY_COMPACT (68-2*4)
 
 struct __aligned(8) shared_buf_map
 {
@@ -41,8 +42,8 @@ static int mtk_ccu_copyCmdInData(struct mtk_ccu *ccu,
 	if (inDataSize == 0)
 		return 0;
 
-	if (inDataSize >= ccu->ccu_ipc.ipcDataSize) {
-		dev_err(ccu->dev, "failed: data length over capacity(%d <= %d)\n",
+	if (inDataSize > ccu->ccu_ipc.ipcDataSize) {
+		dev_err(ccu->dev, "failed: data length over capacity(%d < %d)\n",
 			ccu->ccu_ipc.ipcDataSize, inDataSize);
 		return -EINVAL;
 	}
@@ -62,8 +63,8 @@ static int mtk_ccu_copyCmdOutData(struct mtk_ccu *ccu,
 	if (outDataSize == 0)
 		return 0;
 
-	if (outDataSize >= ccu->ccu_ipc.ipcDataSize) {
-		dev_err(ccu->dev, "failed: data length over capacity(%d <= %d)\n",
+	if (outDataSize > ccu->ccu_ipc.ipcDataSize) {
+		dev_err(ccu->dev, "failed: data length over capacity(%d < %d)\n",
 			ccu->ccu_ipc.ipcDataSize, outDataSize);
 		return -EINVAL;
 	}
@@ -98,12 +99,20 @@ static int mtk_ccu_rproc_ipc_trigger(struct mtk_ccu *ccu,
 		dev_err(ccu->dev,
 			"CCU IPC violation, rcnt:%d, wcnt:%d, tout_fid:%d, tout_mid:%d",
 			read_cnt, write_cnt, ccu->ipc_tout_fid, ccu->ipc_tout_mid);
-		dev_err(ccu->dev, "r_assert:0x%x, i28:0x%x, i29:0x%x, i30:0x%x, i31:0x%x",
-			readl(ccu->ccu_base + MTK_CCU_SPARE_REG20),
-			readl(ccu->ccu_base + MTK_CCU_SPARE_REG28),
-			readl(ccu->ccu_base + MTK_CCU_SPARE_REG29),
-			readl(ccu->ccu_base + MTK_CCU_SPARE_REG30),
-			readl(ccu->ccu_base + MTK_CCU_SPARE_REG31));
+		if (ccu->compact_ipc)
+			dev_err(ccu->dev, "r_assert:0x%x, i28:0x%x, i29:0x%x, i30:0x%x, i31:0x%x",
+				read_ccu_info_regd(ccu, MTK_CCU_SPARE_REG20),
+				read_ccu_info_regd(ccu, MTK_CCU_SPARE_REG28),
+				read_ccu_info_regd(ccu, MTK_CCU_SPARE_REG29),
+				read_ccu_info_regd(ccu, MTK_CCU_SPARE_REG30),
+				read_ccu_info_regd(ccu, MTK_CCU_SPARE_REG31));
+		else
+			dev_err(ccu->dev, "r_assert:0x%x, i28:0x%x, i29:0x%x, i30:0x%x, i31:0x%x",
+				readl(ccu->ccu_base + MTK_CCU_SPARE_REG20),
+				readl(ccu->ccu_base + MTK_CCU_SPARE_REG28),
+				readl(ccu->ccu_base + MTK_CCU_SPARE_REG29),
+				readl(ccu->ccu_base + MTK_CCU_SPARE_REG30),
+				readl(ccu->ccu_base + MTK_CCU_SPARE_REG31));
 		return -EINVAL;
 	}
 
@@ -111,11 +120,24 @@ static int mtk_ccu_rproc_ipc_trigger(struct mtk_ccu *ccu,
 	write_cnt = readl(&ccu->ccu_ipc.ccuIpcPtr->write_cnt);
 	writel(write_cnt + 1, &ccu->ccu_ipc.ccuIpcPtr->write_cnt);
 
-	writel(msg->feature_type, &ccu->ccu_ipc.ccuIpcPtr->msg.feature_type);
-	writel(msg->msg_id, &ccu->ccu_ipc.ccuIpcPtr->msg.msg_id);
-	writel(msg->in_data_ptr, &ccu->ccu_ipc.ccuIpcPtr->msg.in_data_ptr);
-	writel(msg->tg_info, &ccu->ccu_ipc.ccuIpcPtr->msg.tg_info);
-	writel(msg->sensor_idx, &ccu->ccu_ipc.ccuIpcPtr->msg.sensor_idx);
+	if (ccu->compact_ipc) {
+		struct mtk_ccu_msg_compact cmsg;
+
+		cmsg.feature_type = msg->feature_type;
+		cmsg.msg_id = msg->msg_id;
+		cmsg.in_data_ptr = msg->in_data_ptr;
+		cmsg.tg_info = msg->tg_info;
+		cmsg.sensor_idx = msg->sensor_idx;
+		mtk_ccu_memcpy(&ccu->ccu_ipc.ccuIpcPtr->msg, &cmsg,
+			sizeof(struct mtk_ccu_msg_compact));
+	}
+	else {
+		writel(msg->feature_type, &ccu->ccu_ipc.ccuIpcPtr->msg.feature_type);
+		writel(msg->msg_id, &ccu->ccu_ipc.ccuIpcPtr->msg.msg_id);
+		writel(msg->in_data_ptr, &ccu->ccu_ipc.ccuIpcPtr->msg.in_data_ptr);
+		writel(msg->tg_info, &ccu->ccu_ipc.ccuIpcPtr->msg.tg_info);
+		writel(msg->sensor_idx, &ccu->ccu_ipc.ccuIpcPtr->msg.sensor_idx);
+	}
 
 	writel(1, ccu->ccu_ipc.ccuIntTrigPtr);
 	while (readl(&ccu->ccu_ipc.ccuIpcPtr->ack) == MTK_CCU_IPC_NO_ACK) {
@@ -131,12 +153,20 @@ static int mtk_ccu_rproc_ipc_trigger(struct mtk_ccu *ccu,
 		dev_err(ccu->dev,
 			"CCU IPC timeout, ft(%d), mid(%d), ack(%d), cnt(%d)\n",
 			msg->feature_type, msg->msg_id, ackValue, loop_cnt);
-		dev_err(ccu->dev, "r_assert:0x%x, i28:0x%x, i29:0x%x, i30:0x%x, i31:0x%x",
-			readl(ccu->ccu_base + MTK_CCU_SPARE_REG20),
-			readl(ccu->ccu_base + MTK_CCU_SPARE_REG28),
-			readl(ccu->ccu_base + MTK_CCU_SPARE_REG29),
-			readl(ccu->ccu_base + MTK_CCU_SPARE_REG30),
-			readl(ccu->ccu_base + MTK_CCU_SPARE_REG31));
+		if (ccu->compact_ipc)
+			dev_err(ccu->dev, "r_assert:0x%x, i28:0x%x, i29:0x%x, i30:0x%x, i31:0x%x",
+				read_ccu_info_regd(ccu, MTK_CCU_SPARE_REG20),
+				read_ccu_info_regd(ccu, MTK_CCU_SPARE_REG28),
+				read_ccu_info_regd(ccu, MTK_CCU_SPARE_REG29),
+				read_ccu_info_regd(ccu, MTK_CCU_SPARE_REG30),
+				read_ccu_info_regd(ccu, MTK_CCU_SPARE_REG31));
+		else
+			dev_err(ccu->dev, "r_assert:0x%x, i28:0x%x, i29:0x%x, i30:0x%x, i31:0x%x",
+				readl(ccu->ccu_base + MTK_CCU_SPARE_REG20),
+				readl(ccu->ccu_base + MTK_CCU_SPARE_REG28),
+				readl(ccu->ccu_base + MTK_CCU_SPARE_REG29),
+				readl(ccu->ccu_base + MTK_CCU_SPARE_REG30),
+				readl(ccu->ccu_base + MTK_CCU_SPARE_REG31));
 		ccu->ipc_tout_fid = msg->feature_type;
 		ccu->ipc_tout_mid = msg->msg_id;
 		return -ETIMEDOUT;
@@ -174,19 +204,42 @@ static int mtk_ccu_mb_rx(struct mtk_ccu *ccu,
 	if (rear != front) {
 		/*modulus add: rear+1 = rear+1 % CCU_MAILBOX_QUEUE_SIZE*/
 		next =
-		(ccu->mb->front + 1) & (MTK_CCU_MAILBOX_QUEUE_SIZE - 1);
+		(ccu->mb->front + 1) & (ccu_mailbox_max - 1);
 
-		memcpy(task, &(ccu->mb->queue[next]),
-			sizeof(struct mtk_ccu_msg));
+		if (ccu->compact_ipc) {
+			struct mtk_ccu_msg_compact cmsg = {0};
+
+			mtk_ccu_readl(&cmsg, &(ccu->mb_compact->queue[next]),
+				sizeof(struct mtk_ccu_msg_compact));
+			task->feature_type = cmsg.feature_type;
+			task->msg_id = cmsg.msg_id;
+			task->in_data_ptr = (uint32_t)(int32_t)(int16_t)(cmsg.in_data_ptr);
+			task->inDataSize = cmsg.inDataSize;
+			task->tg_info = cmsg.tg_info;
+			task->sensor_idx = cmsg.sensor_idx;
+		}
+		else
+			memcpy(task, &(ccu->mb->queue[next]),
+				sizeof(struct mtk_ccu_msg));
 		ccu->mb->front = next;
 
-		LOG_DBG_IPI(
-		"[%u] received cmd: f(%d), r(%d), cmd(%d), in(%x)\n",
-		(uint32_t)arch_timer_read_counter(),
-		ccu->mb->front,
-		ccu->mb->rear,
-		ccu->mb->queue[next].msg_id,
-		ccu->mb->queue[next].in_data_ptr);
+		if (ccu->compact_ipc)
+			LOG_DBG_IPI(
+			"[%u] received cmd: f(%d), r(%d), cmd(%d), in(%x)\n",
+			(uint32_t)arch_timer_read_counter(),
+			ccu->mb->front,
+			ccu->mb->rear,
+			task->msg_id,
+			task->in_data_ptr);
+		else
+			LOG_DBG_IPI(
+			"[%u] received cmd: f(%d), r(%d), cmd(%d), in(%x)\n",
+			(uint32_t)arch_timer_read_counter(),
+			ccu->mb->front,
+			ccu->mb->rear,
+			ccu->mb->queue[next].msg_id,
+			ccu->mb->queue[next].in_data_ptr);
+
 		ret = rear - front + 1;
 #if IS_ENABLED(CONFIG_MTK_CCU_DEBUG)
 		LOG_DBG_IPI("fs[%d,%d,%d,%d,%d],sc[%d,%d,%d,%d,%d],cam[%d,%d,%d,%d,%d]\n",
@@ -315,18 +368,21 @@ void mtk_ccu_rproc_ipc_init(struct mtk_ccu *ccu)
 	uint32_t trig_reg_offset;
 	struct shared_buf_map *sb_map_ptr =
 		(struct shared_buf_map *)(dmbase + MTK_CCU_SHARED_BUF_OFFSET);
+	uint8_t *ipc_base = (ccu->compact_ipc) ? ccu->ccu_base : ccu->dmem_base;
 
-	trig_reg_offset = (ccu->ccu_version == CCU_VER_ISP7SP) ?
+	trig_reg_offset = ((ccu->ccu_version == CCU_VER_ISP7SP) ||
+		(ccu->ccu_version == CCU_VER_ISP7SPL)) ?
 		MTK_CCU_INT_TRG_ISP7SP : MTK_CCU_INT_TRG;
 	ccu->ccu_ipc.ccuIntTrigPtr =
 		(uint32_t *)(ctrlbase + trig_reg_offset);
 	ccu->ccu_ipc.ccuIpcPtr =
-		(struct ap2ccu_ipc *)(dmbase + sb_map_ptr->ipc_base_offset);
-	ccu->ccu_ipc.ipcDataPtr = dmbase + sb_map_ptr->ipc_data_base_offset;
+		(struct ap2ccu_ipc *)(ipc_base + sb_map_ptr->ipc_base_offset);
+	ccu->ccu_ipc.ipcDataPtr = ipc_base + sb_map_ptr->ipc_data_base_offset;
 	ccu->ccu_ipc.ipcDataAddrCcu = sb_map_ptr->ipc_data_addr_ccu;
 	ccu->ccu_ipc.ipcDataSize = sb_map_ptr->ipc_data_size;
 	if (ccu->ccu_ipc.ipcDataSize == 0)
-		ccu->ccu_ipc.ipcDataSize = MTK_CCU_IPC_IOBUF_CAPACITY;
+		ccu->ccu_ipc.ipcDataSize = (ccu->compact_ipc) ?
+		MTK_CCU_IPC_IOBUF_CAPACITY_COMPACT : MTK_CCU_IPC_IOBUF_CAPACITY;
 	ccu->ccu_ipc.is_initialized = true;
 	LOG_DBG_IPI("IPC max size %d bytes", ccu->ccu_ipc.ipcDataSize);
 }
@@ -467,7 +523,10 @@ int mtk_ccu_rproc_get_inforeg(struct platform_device *pdev,
 	}
 
 	regno <<= 2;
-	*data = readl(ccu->ccu_base + MTK_CCU_SPARE_REG00 + regno);
+	if (ccu->compact_ipc)
+		*data = read_ccu_info_regd(ccu, MTK_CCU_SPARE_REG00 + regno);
+	else
+		*data = readl(ccu->ccu_base + MTK_CCU_SPARE_REG00 + regno);
 
 	spin_unlock(&ccu->ccu_poweron_lock);
 

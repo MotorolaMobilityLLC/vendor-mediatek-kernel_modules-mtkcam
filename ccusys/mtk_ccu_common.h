@@ -39,10 +39,13 @@
 #define CCU_VER_ISP71	71
 #define CCU_VER_ISP7S	72
 #define CCU_VER_ISP7SP	73
+#define CCU_VER_ISP7SPL 74
+#define CCU_VER_ISP8    80
 
 #define MTK_CCU_CLK_PWR_NUM 20
 #define MTK_CCU_CLK_NAME_LEN 32
 #define MTK_CCU_MAILBOX_QUEUE_SIZE 8
+#define MTK_CCU_MAILBOX_QUEUE_COMPACT_SIZE 4
 
 #define MTK_CCU_SRAM_LOG_OFFSET	 (0x1000)
 #define MTK_CCU_DRAM_LOG_BUF_CNT (4)
@@ -63,6 +66,11 @@
 #define LOG_DEFAULT_TAG   0x021182A6
 #define LOG_BUF_IDX_MAX   2
 #define SYSCTRL_IPC_MAGICNO  0x18CD18EC
+
+#define SPARE_REG_OFFSET_SEC	0x20
+#define SPARE_REG_OFFSET_AP		(SPARE_REG_OFFSET_SEC + 0x80)
+#define SPARE_REG_OFFSET_VM1	(SPARE_REG_OFFSET_AP + 0x80)
+#define SPARE_REG_OFFSET_VM2	(SPARE_REG_OFFSET_VM1 + 0x80)
 
 struct mtk_ccu_ipc_desc {
 	mtk_ccu_ipc_handle_t handler;
@@ -121,10 +129,25 @@ struct mtk_ccu_msg {
 	uint32_t sensor_idx; //new
 };
 
+struct __attribute__((__packed__)) mtk_ccu_msg_compact {
+    volatile uint8_t feature_type;
+    volatile uint8_t msg_id;
+    volatile uint16_t in_data_ptr;
+    volatile uint16_t inDataSize;
+    volatile uint8_t tg_info;
+    volatile uint8_t sensor_idx; //new
+};
+
 struct mtk_ccu_mailbox {
 	uint32_t front;
 	uint32_t rear;
 	struct mtk_ccu_msg queue[MTK_CCU_MAILBOX_QUEUE_SIZE];
+};
+
+struct mtk_ccu_mailbox_compact {
+	uint32_t front;
+	uint32_t rear;
+	struct mtk_ccu_msg_compact queue[MTK_CCU_MAILBOX_QUEUE_SIZE];
 };
 
 struct ap2ccu_ipc {
@@ -132,6 +155,13 @@ struct ap2ccu_ipc {
 	uint32_t read_cnt;
 	uint32_t ack;
 	struct mtk_ccu_msg msg;
+};
+
+struct ap2ccu_ipc_compact {
+	uint32_t write_cnt;
+	uint32_t read_cnt;
+	uint32_t ack;
+	struct mtk_ccu_msg_compact msg;
 };
 
 struct mtk_ccu {
@@ -175,12 +205,14 @@ struct mtk_ccu {
 	bool smmu_enabled;
 	void *mrdump_buf;
 	struct mtk_ccu_mailbox *mb;
+	struct mtk_ccu_mailbox_compact *mb_compact;
 	struct mtk_ccu_buffer log_info[MTK_CCU_DRAM_LOG_BUF_CNT];
 	wait_queue_head_t WaitQueueHead;
 	bool cammainpwr_powered;
 	bool poweron;
 	bool disirq;
 	bool bWaitCond;
+	bool compact_ipc;
 	int g_LogBufIdx;
 	int log_level;
 	int log_taglevel;
@@ -195,6 +227,8 @@ struct mtk_ccu_clk_name {
 	char name[MTK_CCU_CLK_NAME_LEN];
 };
 
+extern uint32_t ccu_mailbox_max;
+
 /*---------------------------------------------------------------------------*/
 /*  CHARDEV FUNCTIONS                                                        */
 /*---------------------------------------------------------------------------*/
@@ -205,6 +239,7 @@ int mtk_ccu_reg_chardev(struct mtk_ccu *ccu);
 /*  common FUNCTIONS                                                         */
 /*---------------------------------------------------------------------------*/
 void mtk_ccu_memclr(void *dst, int len);
+void mtk_ccu_readl(void *dst, const void *src, uint32_t len);
 void mtk_ccu_memcpy(void *dst, const void *src, uint32_t len);
 struct mtk_ccu_mem_info *mtk_ccu_get_meminfo(struct mtk_ccu *ccu,
 	enum mtk_ccu_buffer_type type);

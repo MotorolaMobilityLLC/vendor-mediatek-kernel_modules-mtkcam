@@ -88,4 +88,6 @@
 #define CCU_GO_TO_RUN                     0x17172ACE
 #define CCU_GO_TO_STOP                    0x8181DEAD
 
+uint32_t read_ccu_info_regd(struct mtk_ccu *ccu, uint32_t addr);
+
 #endif //__RPOC_MTK_CCU_IPS7_H
