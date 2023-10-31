@@ -765,7 +765,7 @@ static const struct plat_v4l2_data mt6878_v4l2_data = {
 	.timestamp_buffer_ofst = offsetof(struct mtk_cam_uapi_meta_raw_stats_0,
 					  timestamp),
 
-	.reserved_camsv_dev_id = 4,
+	.reserved_camsv_dev_id = 1,
 
 	.vb2_queues_support_list = vb2_queues_support_list,
 	.vb2_queues_support_list_num = ARRAY_SIZE(vb2_queues_support_list),
