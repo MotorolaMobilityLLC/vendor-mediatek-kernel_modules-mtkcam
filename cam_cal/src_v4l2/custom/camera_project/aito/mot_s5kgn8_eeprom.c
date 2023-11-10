@@ -78,8 +78,6 @@ unsigned int s5kgn8_mot_do_factory_verify(struct EEPROM_DRV_FD_DATA *pdata, unsi
 				(struct STRUCT_MOT_EEPROM_DATA *)pGetSensorCalData;
 	int read_data_size, checkSum, checkSum1;
 
-	memset(&pCamCalData->CalibrationStatus, NO_ERRORS, sizeof(pCamCalData->CalibrationStatus));
-
 	read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID,
 			S5KGN8_MOT_EEPROM_ADDR, S5KGN8_MOT_EEPROM_DATA_SIZE, (unsigned char *)pCamCalData->DumpAllEepromData);
 	if (read_data_size <= 0) {
@@ -92,10 +90,9 @@ unsigned int s5kgn8_mot_do_factory_verify(struct EEPROM_DRV_FD_DATA *pdata, unsi
 
 	if(check_crc16(pCamCalData->DumpAllEepromData, S5KGN8_MOT_MNF_DATA_SIZE, checkSum)) {
 		debug_log("check mnf crc16 ok");
-		pCamCalData->CalibrationStatus.mnf_status= NO_ERRORS;
 	} else {
 		debug_log("check mnf crc16 err");
-		pCamCalData->CalibrationStatus.mnf_status = CRC_FAILURE;
+		return CAM_CAL_ERR_NO_PARTNO;
 	}
 	//for dump serial_number
 	memcpy(pCamCalData->serial_number, &pCamCalData->DumpAllEepromData[S5KGN8_MOT_SERIAL_NUMBER_ADDR],
@@ -108,19 +105,17 @@ unsigned int s5kgn8_mot_do_factory_verify(struct EEPROM_DRV_FD_DATA *pdata, unsi
 
 	if(check_crc16(pCamCalData->DumpAllEepromData+S5KGN8_MOT_AF_ADDR, S5KGN8_MOT_AF_DATA_SIZE, checkSum)) {
 		debug_log("check af crc16 ok");
-		pCamCalData->CalibrationStatus.af_status = NO_ERRORS;
 	} else {
 		debug_log("check af crc16 err");
-		pCamCalData->CalibrationStatus.af_status = CRC_FAILURE;
+		return CAM_CAL_ERR_NO_3A_GAIN;
 	}
 
 	//awb check
-	pCamCalData->CalibrationStatus.awb_status =
-		mot_check_awb_data(pCamCalData->DumpAllEepromData+S5KGN8_MOT_AWB_ADDR, S5KGN8_MOT_AWB_DATA_SIZE + 2);
-	if(pCamCalData->CalibrationStatus.awb_status == NO_ERRORS) {
+	if((mot_check_awb_data(pCamCalData->DumpAllEepromData+S5KGN8_MOT_AWB_ADDR, S5KGN8_MOT_AWB_DATA_SIZE + 2)) == NO_ERRORS) {
 		debug_log("check awb data ok");
 	} else {
 		debug_log("check awb data err");
+		return CAM_CAL_ERR_NO_3A_GAIN;
 	}
 
 	//lsc check
@@ -130,10 +125,9 @@ unsigned int s5kgn8_mot_do_factory_verify(struct EEPROM_DRV_FD_DATA *pdata, unsi
 
 	if(check_crc16(pCamCalData->DumpAllEepromData+S5KGN8_MOT_LSC_ADDR, S5KGN8_MOT_LSC_DATA_SIZE, checkSum)) {
 		debug_log("check lsc crc16 ok");
-		pCamCalData->CalibrationStatus.lsc_status= NO_ERRORS;
 	} else {
 		debug_log("check lsc crc16 err");
-		pCamCalData->CalibrationStatus.lsc_status = CRC_FAILURE;
+		return CAM_CAL_ERR_NO_SHADING;
 	}
 
 	//pdaf check
@@ -146,13 +140,10 @@ unsigned int s5kgn8_mot_do_factory_verify(struct EEPROM_DRV_FD_DATA *pdata, unsi
 	if(check_crc16(pCamCalData->DumpAllEepromData+S5KGN8_MOT_PDAF1_ADDR, S5KGN8_MOT_PDAF_DATA1_SIZE, checkSum)
 		&& check_crc16(pCamCalData->DumpAllEepromData+S5KGN8_MOT_PDAF2_ADDR, S5KGN8_MOT_PDAF_DATA2_SIZE, checkSum1)) {
 		debug_log("check pdaf crc16 ok");
-		pCamCalData->CalibrationStatus.pdaf_status= NO_ERRORS;
 	} else {
 		debug_log("check pdaf crc16 err");
-		pCamCalData->CalibrationStatus.pdaf_status = CRC_FAILURE;
+		return CAM_CAL_ERR_NO_PDAF;
 	}
-
-
 
 	//af sync data check
 	checkSum = (pCamCalData->DumpAllEepromData[S5KGN8_MOT_AF_SYNC_DATA_CHECKSUM_ADDR])<< 8
@@ -160,10 +151,9 @@ unsigned int s5kgn8_mot_do_factory_verify(struct EEPROM_DRV_FD_DATA *pdata, unsi
 	debug_log("checkSum  = 0x%x", checkSum);
 	if(check_crc16(pCamCalData->DumpAllEepromData+S5KGN8_MOT_AF_SYNC_DATA_ADDR, S5KGN8_MOT_AF_SYNC_DATA_SIZE, checkSum)) {
 		debug_log("check af sync data crc16 ok");
-		pCamCalData->CalibrationStatus.af_sync_status = NO_ERRORS;
 	} else {
 		debug_log("check af sync data crc16 err");
-		pCamCalData->CalibrationStatus.af_sync_status = CRC_FAILURE;
+		return CAM_CAL_ERR_NO_3A_GAIN;
 	}
 
 	//mtk necessary data check
@@ -172,10 +162,10 @@ unsigned int s5kgn8_mot_do_factory_verify(struct EEPROM_DRV_FD_DATA *pdata, unsi
 	debug_log("checkSum  = 0x%x", checkSum);
 	if(check_crc16(pCamCalData->DumpAllEepromData+S5KGN8_MOT_MTK_NECESSARY_DATA_ADDR, S5KGN8_MOT_MTK_NECESSARY_DATA_SIZE, checkSum)) {
 		debug_log("check necessary data crc16 ok");
-		pCamCalData->CalibrationStatus.mtk_necessary_status = NO_ERRORS;
 	} else {
 		debug_log("check necessary data crc16 err");
-		pCamCalData->CalibrationStatus.mtk_necessary_status = CRC_FAILURE;
+		return CAM_CAL_ERR_NO_PARTNO;
 	}
+
 	return CAM_CAL_ERR_NO_ERR;
 }
