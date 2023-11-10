@@ -36,7 +36,6 @@
 #include "kd_imgsensor_errcode.h"
 
 #include "s5kgn8_Sensor_setting.h"
-#include "s5kgn8_ana_gain_table.h"
 
 #include "adaptor-subdrv-ctrl.h"
 #include "adaptor-i2c.h"
