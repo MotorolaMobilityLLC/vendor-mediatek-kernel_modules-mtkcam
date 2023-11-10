@@ -63,8 +63,6 @@ unsigned int ov32b_mot_do_factory_verify(struct EEPROM_DRV_FD_DATA *pdata, unsig
 				(struct STRUCT_MOT_EEPROM_DATA *)pGetSensorCalData;
 	int read_data_size, checkSum;
 
-	memset(&pCamCalData->CalibrationStatus, NONEXISTENCE, sizeof(pCamCalData->CalibrationStatus));
-
 	read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID,
 			OV32B_MOT_EEPROM_ADDR, OV32B_MOT_EEPROM_DATA_SIZE, (unsigned char *)pCamCalData->DumpAllEepromData);
 	if (read_data_size <= 0) {
@@ -77,21 +75,20 @@ unsigned int ov32b_mot_do_factory_verify(struct EEPROM_DRV_FD_DATA *pdata, unsig
 
 	if(check_crc16(pCamCalData->DumpAllEepromData, OV32B_MOT_MNF_DATA_SIZE, checkSum)) {
 		debug_log("check mnf crc16 ok");
-		pCamCalData->CalibrationStatus.mnf_status= NO_ERRORS;
 	} else {
 		debug_log("check mnf crc16 err");
-		pCamCalData->CalibrationStatus.mnf_status = CRC_FAILURE;
+		return CAM_CAL_ERR_NO_PARTNO;
 	}
 	//for dump serial_number
 	memcpy(pCamCalData->serial_number, &pCamCalData->DumpAllEepromData[OV32B_MOT_SERIAL_NUMBER_ADDR],
 		pCamCalData->serial_number_bit);
+
 	//awb check
-	pCamCalData->CalibrationStatus.awb_status =
-		mot_check_awb_data(pCamCalData->DumpAllEepromData+OV32B_MOT_AWB_ADDR, OV32B_MOT_AWB_DATA_SIZE + 2);
-	if(pCamCalData->CalibrationStatus.awb_status == NO_ERRORS) {
+	if((mot_check_awb_data(pCamCalData->DumpAllEepromData+OV32B_MOT_AWB_ADDR, OV32B_MOT_AWB_DATA_SIZE + 2)) == NO_ERRORS) {
 		debug_log("check awb data ok");
 	} else {
 		debug_log("check awb data err");
+		return CAM_CAL_ERR_NO_3A_GAIN;
 	}
 
 	//lsc check
@@ -101,10 +98,10 @@ unsigned int ov32b_mot_do_factory_verify(struct EEPROM_DRV_FD_DATA *pdata, unsig
 
 	if(check_crc16(pCamCalData->DumpAllEepromData+OV32B_MOT_LSC_ADDR, OV32B_MOT_LSC_DATA_SIZE, checkSum)) {
 		debug_log("check lsc crc16 ok");
-		pCamCalData->CalibrationStatus.lsc_status= NO_ERRORS;
 	} else {
 		debug_log("check lsc crc16 err");
-		pCamCalData->CalibrationStatus.lsc_status = CRC_FAILURE;
+		return CAM_CAL_ERR_NO_SHADING;
 	}
+
 	return CAM_CAL_ERR_NO_ERR;
 }
