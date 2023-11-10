@@ -38,16 +38,31 @@ static u16 addr_data_pair_normal_video[] = {
 };
 
 static u16 addr_data_pair_hs_video[] = {
-#include "setting/s5kgn8_4096_3072_30fps.h"
+#include "setting/s5kgn8_2048_1152_120fps.h"
 };
 
 static u16 addr_data_pair_slim_video[] = {
 #include "setting/s5kgn8_4096_3072_30fps.h"
 };
-
-static u16 addr_data_pair_cust1[] = {
-#include "setting/s5kgn8_4096_3072_30fps.h"
+static u16 addr_data_pair_custom1[] = {
+#include "setting/s5kgn8_8192_6144_24fps.h"
 };
 
+static u16 addr_data_pair_custom2[] = {
+#include "setting/s5kgn8_4096_3072_60fps.h"
+};
+
+static u16 addr_data_pair_custom3[] = {
+#include "setting/s5kgn8_2048_1152_240fps.h"
+};
+
+static u16 addr_data_pair_custom4[] = {
+#include "setting/s5kgn8_4096_2304_30fps_IDCG.h"
+};
+
+//3rd video call
+static u16 addr_data_pair_custom5[] = {
+#include "setting/s5kgn8_2048_1536_30fps.h"
+};
 
 #endif
