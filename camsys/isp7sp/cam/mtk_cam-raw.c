@@ -746,6 +746,7 @@ void dump_dma_soft_rst_stat(struct mtk_raw_device *dev)
 		 __func__, raw_rst_stat, raw_rst_stat2, yuv_rst_stat);
 }
 
+#define REG_LTM_RESET		0x2350
 void reset(struct mtk_raw_device *dev)
 {
 	int sw_ctl;
@@ -800,6 +801,10 @@ RESET_FAILURE:
 	writel(0x0, dev->base + REG_CAMCTL_MOD6_DCM_DIS);
 	writel(0x0, dev->yuv_base + REG_CAMCTL2_MOD5_DCM_DIS);
 	writel(0x0, dev->yuv_base + REG_CAMCTL2_MOD6_DCM_DIS);
+
+	/* reset LTM */
+	writel(0x1, dev->base + REG_LTM_RESET);
+	writel(0x0, dev->base + REG_LTM_RESET);
 
 	wmb(); /* make sure committed */
 }
