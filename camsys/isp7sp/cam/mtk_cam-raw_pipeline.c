@@ -53,6 +53,10 @@ static int debug_disable_twin_dc_scen;
 module_param(debug_disable_twin_dc_scen, int, 0644);
 MODULE_PARM_DESC(debug_disable_twin_dc_scen, "debug: disable twin dc scen");
 
+static int debug_disable_min_opp_limit = -1;
+module_param(debug_disable_min_opp_limit, int, 0644);
+MODULE_PARM_DESC(debug_disable_min_opp_limit, "debug: disable min opp limit");
+
 #define RAW_PIPELINE_NUM 3
 
 #define CAMSV_16P_ENABLE 1
@@ -276,7 +280,9 @@ static inline int mtk_raw_find_combination(struct mtk_cam_res_calc *c,
 	stepper->frontal_pixel_mode = stepper->frontal_pixel_mode_min;
 	stepper->pixel_mode = stepper->pixel_mode_min;
 	stepper->num_raw = stepper->num_raw_min;
-	stepper->opp_idx = stepper->min_opp_idx;
+	stepper->opp_idx = stepper->min_opp_idx +
+		((GET_PLAT_HW(platform_id) != 6878 || debug_disable_min_opp_limit > 0) ?
+		0 : 1);
 
 	return loop_resource_till_valid(c, stepper,
 					policy, ARRAY_SIZE(policy));
