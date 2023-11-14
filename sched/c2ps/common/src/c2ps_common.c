@@ -350,7 +350,9 @@ inline void set_config_camfps(int camfps)
 
 inline void set_special_uclamp_max(int camfps)
 {
-	int cluster_index = NUMBER_OF_CLUSTER - 1;
+	// Temp solution for capture
+	// Suppose 3 cluters, set cluster_index to number of clusters - 1
+	int cluster_index = 2;
 	if (!glb_info) {
 		C2PS_LOGE("glb_info is null\n");
 		return;
@@ -379,7 +381,7 @@ inline void set_glb_info_bg_uclamp_max(void)
 	c2ps_info_lock(&glb_info->mlock);
 	{
 		short _idx = 0;
-		for (; _idx < NUMBER_OF_CLUSTER; _idx++) {
+		for (; _idx < c2ps_nr_clusters; _idx++) {
 			glb_info->max_uclamp[_idx] = get_gear_uclamp_max(_idx);
 			glb_info->curr_max_uclamp[_idx] = glb_info->max_uclamp[_idx];
 		}
@@ -573,7 +575,7 @@ void c2ps_free(void *pvBuf, int i32Size)
 		vfree(pvBuf);
 }
 
-unsigned long c2ps_get_uclamp_freq(int cpu,  unsigned int uclamp)
+unsigned long c2ps_get_uclamp_freq(int cpu, unsigned int uclamp)
 {
 	unsigned long am_util = 0;
 
@@ -621,19 +623,10 @@ bool c2ps_boost_cur_uclamp_max(const int cluster, struct global_info *g_info)
 	if (!need_boost_uclamp_max)
 		return false;
 
-	switch (cluster) {
-		case 0:
-			cpu_index = LCORE_ID;
-			break;
-		case 1:
-			cpu_index = MCORE_ID;
-			break;
-		case 2:
-			cpu_index = BCORE_ID;
-			break;
-		default:
-			return false;
-	}
+	cpu_index = c2ps_get_first_cpu_of_cluster(cluster);
+
+	if (unlikely(cpu_index == -1))
+		return false;
 
 	if (!c2ps_get_cur_cpu_floor(cpu_index, &cur_floor_uclamp, &cur_cpu_floor_freq))
 		return false;
@@ -650,12 +643,37 @@ bool c2ps_boost_cur_uclamp_max(const int cluster, struct global_info *g_info)
 	return false;
 }
 
+inline unsigned long c2ps_get_cluster_uclamp_freq(int cluster,  unsigned int uclamp)
+{
+	int cpu = c2ps_get_first_cpu_of_cluster(cluster);
+
+	if (unlikely(cpu == -1))
+		return 0;
+	return c2ps_get_uclamp_freq(cpu, uclamp);
+}
+
+int c2ps_get_first_cpu_of_cluster(int cluster)
+{
+	struct cpumask *gear_cpus;
+	int cpu = 0;
+
+	if (unlikely(cluster >= c2ps_nr_clusters))
+		return -1;
+	gear_cpus = get_gear_cpumask(cluster);
+
+	if (!gear_cpus)
+		return -1;
+
+	cpu = cpumask_first(gear_cpus);
+	return cpu;
+}
+
 void update_cpu_idle_rate(void)
 {
 	u64 idle_time, wall_time;
 	unsigned int _cpu_index = 0, _cluster_index = 0;
-	unsigned int _num_of_cpu[NUMBER_OF_CLUSTER] = {0};
-	unsigned int _sum_of_idlerate[NUMBER_OF_CLUSTER] = {0};
+	unsigned int _num_of_cpu[MAX_NUMBER_OF_CLUSTERS] = {0};
+	unsigned int _sum_of_idlerate[MAX_NUMBER_OF_CLUSTERS] = {0};
 	unsigned int _total_num_of_cpu = 0;
 	unsigned int _total_idlerate = 0;
 	bool _dangerous_idle_rate_state = false;
@@ -680,12 +698,7 @@ void update_cpu_idle_rate(void)
 		c2ps_main_systrace("check idle rate: %u for cpu: %d",
 									idle_rate->idle, _cpu_index);
 
-		if (_cpu_index <= LCORE_ID)
-			_cluster_idx = 0;
-		else if (_cpu_index <= MCORE_ID)
-			_cluster_idx = 1;
-		else if (_cpu_index <= BCORE_ID)
-			_cluster_idx = 2;
+		_cluster_idx = topology_cluster_id(_cpu_index);
 
 		_num_of_cpu[_cluster_idx]++;
 		_sum_of_idlerate[_cluster_idx] += idle_rate->idle;
@@ -704,7 +717,7 @@ void update_cpu_idle_rate(void)
 	}
 	glb_info->last_sum_idle_rate = _total_idlerate;
 
-	for (; _cluster_index < NUMBER_OF_CLUSTER; _cluster_index++) {
+	for (; _cluster_index < c2ps_nr_clusters; _cluster_index++) {
 		if (c2ps_boost_cur_uclamp_max(_cluster_index, glb_info))
 			continue;
 
@@ -733,9 +746,9 @@ void update_cpu_idle_rate(void)
 		"cluster_0_freq=%ld cluster_1_freq=%ld cluster_2_freq=%ld",
 		glb_info->curr_max_uclamp[0], glb_info->curr_max_uclamp[1],
 		glb_info->curr_max_uclamp[2],
-		c2ps_get_uclamp_freq(LCORE_ID, glb_info->curr_max_uclamp[0]),
-		c2ps_get_uclamp_freq(MCORE_ID, glb_info->curr_max_uclamp[1]),
-		c2ps_get_uclamp_freq(BCORE_ID, glb_info->curr_max_uclamp[2]));
+		c2ps_get_cluster_uclamp_freq(0, glb_info->curr_max_uclamp[0]),
+		c2ps_get_cluster_uclamp_freq(1, glb_info->curr_max_uclamp[1]),
+		c2ps_get_cluster_uclamp_freq(2, glb_info->curr_max_uclamp[2]));
 }
 
 inline bool need_update_background(void)
@@ -745,11 +758,12 @@ inline bool need_update_background(void)
 
 	// temp solution, use alert = 100 to indicate release background uclamp max
 	if (background_idlerate_alert >= 100) {
+		short _cluster_idx = 0;
 		if (!is_release_uclamp_max) {
 			c2ps_info_lock(&glb_info->mlock);
 			{
 				short _idx = 0;
-				for (; _idx < NUMBER_OF_CLUSTER; _idx++) {
+				for (; _idx < c2ps_nr_clusters; _idx++) {
 					glb_info->recovery_uclamp_max[_idx] =
 								glb_info->curr_max_uclamp[_idx];
 
@@ -760,9 +774,10 @@ inline bool need_update_background(void)
 		is_release_uclamp_max = true;
 		glb_info->use_special_uclamp_max = true;
 		glb_info->need_update_uclamp[0] = 1;
-		glb_info->need_update_uclamp[1] = 1;
-		glb_info->need_update_uclamp[2] = 1;
-		glb_info->need_update_uclamp[3] = 1;
+
+		for (; _cluster_idx < c2ps_nr_clusters; _cluster_idx++)
+			glb_info->need_update_uclamp[1 + _cluster_idx] = 1;
+
 		return true;
 	}
 
@@ -778,23 +793,22 @@ inline void reset_need_update_status(void)
 		return;
 
 	if (is_release_uclamp_max && background_idlerate_alert < 100) {
-		int _recovery[NUMBER_OF_CLUSTER] = {
-			max(glb_info->recovery_uclamp_max[0], glb_info->max_uclamp[0]),
-			max(glb_info->recovery_uclamp_max[1], glb_info->max_uclamp[1]),
-			max(glb_info->recovery_uclamp_max[2], glb_info->max_uclamp[2])
-		};
+		int _recovery[MAX_NUMBER_OF_CLUSTERS] = {0};
+		short _cluster_idx = 0;
 
-		if (recovery_uclamp_max_immediately) {
-			set_gear_uclamp_max(0, _recovery[0]);
-			set_gear_uclamp_max(1, _recovery[1]);
-			set_gear_uclamp_max(2, _recovery[2]);
-		}
+		for (; _cluster_idx < c2ps_nr_clusters; _cluster_idx++) {
+			_recovery[_cluster_idx] =
+				max(glb_info->recovery_uclamp_max[_cluster_idx],
+					glb_info->max_uclamp[_cluster_idx]);
+			if (recovery_uclamp_max_immediately)
+				set_gear_uclamp_max(_cluster_idx, _recovery[_cluster_idx]);
+		};
 
 		c2ps_info_lock(&glb_info->mlock);
 
 		if (recovery_uclamp_max_immediately) {
 			short _idx = 0;
-			for (; _idx < NUMBER_OF_CLUSTER; _idx++) {
+			for (; _idx < c2ps_nr_clusters; _idx++) {
 				glb_info->curr_max_uclamp[_idx] = _recovery[_idx];
 				glb_info->recovery_uclamp_max[_idx] = 0;
 			}

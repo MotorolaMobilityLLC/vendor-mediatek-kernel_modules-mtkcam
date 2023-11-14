@@ -52,6 +52,7 @@ static DECLARE_WAIT_QUEUE_HEAD(notifier_wq_queue);
 static void self_uninit_timer_callback(struct timer_list *t);
 static int picked_wl_table = 0;
 static unsigned int background_monitor_duration = BACKGROUND_MONITOR_DURATION;
+unsigned int c2ps_nr_clusters = 0;
 
 struct timer_list backgroup_info_update_timer;
 struct timer_list self_uninit_timer;
@@ -616,6 +617,7 @@ static int __init c2ps_init(void)
 {
 	C2PS_LOGD("+ \n");
 
+	c2ps_nr_clusters = get_nr_gears();
 	c2ps_tsk = kthread_create(c2ps_thread_loop, NULL, "c2ps_thread_loop");
 
 	if (c2ps_tsk == NULL)

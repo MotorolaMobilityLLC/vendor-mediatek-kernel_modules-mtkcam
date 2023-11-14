@@ -22,17 +22,14 @@
 #define MAX_CPU_NUM CONFIG_MAX_NR_CPUS
 // ms
 #define BACKGROUND_MONITOR_DURATION 33
-#define NUMBER_OF_CLUSTER 3
-#define LCORE_ID 3
-#define MCORE_ID 6
-#define BCORE_ID 7
-#define BACKGROUND_UCLAMPMAX_ALERT 10
+#define MAX_NUMBER_OF_CLUSTERS CONFIG_MAX_NR_CPUS
 #define MAX_TASK_NAME_SIZE 10
 #define MAX_UCLAMP 1024
 #define MIN_UCLAMP_MARGIN 50
 
 extern int proc_time_window_size;
 extern int debug_log_on;
+extern unsigned int c2ps_nr_clusters;
 
 struct c2ps_task_info {
 	u32 task_id;
@@ -85,9 +82,7 @@ struct per_cpu_idle_rate {
 
 struct global_info {
 	int cfg_camfps;
-	int max_uclamp[NUMBER_OF_CLUSTER];
-	// int max_uclamp_cluster1;
-	// int max_uclamp_cluster2;
+	int max_uclamp[MAX_NUMBER_OF_CLUSTERS];
 	int camfps;
 	u64 vsync_time;
 	struct per_cpu_idle_rate cpu_idle_rates[MAX_CPU_NUM];
@@ -103,11 +98,11 @@ struct global_info {
 	 *  set -1: be able to decrease uclamp
 	 *  set -2: decrease uclamp faster
 	 */
-	int need_update_uclamp[1 + NUMBER_OF_CLUSTER];
-	int curr_max_uclamp[NUMBER_OF_CLUSTER];
+	int need_update_uclamp[1 + MAX_NUMBER_OF_CLUSTERS];
+	int curr_max_uclamp[MAX_NUMBER_OF_CLUSTERS];
 	bool use_special_uclamp_max;
-	int special_uclamp_max[NUMBER_OF_CLUSTER];
-	int recovery_uclamp_max[NUMBER_OF_CLUSTER];
+	int special_uclamp_max[MAX_NUMBER_OF_CLUSTERS];
+	int recovery_uclamp_max[MAX_NUMBER_OF_CLUSTERS];
 	struct mutex mlock;
 };
 
@@ -179,6 +174,8 @@ bool c2ps_get_cur_cpu_floor(const int cpu, int *floor_uclamp, int *floor_freq);
 int c2ps_get_cpu_min_uclamp(const int cpu);
 int c2ps_get_cpu_max_uclamp(const int cpu);
 bool c2ps_boost_cur_uclamp_max(const int cluster, struct global_info *g_info);
+int c2ps_get_first_cpu_of_cluster(int cluster);
+unsigned long c2ps_get_cluster_uclamp_freq(int cluster,  unsigned int uclamp);
 
 
 extern void set_curr_uclamp_ctrl(int val);
@@ -194,5 +191,6 @@ extern unsigned int get_adaptive_margin(int cpu);
 extern struct cpufreq_policy *cpufreq_cpu_get(unsigned int cpu);
 extern void cpufreq_cpu_put(struct cpufreq_policy *policy);
 extern unsigned long pd_get_freq_util(unsigned int cpu, unsigned long freq);
+extern struct cpumask *get_gear_cpumask(unsigned int gear);
 
 #endif  // C2PS_COMMON_INCLUDE_C2PS_COMMON_H_

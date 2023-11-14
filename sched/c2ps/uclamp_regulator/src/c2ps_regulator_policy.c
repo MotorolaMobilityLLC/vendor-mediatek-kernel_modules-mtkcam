@@ -189,10 +189,15 @@ void c2ps_regulator_bgpolicy_simple(struct regulator_req *req)
 	if (!req->glb_info)
 		return;
 
-	for (; cluster_index < NUMBER_OF_CLUSTER; cluster_index++) {
+	for (; cluster_index < c2ps_nr_clusters; cluster_index++) {
 		int *_cur_bg_uclamp = &(req->glb_info->curr_max_uclamp[cluster_index]);
+		int cpu = c2ps_get_first_cpu_of_cluster(cluster_index);
+
+		if (unlikely(cpu < 0))
+			continue;
+
 		if ((*_bg_uclamp_up_margin[cluster_index]) == 0 &&
-			 req->glb_info->need_update_uclamp[1 + cluster_index] != -1 &&
+			 req->glb_info->need_update_uclamp[1 + cluster_index] >= 0 &&
 			 !req->glb_info->special_uclamp_max[cluster_index])
 			continue;
 
@@ -228,7 +233,7 @@ void c2ps_regulator_bgpolicy_simple(struct regulator_req *req)
 		} else {
 			continue;
 		}
-
+		*_cur_bg_uclamp = min(*_cur_bg_uclamp, c2ps_get_cpu_max_uclamp(cpu));
 		set_gear_uclamp_max(cluster_index, *_cur_bg_uclamp);
 	}
 
@@ -237,9 +242,9 @@ void c2ps_regulator_bgpolicy_simple(struct regulator_req *req)
 		"cluster_0_freq=%ld cluster_1_freq=%ld cluster_2_freq=%ld",
 		req->glb_info->curr_max_uclamp[0], req->glb_info->curr_max_uclamp[1],
 		req->glb_info->curr_max_uclamp[2],
-		c2ps_get_uclamp_freq(LCORE_ID, req->glb_info->curr_max_uclamp[0]),
-		c2ps_get_uclamp_freq(MCORE_ID, req->glb_info->curr_max_uclamp[1]),
-		c2ps_get_uclamp_freq(BCORE_ID, req->glb_info->curr_max_uclamp[2]));
+		c2ps_get_cluster_uclamp_freq(0, req->glb_info->curr_max_uclamp[0]),
+		c2ps_get_cluster_uclamp_freq(1, req->glb_info->curr_max_uclamp[1]),
+		c2ps_get_cluster_uclamp_freq(2, req->glb_info->curr_max_uclamp[2]));
 	c2ps_main_systrace(
 		"special_cluster_0_util=%d special_cluster_1_util=%d special_cluster_2_util=%d ",
 		req->glb_info->special_uclamp_max[0], req->glb_info->special_uclamp_max[1],
