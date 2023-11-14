@@ -1540,9 +1540,11 @@ static int get_csi_param(struct subdrv_ctx *ctx,
 				csi_param->dphy_csi2_resync_dmy_cycle = 0x15;
 			} else if (!strcasecmp(ctx->aov_phy_ctrl_ver,
 				MT6989_PHY_CTRL_VERSIONS)) {
-				csi_param->dphy_data_settle = 0x10;
-				csi_param->dphy_clk_settle = 0x10;
-				csi_param->dphy_trail = 0x10;
+				csi_param->not_fixed_trail_settle = 0;
+				csi_param->not_fixed_dphy_settle = 0;
+				// csi_param->dphy_data_settle = 0x10;
+				// csi_param->dphy_clk_settle = 0x10;
+				csi_param->dphy_trail = 155;
 				csi_param->dphy_csi2_resync_dmy_cycle = 0x15;
 			} else {
 				DRV_LOGE(ctx, "phy_ctrl_ver is invalid\n");
@@ -1576,9 +1578,11 @@ static int get_csi_param(struct subdrv_ctx *ctx,
 				csi_param->dphy_csi2_resync_dmy_cycle = 0x13;
 			} else if (!strcasecmp(ctx->aov_phy_ctrl_ver,
 				MT6989_PHY_CTRL_VERSIONS)) {
-				csi_param->dphy_data_settle = 0x10;
-				csi_param->dphy_clk_settle = 0x10;
-				csi_param->dphy_trail = 0x10;
+				csi_param->not_fixed_trail_settle = 0;
+				csi_param->not_fixed_dphy_settle = 0;
+				// csi_param->dphy_data_settle = 0x10;
+				// csi_param->dphy_clk_settle = 0x10;
+				csi_param->dphy_trail = 142;
 				csi_param->dphy_csi2_resync_dmy_cycle = 0x13;
 			} else {
 				DRV_LOGE(ctx, "phy_ctrl_ver is invalid\n");
@@ -1612,9 +1616,11 @@ static int get_csi_param(struct subdrv_ctx *ctx,
 				csi_param->dphy_csi2_resync_dmy_cycle = 0x14;
 			} else if (!strcasecmp(ctx->aov_phy_ctrl_ver,
 				MT6989_PHY_CTRL_VERSIONS)) {
-				csi_param->dphy_data_settle = 0x10;
-				csi_param->dphy_clk_settle = 0x10;
-				csi_param->dphy_trail = 0x10;
+				csi_param->not_fixed_trail_settle = 0;
+				csi_param->not_fixed_dphy_settle = 0;
+				// csi_param->dphy_data_settle = 0x10;
+				// csi_param->dphy_clk_settle = 0x10;
+				csi_param->dphy_trail = 150;
 				csi_param->dphy_csi2_resync_dmy_cycle = 0x14;
 			} else {
 				DRV_LOGE(ctx, "phy_ctrl_ver is invalid\n");
@@ -1654,9 +1660,11 @@ static int get_csi_param(struct subdrv_ctx *ctx,
 				csi_param->dphy_csi2_resync_dmy_cycle = 0x1C;
 			} else if (!strcasecmp(ctx->aov_phy_ctrl_ver,
 				MT6989_PHY_CTRL_VERSIONS)) {
-				csi_param->dphy_data_settle = 0x10;
-				csi_param->dphy_clk_settle = 0x10;
-				csi_param->dphy_trail = 0x10;
+				csi_param->not_fixed_trail_settle = 0;
+				csi_param->not_fixed_dphy_settle = 0;
+				// csi_param->dphy_data_settle = 0x10;
+				// csi_param->dphy_clk_settle = 0x10;
+				csi_param->dphy_trail = 213;
 				csi_param->dphy_csi2_resync_dmy_cycle = 0x1C;
 			} else {
 				DRV_LOGE(ctx, "phy_ctrl_ver is invalid\n");
@@ -1876,7 +1884,7 @@ static void set_data_rate_global_timing_phy_ctrl(void *arg)
 			subdrv_i2c_wr_u8(ctx, 0x080B, 0xC3);
 		} else {
 			subdrv_i2c_wr_u8(ctx, 0x080A, 0x00);	// TCLK_POST_EX[9:8]
-			subdrv_i2c_wr_u8(ctx, 0x080B, 0x64);	// TCLK_POST_EX[7:0]
+			subdrv_i2c_wr_u8(ctx, 0x080B, 0xFF);	// TCLK_POST_EX[7:0]
 		}
 		subdrv_i2c_wr_u8(ctx, 0x080C, 0x00);	// THS_PREPARE_EX[9:8]
 		subdrv_i2c_wr_u8(ctx, 0x080D, 0x1F);	// THS_PREPARE_EX[7:0]
@@ -1910,7 +1918,7 @@ static void set_data_rate_global_timing_phy_ctrl(void *arg)
 			subdrv_i2c_wr_u8(ctx, 0x080B, 0xC1);
 		} else {
 			subdrv_i2c_wr_u8(ctx, 0x080A, 0x00);	// TCLK_POST_EX[9:8]
-			subdrv_i2c_wr_u8(ctx, 0x080B, 0x64);	// TCLK_POST_EX[7:0]
+			subdrv_i2c_wr_u8(ctx, 0x080B, 0xFF);	// TCLK_POST_EX[7:0]
 		}
 		subdrv_i2c_wr_u8(ctx, 0x080C, 0x00);	// THS_PREPARE_EX[9:8]
 		subdrv_i2c_wr_u8(ctx, 0x080D, 0x27);	// THS_PREPARE_EX[7:0]
@@ -1943,7 +1951,7 @@ static void set_data_rate_global_timing_phy_ctrl(void *arg)
 			subdrv_i2c_wr_u8(ctx, 0x080B, 0xC2);
 		} else {
 			subdrv_i2c_wr_u8(ctx, 0x080A, 0x00);	// TCLK_POST_EX[9:8]
-			subdrv_i2c_wr_u8(ctx, 0x080B, 0x64);	// TCLK_POST_EX[7:0]
+			subdrv_i2c_wr_u8(ctx, 0x080B, 0xFF);	// TCLK_POST_EX[7:0]
 		}
 		subdrv_i2c_wr_u8(ctx, 0x080C, 0x00);	// THS_PREPARE_EX[9:8]
 		subdrv_i2c_wr_u8(ctx, 0x080D, 0x1F);	// THS_PREPARE_EX[7:0]
@@ -1982,7 +1990,7 @@ static void set_data_rate_global_timing_phy_ctrl(void *arg)
 			subdrv_i2c_wr_u8(ctx, 0x080B, 0xC9);
 		} else {
 			subdrv_i2c_wr_u8(ctx, 0x080A, 0x00);	// TCLK_POST_EX[9:8]
-			subdrv_i2c_wr_u8(ctx, 0x080B, 0x64);	// TCLK_POST_EX[7:0]
+			subdrv_i2c_wr_u8(ctx, 0x080B, 0xFF);	// TCLK_POST_EX[7:0]
 		}
 		subdrv_i2c_wr_u8(ctx, 0x080C, 0x00);	// THS_PREPARE_EX[9:8]
 		subdrv_i2c_wr_u8(ctx, 0x080D, 0x17);	// THS_PREPARE_EX[7:0]
