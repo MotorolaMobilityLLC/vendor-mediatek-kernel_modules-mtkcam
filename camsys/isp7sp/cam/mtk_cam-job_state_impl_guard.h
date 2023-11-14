@@ -9,6 +9,8 @@
 #define I2C_THRES_FROM_L_SOF_NS 3000000
 #define SCQ_THRES_FROM_F_SOF_NS 8000000
 
+#include "mtk_cam-job.h"
+
 struct state_accessor;
 struct state_accessor_ops {
 	/*
@@ -110,7 +112,7 @@ static inline int sf_cur_isp_state(struct state_accessor *s_acc)
 static inline int guard_next_compose(struct state_accessor *s_acc,
 			       struct transition_param *p)
 {
-	return (unsigned int)(cur_seq_no(s_acc) - p->info->ack_seq_no) == 1;
+	return frame_seq_diff(cur_seq_no(s_acc), p->info->ack_seq_no) == 1;
 }
 
 static inline int guard_ack_eq(struct state_accessor *s_acc,
@@ -134,7 +136,7 @@ static inline int guard_inner_eq(struct state_accessor *s_acc,
 static inline int guard_inner_ge(struct state_accessor *s_acc,
 				 struct transition_param *p)
 {
-	return p->info->inner_seq_no >= cur_seq_no(s_acc);
+	return frame_seq_ge(p->info->inner_seq_no, cur_seq_no(s_acc));
 }
 
 /* TODO(AY): may be removed */
