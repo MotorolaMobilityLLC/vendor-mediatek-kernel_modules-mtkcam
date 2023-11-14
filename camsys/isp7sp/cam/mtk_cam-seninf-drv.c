@@ -1658,7 +1658,7 @@ static int set_test_model(struct seninf_ctx *ctx, char enable)
 	if (enable) {
 		ret = pm_runtime_get_sync(ctx->dev);
 		if (ret < 0) {
-			dev_info(ctx->dev, "%s pm_runtime_get_sync ret %d\n", __func__, ret);
+			dev_info(ctx->dev, "[%s] pm_runtime_get_sync ret %d\n", __func__, ret);
 			pm_runtime_put_noidle(ctx->dev);
 			return ret;
 		}
@@ -2233,12 +2233,14 @@ static int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 #endif /*INIT_DESKEW_DEBUG*/
 
 	/* get current sensor idx by get_sensor_idx */
-	core->current_sensor_id = get_sensor_idx(ctx);
-	if (core->current_sensor_id < 0) {
-		dev_info(ctx->dev,
-			"[%s] get_sensor_idx[%d] fail\n",
-			__func__, core->current_sensor_id);
-		return core->current_sensor_id;
+	if (!ctx->is_test_model) {
+		core->current_sensor_id = get_sensor_idx(ctx);
+		if (core->current_sensor_id < 0) {
+			dev_info(ctx->dev,
+				"[%s] get_sensor_idx[%d] fail\n",
+				__func__, core->current_sensor_id);
+			return core->current_sensor_id;
+		}
 	}
 
 	if (core->aov_abnormal_init_flag) {
@@ -3527,12 +3529,6 @@ static int set_vcore_power(struct seninf_ctx *ctx, u64 data_rate)
 	seninf_logd(ctx,
 		"line:%d,data rate(%llu),is_cphy(%u),is_4d1c(%d)\n",
 		__LINE__, data_rate, ctx->is_cphy, ctx->is_4d1c);
-	if (data_rate <= 0) {
-		seninf_logi(ctx,
-			"line:%d,please check data rate(%llu),is_cphy(%u),is_4d1c(%d)\n",
-			__LINE__, data_rate, ctx->is_cphy, ctx->is_4d1c);
-		return -EINVAL;
-	}
 	/* loop compare data rate -> if match condition, then break return vcore voltage */
 	if (!ctx->is_cphy) {	// Dphy
 		/* dphy vcore range */
@@ -3782,7 +3778,7 @@ static int runtime_resume(struct device *dev)
 		 * set csi clk according to vcore range
 		 */
 		data_rate = ctx->mipi_pixel_rate * bit_per_pixel;
-		if (data_rate > 0) {
+		if (data_rate > 0 || ctx->is_test_model) {
 			seninf_logd(ctx,
 				"data rate(%llu),mipi pixel rate(%lld),bit_per_pixel(%d),num_data_lanes(%d)\n",
 				data_rate, ctx->mipi_pixel_rate, bit_per_pixel, ctx->num_data_lanes);
