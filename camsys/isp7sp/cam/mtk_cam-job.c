@@ -3361,6 +3361,7 @@ static void m2m_on_transit(struct mtk_cam_job_state *s, int state_type,
 static int
 unset_cq_threshold_and_cammux(struct mtk_cam_job *job)
 {
+	mtk_cam_seninf_irq_seamless_debug_en(job->src_ctx->seninf, true);
 	disable_seninf_cammux(job);
 
 	return 0;

@@ -1815,6 +1815,51 @@ int mtk_cam_seninf_forget_camtg_setting(struct seninf_ctx *ctx)
 
 	return 0;
 }
+bool mtk_cam_seninf_irq_seamless_debug_en(struct v4l2_subdev *sd, bool en)
+{
+	int i, j;
+	struct seninf_vc *vc;
+	struct seninf_vc_out_dest *dest;
+	struct seninf_core *core;
+
+	struct seninf_ctx *ctx = container_of(sd, struct seninf_ctx, subdev);
+	if (unlikely(ctx == NULL)) {
+		pr_info("[ERROR][%s] ctx is null", __func__);
+		return -EINVAL;
+	}
+
+	core = ctx->core;
+	if (unlikely(core == NULL)) {
+		pr_info("[ERROR][%s] core is null", __func__);
+		return -EINVAL;
+	}
+
+	if (!core->is_mt6878)
+		return 0;
+
+	mutex_lock(&core->seamless_vsync_debug_mutex);
+
+	core->seamless_vsync_debug_en = en;
+	ctx->seamless_vsync_debug_seninf_en = en;
+	dev_info(ctx->dev, "%s en: %d\n", __func__, en);
+
+	for (i = 0; i < ctx->vcinfo.cnt; i++) {
+		vc = &ctx->vcinfo.vc[i];
+
+		for (j = 0; j < vc->dest_cnt; j++) {
+			dest = &vc->dest[j];
+
+			if (dest->cam >= g_seninf_ops->cam_mux_num)
+				continue;
+			g_seninf_ops->_enable_cam_mux_vsync_irq(ctx, en, dest->cam);
+			dev_info(ctx->dev, "%s set camtg_%d vsync irq en: %d\n", __func__, dest->cam, en);
+		}
+	}
+
+	mutex_unlock(&core->seamless_vsync_debug_mutex);
+
+	return 0;
+}
 
 static int _mtk_cam_seninf_reset_cammux(struct seninf_ctx *ctx, int pad_id)
 {

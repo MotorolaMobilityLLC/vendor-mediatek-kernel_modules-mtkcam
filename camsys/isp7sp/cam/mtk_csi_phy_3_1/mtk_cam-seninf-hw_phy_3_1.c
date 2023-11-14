@@ -6003,6 +6003,9 @@ static void dump_vsync_info(struct seninf_core *core,
 		break;
 	}
 
+	if (core->seamless_vsync_debug_en)
+		dev_info(core->dev, "%s:%s", __func__, buf);
+
 	len = 0;
 
 	for (i = 0; i < vsync_info->used_cammux_num; i++) {
@@ -6033,6 +6036,9 @@ static void dump_vsync_info(struct seninf_core *core,
 		break;
 	}
 
+	if (core->seamless_vsync_debug_en)
+		dev_info(core->dev, "%s:%s", __func__, buf);
+
 	kfree(buf);
 }
 
@@ -6045,6 +6051,15 @@ static void mtk_notify_frame_end_fn(struct kthread_work *work)
 
 	if (core->vsync_irq_en_flag)
 		dump_vsync_info(core, vsync_info);
+
+
+	if (core->seamless_vsync_debug_en) {
+		dump_vsync_info(core, vsync_info);
+		/* make this debug flow only runs once */
+		core->seamless_vsync_debug_en = 0;
+
+	}
+
 
 	if (core->csi_irq_en_flag)
 		dump_mipi_error_detect_info(core, vsync_info);
@@ -6188,6 +6203,47 @@ static int mtk_cam_enable_stream_err_detect(struct seninf_ctx *ctx)
 	return 0;
 }
 
+static void seninf_seamless_record_cammux_irq(struct seninf_core *core,
+	struct mtk_cam_seninf_vsync_info *vsync_info)
+{
+	struct seninf_ctx *ctx_;
+	int i, j, index = 0;
+	void *pSeninf_cam_mux_pcsr;
+	struct seninf_vc *vc;
+	struct seninf_vc_out_dest *dest;
+
+	list_for_each_entry(ctx_, &core->list, list) {
+		if (!ctx_->streaming)
+			continue;
+
+		if (!ctx_->seamless_vsync_debug_seninf_en)
+			continue;
+
+		for (i = 0; i < ctx_->vcinfo.cnt; i++) {
+			vc = &ctx_->vcinfo.vc[i];
+
+			for (j = 0; j < vc->dest_cnt; j++) {
+				dest = &vc->dest[j];
+				vsync_info->used_cammux[index] = dest->cam;
+
+				if (dest->cam < _seninf_ops->cam_mux_num) {
+					pSeninf_cam_mux_pcsr =
+						ctx_->reg_if_cam_mux_pcsr[dest->cam];
+				} else
+					pSeninf_cam_mux_pcsr = NULL;
+
+				if (pSeninf_cam_mux_pcsr) {
+					vsync_info->cammux_irq_st[index] =
+						SENINF_READ_REG(pSeninf_cam_mux_pcsr,
+							SENINF_CAM_MUX_PCSR_IRQ_STATUS);
+					index++;
+				}
+			}
+		}
+	}
+	vsync_info->used_cammux_num = index;
+}
+
 
 static void seninf_record_cammux_irq(struct seninf_core *core,
 	struct mtk_cam_seninf_vsync_info *vsync_info)
@@ -6245,6 +6301,7 @@ static void seninf_record_cammux_info(struct seninf_core *core,
 			for (i = 0; i < ctx_->vcinfo.cnt; i++) {
 				vc = &ctx_->vcinfo.vc[i];
 				for (j = 0; j < vc->dest_cnt; j++) {
+					pSeninf_cam_mux_pcsr = NULL;
 					dest = &vc->dest[j];
 					pmux = ctx_->reg_if_mux[dest->mux];
 					vsync_info->seninf_mux_irq_st[used_cammux] =
@@ -6255,39 +6312,52 @@ static void seninf_record_cammux_info(struct seninf_core *core,
 						SENINF_WRITE_REG(pmux,
 							SENINF_MUX_IRQ_STATUS, 0x103);
 					}
-					if (dest->cam < _seninf_ops->cam_mux_num &&
-						core->vsync_irq_en_flag) {
+
+					if (dest->cam >= _seninf_ops->cam_mux_num)
+						continue;
+
+					if (core->vsync_irq_en_flag)
 						pSeninf_cam_mux_pcsr =
 							ctx_->reg_if_cam_mux_pcsr[dest->cam];
-					} else
-						pSeninf_cam_mux_pcsr = NULL;
 
-					if (pSeninf_cam_mux_pcsr) {
-						vsync_info->cammux_chk_res_st[used_cammux] =
-							SENINF_READ_REG(pSeninf_cam_mux_pcsr,
-								SENINF_CAM_MUX_PCSR_CHK_RES);
-						vsync_info->cammux_tag_vc_sel_st[used_cammux] =
-							SENINF_READ_REG(pSeninf_cam_mux_pcsr,
-								SENINF_CAM_MUX_PCSR_TAG_VC_SEL);
-						vsync_info->cammux_tag_dt_sel_st[used_cammux] =
-							SENINF_READ_REG(pSeninf_cam_mux_pcsr,
-								SENINF_CAM_MUX_PCSR_TAG_DT_SEL);
-						vsync_info->cammux_ctrl_st[used_cammux] =
-							SENINF_READ_REG(pSeninf_cam_mux_pcsr,
-								SENINF_CAM_MUX_PCSR_CTRL);
-						vsync_info->cammux_chk_ctrl_st[used_cammux] =
-							SENINF_READ_REG(pSeninf_cam_mux_pcsr,
-								SENINF_CAM_MUX_PCSR_CHK_CTL);
-						vsync_info->cammux_chk_err_res_st[used_cammux] =
-							SENINF_READ_REG(pSeninf_cam_mux_pcsr,
-								SENINF_CAM_MUX_PCSR_CHK_ERR_RES);
-						vsync_info->cammux_opt_st[used_cammux] =
-							SENINF_READ_REG(pSeninf_cam_mux_pcsr,
-								SENINF_CAM_MUX_PCSR_OPT);
-						used_cammux++;
-					}
+					if (core->seamless_vsync_debug_en &&
+						ctx_->seamless_vsync_debug_seninf_en)
+						pSeninf_cam_mux_pcsr =
+							ctx_->reg_if_cam_mux_pcsr[dest->cam];
+
+					if (pSeninf_cam_mux_pcsr == NULL)
+						continue;
+
+					vsync_info->cammux_chk_res_st[used_cammux] =
+						SENINF_READ_REG(pSeninf_cam_mux_pcsr,
+							SENINF_CAM_MUX_PCSR_CHK_RES);
+					vsync_info->cammux_tag_vc_sel_st[used_cammux] =
+						SENINF_READ_REG(pSeninf_cam_mux_pcsr,
+							SENINF_CAM_MUX_PCSR_TAG_VC_SEL);
+					vsync_info->cammux_tag_dt_sel_st[used_cammux] =
+						SENINF_READ_REG(pSeninf_cam_mux_pcsr,
+							SENINF_CAM_MUX_PCSR_TAG_DT_SEL);
+					vsync_info->cammux_ctrl_st[used_cammux] =
+						SENINF_READ_REG(pSeninf_cam_mux_pcsr,
+							SENINF_CAM_MUX_PCSR_CTRL);
+					vsync_info->cammux_chk_ctrl_st[used_cammux] =
+						SENINF_READ_REG(pSeninf_cam_mux_pcsr,
+							SENINF_CAM_MUX_PCSR_CHK_CTL);
+					vsync_info->cammux_chk_err_res_st[used_cammux] =
+						SENINF_READ_REG(pSeninf_cam_mux_pcsr,
+							SENINF_CAM_MUX_PCSR_CHK_ERR_RES);
+					vsync_info->cammux_opt_st[used_cammux] =
+						SENINF_READ_REG(pSeninf_cam_mux_pcsr,
+							SENINF_CAM_MUX_PCSR_OPT);
+					used_cammux++;
+
+					if (ctx_->seamless_vsync_debug_seninf_en)
+						mtk_cam_seninf_enable_cam_mux_vsync_irq(
+													ctx_, false, dest->cam);
 				}
 			}
+			/* make this debug flow only runs once */
+			ctx_->seamless_vsync_debug_seninf_en = false;
 		}
 	}
 }
@@ -6314,6 +6384,9 @@ static void seninf_record_vsync_info(struct seninf_core *core,
 	if (core->vsync_irq_en_flag)
 		seninf_record_cammux_irq(core, vsync_info);
 
+	if (core->seamless_vsync_debug_en)
+		seninf_seamless_record_cammux_irq(core, vsync_info);
+
 	if (vsync_info->vsync_irq_st)
 		SENINF_WRITE_REG(pcammux_gcsr,
 			SENINF_CAM_MUX_GCSR_VSYNC_IRQ_STS, 0xFFFFFFFF);
@@ -6334,7 +6407,8 @@ static int mtk_cam_seninf_irq_handler(int irq, void *data)
 
 	spin_lock_irqsave(&core->spinlock_irq, flags);
 
-	if (core->vsync_irq_en_flag || core->csi_irq_en_flag) {
+	if (core->vsync_irq_en_flag || core->csi_irq_en_flag ||
+		core->seamless_vsync_debug_en) {
 		seninf_record_vsync_info(core, &vsync_info);
 		if (seninf_push_vsync_info_msgfifo(&vsync_info) == 0)
 			wake_thread = 1;

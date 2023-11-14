@@ -825,6 +825,7 @@ static int get_seninf_ops(struct device *dev, struct seninf_core *core)
 				// Support phy 3.0 & phy 3.1
 				if (i == SENINF_PHY_3_1) {
 					g_seninf_ops = &mtk_csi_phy_3_1;
+					core->is_mt6878 = true;
 					dev_info(dev, "%s: INFO: phy config mtk-csi-phy-3-1\n", __func__);
 				} else {
 					g_seninf_ops = &mtk_csi_phy_3_0;
@@ -1063,6 +1064,7 @@ static int seninf_core_probe(struct platform_device *pdev)
 	core->dev = dev;
 	mutex_init(&core->mutex);
 	mutex_init(&core->cammux_page_ctrl_mutex);
+	mutex_init(&core->seamless_vsync_debug_mutex);
 	mutex_init(&core->seninf_top_mux_mutex);
 	INIT_LIST_HEAD(&core->list);
 
@@ -2354,6 +2356,8 @@ static int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 	/* reset all sentest flag */
 	ctx->allow_adjust_isp_en = false;
 	ctx->single_raw_streaming_en = false;
+	ctx->seamless_vsync_debug_seninf_en = false;
+	ctx->core->seamless_vsync_debug_en = false;
 
 	return 0;
 }

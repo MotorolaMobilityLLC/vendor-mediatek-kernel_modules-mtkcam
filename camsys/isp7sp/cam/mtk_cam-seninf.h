@@ -140,6 +140,11 @@ struct seninf_core {
 	phandle rproc_ccu_phandle;
 	struct rproc *rproc_ccu_handle;
 
+	/* seamless switch vsync debug flow used  */
+	bool seamless_vsync_debug_en;
+	bool is_mt6878;
+	struct mutex seamless_vsync_debug_mutex;
+
 	/* platform properties */
 	int cphy_settle_delay_dt;
 	int dphy_settle_delay_dt;
@@ -239,6 +244,9 @@ struct seninf_ctx {
 	int seninfIdx;
 	int pad2cam[PAD_MAXCNT][MAX_DEST_NUM];
 	int pad_tag_id[PAD_MAXCNT][MAX_DEST_NUM];
+
+	/* seamless switch vsync debug en */
+	bool seamless_vsync_debug_seninf_en;
 
 	/* remote sensor */
 	struct v4l2_subdev *sensor_sd;
