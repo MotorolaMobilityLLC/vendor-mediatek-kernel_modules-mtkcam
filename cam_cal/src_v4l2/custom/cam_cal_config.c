@@ -283,7 +283,6 @@ unsigned int mot_lens_id_to_name(uint8_t id,unsigned int block_size,unsigned cha
 
     const struct STRUCT_MOT_LENS__ID lens_table[] =
     {
-	{0x0C,"OF-5037A"},
 	{0x21,"38134A-400"},
 	{0x22,"39411A-400"},
 	{0xE0,"ZD0017J1"},
@@ -315,6 +314,7 @@ unsigned int mot_lens_id_to_name(uint8_t id,unsigned int block_size,unsigned cha
 	{0xE4,"ZD0017P4"},
 	{0x2B,"39292C-400"},
 	{0x48,"39397B-400"},
+	{0xC0,"OF-5037A"},
     };
 
     for (i =0;i <  sizeof(lens_table)/sizeof(struct STRUCT_MOT_LENS__ID);i++)
