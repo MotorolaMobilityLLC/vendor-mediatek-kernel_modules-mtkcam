@@ -4118,6 +4118,7 @@ static int csirx_cphy_setting(struct seninf_ctx *ctx)
 
 	/* CPHY_RX_IRQ_EN */
 	SENINF_WRITE_REG(base, CPHY_RX_IRQ_EN, 0xF);
+	SENINF_WRITE_REG(base, CPHY_RX_IRQ_CLR, 0xFF0000);
 
 	dev_info(ctx->dev,
 			"[%s][Done] with is_4d1c(%d),num_data_lanes(%d),port(%d),CPHY_RX_IRQ_EN\n",
@@ -5659,6 +5660,9 @@ static void dump_current_mipi_error_cnt(struct seninf_core *core,
 	char *buf = NULL;
 	void *pcammux_gcsr;
 	int len = 0;
+	void *base_cphy = 0;
+	unsigned int cphy_irq = 0;
+	int i = 0;
 
 	buf = kmalloc(sizeof(char) * VSYNC_DUMP_BUF_MAX_LEN, GFP_ATOMIC);
 	if (buf == NULL)
@@ -5693,6 +5697,21 @@ static void dump_current_mipi_error_cnt(struct seninf_core *core,
 		ctx->size_err_cnt,
 		vsync_info->time_mono/1000000);
 	dev_info(ctx->dev, "%s\n", buf);
+
+	base_cphy = ctx->reg_ana_cphy_top[(unsigned int)ctx->port];
+	cphy_irq = SENINF_READ_REG(base_cphy, CPHY_RX_IRQ_CLR);
+	SENINF_WRITE_REG(base_cphy, CPHY_RX_IRQ_CLR, 0xFF0000);
+	SENINF_SNPRINTF(buf, len, "\nctx->err_lane_resync_cnt = %d, core->err_lane_resync_detection_cnt = %d, CPHY_RX_IRQ_STATUS:(0x%08x)",
+		ctx->err_lane_resync_cnt, core->err_lane_resync_detection_cnt, cphy_irq);
+	dev_info(ctx->dev, "%s\n", buf);
+	if (cphy_irq & 0xF) {
+		for (i = 0; i < vsync_info->used_csi_port_num; i++) {
+			if (vsync_info->ctx_port[i] == ctx->port) {
+				SENINF_SNPRINTF(buf, len, "\nmac csi irq status:(0x%08x)", vsync_info->csi_irq_st[i])
+				dev_info(ctx->dev, "%s\n", buf);
+			}
+		}
+	}
 
 	if (ctx->streaming)
 		if ((ctx->data_not_enough_cnt) >= (core->data_not_enough_detection_cnt) || // 2
