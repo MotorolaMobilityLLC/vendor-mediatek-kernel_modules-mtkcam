@@ -28,6 +28,9 @@
 #define MAX_MUX_VCINFO_DEBUG 15
 #define MAX_TS_SIZE 4
 
+/* define cam mux src sel  idle value */
+#define IDLE_SRC_SEL 0x7f
+
 /*ULPS-mode support*/
 #undef CDPHY_ULPS_MODE_SUPPORT
 //#define CDPHY_ULPS_MODE_SUPPORT

@@ -372,8 +372,8 @@ static int mux_vr2mux_legacy(struct seninf_ctx *ctx, int mux_vr)
 	else if ((mux_vr >= sat_mux_vr_first) && (mux_vr <= sat_mux_vr_last))
 		mux = sat_mux_first + ((mux_vr - sat_mux_vr_first) / SAT_MUX_FACTOR);
 
-	else if ((mux_vr >= sv_normal_mux_first) &&
-			 (mux_vr <= sv_normal_mux_last)) {
+	else if ((mux_vr >= sv_normal_mux_vr_first) &&
+			 (mux_vr <= sv_normal_mux_vr_last)) {
 		mux = sat_mux_last + (mux_vr - sat_mux_vr_last);
 
 	} else if ((mux_vr >= raw_mux_vr_first) && (mux_vr <= raw_mux_vr_last)) {
@@ -430,7 +430,9 @@ static int mux_vr2mux_(struct seninf_ctx *ctx, int mux_vr) {
 		mux = uisp_mux_first + (mux_vr - uisp_mux_vr_first);
 
 	} else {
-		dev_info(ctx->dev,
+
+		if (mux_vr != IDLE_SRC_SEL)
+			dev_info(ctx->dev,
 				"[%s][ERROR] Input(mux_id %d) is invalid\n", __func__, mux_vr);
 	}
 
