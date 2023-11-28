@@ -116,6 +116,10 @@ static int res_calc_fill_sensor(struct mtk_cam_res_calc *c,
 		c->line_time;
 	c->width = s->width;
 	c->height = s->height;
+	c->min_opp_idx_plus_one =
+		unlikely(GET_PLAT_HW(platform_id) == 6878 &&
+		scen_is_normal(&r->scen) &&
+		r->scen.scen.normal.stagger_type == MTK_CAM_STAGGER_NORMAL) ? 1 : 0;
 	return 0;
 }
 
@@ -276,7 +280,7 @@ static inline int mtk_raw_find_combination(struct mtk_cam_res_calc *c,
 	stepper->frontal_pixel_mode = stepper->frontal_pixel_mode_min;
 	stepper->pixel_mode = stepper->pixel_mode_min;
 	stepper->num_raw = stepper->num_raw_min;
-	stepper->opp_idx = stepper->min_opp_idx;
+	stepper->opp_idx = stepper->min_opp_idx + c->min_opp_idx_plus_one;
 
 	return loop_resource_till_valid(c, stepper,
 					policy, ARRAY_SIZE(policy));
