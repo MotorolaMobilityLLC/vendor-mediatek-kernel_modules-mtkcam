@@ -4180,43 +4180,6 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 	return 0;
 }
 
-/* note:
- *   issue: would timeout. can't enable this now
- */
-//#define DO_ADLWR_RESET
-
-#ifdef DO_ADLWR_RESET
-#define ADLWR_ADL_RESET 0x800
-static void adlwr_reset(struct mtk_cam_device *cam_dev)
-{
-	int sw_ctl;
-	int ret;
-
-	if (IS_ERR_OR_NULL(cam_dev->adl_base)) {
-		dev_info(cam_dev->dev, "%s: skipped\n", __func__);
-		return;
-	}
-
-	writel(0, cam_dev->adl_base + ADLWR_ADL_RESET);
-	writel(BIT(1), cam_dev->adl_base + ADLWR_ADL_RESET);
-	wmb(); /* make sure committed */
-
-	ret = readx_poll_timeout(readl, cam_dev->adl_base + ADLWR_ADL_RESET,
-				 sw_ctl,
-				 sw_ctl & BIT(0),
-				 1 /* delay, us */,
-				 5000 /* timeout, us */);
-	if (ret < 0) {
-		dev_info(cam_dev->dev, "%s: error: timeout!\n", __func__);
-		return;
-	}
-
-	/* do hw rst */
-	writel(0x3c, cam_dev->adl_base + ADLWR_ADL_RESET);
-	writel(0, cam_dev->adl_base + ADLWR_ADL_RESET);
-}
-#endif
-
 static void init_camsys_main_adl_setting(struct mtk_cam_device *cam_dev)
 {
 	/* CAM_MAIN_ADLWR_CTRL set RAWA/B/C CQ to super priority */
@@ -4243,9 +4206,6 @@ static int mtk_cam_runtime_resume(struct device *dev)
 	camsys_main_lp_ctrl(cam_dev, true);
 
 	init_camsys_main_adl_setting(cam_dev);
-#ifdef DO_ADLWR_RESET
-	adlwr_reset(cam_dev);
-#endif
 
 	mtk_cam_timesync_init(true);
 

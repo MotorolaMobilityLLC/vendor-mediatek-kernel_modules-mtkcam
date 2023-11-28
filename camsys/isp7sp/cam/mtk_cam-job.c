@@ -2635,6 +2635,16 @@ _job_pack_m2m(struct mtk_cam_job *job,
 	return ret;
 }
 
+int master_raw_set_m2m(struct device *dev, struct mtk_cam_job *job)
+{
+	struct mtk_raw_device *raw = dev_get_drvdata(dev);
+
+	if (is_m2m_apu(job))
+		adlrd_reset(raw->cam);
+
+	return 0;
+}
+
 static int
 _job_pack_only_sv(struct mtk_cam_job *job,
 	 struct pack_job_ops_helper *job_helper)
@@ -3705,6 +3715,10 @@ struct initialize_params subsample_init = {
 	.master_raw_init = master_raw_set_subsample,
 };
 
+struct initialize_params m2m_init = {
+	.master_raw_init = master_raw_set_m2m,
+};
+
 void mtk_cam_job_clean_prev_img_pool(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -3856,6 +3870,7 @@ static int job_factory(struct mtk_cam_job *job)
 
 		mtk_cam_job_state_init_m2m(&job->job_state, &m2m_state_cb);
 		job->ops = &m2m_job_ops;
+		job->init_params = &m2m_init;
 		break;
 	case JOB_TYPE_MSTREAM:
 		pack_helper = &mstream_pack_helper;

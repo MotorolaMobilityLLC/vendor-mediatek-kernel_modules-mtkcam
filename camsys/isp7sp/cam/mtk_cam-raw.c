@@ -809,6 +809,49 @@ RESET_FAILURE:
 	wmb(); /* make sure committed */
 }
 
+#define ADLRD_RESET  0x1800
+#define ADLRD_CTRL_1 0x1804
+#define ADLRD_CTRL_2 0x1808
+void adlrd_reset(struct mtk_cam_device *cam_dev)
+{
+	int adl_ctrl, sw_ctl;
+	int ret;
+
+	if (IS_ERR_OR_NULL(cam_dev->adl_base)) {
+		dev_info(cam_dev->dev, "%s: skipped\n", __func__);
+		return;
+	}
+
+	/* disable double buffer */
+	adl_ctrl = readl(cam_dev->adl_base + ADLRD_RESET);
+	writel(adl_ctrl | BIT(12), cam_dev->adl_base + ADLRD_RESET);
+	writel(0x1, cam_dev->adl_base + ADLRD_CTRL_2);
+
+	writel(BIT(1), cam_dev->adl_base + ADLRD_RESET);
+	wmb(); /* make sure committed */
+
+	ret = readx_poll_timeout(readl, cam_dev->adl_base + ADLRD_RESET,
+				 sw_ctl,
+				 sw_ctl & BIT(0),
+				 1 /* delay, us */,
+				 5000 /* timeout, us */);
+	if (ret < 0) {
+		dev_info(cam_dev->dev, "%s: error: timeout!\n", __func__);
+		return;
+	}
+
+	/* do hw rst */
+	writel(BIT(2), cam_dev->adl_base + ADLRD_RESET);
+	writel(0, cam_dev->adl_base + ADLRD_RESET);
+
+	writel(adl_ctrl, cam_dev->adl_base + ADLRD_CTRL_1);
+	writel(0x1, cam_dev->adl_base + ADLRD_CTRL_2);
+
+	wmb(); /* make sure committed */
+
+	dev_info(cam_dev->dev, "%s done\n", __func__);
+}
+
 static int reset_msgfifo(struct mtk_raw_device *dev)
 {
 	atomic_set(&dev->is_fifo_overflow, 0);
