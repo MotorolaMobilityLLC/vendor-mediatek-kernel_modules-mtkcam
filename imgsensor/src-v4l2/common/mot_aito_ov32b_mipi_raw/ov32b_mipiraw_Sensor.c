@@ -88,6 +88,17 @@ static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 	},
 };
 
+static struct mtk_mbus_frame_desc_entry frame_desc_cus1[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2b,
+			.hsize = 0xCC0,
+			.vsize = 0x72C,
+		},
+	},
+};
+
 static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_prev,
@@ -104,7 +115,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.linelength = 1440,
 		.framelength = 2664,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 340800000,
+		.mipi_pixel_rate = 375600000,
 		.readout_length = 0,
 		.read_margin = 0,
 		.imgsensor_winsize_info = {
@@ -150,7 +161,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.linelength = 1440,
 		.framelength = 2664,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 340800000,
+		.mipi_pixel_rate = 375600000,
 		.readout_length = 0,
 		.read_margin = 0,
 		.imgsensor_winsize_info = {
@@ -197,7 +208,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.linelength = 1440,
 		.framelength = 2664,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 340800000,
+		.mipi_pixel_rate = 375600000,
 		.readout_length = 0,
 		.read_margin = 0,
 		.imgsensor_winsize_info = {
@@ -243,7 +254,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.linelength = 1440,
 		.framelength = 2664,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 340800000,
+		.mipi_pixel_rate = 375600000,
 		.readout_length = 0,
 		.read_margin = 0,
 		.imgsensor_winsize_info = {
@@ -289,7 +300,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.linelength = 1440,
 		.framelength = 2664,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 340800000,
+		.mipi_pixel_rate = 375600000,
 		.readout_length = 0,
 		.read_margin = 0,
 		.imgsensor_winsize_info = {
@@ -309,6 +320,52 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.y2_tg_offset = 0,
 			.w2_tg_size = 3264,
 			.h2_tg_size = 2448,
+		},
+		.aov_mode = 0,
+		.s_dummy_support = 1,
+		.ae_ctrl_support = 1,
+		.pdaf_cap = FALSE,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.ae_binning_ratio = 1,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {0},
+	},
+	{
+		.frame_desc = frame_desc_cus1,
+		.num_entries = ARRAY_SIZE(frame_desc_cus1),
+		.mode_setting_table = addr_data_pair_custom1,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom1),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 115200000,
+		.linelength = 720,
+		.framelength = 2664,
+		.max_framerate = 600,
+		.mipi_pixel_rate = 852000000,
+		.readout_length = 0,
+		.read_margin = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 6528,
+			.full_h = 4896,
+			.x0_offset = 0,
+			.y0_offset = 612,
+			.w0_size = 6528,
+			.h0_size = 3672,
+			.scale_w = 3264,
+			.scale_h = 1836,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 3264,
+			.h1_size = 1836,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 3264,
+			.h2_tg_size = 1836,
 		},
 		.aov_mode = 0,
 		.s_dummy_support = 1,
