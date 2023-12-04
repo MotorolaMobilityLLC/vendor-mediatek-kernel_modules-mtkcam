@@ -34,7 +34,7 @@ static u16 addr_data_pair_capture[] = {
 #include "setting/s5kgn8_4096_3072_30fps.h"
 };
 static u16 addr_data_pair_normal_video[] = {
-#include "setting/s5kgn8_4096_3072_30fps.h"
+#include "setting/s5kgn8_4096_2304_30fps.h"
 };
 
 static u16 addr_data_pair_hs_video[] = {
