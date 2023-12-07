@@ -31,7 +31,7 @@ u16 addr_data_pair_video_ov32b2q[] = {
 #include "setting/OV32B40_3264X1836_MIPI852_30FPS_NORMAL_noPD.h"
 };
 u16 addr_data_pair_hs_video_ov32b2q[] = {
-#include "setting/OV32B40_3264X2448_MIPI852_30FPS_NORMAL_noPD.h"
+#include "setting/OV32B40_1632X918_MIPI1704_120FPS_NORMAL_noPD.h"
 };
 u16 addr_data_pair_slim_video_ov32b2q[] = {
 #include "setting/OV32B40_3264X2448_MIPI852_30FPS_NORMAL_noPD.h"
