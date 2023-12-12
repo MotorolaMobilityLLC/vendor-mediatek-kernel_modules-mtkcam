@@ -620,7 +620,7 @@ bool c2ps_boost_cur_uclamp_max(const int cluster, struct global_info *g_info)
 	int cur_floor_uclamp = 0;
 	int cur_uclamp_max_freq = 0, cur_cpu_floor_freq = 0;
 	int *cur_uclamp_max = &(g_info->curr_max_uclamp[cluster]);
-	if (!need_boost_uclamp_max)
+	if (unlikely(!need_boost_uclamp_max))
 		return false;
 
 	cpu_index = c2ps_get_first_cpu_of_cluster(cluster);
@@ -632,7 +632,8 @@ bool c2ps_boost_cur_uclamp_max(const int cluster, struct global_info *g_info)
 		return false;
 
 	cur_uclamp_max_freq = c2ps_get_uclamp_freq(cpu_index, *cur_uclamp_max);
-	if (cur_uclamp_max_freq < cur_cpu_floor_freq) {
+	if (cur_uclamp_max_freq < cur_cpu_floor_freq &&
+		*cur_uclamp_max < cur_floor_uclamp) {
 		*cur_uclamp_max = cur_floor_uclamp;
 		*cur_uclamp_max = min(*cur_uclamp_max, c2ps_get_cpu_max_uclamp(cpu_index));
 		C2PS_LOGD("boost cpu%d uclamp max to: %d", cpu_index, *cur_uclamp_max);
