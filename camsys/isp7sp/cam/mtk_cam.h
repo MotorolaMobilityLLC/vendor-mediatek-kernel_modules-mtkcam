@@ -286,6 +286,9 @@ struct mtk_cam_device {
 
 	/* shutdown flow */
 	wait_queue_head_t shutdown_wq;
+
+	/* mminfra debug cb */
+	struct notifier_block mminfra_dbg_cb;
 };
 
 static inline struct device *subdev_to_cam_dev(struct v4l2_subdev *sd)

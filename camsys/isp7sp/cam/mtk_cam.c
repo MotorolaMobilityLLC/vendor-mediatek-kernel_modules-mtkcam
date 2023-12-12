@@ -23,6 +23,9 @@
 #include <linux/media.h>
 #include <linux/jiffies.h>
 
+#include <soc/mediatek/smi.h>
+#include <mtk-smi-dbg.h>
+
 #include <media/videobuf2-v4l2.h>
 #include <media/v4l2-event.h>
 #include <media/v4l2-fwnode.h>
@@ -3959,6 +3962,35 @@ static irqreturn_t mtk_irq_adlrd(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+static int mtk_cam_mminfra_dbg_cb(struct notifier_block *nb,
+			unsigned long value, void *data)
+{
+	struct mtk_cam_device *cam =
+			container_of(nb, struct mtk_cam_device, mminfra_dbg_cb);
+	struct mtk_raw_device *raw;
+	int i, ret = 0;
+
+	if (atomic_read(&cam->initialize_cnt) == 0) {
+		dev_info(cam->dev, "cam device may off(%d)\n", ret);
+		return 0;
+	}
+
+	for (i = 0; i < cam->engines.num_raw_devices; i++) {
+		raw = dev_get_drvdata(cam->engines.raw_devs[i]);
+
+		ret = pm_runtime_get_if_in_use(raw->dev);
+		if (ret <= 0) {
+			dev_info(cam->dev, "raw-%d may off(%d)\n", i, ret);
+			continue;
+		}
+
+		raw_dump_dma_status(raw);
+		pm_runtime_put_sync(raw->dev);
+	}
+
+	return 0;
+}
+
 static int mtk_cam_probe(struct platform_device *pdev)
 {
 	struct mtk_cam_device *cam_dev;
@@ -4089,6 +4121,10 @@ SKIP_ADLRD_IRQ:
 
 	mtk_cam_debug_init(&cam_dev->dbg, cam_dev);
 	init_waitqueue_head(&cam_dev->shutdown_wq);
+
+	/* mminfra debug cb */
+	cam_dev->mminfra_dbg_cb.notifier_call = mtk_cam_mminfra_dbg_cb;
+	mtk_smi_dbg_register_notifier(&cam_dev->mminfra_dbg_cb);
 
 	return 0;
 

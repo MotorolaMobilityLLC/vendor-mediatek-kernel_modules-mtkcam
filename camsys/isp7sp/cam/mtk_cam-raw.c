@@ -2648,3 +2648,75 @@ void raw_dump_debug_status(struct mtk_raw_device *dev, bool is_srt)
 			       dbg_RAWI_R5, ARRAY_SIZE(dbg_RAWI_R5));
 #endif
 }
+
+void raw_dump_dma_status(struct mtk_raw_device *dev)
+{
+	struct mtk_yuv_device *yuv = get_yuv_dev(dev);
+	int ctl2_mod5_en = readl(yuv->base + REG_CAMCTL2_MOD5_EN);
+
+	dev_info(dev->dev, "%s : ctl2_mod5_en: 0x%x, cam_main: 0x%x\n",
+		__func__, ctl2_mod5_en, readl(dev->cam->base));
+
+	//yuvo_r1
+	if (READ_FIELD(ctl2_mod5_en, CAMCTL2_YUVO_R1_EN))
+		mtk_cam_dump_dma_debug(dev, yuv->base + 0x4000, "YUVO_R1", //yuvo_r1 + yuvbo_r1
+			dbg_YUVO_R1, ARRAY_SIZE(dbg_YUVO_R1));
+
+	if (READ_FIELD(ctl2_mod5_en, CAMCTL2_YUVCO_R1_EN))
+		mtk_cam_dump_dma_debug(dev, yuv->base + 0x4000, "YUVCO_R1", //yuvco_r1 + yuvdo_r1
+			dbg_YUVCO_R1, ARRAY_SIZE(dbg_YUVCO_R1));
+
+	//yuvo_r2
+	if (READ_FIELD(ctl2_mod5_en, CAMCTL2_YUVO_R2_EN))
+		mtk_cam_dump_dma_debug(dev, yuv->base + 0x4000, "YUVO_R2", //yuvo_r2 + yuvbo_r2
+			dbg_YUVO_R2, ARRAY_SIZE(dbg_YUVO_R2));
+
+	//yuvo_r3
+	if (READ_FIELD(ctl2_mod5_en, CAMCTL2_YUVO_R3_EN))
+		mtk_cam_dump_dma_debug(dev, yuv->base + 0x4000, "YUVO_R3", //yuvo_r3 + yuvbo_r3
+			dbg_YUVO_R3, ARRAY_SIZE(dbg_YUVO_R3));
+
+	if (READ_FIELD(ctl2_mod5_en, CAMCTL2_YUVCO_R3_EN))
+		mtk_cam_dump_dma_debug(dev, yuv->base + 0x4000, "YUVCO_R3", //yuvco_r3 + yuvdo_r3
+			dbg_YUVCO_R3, ARRAY_SIZE(dbg_YUVCO_R3));
+
+	//yuvo_r4
+	if (READ_FIELD(ctl2_mod5_en, CAMCTL2_YUVO_R4_EN))
+		mtk_cam_dump_dma_debug(dev, yuv->base + 0x4000, "YUVO_R4", //yuvo_r4 + yuvbo_r4
+			dbg_YUVO_R4, ARRAY_SIZE(dbg_YUVO_R4));
+
+	//rzh1n2to_r1
+	if (READ_FIELD(ctl2_mod5_en, CAMCTL2_RZH1N2TO_R1_EN))
+		mtk_cam_dump_dma_debug(dev, yuv->base + 0x4000, "RZH1N2TO_R1", //rzh1n2to_r1 + rzh1n2tbo_r1
+			dbg_RZH1N2TO_R1, ARRAY_SIZE(dbg_RZH1N2TO_R1));
+
+	//rzh1n2to_r2
+	if (READ_FIELD(ctl2_mod5_en, CAMCTL2_RZH1N2TO_R2_EN))
+		mtk_cam_dump_dma_debug(dev, yuv->base + 0x4000, "RZH1N2TO_R2",
+			dbg_RZH1N2TO_R2, ARRAY_SIZE(dbg_RZH1N2TO_R2));
+
+	//rzh1n2to_r3
+	if (READ_FIELD(ctl2_mod5_en, CAMCTL2_RZH1N2TO_R3_EN))
+		mtk_cam_dump_dma_debug(dev, yuv->base + 0x4000, "RZH1N2TO_R3", //rzh1n2to_r3 + rzh1n2tbo_r3
+			dbg_RZH1N2TO_R3, ARRAY_SIZE(dbg_RZH1N2TO_R3));
+
+	//drzs4no_r1
+	if (READ_FIELD(ctl2_mod5_en, CAMCTL2_DRZS4NO_R1_EN))
+		mtk_cam_dump_dma_debug(dev, yuv->base + 0x4000, "DRZS4NO_R1",
+			dbg_DRZS4NO_R1, ARRAY_SIZE(dbg_DRZS4NO_R1));
+
+	//drzs4no_r3
+	if (READ_FIELD(ctl2_mod5_en, CAMCTL2_DRZS4NO_R3_EN))
+		mtk_cam_dump_dma_debug(dev, yuv->base + 0x4000, "DRZS4NO_R3",
+			dbg_DRZS4NO_R3, ARRAY_SIZE(dbg_DRZS4NO_R3));
+
+	//drzh2no_r8
+	if (READ_FIELD(ctl2_mod5_en, CAMCTL2_DRZH2NO_R8_EN))
+		mtk_cam_dump_dma_debug(dev, yuv->base + 0x4000, "DRZH2NO_R8",
+			dbg_DRZH2NO_R8, ARRAY_SIZE(dbg_DRZH2NO_R8));
+
+	//tcyso_r1
+	if (READ_FIELD(ctl2_mod5_en, CAMCTL2_TCYSO_R1_EN))
+		mtk_cam_dump_dma_debug(dev, yuv->base + 0x4000, "TCYSO_R1",
+			dbg_TCYSO_R1, ARRAY_SIZE(dbg_TCYSO_R1));
+}

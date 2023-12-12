@@ -154,6 +154,7 @@ void write_pkt_trigger_apu_frame_mode(struct mtk_raw_device *dev,
 				      struct cmdq_pkt *pkt);
 
 void raw_dump_debug_status(struct mtk_raw_device *dev, bool is_srt);
+void raw_dump_dma_status(struct mtk_raw_device *dev);
 
 /* reset */
 void reset(struct mtk_raw_device *dev);
