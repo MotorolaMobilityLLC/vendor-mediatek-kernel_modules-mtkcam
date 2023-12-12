@@ -25,7 +25,6 @@
 static void set_group_hold(void *arg, u8 en);
 static u16 get_gain2reg(u32 gain);
 static int s5kgn8set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
-static int s5kgn8set_test_pattern_data(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
 static void s5kgn8sensor_init(struct subdrv_ctx *ctx);
 static int open(struct subdrv_ctx *ctx);
@@ -35,7 +34,6 @@ static int s5kgn8set_ctrl_locker(struct subdrv_ctx *ctx, u32 cid, bool *is_lock)
 
 static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, s5kgn8set_test_pattern},
-	{SENSOR_FEATURE_SET_TEST_PATTERN_DATA, s5kgn8set_test_pattern_data},
 };
 
 
@@ -92,19 +90,18 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
-#if 0
+
 	{
 		.bus.csi2 = {
 			.channel = 1,
-			.data_type = 0x31,
+			.data_type = 0x30,
 			.hsize = 0x1000,
 			.vsize = 0x240,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW12,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 			.valid_bit = 10,
 		},
 	},
-#endif
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
@@ -198,22 +195,20 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus4[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
-#if 0
+#if 1
 	{
 		.bus.csi2 = {
 			.channel = 1,
-			.data_type = 0x31,
+			.data_type = 0x30,
 			.hsize = 0x1000,
 			.vsize = 0x240,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW12,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 			.valid_bit = 10,
 		},
 	},
 #endif
 };
-
-
 
 static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
 	{
@@ -225,7 +220,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
-#if 0
+
 	{
 		.bus.csi2 = {
 			.channel = 1,
@@ -236,14 +231,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
-#endif
+
 };
-
-
-
-
-
-
 
 
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
@@ -335,7 +324,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus4_info = {
 	},
 };
 
-#if 0
+
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_vid_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 0,
@@ -379,7 +368,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_vid_info = {
 		.i4PDOrder = {0,1}, // R = 1, L = 0
 	},
 };
-#endif
+
 static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_prev,
@@ -392,13 +381,12 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1600000000,
+		.pclk = 1599972480,
 		.linelength = 5088,
 		.framelength = 10482,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 1600000000,
+		.mipi_pixel_rate = 2221632000,
 		.readout_length = 0,
-		.read_margin = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -439,13 +427,12 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1600000000,
+		.pclk = 1599972480,
 		.linelength = 5088,
 		.framelength = 10482,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 1600000000,
+		.mipi_pixel_rate = 2221632000,
 		.readout_length = 0,
-		.read_margin = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -480,19 +467,18 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_vid),
 		.mode_setting_table = addr_data_pair_normal_video,
 		.mode_setting_len = ARRAY_SIZE(addr_data_pair_normal_video),
-		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_group = 0,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1590000000,
+		.pclk = 1589280000,
 		.linelength = 17600,
 		.framelength = 3010,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 1590000000,
+		.mipi_pixel_rate = 1851360000,
 		.readout_length = 0,
-		.read_margin = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -511,12 +497,12 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 2304,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_vid_info,
 	        .min_exposure_line = 16,
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
-                .ana_gain_max = BASEGAIN * 64,
+                .ana_gain_max = BASEGAIN * 16,
 		.ae_binning_ratio = 4,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -533,13 +519,12 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1600000000,
+		.pclk = 1599736320,
 		.linelength = 5096,
 		.framelength = 2616,
 		.max_framerate = 1200,
-		.mipi_pixel_rate = 1600000000,
+		.mipi_pixel_rate = 2221632000,
 		.readout_length = 0,
-		.read_margin = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -580,13 +565,12 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1600000000,
+		.pclk = 1599972480,
 		.linelength = 5088,
 		.framelength = 10482,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 1600000000,
+		.mipi_pixel_rate = 2221632000,
 		.readout_length = 0,
-		.read_margin = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -628,13 +612,12 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1600000000,
+		.pclk = 1599495168,
 		.linelength = 9392,
 		.framelength = 7096,
 		.max_framerate = 240,
-		.mipi_pixel_rate = 1600000000,
+		.mipi_pixel_rate = 2221632000,
 		.readout_length = 0,
-		.read_margin = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -675,13 +658,12 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1600000000,
+		.pclk = 1599882240,
 		.linelength = 6127,
 		.framelength = 4352,
 		.max_framerate = 600,
-		.mipi_pixel_rate = 1600000000,
+		.mipi_pixel_rate = 2221632000,
 		.readout_length = 0,
-		.read_margin = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -722,13 +704,12 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1600000000,
+		.pclk = 1599736320,
 		.linelength = 5096,
 		.framelength = 1308,
 		.max_framerate = 2400,
-		.mipi_pixel_rate = 1600000000,
+		.mipi_pixel_rate = 2221632000,
 		.readout_length = 0,
-		.read_margin = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -763,19 +744,18 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_cus4),
 		.mode_setting_table = addr_data_pair_custom4,
 		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom4),
-		.seamless_switch_group = 1,
+		.seamless_switch_group = 0,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1590000000,
+		.pclk = 1589280000,
 		.linelength = 17600,
 		.framelength = 3010,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 1590000000,
+		.mipi_pixel_rate = 1851360000,
 		.readout_length = 0,
-		.read_margin = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -794,12 +774,12 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 2304,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_vid_info,
 	        .min_exposure_line = 8,
 		.read_margin =24,
                 .ana_gain_min = BASEGAIN * 1,
-                .ana_gain_max = BASEGAIN * 64,
+                .ana_gain_max = BASEGAIN * 16,
 		.ae_binning_ratio = 4,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -816,13 +796,12 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1600000000,
+		.pclk = 1599889200,
 		.linelength = 5096,
 		.framelength = 10465,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 1600000000,
+		.mipi_pixel_rate = 2221632000,
 		.readout_length = 0,
-		.read_margin = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -890,8 +869,8 @@ static struct subdrv_static_ctx static_ctx = {
 	.frame_time_delay_frame = 2,
 	.start_exposure_offset = 500000,    // CTS sensor fusion test
 	.pdaf_type = PDAF_SUPPORT_CAMSV_QPD,
-	.hdr_type = HDR_SUPPORT_NA,
-	.seamless_switch_support = FALSE,
+	.hdr_type = HDR_SUPPORT_DCG,
+	.seamless_switch_support = TRUE,
 	.temperature_support = FALSE,
 	.g_temp = PARAM_UNDEFINED,
 	.g_gain2reg = get_gain2reg,
@@ -979,40 +958,19 @@ static u16 get_gain2reg(u32 gain)
 static int s5kgn8set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 
-#if 0
+
 	u32 mode = *((u32 *)para);
 
 	if (mode != ctx->test_pattern)
 		DRV_LOG(ctx, "mode(%u->%u)\n", ctx->test_pattern, mode);
-	/* 1:Solid Color 2:Color Bar 5:Black */
 	if (mode)
-		subdrv_i2c_wr_u16(ctx, 0x0600, mode); /*100% Color bar*/
+		subdrv_i2c_wr_u16(ctx, 0x0600, 0x0001); /*Black*/
 	else if (ctx->test_pattern)
 		subdrv_i2c_wr_u16(ctx, 0x0600, 0x0000); /*No pattern*/
 
 	ctx->test_pattern = mode;
 
-#endif
-	return ERROR_NONE;
-}
 
-static int s5kgn8set_test_pattern_data(struct subdrv_ctx *ctx, u8 *para, u32 *len)
-{
-#if 0
-	struct mtk_test_pattern_data *data = (struct mtk_test_pattern_data *)para;
-	u16 R = (data->Channel_R >> 22) & 0x3ff;
-	u16 Gr = (data->Channel_Gr >> 22) & 0x3ff;
-	u16 Gb = (data->Channel_Gb >> 22) & 0x3ff;
-	u16 B = (data->Channel_B >> 22) & 0x3ff;
-
-	subdrv_i2c_wr_u16(ctx, 0x0602, R);
-	subdrv_i2c_wr_u16(ctx, 0x0604, Gr);
-	subdrv_i2c_wr_u16(ctx, 0x0606, B);
-	subdrv_i2c_wr_u16(ctx, 0x0608, Gb);
-
-	DRV_LOG(ctx, "mode(%u) R/Gr/Gb/B = 0x%04x/0x%04x/0x%04x/0x%04x\n",
-		ctx->test_pattern, R, Gr, Gb, B);
-#endif
 	return ERROR_NONE;
 }
 
