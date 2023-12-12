@@ -88,7 +88,7 @@ static inline struct v4l2_rect fullsize_as_crop(unsigned int w, unsigned int h)
 	};
 }
 
-#define USE_CTRL_PIXEL_RATE 0
+#define USE_CTRL_PIXEL_RATE 1
 #define DC_MODE_VB_MARGIN 100
 
 static int res_calc_fill_sensor(struct mtk_cam_res_calc *c,
@@ -103,7 +103,10 @@ static int res_calc_fill_sensor(struct mtk_cam_res_calc *c,
 	interval = 1000000000L * interval_n / interval_d;
 
 #if USE_CTRL_PIXEL_RATE
-	c->mipi_pixel_rate = s->pixel_rate;
+	c->mipi_pixel_rate = s->pixel_rate ? s->pixel_rate :
+		(u64)(s->width + s->hblank)
+		* (s->height + s->vblank)
+		* interval_d / interval_n;
 #else
 	c->mipi_pixel_rate =
 		(u64)(s->width + s->hblank)
