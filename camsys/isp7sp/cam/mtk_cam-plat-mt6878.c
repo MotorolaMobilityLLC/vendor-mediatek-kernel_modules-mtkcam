@@ -240,10 +240,8 @@ static int get_meta_cfg_port_size(
 	case PORT_PDI:
 		return stats_cfg->pde_param.pdi_max_size;
 	default:
-		pr_info("%s: %s: not supported: %d\n",
-			__FILE__, __func__, dma_port);
+		return 0;
 	}
-	return 0;
 }
 
 static int get_meta_stats0_port_size(
