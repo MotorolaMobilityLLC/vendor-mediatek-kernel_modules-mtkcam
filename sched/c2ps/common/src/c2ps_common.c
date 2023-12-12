@@ -35,12 +35,14 @@ int proc_time_window_size = 1;
 int debug_log_on = 0;
 int background_idlerate_alert = 12;
 int background_idlerate_dangerous = 5;
+int c2ps_placeholder = 0;
 bool recovery_uclamp_max_immediately = false;
 bool need_boost_uclamp_max = true;
 module_param(proc_time_window_size, int, 0644);
 module_param(debug_log_on, int, 0644);
 module_param(background_idlerate_alert, int, 0644);
 module_param(background_idlerate_dangerous, int, 0644);
+module_param(c2ps_placeholder, int, 0644);
 module_param(recovery_uclamp_max_immediately, bool, 0644);
 module_param(need_boost_uclamp_max, bool, 0644);
 
@@ -348,21 +350,34 @@ inline void set_config_camfps(int camfps)
 	c2ps_info_unlock(&glb_info->mlock);
 }
 
-inline void set_special_uclamp_max(int camfps)
+inline void decide_special_uclamp_max(int placeholder_type)
 {
-	// Temp solution for capture
-	// Suppose 3 cluters, set cluster_index to number of clusters - 1
-	int cluster_index = 2;
 	if (!glb_info) {
 		C2PS_LOGE("glb_info is null\n");
 		return;
 	}
 
 	c2ps_info_lock(&glb_info->mlock);
-	glb_info->use_special_uclamp_max = false;
-	for (; cluster_index >= 0; --cluster_index) {
-		glb_info->special_uclamp_max[cluster_index] = (camfps & (MAX_UCLAMP - 1));
-		camfps >>= 10;
+	switch (placeholder_type) {
+		// For backward compatibility, set special uclamp max to
+		// placeholder1 setting for case 0
+		case 0:
+		case 1:
+			memcpy(glb_info->special_uclamp_max, glb_info->uclamp_max_placeholder1,
+				c2ps_nr_clusters * sizeof(int));
+			break;
+		case 2:
+			memcpy(glb_info->special_uclamp_max, glb_info->uclamp_max_placeholder2,
+				c2ps_nr_clusters * sizeof(int));
+			break;
+		case 3:
+			memcpy(glb_info->special_uclamp_max, glb_info->uclamp_max_placeholder3,
+				c2ps_nr_clusters * sizeof(int));
+			break;
+		default:
+			memcpy(glb_info->special_uclamp_max, glb_info->uclamp_max_placeholder1,
+				c2ps_nr_clusters * sizeof(int));
+			break;
 	}
 	c2ps_info_unlock(&glb_info->mlock);
 	C2PS_LOGD(
@@ -418,6 +433,22 @@ inline bool is_group_head(struct c2ps_task_info *tsk_info)
 		return false;
 	}
 	return tsk_info->task_id == tsk_info->tsk_group->group_head;
+}
+
+inline bool need_update_single_shot_uclamp_max(int *uclamp_max)
+{
+	short cluster_index = 0;
+
+	if (!glb_info) {
+		C2PS_LOGE("glb_info is null\n");
+		return false;
+	}
+
+	for (; cluster_index < c2ps_nr_clusters; ++cluster_index) {
+		if (uclamp_max[cluster_index] <= 0)
+			return false;
+	}
+	return true;
 }
 
 void c2ps_systrace_c(pid_t pid, int val, const char *fmt, ...)
@@ -758,8 +789,7 @@ inline bool need_update_background(void)
 		return false;
 
 	// temp solution, use alert = 100 to indicate release background uclamp max
-	if (background_idlerate_alert >= 100) {
-		short _cluster_idx = 0;
+	if (background_idlerate_alert >= 100 || c2ps_placeholder) {
 		if (!is_release_uclamp_max) {
 			c2ps_info_lock(&glb_info->mlock);
 			{
@@ -767,17 +797,13 @@ inline bool need_update_background(void)
 				for (; _idx < c2ps_nr_clusters; _idx++) {
 					glb_info->recovery_uclamp_max[_idx] =
 								glb_info->curr_max_uclamp[_idx];
-
 				}
 			}
 			c2ps_info_unlock(&glb_info->mlock);
 		}
+		decide_special_uclamp_max(c2ps_placeholder);
 		is_release_uclamp_max = true;
 		glb_info->use_special_uclamp_max = true;
-		glb_info->need_update_uclamp[0] = 1;
-
-		for (; _cluster_idx < c2ps_nr_clusters; _cluster_idx++)
-			glb_info->need_update_uclamp[1 + _cluster_idx] = 1;
 
 		return true;
 	}
@@ -793,7 +819,8 @@ inline void reset_need_update_status(void)
 	if (!glb_info)
 		return;
 
-	if (is_release_uclamp_max && background_idlerate_alert < 100) {
+	if (is_release_uclamp_max &&
+		(background_idlerate_alert < 100 && !c2ps_placeholder)) {
 		int _recovery[MAX_NUMBER_OF_CLUSTERS] = {0};
 		short _cluster_idx = 0;
 
@@ -820,6 +847,25 @@ inline void reset_need_update_status(void)
 		is_release_uclamp_max = false;
 	}
 	glb_info->need_update_uclamp[0] = 0;
+}
+
+inline bool need_send_regulator_req(struct global_info *g_info)
+{
+	bool same_uclamp_max = true;
+	short cluster_idx = 0;
+
+	if (!g_info)
+		return false;
+
+	for (; cluster_idx < c2ps_nr_clusters; cluster_idx++) {
+		if (likely(g_info->curr_max_uclamp[cluster_idx] !=
+				g_info->special_uclamp_max[cluster_idx])) {
+			same_uclamp_max = false;
+			break;
+		}
+	}
+
+	return !(g_info->use_special_uclamp_max && same_uclamp_max);
 }
 
 static ssize_t task_info_show(struct kobject *kobj,
@@ -921,7 +967,7 @@ static ssize_t gear_uclamp_max_show(struct kobject *kobj,
 
 static KOBJ_ATTR_RW(gear_uclamp_max);
 
-int init_c2ps_common(int camfps)
+int init_c2ps_common(void)
 {
 	int ret = 0;
 
@@ -942,8 +988,6 @@ int init_c2ps_common(int camfps)
 	}
 
 	set_glb_info_bg_uclamp_max();
-	// FIXME: temp solution to set special Uclamp max
-	set_special_uclamp_max(camfps);
 
 	return ret;
 }

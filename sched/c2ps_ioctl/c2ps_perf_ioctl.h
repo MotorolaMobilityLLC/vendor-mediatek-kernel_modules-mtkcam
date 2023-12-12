@@ -19,6 +19,7 @@
 #include <linux/ioctl.h>
 
 #define MAX_TASK_NAME_SIZE 10
+#define MAX_CPU_NUM CONFIG_MAX_NR_CPUS
 
 extern int debug_log_on;
 
@@ -57,6 +58,16 @@ typedef struct C2PS_INFO_NOTIFY {
 	u32 cur_camfps;
 } C2PS_INFO_NOTIFY;
 
+typedef struct C2PS_SINGLE_SHOT_PARAM {
+	int uclamp_max[MAX_CPU_NUM];
+	int idle_rate_alert;
+	int timeout;
+	int uclamp_max_placeholder1[MAX_CPU_NUM];
+	int uclamp_max_placeholder2[MAX_CPU_NUM];
+	int uclamp_max_placeholder3[MAX_CPU_NUM];
+	bool reset_param;
+} C2PS_SINGLE_SHOT_PARAM;
+
 #define C2PS_IOCTL_MAGIC 'g'
 #define C2PS_ACTIVATE       _IOW(C2PS_IOCTL_MAGIC, 27, C2PS_INIT_PARAM)
 #define C2PS_ADD_TASK       _IOW(C2PS_IOCTL_MAGIC, 28, C2PS_TASK_INIT_PARAMS)
@@ -66,6 +77,7 @@ typedef struct C2PS_INFO_NOTIFY {
 #define C2PS_DESTROY        _IOW(C2PS_IOCTL_MAGIC, 32, C2PS_UNINIT_PARAM)
 #define C2PS_NOTIFY_VSYNC   _IOW(C2PS_IOCTL_MAGIC, 33, C2PS_INFO_NOTIFY)
 #define C2PS_NOTIFY_CAMFPS  _IOW(C2PS_IOCTL_MAGIC, 34, C2PS_INFO_NOTIFY)
+#define C2PS_TASK_SINGLE_SHOT    _IOW(C2PS_IOCTL_MAGIC, 35, C2PS_SINGLE_SHOT_PARAM)
 
 #define C2PS_LOGD(fmt, ...)                                             \
     do {                                                                \

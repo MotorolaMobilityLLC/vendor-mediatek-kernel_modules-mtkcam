@@ -204,17 +204,13 @@ void c2ps_regulator_bgpolicy_simple(struct regulator_req *req)
 		if (req->glb_info->need_update_uclamp[1 + cluster_index] == 2) {
 			*_cur_bg_uclamp = (int)(req->glb_info->max_uclamp[cluster_index]
 				      * (100 + (*_bg_uclamp_up_margin[cluster_index])) / 100);
+		} else if (req->glb_info->use_special_uclamp_max &&
+				req->glb_info->special_uclamp_max[cluster_index] > 0) {
+			*_cur_bg_uclamp = max(req->glb_info->special_uclamp_max[cluster_index],
+								req->glb_info->max_uclamp[cluster_index]);
 		} else if (req->glb_info->need_update_uclamp[1 + cluster_index] == 1) {
 			int _max_uclamp_max = (int)(req->glb_info->max_uclamp[cluster_index]
 				      * (100 + (*_bg_uclamp_up_margin[cluster_index])) / 100);
-
-			if (req->glb_info->use_special_uclamp_max &&
-				req->glb_info->special_uclamp_max[cluster_index] > 0) {
-				_max_uclamp_max =
-							req->glb_info->special_uclamp_max[cluster_index];
-				_max_uclamp_max =
-				max(_max_uclamp_max, req->glb_info->max_uclamp[cluster_index]);
-			}
 
 			*_cur_bg_uclamp += c2ps_regulator_bg_update_uclamp;
 

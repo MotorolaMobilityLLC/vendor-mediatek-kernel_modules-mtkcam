@@ -28,6 +28,11 @@ int (*c2ps_notify_camfps_fp)(int camfps);
 EXPORT_SYMBOL_GPL(c2ps_notify_camfps_fp);
 int (*c2ps_notify_task_scene_change_fp)(int task_id, int scene_mode);
 EXPORT_SYMBOL_GPL(c2ps_notify_task_scene_change_fp);
+int (*c2ps_notify_task_single_shot_fp)(
+	int *uclamp_max, int idle_rate_alert, int timeout,
+	int *uclamp_max_placeholder1, int *uclamp_max_placeholder2,
+	int *uclamp_max_placeholder3, bool reset_param);
+EXPORT_SYMBOL_GPL(c2ps_notify_task_single_shot_fp);
 
 struct proc_dir_entry *c2ps_ioctl_root;
 EXPORT_SYMBOL(c2ps_ioctl_root);
@@ -64,6 +69,7 @@ static long device_ioctl(
 	C2PS_UNINIT_PARAM c2ps_uninit_param;
 	C2PS_TASK_INIT_PARAMS c2ps_tsk_init_param;
 	C2PS_INFO_NOTIFY c2ps_info;
+	C2PS_SINGLE_SHOT_PARAM c2ps_single_shot;
 
 	switch (cmd) {
 	#if IS_ENABLED(CONFIG_MTK_C2PS)
@@ -157,6 +163,23 @@ static long device_ioctl(
 		if (c2ps_notify_camfps_fp)
 			c2ps_notify_camfps_fp((&c2ps_info)->cur_camfps);
 		break;
+	case C2PS_TASK_SINGLE_SHOT:
+		C2PS_LOGD("C2PS_SINGLE_SHOT");
+		if (perfctl_copy_from_user(&c2ps_single_shot, argp,
+			sizeof(c2ps_single_shot))) {
+			ret = -EFAULT;
+			goto ret_ioctl;
+		}
+		if (c2ps_notify_task_single_shot_fp)
+			c2ps_notify_task_single_shot_fp(
+			(&c2ps_single_shot)->uclamp_max,
+			(&c2ps_single_shot)->idle_rate_alert,
+			(&c2ps_single_shot)->timeout,
+			(&c2ps_single_shot)->uclamp_max_placeholder1,
+			(&c2ps_single_shot)->uclamp_max_placeholder2,
+			(&c2ps_single_shot)->uclamp_max_placeholder3,
+			(&c2ps_single_shot)->reset_param);
+		break;
 	#else
 	case C2PS_ACTIVATE:
 		[[fallthrough]];
@@ -173,6 +196,8 @@ static long device_ioctl(
 	case C2PS_NOTIFY_VSYNC:
 		[[fallthrough]];
 	case C2PS_NOTIFY_CAMFPS:
+		[[fallthrough]];
+	case C2PS_TASK_SINGLE_SHOT:
 		[[fallthrough]];
 	break;
 	#endif

@@ -103,6 +103,10 @@ struct global_info {
 	bool use_special_uclamp_max;
 	int special_uclamp_max[MAX_NUMBER_OF_CLUSTERS];
 	int recovery_uclamp_max[MAX_NUMBER_OF_CLUSTERS];
+	int overwrite_uclamp_max[MAX_NUMBER_OF_CLUSTERS];
+	int uclamp_max_placeholder1[MAX_NUMBER_OF_CLUSTERS];
+	int uclamp_max_placeholder2[MAX_NUMBER_OF_CLUSTERS];
+	int uclamp_max_placeholder3[MAX_NUMBER_OF_CLUSTERS];
 	struct mutex mlock;
 };
 
@@ -132,7 +136,7 @@ struct regulator_req {
 #define C2PS_LOGE(fmt, ...) pr_err("[C2PS]: %s %s %d " fmt, \
 	__FILE__, __func__, __LINE__, ##__VA_ARGS__)
 
-int init_c2ps_common(int camfps);
+int init_c2ps_common(void);
 void exit_c2ps_common(void);
 int set_curr_uclamp_hint(int pid, int set);
 int set_curr_uclamp_hint_wo_lock(struct task_struct *p, int set);
@@ -155,7 +159,7 @@ u64 c2ps_get_time(void);
 void c2ps_update_task_info_hist(struct c2ps_task_info *tsk_info);
 struct global_info *get_glb_info(void);
 void set_config_camfps(int camfps);
-void set_special_uclamp_max(int camfps);
+void decide_special_uclamp_max(int placeholder_type);
 void update_vsync_time(u64 ts);
 void update_camfps(int camfps);
 bool is_group_head(struct c2ps_task_info *tsk_info);
@@ -176,6 +180,8 @@ int c2ps_get_cpu_max_uclamp(const int cpu);
 bool c2ps_boost_cur_uclamp_max(const int cluster, struct global_info *g_info);
 int c2ps_get_first_cpu_of_cluster(int cluster);
 unsigned long c2ps_get_cluster_uclamp_freq(int cluster,  unsigned int uclamp);
+bool need_update_single_shot_uclamp_max(int *uclamp_max);
+bool need_send_regulator_req(struct global_info *g_info);
 
 
 extern void set_curr_uclamp_ctrl(int val);
