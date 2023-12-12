@@ -973,7 +973,7 @@ int init_c2ps_common(void)
 
 	hash_init(task_info_tbl);
 	hash_init(task_group_info_tbl);
-	glb_info = kmalloc(sizeof(*glb_info), GFP_KERNEL);
+	glb_info = kzalloc(sizeof(*glb_info), GFP_KERNEL);
 
 	if (unlikely(!glb_info)) {
 		C2PS_LOGE("OOM\n");

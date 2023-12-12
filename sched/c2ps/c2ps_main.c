@@ -76,7 +76,7 @@ static void backgroup_info_update_timer_callback(struct timer_list *t)
 	update_cpu_idle_rate();
 }
 
-static void c2ps_notifier_wq_cb_init(int camfps)
+static void c2ps_notifier_wq_cb_init(void)
 {
 	if (unlikely(init_c2ps_common())) {
 		C2PS_LOGD("init_c2ps_common failed\n");
@@ -300,7 +300,7 @@ static void c2ps_notifier_wq_cb(void)
 
 	switch (vpPush->ePushType) {
 	case C2PS_NOTIFIER_INIT:
-		c2ps_notifier_wq_cb_init(vpPush->camfps);
+		c2ps_notifier_wq_cb_init();
 		break;
 	case C2PS_NOTIFIER_UNINIT:
 		c2ps_notifier_wq_cb_uninit();
