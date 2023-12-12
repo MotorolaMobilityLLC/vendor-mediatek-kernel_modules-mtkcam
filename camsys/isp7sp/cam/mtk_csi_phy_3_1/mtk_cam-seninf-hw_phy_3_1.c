@@ -1748,17 +1748,17 @@ static int csirx_phyA_init(struct seninf_ctx *ctx)
 		SENINF_BITS(base, CDPHY_RX_ANA_7,
 			    RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0x4);//TODO
 		SENINF_BITS(base, CDPHY_RX_ANA_6,
-			    RG_CSI0_CPHY_T0_CDR_AB_WIDTH, 0x9);
+			    RG_CSI0_CPHY_T0_CDR_AB_WIDTH, 0xA);
 		SENINF_BITS(base, CDPHY_RX_ANA_6,
-			    RG_CSI0_CPHY_T0_CDR_BC_WIDTH, 0x9);
+			    RG_CSI0_CPHY_T0_CDR_BC_WIDTH, 0xA);
 		SENINF_BITS(base, CDPHY_RX_ANA_6,
-			    RG_CSI0_CPHY_T0_CDR_CA_WIDTH, 0x9);
+			    RG_CSI0_CPHY_T0_CDR_CA_WIDTH, 0xA);
 		SENINF_BITS(base, CDPHY_RX_ANA_7,
-			    RG_CSI0_CPHY_T1_CDR_AB_WIDTH, 0x9);
+			    RG_CSI0_CPHY_T1_CDR_AB_WIDTH, 0xA);
 		SENINF_BITS(base, CDPHY_RX_ANA_7,
-			    RG_CSI0_CPHY_T1_CDR_BC_WIDTH, 0x9);
+			    RG_CSI0_CPHY_T1_CDR_BC_WIDTH, 0xA);
 		SENINF_BITS(base, CDPHY_RX_ANA_7,
-			    RG_CSI0_CPHY_T1_CDR_CA_WIDTH, 0x9);
+			    RG_CSI0_CPHY_T1_CDR_CA_WIDTH, 0xA);
 
 		/* non-ULPS mode
 		 *	0 : ULPS mode
@@ -3115,9 +3115,9 @@ static int csirx_phyA_setting(struct seninf_ctx *ctx)
 						RG_CSI0_CDPHY_EQ_SR0, 0x0);
 
 				SENINF_BITS(baseA, CDPHY_RX_ANA_6,
-						RG_CSI0_CPHY_T0_CDR_CK_DELAY, 0xA);
+						RG_CSI0_CPHY_T0_CDR_CK_DELAY, 0xC);
 				SENINF_BITS(baseA, CDPHY_RX_ANA_7,
-						RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0xA);
+						RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0xC);
 
 				SENINF_BITS(baseA, CDPHY_RX_ANA_5,
 						RG_CSI0_CDPHY_EQ_IS, 0x2);
@@ -3133,9 +3133,9 @@ static int csirx_phyA_setting(struct seninf_ctx *ctx)
 						RG_CSI0_CDPHY_EQ_SR0, 0x0);
 
 				SENINF_BITS(baseB, CDPHY_RX_ANA_6,
-						RG_CSI0_CPHY_T0_CDR_CK_DELAY, 0xA);
+						RG_CSI0_CPHY_T0_CDR_CK_DELAY, 0xC);
 				SENINF_BITS(baseB, CDPHY_RX_ANA_7,
-						RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0xA);
+						RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0xC);
 
 				SENINF_BITS(baseB, CDPHY_RX_ANA_5,
 						RG_CSI0_CDPHY_EQ_IS, 0x2);
@@ -3152,9 +3152,9 @@ static int csirx_phyA_setting(struct seninf_ctx *ctx)
 						RG_CSI0_CDPHY_EQ_SR0, 0x0);
 
 				SENINF_BITS(baseA, CDPHY_RX_ANA_6,
-						RG_CSI0_CPHY_T0_CDR_CK_DELAY, 0x6);
+						RG_CSI0_CPHY_T0_CDR_CK_DELAY, 0x5);
 				SENINF_BITS(baseA, CDPHY_RX_ANA_7,
-						RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0x6);
+						RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0x5);
 
 				SENINF_BITS(baseA, CDPHY_RX_ANA_5,
 						RG_CSI0_CDPHY_EQ_IS, 0x1);
@@ -3169,9 +3169,9 @@ static int csirx_phyA_setting(struct seninf_ctx *ctx)
 						RG_CSI0_CDPHY_EQ_SR0, 0x0);
 
 				SENINF_BITS(baseB, CDPHY_RX_ANA_6,
-						RG_CSI0_CPHY_T0_CDR_CK_DELAY, 0x6);
+						RG_CSI0_CPHY_T0_CDR_CK_DELAY, 0x5);
 				SENINF_BITS(baseB, CDPHY_RX_ANA_7,
-						RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0x6);
+						RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0x5);
 
 				SENINF_BITS(baseB, CDPHY_RX_ANA_5,
 						RG_CSI0_CDPHY_EQ_IS, 0x1);
@@ -3229,9 +3229,9 @@ static int csirx_phyA_setting(struct seninf_ctx *ctx)
 						RG_CSI0_CDPHY_EQ_SR0, 0x0);
 
 				SENINF_BITS(base, CDPHY_RX_ANA_6,
-						RG_CSI0_CPHY_T0_CDR_CK_DELAY, 0xA);
+						RG_CSI0_CPHY_T0_CDR_CK_DELAY, 0xC);
 				SENINF_BITS(base, CDPHY_RX_ANA_7,
-						RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0xA);
+						RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0xC);
 
 				SENINF_BITS(base, CDPHY_RX_ANA_5,
 						RG_CSI0_CDPHY_EQ_IS, 0x2);
@@ -3247,9 +3247,9 @@ static int csirx_phyA_setting(struct seninf_ctx *ctx)
 						RG_CSI0_CDPHY_EQ_SR0, 0x0);
 
 				SENINF_BITS(base, CDPHY_RX_ANA_6,
-						RG_CSI0_CPHY_T0_CDR_CK_DELAY, 0x6);
+						RG_CSI0_CPHY_T0_CDR_CK_DELAY, 0x5);
 				SENINF_BITS(base, CDPHY_RX_ANA_7,
-						RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0x6);
+						RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0x5);
 
 				SENINF_BITS(base, CDPHY_RX_ANA_5,
 						RG_CSI0_CDPHY_EQ_IS, 0x1);
