@@ -49,7 +49,7 @@ static u16 addr_data_pair_custom1[] = {
 };
 
 static u16 addr_data_pair_custom2[] = {
-#include "setting/s5kgn8_4096_3072_60fps.h"
+#include "setting/s5kgn8_4096_2304_60fps.h"
 };
 
 static u16 addr_data_pair_custom3[] = {
