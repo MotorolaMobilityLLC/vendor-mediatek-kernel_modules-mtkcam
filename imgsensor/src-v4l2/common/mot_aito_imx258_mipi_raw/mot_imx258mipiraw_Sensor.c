@@ -511,8 +511,8 @@ int imx258_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 
 				if (*sensor_id == ctx->s_ctx.sensor_id)
 					return ERROR_NONE;
-				retry--;
 			}
+			retry--;
 		} while (retry > 0);
 		i++;
 		retry = 10;
