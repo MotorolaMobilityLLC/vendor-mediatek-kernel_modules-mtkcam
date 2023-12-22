@@ -94,7 +94,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
-
+#if 0
 	{
 		.bus.csi2 = {
 			.channel = 1,
@@ -106,6 +106,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.valid_bit = 10,
 		},
 	},
+#endif
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
@@ -203,7 +204,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus4[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
-
+#if 0
 	{
 		.bus.csi2 = {
 			.channel = 1,
@@ -215,7 +216,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus4[] = {
 			.valid_bit = 10,
 		},
 	},
-
+#endif
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
@@ -228,7 +229,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
-
+#if 0
 	{
 		.bus.csi2 = {
 			.channel = 1,
@@ -240,7 +241,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
 			.valid_bit = 10,
 		},
 	},
-
+#endif
 };
 
 #if 0
@@ -287,7 +288,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 		.i4PDOrder = {0,1}, // R = 1, L = 0
 	},
 };
-#endif
+
 
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus4_info = {
 	.i4OffsetX = 0,
@@ -377,7 +378,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_vid_info = {
 		.i4PDOrder = {0,1}, // R = 1, L = 0
 	},
 };
-
+#endif
 static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_prev,
@@ -482,11 +483,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1589280000,
-		.linelength = 17600,
-		.framelength = 3010,
+		.pclk = 1600000000,
+		.linelength = 8136,
+		.framelength = 6554,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 1851360000,
+		.mipi_pixel_rate = 1732800000,
 		.readout_length = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
@@ -506,8 +507,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 2304,
 		},
-		.pdaf_cap = TRUE,
-		.imgsensor_pd_info = &imgsensor_pd_vid_info,
+		.pdaf_cap = FALSE,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
 	        .min_exposure_line = 16,
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
@@ -528,11 +529,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1599736320,
+		.pclk = 1600000000,
 		.linelength = 5096,
 		.framelength = 2616,
 		.max_framerate = 1200,
-		.mipi_pixel_rate = 2221632000,
+		.mipi_pixel_rate = 2079360000,
 		.readout_length = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
@@ -621,11 +622,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1599495168,
+		.pclk = 1600000000,
 		.linelength = 9392,
 		.framelength = 7096,
 		.max_framerate = 240,
-		.mipi_pixel_rate = 2221632000,
+		.mipi_pixel_rate = 2079360000,
 		.readout_length = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
@@ -713,11 +714,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1599736320,
+		.pclk = 1600000000,
 		.linelength = 5096,
 		.framelength = 1308,
 		.max_framerate = 2400,
-		.mipi_pixel_rate = 2221632000,
+		.mipi_pixel_rate = 2079360000,
 		.readout_length = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
@@ -759,11 +760,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1589280000,
-		.linelength = 17600,
-		.framelength = 3010,
+		.pclk = 1600000000,
+		.linelength = 19080,
+		.framelength = 2788,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 1851360000,
+		.mipi_pixel_rate = 1732800000,
 		.readout_length = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
@@ -783,8 +784,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 2304,
 		},
-		.pdaf_cap = TRUE,
-		.imgsensor_pd_info = &imgsensor_pd_vid_info,
+		.pdaf_cap = FALSE,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
 	        .min_exposure_line = 8,
 		.read_margin =24,
                 .ana_gain_min = BASEGAIN * 1,
@@ -805,11 +806,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
-		.pclk = 1599889200,
+		.pclk = 1600000000,
 		.linelength = 5096,
 		.framelength = 10465,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 2221632000,
+		.mipi_pixel_rate = 2079360000,
 		.readout_length = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
@@ -829,8 +830,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 2048,
 			.h2_tg_size = 1536,
 		},
-		.pdaf_cap = TRUE,
-		.imgsensor_pd_info = &imgsensor_pd_cus4_info,
+		.pdaf_cap = FALSE,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
 	        .min_exposure_line = 16,
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
