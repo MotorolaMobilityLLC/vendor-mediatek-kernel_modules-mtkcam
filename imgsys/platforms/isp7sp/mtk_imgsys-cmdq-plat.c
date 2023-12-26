@@ -3102,9 +3102,18 @@ void mtk_imgsys_mmqos_set_by_scen_plat7sp(struct mtk_imgsys_dev *imgsys_dev,
 					qos_info->qos_path[IMGSYS_COMMON_1_R].bw = bw_final[2];
 					qos_info->qos_path[IMGSYS_COMMON_1_W].bw = bw_final[3];
 
-					bw_final[0] = (bw_final[0] * imgsys_qos_factor) >> 2;
+					if (dvfs_info->pix_mode != 1)
+						bw_final[0] = (bw_final[0] * imgsys_qos_factor) >> 2;
+					else
+						bw_final[0] = (bw_final[0] * 12) >> 3;
+
 					bw_final[1] = (bw_final[1] * imgsys_qos_factor) >> 2;
-					bw_final[2] = (bw_final[2] * imgsys_qos_factor) >> 2;
+
+					if (dvfs_info->pix_mode != 1)
+						bw_final[2] = (bw_final[2] * imgsys_qos_factor) >> 2;
+					else
+						bw_final[2] = (bw_final[2] * 12) >> 3;
+
 					bw_final[3] = (bw_final[3] * imgsys_qos_factor) >> 2;
 
 					if (imgsys_qos_dbg_enable_plat7sp())
