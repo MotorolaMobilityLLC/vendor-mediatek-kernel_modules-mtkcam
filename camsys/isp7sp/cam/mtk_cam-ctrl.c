@@ -1253,6 +1253,7 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 				    1001)) {
 		dev_info(dev, "[%s] check_for_inner timeout: expected in=0x%x\n",
 			 __func__, check_args.expect_inner);
+		mtk_cam_seninf_dump_current_status(job->src_ctx->seninf);
 		goto SWITCH_FAILURE;
 	}
 
