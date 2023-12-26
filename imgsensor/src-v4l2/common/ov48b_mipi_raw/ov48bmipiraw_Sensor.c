@@ -325,18 +325,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus12[] = {
 		},
 	},
 };
-static struct mtk_mbus_frame_desc_entry frame_desc_cus13[] = {
-	{
-		.bus.csi2 = {
-			.channel = 0,
-			.data_type = 0x2b,
-			.hsize = 0x0280,
-			.vsize = 0x01e0,
-		},
-	},
-};
 
-static struct mtk_mbus_frame_desc_entry frame_desc_cus14[] = {
+static struct mtk_mbus_frame_desc_entry frame_desc_cus13[] = {
 	{
 		.bus.csi2 = {
 			.channel = 0,
@@ -1177,54 +1167,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_cus13),
 		.mode_setting_table = addr_data_pair_custom13,
 		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom13),
-		.seamless_switch_group = PARAM_UNDEFINED,
-		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
-		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
-		.hdr_mode = HDR_NONE,
-		.raw_cnt = 1,
-		.exp_cnt = 1,
-		.pclk = 115200000,
-		.linelength = 34560,
-		.framelength = 1666,
-		.max_framerate = 20,
-		.mipi_pixel_rate = 273000000,
-		.readout_length = 0,
-		.read_margin = 0,
-		.imgsensor_winsize_info = {
-			.full_w = 8000,
-			.full_h = 6000,
-			.x0_offset = 1440,
-			.y0_offset = 1560,
-			.w0_size = 5120,
-			.h0_size = 2880,
-			.scale_w = 640,
-			.scale_h = 480,
-			.x1_offset = 0,
-			.y1_offset = 0,
-			.w1_size = 640,
-			.h1_size = 480,
-			.x2_tg_offset = 0,
-			.y2_tg_offset = 0,
-			.w2_tg_size = 640,
-			.h2_tg_size = 480,
-		},
-		.aov_mode = 1,
-		.s_dummy_support = 1,
-		.ae_ctrl_support = 1,
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
-		.ae_binning_ratio = 2,
-		.fine_integ_line = 0,
-		.delay_frame = 2,
-		.csi_param = {
-			.cphy_settle = 98,
-		},
-	},
-	{
-		.frame_desc = frame_desc_cus14,
-		.num_entries = ARRAY_SIZE(frame_desc_cus14),
-		.mode_setting_table = addr_data_pair_custom14,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom14),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
