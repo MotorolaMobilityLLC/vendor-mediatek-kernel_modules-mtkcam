@@ -27,8 +27,6 @@ struct mtk_cam_res_calc {
 	int bin_en : 4;
 
 	unsigned int slb_size;
-
-	int min_opp_idx_plus_one;
 };
 
 static inline int _bin_ratio(struct mtk_cam_res_calc *c)
