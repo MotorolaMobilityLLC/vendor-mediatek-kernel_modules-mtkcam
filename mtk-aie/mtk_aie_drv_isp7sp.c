@@ -3349,6 +3349,7 @@ static void aie_uninit(struct mtk_aie_dev *fd)
 static int aie_prepare(struct mtk_aie_dev *fd, struct aie_enq_info *aie_cfg)
 {
 	int ret = 0;
+	static int pre_mode = FLDMODE; // init fld mode, because fld could not enter to aie_prepare
 
 	AIE_SYSTRACE_BEGIN("%s", __func__);
 
@@ -3366,6 +3367,7 @@ static int aie_prepare(struct mtk_aie_dev *fd, struct aie_enq_info *aie_cfg)
 		fd->base_para->pyramid_height =
 			fd->base_para->max_pyramid_height;
 		fd->base_para->number_of_pyramid = 3;
+		pre_mode = aie_cfg->sel_mode;
 	} else {
 		if (aie_cfg->pyramid_base_width >
 			fd->base_para->max_pyramid_width ||
@@ -3388,12 +3390,15 @@ static int aie_prepare(struct mtk_aie_dev *fd, struct aie_enq_info *aie_cfg)
 			fd->base_para->max_pyramid_height;
 		fd->base_para->number_of_pyramid =
 			aie_cfg->number_of_pyramid;
-		if (aie_cfg->pyramid_base_width !=
-			fd->base_para->pyramid_width) {
-			aie_dev_dbg(fd->dev, "pre: %d, cur: %d, num: %d\n",
+		if (!((aie_cfg->pyramid_base_width ==
+			fd->base_para->pyramid_width) && (aie_cfg->sel_mode == pre_mode))) {
+			aie_dev_dbg(fd->dev, "pre: (%d,%d) cur: (%d,%d) num: %d\n",
 				fd->base_para->pyramid_width,
+				pre_mode,
 				aie_cfg->pyramid_base_width,
+				aie_cfg->sel_mode,
 				fd->base_para->number_of_pyramid);
+			pre_mode = aie_cfg->sel_mode;
 			fd->base_para->pyramid_width =
 				aie_cfg->pyramid_base_width;
 
