@@ -268,6 +268,7 @@ struct mtk_imgsys_dvfs {
 	unsigned long freq;
 	unsigned int vss_task_cnt;
 	unsigned int smvr_task_cnt;
+	unsigned int vr_task_cnt;
 	unsigned int pix_mode;
 };
 

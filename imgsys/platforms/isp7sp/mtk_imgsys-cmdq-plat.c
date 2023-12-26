@@ -2622,6 +2622,7 @@ void mtk_imgsys_mmdvfs_init_plat7sp(struct mtk_imgsys_dev *imgsys_dev)
 	dvfs_info->cur_freq_smi = 0;
 	dvfs_info->vss_task_cnt = 0;
 	dvfs_info->smvr_task_cnt = 0;
+	dvfs_info->vr_task_cnt = 0;
 	dvfs_info->opp_num = opp_num;
 
 }
@@ -2822,6 +2823,7 @@ void mtk_imgsys_mmdvfs_reset_plat7sp(struct mtk_imgsys_dev *imgsys_dev)
 	dvfs_info->cur_freq_smi = freq;
 	dvfs_info->vss_task_cnt = 0;
 	dvfs_info->smvr_task_cnt = 0;
+	dvfs_info->vr_task_cnt = 0;
 }
 
 void mtk_imgsys_mmqos_init_plat7sp(struct mtk_imgsys_dev *imgsys_dev)
@@ -3209,6 +3211,7 @@ void mtk_imgsys_mmdvfs_mmqos_cal_plat7sp(struct mtk_imgsys_dev *imgsys_dev,
 	#if IMGSYS_DVFS_ENABLE
 	unsigned long pixel_max = 0, pixel_total_max = 0;
 	unsigned long smvr_size = 0, smvr_freq_floor = 0;
+	unsigned long vr_size = 0, vr_freq_floor = 0;
 	/* struct timeval curr_time; */
 	u64 ts_fps = 0;
 	#endif
@@ -3234,6 +3237,10 @@ void mtk_imgsys_mmdvfs_mmqos_cal_plat7sp(struct mtk_imgsys_dev *imgsys_dev,
 			if ((batch_num > 1) &&
 				(frm_info->user_info[frm_idx].hw_comb & IMGSYS_ENG_ME))
 				smvr_size = frm_info->user_info[frm_idx].pixel_bw;
+			/* Using F0 for VR size check */
+			else if ((frm_info->user_info[frm_idx].hw_comb & IMGSYS_VR_F0_HW_COMB) ==
+					IMGSYS_VR_F0_HW_COMB)
+				vr_size = frm_info->user_info[frm_idx].pixel_bw;
 		}
 	}
 	#if IMGSYS_DVFS_ENABLE
@@ -3287,8 +3294,23 @@ void mtk_imgsys_mmdvfs_mmqos_cal_plat7sp(struct mtk_imgsys_dev *imgsys_dev,
 					freq = smvr_freq_floor;
 				else
 					freq = pixel_total_max;
-			} else if (dvfs_info->smvr_task_cnt == 0)
-				freq = pixel_total_max;
+			} else if (dvfs_info->smvr_task_cnt == 0) {
+				if (dvfs_info->pix_mode == 1) {
+					if ((fps >= IMGSYS_VR_FPS_FLOOR1) &&
+						(vr_size >= IMGSYS_VR_SIZE_FLOOR1)) {
+						dvfs_info->vr_task_cnt++;
+						vr_freq_floor = IMGSYS_VR_FREQ_FLOOR1;
+					} else if (dvfs_info->vr_task_cnt > 0)
+						vr_freq_floor = dvfs_info->freq;
+					else
+						vr_freq_floor = 0;
+					if (pixel_total_max < vr_freq_floor)
+						freq = vr_freq_floor;
+					else
+						freq = pixel_total_max;
+				} else
+					freq = pixel_total_max;
+			}
 
 			if (dvfs_info->vss_task_cnt == 0)
 				dvfs_info->freq = freq;
@@ -3338,8 +3360,24 @@ void mtk_imgsys_mmdvfs_mmqos_cal_plat7sp(struct mtk_imgsys_dev *imgsys_dev,
 					freq = smvr_freq_floor;
 				else
 					freq = pixel_total_max;
-			} else if (dvfs_info->smvr_task_cnt == 0)
-				freq = pixel_total_max;
+			} else if (dvfs_info->smvr_task_cnt == 0) {
+				if (dvfs_info->pix_mode == 1) {
+					if ((fps >= IMGSYS_VR_FPS_FLOOR1) &&
+						(vr_size >= IMGSYS_VR_SIZE_FLOOR1)) {
+						dvfs_info->vr_task_cnt--;
+						vr_freq_floor = IMGSYS_VR_FREQ_FLOOR1;
+					}
+					if (dvfs_info->vr_task_cnt > 0)
+						vr_freq_floor = dvfs_info->freq;
+					else
+						vr_freq_floor = 0;
+					if (pixel_total_max < vr_freq_floor)
+						freq = vr_freq_floor;
+					else
+						freq = pixel_total_max;
+				} else
+					freq = pixel_total_max;
+			}
 
 			if (dvfs_info->vss_task_cnt == 0)
 				dvfs_info->freq = freq;
@@ -3362,10 +3400,11 @@ void mtk_imgsys_mmdvfs_mmqos_cal_plat7sp(struct mtk_imgsys_dev *imgsys_dev,
 
 	if (imgsys_dvfs_dbg_enable_plat7sp())
 		dev_info(qos_info->dev,
-		"[%s] isSet(%d) fps(%d/%d/%d) batchNum(%d) bw_exe(%d) vss(%d) smvr(%d/%lu/%lu) freq(%lu/%lu) local_pix_sz(%lu/%lu/%lu/%lu) global_pix_sz(%lu/%lu/%lu/%lu)\n",
+		"[%s] isSet(%d) fps(%d/%d/%d) batchNum(%d) bw_exe(%d) vss(%d) smvr(%d/%lu/%lu) vr(%d/%lu/%lu) freq(%lu/%lu) local_pix_sz(%lu/%lu/%lu/%lu) global_pix_sz(%lu/%lu/%lu/%lu)\n",
 		__func__, isSet, fps, frm_info->fps, fps_smvr, batch_num, bw_exe,
 		dvfs_info->vss_task_cnt, dvfs_info->smvr_task_cnt, smvr_size,
-		smvr_freq_floor, freq, dvfs_info->freq,
+		smvr_freq_floor, dvfs_info->vr_task_cnt, vr_size,
+		vr_freq_floor, freq, dvfs_info->freq,
 		pixel_size[0], pixel_size[1], pixel_size[2], pixel_max,
 		dvfs_info->pixel_size[0], dvfs_info->pixel_size[1],
 		dvfs_info->pixel_size[2], pixel_total_max
