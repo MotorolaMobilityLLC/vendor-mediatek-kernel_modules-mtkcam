@@ -2237,7 +2237,7 @@ static int mtk_cam_seninf_set_seninf_top_ctrl2(struct seninf_ctx *ctx, u32 val)
 		return -EINVAL;
 	}
 
-	dev_info(ctx->dev, "[%s] port:%d,TOP_CTRL2(0x%x)", __func__, port,
+	seninf_logd(ctx, "[%s] port:%d,TOP_CTRL2(0x%x)", __func__, port,
 		SENINF_READ_REG(pSeninf_top, SENINF_TOP_CTRL2));
 
 	return 0;
@@ -2257,7 +2257,7 @@ static int seninf1_setting(struct seninf_ctx *ctx)
 	// enable/disable seninf, enable after csi2, testmdl is done.
 	SENINF_BITS(pSeninf, SENINF_CTRL, SENINF_EN, 1);
 
-	dev_info(ctx->dev,
+	seninf_logd(ctx,
 		"[%s] port:%d,TOP_CTRL2(0x%x),SENINF_CSI2_CTRL(0x%x),SENINF_CTRL(0x%x)",
 		__func__,
 		port,
@@ -2711,14 +2711,14 @@ static int csirx_mac_csi_lrte_setting(struct seninf_ctx *ctx)
 		/* stability debug diable LRTE_EN */
 		SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_RESYNC_MERGE_CTRL, RG_CSI2_RESYNC_LRTE_EN, 0x0);
 		SENINF_BITS(cphy_base, CPHY_RX_CAL_ALP_CTRL, RG_CPHY_ALP_EN, 0x0);
-		dev_info(ctx->dev, "[%s] lrte not support(%d), disable LRTE_EN ALP_EN, port:%d\n",
+		seninf_logd(ctx, "[%s] lrte not support(%d), disable LRTE_EN ALP_EN, port:%d\n",
 			__func__, ctx->csi_param.cphy_lrte_support, ctx->port);
 		return 0;
 	}
 
 	if (!ctx->is_cphy) {
 		/* DPHY Config */
-		dev_info(ctx->dev, "[%s] Dphy sensor skip lrte mac_csi setting, port:%d\n",
+		seninf_logd(ctx, "[%s] Dphy sensor skip lrte mac_csi setting, port:%d\n",
 			__func__, ctx->port);
 	} else {
 		/* CPHY Config */
@@ -2729,8 +2729,6 @@ static int csirx_mac_csi_lrte_setting(struct seninf_ctx *ctx)
 		SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_RESYNC_MERGE_CTRL2, RG_RESYNC_LRTE_WC_DMY_OPTION, 0x0);
 
 		/* CPHY LRTE TX spacer must greater than 40 */
-		dev_info(ctx->dev, "[%s] Cphy lrte support(%d), port:%d\n",
-			__func__, ctx->csi_param.cphy_lrte_support, ctx->port);
 
 		/* LRTE SW Workaround */
 		SENINF_BITS(dphy_base, DPHY_RX_SPARE1, RG_POST_CNT, 0x1);
@@ -2740,19 +2738,19 @@ static int csirx_mac_csi_lrte_setting(struct seninf_ctx *ctx)
 		SENINF_BITS(cphy_base, CPHY_RX_CAL_ALP_CTRL, RG_CPHY_ALP_EN, 0x1);
 		SENINF_BITS(cphy_base, CPHY_RX_INIT, RG_CPHY_CSI2_TINIT_CNT_EN, 0x1);
 		SENINF_BITS(cphy_base, CPHY_POST_ENCODE, CPHY_POST_REPLACE_EN, 0x0);
-		dev_info(ctx->dev, "[%s] LRTE DPHY_RX_SPARE1(0x%x)\n", __func__,
+		seninf_logd(ctx, "[%s] LRTE DPHY_RX_SPARE1(0x%x)\n", __func__,
 			SENINF_READ_BITS(dphy_base, DPHY_RX_SPARE1, RG_POST_CNT));
-		dev_info(ctx->dev, "[%s] LRTE DPHY_RX_SPARE1(0x%x)\n", __func__,
+		seninf_logd(ctx, "[%s] LRTE DPHY_RX_SPARE1(0x%x)\n", __func__,
 			SENINF_READ_BITS(cphy_base, CPHY_RX_STATE_CHK_EN, RG_ALP_POS_DET_MASK));
-		dev_info(ctx->dev, "[%s] LRTE DPHY_RX_SPARE1(0x%x)\n", __func__,
+		seninf_logd(ctx, "[%s] LRTE DPHY_RX_SPARE1(0x%x)\n", __func__,
 			SENINF_READ_BITS(cphy_base, CPHY_RX_CAL_ALP_CTRL, RG_CPHY_ALP_SETTLE_PARAMETER));
-		dev_info(ctx->dev, "[%s] LRTE DPHY_RX_SPARE1(0x%x)\n", __func__,
+		seninf_logd(ctx, "[%s] LRTE DPHY_RX_SPARE1(0x%x)\n", __func__,
 			SENINF_READ_BITS(cphy_base, CPHY_RX_CAL_ALP_CTRL, RG_ALP_RX_EN_SEL));
-		dev_info(ctx->dev, "[%s] LRTE DPHY_RX_SPARE1(0x%x)\n", __func__,
+		seninf_logd(ctx, "[%s] LRTE DPHY_RX_SPARE1(0x%x)\n", __func__,
 			SENINF_READ_BITS(cphy_base, CPHY_RX_CAL_ALP_CTRL, RG_CPHY_ALP_EN));
-		dev_info(ctx->dev, "[%s] LRTE DPHY_RX_SPARE1(0x%x)\n", __func__,
+		seninf_logd(ctx, "[%s] LRTE DPHY_RX_SPARE1(0x%x)\n", __func__,
 			SENINF_READ_BITS(cphy_base, CPHY_RX_INIT, RG_CPHY_CSI2_TINIT_CNT_EN));
-		dev_info(ctx->dev, "[%s] LRTE DPHY_RX_SPARE1(0x%x)\n", __func__,
+		seninf_logd(ctx, "[%s] LRTE DPHY_RX_SPARE1(0x%x)\n", __func__,
 			SENINF_READ_BITS(cphy_base, CPHY_POST_ENCODE, CPHY_POST_REPLACE_EN));
 	}
 
@@ -7386,15 +7384,15 @@ static int mtk_cam_set_phya_clock_src(struct seninf_ctx *ctx, u64 val)
 	switch (val) {
 	case 1:
 		if (_seninf_ops->iomem_ver == NULL) {
-			dev_info(ctx->dev, "[%s] phya clk set to 0\n", __func__);
+			seninf_logd(ctx, "[%s] phya clk set to 0\n", __func__);
 			return 0;
 		} else if (!strcasecmp(_seninf_ops->iomem_ver, MT6878_IOMOM_VERSIONS)) {
-			dev_info(ctx->dev, "[%s] phya clk set to 0\n", __func__);
+			seninf_logd(ctx, "[%s] phya clk set to 0\n", __func__);
 			return 0;
 		} else if (!strcasecmp(_seninf_ops->iomem_ver, MT6989_IOMOM_VERSIONS))
 			SENINF_BITS(base, CDPHY_RX_ANA_SETTING_0, CSR_ANA_REF_CK_SEL, val);
 		else {
-			dev_info(ctx->dev,
+			seninf_logd(ctx,
 				"[%s] phya clk set to %llu fail, check platform ver\n",
 				__func__, val);
 			return -EINVAL;
@@ -7406,7 +7404,7 @@ static int mtk_cam_set_phya_clock_src(struct seninf_ctx *ctx, u64 val)
 	default:
 		return -EINVAL;
 	}
-	dev_info(ctx->dev, "[%s] phya clk set to %llu\n", __func__, val);
+	seninf_logd(ctx, "[%s] phya clk set to %llu\n", __func__, val);
 
 	return 0;
 }

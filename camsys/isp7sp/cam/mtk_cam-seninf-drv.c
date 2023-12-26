@@ -2375,7 +2375,8 @@ static int s_update_isp_clk_en(struct seninf_ctx *ctx, void *arg)
 
 	ctx->allow_adjust_isp_en = *en;
 
-	dev_info(ctx->dev, "en: %d, allow_adjust_isp_en  is %d\n",
+	if (*en)
+		dev_info(ctx->dev, "en: %d, allow_adjust_isp_en  is %d\n",
 				*en, ctx->allow_adjust_isp_en);
 
 	return 0;
