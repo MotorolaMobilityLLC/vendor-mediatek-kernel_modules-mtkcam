@@ -42,6 +42,7 @@
 
 static struct mtk_cam_seninf_ops *_seninf_ops = &mtk_csi_phy_3_1;
 static struct mtk_cam_seninf_irq_event_st vsync_detect_seninf_irq_event;
+
 #define SENINF_IRQ_FIFO_LEN 36
 #define VSYNC_DUMP_BUF_MAX_LEN 2048
 
@@ -116,6 +117,7 @@ module_param(adb_seninf_clk, uint, 0644);
 MODULE_PARM_DESC(adb_seninf_clk, "adb_seninf_clk");
 #endif /* INIT_DESKEW_UT */
 
+static int mtk_cam_seninf_set_all_cam_mux_vsync_irq(struct seninf_ctx *ctx, bool enable);
 static u64 settle_formula(u64 settle_ns, u64 seninf_ck)
 {
 	u64 _val = (settle_ns * seninf_ck);
@@ -6294,6 +6296,8 @@ static void seninf_seamless_record_cammux_irq(struct seninf_core *core,
 				}
 			}
 		}
+
+		mtk_cam_seninf_set_all_cam_mux_vsync_irq(ctx_, false);
 	}
 	vsync_info->used_cammux_num = index;
 }
