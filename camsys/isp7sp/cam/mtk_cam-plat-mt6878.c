@@ -797,6 +797,7 @@ static const struct plat_data_hw mt6878_hw_data = {
 	.query_caci_size = query_caci_size,
 	.query_max_exp_support = query_max_exp_support,
 	.query_icc_path_idx = query_icc_path_idx,
+	.apu_support = false,
 	.max_main_pipe_w = 4704,
 	.max_main_pipe_twin_w = 4596,
 	.pixel_mode_max = 1,

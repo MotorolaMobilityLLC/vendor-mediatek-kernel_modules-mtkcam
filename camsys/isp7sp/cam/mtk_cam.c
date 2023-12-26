@@ -2574,6 +2574,10 @@ int mtk_cam_ctx_init_scenario(struct mtk_cam_ctx *ctx)
 	} else if (ctrl_data->valid_apu_info &&
 		   scen_is_m2m_apu(scen, &ctrl_data->apu_info)) {
 
+		if (!GET_PLAT_HW(apu_support))
+			dev_info(cam->dev, "%s: do not support APU hardware path\n",
+				__func__);
+
 		ret = mtk_cam_ctx_request_slb(ctx, UID_SH_P1, false, NULL);
 
 	} else if (res_raw_is_dc_mode(res) && res->slb_size) {
