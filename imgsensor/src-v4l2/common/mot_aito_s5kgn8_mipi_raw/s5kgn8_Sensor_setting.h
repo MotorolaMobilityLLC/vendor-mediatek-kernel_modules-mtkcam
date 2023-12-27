@@ -65,4 +65,10 @@ static u16 addr_data_pair_custom5[] = {
 #include "setting/s5kgn8_2048_1536_30fps.h"
 };
 
+
+//in sensor zoom
+static u16 addr_data_pair_custom6[] = {
+#include "setting/s5kgn8_4096_3072_30fps_crop.h"
+};
+
 #endif
