@@ -29,11 +29,12 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 static void s5kgn8sensor_init(struct subdrv_ctx *ctx);
 static int open(struct subdrv_ctx *ctx);
 static int s5kgn8set_ctrl_locker(struct subdrv_ctx *ctx, u32 cid, bool *is_lock);
-
+static int s5kgn8_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 /* STRUCT */
 
 static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, s5kgn8set_test_pattern},
+	{SENSOR_FEATURE_SET_AWB_GAIN, s5kgn8_awb_gain},
 };
 
 
@@ -244,6 +245,30 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
 #endif
 };
 
+
+static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2b,
+			.hsize = 0x1000,
+			.vsize = 0x0c00,
+			.user_data_desc = VC_STAGGER_NE,
+		},
+	},
+#if 0
+	{
+		.bus.csi2 = {
+			.channel = 1,
+			.data_type = 0x30,
+			.hsize = 0x0400,
+			.vsize = 0x0c00,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+		},
+	},
+#endif
+};
 #if 0
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4OffsetX = 0,
@@ -421,7 +446,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
                 .ana_gain_max = BASEGAIN * 64,
-		.ae_binning_ratio = 4,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
 		.csi_param = {0},
@@ -467,7 +492,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
                 .ana_gain_max = BASEGAIN * 64,
-		.ae_binning_ratio = 1,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
 		.csi_param = {0},
@@ -513,7 +538,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
                 .ana_gain_max = BASEGAIN * 16,
-		.ae_binning_ratio = 4,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
 		.csi_param = {0},
@@ -559,7 +584,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
                 .ana_gain_max = BASEGAIN * 64,
-		.ae_binning_ratio = 4,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
 		.csi_param = {0},
@@ -605,7 +630,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
                 .ana_gain_max = BASEGAIN * 64,
-		.ae_binning_ratio = 4,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
 		.csi_param = {0},
@@ -623,8 +648,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.raw_cnt = 1,
 		.exp_cnt = 1,
 		.pclk = 1600000000,
-		.linelength = 9392,
-		.framelength = 7096,
+		.linelength = 9544,
+		.framelength = 6984,
 		.max_framerate = 240,
 		.mipi_pixel_rate = 2079360000,
 		.readout_length = 0,
@@ -652,7 +677,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin =96,
                 .ana_gain_min = BASEGAIN * 1,
                 .ana_gain_max = BASEGAIN * 16,
-		.ae_binning_ratio = 4,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
 		.csi_param = {0},
@@ -698,7 +723,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
                 .ana_gain_max = BASEGAIN * 64,
-		.ae_binning_ratio = 4,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
 		.csi_param = {0},
@@ -744,7 +769,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
                 .ana_gain_max = BASEGAIN * 64,
-		.ae_binning_ratio = 4,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
 		.csi_param = {0},
@@ -790,7 +815,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin =24,
                 .ana_gain_min = BASEGAIN * 1,
                 .ana_gain_max = BASEGAIN * 16,
-		.ae_binning_ratio = 4,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
 		.csi_param = {0},
@@ -800,7 +825,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_cus5),
 		.mode_setting_table = addr_data_pair_custom5,
 		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom5),
-		.seamless_switch_group = 1,
+		.seamless_switch_group = 0,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.hdr_mode = HDR_NONE,
@@ -836,7 +861,54 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
                 .ana_gain_max = BASEGAIN * 16,
-		.ae_binning_ratio = 4,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {0},
+	},
+
+	{//custom6
+		.frame_desc = frame_desc_cus6,
+		.num_entries = ARRAY_SIZE(frame_desc_cus6),
+		.mode_setting_table = addr_data_pair_custom6,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom6),
+		.seamless_switch_group = 0,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 1600000000,
+		.linelength = 9544,
+		.framelength = 5588,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 2079360000,
+		.readout_length = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 2048,
+			.y0_offset = 1536,
+			.w0_size = 4096,
+			.h0_size = 3072,
+			.scale_w = 4096,
+			.scale_h = 3072,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 3072,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 3072,
+		},
+		.pdaf_cap = FALSE,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+	        .min_exposure_line = 16,
+		.read_margin = 96,
+                .ana_gain_min = BASEGAIN * 1,
+                .ana_gain_max = BASEGAIN * 16,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
 		.csi_param = {0},
@@ -963,6 +1035,35 @@ static void set_group_hold(void *arg, u8 en)
 static u16 get_gain2reg(u32 gain)
 {
 	return gain * 32 / BASEGAIN;
+}
+
+#define REG_GAIN 0x0400
+#define WB_GAIN_FACTOR 512
+static int s5kgn8_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	struct SET_SENSOR_AWB_GAIN *pSetSensorAWB = (( struct SET_SENSOR_AWB_GAIN  *)para);
+
+	UINT32 rgain_32, grgain_32, gbgain_32, bgain_32, ggain_32;
+	if ((ctx->current_scenario_id == SENSOR_SCENARIO_ID_CUSTOM1) ||
+		(ctx->current_scenario_id == SENSOR_SCENARIO_ID_CUSTOM6))
+	{
+		grgain_32 = (pSetSensorAWB->ABS_GAIN_GR * REG_GAIN ) / WB_GAIN_FACTOR;
+		rgain_32 = (pSetSensorAWB->ABS_GAIN_R * REG_GAIN ) / WB_GAIN_FACTOR;
+		bgain_32 = (pSetSensorAWB->ABS_GAIN_B * REG_GAIN ) / WB_GAIN_FACTOR;
+		gbgain_32 = (pSetSensorAWB->ABS_GAIN_GB * REG_GAIN ) / WB_GAIN_FACTOR;
+		ggain_32 = (grgain_32+gbgain_32)/2;
+
+		DRV_LOG(ctx, "[%s] ABS_GAIN_GR:%d, grgain_32:%d, ABS_GAIN_R:%d, rgain_32:%d , ABS_GAIN_B:%d, bgain_32:%d,ABS_GAIN_GB:%d, gbgain_32:%d\n",
+			__func__,
+			pSetSensorAWB->ABS_GAIN_GR, grgain_32,
+			pSetSensorAWB->ABS_GAIN_R, rgain_32,
+			pSetSensorAWB->ABS_GAIN_B, bgain_32,
+			pSetSensorAWB->ABS_GAIN_GB, gbgain_32);
+		subdrv_i2c_wr_u16(ctx, 0x0d82, rgain_32);
+		subdrv_i2c_wr_u16(ctx, 0x0d84, ggain_32);
+		subdrv_i2c_wr_u16(ctx, 0x0d86, bgain_32);
+	}
+	return ERROR_NONE;
 }
 
 static int s5kgn8set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
