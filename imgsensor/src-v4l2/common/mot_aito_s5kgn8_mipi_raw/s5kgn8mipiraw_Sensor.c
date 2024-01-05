@@ -48,7 +48,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
-#if 0
+
 	{
 		.bus.csi2 = {
 			.channel = 1,
@@ -59,7 +59,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
-#endif
+
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 	{
@@ -71,7 +71,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
-#if 0
+
 	{
 		.bus.csi2 = {
 			.channel = 1,
@@ -82,7 +82,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
-#endif
+
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
@@ -95,19 +95,19 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
-#if 0
+
 	{
 		.bus.csi2 = {
 			.channel = 1,
 			.data_type = 0x30,
-			.hsize = 0x1000,
-			.vsize = 0x240,
+			.hsize = 0x0400,
+			.vsize = 0x0900,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 			.valid_bit = 10,
 		},
 	},
-#endif
+
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
@@ -132,7 +132,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
-#if 0
+
 	{
 		.bus.csi2 = {
 			.channel = 1,
@@ -143,7 +143,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
-#endif
+
 };
 
 
@@ -169,18 +169,18 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
-#if 0
+
 	{
 		.bus.csi2 = {
 			.channel = 1,
 			.data_type = 0x30,
 			.hsize = 0x0400,
-			.vsize = 0x0c00,
+			.vsize = 0x0900,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
-#endif
+
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_cus3[] = {
 	{
@@ -205,19 +205,19 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus4[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
-#if 0
+
 	{
 		.bus.csi2 = {
 			.channel = 1,
 			.data_type = 0x30,
-			.hsize = 0x1000,
-			.vsize = 0x240,
+			.hsize = 0x0400,
+			.vsize = 0x0900,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 			.valid_bit = 10,
 		},
 	},
-#endif
+
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
@@ -235,7 +235,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
 		.bus.csi2 = {
 			.channel = 1,
 			.data_type = 0x30,
-			.hsize = 0x0800,
+			.hsize = 0x0600,
 			.vsize = 0x0180,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
@@ -244,6 +244,9 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
 	},
 #endif
 };
+
+
+
 
 
 static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
@@ -256,20 +259,20 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
-#if 0
+#if 1
 	{
 		.bus.csi2 = {
 			.channel = 1,
 			.data_type = 0x30,
-			.hsize = 0x0400,
-			.vsize = 0x0c00,
+			.hsize = 0x0200,
+			.vsize = 0x0600,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
 #endif
 };
-#if 0
+#if 1
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 0,
@@ -285,9 +288,9 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4LeFirst = 0,
 	.i4Crop = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		{0, 0}, {0, 0}, {0, 384}, {0, 0}, {0, 0},
 		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		{0, 0}, {0, 384}, {0, 0}, {0, }, {0, 0},
 		// <cust6> <cust7> <cust8> cust9 cust10
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		// cust11 cust12 cust13 <cust14> <cust15>
@@ -303,6 +306,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4FullRawW = 4096,
 	.i4FullRawH = 3072,
 	.i4ModeIndex = 3,
+	.i4VCPackNum = 4,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
 	/* VC's PD pattern description */
 	.sPDMapInfo[0] = {
@@ -314,8 +318,8 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	},
 };
 
-
-static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus4_info = {
+#if 0
+static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus5_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 0,
 	.i4PitchX = 0,
@@ -332,7 +336,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus4_info = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		{0, 0}, {0, 0}, {0, 0}, {0, }, {0, 0},
 		// <cust6> <cust7> <cust8> cust9 cust10
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		// cust11 cust12 cust13 <cust14> <cust15>
@@ -348,6 +352,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus4_info = {
 	.i4FullRawW = 2048,
 	.i4FullRawH = 1536,
 	.i4ModeIndex = 3,
+	.i4VCPackNum = 4,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
 	/* VC's PD pattern description */
 	.sPDMapInfo[0] = {
@@ -359,6 +364,51 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus4_info = {
 	},
 };
 
+#endif
+static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus6_info = {
+	.i4OffsetX = 0,
+	.i4OffsetY = 0,
+	.i4PitchX = 0,
+	.i4PitchY = 0,
+	.i4PairNum = 0,
+	.i4SubBlkW = 0,
+	.i4SubBlkH = 0,
+	.i4PosL = {{0, 0}},
+	.i4PosR = {{0, 0}},
+	.i4BlockNumX = 0,
+	.i4BlockNumY = 0,
+	.i4LeFirst = 0,
+	.i4Crop = {
+		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
+		{0, 0}, {0, 0}, {0, 0}, {0, }, {0, 0},
+		// <cust6> <cust7> <cust8> cust9 cust10
+		{2048, 1536}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// cust11 cust12 cust13 <cust14> <cust15>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <cust16> <cust17> cust18 <cust19> cust20
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <cust21> <cust22> <cust23> <cust24> <cust25>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// cust26 <cust27> cust28
+		{0, 0}, {0, 0}, {0, 0},
+	},
+	.iMirrorFlip = 0,
+	.i4FullRawW = 8192,
+	.i4FullRawH = 6144,
+	.i4ModeIndex = 3,
+	.i4VCPackNum = 4,
+	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		.i4PDPattern = 1, //all PD
+		.i4BinFacX = 4,
+		.i4BinFacY = 8,
+		.i4PDRepetition = 0,
+		.i4PDOrder = {0,1}, // R = 1, L = 0
+	},
+};
 
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_vid_info = {
 	.i4OffsetX = 0,
@@ -377,7 +427,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_vid_info = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
 		{0, 0}, {0, 0}, {0, 384}, {0, 0}, {0, 0},
 		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
-		{0, 0}, {0, 0}, {0, 0}, {0, 384}, {0, 0},
+		{0, 0}, {0, 384}, {0, 0}, {0, }, {0, 0},
 		// <cust6> <cust7> <cust8> cust9 cust10
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		// cust11 cust12 cust13 <cust14> <cust15>
@@ -393,6 +443,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_vid_info = {
 	.i4FullRawW = 4096,
 	.i4FullRawH = 3072,
 	.i4ModeIndex = 3,
+	.i4VCPackNum = 4,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
 	/* VC's PD pattern description */
 	.sPDMapInfo[0] = {
@@ -440,8 +491,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 	        .min_exposure_line = 16,
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
@@ -486,8 +537,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 	        .min_exposure_line = 16,
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
@@ -532,8 +583,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 2304,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_vid_info,
 	        .min_exposure_line = 16,
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
@@ -624,8 +675,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 	        .min_exposure_line = 16,
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
@@ -717,8 +768,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 2304,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 	        .min_exposure_line = 16,
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
@@ -809,8 +860,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 2304,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_vid_info,
 	        .min_exposure_line = 8,
 		.read_margin =24,
                 .ana_gain_min = BASEGAIN * 1,
@@ -867,7 +918,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {0},
 	},
 
-	{//custom6
+	{//custom6  full crop
 		.frame_desc = frame_desc_cus6,
 		.num_entries = ARRAY_SIZE(frame_desc_cus6),
 		.mode_setting_table = addr_data_pair_custom6,
@@ -902,8 +953,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_cus6_info,
 	        .min_exposure_line = 16,
 		.read_margin = 96,
                 .ana_gain_min = BASEGAIN * 1,
@@ -936,7 +987,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.ana_gain_min = BASEGAIN * 1,
 	.ana_gain_max = BASEGAIN * 64,
 	.ana_gain_type = 2,
-	.ana_gain_step = 32,
+	.ana_gain_step = 2,
 	.ana_gain_table = PARAM_UNDEFINED,
 	.ana_gain_table_size = PARAM_UNDEFINED,
 	.min_gain_iso = 100,
