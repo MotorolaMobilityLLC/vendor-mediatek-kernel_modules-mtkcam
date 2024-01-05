@@ -124,7 +124,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin = 10,
 		.framelength_step = 1,
 		.coarse_integ_step = 1,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 6,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 1,
 		.imgsensor_winsize_info = {
 			.full_w = 4160,
 			.full_h = 3120,
@@ -174,7 +174,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin = 10,
 		.framelength_step = 1,
 		.coarse_integ_step = 1,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 6,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 1,
 		.imgsensor_winsize_info = {
 			.full_w = 4160,
 			.full_h = 3120,
@@ -224,7 +224,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin = 10,
 		.framelength_step = 1,
 		.coarse_integ_step = 1,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 6,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 1,
 		.imgsensor_winsize_info = {
 			.full_w = 4160,
 			.full_h = 3120,
@@ -274,7 +274,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin = 10,
 		.framelength_step = 1,
 		.coarse_integ_step = 1,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 6,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 1,
 		.imgsensor_winsize_info = {
 			.full_w = 4160,
 			.full_h = 3120,
@@ -324,7 +324,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin = 10,
 		.framelength_step = 1,
 		.coarse_integ_step = 1,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 6,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 1,
 		.imgsensor_winsize_info = {
 			.full_w = 4160,
 			.full_h = 3120,
@@ -374,7 +374,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.read_margin = 10,
 		.framelength_step = 1,
 		.coarse_integ_step = 1,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 5,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 1,
 		.imgsensor_winsize_info = {
 			.full_w = 4160,
 			.full_h = 3120,
@@ -426,16 +426,16 @@ static struct subdrv_static_ctx static_ctx = {
 
 	.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_R,
 	.ana_gain_def = BASEGAIN * 4,
-	.ana_gain_min = 1150,
-	.ana_gain_max = BASEGAIN * 64,
+	.ana_gain_min = BASEGAIN,
+	.ana_gain_max = BASEGAIN * 16,
 	.ana_gain_type = 0,//0:sony, 1:ov or samusng....etc no used
 	.ana_gain_step = 1,// no used
 	.ana_gain_table = imx258_ana_gain_table,
 	.ana_gain_table_size = sizeof(imx258_ana_gain_table),
 	.min_gain_iso = 100, // no change
 	.exposure_def = 0x3D0, //no change
-	.exposure_min = 16,
-	.exposure_max = 0xFFFF - 48,
+	.exposure_min = 1,
+	.exposure_max = 0xFFFF - 10,
 	.exposure_step = 1, // Get Maximum Step
 	.exposure_margin = 10,
 	.dig_gain_min = BASE_DGAIN * 1,
@@ -462,7 +462,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.reg_addr_exposure = {
 			{0x0202, 0x0203},
 	},
-	.long_exposure_support = TRUE,
+	.long_exposure_support = FALSE,
 	.reg_addr_exposure_lshift = 0x3100,
 	.reg_addr_ana_gain = {
 			{0x0204, 0x0205},
@@ -669,8 +669,8 @@ static void set_group_hold(void *arg, u8 en)
 
 static u16 get_gain2reg(u32 gain)
 {
-	/*the below formula is unconditional carry */
-	return (1024 - (1024 * BASEGAIN + (gain >> 1)) / gain);
+	if (gain > 16*BASEGAIN) gain = 16*BASEGAIN;
+	return (512 - (512 * BASEGAIN) / gain);
 }
 
 static int imx258_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
