@@ -26,6 +26,7 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check);
 int mtk_cam_seninf_get_csi_irq_status(struct v4l2_subdev *sd, struct v4l2_ctrl *ctrl);
 
 int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd);
+int mtk_cam_seninf_set_abort(struct v4l2_subdev *sd);
 
 int mtk_cam_seninf_check_timeout(struct v4l2_subdev *sd, u64 time_waited);
 u64 mtk_cam_seninf_get_frame_time(struct v4l2_subdev *sd, u32 seq_id);

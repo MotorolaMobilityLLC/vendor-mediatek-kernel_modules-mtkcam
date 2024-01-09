@@ -2360,6 +2360,7 @@ static int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 	ctx->single_raw_streaming_en = false;
 	ctx->seamless_vsync_debug_seninf_en = false;
 	ctx->core->seamless_vsync_debug_en = false;
+	ctx->set_abort_flag = false;
 
 	return 0;
 }
@@ -4100,6 +4101,26 @@ int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd)
 		 __func__, ret, reset_by_user);
 
 	return (ret && reset_by_user);
+}
+
+int mtk_cam_seninf_set_abort(struct v4l2_subdev *sd)
+{
+	int ret = 0;
+	struct seninf_ctx *ctx = NULL;
+
+	if(sd) {
+		ctx = sd_to_ctx(sd);
+	} else {
+		ret = -1;
+		pr_info("[%s] Null v4l2_subdev sd\n", __func__);
+		return ret;
+	}
+
+	ctx->set_abort_flag = 1;
+
+	dev_info(ctx->dev, "%s Streaming(%d) set_abort_flag(%d)\n",
+		__func__, ctx->streaming, ctx->set_abort_flag);
+	return ret;
 }
 
 void mtk_cam_seninf_set_secure(struct v4l2_subdev *sd, int enable, u64 SecInfo_addr)

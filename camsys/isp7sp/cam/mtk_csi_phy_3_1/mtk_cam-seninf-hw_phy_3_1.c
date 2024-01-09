@@ -4969,6 +4969,11 @@ static bool delay_with_stream_check(struct seninf_ctx *ctx, unsigned long delay)
 		if (!ctx->streaming)
 			break;
 
+		if (ctx->set_abort_flag) {
+			dev_info(ctx->dev, "%s abort\n", __func__);
+			return false;
+		}
+
 		delay_step = min((unsigned long)MAX_DELAY_STEP, delay - delay_inc);
 		mdelay(delay_step);
 		delay_inc += delay_step;
