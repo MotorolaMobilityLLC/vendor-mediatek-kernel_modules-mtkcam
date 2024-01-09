@@ -1726,6 +1726,9 @@ void mtk_cam_ctrl_stop(struct mtk_cam_ctrl *cam_ctrl)
 	}
 	read_unlock(&cam_ctrl->list_lock);
 
+	if (ctx->seninf)
+		mtk_cam_seninf_set_abort(ctx->seninf);
+
 	mtk_cam_watchdog_stop(&cam_ctrl->watchdog);
 
 	/* this would be time consuming */
