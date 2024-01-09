@@ -802,7 +802,6 @@ static const struct plat_data_hw mt6878_hw_data = {
 	.max_main_pipe_twin_w = 4596,
 	.pixel_mode_max = 1,
 	.has_pixel_mode_contraints = false,
-	.vsync_timeout_offset_ns = 3000000,
 };
 
 struct camsys_platform_data mt6878_data = {

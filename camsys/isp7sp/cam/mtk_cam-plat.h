@@ -205,8 +205,6 @@ struct plat_data_hw {
 
 	bool dcif_slb_support;
 	bool apu_support;
-
-	u64 vsync_timeout_offset_ns;
 };
 
 struct camsys_platform_data {
