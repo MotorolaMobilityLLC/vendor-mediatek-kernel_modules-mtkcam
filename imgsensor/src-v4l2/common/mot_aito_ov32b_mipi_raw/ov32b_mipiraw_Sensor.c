@@ -561,6 +561,26 @@ static u16 get_gain2reg(u32 gain)
 static int ov32b_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 
+	u32 mode = *((u32 *)para);
+
+	if (mode != ctx->test_pattern)
+		DRV_LOG(ctx, "mode(%u->%u)\n", ctx->test_pattern, mode);
+	if (mode){
+		subdrv_i2c_wr_u8(ctx,0x3208,0x01);
+		subdrv_i2c_wr_u8(ctx,0x50c1,0x01);
+		subdrv_i2c_wr_u8(ctx,0x50c2,0xff);
+		subdrv_i2c_wr_u8(ctx,0x3208,0x11);
+		subdrv_i2c_wr_u8(ctx,0x3208,0xa1);
+	}
+	else if (ctx->test_pattern){
+		subdrv_i2c_wr_u8(ctx,0x3208,0x01);
+		subdrv_i2c_wr_u8(ctx,0x50c1,0x00);
+		subdrv_i2c_wr_u8(ctx,0x50c2,0x00);
+		subdrv_i2c_wr_u8(ctx,0x3208,0x11);
+		subdrv_i2c_wr_u8(ctx,0x3208,0xa1);
+	}
+	ctx->test_pattern = mode;
+
 	return ERROR_NONE;
 }
 
