@@ -230,19 +230,19 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
-#if 0
+
 	{
 		.bus.csi2 = {
 			.channel = 1,
 			.data_type = 0x30,
-			.hsize = 0x0600,
-			.vsize = 0x0180,
+			.hsize = 0x0200,
+			.vsize = 0x0600,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 			.valid_bit = 10,
 		},
 	},
-#endif
+
 };
 
 
@@ -259,7 +259,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
-#if 1
+
 	{
 		.bus.csi2 = {
 			.channel = 1,
@@ -270,9 +270,9 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
-#endif
+
 };
-#if 1
+
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 0,
@@ -318,7 +318,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	},
 };
 
-#if 0
+
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus5_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 0,
@@ -364,7 +364,6 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus5_info = {
 	},
 };
 
-#endif
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus6_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 0,
@@ -454,7 +453,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_vid_info = {
 		.i4PDOrder = {0,1}, // R = 1, L = 0
 	},
 };
-#endif
+
 static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_prev,
@@ -606,8 +605,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.raw_cnt = 1,
 		.exp_cnt = 1,
 		.pclk = 1600000000,
-		.linelength = 5096,
-		.framelength = 2616,
+		.linelength = 5000,
+		.framelength = 2660,
 		.max_framerate = 1200,
 		.mipi_pixel_rate = 2079360000,
 		.readout_length = 0,
@@ -791,8 +790,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.raw_cnt = 1,
 		.exp_cnt = 1,
 		.pclk = 1600000000,
-		.linelength = 5096,
-		.framelength = 1308,
+		.linelength = 5000,
+		.framelength = 1332,
 		.max_framerate = 2400,
 		.mipi_pixel_rate = 2079360000,
 		.readout_length = 0,
@@ -883,8 +882,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.raw_cnt = 1,
 		.exp_cnt = 1,
 		.pclk = 1600000000,
-		.linelength = 5096,
-		.framelength = 10465,
+		.linelength = 5000,
+		.framelength = 10668,
 		.max_framerate = 300,
 		.mipi_pixel_rate = 2079360000,
 		.readout_length = 0,
@@ -906,8 +905,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 2048,
 			.h2_tg_size = 1536,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info =  &imgsensor_pd_cus5_info,
 	        .min_exposure_line = 16,
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
@@ -1153,7 +1152,7 @@ static void s5kgn8sensor_init(struct subdrv_ctx *ctx)
 	subdrv_i2c_wr_u16(ctx, 0xFCFC, 0x4000);
 	subdrv_i2c_wr_u16(ctx, 0x6000, 0x0005);
 	subdrv_i2c_wr_u16(ctx, 0x6010, 0x0001);
-	mdelay(30);
+	mdelay(10);
 	i2c_table_write(ctx, uTnpArrayInit,
 			ARRAY_SIZE(uTnpArrayInit));
 	DRV_LOG(ctx, "X\n");
