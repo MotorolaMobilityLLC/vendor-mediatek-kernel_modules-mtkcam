@@ -29,6 +29,7 @@ static DEFINE_MUTEX(task_group_info_tbl_lock);
 
 static struct kobject *base_kobj;
 static struct global_info *glb_info;
+static struct eas_settings *pre_eas_settings;
 
 bool is_release_uclamp_max = false;
 int proc_time_window_size = 1;
@@ -868,6 +869,38 @@ inline bool need_send_regulator_req(struct global_info *g_info)
 	return !(g_info->use_special_uclamp_max && same_uclamp_max);
 }
 
+void set_heavyloading_special_setting(void)
+{
+	if (likely(pre_eas_settings == NULL))
+		pre_eas_settings = kmalloc(sizeof(*pre_eas_settings), GFP_KERNEL);
+	if (unlikely(!pre_eas_settings)) {
+		C2PS_LOGE("pre_eas_settings OOM\n");
+		return;
+	}
+
+	pre_eas_settings->flt_ctrl_force = flt_ctrl_force_get();
+	pre_eas_settings->group_get_mode = group_get_mode();
+	pre_eas_settings->grp_dvfs_ctrl = get_grp_dvfs_ctrl();
+	pre_eas_settings->ignore_idle_ctrl = get_ignore_idle_ctrl();
+
+	// set flt off, ignore idle on
+	flt_ctrl_force_set(1);
+	group_set_mode(0);
+	set_grp_dvfs_ctrl(0);
+	set_ignore_idle_ctrl(1);
+}
+
+void reset_heavyloading_special_setting(void)
+{
+	if (likely(!pre_eas_settings))
+		return;
+
+	flt_ctrl_force_set(0);
+	group_set_mode(pre_eas_settings->group_get_mode);
+	set_grp_dvfs_ctrl(pre_eas_settings->grp_dvfs_ctrl);
+	set_ignore_idle_ctrl(pre_eas_settings->ignore_idle_ctrl);
+}
+
 static ssize_t task_info_show(struct kobject *kobj,
 	struct kobj_attribute *attr,
 	char *buf)
@@ -998,6 +1031,10 @@ void exit_c2ps_common(void)
 	c2ps_clear_task_group_info_table();
 	kfree(glb_info);
 	glb_info = NULL;
+	if (pre_eas_settings != NULL) {
+		kfree(pre_eas_settings);
+		pre_eas_settings = NULL;
+	}
 	is_release_uclamp_max = false;
 	c2ps_sysfs_remove_file(base_kobj, &kobj_attr_task_info);
 	c2ps_sysfs_remove_file(base_kobj, &kobj_attr_gear_uclamp_max);

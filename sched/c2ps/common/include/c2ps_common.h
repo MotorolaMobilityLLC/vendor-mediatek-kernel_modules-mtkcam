@@ -110,6 +110,15 @@ struct global_info {
 	struct mutex mlock;
 };
 
+struct eas_settings {
+	// disable flt
+	bool flt_ctrl_force;
+	int group_get_mode;
+	int grp_dvfs_ctrl;
+	// skip idle
+	int ignore_idle_ctrl;
+};
+
 struct regulator_req {
 	struct c2ps_task_info *tsk_info;
 	struct global_info *glb_info;
@@ -173,6 +182,8 @@ void set_glb_info_bg_uclamp_max(void);
 void update_cpu_idle_rate(void);
 bool need_update_background(void);
 void reset_need_update_status(void);
+void set_heavyloading_special_setting(void);
+void reset_heavyloading_special_setting(void);
 unsigned long c2ps_get_uclamp_freq(int cpu,  unsigned int uclamp);
 bool c2ps_get_cur_cpu_floor(const int cpu, int *floor_uclamp, int *floor_freq);
 int c2ps_get_cpu_min_uclamp(const int cpu);
@@ -198,5 +209,13 @@ extern struct cpufreq_policy *cpufreq_cpu_get(unsigned int cpu);
 extern void cpufreq_cpu_put(struct cpufreq_policy *policy);
 extern unsigned long pd_get_freq_util(unsigned int cpu, unsigned long freq);
 extern struct cpumask *get_gear_cpumask(unsigned int gear);
+extern bool flt_ctrl_force_get(void);
+extern void flt_ctrl_force_set(int set);
+extern u32 group_get_mode(void);
+extern void group_set_mode(u32 mode);
+extern int get_grp_dvfs_ctrl(void);
+extern void set_grp_dvfs_ctrl(int set);
+extern bool get_ignore_idle_ctrl(void);
+extern void set_ignore_idle_ctrl(bool val);
 
 #endif  // C2PS_COMMON_INCLUDE_C2PS_COMMON_H_

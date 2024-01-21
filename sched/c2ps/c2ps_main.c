@@ -104,6 +104,7 @@ static void c2ps_notifier_wq_cb_uninit(void)
 	set_gear_uclamp_ctrl(0);
 	// disable sugov curr_uclamp feature
 	set_curr_uclamp_ctrl(0);
+	reset_heavyloading_special_setting();
 	c2ps_uclamp_regulator_flush();
 	del_timer_sync(&backgroup_info_update_timer);
 	exit_c2ps_common();
@@ -381,6 +382,13 @@ int c2ps_notify_init(
 		"max_uclamp_cluster2: %d",
 		cfg_camfps, max_uclamp_cluster0, max_uclamp_cluster1,
 		max_uclamp_cluster2);
+
+	// FIXME: temp solution to hint heavyloading scene with EAS setting
+	if (unlikely(cfg_camfps == 0 && max_uclamp_cluster0 == 0 &&
+		max_uclamp_cluster1 == 0 && max_uclamp_cluster2 == 0)) {
+		set_heavyloading_special_setting();
+		goto out;
+	}
 
 	// set_config_camfps(cfg_camfps);
 
