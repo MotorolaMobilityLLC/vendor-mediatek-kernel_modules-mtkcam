@@ -192,6 +192,8 @@ void c2ps_regulator_bgpolicy_simple(struct regulator_req *req)
 	for (; cluster_index < c2ps_nr_clusters; cluster_index++) {
 		int *_cur_bg_uclamp = &(req->glb_info->curr_max_uclamp[cluster_index]);
 		int cpu = c2ps_get_first_cpu_of_cluster(cluster_index);
+		int _uclamp_max_floor = req->glb_info->use_uclamp_max_floor?
+							req->glb_info->uclamp_max_floor[cluster_index]:0;
 
 		if (unlikely(cpu < 0))
 			continue;
@@ -204,16 +206,11 @@ void c2ps_regulator_bgpolicy_simple(struct regulator_req *req)
 		if (req->glb_info->need_update_uclamp[1 + cluster_index] == 2) {
 			*_cur_bg_uclamp = (int)(req->glb_info->max_uclamp[cluster_index]
 				      * (100 + (*_bg_uclamp_up_margin[cluster_index])) / 100);
-		} else if (req->glb_info->use_special_uclamp_max &&
-				req->glb_info->special_uclamp_max[cluster_index] > 0) {
-			*_cur_bg_uclamp = max(req->glb_info->special_uclamp_max[cluster_index],
-								req->glb_info->max_uclamp[cluster_index]);
 		} else if (req->glb_info->need_update_uclamp[1 + cluster_index] == 1) {
 			int _max_uclamp_max = (int)(req->glb_info->max_uclamp[cluster_index]
 				      * (100 + (*_bg_uclamp_up_margin[cluster_index])) / 100);
 
 			*_cur_bg_uclamp += c2ps_regulator_bg_update_uclamp;
-
 			*_cur_bg_uclamp = min(*_cur_bg_uclamp, _max_uclamp_max);
 		} else if (req->glb_info->need_update_uclamp[1 + cluster_index] == -2) {
 			if (c2ps_regulator_bg_update_uclamp_fast <= 0)
@@ -229,6 +226,7 @@ void c2ps_regulator_bgpolicy_simple(struct regulator_req *req)
 		} else {
 			continue;
 		}
+		*_cur_bg_uclamp = max(*_cur_bg_uclamp, _uclamp_max_floor);
 		*_cur_bg_uclamp = min(*_cur_bg_uclamp, c2ps_get_cpu_max_uclamp(cpu));
 		set_gear_uclamp_max(cluster_index, *_cur_bg_uclamp);
 	}

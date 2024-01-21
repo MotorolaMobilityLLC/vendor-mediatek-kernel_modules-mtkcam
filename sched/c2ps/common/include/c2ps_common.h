@@ -100,13 +100,17 @@ struct global_info {
 	 */
 	int need_update_uclamp[1 + MAX_NUMBER_OF_CLUSTERS];
 	int curr_max_uclamp[MAX_NUMBER_OF_CLUSTERS];
-	bool use_special_uclamp_max;
+	bool use_uclamp_max_floor;
 	int special_uclamp_max[MAX_NUMBER_OF_CLUSTERS];
 	int recovery_uclamp_max[MAX_NUMBER_OF_CLUSTERS];
 	int overwrite_uclamp_max[MAX_NUMBER_OF_CLUSTERS];
 	int uclamp_max_placeholder1[MAX_NUMBER_OF_CLUSTERS];
 	int uclamp_max_placeholder2[MAX_NUMBER_OF_CLUSTERS];
 	int uclamp_max_placeholder3[MAX_NUMBER_OF_CLUSTERS];
+	int uclamp_max_floor[MAX_NUMBER_OF_CLUSTERS];
+	// due to alert 100 is used to trigger special uclamp max, we need to backup
+	// idle alert value
+	int backup_idle_alert;
 	struct mutex mlock;
 };
 
@@ -192,7 +196,6 @@ bool c2ps_boost_cur_uclamp_max(const int cluster, struct global_info *g_info);
 int c2ps_get_first_cpu_of_cluster(int cluster);
 unsigned long c2ps_get_cluster_uclamp_freq(int cluster,  unsigned int uclamp);
 bool need_update_single_shot_uclamp_max(int *uclamp_max);
-bool need_send_regulator_req(struct global_info *g_info);
 
 
 extern void set_curr_uclamp_ctrl(int val);

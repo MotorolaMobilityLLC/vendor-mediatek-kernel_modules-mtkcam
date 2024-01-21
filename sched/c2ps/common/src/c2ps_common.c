@@ -379,7 +379,10 @@ inline void decide_special_uclamp_max(int placeholder_type)
 			memcpy(glb_info->special_uclamp_max, glb_info->uclamp_max_placeholder1,
 				c2ps_nr_clusters * sizeof(int));
 			break;
+
 	}
+	memcpy(glb_info->uclamp_max_floor, glb_info->special_uclamp_max,
+				c2ps_nr_clusters * sizeof(int));
 	c2ps_info_unlock(&glb_info->mlock);
 	C2PS_LOGD(
 		"special_cluster_0_util=%d special_cluster_1_util=%d "
@@ -710,9 +713,17 @@ void update_cpu_idle_rate(void)
 	unsigned int _total_num_of_cpu = 0;
 	unsigned int _total_idlerate = 0;
 	bool _dangerous_idle_rate_state = false;
+	int _alert = 0;
 
 	if (!glb_info)
 		return;
+
+	if (likely(background_idlerate_alert < 100)) {
+		glb_info->backup_idle_alert = background_idlerate_alert;
+		_alert = background_idlerate_alert;
+	} else {
+		_alert = glb_info->backup_idle_alert;
+	}
 
 	// Only timer callback will call this function, shouldn't lock
 	for (; _cpu_index < MAX_CPU_NUM; _cpu_index++) {
@@ -758,7 +769,7 @@ void update_cpu_idle_rate(void)
 			glb_info->need_update_uclamp[0] = 1;
 			glb_info->need_update_uclamp[1 + _cluster_index] = 2;
 		} else if (_sum_of_idlerate[_cluster_index] <
-			background_idlerate_alert * _num_of_cpu[_cluster_index]) {
+			_alert * _num_of_cpu[_cluster_index]) {
 			glb_info->need_update_uclamp[0] = 1;
 			glb_info->need_update_uclamp[1 + _cluster_index] = 1;
 			c2ps_main_systrace("cluster: %u touches alert idle rate",
@@ -767,7 +778,7 @@ void update_cpu_idle_rate(void)
 					glb_info->max_uclamp[_cluster_index]) {
 			glb_info->need_update_uclamp[0] = 1;
 			if (_sum_of_idlerate[_cluster_index] >
-					background_idlerate_alert * _num_of_cpu[_cluster_index] * 2)
+					_alert * _num_of_cpu[_cluster_index] * 2)
 				glb_info->need_update_uclamp[1 + _cluster_index] = -2;
 			else
 				glb_info->need_update_uclamp[1 + _cluster_index] = -1;
@@ -791,6 +802,7 @@ inline bool need_update_background(void)
 
 	// temp solution, use alert = 100 to indicate release background uclamp max
 	if (background_idlerate_alert >= 100 || c2ps_placeholder) {
+		decide_special_uclamp_max(c2ps_placeholder);
 		if (!is_release_uclamp_max) {
 			c2ps_info_lock(&glb_info->mlock);
 			{
@@ -799,14 +811,17 @@ inline bool need_update_background(void)
 					glb_info->recovery_uclamp_max[_idx] =
 								glb_info->curr_max_uclamp[_idx];
 				}
+
+				glb_info->use_uclamp_max_floor = true;
+				if (background_idlerate_alert >= 100) {
+					glb_info->backup_idle_alert =
+							max(glb_info->backup_idle_alert / 2, 15);
+				}
 			}
 			c2ps_info_unlock(&glb_info->mlock);
+			is_release_uclamp_max = true;
+			return true;
 		}
-		decide_special_uclamp_max(c2ps_placeholder);
-		is_release_uclamp_max = true;
-		glb_info->use_special_uclamp_max = true;
-
-		return true;
 	}
 
 	if (is_release_uclamp_max)
@@ -843,30 +858,12 @@ inline void reset_need_update_status(void)
 			}
 		}
 
-		glb_info->use_special_uclamp_max = false;
+		glb_info->use_uclamp_max_floor = false;
 		c2ps_info_unlock(&glb_info->mlock);
 		is_release_uclamp_max = false;
+	} else if (!is_release_uclamp_max) {
+		glb_info->need_update_uclamp[0] = 0;
 	}
-	glb_info->need_update_uclamp[0] = 0;
-}
-
-inline bool need_send_regulator_req(struct global_info *g_info)
-{
-	bool same_uclamp_max = true;
-	short cluster_idx = 0;
-
-	if (!g_info)
-		return false;
-
-	for (; cluster_idx < c2ps_nr_clusters; cluster_idx++) {
-		if (likely(g_info->curr_max_uclamp[cluster_idx] !=
-				g_info->special_uclamp_max[cluster_idx])) {
-			same_uclamp_max = false;
-			break;
-		}
-	}
-
-	return !(g_info->use_special_uclamp_max && same_uclamp_max);
 }
 
 void set_heavyloading_special_setting(void)

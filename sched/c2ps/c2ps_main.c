@@ -344,18 +344,13 @@ static void c2ps_notifier_wq_cb(void)
 	c2ps_free(vpPush, sizeof(*vpPush));
 
 	if (need_update_background()) {
-		struct global_info *g_info = get_glb_info();
+		struct regulator_req *req = get_regulator_req();
 
-		if (unlikely(!g_info))
-			return;
-		if (need_send_regulator_req(g_info)) {
-			struct regulator_req *req = get_regulator_req();
-			if (req != NULL) {
-				req->glb_info = g_info;
-				send_regulator_req(req);
-			}
+		if (req != NULL) {
+			req->glb_info = get_glb_info();
+			send_regulator_req(req);
+			reset_need_update_status();
 		}
-		reset_need_update_status();
 	}
 }
 
