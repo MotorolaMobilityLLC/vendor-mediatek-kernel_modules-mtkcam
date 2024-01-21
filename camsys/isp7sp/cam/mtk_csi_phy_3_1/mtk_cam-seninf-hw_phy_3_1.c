@@ -433,17 +433,17 @@ static int mtk_cam_seninf_enable_cam_mux_vsync_irq(struct seninf_ctx *ctx, bool 
 static int mtk_cam_seninf_enable_global_drop_irq(struct seninf_ctx *ctx, bool enable, int index)
 {
 	void *pSeninf_cam_mux_gcsr = ctx->reg_if_cam_mux_gcsr;
-	int tmp = 0;
 
-	tmp = SENINF_READ_BITS(pSeninf_cam_mux_gcsr,
-			SENINF_CAM_MUX_GCSR_IRQ_EN, RG_SENINF_CAM_MUX_GCSR_SKIP_NEXT_FRAME_IRQ_EN);
 	if (enable)
-		tmp |= 1 << index;
+		SENINF_BITS(pSeninf_cam_mux_gcsr,
+					SENINF_CAM_MUX_GCSR_IRQ_EN,
+					RG_SENINF_CAM_MUX_GCSR_SKIP_NEXT_FRAME_IRQ_EN,
+					0x3);
 	else
-		tmp &= ~(1 << index);
-
-	SENINF_BITS(pSeninf_cam_mux_gcsr,
-		SENINF_CAM_MUX_GCSR_IRQ_EN, RG_SENINF_CAM_MUX_GCSR_SKIP_NEXT_FRAME_IRQ_EN, tmp);
+		SENINF_BITS(pSeninf_cam_mux_gcsr,
+					SENINF_CAM_MUX_GCSR_IRQ_EN,
+					RG_SENINF_CAM_MUX_GCSR_SKIP_NEXT_FRAME_IRQ_EN,
+					0x0);
 
 	return 0;
 
