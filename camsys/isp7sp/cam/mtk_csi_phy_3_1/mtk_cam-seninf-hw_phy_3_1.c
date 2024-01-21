@@ -430,6 +430,25 @@ static int mtk_cam_seninf_enable_cam_mux_vsync_irq(struct seninf_ctx *ctx, bool 
 	return 0;
 }
 
+static int mtk_cam_seninf_enable_global_drop_irq(struct seninf_ctx *ctx, bool enable, int index)
+{
+	void *pSeninf_cam_mux_gcsr = ctx->reg_if_cam_mux_gcsr;
+	int tmp = 0;
+
+	tmp = SENINF_READ_BITS(pSeninf_cam_mux_gcsr,
+			SENINF_CAM_MUX_GCSR_IRQ_EN, RG_SENINF_CAM_MUX_GCSR_SKIP_NEXT_FRAME_IRQ_EN);
+	if (enable)
+		tmp |= 1 << index;
+	else
+		tmp &= ~(1 << index);
+
+	SENINF_BITS(pSeninf_cam_mux_gcsr,
+		SENINF_CAM_MUX_GCSR_IRQ_EN, RG_SENINF_CAM_MUX_GCSR_SKIP_NEXT_FRAME_IRQ_EN, tmp);
+
+	return 0;
+
+}
+
 static int mtk_cam_seninf_disable_cammux(struct seninf_ctx *ctx, int cam_mux)
 {
 	void *pSeninf_cam_mux_pcsr = NULL;
@@ -446,6 +465,7 @@ static int mtk_cam_seninf_disable_cammux(struct seninf_ctx *ctx, int cam_mux)
 	}
 	pSeninf_cam_mux_pcsr = ctx->reg_if_cam_mux_pcsr[cam_mux];
 	mtk_cam_seninf_enable_cam_mux_vsync_irq(ctx, 0, cam_mux);
+	mtk_cam_seninf_enable_global_drop_irq(ctx, 0, cam_mux);
 
 	SENINF_BITS(pSeninf_cam_mux_pcsr,
 			SENINF_CAM_MUX_PCSR_CTRL, CAM_MUX_PCSR_NEXT_SRC_SEL, IDLE_SRC_SEL);
@@ -4553,6 +4573,7 @@ static int mtk_cam_seninf_debug_core_dump(struct seninf_ctx *ctx,
 	struct mtk_cam_seninf_mux_meter *meter;
 	struct mtk_cam_seninf_vcinfo_debug *vcinfo_debug;
 	void *seninf, *csi_mac, *rx, *pmux, *pcammux, *base_ana;
+	void *pSeninf_cam_mux_gcsr;
 	unsigned long debug_ft = FT_30_FPS;
 	const unsigned int ft_delay_margin = 3;
 
@@ -4560,6 +4581,7 @@ static int mtk_cam_seninf_debug_core_dump(struct seninf_ctx *ctx,
 	seninf = ctx->reg_if_csi2[(unsigned int)ctx->seninfIdx];
 	rx = ctx->reg_ana_dphy_top[(unsigned int)ctx->port];
 	base_ana = ctx->reg_ana_csi_rx[(unsigned int)ctx->port];
+	pSeninf_cam_mux_gcsr = ctx->reg_if_cam_mux_gcsr;
 
 	ctrl =
 		v4l2_ctrl_find(sensor_sd->ctrl_handler, V4L2_CID_MTK_SOF_TIMEOUT_VALUE);
@@ -4617,6 +4639,26 @@ static int mtk_cam_seninf_debug_core_dump(struct seninf_ctx *ctx,
 	SENINF_WRITE_REG(csi_mac, CSIRX_MAC_CSI2_SIZE_CHK_RCV2, 0xFFFFFFFF);
 	SENINF_WRITE_REG(csi_mac, CSIRX_MAC_CSI2_SIZE_CHK_RCV3, 0xFFFFFFFF);
 	SENINF_WRITE_REG(csi_mac, CSIRX_MAC_CSI2_SIZE_CHK_RCV4, 0xFFFFFFFF);
+
+	dev_info(ctx->dev,
+	"CAMMUX GCSR IRQ_EN/stat 0x%x/0x%x, VSYNC_IRQ_EN/H 0x%x/0x%x, VSYNC_IRQ_STS/H: 0x%x/0x%x\n",
+		SENINF_READ_REG(pSeninf_cam_mux_gcsr, SENINF_CAM_MUX_GCSR_IRQ_EN),
+		SENINF_READ_REG(pSeninf_cam_mux_gcsr, SENINF_CAM_MUX_GCSR_IRQ_STS),
+		SENINF_READ_REG(pSeninf_cam_mux_gcsr, SENINF_CAM_MUX_GCSR_VSYNC_IRQ_EN),
+		SENINF_READ_REG(pSeninf_cam_mux_gcsr, SENINF_CAM_MUX_GCSR_VSYNC_IRQ_EN_H),
+		SENINF_READ_REG(pSeninf_cam_mux_gcsr, SENINF_CAM_MUX_GCSR_VSYNC_IRQ_STS),
+		SENINF_READ_REG(pSeninf_cam_mux_gcsr, SENINF_CAM_MUX_GCSR_VSYNC_IRQ_STS_H));
+
+	dev_info(ctx->dev,
+	"GCSR HSIZE_IRQ_EN/H/stat/stat_H 0x%x/0x%x/0x%x/0x%x, VSIZE_IRQ_EN/H/stat/stat_H 0x%x/0x%x/0x%x/0x%x\n",
+		SENINF_READ_REG(pSeninf_cam_mux_gcsr, SENINF_CAM_MUX_GCSR_HSIZE_ERR_IRQ_EN),
+		SENINF_READ_REG(pSeninf_cam_mux_gcsr, SENINF_CAM_MUX_GCSR_HSIZE_ERR_IRQ_EN_H),
+		SENINF_READ_REG(pSeninf_cam_mux_gcsr, SENINF_CAM_MUX_GCSR_HSIZE_ERR_IRQ_STS),
+		SENINF_READ_REG(pSeninf_cam_mux_gcsr, SENINF_CAM_MUX_GCSR_HSIZE_ERR_IRQ_STS_H),
+		SENINF_READ_REG(pSeninf_cam_mux_gcsr, SENINF_CAM_MUX_GCSR_VSIZE_ERR_IRQ_EN),
+		SENINF_READ_REG(pSeninf_cam_mux_gcsr, SENINF_CAM_MUX_GCSR_VSIZE_ERR_IRQ_EN_H),
+		SENINF_READ_REG(pSeninf_cam_mux_gcsr, SENINF_CAM_MUX_GCSR_VSIZE_ERR_IRQ_STS),
+		SENINF_READ_REG(pSeninf_cam_mux_gcsr, SENINF_CAM_MUX_GCSR_VSIZE_ERR_IRQ_STS_H));
 
 	for (i = 0; i < ctx->vcinfo.cnt; i++) {
 		vc = &ctx->vcinfo.vc[i];
@@ -6392,6 +6434,7 @@ static void seninf_seamless_record_cammux_irq(struct seninf_core *core,
 				dest = &vc->dest[j];
 				vsync_info->used_cammux[index] = dest->cam;
 
+				mtk_cam_seninf_enable_global_drop_irq(ctx_, false, dest->cam);
 				if (dest->cam < _seninf_ops->cam_mux_num) {
 					pSeninf_cam_mux_pcsr =
 						ctx_->reg_if_cam_mux_pcsr[dest->cam];
@@ -6680,26 +6723,6 @@ static int mtk_cam_seninf_reset_cam_mux_dyn_en(struct seninf_ctx *ctx, int index
 		SENINF_BITS(pSeninf_cam_mux_gcsr,
 			SENINF_CAM_MUX_GCSR_DYN_EN1, RG_SENINF_CAM_MUX_GCSR_DYN_SWITCH_EN1, 0);
 	return 0;
-}
-
-
-static int mtk_cam_seninf_enable_global_drop_irq(struct seninf_ctx *ctx, bool enable, int index)
-{
-	void *pSeninf_cam_mux_gcsr = ctx->reg_if_cam_mux_gcsr;
-	int tmp = 0;
-
-	tmp = SENINF_READ_BITS(pSeninf_cam_mux_gcsr,
-			SENINF_CAM_MUX_GCSR_IRQ_EN, RG_SENINF_CAM_MUX_GCSR_SKIP_NEXT_FRAME_IRQ_EN);
-	if (enable)
-		tmp |= 1 << index;
-	else
-		tmp &= ~(1 << index);
-
-	SENINF_BITS(pSeninf_cam_mux_gcsr,
-		SENINF_CAM_MUX_GCSR_IRQ_EN, RG_SENINF_CAM_MUX_GCSR_SKIP_NEXT_FRAME_IRQ_EN, tmp);
-
-	return 0;
-
 }
 
 static int mtk_cam_seninf_set_all_cam_mux_vsync_irq(struct seninf_ctx *ctx, bool enable)
