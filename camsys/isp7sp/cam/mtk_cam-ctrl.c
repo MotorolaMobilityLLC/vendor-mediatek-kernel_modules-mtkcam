@@ -1231,10 +1231,6 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 
 	mtk_cam_job_manually_apply_sensor(job);
 
-	/* should set ts for next job's apply_sensor */
-	ctrl->r_info.sof_ts_ns = ktime_get_boottime_ns();
-	ctrl->r_info.sof_l_ts_ns = ktime_get_boottime_ns();
-
 	if (call_job_seamless_ops(job, after_sensor))
 		goto SWITCH_FAILURE;
 
@@ -1246,7 +1242,13 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 		goto SWITCH_FAILURE;
 	}
 
+	/* should set ts for next job's apply_sensor */
+	ctrl->r_info.sof_ts_ns = ktime_get_boottime_ns();
+	ctrl->r_info.sof_l_ts_ns = ktime_get_boottime_ns();
+
 	call_job_seamless_ops(job, after_prev_frame_done);
+
+	trigger_fake_sof_event(ctrl);
 
 	check_args.expect_inner = job->frame_seq_no;
 	if (mtk_cam_ctrl_wait_event(ctrl, check_for_inner, &check_args,
