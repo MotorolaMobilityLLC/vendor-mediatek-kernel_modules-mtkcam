@@ -30,12 +30,90 @@ static void s5kgn8sensor_init(struct subdrv_ctx *ctx);
 static int open(struct subdrv_ctx *ctx);
 static int s5kgn8set_ctrl_locker(struct subdrv_ctx *ctx, u32 cid, bool *is_lock);
 static int s5kgn8_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int s5kgn8_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 /* STRUCT */
 
 static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, s5kgn8set_test_pattern},
 	{SENSOR_FEATURE_SET_AWB_GAIN, s5kgn8_awb_gain},
+	{SENSOR_FEATURE_SEAMLESS_SWITCH, s5kgn8_seamless_switch},
 };
+
+
+
+static int s5kgn8_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	enum SENSOR_SCENARIO_ID_ENUM scenario_id;
+	struct mtk_hdr_ae *ae_ctrl = NULL;
+	u64 *feature_data = (u64 *)para;
+	u32 exp_cnt = 0;
+
+	if (feature_data == NULL) {
+		DRV_LOGE(ctx, "input scenario is null!");
+		return ERROR_NONE;
+	}
+	scenario_id = *feature_data;
+	DRV_LOGE(ctx, "wzl  s5kgn8_seamless_switch  star scenario_id =%d \n",scenario_id);
+	if ((feature_data + 1) != NULL)
+		ae_ctrl = (struct mtk_hdr_ae *)((uintptr_t)(*(feature_data + 1)));
+	else
+		DRV_LOGE(ctx, "no ae_ctrl input");
+
+	check_current_scenario_id_bound(ctx);
+	DRV_LOG(ctx, "E: set seamless switch %u %u\n", ctx->current_scenario_id, scenario_id);
+	if (!ctx->extend_frame_length_en)
+		DRV_LOGE(ctx, "please extend_frame_length before seamless_switch!\n");
+	ctx->extend_frame_length_en = FALSE;
+
+	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
+		DRV_LOGE(ctx, "invalid sid:%u, mode_num:%u\n",
+			scenario_id, ctx->s_ctx.sensor_mode_num);
+		return ERROR_NONE;
+	}
+	if (ctx->s_ctx.mode[scenario_id].seamless_switch_group == 0 ||
+		ctx->s_ctx.mode[scenario_id].seamless_switch_group !=
+			ctx->s_ctx.mode[ctx->current_scenario_id].seamless_switch_group) {
+		DRV_LOGE(ctx, "seamless_switch not supported\n");
+		return ERROR_NONE;
+	}
+	if (ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_table == NULL) {
+		DRV_LOGE(ctx, "Please implement seamless_switch setting\n");
+		return ERROR_NONE;
+	}
+
+	exp_cnt = ctx->s_ctx.mode[scenario_id].exp_cnt;
+	ctx->is_seamless = TRUE;
+
+
+	update_mode_info(ctx, scenario_id);
+	i2c_table_write(ctx,
+		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_table,
+		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_len);
+
+	if (ae_ctrl) {
+		switch (ctx->s_ctx.mode[scenario_id].hdr_mode) {
+		case HDR_RAW_DCG_RAW:
+			set_shutter(ctx, ae_ctrl->exposure.le_exposure);
+			if (ctx->s_ctx.mode[scenario_id].dcg_info.dcg_gain_mode
+				== IMGSENSOR_DCG_DIRECT_MODE)
+				set_multi_gain(ctx, (u32 *)&ae_ctrl->gain, exp_cnt);
+			else
+				set_gain(ctx, ae_ctrl->gain.le_gain);
+			break;
+		default:
+			set_shutter(ctx, ae_ctrl->exposure.le_exposure);
+			set_gain(ctx, ae_ctrl->gain.le_gain);
+			break;
+		}
+	}
+
+	ctx->fast_mode_on = TRUE;
+	ctx->ref_sof_cnt = ctx->sof_cnt;
+	ctx->is_seamless = FALSE;
+	DRV_LOGE(ctx, "wzl  s5kgn8_seamless_switch  end\n");
+	DRV_LOG(ctx, "X: set seamless switch done\n");
+	return ERROR_NONE;
+}
 
 
 static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
@@ -460,9 +538,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_prev),
 		.mode_setting_table = addr_data_pair_preview,
 		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview),
-		.seamless_switch_group = PARAM_UNDEFINED,
-		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
-		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.seamless_switch_group = 2,
+		.seamless_switch_mode_setting_table = s5kgn8_seamless_preview,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(s5kgn8_seamless_preview),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -922,9 +1000,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_cus6),
 		.mode_setting_table = addr_data_pair_custom6,
 		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom6),
-		.seamless_switch_group = 0,
-		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
-		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.seamless_switch_group = 2,
+		.seamless_switch_mode_setting_table = s5kgn8_seamless_custom6,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(s5kgn8_seamless_custom6),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
