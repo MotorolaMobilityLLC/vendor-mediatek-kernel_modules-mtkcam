@@ -1444,6 +1444,7 @@ void camsv_handle_err(
 			mtk_cam_ctrl_dump_request(sv_dev->cam, CAMSYS_ENGINE_CAMSV, sv_dev->id,
 				frame_idx_inner, MSG_CAMSV_SEAMLESS_ERROR);
 		else {
+			//guozy16, IKSWU-60804, fix camerahalserver crash 1 times
 			if (cur_platform->hw->platform_id == 6989)
 				mtk_cam_ctrl_dump_request(sv_dev->cam, CAMSYS_ENGINE_CAMSV, sv_dev->id,
 					frame_idx_inner, MSG_CAMSV_ERROR);
