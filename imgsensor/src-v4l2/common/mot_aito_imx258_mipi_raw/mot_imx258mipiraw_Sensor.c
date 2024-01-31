@@ -5,7 +5,7 @@
  *
  * Filename:
  * ---------
- *	 imx598mipiraw_Sensor.c
+ *	 imx258mipiraw_Sensor.c
  *
  * Project:
  * --------
@@ -31,6 +31,25 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt);
 static void mot_imx258_apply_spc_data(void *sensor_ctx);
 
+//#define MOT_IMX258_PDAF_DEBUG
+
+#ifdef MOT_IMX258_PDAF_DEBUG
+static unsigned int imx258_pd_dt = 0x30;
+static unsigned int imx258_pd_ddesc = VC_PDAF_STATS_NE_PIX_1;
+static unsigned int imx258_pd_en = 1;
+module_param(imx258_pd_dt, uint, 0644);
+module_param(imx258_pd_ddesc, uint, 0644);
+module_param(imx258_pd_en, uint, 0644);
+#endif
+
+#define ENABLE_IMX258_PD TRUE
+#define IMX258_PD_DT 0x30
+#define IMX258_DATA_DESC VC_PDAF_STATS_NE_PIX_1
+#define IMX258_PD_X_SIZE 136
+#define IMX258_PD_Y_SIZE (384*5)
+#define IMX258_CROP_PD_X_SIZE (136)
+#define IMX258_CROP_PD_Y_SIZE (288*5)
+
 /* STRUCT */
 static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, imx258_set_test_pattern},
@@ -47,6 +66,18 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
+#ifdef ENABLE_IMX258_PD
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = IMX258_PD_DT,
+			.hsize = IMX258_PD_X_SIZE,
+			.vsize = IMX258_PD_Y_SIZE,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = IMX258_DATA_DESC,
+		},
+	}
+#endif
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 	{
@@ -58,6 +89,18 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
+#ifdef ENABLE_IMX258_PD
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = IMX258_PD_DT,
+			.hsize = IMX258_PD_X_SIZE,
+			.vsize = IMX258_PD_Y_SIZE,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = IMX258_DATA_DESC,
+		},
+	}
+#endif
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 	{
@@ -69,6 +112,18 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
+#ifdef ENABLE_IMX258_PD
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = IMX258_PD_DT,
+			.hsize = IMX258_CROP_PD_X_SIZE,
+			.vsize = IMX258_CROP_PD_Y_SIZE,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = IMX258_DATA_DESC,
+		},
+	}
+#endif
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
 	{
@@ -80,6 +135,18 @@ static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
+#ifdef ENABLE_IMX258_PD
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = IMX258_PD_DT,
+			.hsize = IMX258_PD_X_SIZE,
+			.vsize = IMX258_PD_Y_SIZE,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = IMX258_DATA_DESC,
+		},
+	}
+#endif
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 	{
@@ -91,6 +158,18 @@ static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
+#ifdef ENABLE_IMX258_PD
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = IMX258_PD_DT,
+			.hsize = IMX258_PD_X_SIZE,
+			.vsize = IMX258_PD_Y_SIZE,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = IMX258_DATA_DESC,
+		},
+	}
+#endif
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_cus1[] = {
 	{
@@ -103,6 +182,62 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus1[] = {
 		},
 	},
 };
+
+#ifdef ENABLE_IMX258_PD
+static struct SET_PD_BLOCK_INFO_T imx258_pd_info = {
+	.i4OffsetX = 0,
+	.i4OffsetY = 24,
+	.i4PitchX = 32,
+	.i4PitchY = 32,
+	.i4PairNum = 8,
+	.i4SubBlkW = 8,
+	.i4SubBlkH = 16,
+	.i4PosL = {
+		{2, 29}, {10, 29}, {18, 29}, {26, 29},
+		{6, 45}, {14, 45}, {22, 45}, {30, 45}
+	},
+	.i4PosR = {
+		{2, 33}, {10, 33}, {18, 33}, {26, 33},
+		{6, 49}, {14, 49}, {22, 49}, {30, 49}
+	},
+	.i4BlockNumX = 130,
+	.i4BlockNumY = 96,
+	.i4Crop = {
+		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
+		{0, 0}, {0, 0}, {0, 390}, {0, 0}, {0, 0},
+		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <cust6> <cust7> <cust8> cust9 cust10
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// cust11 cust12 cust13 <cust14> <cust15>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <cust16> <cust17> cust18 <cust19> cust20
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <cust21> <cust22> <cust23> <cust24> <cust25>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// cust26 <cust27> cust28
+		{0, 0}, {0, 0}, {0, 0},
+	},
+	.i4LeFirst = 0,
+	.i4VolumeX = 1,
+	.i4VolumeY = 1,
+	.i4FullRawW = 4160,
+	.i4FullRawH = 3120,
+	.iMirrorFlip = 0,
+	.i4VCPackNum = 4,
+	.PDAF_Support = PDAF_SUPPORT_CAMSV,
+	/* VC's PD pattern description */
+#if 0
+	.sPDMapInfo[0] = {
+		.i4VCFeature = IMX258_DATA_DESC,
+		.i4PDPattern = 3, //sparse PD non-interleaved
+		.i4PDRepetition = 4,
+		.i4PDOrder = {0,1,0,1}, // R = 1, L = 0
+	},
+#endif
+};
+#endif
+
 static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_prev,
@@ -143,8 +278,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4160,
 			.h2_tg_size = 3120,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = NULL,
+#ifdef ENABLE_IMX258_PD
+		.pdaf_cap = ENABLE_IMX258_PD,
+		.imgsensor_pd_info = &imx258_pd_info,
+#endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -193,8 +330,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4160,
 			.h2_tg_size = 3120,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = NULL,
+#ifdef ENABLE_IMX258_PD
+		.pdaf_cap = ENABLE_IMX258_PD,
+		.imgsensor_pd_info = &imx258_pd_info,
+#endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -243,8 +382,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4160,
 			.h2_tg_size = 2340,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = NULL,
+#ifdef ENABLE_IMX258_PD
+		.pdaf_cap = ENABLE_IMX258_PD,
+		.imgsensor_pd_info = &imx258_pd_info,
+#endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -293,8 +434,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4160,
 			.h2_tg_size = 3120,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = NULL,
+#ifdef ENABLE_IMX258_PD
+		.pdaf_cap = ENABLE_IMX258_PD,
+		.imgsensor_pd_info = &imx258_pd_info,
+#endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -343,8 +486,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4160,
 			.h2_tg_size = 3120,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = NULL,
+#ifdef ENABLE_IMX258_PD
+		.pdaf_cap = ENABLE_IMX258_PD,
+		.imgsensor_pd_info = &imx258_pd_info,
+#endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -393,8 +538,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 2080,
 			.h2_tg_size = 1170,
 		},
+#ifdef ENABLE_IMX258_PD
 		.pdaf_cap = FALSE,
 		.imgsensor_pd_info = NULL,
+#endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 357,
 		.delay_frame = 2,
@@ -446,8 +593,11 @@ static struct subdrv_static_ctx static_ctx = {
 	.ae_effective_frame = 2,///SHUTTER AND GAIN N+1 (long expose used)
 	.frame_time_delay_frame = 2,
 	.start_exposure_offset = 5500000,
-
+#if ENABLE_IMX258_PD
+	.pdaf_type = PDAF_SUPPORT_CAMSV,
+#else
 	.pdaf_type = PDAF_SUPPORT_NA,
+#endif
 	.hdr_type = HDR_SUPPORT_NA,  //check this sensor is stagger or not.
 	.seamless_switch_support = FALSE,
 	.temperature_support = FALSE,
@@ -525,6 +675,29 @@ int imx258_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 	return ERROR_NONE;
 }
 
+#ifdef MOT_IMX258_PDAF_DEBUG
+int imx258_overlay_pd_settings(void)
+{
+	int i, len;
+
+	len = ARRAY_SIZE(mode_struct);
+	for (i=0; i<len-1; i++) {
+		mode_struct[i].pdaf_cap = imx258_pd_en;
+		mode_struct[i].frame_desc[1].bus.csi2.data_type = imx258_pd_dt;
+		mode_struct[i].frame_desc[1].bus.csi2.user_data_desc = imx258_pd_ddesc;
+		if (!imx258_pd_en) {
+			mode_struct[i].num_entries = 1;
+		}
+	}
+
+	if (imx258_pd_en) {
+		static_ctx.pdaf_type = PDAF_SUPPORT_CAMSV;
+	} else {
+		static_ctx.pdaf_type = PDAF_SUPPORT_NA;
+	}
+	return 0;
+}
+#endif
 
 int imx258_open(struct subdrv_ctx *ctx)
 {
@@ -594,6 +767,10 @@ int imx258_open(struct subdrv_ctx *ctx)
 		memcpy(ctx->frame_length_in_lut_rg, ctx->frame_length_in_lut,
 			sizeof(ctx->frame_length_in_lut_rg));
 	}
+
+#ifdef MOT_IMX258_PDAF_DEBUG
+	imx258_overlay_pd_settings();
+#endif
 
 	return ERROR_NONE;
 }
