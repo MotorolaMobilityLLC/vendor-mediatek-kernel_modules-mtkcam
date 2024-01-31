@@ -354,8 +354,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
 static u32 s5kgn8_dcg_ratio_table_12bit[] = {4000};
 static struct mtk_sensor_saturation_info imgsensor_saturation_info_12bit = {
 	.gain_ratio = 4000,
-	.OB_pedestal = 64,
-	.saturation_level = 3900,
+	.OB_pedestal = 256,
+	.saturation_level = 4095,
 };
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4OffsetX = 0,
@@ -919,7 +919,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.seamless_switch_mode_setting_len = ARRAY_SIZE(s5kgn8_seamless_custom4),
 		.hdr_mode = HDR_RAW_DCG_COMPOSE,
 		.raw_cnt = 1,
-		.exp_cnt = 1,
+		.exp_cnt = 2,
 		.pclk = 1600000000,
 		.linelength = 19080,
 		.framelength = 2788,
@@ -927,8 +927,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mipi_pixel_rate = 1732800000,
 		.readout_length = 0,
 		.read_margin = 0,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 12,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 12,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -962,13 +960,16 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dcg_info = {
 			.dcg_mode = IMGSENSOR_DCG_COMPOSE,
 			.dcg_gain_mode = IMGSENSOR_DCG_RATIO_MODE,
+			.dcg_gain_base = IMGSENSOR_DCG_GAIN_LCG_BASE,
 			.dcg_gain_ratio_min = 4000,
 			.dcg_gain_ratio_max = 4000,
 			.dcg_gain_ratio_step = 0,
 			.dcg_gain_table = s5kgn8_dcg_ratio_table_12bit,
 			.dcg_gain_table_size = sizeof(s5kgn8_dcg_ratio_table_12bit),
 		},
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 4,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 16,
 	},
 	{//custom5
