@@ -5151,6 +5151,12 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		/* WRITE CLEAR C/DPHY_IRQ_STATUS */
 		SENINF_WRITE_REG(base_dphy, DPHY_RX_IRQ_CLR, 0xFFFFFFFF);
 		SENINF_WRITE_REG(base_cphy, CPHY_RX_IRQ_CLR, 0xFF0000);
+
+		/* D/CPHY WRITE CLEAR CHECK RG IS DIFFERENT */
+		dev_info(ctx->dev,
+			"After write clear DPHY_RX_IRQ_STATUS(0x%x)/CPHY_RX_IRQ_CLR(0x%x)",
+			SENINF_READ_REG(base_dphy, DPHY_RX_IRQ_STATUS),
+			SENINF_READ_REG(base_cphy, CPHY_RX_IRQ_CLR));
 	}
 
 	dev_info(ctx->dev,
@@ -5205,6 +5211,10 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 	if ((mac_irq & ~(0x324)) || (seninf_irq & ~(0x10000000))) {
 		SENINF_WRITE_REG(base_csi_mac, CSIRX_MAC_CSI2_IRQ_STATUS, 0xffffffff);
 		SENINF_WRITE_REG(base_seninf, SENINF_CSI2_IRQ_STATUS, 0xffffffff);
+		dev_info(ctx->dev,
+			"After write clear CSIRX_MAC_CSI2/SENINF_CSI2 _IRQ_STATUS:(0x%x)/(0x%x)",
+			SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_IRQ_STATUS),
+			SENINF_READ_REG(base_seninf, SENINF_CSI2_IRQ_STATUS));
 	}
 	dev_info(ctx->dev,
 		"SENINF%d_CSI2_PRBS_EN/_OPT:(0x%x)/(0x%x),CSIRX_MAC_CSI2_EN/_OPT/_IRQ_STATUS/_MULTI_ERR_F_STATUS:(0x%x)/(0x%x)/(0x%x)/(0x%x),SENINF_CSI2_IRQ_STATUS:(0x%x),CSIRX_MAC_CSI2_RESYNC_MERGE_CTRL:(0x%x)\n",
@@ -5240,6 +5250,21 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		SENINF_WRITE_REG(base_csi_mac, CSIRX_MAC_CSI2_SIZE_CHK_RCV2, 0xFFFFFFFF);
 		SENINF_WRITE_REG(base_csi_mac, CSIRX_MAC_CSI2_SIZE_CHK_RCV3, 0xFFFFFFFF);
 		SENINF_WRITE_REG(base_csi_mac, CSIRX_MAC_CSI2_SIZE_CHK_RCV4, 0xFFFFFFFF);
+		dev_info(ctx->dev,
+			"CSIRX_MAC_CSI2_IRQ_G1_STATUS:(0x%x), DESKEW_FIFO_OVERFLOW_L0/L1/L2/L3:(0x%x)/(0x%x)/(0x%x)/(0x%x)\n",
+			SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_IRQ_G1_STATUS),
+			SENINF_READ_BITS(base_csi_mac,
+				CSIRX_MAC_CSI2_IRQ_G1_STATUS, RO_CSI2_DESKEW_FIFO_OVERFLOW_L0_IRQ),
+			SENINF_READ_BITS(base_csi_mac,
+				CSIRX_MAC_CSI2_IRQ_G1_STATUS, RO_CSI2_DESKEW_FIFO_OVERFLOW_L1_IRQ),
+			SENINF_READ_BITS(base_csi_mac,
+				CSIRX_MAC_CSI2_IRQ_G1_STATUS, RO_CSI2_DESKEW_FIFO_OVERFLOW_L2_IRQ),
+			SENINF_READ_BITS(base_csi_mac,
+				CSIRX_MAC_CSI2_IRQ_G1_STATUS, RO_CSI2_DESKEW_FIFO_OVERFLOW_L3_IRQ));
+		/* WRITE CLEAR CSIRX_MAC_CSI2_IRQ_G1_STATUS */
+		SENINF_WRITE_REG(base_csi_mac, CSIRX_MAC_CSI2_IRQ_G1_STATUS, 0xFFFFFFFF);
+		dev_info(ctx->dev, "After write clear CSIRX_MAC_CSI2_IRQ_G1_STATUS(0x%x)",
+			SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_IRQ_G1_STATUS));
 	} else if (!strcasecmp(_seninf_ops->iomem_ver, MT6989_IOMOM_VERSIONS)) {
 		dev_info(ctx->dev,
 			"CSIRX_MAC_CSI2_SIZE_CHK_CTRL0/_CTRL1/_CTRL2/_CTRL3/_CTRL4:(0x%x)/(0x%x)/(0x%x)/(0x%x)/(0x%x)\n",
@@ -5343,6 +5368,21 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 			SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_SIZE_CHK_RCV2),
 			SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_SIZE_CHK_RCV3),
 			SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_SIZE_CHK_RCV4));
+		dev_info(ctx->dev,
+			"CSIRX_MAC_CSI2_IRQ_G1_STATUS:(0x%x), DESKEW_FIFO_OVERFLOW_L0/L1/L2/L3:(0x%x)/(0x%x)/(0x%x)/(0x%x)\n",
+			SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_IRQ_G1_STATUS),
+			SENINF_READ_BITS(base_csi_mac,
+				CSIRX_MAC_CSI2_IRQ_G1_STATUS, RO_CSI2_DESKEW_FIFO_OVERFLOW_L0_IRQ),
+			SENINF_READ_BITS(base_csi_mac,
+				CSIRX_MAC_CSI2_IRQ_G1_STATUS, RO_CSI2_DESKEW_FIFO_OVERFLOW_L1_IRQ),
+			SENINF_READ_BITS(base_csi_mac,
+				CSIRX_MAC_CSI2_IRQ_G1_STATUS, RO_CSI2_DESKEW_FIFO_OVERFLOW_L2_IRQ),
+			SENINF_READ_BITS(base_csi_mac,
+				CSIRX_MAC_CSI2_IRQ_G1_STATUS, RO_CSI2_DESKEW_FIFO_OVERFLOW_L3_IRQ));
+		/* WRITE CLEAR CSIRX_MAC_CSI2_IRQ_G1_STATUS */
+		SENINF_WRITE_REG(base_csi_mac, CSIRX_MAC_CSI2_IRQ_G1_STATUS, 0xFFFFFFFF);
+		dev_info(ctx->dev, "After write clear CSIRX_MAC_CSI2_IRQ_G1_STATUS(0x%x)",
+			SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_IRQ_G1_STATUS));
 	} else if (!strcasecmp(_seninf_ops->iomem_ver, MT6989_IOMOM_VERSIONS)) {
 		dev_info(ctx->dev,
 			"CSIRX_MAC_CSI2_SIZE_CHK_CTRL0/_CTRL1/_CTRL2/_CTRL3/_CTRL4:(0x%x)/(0x%x)/(0x%x)/(0x%x)/(0x%x)\n",
