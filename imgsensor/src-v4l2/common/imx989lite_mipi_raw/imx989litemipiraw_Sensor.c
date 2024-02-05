@@ -419,7 +419,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus3[] = {
 			.hsize = 0x0f00,
 			.vsize = 0x021c,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.user_data_desc = VC_PDAF_STATS_ME_PIX_1,
 		},
 	},
 #if IMX989LITE_EMBEDDED_DATA_EN
