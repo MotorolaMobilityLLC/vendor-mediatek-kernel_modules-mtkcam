@@ -1443,9 +1443,11 @@ void camsv_handle_err(
 		if (atomic_read(&sv_dev->is_seamless))
 			mtk_cam_ctrl_dump_request(sv_dev->cam, CAMSYS_ENGINE_CAMSV, sv_dev->id,
 				frame_idx_inner, MSG_CAMSV_SEAMLESS_ERROR);
-		else
-			mtk_cam_ctrl_dump_request(sv_dev->cam, CAMSYS_ENGINE_CAMSV, sv_dev->id,
-				frame_idx_inner, MSG_CAMSV_ERROR);
+		else {
+			if (cur_platform->hw->platform_id == 6989)
+				mtk_cam_ctrl_dump_request(sv_dev->cam, CAMSYS_ENGINE_CAMSV, sv_dev->id,
+					frame_idx_inner, MSG_CAMSV_ERROR);
+		}
 
 		mtk_cam_ctrl_notify_hw_hang(sv_dev->cam,
 					    CAMSYS_ENGINE_CAMSV, sv_dev->id,
