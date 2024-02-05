@@ -163,7 +163,7 @@ static int sv_process_fsm(struct mtk_camsv_device *sv_dev,
 
 	done_type = irq_info->irq_type & BIT(CAMSYS_IRQ_FRAME_DONE);
 	if (done_type) {
-		irq_info->irq_type &= ~drop_type;
+		irq_info->irq_type &= ~done_type;
 		done_tags = irq_info->done_tags;
 	}
 
