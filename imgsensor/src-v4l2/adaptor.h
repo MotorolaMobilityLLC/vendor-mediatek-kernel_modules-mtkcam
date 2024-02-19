@@ -133,6 +133,7 @@ struct adaptor_ctx {
 	struct v4l2_ctrl *hdr_tri_shutter;
 	struct v4l2_ctrl *hdr_tri_gain;
 	struct v4l2_ctrl *hdr_ae_ctrl;
+	struct v4l2_ctrl * sensor_lens_position;
 
 	/* custom v4l2 ctrls - frame sync - */
 	struct v4l2_ctrl *frame_sync;
