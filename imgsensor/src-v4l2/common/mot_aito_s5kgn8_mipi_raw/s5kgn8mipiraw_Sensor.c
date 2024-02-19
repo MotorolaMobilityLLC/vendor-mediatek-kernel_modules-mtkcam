@@ -21,7 +21,7 @@
  *============================================================================
  ****************************************************************************/
 #include "s5kgn8mipiraw_Sensor.h"
-
+static void get_sensor_cali(struct subdrv_ctx *ctx);
 static void set_group_hold(void *arg, u8 en);
 static u16 get_gain2reg(u32 gain);
 static int s5kgn8set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
@@ -31,14 +31,15 @@ static int open(struct subdrv_ctx *ctx);
 static int s5kgn8set_ctrl_locker(struct subdrv_ctx *ctx, u32 cid, bool *is_lock);
 static int s5kgn8_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int s5kgn8_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int s5kgn8_lens_position(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 /* STRUCT */
 
 static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, s5kgn8set_test_pattern},
 	{SENSOR_FEATURE_SET_AWB_GAIN, s5kgn8_awb_gain},
 	{SENSOR_FEATURE_SEAMLESS_SWITCH, s5kgn8_seamless_switch},
+	{SENSOR_FEATURE_SET_LENS_POSITION, s5kgn8_lens_position},
 };
-
 
 
 static int s5kgn8_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
@@ -110,7 +111,6 @@ static int s5kgn8_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	ctx->fast_mode_on = TRUE;
 	ctx->ref_sof_cnt = ctx->sof_cnt;
 	ctx->is_seamless = FALSE;
-	DRV_LOGE(ctx, "wzl  s5kgn8_seamless_switch  end\n");
 	DRV_LOG(ctx, "X: set seamless switch done\n");
 	return ERROR_NONE;
 }
@@ -1169,7 +1169,115 @@ const struct subdrv_entry mot_aito_s5kgn8_mipi_raw_entry = {
 	.ops = &ops,
 };
 
+
+static int crc_reverse_byte(int data)
+{
+	return ((data * 0x0802LU & 0x22110LU) |
+		(data * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16;
+}
+
+static int32_t check_crc16(uint8_t  *data, uint32_t size, uint32_t ref_crc)
+{
+	int32_t crc_match = 0;
+	uint16_t crc = 0x0000;
+	uint16_t crc_reverse = 0x0000;
+	uint32_t i, j;
+
+	uint32_t tmp;
+	uint32_t tmp_reverse;
+
+	/* Calculate both methods of CRC since integrators differ on
+	  * how CRC should be calculated. */
+	for (i = 0; i < size; i++) {
+		tmp_reverse = crc_reverse_byte(data[i]);
+		tmp = data[i] & 0xff;
+		for (j = 0; j < 8; j++) {
+			if (((crc & 0x8000) >> 8) ^ (tmp & 0x80))
+				crc = (crc << 1) ^ 0x8005;
+			else
+				crc = crc << 1;
+			tmp <<= 1;
+
+			if (((crc_reverse & 0x8000) >> 8) ^ (tmp_reverse & 0x80))
+				crc_reverse = (crc_reverse << 1) ^ 0x8005;
+			else
+				crc_reverse = crc_reverse << 1;
+
+			tmp_reverse <<= 1;
+		}
+	}
+
+	crc_reverse = (crc_reverse_byte(crc_reverse) << 8) |
+		crc_reverse_byte(crc_reverse >> 8);
+
+	if (crc == ref_crc || crc_reverse == ref_crc)
+		crc_match = 1;
+
+	return crc_match;
+}
+
 /* FUNCTION */
+#define  S5KGN8_AF_DATA_START 0x0027
+#define  S5KGN8_AF_DATA_LEN 24
+#define  S5KGN8_EEPROM_ADDR 0xA0
+static u16 af_macro_val =0;
+static u16 af_inf_val =0;
+static bool s5kgn8_af_data_ready = FALSE;
+static void get_sensor_cali(struct subdrv_ctx *ctx)
+{
+
+	int ret = 0;
+	u16 ref_crc = 0;
+	u8 s5kgn8_af_data[26];
+	if (s5kgn8_af_data_ready) {
+		DRV_LOG_MUST(ctx, "af data is ready.");
+		return;
+	}
+	ret = adaptor_i2c_rd_p8(ctx->i2c_client, (S5KGN8_EEPROM_ADDR >> 1), S5KGN8_AF_DATA_START, s5kgn8_af_data, S5KGN8_AF_DATA_LEN+2) ;
+	if (ret < 0) {
+		DRV_LOGE(ctx, "Read af data failed. ret:%d", ret);
+		s5kgn8_af_data_ready = FALSE;
+		return;
+	}
+	ref_crc = ((s5kgn8_af_data[S5KGN8_AF_DATA_LEN] << 8) |s5kgn8_af_data[S5KGN8_AF_DATA_LEN+1]);
+	if (check_crc16(s5kgn8_af_data, S5KGN8_AF_DATA_LEN, ref_crc)) {
+		s5kgn8_af_data_ready = TRUE;
+		DRV_LOG(ctx, "af data ready now.");
+	} else {
+		DRV_LOGE(ctx, "AF data CRC error!");
+	}
+
+	if( s5kgn8_af_data_ready)
+	{
+		af_macro_val = (s5kgn8_af_data[2]<<8 | s5kgn8_af_data[3])/64;
+		af_inf_val = (s5kgn8_af_data[6]<<8 | s5kgn8_af_data[7])/64;
+	}
+	DRV_LOG(ctx, "af_macro_val =%d  af_inf_val =%d \n", af_macro_val,af_inf_val);
+}
+
+static int s5kgn8_lens_position(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	u32 lens_position_reg_val;
+	u32 lens_position = *((u32 *)para);
+	if(s5kgn8_af_data_ready == FALSE)
+	{
+		DRV_LOG(ctx, "s5kgn8_af_data_ready =%d \n", s5kgn8_af_data_ready);
+		return -1;
+	}
+	if(lens_position > af_macro_val)
+	{
+		lens_position =af_macro_val;
+	}
+	if(lens_position < af_inf_val)
+	{
+		lens_position =af_inf_val;
+	}
+	lens_position_reg_val = (lens_position-af_inf_val)*1023 /(af_macro_val -af_inf_val);
+	DRV_LOG(ctx, "lens_position =%d  lens_position_reg_val =%d",lens_position,lens_position_reg_val);
+	DRV_LOG(ctx, "af_macro_val =%d  af_inf_val =%d",af_macro_val,af_inf_val);
+	subdrv_i2c_wr_u16(ctx, 0x3592, lens_position_reg_val);
+	return 0;
+}
 
 static void set_group_hold(void *arg, u8 en)
 {
@@ -1220,20 +1328,17 @@ static int s5kgn8_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 
 static int s5kgn8set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
-
-
 	u32 mode = *((u32 *)para);
-
 	if (mode != ctx->test_pattern)
 		DRV_LOG(ctx, "mode(%u->%u)\n", ctx->test_pattern, mode);
-	if (mode)
+	if (mode) {
 		subdrv_i2c_wr_u16(ctx, 0x0600, 0x0001); /*Black*/
-	else if (ctx->test_pattern)
+		subdrv_i2c_wr_u16(ctx, 0x0620, 0x0001); /*Black*/
+	} else if (ctx->test_pattern) {
 		subdrv_i2c_wr_u16(ctx, 0x0600, 0x0000); /*No pattern*/
-
+		subdrv_i2c_wr_u16(ctx, 0x0620, 0x0000); /*No pattern*/
+	}
 	ctx->test_pattern = mode;
-
-
 	return ERROR_NONE;
 }
 
@@ -1295,7 +1400,7 @@ static int open(struct subdrv_ctx *ctx)
 	ctx->sof_cnt = 0;
 	ctx->ref_sof_cnt = 0;
 	ctx->is_streaming = 0;
-
+	get_sensor_cali(ctx);
 	return ERROR_NONE;
 } /* open */
 
