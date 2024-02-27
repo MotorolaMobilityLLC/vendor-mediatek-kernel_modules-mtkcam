@@ -152,14 +152,16 @@ void set_i2c_buffer(struct subdrv_ctx *ctx, u16 reg, u16 val)
 	}
 }
 
-u16 i2c_read_eeprom(struct subdrv_ctx *ctx, u16 addr)
+u16 i2c_multi_read_eeprom(struct subdrv_ctx *ctx, u16 addr, u16 size, u8 *pbuf)
 {
-	u16 get_byte = 0;
-	u16 idx = ctx->eeprom_index;
-	u8 write_id = ctx->s_ctx.eeprom_info[idx].i2c_write_id;
+	u16 idx;
+	u8 write_id;
 
-	adaptor_i2c_rd_u8(ctx->i2c_client, write_id >> 1, addr, (u8 *)&get_byte);
-	return get_byte;
+	idx = ctx->eeprom_index;
+	write_id = ctx->s_ctx.eeprom_info[idx].i2c_write_id;
+	adaptor_i2c_rd_p8(ctx->i2c_client, write_id >> 1, addr, pbuf, size);
+
+	return 0;
 }
 
 void get_pdaf_reg_setting(struct subdrv_ctx *ctx, u32 regNum, u16 *regDa)
@@ -230,10 +232,7 @@ bool probe_eeprom(struct subdrv_ctx *ctx)
 	for (idx = 0; idx < eeprom_num; idx++) {
 		ctx->eeprom_index = idx;
 		addr_header_id = info[idx].addr_header_id;
-		header_id =	i2c_read_eeprom(ctx, addr_header_id) |
-			(i2c_read_eeprom(ctx, addr_header_id + 1) << 8) |
-			(i2c_read_eeprom(ctx, addr_header_id + 2) << 16) |
-			(i2c_read_eeprom(ctx, addr_header_id + 3) << 24);
+		i2c_multi_read_eeprom(ctx, addr_header_id, sizeof(header_id), (u8 *)&header_id);
 		DRV_LOG(ctx, "eeprom index[cur/total]:%u/%u, header id[cur/exp]:0x%08x/0x%08x\n",
 			idx, eeprom_num, header_id, info[idx].header_id);
 		if (header_id == info[idx].header_id) {
@@ -252,7 +251,6 @@ void read_sensor_Cali(struct subdrv_ctx *ctx)
 	u8 *buf = NULL;
 	u16 size = 0;
 	u16 addr = 0;
-	int i = 0;
 	struct eeprom_info_struct *info = ctx->s_ctx.eeprom_info;
 
 	/* Probe EEPROM device */
@@ -269,13 +267,10 @@ void read_sensor_Cali(struct subdrv_ctx *ctx)
 	if (support && size > 0) {
 		if (info[idx].preload_qsc_table == NULL) {
 			info[idx].preload_qsc_table = kmalloc(size, GFP_KERNEL);
-			if (buf == NULL) {
-				for (i = 0; i < size; i++)
-					*(info[idx].preload_qsc_table + i) =
-					i2c_read_eeprom(ctx, addr + i);
-			} else {
+			if (buf == NULL)
+				i2c_multi_read_eeprom(ctx, addr, size, info[idx].preload_qsc_table);
+			else
 				memcpy(info[idx].preload_qsc_table, buf, size);
-			}
 			DRV_LOG(ctx, "preload QSC data %u bytes", size);
 		} else {
 			DRV_LOG(ctx, "QSC data is already preloaded %u bytes", size);
@@ -290,13 +285,10 @@ void read_sensor_Cali(struct subdrv_ctx *ctx)
 	if (support && size > 0) {
 		if (info[idx].preload_pdc_table == NULL) {
 			info[idx].preload_pdc_table = kmalloc(size, GFP_KERNEL);
-			if (buf == NULL) {
-				for (i = 0; i < size; i++)
-					*(info[idx].preload_pdc_table + i) =
-					i2c_read_eeprom(ctx, addr + i);
-			} else {
+			if (buf == NULL)
+				i2c_multi_read_eeprom(ctx, addr, size, info[idx].preload_pdc_table);
+			else
 				memcpy(info[idx].preload_pdc_table, buf, size);
-			}
 			DRV_LOG(ctx, "preload PDC data %u bytes", size);
 		} else {
 			DRV_LOG(ctx, "PDC data is already preloaded %u bytes", size);
@@ -311,13 +303,10 @@ void read_sensor_Cali(struct subdrv_ctx *ctx)
 	if (support && size > 0) {
 		if (info[idx].preload_lrc_table == NULL) {
 			info[idx].preload_lrc_table = kmalloc(size, GFP_KERNEL);
-			if (buf == NULL) {
-				for (i = 0; i < size; i++)
-					*(info[idx].preload_lrc_table + i) =
-					i2c_read_eeprom(ctx, addr + i);
-			} else {
+			if (buf == NULL)
+				i2c_multi_read_eeprom(ctx, addr, size, info[idx].preload_lrc_table);
+			else
 				memcpy(info[idx].preload_lrc_table, buf, size);
-			}
 			DRV_LOG(ctx, "preload LRC data %u bytes", size);
 		} else {
 			DRV_LOG(ctx, "LRC data is already preloaded %u bytes", size);
@@ -332,13 +321,10 @@ void read_sensor_Cali(struct subdrv_ctx *ctx)
 	if (support && size > 0) {
 		if (info[idx].preload_xtalk_table == NULL) {
 			info[idx].preload_xtalk_table = kmalloc(size, GFP_KERNEL);
-			if (buf == NULL) {
-				for (i = 0; i < size; i++)
-					*(info[idx].preload_xtalk_table + i) =
-					i2c_read_eeprom(ctx, addr + i);
-			} else {
+			if (buf == NULL)
+				i2c_multi_read_eeprom(ctx, addr, size, info[idx].preload_xtalk_table);
+			else
 				memcpy(info[idx].preload_xtalk_table, buf, size);
-			}
 			DRV_LOG(ctx, "preload XTALK data %u bytes", size);
 		} else {
 			DRV_LOG(ctx, "XTALK data is already preloaded %u bytes", size);
@@ -369,7 +355,7 @@ void write_frame_length(struct subdrv_ctx *ctx, u32 fll)
 	check_current_scenario_id_bound(ctx);
 	fll_step = ctx->s_ctx.mode[ctx->current_scenario_id].framelength_step;
 	if (fll_step)
-		fll = round_up(fll, fll_step);
+		fll = roundup(fll, fll_step);
 	ctx->frame_length = fll;
 
 	if (ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_STAGGER)
@@ -417,9 +403,9 @@ void write_frame_length_in_lut(struct subdrv_ctx *ctx, u32 fll, u32 *fll_in_lut)
 	case 2:
 		if (fll_step) {
 			fll_in_lut[0] =
-				round_up(fll_in_lut[0], fll_step);
+				roundup(fll_in_lut[0], fll_step);
 			fll_in_lut[1] =
-				round_up(fll_in_lut[1], fll_step);
+				roundup(fll_in_lut[1], fll_step);
 		}
 		fll_in_lut[2] = 0;
 		fll_in_lut[3] = 0;
@@ -432,11 +418,11 @@ void write_frame_length_in_lut(struct subdrv_ctx *ctx, u32 fll, u32 *fll_in_lut)
 	case 3:
 		if (fll_step) {
 			fll_in_lut[0] =
-				round_up(fll_in_lut[0], fll_step);
+				roundup(fll_in_lut[0], fll_step);
 			fll_in_lut[1] =
-				round_up(fll_in_lut[1], fll_step);
+				roundup(fll_in_lut[1], fll_step);
 			fll_in_lut[2] =
-				round_up(fll_in_lut[2], fll_step);
+				roundup(fll_in_lut[2], fll_step);
 		}
 		fll_in_lut[3] = 0;
 		fll_in_lut[4] = 0;
@@ -791,11 +777,13 @@ void set_max_framerate_by_scenario(struct subdrv_ctx *ctx,
 	/* set in the range of frame length */
 	ctx->frame_length = max(frame_length, frame_length_min);
 	ctx->frame_length = min(ctx->frame_length, frame_length_max);
+	ctx->frame_length = frame_length_step ?
+		roundup(ctx->frame_length,frame_length_step) : ctx->frame_length;
 
 	ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
 	ctx->min_frame_length = ctx->frame_length;
-	DRV_LOG(ctx, "max_fps(input/output):%u/%u(sid:%u), min_fl_en:1\n",
-		framerate, ctx->current_fps, scenario_id);
+	DRV_LOG(ctx, "max_fps(input/output):%u/%u(sid:%u), min_fl_en:1, ctx->frame_length:%u\n",
+		framerate, ctx->current_fps, scenario_id, ctx->frame_length);
 	if (ctx->s_ctx.reg_addr_auto_extend ||
 			(ctx->frame_length > (ctx->exposure[0] + ctx->s_ctx.exposure_margin))) {
 		if (ctx->s_ctx.aov_sensor_support &&
@@ -863,6 +851,9 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 		/* fll_a = min(fll_a, fll_max) */
 		ctx->frame_length_in_lut[0] =
 			min(calc_fl_in_lut[0], ctx->s_ctx.frame_length_max);
+		ctx->frame_length_in_lut[0] = frame_length_step ?
+			roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+			ctx->frame_length_in_lut[0];
 		/* fll_b_min = readout + xx lines(margin) */
 		calc_fl_in_lut[1] =
 			ctx->s_ctx.mode[scenario_id].readout_length +
@@ -879,6 +870,9 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 		/* fll_b = min(fll_b, fll_max) */
 		ctx->frame_length_in_lut[1] =
 			min(calc_fl_in_lut[1], ctx->s_ctx.frame_length_max);
+		ctx->frame_length_in_lut[1] = frame_length_step ?
+			roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+			ctx->frame_length_in_lut[1];
 		ctx->frame_length_in_lut[2] = 0;
 		ctx->frame_length_in_lut[3] = 0;
 		ctx->frame_length_in_lut[4] = 0;
@@ -944,6 +938,9 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 		/* fll_a = min(fll_a, fll_max) */
 		ctx->frame_length_in_lut[0] =
 			min(calc_fl_in_lut[0], ctx->s_ctx.frame_length_max);
+		ctx->frame_length_in_lut[0] = frame_length_step ?
+			roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+			ctx->frame_length_in_lut[0];
 		/* fll_b_min = readout + xx lines(margin) */
 		calc_fl_in_lut[1] =
 			ctx->s_ctx.mode[scenario_id].readout_length +
@@ -954,6 +951,9 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 		/* fll_b = min(fll_b, fll_max) */
 		ctx->frame_length_in_lut[1] =
 			min(calc_fl_in_lut[1], ctx->s_ctx.frame_length_max);
+		ctx->frame_length_in_lut[1] = frame_length_step ?
+			roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+			ctx->frame_length_in_lut[1];
 		/* fll_c_min = readout + xx lines(margin) */
 		calc_fl_in_lut[2] =
 			ctx->s_ctx.mode[scenario_id].readout_length +
@@ -972,6 +972,9 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 		/* fll_c = min(fll_c, fll_max) */
 		ctx->frame_length_in_lut[2] =
 			min(calc_fl_in_lut[2], ctx->s_ctx.frame_length_max);
+		ctx->frame_length_in_lut[2] = frame_length_step ?
+			roundup(ctx->frame_length_in_lut[2], frame_length_step) :
+			ctx->frame_length_in_lut[2];
 		ctx->frame_length_in_lut[3] = 0;
 		ctx->frame_length_in_lut[4] = 0;
 		/* update framelength */
@@ -1254,7 +1257,7 @@ void set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 		shutters[i] = min_t(u64, shutters[i],
 			(u64)ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_shutter_range[i].max);
 		if (cit_step)
-			shutters[i] = round_up(shutters[i], cit_step);
+			shutters[i] = roundup(shutters[i], cit_step);
 	}
 
 	/* check boundary of framelength */
@@ -1375,6 +1378,7 @@ void set_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 	int i = 0;
 	u16 last_exp_cnt = 1;
 	int fine_integ_line = 0;
+	u32 frame_length_step;
 	u32 cit_step = 0;
 	u32 cit_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT] = {0};
 	u32 calc_fl_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT] = {0};
@@ -1394,6 +1398,7 @@ void set_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 
 	fine_integ_line = ctx->s_ctx.mode[ctx->current_scenario_id].fine_integ_line;
 	cit_step = ctx->s_ctx.mode[ctx->current_scenario_id].coarse_integ_step;
+	frame_length_step = ctx->s_ctx.mode[ctx->current_scenario_id].framelength_step;
 
 	/* manual mode */
 	for (i = 0; i < exp_cnt; i++) {
@@ -1403,11 +1408,11 @@ void set_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 		shutters[i] = min_t(u64, shutters[i],
 			(u64)ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_shutter_range[i].max);
 		if (cit_step)
-			shutters[i] = round_up(shutters[i], cit_step);
+			shutters[i] = roundup(shutters[i], cit_step);
 
 		/* update frame_length_in_lut */
 		ctx->frame_length_in_lut[i] = frame_length_in_lut[i] ?
-			frame_length_in_lut[i] : ctx->frame_length_in_lut[i];
+			frame_length_in_lut[i] : 0;
 		/* check boundary of framelength in lut */
 		ctx->frame_length_in_lut[i] =
 			min(ctx->frame_length_in_lut[i], ctx->s_ctx.frame_length_max);
@@ -1440,6 +1445,9 @@ void set_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 		/* fll_a = max(readout, current shutter_b) */
 		calc_fl_in_lut[0] =
 			max(calc_fl_in_lut[0], cit_in_lut[1] + ctx->s_ctx.exposure_margin);
+		ctx->frame_length_in_lut[0] = frame_length_step ?
+			roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+			ctx->frame_length_in_lut[0];
 		/* fll_b_min = readout + xx lines(margin) */
 		calc_fl_in_lut[1] =
 			ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
@@ -1468,6 +1476,9 @@ void set_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 		/* fll_b = min(fll_b, fll_max) */
 		ctx->frame_length_in_lut[1] =
 			min(ctx->frame_length_in_lut[1], ctx->s_ctx.frame_length_max);
+		ctx->frame_length_in_lut[1] = frame_length_step ?
+			roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+			ctx->frame_length_in_lut[1];
 		/* lut[2] no use, and assign zero */
 		ctx->frame_length_in_lut[2] = 0;
 		/* lut[3] no use, and assign zero */
@@ -1483,6 +1494,9 @@ void set_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 		/* fll_a = max(readout, current shutter_b) */
 		calc_fl_in_lut[0] =
 			max(calc_fl_in_lut[0], cit_in_lut[1] + ctx->s_ctx.exposure_margin);
+		ctx->frame_length_in_lut[0] = frame_length_step ?
+			roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+			ctx->frame_length_in_lut[0];
 		/* fll_b_min = readout + xx lines(margin) */
 		calc_fl_in_lut[1] =
 			ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
@@ -1490,6 +1504,9 @@ void set_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 		/* fll_b = max(readout, current shutter_c) */
 		calc_fl_in_lut[1] =
 			max(calc_fl_in_lut[1], cit_in_lut[2] + ctx->s_ctx.exposure_margin);
+		ctx->frame_length_in_lut[1] = frame_length_step ?
+			roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+			ctx->frame_length_in_lut[1];
 		/* fll_c_min = readout + xx lines(margin) */
 		calc_fl_in_lut[2] =
 			ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
@@ -1526,6 +1543,9 @@ void set_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 		/* fll_c = min(fll_c, fll_max) */
 		ctx->frame_length_in_lut[2] =
 			min(ctx->frame_length_in_lut[2], ctx->s_ctx.frame_length_max);
+		ctx->frame_length_in_lut[2] = frame_length_step ?
+			roundup(ctx->frame_length_in_lut[2], frame_length_step) :
+			ctx->frame_length_in_lut[2];
 		/* lut[3] no use, and assign zero */
 		ctx->frame_length_in_lut[3] = 0;
 		/* lut[4] no use, and assign zero */
@@ -3062,8 +3082,8 @@ void common_get_prsh_length_lines(struct subdrv_ctx *ctx,
 	ae_ctrl_cit = min(ae_ctrl_cit, ctx->s_ctx.exposure_max);
 	cit_step = ctx->s_ctx.mode[ctx->current_scenario_id].coarse_integ_step ?: 1;
 	if (cit_step) {
-		ae_ctrl_cit = round_up(ae_ctrl_cit, cit_step);
-		prsh_length_lc = round_up(prsh_length_lc, cit_step);
+		ae_ctrl_cit = roundup(ae_ctrl_cit, cit_step);
+		prsh_length_lc = roundup(prsh_length_lc, cit_step);
 	}
 
 	prsh_length_lc = (prsh_length_lc > (ae_ctrl_cit + hw_fixed_value)) ? prsh_length_lc : 0;
