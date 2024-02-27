@@ -876,6 +876,13 @@ static int _get_frame_desc(struct adaptor_ctx *ctx, unsigned int pad,
 		if (scenario_id == SENSOR_SCENARIO_ID_NONE)
 			break;
 
+		if (ctx->subctx.s_ctx.mode != NULL &&
+			ctx->subctx.s_ctx.mode[scenario_id].seamless_switch_group !=
+			ctx->subctx.s_ctx.mode[ctx->cur_mode->id].seamless_switch_group){
+			++i;
+			continue;
+		}
+
 		ret = subdrv_call(ctx, get_frame_desc, scenario_id, &fd_tmp);
 
 		if (!ret) {
