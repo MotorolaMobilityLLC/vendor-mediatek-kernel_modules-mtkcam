@@ -2663,6 +2663,19 @@ void get_sensor_frame_count(struct subdrv_ctx *ctx, u32 *frame_cnt)
 	*frame_cnt = framecnt;
 }
 
+void get_dcg_ratio_group_by_scenario(struct subdrv_ctx *ctx,
+		enum SENSOR_SCENARIO_ID_ENUM scenario_id, void *data)
+{
+	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
+		DRV_LOG(ctx, "invalid sid:%u, mode_num:%u\n",
+			scenario_id, ctx->s_ctx.sensor_mode_num);
+		scenario_id = SENSOR_SCENARIO_ID_NORMAL_PREVIEW;
+	}
+	memcpy(data,
+		(void *)ctx->s_ctx.mode[scenario_id].dcg_info.dcg_ratio_group,
+		sizeof(u32)*IMGSENSOR_EXPOSURE_CNT);
+}
+
 int common_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 {
 	u8 i = 0;
@@ -3630,6 +3643,11 @@ int common_feature_control(struct subdrv_ctx *ctx, MSDK_SENSOR_FEATURE_ENUM feat
 		break;
 	case SENSOR_FEATURE_GET_FRAME_CNT:
 		get_sensor_frame_count(ctx, (u32 *) feature_data);
+		break;
+	case SENSOR_FEATURE_GET_DCG_RATIO_GROUP_BY_SCENARIO:
+		get_dcg_ratio_group_by_scenario(ctx,
+			(enum SENSOR_SCENARIO_ID_ENUM)*(feature_data),
+			(u32 *)((uintptr_t)(*(feature_data + 1))));
 		break;
 	default:
 		DRV_LOGE(ctx, "feature_id %u is invalid\n", feature_id);

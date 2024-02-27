@@ -180,6 +180,7 @@ struct dcg_info_struct {
 	u32 dcg_gain_ratio_step;
 	u32 *dcg_gain_table;
 	u32 dcg_gain_table_size;
+	u32 dcg_ratio_group[IMGSENSOR_EXPOSURE_CNT];
 };
 
 

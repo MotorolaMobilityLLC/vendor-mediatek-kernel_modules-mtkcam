@@ -569,6 +569,11 @@ struct mtk_sensor_vc_info_by_scenario {
 	struct mtk_mbus_frame_desc fd;
 };
 
+struct mtk_dcg_ratio_group_by_scenario {
+	__u32 scenario_id;
+	__u32 *dcg_ratio_group;
+};
+
 /* GET */
 
 #define VIDIOC_MTK_G_DEF_FPS_BY_SCENARIO \
@@ -714,6 +719,9 @@ struct mtk_sensor_vc_info_by_scenario {
 
 #define VIDIOC_MTK_G_MULTI_EXP_SHUTTER_RANGE_BY_SCENARIO \
 	_IOWR('M', BASE_VIDIOC_PRIVATE + 50, struct mtk_multi_exp_shutter_range_by_scenario)
+
+#define VIDIOC_MTK_G_DCG_RATIO_GROUP_BY_SCENARIO \
+	_IOWR('M', BASE_VIDIOC_PRIVATE + 51, struct mtk_dcg_ratio_group_by_scenario)
 /* SET */
 
 #define VIDIOC_MTK_S_VIDEO_FRAMERATE \
