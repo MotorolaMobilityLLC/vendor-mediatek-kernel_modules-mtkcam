@@ -3978,11 +3978,16 @@ static int mtk_cam_mminfra_dbg_cb(struct notifier_block *nb,
 	struct mtk_cam_device *cam =
 			container_of(nb, struct mtk_cam_device, mminfra_dbg_cb);
 	struct mtk_raw_device *raw;
-	int i, ret = 0;
+	int i, ret = 0, hsf_en = 0;
+	struct mtk_cam_ctx *ctx;
 
 	if (atomic_read(&cam->initialize_cnt) == 0) {
 		dev_info(cam->dev, "cam device may off(%d)\n", ret);
 		return 0;
+	}
+	for (i = 0; i < cam->max_stream_num; i++) {
+		ctx = &cam->ctxs[i];
+		hsf_en += ctx->enable_hsf_raw;
 	}
 
 	for (i = 0; i < cam->engines.num_raw_devices; i++) {
@@ -3993,8 +3998,9 @@ static int mtk_cam_mminfra_dbg_cb(struct notifier_block *nb,
 			dev_info(cam->dev, "raw-%d may off(%d)\n", i, ret);
 			continue;
 		}
+		if (hsf_en == 0)
+			raw_dump_dma_status(raw);
 
-		raw_dump_dma_status(raw);
 		pm_runtime_put_sync(raw->dev);
 	}
 
