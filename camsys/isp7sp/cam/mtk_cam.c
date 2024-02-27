@@ -600,6 +600,12 @@ static void mtk_cam_store_pipe_data_to_ctx(
 
 	data = &req->raw_data[raw_pipe_idx];
 	ctx->ctrldata = data->ctrl;
+
+	if (!ctx->ctrldata_stored) {
+		ctx->enable_luma_dump = CAM_DEBUG_ENABLED(AA) ||
+			ctx->ctrldata.resource.user_data.raw_res.luma_debug;
+	}
+
 	ctx->ctrldata_stored = true;
 }
 
@@ -4205,15 +4211,17 @@ static void camsys_main_lp_ctrl(struct mtk_cam_device *cam_dev, bool on)
 		}
 	}
 
-	dev_info(cam_dev->dev, "%s: ctrl: 0x%x ack: 0x%x\n", __func__,
-		readl(cam_dev->base + CAM_MAIN_LOW_POWER_CTRL), spm_ack);
+	if (CAM_DEBUG_ENABLED(V4L2))
+		dev_info(cam_dev->dev, "%s: ctrl: 0x%x ack: 0x%x\n", __func__,
+			readl(cam_dev->base + CAM_MAIN_LOW_POWER_CTRL), spm_ack);
 }
 
 static int mtk_cam_runtime_suspend(struct device *dev)
 {
 	struct mtk_cam_device *cam_dev = dev_get_drvdata(dev);
 
-	dev_dbg(dev, "- %s\n", __func__);
+	if (CAM_DEBUG_ENABLED(V4L2))
+		dev_info(dev, "- %s\n", __func__);
 
 	camsys_main_lp_ctrl(cam_dev, false);
 
@@ -4241,7 +4249,8 @@ static int mtk_cam_runtime_resume(struct device *dev)
 {
 	struct mtk_cam_device *cam_dev = dev_get_drvdata(dev);
 
-	dev_dbg(dev, "- %s\n", __func__);
+	if (CAM_DEBUG_ENABLED(V4L2))
+		dev_info(dev, "- %s\n", __func__);
 
 	camsys_main_lp_ctrl(cam_dev, true);
 

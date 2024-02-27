@@ -776,7 +776,7 @@ handle_raw_frame_done(struct mtk_cam_job *job)
 		}
 	}
 
-	if (ctx->has_raw_subdev && CAM_DEBUG_ENABLED(AA))
+	if (ctx->has_raw_subdev && job->src_ctx->enable_luma_dump)
 		call_jobop(job, dump_aa_info);
 
 	return 0;
@@ -1855,9 +1855,10 @@ static int apply_engines_cq(struct mtk_cam_job *job,
 
 	mtk_cam_apply_qos(job);
 
-	dev_info(ctx->cam->dev, "[%s] ctx-%d CQ-0x%x cq_eng 0x%lx used_eng 0x%lx (%s) ts(%llu)\n",
-		__func__, ctx->stream_id, frame_seq_no, cq_engine,
-		used_engine, job->scen_str, ts);
+	if (CAM_DEBUG_ENABLED(JOB))
+		dev_info(ctx->cam->dev, "[%s] ctx-%d CQ-0x%x cq_eng 0x%lx used_eng 0x%lx (%s) ts(%llu)\n",
+			__func__, ctx->stream_id, frame_seq_no, cq_engine,
+			used_engine, job->scen_str, ts);
 	return 0;
 }
 

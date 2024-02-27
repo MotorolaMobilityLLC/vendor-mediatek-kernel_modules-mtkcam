@@ -1203,9 +1203,11 @@ int mtk_cam_vidioc_g_meta_fmt(struct file *file, void *fh,
 	case MTK_RAW_META_SV_OUT_2:
 		node->active_fmt.fmt.meta.buffersize =
 				CAMSV_EXT_META_0_WIDTH * CAMSV_EXT_META_0_HEIGHT;
-		dev_dbg(cam->dev,
-			"%s:extmeta name:%s buffersize:%d\n",
-			__func__, node->desc.name, node->active_fmt.fmt.meta.buffersize);
+
+		if (CAM_DEBUG_ENABLED(V4L2))
+			dev_info(cam->dev,
+				"%s:extmeta name:%s buffersize:%d\n",
+				__func__, node->desc.name, node->active_fmt.fmt.meta.buffersize);
 		break;
 	default:
 		break;
@@ -1213,9 +1215,11 @@ int mtk_cam_vidioc_g_meta_fmt(struct file *file, void *fh,
 
 	f->fmt.meta.dataformat = node->active_fmt.fmt.meta.dataformat;
 	f->fmt.meta.buffersize = node->active_fmt.fmt.meta.buffersize;
-	dev_dbg(cam->dev,
-		"%s: node:%s dataformat:%d buffersize:%d\n",
-		__func__, node->desc.name, f->fmt.meta.dataformat, f->fmt.meta.buffersize);
+
+	if (CAM_DEBUG_ENABLED(V4L2))
+		dev_info(cam->dev,
+			"%s: node:%s dataformat:%d buffersize:%d\n",
+			__func__, node->desc.name, f->fmt.meta.dataformat, f->fmt.meta.buffersize);
 
 	if (CAM_DEBUG_ENABLED(V4L2))
 		log_fmt_ops(node, f, __func__);

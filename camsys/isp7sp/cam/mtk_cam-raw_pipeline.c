@@ -1316,7 +1316,9 @@ static int mtk_raw_sd_s_stream(struct v4l2_subdev *sd, int enable)
 	struct mtk_raw_pipeline *pipe =
 		container_of(sd, struct mtk_raw_pipeline, subdev);
 
-	dev_info(dev, "%s: %d\n", __func__, enable);
+	if (CAM_DEBUG_ENABLED(V4L2))
+		dev_info(dev, "%s: %d\n", __func__, enable);
+
 	if (enable) {
 		pipe->sensor = NULL;
 		pipe->seninf = mtk_cam_find_sensor_seninf(sd, MEDIA_ENT_F_VID_IF_BRIDGE);
