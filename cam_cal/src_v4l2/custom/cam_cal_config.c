@@ -22,23 +22,8 @@
 #include "cam_cal_config.h"
 #include "cam_cal_list.h"
 #include "eeprom_i2c_common_driver.h"
+#include "mot_cam_cal.h"
 
-#define EEPROM_DEBUG
-#define MOTO_OB_VALUE 64
-#define MOTO_WB_VALUE_BASE 64
-#define MOT_AWB_RB_MIN_VALUE 200
-#define MOT_AWB_G_MIN_VALUE 760
-#define MOT_AWB_RBG_MAX_VALUE 880
-#define MOT_AWB_GRGB_RATIO_MIN_1000TIMES 970
-#define MOT_AWB_GRGB_RATIO_MAX_1000TIMES 1030
-#define MOT_AF_ADDR 0x27
-#define MOT_AF_DATA_SIZE 24
-#define MOT_AWB_ADDR 0x41
-#define MOT_AWB_DATA_SIZE 43
-#define IDX_MAX_CAM_NUMBER 7 // refer to IHalsensor.h
-#define MAX_EEPROM_LIST_NUMBER 32
-#define MAX_temp(a,b,c) (a)>(b)?((a)>(c)?(a):(c)):((b)>(c)?(b):(c))
-#define ABS(a,b) a>=b?(a-b):(b-a)
 #undef E
 #define E(__x__) (__x__)
 extern struct STRUCT_CAM_CAL_CONFIG_STRUCT CAM_CAL_CONFIG_LIST;
@@ -340,6 +325,8 @@ unsigned int mot_lens_id_to_name(uint8_t id,unsigned int block_size,unsigned cha
    }
    return err;
 }
+EXPORT_SYMBOL(mot_lens_id_to_name);
+
 unsigned int mot_do_manufacture_info(struct EEPROM_DRV_FD_DATA *pdata,
 		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData)
 {
