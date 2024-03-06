@@ -22,56 +22,57 @@
 
 
 
-static u16 uTnpArrayInit[] = {
-#include "setting/s5kgn8_initsettting.h"
+static u16 uTnpArrayInit_1[] = {
+#include "setting/s5kgn8_initsettting_1.h"
+};
+
+static u16 uTnpArrayInit_2[] = {
+#include "setting/s5kgn8_initsettting_2.h"
+};
+
+static u16 uTnpArrayInit_3[] = {
+#include "setting/s5kgn8_initsettting_3.h"
+#include "setting/calibration_xtc.h"
+#include "setting/init_end.h"
 };
 
 static u16 addr_data_pair_preview[] = {
-0xFCFC, 0x4000,
-#include "setting/fcm.h"
-#include "setting/calibration_xtc.h"
 #include "setting/s5kgn8_4096_3072_30fps.h"
-#include "setting/fcm_end.h"
 };
 
 
 static u16 s5kgn8_seamless_preview[] = {
 0xFCFC, 0x4000,
-0x6000, 0x0005,
+#include "setting/scm_index.h"
+0xFCFC, 0x4000,
 0x0104, 0x0101,
 #include "setting/s5kgn8_4096_3072_30fps_sub.h"
 0xFCFC, 0x4000,
-0x0B32, 0x0000,
-0x0B30, 0x0100,
-0x0340, 0x199C,
+0x0B32, 0x0100,
+0x0B30, 0x0101,
+0x0340, 0x199A,
 0x0104, 0x0001,
-0x6000, 0x0085,
 };
 
 static u16 addr_data_pair_capture[] = {
 #include "setting/s5kgn8_4096_3072_30fps.h"
 };
 static u16 addr_data_pair_normal_video[] = {
-0xFCFC, 0x4000,
-#include "setting/fcm.h"
-#include "setting/calibration_xtc.h"
 #include "setting/s5kgn8_4096_2304_30fps.h"
-#include "setting/fcm_end.h"
 };
 
 
 static u16 s5kgn8_seamless_normal_video[] = {
 0xFCFC, 0x4000,
-0x6000, 0x0005,
+#include "setting/scm_index.h"
+0xFCFC, 0x4000,
 0x0104, 0x0101,
 #include "setting/s5kgn8_4096_2304_30fps_sub.h"
 0xFCFC, 0x4000,
-0x0B32, 0x0000,
-0x0B30, 0x0101,
+0x0B32, 0x0001,
+0x0B30, 0x0100,
 0x0340, 0x199A,
 0x0104, 0x0001,
-0x6000, 0x0085,
-
 };
 
 static u16 addr_data_pair_hs_video[] = {
@@ -94,26 +95,21 @@ static u16 addr_data_pair_custom3[] = {
 };
 
 static u16 addr_data_pair_custom4[] = {
-0xFCFC, 0x4000,
-#include "setting/fcm.h"
-#include "setting/calibration_xtc.h"
 #include "setting/s5kgn8_4096_2304_30fps_IDCG.h"
-#include "setting/fcm_end.h"
-
 };
 
 
 static u16 s5kgn8_seamless_custom4[] = {
 0xFCFC, 0x4000,
-0x6000, 0x0005,
+#include "setting/scm_index.h"
+0xFCFC, 0x4000,
 0x0104, 0x0101,
 #include "setting/s5kgn8_4096_2304_30fps_IDCG_sub.h"
 0xFCFC, 0x4000,
-0x0B32, 0x0000,
-0x0B30, 0x0100,
-0x0340, 0x0AEE,
+0x0B32, 0x0100,
+0x0B30, 0x0101,
+0x0340, 0x0AE4,
 0x0104, 0x0001,
-0x6000, 0x0085,
 };
 
 //3rd video call
@@ -124,24 +120,20 @@ static u16 addr_data_pair_custom5[] = {
 
 //in sensor zoom
 static u16 addr_data_pair_custom6[] = {
-0xFCFC, 0x4000,
-#include "setting/fcm.h"
-#include "setting/calibration_xtc.h"
 #include "setting/s5kgn8_4096_3072_30fps_crop.h"
-#include "setting/fcm_end.h"
 };
 
 static u16 s5kgn8_seamless_custom6[] = {
 0xFCFC, 0x4000,
-0x6000, 0x0005,
+#include "setting/scm_index.h"
+0xFCFC, 0x4000,
 0x0104, 0x0101,
 #include "setting/s5kgn8_4096_3072_30fps_crop_sub.h"
 0xFCFC, 0x4000,
-0x0B32, 0x0000,
-0x0B30, 0x0101,
-0x0340, 0x15D4,
+0x0B32, 0x0100,
+0x0B30, 0x0100,
+0x0340, 0x15CC,
 0x0104, 0x0001,
-0x6000, 0x0085,
 };
 
 

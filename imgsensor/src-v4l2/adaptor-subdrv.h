@@ -597,6 +597,14 @@ struct subdrv_entry {
 	adaptor_i2c_wr_regs_u16(subctx->i2c_client, \
 		subctx->i2c_write_id >> 1, list, len)
 
+#define mot_subdrv_i2c_wr_burst_p16(subctx,reg, p_vals, n_vals) \
+	mot_adaptor_i2c_wr_burst_p16(subctx->i2c_client, \
+		subctx->i2c_write_id >> 1, reg, p_vals, n_vals)
+
+#define mot_subdrv_i2c_wr_swq_p16(subctx,reg, p_vals, n_vals) \
+	mot_adaptor_i2c_wr_swq_p16(subctx->i2c_client, \
+		subctx->i2c_write_id >> 1, reg, p_vals, n_vals)
+
 #define FINE_INTEG_CONVERT(_shutter, _fine_integ) \
 ( \
 	!(_fine_integ) ? \

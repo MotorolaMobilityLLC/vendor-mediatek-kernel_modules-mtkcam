@@ -34,4 +34,10 @@ int adaptor_i2c_wr_regs_u8(struct i2c_client *i2c_client,
 int adaptor_i2c_wr_regs_u16(struct i2c_client *i2c_client,
 		u16 addr, u16 *list, u32 len);
 
+int mot_adaptor_i2c_wr_burst_p16(struct i2c_client *i2c_client,
+		u16 addr, u16 reg,u16 *p_vals, u32 n_vals);
+
+int mot_adaptor_i2c_wr_swq_p16(struct i2c_client *i2c_client,
+		u16 addr, u16 reg, u16 *p_vals, u32 n_vals);
+
 #endif
