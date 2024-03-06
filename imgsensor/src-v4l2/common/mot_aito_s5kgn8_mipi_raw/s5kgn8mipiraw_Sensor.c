@@ -54,7 +54,6 @@ static int s5kgn8_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 		return ERROR_NONE;
 	}
 	scenario_id = *feature_data;
-	DRV_LOGE(ctx, "wzl  s5kgn8_seamless_switch  star scenario_id =%d \n",scenario_id);
 	if ((feature_data + 1) != NULL)
 		ae_ctrl = (struct mtk_hdr_ae *)((uintptr_t)(*(feature_data + 1)));
 	else
@@ -1355,13 +1354,14 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 static void s5kgn8sensor_init(struct subdrv_ctx *ctx)
 {
 	DRV_LOG(ctx, "E\n");
-	DRV_LOG(ctx, "Dphy-2lane setting\n");
 	subdrv_i2c_wr_u16(ctx, 0xFCFC, 0x4000);
-	subdrv_i2c_wr_u16(ctx, 0x6000, 0x0005);
 	subdrv_i2c_wr_u16(ctx, 0x6010, 0x0001);
 	mdelay(10);
-	i2c_table_write(ctx, uTnpArrayInit,
-			ARRAY_SIZE(uTnpArrayInit));
+	// 1 4 5
+	i2c_table_write(ctx, uTnpArrayInit_1,ARRAY_SIZE(uTnpArrayInit_1));
+	mot_subdrv_i2c_wr_burst_p16(ctx, 0x6F12,uTnpArrayInit_2,
+		ARRAY_SIZE(uTnpArrayInit_2));
+	i2c_table_write(ctx, uTnpArrayInit_3,ARRAY_SIZE(uTnpArrayInit_3));
 	DRV_LOG(ctx, "X\n");
 }
 
