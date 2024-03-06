@@ -306,6 +306,125 @@ int adaptor_i2c_wr_p16(struct i2c_client *i2c_client,
 	return 0;
 }
 
+
+#define MOT_MAX_BUF_SIZE 8191
+#define MOT_MAX_VAL_NUM_U16 ((MOT_MAX_BUF_SIZE - 2) >> 1)
+int mot_adaptor_i2c_wr_burst_p16(struct i2c_client *i2c_client,
+		u16 addr, u16 reg,u16 *p_vals, u32 n_vals)
+{
+	u8 *buf, *pbuf;
+	u16 *pdata;
+	struct i2c_msg msg;
+	int i, ret, sent, total, cnt;
+
+	if (i2c_client == NULL)
+		return -ENODEV;
+
+	buf = kmalloc(MOT_MAX_BUF_SIZE, GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+
+	sent = 0;
+	total = n_vals;
+	pdata = p_vals;
+
+	buf[0] = reg >> 8;
+	buf[1] = reg & 0xff;
+
+	msg.addr = addr;
+	msg.flags = i2c_client->flags;
+	msg.buf = buf;
+
+	while (sent < total) {
+
+		cnt = total - sent;
+		if (cnt > MOT_MAX_VAL_NUM_U16)
+			cnt = MOT_MAX_VAL_NUM_U16;
+
+		pbuf = buf + 2;
+
+		for (i = 0; i < cnt; i++) {
+			pbuf[0] = pdata[0] >> 8;
+			pbuf[1] = pdata[0] & 0xff;
+			pdata++;
+			pbuf += 2;
+		}
+
+		msg.len = 2 + (cnt << 1);
+
+		ret = i2c_transfer(i2c_client->adapter, &msg, 1);
+		if (ret < 0) {
+			dev_info(&i2c_client->dev,
+				"i2c transfer failed (%d)\n", ret);
+			kfree(buf);
+			return -EIO;
+		}
+		sent += cnt;
+	}
+	kfree(buf);
+	return 0;
+}
+
+int mot_adaptor_i2c_wr_swq_p16(struct i2c_client *i2c_client,
+		u16 addr, u16 reg, u16 *p_vals, u32 n_vals)
+{
+	u8 *buf, *pbuf;
+	u16 *pdata;
+	struct i2c_msg msg;
+	int i, ret, sent, total, cnt;
+
+	if (i2c_client == NULL)
+		return -ENODEV;
+
+	buf = kmalloc(MOT_MAX_BUF_SIZE, GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+
+	sent = 0;
+	total = n_vals;
+	pdata = p_vals;
+
+	buf[0] = reg >> 8;
+	buf[1] = reg & 0xff;
+
+	msg.addr = addr;
+	msg.flags = i2c_client->flags;
+	msg.buf = buf;
+
+	while (sent < total) {
+
+		cnt = total - sent;
+		if (cnt > MOT_MAX_VAL_NUM_U16)
+			cnt = MOT_MAX_VAL_NUM_U16;
+
+		pbuf = buf + 2;
+
+		for (i = 0; i < cnt; i++) {
+			pbuf[0] = pdata[0] >> 8;
+			pbuf[1] = pdata[0] & 0xff;
+			pdata++;
+			pbuf += 2;
+		}
+
+		msg.len = 2 + (cnt << 1);
+
+		ret = i2c_transfer(i2c_client->adapter, &msg, 1);
+		if (ret < 0) {
+			dev_info(&i2c_client->dev,
+				"i2c transfer failed (%d)\n", ret);
+			kfree(buf);
+			return -EIO;
+		}
+
+		sent += cnt;
+		reg  += 2*cnt;
+		buf[0] = reg >> 8;
+	       buf[1] = reg & 0xff;
+	}
+	kfree(buf);
+	return 0;
+}
+
 int adaptor_i2c_wr_seq_p8(struct i2c_client *i2c_client,
 		u16 addr, u16 reg, u8 *p_vals, u32 n_vals)
 {
