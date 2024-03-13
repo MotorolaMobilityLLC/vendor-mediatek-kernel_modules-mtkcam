@@ -28,6 +28,21 @@ static int gc13a2_set_shutter_frame_length(struct subdrv_ctx *ctx,u8 *para, u32 
 static int gc13a2_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
 
+//#define MOT_GC13A2_PDAF_DEBUG
+#ifdef MOT_GC13A2_PDAF_DEBUG
+static unsigned int gc13a2_pd_dt = 0x32;
+static unsigned int gc13a2_pd_ddesc = VC_PDAF_STATS_NE_PIX_1;
+static unsigned int gc13a2_pd_en = 1;
+module_param(gc13a2_pd_dt, uint, 0644);
+module_param(gc13a2_pd_ddesc, uint, 0644);
+module_param(gc13a2_pd_en, uint, 0644);
+#endif
+
+#define ENABLE_GC13A2_PD TRUE
+#define GC13A2_PD_DT 0x32
+//#define GC13A2_DATA_DESC VC_PDAF_STATS_NE_PIX_1
+#define GC13A2_DATA_DESC VC_PDAF_STATS
+
 /* STRUCT */
 
 static struct subdrv_feature_control feature_control_list[] = {
@@ -63,6 +78,18 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 			.vsize = 0x0C30,  // 3120
 		},
 	},
+#ifdef ENABLE_GC13A2_PD
+	{
+		.bus.csi2 = {
+			.channel = 2,
+			.data_type = GC13A2_PD_DT,
+			.hsize = 0x00a0,
+			.vsize = 0x0300,
+			//.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = GC13A2_DATA_DESC,
+		},
+	}
+#endif
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 	{
@@ -73,6 +100,18 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 			.vsize = 0x0C30,  // 3120
 		},
 	},
+#ifdef ENABLE_GC13A2_PD
+	{
+		.bus.csi2 = {
+			.channel = 2,
+			.data_type = GC13A2_PD_DT,
+			.hsize = 0x00a0,
+			.vsize = 0x0300,
+			//.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = GC13A2_DATA_DESC,
+		},
+	}
+#endif
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 	{
@@ -83,6 +122,18 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.vsize = 0x0C30,  // 3120
 		},
 	},
+#ifdef ENABLE_GC13A2_PD
+	{
+		.bus.csi2 = {
+			.channel = 2,
+			.data_type = GC13A2_PD_DT,
+			.hsize = 0x00a0,
+			.vsize = 0x0300,
+			//.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = GC13A2_DATA_DESC,
+		},
+	}
+#endif
 };
 /*
 static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
@@ -96,6 +147,44 @@ static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
 	},
 };
 */
+
+#ifdef ENABLE_GC13A2_PD
+static struct SET_PD_BLOCK_INFO_T gc13a2_pd_info = {
+	.i4OffsetX = 32,
+	.i4OffsetY = 24,
+	.i4PitchX = 64,
+	.i4PitchY = 64,
+	.i4PairNum = 16,
+	.i4SubBlkW = 16,
+	.i4SubBlkH = 16,
+	.i4PosR = {
+		{39, 28},		{55, 32},		{75, 32},		{91, 28},
+		{43, 48},		{59, 52},		{71, 52},		{87, 48},
+		{43, 64},		{59, 60},		{71, 60},		{87, 64},
+		{39, 84},		{55, 80},		{75, 80},		{91, 84},
+	},
+	.i4PosL = {
+		{39, 32},		{55, 36},		{75, 36},		{91, 32},
+		{43, 44},		{59, 48},		{71, 48},		{87, 44},
+		{43, 68},		{59, 64},		{71, 64},		{87, 68},
+		{39, 80},		{55, 76},		{75, 76},		{91, 80},
+	},
+	.i4BlockNumX = 64,
+	.i4BlockNumY = 48,
+	.i4Crop = {
+		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
+		{0, 0}, {0, 0}, {0, 390}, {0, 0}, {0, 0},
+		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+	},
+	.iMirrorFlip = 3,
+	.i4VCPackNum = 2,
+	.i4FullRawW = 4160,
+	.i4FullRawH = 3120,
+	.PDAF_Support = PDAF_SUPPORT_CAMSV,
+	/* VC's PD pattern description */
+};
+#endif
 
 static struct subdrv_mode_struct mode_struct[] = {
 	{
@@ -134,8 +223,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4160,
 			.h2_tg_size = 3120,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+#ifdef ENABLE_GC13A2_PD
+		.pdaf_cap = ENABLE_GC13A2_PD,
+		.imgsensor_pd_info = &gc13a2_pd_info,
+#endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 1,
@@ -179,8 +270,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4160,
 			.h2_tg_size = 3120,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+#ifdef ENABLE_GC13A2_PD
+		.pdaf_cap = ENABLE_GC13A2_PD,
+		.imgsensor_pd_info = &gc13a2_pd_info,
+#endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 1,
@@ -224,8 +317,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4160,
 			.h2_tg_size = 3120,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+#ifdef ENABLE_GC13A2_PD
+		.pdaf_cap = ENABLE_GC13A2_PD,
+		.imgsensor_pd_info = &gc13a2_pd_info,
+#endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 1,
@@ -332,7 +427,12 @@ static struct subdrv_static_ctx static_ctx = {
 	.frame_time_delay_frame = 1,
 	.start_exposure_offset = 0,
 
+#if ENABLE_GC13A2_PD
+	.pdaf_type = PDAF_SUPPORT_CAMSV,
+#else
 	.pdaf_type = PDAF_SUPPORT_NA,
+#endif
+
 	.hdr_type = HDR_SUPPORT_DCG,
 	.seamless_switch_support = FALSE,
 	.temperature_support = FALSE,
@@ -366,6 +466,30 @@ static struct subdrv_static_ctx static_ctx = {
 #endif
 };
 
+#ifdef MOT_GC13A2_PDAF_DEBUG
+int gc13a2_overlay_pd_settings(void)
+{
+	int i, len;
+
+	len = ARRAY_SIZE(mode_struct);
+	for (i=0; i<len-1; i++) {
+		mode_struct[i].pdaf_cap = gc13a2_pd_en;
+		mode_struct[i].frame_desc[1].bus.csi2.data_type = gc13a2_pd_dt;
+		mode_struct[i].frame_desc[1].bus.csi2.user_data_desc = gc13a2_pd_ddesc;
+		if (!gc13a2_pd_en) {
+			mode_struct[i].num_entries = 1;
+		}
+	}
+
+	if (gc13a2_pd_en) {
+		static_ctx.pdaf_type = PDAF_SUPPORT_CAMSV;
+	} else {
+		static_ctx.pdaf_type = PDAF_SUPPORT_NA;
+	}
+	return 0;
+}
+#endif
+
 static struct subdrv_ops ops = {
 	.get_id = common_get_imgsensor_id,
 	.init_ctx = init_ctx,
@@ -380,6 +504,10 @@ static struct subdrv_ops ops = {
 	.get_csi_param = common_get_csi_param,
 	.update_sof_cnt = common_update_sof_cnt,
 };
+
+#ifdef MOT_GC13A2_PDAF_DEBUG
+	gc13a2_overlay_pd_settings();
+#endif
 
 static struct subdrv_pw_seq_entry pw_seq[] = {
 	{HW_ID_MCLK, 24, 0},
