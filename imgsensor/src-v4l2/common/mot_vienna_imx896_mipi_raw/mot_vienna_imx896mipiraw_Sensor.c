@@ -21,6 +21,7 @@
  *============================================================================
  ****************************************************************************/
 #include "mot_vienna_imx896mipiraw_Sensor.h"
+#include "mot_vienna_imx896_cali.h"
 
 #define IMX896_EMBEDDED_DATA_EN 0
 
@@ -351,6 +352,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.start_exposure_offset = 500000,
 	.g_gain2reg = get_gain2reg,
 	.s_gph = set_group_hold,
+	.s_cali = mot_imx896_apply_qsc_spc_data,
 
 	.reg_addr_stream = 0x0100,
 	.reg_addr_mirror_flip = 0x0101,
