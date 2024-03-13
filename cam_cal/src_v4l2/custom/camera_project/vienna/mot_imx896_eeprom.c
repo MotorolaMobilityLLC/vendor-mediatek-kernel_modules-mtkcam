@@ -20,7 +20,7 @@ static unsigned int mot_imx896_do_2a_gain(struct EEPROM_DRV_FD_DATA *pdata,
 		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData);
 
 #define IMX896_MOT_EEPROM_ADDR 0x00
-#define IMX896_MOT_EEPROM_DATA_SIZE 0x19EE
+#define IMX896_MOT_EEPROM_DATA_SIZE 0x325B
 #define IMX896_MOT_SERIAL_NUMBER_ADDR 0x16
 #define IMX896_MOT_MNF_ADDR 0x00
 #define IMX896_MOT_MNF_DATA_SIZE 38
@@ -46,6 +46,14 @@ static unsigned int mot_imx896_do_2a_gain(struct EEPROM_DRV_FD_DATA *pdata,
 #define IMX896_MOT_MTK_NECESSARY_DATA_ADDR 0x19D9
 #define IMX896_MOT_MTK_NECESSARY_DATA_SIZE 19
 #define IMX896_MOT_MTK_NECESSARY_DATA_CHECKSUM_ADDR 0x19EC
+
+#define IMX896_QSC_DATA_ADDR 0x19EE
+#define IMX896_QSC_DATA_SIZE 3072
+#define IMX896_QSC_CRC_ADDR 0x25EE
+
+#define IMX896_SPC_DATA_ADDR 0x25F0
+#define IMX896_SPC_DATA_SIZE 384
+#define IMX896_SPC_CRC_ADDR 0x2770
 
 static struct STRUCT_CALIBRATION_LAYOUT_STRUCT cal_layout_table = {
 	0x00000003, 0x32443832, CAM_CAL_SINGLE_EEPROM_DATA,
@@ -450,6 +458,28 @@ unsigned int imx896_mot_do_factory_verify(struct EEPROM_DRV_FD_DATA *pdata, unsi
 		debug_log("check necessary data crc16 ok");
 	} else {
 		debug_log("check necessary data crc16 err");
+		return CAM_CAL_ERR_NO_PARTNO;
+	}
+
+	//imx896 qsc data check
+	checkSum = (pCamCalData->DumpAllEepromData[IMX896_QSC_CRC_ADDR])<< 8
+		|(pCamCalData->DumpAllEepromData[IMX896_QSC_CRC_ADDR+1]);
+	debug_log("checkSum  = 0x%x", checkSum);
+	if(check_crc16(pCamCalData->DumpAllEepromData+IMX896_QSC_DATA_ADDR, IMX896_QSC_DATA_SIZE, checkSum)) {
+		debug_log("check QSC data crc16 ok");
+	} else {
+		debug_log("check QSC data crc16 err");
+		return CAM_CAL_ERR_NO_PARTNO;
+	}
+
+	//imx896 spc data check
+	checkSum = (pCamCalData->DumpAllEepromData[IMX896_SPC_CRC_ADDR])<< 8
+		|(pCamCalData->DumpAllEepromData[IMX896_SPC_CRC_ADDR+1]);
+	debug_log("checkSum  = 0x%x", checkSum);
+	if(check_crc16(pCamCalData->DumpAllEepromData+IMX896_SPC_DATA_ADDR, IMX896_SPC_DATA_SIZE, checkSum)) {
+		debug_log("check SPC data crc16 ok");
+	} else {
+		debug_log("check SPC data crc16 err");
 		return CAM_CAL_ERR_NO_PARTNO;
 	}
 
