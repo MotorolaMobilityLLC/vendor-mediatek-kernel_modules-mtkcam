@@ -673,7 +673,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 	        .min_exposure_line = 16,
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
-                .ana_gain_max = BASEGAIN * 16,
+                .ana_gain_max = BASEGAIN * 64,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -1013,7 +1013,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 	        .min_exposure_line = 16,
 		.read_margin =48,
                 .ana_gain_min = BASEGAIN * 1,
-                .ana_gain_max = BASEGAIN * 16,
+                .ana_gain_max = BASEGAIN * 64,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -1095,7 +1095,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.min_gain_iso = 100,
 	.exposure_def = 0x3D0,
 	.exposure_min = 3,    //?
-	.exposure_max = 0xFFFF - 3, //?
+	.exposure_max = (0xFFFF*128) - 3, //?
 	.exposure_step = 1,         //?
 	.exposure_margin = 3,       //?
 
@@ -1274,10 +1274,16 @@ static int s5kgn8_lens_position(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	{
 		lens_position =af_inf_val;
 	}
-	lens_position_reg_val = (lens_position-af_inf_val)*1023 /(af_macro_val -af_inf_val);
-	DRV_LOG(ctx, "lens_position =%d  lens_position_reg_val =%d",lens_position,lens_position_reg_val);
-	DRV_LOG(ctx, "af_macro_val =%d  af_inf_val =%d",af_macro_val,af_inf_val);
-	subdrv_i2c_wr_u16(ctx, 0x3592, lens_position_reg_val);
+	if ((ctx->current_scenario_id == SENSOR_SCENARIO_ID_CUSTOM1) ||
+		(ctx->current_scenario_id == SENSOR_SCENARIO_ID_CUSTOM6))
+	{
+		lens_position_reg_val = (lens_position-af_inf_val)*1023 /(af_macro_val -af_inf_val);
+		DRV_LOG(ctx, "lens_position =%d  lens_position_reg_val =%d",lens_position,lens_position_reg_val);
+		DRV_LOG(ctx, "af_macro_val =%d  af_inf_val =%d",af_macro_val,af_inf_val);
+		subdrv_i2c_wr_u16(ctx, 0xFCFC, 0x2000);
+		subdrv_i2c_wr_u16(ctx, 0x3592, lens_position_reg_val);
+		subdrv_i2c_wr_u16(ctx, 0xFCFC, 0x4000);
+	}
 	return 0;
 }
 
