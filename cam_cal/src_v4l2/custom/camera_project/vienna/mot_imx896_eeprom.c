@@ -18,7 +18,8 @@ static unsigned int mot_imx896_do_manufacture_info(struct EEPROM_DRV_FD_DATA *pd
 		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData);
 static unsigned int mot_imx896_do_2a_gain(struct EEPROM_DRV_FD_DATA *pdata,
 		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData);
-
+static unsigned int mot_imx896_do_pdaf(struct EEPROM_DRV_FD_DATA *pdata,
+		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData);
 #define IMX896_MOT_EEPROM_ADDR 0x00
 #define IMX896_MOT_EEPROM_DATA_SIZE 0x325B
 #define IMX896_MOT_SERIAL_NUMBER_ADDR 0x16
@@ -55,6 +56,18 @@ static unsigned int mot_imx896_do_2a_gain(struct EEPROM_DRV_FD_DATA *pdata,
 #define IMX896_SPC_DATA_SIZE 384
 #define IMX896_SPC_CRC_ADDR 0x2770
 
+#define IMX896_FULL_PD_PROC1_ADDR 0x13DF
+#define IMX896_FULL_PD_PROC1_SIZE 496
+#define IMX896_FULL_PD_PROC2_ADDR 0x15CF
+#define IMX896_FULL_PD_PROC2_SIZE 1004
+#define IMX896_FULL_PD_SIZE (IMX896_FULL_PD_PROC1_SIZE+IMX896_FULL_PD_PROC2_SIZE)
+
+#define IMX896_PARTIAL_PD_PROC1_ADDR 0x2C39
+#define IMX896_PARTIAL_PD_PROC1_SIZE 496
+#define IMX896_PARTIAL_PD_PROC2_ADDR 0x2E29
+#define IMX896_PARTIAL_PD_PROC2_SIZE 1004
+#define IMX896_PARTIAL_PD_SIZE (IMX896_PARTIAL_PD_PROC1_SIZE+IMX896_PARTIAL_PD_PROC2_SIZE)
+
 static struct STRUCT_CALIBRATION_LAYOUT_STRUCT cal_layout_table = {
 	0x00000003, 0x32443832, CAM_CAL_SINGLE_EEPROM_DATA,
 	{
@@ -62,7 +75,7 @@ static struct STRUCT_CALIBRATION_LAYOUT_STRUCT cal_layout_table = {
 		{0x00000000, 0x00000000, 0x00000025, do_part_number},//CAMERA_CAM_CAL_DATA_PART_NUMBER
 		{0x00000001, IMX896_MOT_LSC_ADDR, IMX896_MOT_LSC_DATA_SIZE, mot_do_single_lsc},//CAMERA_CAM_CAL_DATA_SHADING_TABLE
 		{0x00000001, 0x00000027, 0x00000045, mot_imx896_do_2a_gain},//CAMERA_CAM_CAL_DATA_3A_GAIN
-		{0x00000001, IMX896_MOT_PDAF1_ADDR, IMX896_MOT_PDAF_DATA1_SIZE+IMX896_MOT_PDAF_DATA2_SIZE, mot_do_pdaf},//CAMERA_CAM_CAL_DATA_PDAF
+		{0x00000001, 0x00000000, 0x00000000, mot_imx896_do_pdaf},//CAMERA_CAM_CAL_DATA_PDAF
 		{0x00000000, 0x00000FAE, 0x00000550, do_stereo_data},//CAMERA_CAM_CAL_DATA_STEREO_DATA
 		{0x00000000, 0x00000000, 0x00000E25, do_dump_all},//CAMERA_CAM_CAL_DATA_DUMP
 		{0x00000000, 0x00000F80, 0x0000000A, do_lens_id},//CAMERA_CAM_CAL_DATA_LENS_ID
@@ -85,6 +98,94 @@ struct STRUCT_CAM_CAL_CONFIG_STRUCT mot_imx896_eeprom = {
 	.enable_preload = 1,
 	.preload_size = IMX896_MOT_EEPROM_DATA_SIZE,
 };
+
+static unsigned int mot_imx896_do_pdaf(struct EEPROM_DRV_FD_DATA *pdata,
+		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData)
+{
+	struct STRUCT_CAM_CAL_DATA_STRUCT *pCamCalData =
+				(struct STRUCT_CAM_CAL_DATA_STRUCT *)pGetSensorCalData;
+
+	int read_data_size, checkSum1, checkSum2;
+	int err =  CamCalReturnErr[pCamCalData->Command];
+	uint8_t  tempBuf[1504] = {0};
+
+	//Partial PD calibration data
+	read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID, IMX896_PARTIAL_PD_PROC1_ADDR,
+	                           IMX896_PARTIAL_PD_SIZE + 4, (unsigned char *)tempBuf);
+	if (read_data_size <= 0) {
+		err = CAM_CAL_ERR_NO_PDAF;
+		return err;
+	}
+	checkSum1 = tempBuf[1500] << 8 | tempBuf[1501];
+	checkSum2 = tempBuf[1502] << 8 | tempBuf[1503];
+	debug_log("checkSum1  = 0x%x, checkSum2 = 0x%x", checkSum1, checkSum2);
+
+	if(check_crc16(tempBuf, 496, checkSum1) && check_crc16(tempBuf +496, 1004, checkSum2)) {
+		debug_log("partial PD calibration check_crc16 ok");
+		err = CAM_CAL_ERR_NO_ERR;
+	} else {
+		debug_log("partial PD calibration check_crc16 err");
+		err = CAM_CAL_ERR_NO_PDAF;
+		return err;
+	}
+
+	read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID, IMX896_PARTIAL_PD_PROC1_ADDR,
+	                           IMX896_PARTIAL_PD_SIZE, (unsigned char *)&pCamCalData->PDAF.Data[0]);
+	if (read_data_size <= 0) {
+		err = CAM_CAL_ERR_NO_PDAF;
+		return err;
+	}
+
+	//Full PD calibration data
+	read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID, IMX896_FULL_PD_PROC1_ADDR,
+	                           IMX896_FULL_PD_SIZE + 4, (unsigned char *)tempBuf);
+	if (read_data_size <= 0) {
+		err = CAM_CAL_ERR_NO_PDAF;
+		return err;
+	}
+	checkSum1 = tempBuf[1500] << 8 | tempBuf[1501];
+	checkSum2 = tempBuf[1502] << 8 | tempBuf[1503];
+	debug_log("checkSum1  = 0x%x, checkSum2 = 0x%x", checkSum1, checkSum2);
+
+	if(check_crc16(tempBuf, 496, checkSum1) && check_crc16(tempBuf +496, 1004, checkSum2)) {
+		debug_log("full PD calibration check_crc16 ok");
+		err = CAM_CAL_ERR_NO_ERR;
+	} else {
+		debug_log("full PD calibration check_crc16 err");
+		err = CAM_CAL_ERR_NO_PDAF;
+		return err;
+	}
+
+	read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID, IMX896_FULL_PD_PROC1_ADDR,
+	                           IMX896_FULL_PD_SIZE,
+	                           (unsigned char *)&pCamCalData->PDAF.Data[IMX896_PARTIAL_PD_SIZE]);
+	if (read_data_size <= 0) {
+		err = CAM_CAL_ERR_NO_PDAF;
+		return err;
+	}
+
+	pCamCalData->PDAF.Size_of_PDAF = IMX896_PARTIAL_PD_SIZE  + IMX896_FULL_PD_SIZE;
+	debug_log("PDAF total size=%d\n", block_size);
+
+	debug_log("======================PDAF Data==================\n");
+	debug_log("First five of partial pd: %x, %x, %x, %x, %x\n",
+		pCamCalData->PDAF.Data[0],
+		pCamCalData->PDAF.Data[1],
+		pCamCalData->PDAF.Data[2],
+		pCamCalData->PDAF.Data[3],
+		pCamCalData->PDAF.Data[4]);
+	debug_log("First five of full pd: %x, %x, %x, %x, %x\n",
+		pCamCalData->PDAF.Data[IMX896_PARTIAL_PD_SIZE],
+		pCamCalData->PDAF.Data[IMX896_PARTIAL_PD_SIZE+1],
+		pCamCalData->PDAF.Data[IMX896_PARTIAL_PD_SIZE+2],
+		pCamCalData->PDAF.Data[IMX896_PARTIAL_PD_SIZE+3],
+		pCamCalData->PDAF.Data[IMX896_PARTIAL_PD_SIZE+4]);
+	debug_log("RETURN = 0x%x\n", err);
+	debug_log("======================PDAF Data==================\n");
+
+	return err;
+
+}
 
 unsigned int mot_imx896_do_2a_gain(struct EEPROM_DRV_FD_DATA *pdata,
 		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData)
