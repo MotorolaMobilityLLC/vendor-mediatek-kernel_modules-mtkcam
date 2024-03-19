@@ -38,6 +38,7 @@ static struct STRUCT_CALIBRATION_LAYOUT_STRUCT cal_layout_table = {
 		{0x00000000, 0x00000000, 0x00000000, do_stereo_data},
 		{0x00000000, 0x00000000, 0x00000000, do_dump_all},
 		{0x00000000, 0x00000000, 0x00000000, do_lens_id},
+		{0x00000000, 0x00000000, 0x00000000, NULL},
 		{0x00000001, 0x00000000, 0x00000025, mot_do_manufacture_info}
 	}
 };
