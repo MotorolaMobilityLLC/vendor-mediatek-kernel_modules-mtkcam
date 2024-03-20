@@ -36,7 +36,6 @@
 #include "kd_imgsensor_errcode.h"
 
 #include "mot_vienna_s5kjd1_Sensor_setting.h"
-#include "mot_vienna_s5kjd1_ana_gain_table.h"
 
 #include "adaptor-subdrv-ctrl.h"
 #include "adaptor-i2c.h"
