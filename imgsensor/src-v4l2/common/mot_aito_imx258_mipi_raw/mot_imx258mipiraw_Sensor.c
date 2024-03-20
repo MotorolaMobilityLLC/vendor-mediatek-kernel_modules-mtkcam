@@ -30,7 +30,11 @@ static int imx258_set_test_pattern_data(struct subdrv_ctx *ctx, u8 *para, u32 *l
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
 static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt);
 static void mot_imx258_apply_spc_data(void *sensor_ctx);
-
+#define ENABLE_IMX258_LONG_EXPOSURE TRUE
+#if  ENABLE_IMX258_LONG_EXPOSURE
+static int imx258_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static void imx258_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter, u32 frame_length);
+#endif
 //#define MOT_IMX258_PDAF_DEBUG
 
 #ifdef MOT_IMX258_PDAF_DEBUG
@@ -54,6 +58,9 @@ module_param(imx258_pd_en, uint, 0644);
 static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, imx258_set_test_pattern},
 	{SENSOR_FEATURE_SET_TEST_PATTERN_DATA, imx258_set_test_pattern_data},
+#if  ENABLE_IMX258_LONG_EXPOSURE
+	{SENSOR_FEATURE_SET_ESHUTTER, imx258_set_shutter},
+#endif
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
@@ -582,7 +589,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.min_gain_iso = 100, // no change
 	.exposure_def = 0x3D0, //no change
 	.exposure_min = 1,
-	.exposure_max = 0xFFFF - 10,
+	.exposure_max = (0xFFFF*128) - 10,
 	.exposure_step = 1, // Get Maximum Step
 	.exposure_margin = 10,
 	.dig_gain_min = BASE_DGAIN * 1,
@@ -612,8 +619,8 @@ static struct subdrv_static_ctx static_ctx = {
 	.reg_addr_exposure = {
 			{0x0202, 0x0203},
 	},
-	.long_exposure_support = FALSE,
-	.reg_addr_exposure_lshift = 0x3100,
+	.long_exposure_support = TRUE,
+	.reg_addr_exposure_lshift = 0x3002,
 	.reg_addr_ana_gain = {
 			{0x0204, 0x0205},
 	},
@@ -638,6 +645,110 @@ static struct subdrv_static_ctx static_ctx = {
 	.checksum_value = 0xecaae2a0,
 };
 
+
+
+#if  ENABLE_IMX258_LONG_EXPOSURE
+static void imx258_set_long_exposure(struct subdrv_ctx *ctx)
+{
+	u32 shutter = ctx->exposure[IMGSENSOR_STAGGER_EXPOSURE_LE];
+	u32 l_shutter = 0;
+	u16 l_shift = 0;
+
+	if (shutter > (ctx->s_ctx.frame_length_max - ctx->s_ctx.exposure_margin)) {
+		if (ctx->s_ctx.long_exposure_support == FALSE) {
+			DRV_LOGE(ctx, "sensor no support of exposure lshift!\n");
+			return;
+		}
+		if (ctx->s_ctx.reg_addr_exposure_lshift == PARAM_UNDEFINED) {
+			DRV_LOGE(ctx, "please implement lshift register address\n");
+			return;
+		}
+		for (l_shift = 1; l_shift < 7; l_shift++) {
+			l_shutter = ((shutter - 1) >> l_shift) + 1;
+			if (l_shutter
+				< (ctx->s_ctx.frame_length_max - ctx->s_ctx.exposure_margin))
+				break;
+		}
+		if (l_shift > 7) {
+			DRV_LOGE(ctx, "unable to set exposure:%u, set to max\n", shutter);
+			l_shift = 7;
+		}
+		shutter = ((shutter - 1) >> l_shift) + 1;
+		ctx->frame_length = shutter + ctx->s_ctx.exposure_margin;
+		DRV_LOG(ctx, "long exposure mode: lshift %u times\n", l_shift);
+		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure_lshift, l_shift);
+		ctx->l_shift = l_shift;
+		/* Frame exposure mode customization for LE*/
+		ctx->ae_frm_mode.frame_mode_1 = IMGSENSOR_AE_MODE_SE;
+		ctx->ae_frm_mode.frame_mode_2 = IMGSENSOR_AE_MODE_SE;
+		ctx->current_ae_effective_frame = 2;
+	} else {
+		if (ctx->s_ctx.reg_addr_exposure_lshift != PARAM_UNDEFINED) {
+			set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure_lshift, l_shift);
+			ctx->l_shift = l_shift;
+		}
+		ctx->current_ae_effective_frame = 2;
+	}
+	ctx->exposure[IMGSENSOR_STAGGER_EXPOSURE_LE] = shutter;
+}
+
+static void imx258_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter, u32 frame_length)
+{
+	int fine_integ_line = 0;
+	bool gph = !ctx->is_seamless && (ctx->s_ctx.s_gph != NULL);
+	ctx->frame_length = frame_length ? frame_length : ctx->min_frame_length;
+	check_current_scenario_id_bound(ctx);
+	/* check boundary of shutter */
+	fine_integ_line = ctx->s_ctx.mode[ctx->current_scenario_id].fine_integ_line;
+	shutter = FINE_INTEG_CONVERT(shutter, fine_integ_line);
+	shutter = max_t(u64, shutter,
+		(u64)ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_shutter_range[0].min);
+	shutter = min_t(u64, shutter,
+		(u64)ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_shutter_range[0].max);
+	/* check boundary of framelength */
+	ctx->frame_length = max((u32)shutter + ctx->s_ctx.exposure_margin, ctx->min_frame_length);
+	ctx->frame_length = min(ctx->frame_length, ctx->s_ctx.frame_length_max);
+	/* restore shutter */
+	memset(ctx->exposure, 0, sizeof(ctx->exposure));
+	ctx->exposure[0] = (u32) shutter;
+	/* group hold start */
+	if (gph)
+		ctx->s_ctx.s_gph((void *)ctx, 1);
+	/* write shutter */
+	imx258_set_long_exposure(ctx);
+	/* write framelength */
+	write_frame_length(ctx, ctx->frame_length);
+
+	if (ctx->s_ctx.reg_addr_exposure[0].addr[2]) {
+		set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_exposure[0].addr[0],
+			(ctx->exposure[0] >> 16) & 0xFF);
+		set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_exposure[0].addr[1],
+			(ctx->exposure[0] >> 8) & 0xFF);
+		set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_exposure[0].addr[2],
+			ctx->exposure[0] & 0xFF);
+	} else {
+		set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_exposure[0].addr[0],
+			(ctx->exposure[0] >> 8) & 0xFF);
+		set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_exposure[0].addr[1],
+			ctx->exposure[0] & 0xFF);
+	}
+	DRV_LOG(ctx, "exp[0x%x], fll(input/output):%u/%u, flick_en:%d\n",
+		ctx->exposure[0], frame_length, ctx->frame_length, ctx->autoflicker_en);
+	if (!ctx->ae_ctrl_gph_en) {
+		if (gph)
+			ctx->s_ctx.s_gph((void *)ctx, 0);
+		commit_i2c_buffer(ctx);
+	}
+	/* group hold end */
+}
+
+static int imx258_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	u64 shutter = *((u64 *)para);
+	imx258_set_shutter_frame_length(ctx, shutter,0);
+	return 0;
+}
+#endif
 int imx258_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 {
 	u8 i = 0;
