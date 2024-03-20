@@ -149,6 +149,30 @@ static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 	},
 };
 
+static struct mtk_mbus_frame_desc_entry frame_desc_cus1[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2b,
+			.hsize = 0x1000,
+			.vsize = 0x0c00,
+			.user_data_desc = VC_STAGGER_NE,
+		},
+	},
+};
+
+static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2b,
+			.hsize = 0x1000,
+			.vsize = 0x0900,
+			.user_data_desc = VC_STAGGER_NE,
+		},
+	},
+};
+
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 0,
@@ -206,7 +230,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info,
-		.ae_binning_ratio = 1000,
+		.ae_binning_ratio = 1428,
 		.fine_integ_line = 826,
 		.delay_frame = 1,
 		.csi_param = {
@@ -250,7 +274,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info,
-		.ae_binning_ratio = 1465,
+		.ae_binning_ratio = 1428,
 		.fine_integ_line = 826,
 		.delay_frame = 1,
 		.csi_param = {
@@ -294,7 +318,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info,
-		.ae_binning_ratio = 1465,
+		.ae_binning_ratio = 1428,
 		.fine_integ_line = 826,
 		.delay_frame = 1,
 		.csi_param = {
@@ -338,7 +362,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info,
-		.ae_binning_ratio = 1465,
+		.ae_binning_ratio = 1428,
 		.fine_integ_line = 826,
 		.delay_frame = 1,
 		.csi_param = {
@@ -382,9 +406,92 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info,
-		.ae_binning_ratio = 1465,
+		.ae_binning_ratio = 1428,
 		.fine_integ_line = 826,
 		.delay_frame = 1,
+		.csi_param = {
+			.cphy_settle = 73,
+		},
+		.dpc_enabled = true, /* reg 0x0b06 */
+	},
+	{//custom1  full crop
+		.frame_desc = frame_desc_cus1,
+		.num_entries = ARRAY_SIZE(frame_desc_cus1),
+		.mode_setting_table = addr_data_pair_custom1,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom1),
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 1360000000,
+		.linelength = 14032,
+		.framelength = 3225,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 1645710000,
+		.readout_length = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 2048,
+			.y0_offset = 1536,
+			.w0_size = 4096,
+			.h0_size = 3072,
+			.scale_w = 4096,
+			.scale_h = 3072,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 3072,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 3072,
+		},
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 826,
+		.delay_frame = 2,
+		.csi_param = {
+			.cphy_settle = 73,
+		},
+		.dpc_enabled = true, /* reg 0x0b06 */
+	},
+	{//custom2  FHD
+		.frame_desc = frame_desc_cus2,
+		.num_entries = ARRAY_SIZE(frame_desc_cus2),
+		.mode_setting_table = addr_data_pair_custom2,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom2),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 1360000000,
+		.linelength = 7136,
+		.framelength = 3174,
+		.max_framerate = 600,
+		.mipi_pixel_rate = 1645710000,
+		.readout_length = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 768,
+			.w0_size = 8192,
+			.h0_size = 4608,
+			.scale_w = 4096,
+			.scale_h = 2304,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2304,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2304,
+		},
+		.ae_binning_ratio = 1428,
+		.fine_integ_line = 826,
+		.delay_frame = 2,
 		.csi_param = {
 			.cphy_settle = 73,
 		},
