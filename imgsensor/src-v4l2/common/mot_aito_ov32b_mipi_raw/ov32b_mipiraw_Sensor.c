@@ -409,7 +409,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.min_gain_iso = 100,
 	.exposure_def = 0x3D0,
 	.exposure_min = 16,
-	.exposure_max = 0xffff - 31,
+	.exposure_max = (0xffff*128) - 31,
 	.exposure_step = 1,
 	.exposure_margin = 31,
 
@@ -428,7 +428,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.reg_addr_stream = 0x0100,
 	.reg_addr_mirror_flip = PARAM_UNDEFINED,
 	.reg_addr_exposure = {{0x3500, 0x3501, 0x3502},},
-	.long_exposure_support = FALSE,
+	.long_exposure_support = TRUE,
 	.reg_addr_exposure_lshift = PARAM_UNDEFINED,
 	.reg_addr_ana_gain = {{0x3508, 0x3509},},
 	.reg_addr_frame_length = {0x3840, 0x380E, 0x380F},
