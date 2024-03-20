@@ -30,6 +30,12 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 static void mot_vienna_s5k3k1_sensor_init(struct subdrv_ctx *ctx);
 static int open(struct subdrv_ctx *ctx);
 
+#define ENABLE_S5K3K1_PD TRUE
+#define S5K3K1_PD_DT 0x2b
+#define S5K3K1_DATA_DESC VC_PDAF_STATS
+#define S5K3K1_PD_X_SIZE 456
+#define S5K3K1_PD_Y_SIZE 680
+
 /* STRUCT */
 
 static struct subdrv_feature_control feature_control_list[] = {
@@ -46,6 +52,17 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 			.vsize = 0xab0,
 		},
 	},
+#ifdef ENABLE_S5K3K1_PD
+	{
+		.bus.csi2 = {
+			.channel = 1,
+			.data_type = S5K3K1_PD_DT,
+			.hsize = S5K3K1_PD_X_SIZE,
+			.vsize = S5K3K1_PD_Y_SIZE,
+			.user_data_desc = S5K3K1_DATA_DESC,
+		},
+	}
+#endif
 };
 /*static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 	{
@@ -88,6 +105,52 @@ static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 	},
 };*/
 
+#ifdef ENABLE_S5K3K1_PD
+static struct SET_PD_BLOCK_INFO_T s5k3k1_pd_info = {
+	.i4OffsetX = 0,
+	.i4OffsetY = 8,
+	.i4PitchX = 8,
+	.i4PitchY = 32,
+	.i4PairNum = 4,
+	.i4SubBlkW = 8,
+	.i4SubBlkH = 8,
+	.i4PosL = {
+		{2, 9}, {6, 21}, {2, 29}, {6, 33}
+	},
+	.i4PosR = {
+		{2, 13}, {6, 17}, {2, 25}, {6, 37}
+	},
+	.i4BlockNumX = 456,
+	.i4BlockNumY = 85,
+	.i4Crop = {
+		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <cust6> <cust7> <cust8> cust9 cust10
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// cust11 cust12 cust13 <cust14> <cust15>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <cust16> <cust17> cust18 <cust19> cust20
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <cust21> <cust22> <cust23> <cust24> <cust25>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// cust26 <cust27> cust28
+		{0, 0}, {0, 0}, {0, 0},
+	},
+	.i4FullRawW = 3648,
+	.i4FullRawH = 2736,
+	.iMirrorFlip = 0,
+	.PDAF_Support = PDAF_SUPPORT_CAMSV,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		.i4PDPattern = 3, // sparse PD non-interleaved
+		.i4PDRepetition = 8,
+		.i4PDOrder = { 0, 1, 1, 0, 1, 0, 0, 1 }, // L = 0, R = 1
+	},
+};
+#endif
+
 static struct subdrv_mode_struct mode_struct[] = {
 	{//preview
 		.frame_desc = frame_desc_prev,
@@ -108,8 +171,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.readout_length = 0,
 		.read_margin = 0,
 		.imgsensor_winsize_info = {
-			.full_w = 3840,
-			.full_h = 2880,
+			.full_w = 3648,
+			.full_h = 2736,
 			.x0_offset = 0,
 			.y0_offset = 0,
 			.w0_size = 3648,
@@ -125,8 +188,13 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 3648,
 			.h2_tg_size = 2736,
 		},
+#ifdef ENABLE_S5K3K1_PD
+		.pdaf_cap = ENABLE_S5K3K1_PD,
+		.imgsensor_pd_info = &s5k3k1_pd_info,
+#else
 		.pdaf_cap = FALSE,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
+#endif
 		.ae_binning_ratio = 1,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -151,8 +219,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.readout_length = 0,
 		.read_margin = 0,
 		.imgsensor_winsize_info = {
-			.full_w = 3840,
-			.full_h = 2880,
+			.full_w = 3648,
+			.full_h = 2736,
 			.x0_offset = 0,
 			.y0_offset = 0,
 			.w0_size = 3648,
@@ -168,8 +236,13 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 3648,
 			.h2_tg_size = 2736,
 		},
+#ifdef ENABLE_S5K3K1_PD
+		.pdaf_cap = ENABLE_S5K3K1_PD,
+		.imgsensor_pd_info = &s5k3k1_pd_info,
+#else
 		.pdaf_cap = FALSE,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
+#endif
 		.ae_binning_ratio = 1,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -194,8 +267,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.readout_length = 0,
 		.read_margin = 0,
 		.imgsensor_winsize_info = {
-			.full_w = 3840,
-			.full_h = 2880,
+			.full_w = 3648,
+			.full_h = 2736,
 			.x0_offset = 0,
 			.y0_offset = 0,
 			.w0_size = 3648,
@@ -211,8 +284,13 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 3648,
 			.h2_tg_size = 2736,
 		},
+#ifdef ENABLE_S5K3K1_PD
+		.pdaf_cap = ENABLE_S5K3K1_PD,
+		.imgsensor_pd_info = &s5k3k1_pd_info,
+#else
 		.pdaf_cap = FALSE,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
+#endif
 		.ae_binning_ratio = 1,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -237,8 +315,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.readout_length = 0,
 		.read_margin = 0,
 		.imgsensor_winsize_info = {
-			.full_w = 3840,
-			.full_h = 2880,
+			.full_w = 3648,
+			.full_h = 2736,
 			.x0_offset = 0,
 			.y0_offset = 0,
 			.w0_size = 3648,
@@ -254,8 +332,13 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 3648,
 			.h2_tg_size = 2736,
 		},
+#ifdef ENABLE_S5K3K1_PD
+		.pdaf_cap = ENABLE_S5K3K1_PD,
+		.imgsensor_pd_info = &s5k3k1_pd_info,
+#else
 		.pdaf_cap = FALSE,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
+#endif
 		.ae_binning_ratio = 1,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -280,8 +363,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.readout_length = 0,
 		.read_margin = 0,
 		.imgsensor_winsize_info = {
-			.full_w = 3840,
-			.full_h = 2880,
+			.full_w = 3648,
+			.full_h = 2736,
 			.x0_offset = 0,
 			.y0_offset = 0,
 			.w0_size = 3648,
@@ -297,8 +380,13 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 3648,
 			.h2_tg_size = 2736,
 		},
+#ifdef ENABLE_S5K3K1_PD
+		.pdaf_cap = ENABLE_S5K3K1_PD,
+		.imgsensor_pd_info = &s5k3k1_pd_info,
+#else
 		.pdaf_cap = FALSE,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
+#endif
 		.ae_binning_ratio = 1,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -344,7 +432,11 @@ static struct subdrv_static_ctx static_ctx = {
 	.frame_time_delay_frame = 2,
 	.start_exposure_offset = 500000, // 05.11.23 (m.d.y) update
 
+#ifdef ENABLE_S5K3K1_PD
+	.pdaf_type = PDAF_SUPPORT_CAMSV,
+#else
 	.pdaf_type = PDAF_SUPPORT_NA,
+#endif
 	.hdr_type = HDR_SUPPORT_NA,
 	.seamless_switch_support = FALSE,
 	.temperature_support = FALSE,

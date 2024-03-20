@@ -309,9 +309,9 @@ static unsigned int mot_s5k3k1_do_2a_gain(struct EEPROM_DRV_FD_DATA *pdata,
 			return err;
 		}
 		AFMacroDistance = af_data[0]<<8 | af_data[1];
-		AFMacro = (af_data[2]<<8 | af_data[3])/32;
+		AFMacro = (af_data[2]<<8 | af_data[3])/64;
 		AFInfDistance = af_data[4]<<8 | af_data[5];
-		AFInf = (af_data[6]<<8 | af_data[7])/32;
+		AFInf = (af_data[6]<<8 | af_data[7])/64;
 		pCamCalData->Single2A.S2aAf[0] = AFInf;
 		pCamCalData->Single2A.S2aAf[1] = AFMacro;
 		pCamCalData->Single2A.S2aAF_t.AF_infinite_pattern_distance = AFInfDistance;
