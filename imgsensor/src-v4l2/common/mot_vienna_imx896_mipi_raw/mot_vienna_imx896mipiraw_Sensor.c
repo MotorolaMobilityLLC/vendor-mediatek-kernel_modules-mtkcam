@@ -159,6 +159,17 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus1[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x0800,
+			.vsize = 0x0600,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
+		},
+	},
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = {
@@ -192,6 +203,32 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	},
 	.i4ModeIndex = 3,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
+};
+
+static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus1_info = {
+	.i4OffsetX = 0,
+	.i4OffsetY = 0,
+	.i4PitchX = 0,
+	.i4PitchY = 0,
+	.i4PairNum = 0,
+	.i4SubBlkW = 0,
+	.i4SubBlkH = 0,
+	.i4BlockNumX = 0,
+	.i4BlockNumY = 0,
+	.i4PosL = {	{0, 0} },
+	.i4PosR = { {0, 0} },
+	.i4Crop = {
+		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
+		{2048, 1536}, {0, 0}, {0, 0}, {0, }, {0, 0},
+	},
+	.iMirrorFlip = IMAGE_NORMAL,
+	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
+	.i4FullRawW = 8192,
+	.i4FullRawH = 6144,
+	.i4ModeIndex = 3,
+	.i4VCPackNum = 1,
 };
 
 static struct subdrv_mode_struct mode_struct[] = {
@@ -446,6 +483,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_cus1_info,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 826,
 		.delay_frame = 2,
