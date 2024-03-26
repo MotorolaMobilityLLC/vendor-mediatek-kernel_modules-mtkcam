@@ -1306,6 +1306,7 @@ static u16 uTnpArrayInit_4lane[] = {
 0xF440, 0x000F,
 0xF442, 0x001F,
 0xFB0A, 0x0567,
+0x0BCC, 0x0000,
 };
 
 static u16 addr_data_pair_preview[] = {
