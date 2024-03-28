@@ -35,10 +35,15 @@ static int s5kgn8_lens_position(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt);
 
 #define ENABLE_S5KGN8_LONG_EXPOSURE TRUE
+#define VENDOR_OV TRUE
+#define VENDOR_QT TRUE
 #if  ENABLE_S5KGN8_LONG_EXPOSURE
 static int s5kgn8_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static void s5kgn8_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter, u32 frame_length);
 #endif
+
+static int mot_s5kgn8_Manufacturer_ID = 0;
+module_param(mot_s5kgn8_Manufacturer_ID,int, 0644);
 /* STRUCT */
 
 static struct subdrv_feature_control feature_control_list[] = {
@@ -651,15 +656,16 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_vid_info = {
 	},
 };
 
-static struct subdrv_mode_struct mode_struct[] = {
+#if VENDOR_OV
+static struct subdrv_mode_struct mode_ov_struct[] = {
 	{
 		.frame_desc = frame_desc_prev,
 		.num_entries = ARRAY_SIZE(frame_desc_prev),
-		.mode_setting_table = addr_data_pair_preview,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview),
+		.mode_setting_table = OV_addr_data_pair_preview,
+		.mode_setting_len = ARRAY_SIZE(OV_addr_data_pair_preview),
 		.seamless_switch_group = 2,
-		.seamless_switch_mode_setting_table = s5kgn8_seamless_preview,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(s5kgn8_seamless_preview),
+		.seamless_switch_mode_setting_table = OV_s5kgn8_seamless_preview,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(OV_s5kgn8_seamless_preview),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -701,8 +707,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_cap,
 		.num_entries = ARRAY_SIZE(frame_desc_cap),
-		.mode_setting_table = addr_data_pair_capture,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_capture),
+		.mode_setting_table = OV_addr_data_pair_capture,
+		.mode_setting_len = ARRAY_SIZE(OV_addr_data_pair_capture),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -747,11 +753,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_vid,
 		.num_entries = ARRAY_SIZE(frame_desc_vid),
-		.mode_setting_table = addr_data_pair_normal_video,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_normal_video),
+		.mode_setting_table = OV_addr_data_pair_normal_video,
+		.mode_setting_len = ARRAY_SIZE(OV_addr_data_pair_normal_video),
 		.seamless_switch_group = 1,
-		.seamless_switch_mode_setting_table = s5kgn8_seamless_normal_video,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(s5kgn8_seamless_normal_video),
+		.seamless_switch_mode_setting_table = OV_s5kgn8_seamless_normal_video,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(OV_s5kgn8_seamless_normal_video),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -795,8 +801,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_hs_vid,
 		.num_entries = ARRAY_SIZE(frame_desc_hs_vid),
-		.mode_setting_table = addr_data_pair_hs_video,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_hs_video),
+		.mode_setting_table = OV_addr_data_pair_hs_video,
+		.mode_setting_len = ARRAY_SIZE(OV_addr_data_pair_hs_video),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -841,8 +847,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_slim_vid,
 		.num_entries = ARRAY_SIZE(frame_desc_slim_vid),
-		.mode_setting_table = addr_data_pair_slim_video,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_slim_video),
+		.mode_setting_table = OV_addr_data_pair_slim_video,
+		.mode_setting_len = ARRAY_SIZE(OV_addr_data_pair_slim_video),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -888,8 +894,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{//custom1
 		.frame_desc = frame_desc_cus1,
 		.num_entries = ARRAY_SIZE(frame_desc_cus1),
-		.mode_setting_table = addr_data_pair_custom1,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom1),
+		.mode_setting_table = OV_addr_data_pair_custom1,
+		.mode_setting_len = ARRAY_SIZE(OV_addr_data_pair_custom1),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -934,8 +940,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{//custom2
 		.frame_desc = frame_desc_cus2,
 		.num_entries = ARRAY_SIZE(frame_desc_cus2),
-		.mode_setting_table = addr_data_pair_custom2,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom2),
+		.mode_setting_table = OV_addr_data_pair_custom2,
+		.mode_setting_len = ARRAY_SIZE(OV_addr_data_pair_custom2),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -980,8 +986,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{//custom3
 		.frame_desc = frame_desc_cus3,
 		.num_entries = ARRAY_SIZE(frame_desc_cus3),
-		.mode_setting_table = addr_data_pair_custom3,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom3),
+		.mode_setting_table = OV_addr_data_pair_custom3,
+		.mode_setting_len = ARRAY_SIZE(OV_addr_data_pair_custom3),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -1026,11 +1032,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{//custom4
 		.frame_desc = frame_desc_cus4,
 		.num_entries = ARRAY_SIZE(frame_desc_cus4),
-		.mode_setting_table = addr_data_pair_custom4,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom4),
+		.mode_setting_table = OV_addr_data_pair_custom4,
+		.mode_setting_len = ARRAY_SIZE(OV_addr_data_pair_custom4),
 		.seamless_switch_group = 1,
-		.seamless_switch_mode_setting_table = s5kgn8_seamless_custom4,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(s5kgn8_seamless_custom4),
+		.seamless_switch_mode_setting_table = OV_s5kgn8_seamless_custom4,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(OV_s5kgn8_seamless_custom4),
 		.hdr_mode = HDR_RAW_DCG_COMPOSE,
 		.raw_cnt = 1,
 		.exp_cnt = 2,
@@ -1089,8 +1095,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{//custom5
 		.frame_desc = frame_desc_cus5,
 		.num_entries = ARRAY_SIZE(frame_desc_cus5),
-		.mode_setting_table = addr_data_pair_custom5,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom5),
+		.mode_setting_table = OV_addr_data_pair_custom5,
+		.mode_setting_len = ARRAY_SIZE(OV_addr_data_pair_custom5),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -1136,11 +1142,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{//custom6  full crop
 		.frame_desc = frame_desc_cus6,
 		.num_entries = ARRAY_SIZE(frame_desc_cus6),
-		.mode_setting_table = addr_data_pair_custom6,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom6),
+		.mode_setting_table = OV_addr_data_pair_custom6,
+		.mode_setting_len = ARRAY_SIZE(OV_addr_data_pair_custom6),
 		.seamless_switch_group = 2,
-		.seamless_switch_mode_setting_table = s5kgn8_seamless_custom6,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(s5kgn8_seamless_custom6),
+		.seamless_switch_mode_setting_table = OV_s5kgn8_seamless_custom6,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(OV_s5kgn8_seamless_custom6),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -1181,7 +1187,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 	},
 };
 
-static struct subdrv_static_ctx static_ctx = {
+static struct subdrv_static_ctx static_ov_ctx = {
 	.sensor_id = MOT_AITO_S5KGN8_SENSOR_ID,
 	.reg_addr_sensor_id = {0x0000, 0x0001},
 	.i2c_addr_table = {0x20, 0xFF},
@@ -1237,8 +1243,8 @@ static struct subdrv_static_ctx static_ctx = {
 
 	.init_setting_table = PARAM_UNDEFINED,
 	.init_setting_len = PARAM_UNDEFINED,
-	.mode = mode_struct,
-	.sensor_mode_num = ARRAY_SIZE(mode_struct),
+	.mode = mode_ov_struct,
+	.sensor_mode_num = ARRAY_SIZE(mode_ov_struct),
 	.list = feature_control_list,
 	.list_len = ARRAY_SIZE(feature_control_list),
 	.chk_s_off_sta = 1,
@@ -1249,7 +1255,609 @@ static struct subdrv_static_ctx static_ctx = {
 	/* custom stream control delay timing for hw limitation (ms) */
 	.custom_stream_ctrl_delay = 0,
 };
+#endif
 
+
+#if VENDOR_QT
+static struct subdrv_mode_struct mode_qt_struct[] = {
+	{
+		.frame_desc = frame_desc_prev,
+		.num_entries = ARRAY_SIZE(frame_desc_prev),
+		.mode_setting_table = QT_addr_data_pair_preview,
+		.mode_setting_len = ARRAY_SIZE(QT_addr_data_pair_preview),
+		.seamless_switch_group = 2,
+		.seamless_switch_mode_setting_table = QT_s5kgn8_seamless_preview,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(QT_s5kgn8_seamless_preview),
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 1600000000,
+		.linelength = 8136,
+		.framelength = 6556,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 2079360000,
+		.readout_length = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 0,
+			.w0_size = 8192,
+			.h0_size = 6144,
+			.scale_w = 4096,
+			.scale_h = 3072,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 3072,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 3072,
+		},
+		.pdaf_cap = FALSE,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+	        .min_exposure_line = 16,
+		.read_margin =48,
+                .ana_gain_min = BASEGAIN * 1,
+                .ana_gain_max = BASEGAIN * 64,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {0},
+	},
+	{
+		.frame_desc = frame_desc_cap,
+		.num_entries = ARRAY_SIZE(frame_desc_cap),
+		.mode_setting_table = QT_addr_data_pair_capture,
+		.mode_setting_len = ARRAY_SIZE(QT_addr_data_pair_capture),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 1600000000,
+		.linelength = 8136,
+		.framelength = 6556,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 2079360000,
+		.readout_length = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 0,
+			.w0_size = 8192,
+			.h0_size = 6144,
+			.scale_w = 4096,
+			.scale_h = 3072,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 3072,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 3072,
+		},
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
+	        .min_exposure_line = 16,
+		.read_margin =48,
+                .ana_gain_min = BASEGAIN * 1,
+                .ana_gain_max = BASEGAIN * 64,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {0},
+	},
+	{
+		.frame_desc = frame_desc_vid,
+		.num_entries = ARRAY_SIZE(frame_desc_vid),
+		.mode_setting_table = QT_addr_data_pair_normal_video,
+		.mode_setting_len = ARRAY_SIZE(QT_addr_data_pair_normal_video),
+		.seamless_switch_group = 1,
+		.seamless_switch_mode_setting_table = QT_s5kgn8_seamless_normal_video,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(QT_s5kgn8_seamless_normal_video),
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 1600000000,
+		.linelength = 8136,
+		.framelength = 6554,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 1732800000,
+		.readout_length = 0,
+		.saturation_info = &imgsensor_saturation_info_12bit,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 768,
+			.w0_size = 8192,
+			.h0_size = 4608,
+			.scale_w = 4096,
+			.scale_h = 2304,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2304,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2304,
+		},
+		.pdaf_cap = TRUE,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW12_Gr,
+		.imgsensor_pd_info = &imgsensor_pd_vid_info,
+	        .min_exposure_line = 16,
+		.read_margin =48,
+                .ana_gain_min = BASEGAIN * 1,
+                .ana_gain_max = BASEGAIN * 64,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {0},
+	},
+	{
+		.frame_desc = frame_desc_hs_vid,
+		.num_entries = ARRAY_SIZE(frame_desc_hs_vid),
+		.mode_setting_table = QT_addr_data_pair_hs_video,
+		.mode_setting_len = ARRAY_SIZE(QT_addr_data_pair_hs_video),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 1600000000,
+		.linelength = 5000,
+		.framelength = 2660,
+		.max_framerate = 1200,
+		.mipi_pixel_rate = 2079360000,
+		.readout_length = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 768,
+			.w0_size = 8192,
+			.h0_size = 4608,
+			.scale_w = 2048,
+			.scale_h = 1152,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 2048,
+			.h1_size = 1152,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 2048,
+			.h2_tg_size = 1152,
+		},
+		.pdaf_cap = FALSE,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+	        .min_exposure_line = 16,
+		.read_margin =48,
+                .ana_gain_min = BASEGAIN * 1,
+                .ana_gain_max = BASEGAIN * 64,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {0},
+	},
+	{
+		.frame_desc = frame_desc_slim_vid,
+		.num_entries = ARRAY_SIZE(frame_desc_slim_vid),
+		.mode_setting_table = QT_addr_data_pair_slim_video,
+		.mode_setting_len = ARRAY_SIZE(QT_addr_data_pair_slim_video),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 1600000000,
+		.linelength = 8136,
+		.framelength = 6556,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 2079360000,
+		.readout_length = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 0,
+			.w0_size = 8192,
+			.h0_size = 6144,
+			.scale_w = 4096,
+			.scale_h = 3072,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 3072,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 3072,
+		},
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
+	        .min_exposure_line = 16,
+		.read_margin =48,
+                .ana_gain_min = BASEGAIN * 1,
+                .ana_gain_max = BASEGAIN * 64,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {0},
+	},
+
+	{//custom1
+		.frame_desc = frame_desc_cus1,
+		.num_entries = ARRAY_SIZE(frame_desc_cus1),
+		.mode_setting_table = QT_addr_data_pair_custom1,
+		.mode_setting_len = ARRAY_SIZE(QT_addr_data_pair_custom1),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 1600000000,
+		.linelength = 9544,
+		.framelength = 6984,
+		.max_framerate = 240,
+		.mipi_pixel_rate = 2079360000,
+		.readout_length = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 0,
+			.w0_size = 8192,
+			.h0_size = 6144,
+			.scale_w = 8192,
+			.scale_h = 6144,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 8192,
+			.h1_size = 6144,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 8192,
+			.h2_tg_size = 6144,
+		},
+		.pdaf_cap = FALSE,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+	        .min_exposure_line = 32,
+		.read_margin =96,
+                .ana_gain_min = BASEGAIN * 1,
+                .ana_gain_max = BASEGAIN * 16,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {0},
+	},
+	{//custom2
+		.frame_desc = frame_desc_cus2,
+		.num_entries = ARRAY_SIZE(frame_desc_cus2),
+		.mode_setting_table = QT_addr_data_pair_custom2,
+		.mode_setting_len = ARRAY_SIZE(QT_addr_data_pair_custom2),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 1600000000,
+		.linelength = 8136,
+		.framelength = 3276,
+		.max_framerate = 600,
+		.mipi_pixel_rate = 2079360000,
+		.readout_length = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 768,
+			.w0_size = 8192,
+			.h0_size = 4608,
+			.scale_w = 4096,
+			.scale_h = 2304,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2304,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2304,
+		},
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
+	        .min_exposure_line = 16,
+		.read_margin =48,
+                .ana_gain_min = BASEGAIN * 1,
+                .ana_gain_max = BASEGAIN * 64,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {0},
+	},
+	{//custom3
+		.frame_desc = frame_desc_cus3,
+		.num_entries = ARRAY_SIZE(frame_desc_cus3),
+		.mode_setting_table = QT_addr_data_pair_custom3,
+		.mode_setting_len = ARRAY_SIZE(QT_addr_data_pair_custom3),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 1600000000,
+		.linelength = 5000,
+		.framelength = 1332,
+		.max_framerate = 2400,
+		.mipi_pixel_rate = 2079360000,
+		.readout_length = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 768,
+			.w0_size = 8192,
+			.h0_size = 4608,
+			.scale_w = 2048,
+			.scale_h = 1152,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 2048,
+			.h1_size = 1152,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 2048,
+			.h2_tg_size = 1152,
+		},
+		.pdaf_cap = FALSE,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+	        .min_exposure_line = 16,
+		.read_margin =48,
+                .ana_gain_min = BASEGAIN * 1,
+                .ana_gain_max = BASEGAIN * 64,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {0},
+	},
+	{//custom4
+		.frame_desc = frame_desc_cus4,
+		.num_entries = ARRAY_SIZE(frame_desc_cus4),
+		.mode_setting_table = QT_addr_data_pair_custom4,
+		.mode_setting_len = ARRAY_SIZE(QT_addr_data_pair_custom4),
+		.seamless_switch_group = 1,
+		.seamless_switch_mode_setting_table = QT_s5kgn8_seamless_custom4,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(QT_s5kgn8_seamless_custom4),
+		.hdr_mode = HDR_RAW_DCG_COMPOSE,
+		.raw_cnt = 1,
+		.exp_cnt = 2,
+		.pclk = 1600000000,
+		.linelength = 19080,
+		.framelength = 2788,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 1732800000,
+		.readout_length = 0,
+		.read_margin = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 768,
+			.w0_size = 8192,
+			.h0_size = 4608,
+			.scale_w = 4096,
+			.scale_h = 2304,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2304,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2304,
+		},
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_vid_info,
+	        .min_exposure_line = 8,
+		.read_margin =24,
+                .ana_gain_min = BASEGAIN * 1,
+                .ana_gain_max = BASEGAIN * 16,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {0},
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW12_Gr,
+		.saturation_info = &imgsensor_saturation_info_12bit,
+		.dcg_info = {
+			.dcg_mode = IMGSENSOR_DCG_COMPOSE,
+			.dcg_gain_mode = IMGSENSOR_DCG_RATIO_MODE,
+			.dcg_gain_base = IMGSENSOR_DCG_GAIN_LCG_BASE,
+			.dcg_gain_ratio_min = 1000,
+			.dcg_gain_ratio_max = 1000,
+			.dcg_gain_ratio_step = 0,
+			.dcg_gain_table = s5kgn8_dcg_ratio_table_12bit,
+			.dcg_gain_table_size = sizeof(s5kgn8_dcg_ratio_table_12bit),
+		},
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 16,
+	},
+	{//custom5
+		.frame_desc = frame_desc_cus5,
+		.num_entries = ARRAY_SIZE(frame_desc_cus5),
+		.mode_setting_table = QT_addr_data_pair_custom5,
+		.mode_setting_len = ARRAY_SIZE(QT_addr_data_pair_custom5),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 1600000000,
+		.linelength = 5000,
+		.framelength = 10668,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 2079360000,
+		.readout_length = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 0,
+			.w0_size = 8192,
+			.h0_size = 6144,
+			.scale_w = 2048,
+			.scale_h = 1536,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 2048,
+			.h1_size = 1536,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 2048,
+			.h2_tg_size = 1536,
+		},
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info =  &imgsensor_pd_cus5_info,
+	        .min_exposure_line = 16,
+		.read_margin =48,
+                .ana_gain_min = BASEGAIN * 1,
+                .ana_gain_max = BASEGAIN * 64,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {0},
+	},
+
+	{//custom6  full crop
+		.frame_desc = frame_desc_cus6,
+		.num_entries = ARRAY_SIZE(frame_desc_cus6),
+		.mode_setting_table = QT_addr_data_pair_custom6,
+		.mode_setting_len = ARRAY_SIZE(QT_addr_data_pair_custom6),
+		.seamless_switch_group = 2,
+		.seamless_switch_mode_setting_table = QT_s5kgn8_seamless_custom6,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(QT_s5kgn8_seamless_custom6),
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 1600000000,
+		.linelength = 9544,
+		.framelength = 5588,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 2079360000,
+		.readout_length = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 2048,
+			.y0_offset = 1536,
+			.w0_size = 4096,
+			.h0_size = 3072,
+			.scale_w = 4096,
+			.scale_h = 3072,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 3072,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 3072,
+		},
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_cus6_info,
+	        .min_exposure_line = 16,
+		.read_margin = 96,
+                .ana_gain_min = BASEGAIN * 1,
+                .ana_gain_max = BASEGAIN * 16,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {0},
+	},
+};
+
+static struct subdrv_static_ctx static_qt_ctx = {
+	.sensor_id = MOT_AITO_S5KGN8_SENSOR_ID,
+	.reg_addr_sensor_id = {0x0000, 0x0001},
+	.i2c_addr_table = {0x20, 0xFF},
+	.i2c_burst_write_support = TRUE,
+	.i2c_transfer_data_type = I2C_DT_ADDR_16_DATA_16,
+	.eeprom_info = 0,
+	.eeprom_num = 0,
+	.resolution = {8192, 6144},
+	.mirror = IMAGE_NORMAL,
+	.mclk = 24,
+	.isp_driving_current = ISP_DRIVING_6MA,
+	.sensor_interface_type = SENSOR_INTERFACE_TYPE_MIPI,
+	.mipi_sensor_type = MIPI_CPHY,
+	.mipi_lane_num = SENSOR_MIPI_3_LANE,
+	.ob_pedestal = 0x40,
+	.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_Gr,
+	.ana_gain_def = BASEGAIN * 4,
+	.ana_gain_min = BASEGAIN * 1,
+	.ana_gain_max = BASEGAIN * 64,
+	.ana_gain_type = 2,
+	.ana_gain_step = 2,
+	.ana_gain_table = PARAM_UNDEFINED,
+	.ana_gain_table_size = PARAM_UNDEFINED,
+	.min_gain_iso = 100,
+	.exposure_def = 0x3D0,
+	.exposure_min = 3,    //?
+	.exposure_max = (0xFFFF*128) - 32, //?
+	.exposure_step = 1,         //?
+	.exposure_margin = 32,       //?
+
+	.frame_length_max = 0xFFFF,
+	.ae_effective_frame = 2,
+	.frame_time_delay_frame = 2,
+	.start_exposure_offset = 500000,    // CTS sensor fusion test
+	.pdaf_type = PDAF_SUPPORT_CAMSV_QPD,
+	.hdr_type = HDR_SUPPORT_DCG,
+	.seamless_switch_support = TRUE,
+	.temperature_support = FALSE,
+	.g_temp = PARAM_UNDEFINED,
+	.g_gain2reg = get_gain2reg,
+	.s_gph = set_group_hold,
+	.reg_addr_stream = 0x0100,
+	.reg_addr_mirror_flip = 0x0101,
+	.reg_addr_exposure = {{0x0202, 0x0203},},
+	.long_exposure_support = TRUE,
+	.reg_addr_exposure_lshift = 0x0702,
+	.reg_addr_ana_gain = {{0x0204, 0x0205},},
+	.reg_addr_frame_length = {0x0340, 0x0341},
+	.reg_addr_temp_en = PARAM_UNDEFINED,
+	.reg_addr_temp_read = PARAM_UNDEFINED,
+	.reg_addr_auto_extend = PARAM_UNDEFINED,
+	.reg_addr_frame_count = 0x0005,             //samsung need
+
+	.init_setting_table = PARAM_UNDEFINED,
+	.init_setting_len = PARAM_UNDEFINED,
+	.mode = mode_qt_struct,
+	.sensor_mode_num = ARRAY_SIZE(mode_qt_struct),
+	.list = feature_control_list,
+	.list_len = ARRAY_SIZE(feature_control_list),
+	.chk_s_off_sta = 1,
+	.chk_s_off_end = 0,
+
+	.checksum_value = 0x31E3FBE2,
+
+	/* custom stream control delay timing for hw limitation (ms) */
+	.custom_stream_ctrl_delay = 0,
+};
+#endif
 static struct subdrv_ops ops = {
 	.get_id = common_get_imgsensor_id,
 	.init_ctx = init_ctx,
@@ -1399,6 +2007,41 @@ static int s5kgn8_lens_position(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	}
 	return 0;
 }
+static void s5kgn8_check_manufacturer_id(struct subdrv_ctx *ctx)
+{
+
+	int ret = 0;
+	u8 s5kgn8_Manufacturer[2];
+	u8 retry = 3;
+	if(mot_s5kgn8_Manufacturer_ID != 0)
+	{
+       		return;
+	}
+
+	do {
+		ret = adaptor_i2c_rd_p8(ctx->i2c_client, (S5KGN8_EEPROM_ADDR >> 1),
+						0x000d, s5kgn8_Manufacturer, 2) ;
+		if (ret < 0) {
+			DRV_LOGE(ctx, "Read eeprom Manufacturer data failed. ret:%d retry=%d \n", ret,retry);
+			mot_s5kgn8_Manufacturer_ID = 0;
+		}
+       		if((s5kgn8_Manufacturer[0]  == 0x4f)&& (s5kgn8_Manufacturer[1]  == 0x46))
+       		{
+       			mot_s5kgn8_Manufacturer_ID =1;
+			DRV_LOG(ctx, "s5kgn8 is OV module\n");
+			return;
+		}
+       		if((s5kgn8_Manufacturer[0]  == 0x51)&& (s5kgn8_Manufacturer[1]  == 0x54))
+       		{
+       			mot_s5kgn8_Manufacturer_ID =2;
+			DRV_LOG(ctx, "s5kgn8 is QT module\n");
+			return;
+		}
+		retry--;
+		mdelay(2);
+	} while (retry > 0);
+	return;
+}
 
 static void set_group_hold(void *arg, u8 en)
 {
@@ -1465,7 +2108,14 @@ static int s5kgn8set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id)
 {
-	memcpy(&(ctx->s_ctx), &static_ctx, sizeof(struct subdrv_static_ctx));
+	s5kgn8_check_manufacturer_id(ctx);
+	if(mot_s5kgn8_Manufacturer_ID == 1){
+		memcpy(&(ctx->s_ctx), &static_ov_ctx, sizeof(struct subdrv_static_ctx));
+	} else if(mot_s5kgn8_Manufacturer_ID == 2){
+		memcpy(&(ctx->s_ctx), &static_qt_ctx, sizeof(struct subdrv_static_ctx));
+	} else {
+		memcpy(&(ctx->s_ctx), &static_ov_ctx, sizeof(struct subdrv_static_ctx));
+	}
 	subdrv_ctx_init(ctx);
 	ctx->i2c_client = i2c_client;
 	ctx->i2c_write_id = i2c_write_id;
@@ -1479,11 +2129,19 @@ static void s5kgn8sensor_init(struct subdrv_ctx *ctx)
 	subdrv_i2c_wr_u16(ctx, 0xFCFC, 0x4000);
 	subdrv_i2c_wr_u16(ctx, 0x6010, 0x0001);
 	mdelay(10);
-	// 1 4 5
+	// 1 4 5 7
 	i2c_table_write(ctx, uTnpArrayInit_1,ARRAY_SIZE(uTnpArrayInit_1));
 	mot_subdrv_i2c_wr_burst_p16(ctx, 0x6F12,uTnpArrayInit_2,
 		ARRAY_SIZE(uTnpArrayInit_2));
 	i2c_table_write(ctx, uTnpArrayInit_3,ARRAY_SIZE(uTnpArrayInit_3));
+	if(mot_s5kgn8_Manufacturer_ID == 1)
+	{
+		i2c_table_write(ctx, uTnpArray_ov_gos,ARRAY_SIZE(uTnpArray_ov_gos));
+	} else if (mot_s5kgn8_Manufacturer_ID == 2) {
+		i2c_table_write(ctx, uTnpArray_qt_gos,ARRAY_SIZE(uTnpArray_qt_gos));
+	} else {
+		i2c_table_write(ctx, uTnpArray_ov_gos,ARRAY_SIZE(uTnpArray_ov_gos));
+	}
 	DRV_LOG(ctx, "X\n");
 }
 
@@ -1495,7 +2153,10 @@ static int open(struct subdrv_ctx *ctx)
 	/* get sensor id */
 	if (common_get_imgsensor_id(ctx, &sensor_id) != ERROR_NONE)
 		return ERROR_SENSOR_CONNECT_FAIL;
-
+	if(mot_s5kgn8_Manufacturer_ID == 0)
+	{
+		DRV_LOGE(ctx, "Read eeprom Manufacturer data failed. used default sensor ov\n");
+	}
 	/* initail setting */
 	s5kgn8sensor_init(ctx);
 
