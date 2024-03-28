@@ -561,7 +561,13 @@ static void s5kjd1_sensor_init(struct subdrv_ctx *ctx)
 	subdrv_i2c_wr_u16(ctx, 0x0000, 0x0006);
 	subdrv_i2c_wr_u16(ctx, 0x0000, 0x3841);
 	subdrv_i2c_wr_u16(ctx, 0x0102, 0x0001);
-    mdelay(30);
+	mdelay(30);
+	subdrv_i2c_wr_u16(ctx, 0xF45E, 0x00C0);
+	subdrv_i2c_wr_u16(ctx, 0x0A02, 0x01F4);
+	subdrv_i2c_wr_u16(ctx, 0x6028, 0x2001);
+	subdrv_i2c_wr_u16(ctx, 0x602A, 0x3478);
+	mot_subdrv_i2c_wr_burst_p16(ctx, 0x6F12,uTnpArrayInit_busrt,
+		ARRAY_SIZE(uTnpArrayInit_busrt));
 	i2c_table_write(ctx, uTnpArrayInit_4lane,
 			ARRAY_SIZE(uTnpArrayInit_4lane));
 	DRV_LOG(ctx, "X\n");
