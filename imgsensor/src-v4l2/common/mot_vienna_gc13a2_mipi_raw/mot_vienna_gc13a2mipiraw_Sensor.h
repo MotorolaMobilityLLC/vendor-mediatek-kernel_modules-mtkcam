@@ -36,7 +36,6 @@
 #include "kd_imgsensor_errcode.h"
 
 #include "mot_vienna_gc13a2_Sensor_setting.h"
-#include "mot_vienna_gc13a2_ana_gain_table.h"
 
 #include "adaptor-subdrv-ctrl.h"
 #include "adaptor-i2c.h"
