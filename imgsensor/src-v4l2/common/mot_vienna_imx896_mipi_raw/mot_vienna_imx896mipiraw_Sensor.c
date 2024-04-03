@@ -30,6 +30,7 @@ static void set_group_hold(void *arg, u8 en);
 static u16 get_gain2reg(u32 gain);
 static int imx896_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int imx896_get_min_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int imx896_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
 static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt);
 static int imx896_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
@@ -43,6 +44,7 @@ module_param(imx896_hw_ver, int, 0644);
 static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, imx896_set_test_pattern},
 	{SENSOR_FEATURE_GET_MIN_SHUTTER_BY_SCENARIO, imx896_get_min_shutter},
+	{SENSOR_FEATURE_SEAMLESS_SWITCH, imx896_seamless_switch},
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
@@ -289,6 +291,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_prev),
 		.mode_setting_table = imx896_preview_setting,
 		.mode_setting_len = ARRAY_SIZE(imx896_preview_setting),
+		.seamless_switch_group = 1,
+		.seamless_switch_mode_setting_table = imx896_seamless_preview,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx896_seamless_preview),
 		.pclk = 1360000000,
 		.linelength = 11904,
 		.framelength = 3791,
@@ -322,7 +327,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
-		.delay_frame = 1,
+		.delay_frame = 2,
 		.ana_gain_min = 1*BASEGAIN,
 		.ana_gain_max = 64*BASEGAIN,
 		.dig_gain_min = 1*BASEGAIN,
@@ -338,6 +343,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_cap),
 		.mode_setting_table = imx896_capture_setting,
 		.mode_setting_len = ARRAY_SIZE(imx896_capture_setting),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.pclk = 1360000000,
 		.linelength = 11904,
 		.framelength = 3791,
@@ -371,7 +379,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
-		.delay_frame = 1,
+		.delay_frame = 2,
 		.ana_gain_min = 1*BASEGAIN,
 		.ana_gain_max = 64*BASEGAIN,
 		.dig_gain_min = 1*BASEGAIN,
@@ -387,6 +395,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_vid),
 		.mode_setting_table = imx896_normal_video_setting,
 		.mode_setting_len = ARRAY_SIZE(imx896_normal_video_setting),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.pclk = 1360000000,
 		.linelength = 11904,
 		.framelength = 3791,
@@ -420,7 +431,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
-		.delay_frame = 1,
+		.delay_frame = 2,
 		.ana_gain_min = 1*BASEGAIN,
 		.ana_gain_max = 64*BASEGAIN,
 		.dig_gain_min = 1*BASEGAIN,
@@ -436,6 +447,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_hs_vid),
 		.mode_setting_table = imx896_hs_video_setting,
 		.mode_setting_len = ARRAY_SIZE(imx896_hs_video_setting),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.pclk = 1360000000,
 		.linelength = 11904,
 		.framelength = 3791,
@@ -469,7 +483,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
-		.delay_frame = 1,
+		.delay_frame = 2,
 		.ana_gain_min = 1*BASEGAIN,
 		.ana_gain_max = 64*BASEGAIN,
 		.dig_gain_min = 1*BASEGAIN,
@@ -485,6 +499,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_slim_vid),
 		.mode_setting_table = imx896_slim_video_setting,
 		.mode_setting_len = ARRAY_SIZE(imx896_slim_video_setting),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.pclk = 1360000000,
 		.linelength = 11904,
 		.framelength = 3791,
@@ -518,7 +535,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
-		.delay_frame = 1,
+		.delay_frame = 2,
 		.ana_gain_min = 1*BASEGAIN,
 		.ana_gain_max = 64*BASEGAIN,
 		.dig_gain_min = 1*BASEGAIN,
@@ -534,6 +551,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_cus1),
 		.mode_setting_table = addr_data_pair_custom1,
 		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom1),
+		.seamless_switch_group = 1,
+		.seamless_switch_mode_setting_table = imx896_seamless_custom1,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx896_seamless_custom1),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -675,12 +695,13 @@ static struct subdrv_static_ctx static_ctx = {
 
 	.frame_length_max = 0xFFFC,
 	.ae_effective_frame = 2,
-	.frame_time_delay_frame = 1,
+	.frame_time_delay_frame = 2,
 	.start_exposure_offset = 500000,
 	.pdaf_type = PDAF_SUPPORT_CAMSV_QPD,
 	.g_gain2reg = get_gain2reg,
 	.s_gph = set_group_hold,
 	.s_cali = mot_imx896_apply_qsc_spc_data,
+	.seamless_switch_support = TRUE,
 
 	.reg_addr_stream = 0x0100,
 	.reg_addr_mirror_flip = 0x0101,
@@ -973,4 +994,80 @@ static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt)
 		commit_i2c_buffer(ctx);
 	}
 	return 0;
+}
+
+static int imx896_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	enum SENSOR_SCENARIO_ID_ENUM scenario_id;
+	struct mtk_hdr_ae *ae_ctrl = NULL;
+	u64 *feature_data = (u64 *)para;
+	u32 exp_cnt = 0;
+
+	if (feature_data == NULL) {
+		DRV_LOG(ctx, "input scenario is null!");
+		return ERROR_NONE;
+	}
+	scenario_id = *feature_data;
+
+	if ((feature_data + 1) != NULL)
+		ae_ctrl = (struct mtk_hdr_ae *)((uintptr_t)(*(feature_data + 1)));
+	else
+		DRV_LOG(ctx, "no ae_ctrl input");
+
+	check_current_scenario_id_bound(ctx);
+	DRV_LOG(ctx, "E: set seamless switch %u %u\n", ctx->current_scenario_id, scenario_id);
+	if (!ctx->extend_frame_length_en)
+		DRV_LOG(ctx, "please extend_frame_length before seamless_switch!\n");
+	ctx->extend_frame_length_en = FALSE;
+
+	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
+		DRV_LOG(ctx, "invalid sid:%u, mode_num:%u\n",
+			scenario_id, ctx->s_ctx.sensor_mode_num);
+		return ERROR_NONE;
+	}
+	if (ctx->s_ctx.mode[scenario_id].seamless_switch_group == 0 ||
+		ctx->s_ctx.mode[scenario_id].seamless_switch_group !=
+			ctx->s_ctx.mode[ctx->current_scenario_id].seamless_switch_group) {
+		DRV_LOG(ctx, "seamless_switch not supported\n");
+		return ERROR_NONE;
+	}
+	if (ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_table == NULL) {
+		DRV_LOG(ctx, "Please implement seamless_switch setting\n");
+		return ERROR_NONE;
+	}
+
+	exp_cnt = ctx->s_ctx.mode[scenario_id].exp_cnt;
+	ctx->is_seamless = TRUE;
+
+
+	update_mode_info(ctx, scenario_id);
+	subdrv_i2c_wr_u8(ctx, 0x0104, 0x01);
+	subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_fast_mode, 0x02);
+	i2c_table_write(ctx,
+		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_table,
+		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_len);
+
+	if (ae_ctrl) {
+		switch (ctx->s_ctx.mode[scenario_id].hdr_mode) {
+		case HDR_RAW_DCG_RAW:
+			set_shutter(ctx, ae_ctrl->exposure.le_exposure);
+			if (ctx->s_ctx.mode[scenario_id].dcg_info.dcg_gain_mode
+				== IMGSENSOR_DCG_DIRECT_MODE)
+				set_multi_gain(ctx, (u32 *)&ae_ctrl->gain, exp_cnt);
+			else
+				set_gain(ctx, ae_ctrl->gain.le_gain);
+			break;
+		default:
+			set_shutter(ctx, ae_ctrl->exposure.le_exposure);
+			set_gain(ctx, ae_ctrl->gain.le_gain);
+			break;
+		}
+	}
+	subdrv_i2c_wr_u8(ctx, 0x0104, 0x00);
+
+	ctx->fast_mode_on = TRUE;
+	ctx->ref_sof_cnt = ctx->sof_cnt;
+	ctx->is_seamless = FALSE;
+	DRV_LOG_MUST(ctx, "X: set seamless switch done\n");
+	return ERROR_NONE;
 }
