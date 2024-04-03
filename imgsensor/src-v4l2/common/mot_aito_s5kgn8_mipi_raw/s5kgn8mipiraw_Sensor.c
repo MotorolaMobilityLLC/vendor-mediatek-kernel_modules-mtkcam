@@ -39,6 +39,8 @@ static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt);
 #define VENDOR_QT TRUE
 #if  ENABLE_S5KGN8_LONG_EXPOSURE
 static int s5kgn8_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int s5kgn8_get_margin(struct subdrv_ctx *ctx, u8 *feature_para, u32 *feature_para_len);
+static int s5kgn8_get_min_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static void s5kgn8_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter, u32 frame_length);
 #endif
 
@@ -51,10 +53,67 @@ static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_AWB_GAIN, s5kgn8_awb_gain},
 	{SENSOR_FEATURE_SEAMLESS_SWITCH, s5kgn8_seamless_switch},
 	{SENSOR_FEATURE_SET_LENS_POSITION, s5kgn8_lens_position},
+	{SENSOR_FEATURE_GET_FRAME_CTRL_INFO_BY_SCENARIO,s5kgn8_get_margin},
+	{SENSOR_FEATURE_GET_MIN_SHUTTER_BY_SCENARIO, s5kgn8_get_min_shutter},
 #if  ENABLE_S5KGN8_LONG_EXPOSURE
 	{SENSOR_FEATURE_SET_ESHUTTER, s5kgn8_set_shutter},
 #endif
 };
+
+static int s5kgn8_get_min_shutter_by_scenario(struct subdrv_ctx *ctx,
+		enum SENSOR_SCENARIO_ID_ENUM scenario_id,
+		u64 *min_shutter, u64 *exposure_step)
+{
+	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
+		DRV_LOG(ctx, "invalid cur_sid:%u, mode_num:%u set default\n",
+			scenario_id, ctx->s_ctx.sensor_mode_num);
+		scenario_id = 0;
+	}
+
+	if (ctx->s_ctx.mode[scenario_id].min_exposure_line) {
+		*min_shutter = ctx->s_ctx.mode[scenario_id].min_exposure_line;
+	} else {
+		*min_shutter = ctx->s_ctx.exposure_min;
+	}
+
+	if (ctx->s_ctx.mode[scenario_id].coarse_integ_step) {
+		*exposure_step = ctx->s_ctx.mode[scenario_id].coarse_integ_step;
+	} else {
+		*exposure_step = ctx->s_ctx.exposure_step;
+	}
+	DRV_LOG(ctx, "scenario_id:%d, min shutter:%llu, exp_step:%llu",
+				scenario_id, *min_shutter, *exposure_step);
+	return ERROR_NONE;
+}
+
+static int s5kgn8_get_min_shutter(struct subdrv_ctx *ctx, u8 *feature_para, u32 *feature_para_len)
+{
+	u64 *feature_data = (u64 *) feature_para;
+	return s5kgn8_get_min_shutter_by_scenario(ctx,
+			(enum SENSOR_SCENARIO_ID_ENUM)*(feature_data),
+			feature_data + 1, feature_data + 2);
+}
+
+static int s5kgn8_get_margin(struct subdrv_ctx *ctx, u8 *feature_para, u32 *feature_para_len)
+{
+
+	enum SENSOR_SCENARIO_ID_ENUM scenario_id =ctx->current_scenario_id;
+	u64 * margin =  (((u64 *)feature_para)+2);
+	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
+		DRV_LOG(ctx, "invalid cur_sid:%u, mode_num:%u set default\n",
+			ctx->current_scenario_id, ctx->s_ctx.sensor_mode_num);
+		return -1;
+	}
+	*(feature_para + 1) = 1;
+	if(margin)
+	{
+		*margin= ctx->s_ctx.mode[scenario_id].read_margin;
+		DRV_LOG(ctx, " scenario_id:%d, read_margin:%llu\n",scenario_id, *margin);
+	} else {
+		DRV_LOGE(ctx, " scenario_id:%d get margin fail,margin is NULL\n",scenario_id);
+	}
+	return ERROR_NONE;
+}
 #if  ENABLE_S5KGN8_LONG_EXPOSURE
 static void s5kgn8_set_long_exposure(struct subdrv_ctx *ctx)
 {
@@ -113,7 +172,7 @@ static void s5kgn8_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter,
 	fine_integ_line = ctx->s_ctx.mode[ctx->current_scenario_id].fine_integ_line;
 	shutter = FINE_INTEG_CONVERT(shutter, fine_integ_line);
 	shutter = max_t(u64, shutter,
-		(u64)ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_shutter_range[0].min);
+		(u64)ctx->s_ctx.mode[ctx->current_scenario_id].min_exposure_line);
 	shutter = min_t(u64, shutter,
 		(u64)ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_shutter_range[0].max);
 	/* check boundary of framelength */
@@ -1176,7 +1235,7 @@ static struct subdrv_mode_struct mode_ov_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_cus6_info,
-	        .min_exposure_line = 16,
+		.min_exposure_line = 32,
 		.read_margin = 96,
                 .ana_gain_min = BASEGAIN * 1,
                 .ana_gain_max = BASEGAIN * 16,
@@ -1213,10 +1272,10 @@ static struct subdrv_static_ctx static_ov_ctx = {
 	.ana_gain_table_size = PARAM_UNDEFINED,
 	.min_gain_iso = 100,
 	.exposure_def = 0x3D0,
-	.exposure_min = 3,    //?
-	.exposure_max = (0xFFFF*128) - 3, //?
-	.exposure_step = 1,         //?
-	.exposure_margin = 3,       //?
+	.exposure_min = 16,                     //def mode
+	.exposure_max = (0xFFFF*128) - 48,      //def mode
+	.exposure_step = 1,
+	.exposure_margin = 48,                  //def mode
 
 	.frame_length_max = 0xFFFF,
 	.ae_effective_frame = 2,
@@ -1778,7 +1837,7 @@ static struct subdrv_mode_struct mode_qt_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_cus6_info,
-	        .min_exposure_line = 16,
+		.min_exposure_line = 32,
 		.read_margin = 96,
                 .ana_gain_min = BASEGAIN * 1,
                 .ana_gain_max = BASEGAIN * 16,
@@ -1815,10 +1874,10 @@ static struct subdrv_static_ctx static_qt_ctx = {
 	.ana_gain_table_size = PARAM_UNDEFINED,
 	.min_gain_iso = 100,
 	.exposure_def = 0x3D0,
-	.exposure_min = 3,    //?
-	.exposure_max = (0xFFFF*128) - 32, //?
-	.exposure_step = 1,         //?
-	.exposure_margin = 32,       //?
+	.exposure_min = 16,                     //def mode
+	.exposure_max = (0xFFFF*128) - 48,      //def mode
+	.exposure_step = 1,
+	.exposure_margin = 48,                  //def mode
 
 	.frame_length_max = 0xFFFF,
 	.ae_effective_frame = 2,
