@@ -1952,6 +1952,7 @@ static u16 imx896_init_setting[] = {
     0xAF5B, 0x50,
     0xAF5D, 0x50,
     0xDDA9, 0x4E,
+    0x0106, 0x01,//Stream off immediately
 };
 
 static u16 imx896_preview_setting[] = {
