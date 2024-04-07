@@ -489,7 +489,7 @@ static struct subdrv_pw_seq_entry pw_seq[] = {
 	{HW_ID_AVDD, 2800000, 1}, // pmic_ldo for avdd
 	{HW_ID_DVDD, 1050000, 1}, // pmic_ldo for dvdd
 	{HW_ID_MCLK_DRIVING_CURRENT, 8, 0},
-	{HW_ID_RST, 1, 5}
+	{HW_ID_RST, 1, 2}
 };
 
 const struct subdrv_entry mot_vienna_s5k3k1_mipi_raw_entry = {
