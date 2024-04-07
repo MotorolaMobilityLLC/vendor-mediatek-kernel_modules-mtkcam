@@ -38,6 +38,7 @@
 
 #include "mot_vienna_imx896_ana_gain_table.h"
 #include "mot_vienna_imx896Sensor_setting.h"
+#include "mot_vienna_imx896Sensor_mp_setting.h"
 
 #include "adaptor-subdrv-ctrl.h"
 #include "adaptor-i2c.h"
