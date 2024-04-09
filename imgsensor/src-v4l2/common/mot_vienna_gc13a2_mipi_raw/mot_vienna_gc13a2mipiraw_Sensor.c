@@ -27,6 +27,12 @@ static int gc13a2_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int gc13a2_set_shutter_frame_length(struct subdrv_ctx *ctx,u8 *para, u32 *len);
 static int gc13a2_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
+#if ENABLE_GC13A2_FAST_STANDBY
+static int gc13a2_streaming_control(struct subdrv_ctx *ctx, kal_bool enable);
+static int gc13a2_set_fast_standby_stream_off(struct subdrv_ctx *ctx,u8 *para, u32 *len);
+static int gc13a2_set_fast_standby_stream_on(struct subdrv_ctx *ctx,u8 *para, u32 *len);
+static int gc13a2_ops_close(struct subdrv_ctx *ctx);
+#endif
 
 //#define MOT_GC13A2_PDAF_DEBUG
 #ifdef MOT_GC13A2_PDAF_DEBUG
@@ -50,6 +56,10 @@ static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_GAIN, gc13a2_set_gain},
 	{SENSOR_FEATURE_SET_ESHUTTER, gc13a2_set_shutter},
 	{SENSOR_FEATURE_SET_SHUTTER_FRAME_TIME, gc13a2_set_shutter_frame_length},
+#if ENABLE_GC13A2_FAST_STANDBY
+	{SENSOR_FEATURE_SET_STREAMING_SUSPEND, gc13a2_set_fast_standby_stream_off},
+	{SENSOR_FEATURE_SET_STREAMING_RESUME, gc13a2_set_fast_standby_stream_on},
+#endif
 };
 
 // 1000 base for dcg gain ratio
@@ -498,7 +508,11 @@ static struct subdrv_ops ops = {
 	.get_resolution = common_get_resolution,
 	.control = common_control,
 	.feature_control = common_feature_control,
+#if ENABLE_GC13A2_FAST_STANDBY
+	.close = gc13a2_ops_close,
+#else
 	.close = common_close,
+#endif
 	.get_frame_desc = common_get_frame_desc,
 	.get_temp = common_get_temp,
 	.get_csi_param = common_get_csi_param,
@@ -558,6 +572,41 @@ static int gc13a2_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	return gc13a2_set_shutter_frame_length(ctx, para, len);
 }
+
+
+#if ENABLE_GC13A2_FAST_STANDBY
+static int gc13a2_streaming_control(struct subdrv_ctx *ctx, kal_bool enable)
+{
+	DRV_LOG_MUST(ctx, "13a2 fast_standby streming. enable=%d(0=stream off, 1=stream on) \n", enable);
+	if(enable)
+		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_stream, 0x01);
+	else
+		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_stream, 0x80);
+
+	return ERROR_NONE;
+}
+
+static int gc13a2_ops_close(struct subdrv_ctx *ctx)
+{
+	gc13a2_streaming_control(ctx, KAL_FALSE);
+	DRV_LOG_MUST(ctx, "subdrv close \n");
+	return ERROR_NONE;
+}
+
+static int gc13a2_set_fast_standby_stream_off(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	return gc13a2_streaming_control(ctx, KAL_FALSE);
+}
+
+static int gc13a2_set_fast_standby_stream_on(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	unsigned long long *feature_data = (unsigned long long *)para;
+
+	if(*feature_data != 0)
+		gc13a2_set_shutter(ctx, para, len);
+	return gc13a2_streaming_control(ctx, KAL_TRUE);
+}
+#endif
 
 static int gc13a2_set_shutter_frame_length(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {

@@ -24,6 +24,9 @@
 #define GC13A2_IMAGE_V_MIRROR         0
 #define GC13A2_IMAGE_HV_MIRROR        0
 
+/* GC13A2 FAST STANDBY*/
+#define ENABLE_GC13A2_FAST_STANDBY    1
+
 #if GC13A2_IMAGE_NORMAL
 #define MIRROR	     0x00
 #define PARA	     0x01
@@ -433,7 +436,9 @@ u16 gc13a2_init_setting[] = {
 	0x0bab, 0x00,
 	0x0aea, 0x2b,
 	0x0ae9, 0x18,
+#if ENABLE_GC13A2_FAST_STANDBY
 	0x0266, 0x03,
+#endif
 	0x0ae8, 0x14,
 	/*Gain_p*/
 	0x05a0, 0xC1,
