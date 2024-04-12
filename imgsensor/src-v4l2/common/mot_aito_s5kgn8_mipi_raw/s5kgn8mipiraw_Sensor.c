@@ -22,7 +22,6 @@
  ****************************************************************************/
 #include "s5kgn8mipiraw_Sensor.h"
 static void get_sensor_cali(struct subdrv_ctx *ctx);
-static void set_group_hold(void *arg, u8 en);
 static u16 get_gain2reg(u32 gain);
 static int s5kgn8set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
@@ -269,22 +268,10 @@ static int s5kgn8_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_len);
 
 	if (ae_ctrl) {
-		switch (ctx->s_ctx.mode[scenario_id].hdr_mode) {
-		case HDR_RAW_DCG_RAW:
-			set_shutter(ctx, ae_ctrl->exposure.le_exposure);
-			if (ctx->s_ctx.mode[scenario_id].dcg_info.dcg_gain_mode
-				== IMGSENSOR_DCG_DIRECT_MODE)
-				set_multi_gain(ctx, (u32 *)&ae_ctrl->gain, exp_cnt);
-			else
-				set_gain(ctx, ae_ctrl->gain.le_gain);
-			break;
-		default:
-			set_shutter(ctx, ae_ctrl->exposure.le_exposure);
-			set_gain(ctx, ae_ctrl->gain.le_gain);
-			break;
-		}
+		subdrv_i2c_wr_u16(ctx, 0x0202, ae_ctrl->exposure.le_exposure);
+		subdrv_i2c_wr_u16(ctx, 0x0204, ae_ctrl->gain.le_gain);
 	}
-
+	subdrv_i2c_wr_u16(ctx, 0x0104, 0x0001);
 	ctx->fast_mode_on = TRUE;
 	ctx->ref_sof_cnt = ctx->sof_cnt;
 	ctx->is_seamless = FALSE;
@@ -1287,7 +1274,7 @@ static struct subdrv_static_ctx static_ov_ctx = {
 	.temperature_support = FALSE,
 	.g_temp = PARAM_UNDEFINED,
 	.g_gain2reg = get_gain2reg,
-	.s_gph = set_group_hold,
+	.s_gph = PARAM_UNDEFINED,
 	.reg_addr_stream = 0x0100,
 	.reg_addr_mirror_flip = 0x0101,
 	.reg_addr_exposure = {{0x0202, 0x0203},},
@@ -1889,7 +1876,7 @@ static struct subdrv_static_ctx static_qt_ctx = {
 	.temperature_support = FALSE,
 	.g_temp = PARAM_UNDEFINED,
 	.g_gain2reg = get_gain2reg,
-	.s_gph = set_group_hold,
+	.s_gph = PARAM_UNDEFINED,
 	.reg_addr_stream = 0x0100,
 	.reg_addr_mirror_flip = 0x0101,
 	.reg_addr_exposure = {{0x0202, 0x0203},},
@@ -2100,19 +2087,6 @@ static void s5kgn8_check_manufacturer_id(struct subdrv_ctx *ctx)
 		mdelay(2);
 	} while (retry > 0);
 	return;
-}
-
-static void set_group_hold(void *arg, u8 en)
-{
-
-#if 0
-	struct subdrv_ctx *ctx = (struct subdrv_ctx *)arg;
-
-	if (en)
-		set_i2c_buffer(ctx, 0x0104, 0x01);
-	else
-		set_i2c_buffer(ctx, 0x0104, 0x00);
-#endif
 }
 
 static u16 get_gain2reg(u32 gain)
