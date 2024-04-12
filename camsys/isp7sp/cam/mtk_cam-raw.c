@@ -417,7 +417,7 @@ void apply_cq(struct mtk_raw_device *dev,
 {
 	dma_addr_t main, sub;
 
-	if (CAM_DEBUG_ENABLED(RAW_INT))
+//	if (CAM_DEBUG_ENABLED(RAW_INT))
 		dev_info(dev->dev,
 			 "apply raw%d cq - addr:0x%llx, size:%d/%d, offset:%d\n",
 			 dev->id, cq_addr, cq_size, sub_cq_size, sub_cq_offset);
@@ -1392,13 +1392,13 @@ static int mtk_raw_pm_suspend_prepare(struct mtk_raw_device *dev)
 //	u32 val;
 	int ret;
 
-	dev_dbg(dev->dev, "- %s\n", __func__);
+	dev_info(dev->dev, "- %s\n", __func__);
 
 	if (pm_runtime_suspended(dev->dev))
 		return 0;
 
 	/* Disable ISP's view finder and wait for TG idle */
-	dev_dbg(dev->dev, "cam suspend, disable VF\n");
+	dev_info(dev->dev, "cam suspend, disable VF\n");
 #ifdef NOT_READY
 	val = readl(dev->base + REG_TG_VF_CON);
 	writel(val & (~TG_VFDATA_EN), dev->base + REG_TG_VF_CON);
@@ -1406,7 +1406,7 @@ static int mtk_raw_pm_suspend_prepare(struct mtk_raw_device *dev)
 					(val & TG_CAM_CS_MASK) == TG_IDLE_ST,
 					USEC_PER_MSEC, MTK_RAW_STOP_HW_TIMEOUT);
 	if (ret)
-		dev_dbg(dev->dev, "can't stop HW:%d:0x%x\n", ret, val);
+		dev_info(dev->dev, "can't stop HW:%d:0x%x\n", ret, val);
 
 	/* Disable CMOS */
 	val = readl(dev->base + REG_TG_SEN_MODE);
@@ -1423,7 +1423,7 @@ static int mtk_raw_pm_post_suspend(struct mtk_raw_device *dev)
 //	u32 val;
 	int ret;
 
-	dev_dbg(dev->dev, "- %s\n", __func__);
+	dev_info(dev->dev, "- %s\n", __func__);
 
 	if (pm_runtime_suspended(dev->dev))
 		return 0;
@@ -1435,7 +1435,7 @@ static int mtk_raw_pm_post_suspend(struct mtk_raw_device *dev)
 
 #ifdef NOT_READY
 	/* Enable CMOS */
-	dev_dbg(dev->dev, "cam resume, enable CMOS/VF\n");
+	dev_info(dev->dev, "cam resume, enable CMOS/VF\n");
 	val = readl(dev->base + REG_TG_SEN_MODE);
 	writel(val | TG_SEN_MODE_CMOS_EN, dev->base + REG_TG_SEN_MODE);
 
@@ -1768,7 +1768,7 @@ static int mtk_raw_runtime_resume(struct device *dev)
 	if (pr_detect_count < KERNEL_LOG_MAX)
 		set_detect_count(KERNEL_LOG_MAX);
 
-	if (CAM_DEBUG_ENABLED(RAW_INT))
+//	if (CAM_DEBUG_ENABLED(RAW_INT))
 		dev_info(dev, "%s:enable clock\n", __func__);
 
 	mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_CAM);
@@ -2154,7 +2154,7 @@ static int mtk_yuv_runtime_suspend(struct device *dev)
 	struct mtk_yuv_device *drvdata = dev_get_drvdata(dev);
 	int i;
 
-	if (CAM_DEBUG_ENABLED(RAW_INT))
+//	if (CAM_DEBUG_ENABLED(RAW_INT))
 		dev_info(dev, "%s:disable clock\n", __func__);
 
 	mtk_cam_reset_qos(dev, &drvdata->qos);
@@ -2170,7 +2170,7 @@ static int mtk_yuv_runtime_resume(struct device *dev)
 	struct mtk_yuv_device *drvdata = dev_get_drvdata(dev);
 	int i, ret;
 
-	if (CAM_DEBUG_ENABLED(RAW_INT))
+//	if (CAM_DEBUG_ENABLED(RAW_INT))
 		dev_info(dev, "%s:enable clock\n", __func__);
 
 	enable_irq(drvdata->irq);
@@ -2581,7 +2581,7 @@ static int mtk_rms_runtime_suspend(struct device *dev)
 	struct mtk_rms_device *drvdata = dev_get_drvdata(dev);
 	int i;
 
-	if (CAM_DEBUG_ENABLED(RAW_INT))
+//	if (CAM_DEBUG_ENABLED(RAW_INT))
 		dev_info(dev, "%s:disable clock\n", __func__);
 
 	for (i = 0; i < drvdata->num_clks; i++)
@@ -2595,7 +2595,7 @@ static int mtk_rms_runtime_resume(struct device *dev)
 	struct mtk_rms_device *drvdata = dev_get_drvdata(dev);
 	int i, ret;
 
-	if (CAM_DEBUG_ENABLED(RAW_INT))
+//	if (CAM_DEBUG_ENABLED(RAW_INT))
 		dev_info(dev, "%s:enable clock\n", __func__);
 
 	for (i = 0; i < drvdata->num_clks; i++) {
