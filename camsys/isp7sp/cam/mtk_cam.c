@@ -4231,8 +4231,8 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 {
 	struct mtk_cam_device *cam_dev = dev_get_drvdata(dev);
 
-	if (CAM_DEBUG_ENABLED(V4L2))
-		dev_info(dev, "- %s\n", __func__);
+//	if (CAM_DEBUG_ENABLED(V4L2))
+	dev_info(dev, "- %s\n", __func__);
 
 	camsys_main_lp_ctrl(cam_dev, false);
 
@@ -4260,7 +4260,7 @@ static int mtk_cam_runtime_resume(struct device *dev)
 {
 	struct mtk_cam_device *cam_dev = dev_get_drvdata(dev);
 
-	if (CAM_DEBUG_ENABLED(V4L2))
+	//if (CAM_DEBUG_ENABLED(V4L2))
 		dev_info(dev, "- %s\n", __func__);
 
 	camsys_main_lp_ctrl(cam_dev, true);
