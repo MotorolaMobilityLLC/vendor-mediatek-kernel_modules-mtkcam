@@ -700,9 +700,11 @@ static int gc13a2_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	if (enable) {
 		subdrv_i2c_wr_u8(ctx, 0x0089, 0x00); /* 100% Color bar */
 		subdrv_i2c_wr_u8(ctx, 0x00ce, 0x19);
+		subdrv_i2c_wr_u8(ctx, 0x00cf, 0x00);
 	} else {
 		subdrv_i2c_wr_u8(ctx, 0x0089, 0x02);
 		subdrv_i2c_wr_u8(ctx, 0x00ce, 0x09); /* No pattern */
+		subdrv_i2c_wr_u8(ctx, 0x00cf, 0x10);
 	}
 	ctx->test_pattern = enable;
 
