@@ -219,6 +219,29 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus4[] = {
 	},
 };
 
+static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2b,
+			.hsize = 0x0800,
+			.vsize = 0x0600,
+			.user_data_desc = VC_STAGGER_NE,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x0800,
+			.vsize = 0x0180,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
+		},
+	},
+};
+
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 0,
@@ -767,6 +790,61 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.ana_gain_min = 1*BASEGAIN,
 		.ana_gain_max = 16*BASEGAIN,//24dB
+		.dig_gain_min = 1*BASEGAIN,
+		.dig_gain_max = 1*BASEGAIN,
+		.dig_gain_step = 4,
+		.csi_param = {
+			.cphy_settle = 73,
+		},
+		.dpc_enabled = true, /* reg 0x0b06 */
+	},
+	{//custom5  2048x1536@30fps
+		.frame_desc = frame_desc_cus5,
+		.num_entries = ARRAY_SIZE(frame_desc_cus5),
+		.mode_setting_table = addr_data_pair_custom5,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom5),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 1360000000,
+		.linelength = 6728,
+		.framelength = 6722,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 1645710000,
+		.readout_length = 0,
+		.read_margin = 0,
+		.framelength_step = 2,
+		.coarse_integ_step = 2,
+		.min_exposure_line = 8,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 8,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 0,
+			.w0_size = 8192,
+			.h0_size = 6144,
+			.scale_w = 2048,
+			.scale_h = 1536,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 2048,
+			.h1_size = 1536,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 2048,
+			.h2_tg_size = 1536,
+		},
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
+		.ae_binning_ratio = 1428,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.ana_gain_min = 1*BASEGAIN,
+		.ana_gain_max = 64*BASEGAIN,//36dB
 		.dig_gain_min = 1*BASEGAIN,
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
