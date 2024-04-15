@@ -35,6 +35,7 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt);
 static int imx896_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
 static int imx896_sensor_open(struct subdrv_ctx *ctx);
+static int imx896_set_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 
 static int imx896_hw_ver = -1;
 module_param(imx896_hw_ver, int, 0644);
@@ -45,6 +46,7 @@ static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, imx896_set_test_pattern},
 	{SENSOR_FEATURE_GET_MIN_SHUTTER_BY_SCENARIO, imx896_get_min_shutter},
 	{SENSOR_FEATURE_SEAMLESS_SWITCH, imx896_seamless_switch},
+	{SENSOR_FEATURE_SET_AWB_GAIN, imx896_set_awb_gain},
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
@@ -1186,5 +1188,42 @@ static int imx896_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	ctx->ref_sof_cnt = ctx->sof_cnt;
 	ctx->is_seamless = FALSE;
 	DRV_LOG_MUST(ctx, "X: set seamless switch done\n");
+	return ERROR_NONE;
+}
+
+static int imx896_set_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	#define SENSOR_REG_GAIN_FACTOR 0x0100
+	#define PLATFORM_WB_GAIN_FACTOR 512
+	#define MAX_WB_GAIN_BASE_512 0x0FFF//15.996*512
+	struct SET_SENSOR_AWB_GAIN *pSetSensorAWB = (( struct SET_SENSOR_AWB_GAIN  *)para);
+
+	UINT32 rgain_32, grgain_32, gbgain_32, bgain_32;
+	if ((ctx->current_scenario_id == SENSOR_SCENARIO_ID_CUSTOM1) ||
+		(ctx->current_scenario_id == SENSOR_SCENARIO_ID_CUSTOM4))
+	{
+		grgain_32 = (pSetSensorAWB->ABS_GAIN_GR * SENSOR_REG_GAIN_FACTOR ) / PLATFORM_WB_GAIN_FACTOR;
+		rgain_32 = (pSetSensorAWB->ABS_GAIN_R * SENSOR_REG_GAIN_FACTOR ) / PLATFORM_WB_GAIN_FACTOR;
+		bgain_32 = (pSetSensorAWB->ABS_GAIN_B * SENSOR_REG_GAIN_FACTOR ) / PLATFORM_WB_GAIN_FACTOR;
+		gbgain_32 = (pSetSensorAWB->ABS_GAIN_GB * SENSOR_REG_GAIN_FACTOR ) / PLATFORM_WB_GAIN_FACTOR;
+
+		DRV_LOG(ctx, "[%s] ABS_GAIN_GR:%d, grgain_32:%d, ABS_GAIN_R:%d, rgain_32:%d , ABS_GAIN_B:%d, bgain_32:%d,ABS_GAIN_GB:%d, gbgain_32:%d\n",
+			__func__,
+			pSetSensorAWB->ABS_GAIN_GR, grgain_32,
+			pSetSensorAWB->ABS_GAIN_R, rgain_32,
+			pSetSensorAWB->ABS_GAIN_B, bgain_32,
+			pSetSensorAWB->ABS_GAIN_GB, gbgain_32);
+
+		//Avoid register data oveflow
+		grgain_32 = grgain_32>MAX_WB_GAIN_BASE_512 ? MAX_WB_GAIN_BASE_512 : grgain_32;
+		rgain_32 = rgain_32>MAX_WB_GAIN_BASE_512 ? MAX_WB_GAIN_BASE_512 : rgain_32;
+		bgain_32 = bgain_32>MAX_WB_GAIN_BASE_512 ? MAX_WB_GAIN_BASE_512 : bgain_32;
+		gbgain_32 = gbgain_32>MAX_WB_GAIN_BASE_512 ? MAX_WB_GAIN_BASE_512 : gbgain_32;
+
+		subdrv_i2c_wr_u16(ctx, 0x0B8E, grgain_32);
+		subdrv_i2c_wr_u16(ctx, 0x0B90, rgain_32);
+		subdrv_i2c_wr_u16(ctx, 0x0B92, bgain_32);
+		subdrv_i2c_wr_u16(ctx, 0x0B94, gbgain_32);
+	}
 	return ERROR_NONE;
 }
