@@ -733,9 +733,9 @@ unsigned int mot_do_2a_gain(struct EEPROM_DRV_FD_DATA *pdata,
 			err = CAM_CAL_NONE_BITEN;
 			return err;
 		}
-
-		af_inf_posture = AF_POSTURE[10]<<8|AF_POSTURE[9];
-		af_macro_posture = AF_POSTURE[12]<<8|AF_POSTURE[11];
+		//aito's S5KGN8 AF is close loop driver IC, AF drift is 0, the programmed values is 0xFFFF.
+		af_inf_posture = 0;
+		af_macro_posture = 0;
 		AF_infinite_calibration_temperature = AF_POSTURE[17];
 		pCamCalData->Single2A.S2aAF_t.Posture_AF_infinite_calibration = af_inf_posture;
 		pCamCalData->Single2A.S2aAF_t.Posture_AF_macro_calibration = af_macro_posture;
