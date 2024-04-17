@@ -23,6 +23,8 @@
 #include "mtk_cam-hsf.h"
 #include "mtk_cam-trace.h"
 #include "mtk_cam-raw_ctrl.h"
+#include "mtk_cam-raw_debug.h"
+#include "mtk_cam-dmadbg.h"
 
 #define SCQ_DEADLINE_US(fi)		((fi) / 2) // 0.5 frame interval
 
@@ -5166,7 +5168,14 @@ int mtk_cam_job_manually_apply_sensor(struct mtk_cam_job *job)
 
 int mtk_cam_job_manually_apply_isp(struct mtk_cam_job *job, bool wait_completion)
 {
+	struct mtk_cam_device *cam = job->src_ctx->cam;
 	unsigned long timeout = msecs_to_jiffies(2000);
+	struct mtk_raw_device *raw_dev;
+	unsigned long cq_engine;
+	unsigned long subset;
+	int raw_id;
+
+
 
 	if (!wait_for_completion_timeout(&job->compose_completion, timeout)) {
 		pr_info("[%s] error: wait for job composed timeout\n",
@@ -5182,8 +5191,18 @@ int mtk_cam_job_manually_apply_isp(struct mtk_cam_job *job, bool wait_completion
 	if (!wait_completion)
 		return 0;
 
+
 	if (!wait_for_completion_timeout(&job->cq_exe_completion, timeout)) {
 		pr_info("[%s] error: wait for job cq exe\n", __func__);
+		cq_engine = engines_to_trigger_cq(job, &(job->cq_rst));
+                subset = bit_map_subset_of(MAP_HW_RAW, cq_engine);
+                if(subset) {
+			raw_id = find_first_bit_set(subset);
+			raw_dev = dev_get_drvdata(cam->engines.raw_devs[raw_id]);
+			mtk_cam_dump_cq_debug(raw_dev,
+				"cqi_r1",
+				cqi_sum, ARRAY_SIZE(cqi_sum));
+               }
 		return -1;
 	}
 
