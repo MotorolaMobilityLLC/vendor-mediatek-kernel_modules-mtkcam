@@ -321,6 +321,7 @@ static u16 sensor_init_setting_array2[] = {
     0xF472,0x001F,
     0xFA08,0x000E,
     0xFA0A,0x0011,
+    0x6B76,0x8000,
     0x0101,0x0000,
 };
 static u16 preview_setting_array[] = {
