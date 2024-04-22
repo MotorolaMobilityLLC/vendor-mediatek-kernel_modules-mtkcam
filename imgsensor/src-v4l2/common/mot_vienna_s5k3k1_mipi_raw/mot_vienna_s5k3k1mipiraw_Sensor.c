@@ -640,9 +640,8 @@ static int mot_vienna_s5k3k1_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, 
 
 	if (mode != ctx->test_pattern)
 		DRV_LOG(ctx, "mode(%u->%u)\n", ctx->test_pattern, mode);
-	/* 1:Solid Color 2:Color Bar 5:Black */
 	if (mode)
-		subdrv_i2c_wr_u16(ctx, 0x0600, mode); /*100% Color bar*/
+		subdrv_i2c_wr_u16(ctx, 0x0600, 0x0001); /*Black*/
 	else if (ctx->test_pattern)
 		subdrv_i2c_wr_u16(ctx, 0x0600, 0x0000); /*No pattern*/
 
