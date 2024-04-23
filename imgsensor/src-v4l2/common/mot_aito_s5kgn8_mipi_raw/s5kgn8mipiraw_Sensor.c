@@ -225,7 +225,7 @@ static int s5kgn8_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	struct mtk_hdr_ae *ae_ctrl = NULL;
 	u64 *feature_data = (u64 *)para;
 	u32 exp_cnt = 0;
-
+	u32 gain =0;
 	if (feature_data == NULL) {
 		DRV_LOGE(ctx, "input scenario is null!");
 		return ERROR_NONE;
@@ -259,6 +259,7 @@ static int s5kgn8_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	}
 
 	exp_cnt = ctx->s_ctx.mode[scenario_id].exp_cnt;
+	gain = ae_ctrl->gain.le_gain/32;
 	ctx->is_seamless = TRUE;
 
 
@@ -269,7 +270,7 @@ static int s5kgn8_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 
 	if (ae_ctrl) {
 		subdrv_i2c_wr_u16(ctx, 0x0202, ae_ctrl->exposure.le_exposure);
-		subdrv_i2c_wr_u16(ctx, 0x0204, ae_ctrl->gain.le_gain);
+		subdrv_i2c_wr_u16(ctx, 0x0204, gain);
 	}
 	subdrv_i2c_wr_u16(ctx, 0x0104, 0x0001);
 	ctx->fast_mode_on = TRUE;
