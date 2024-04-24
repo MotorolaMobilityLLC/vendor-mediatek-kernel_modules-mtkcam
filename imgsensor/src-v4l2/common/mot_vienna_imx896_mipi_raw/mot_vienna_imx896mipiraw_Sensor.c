@@ -998,21 +998,17 @@ static int imx896_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 
 	if (mode != ctx->test_pattern)
 		DRV_LOG(ctx, "mode(%u->%u)\n", ctx->test_pattern, mode);
-	/* 1:Solid Color 2:Color Bar 5:Black */
-	switch (mode) {
-	case 5:
-		subdrv_i2c_wr_u8(ctx, 0x020E, 0x00); /* dig_gain = 0 */
-		break;
-	default:
-		subdrv_i2c_wr_u8(ctx, 0x0601, mode);
-		break;
-	}
 
-	if ((ctx->test_pattern) && (mode != ctx->test_pattern)) {
-		if (ctx->test_pattern == 5)
-			subdrv_i2c_wr_u8(ctx, 0x020E, 0x01);
-		else if (mode == 0)
+	if (mode != ctx->test_pattern) {
+		if (mode == 0) {
 			subdrv_i2c_wr_u8(ctx, 0x0601, 0x00); /* No pattern */
+		} else {
+			subdrv_i2c_wr_u8(ctx, 0x0601, 0x01);/* Solid black with PD output*/
+			subdrv_i2c_wr_u8(ctx, 0xA281, 0x01);
+			subdrv_i2c_wr_u8(ctx, 0xA282, 0x01);
+			subdrv_i2c_wr_u8(ctx, 0xA283, 0x01);
+			subdrv_i2c_wr_u8(ctx, 0xA284, 0x01);
+		}
 	}
 
 	ctx->test_pattern = mode;
