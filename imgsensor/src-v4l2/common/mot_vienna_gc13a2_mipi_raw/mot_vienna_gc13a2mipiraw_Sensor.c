@@ -239,7 +239,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 #endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
-		.delay_frame = 1,
+		.delay_frame = 2,
 		.csi_param = {
 			.dphy_trail = 92,
 		},
@@ -286,7 +286,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 #endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
-		.delay_frame = 1,
+		.delay_frame = 2,
 		.csi_param = {
 			.dphy_trail = 92,
 		},
@@ -333,7 +333,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 #endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
-		.delay_frame = 1,
+		.delay_frame = 2,
 		.csi_param = {
 			.dphy_trail  = 92,
 		},
@@ -427,14 +427,14 @@ static struct subdrv_static_ctx static_ctx = {
 	.min_gain_iso = 100,
 	.exposure_def = 0x3D0,
 	.exposure_min = 4,
-	.exposure_max = 0xFFFF - 16,
+	.exposure_max = (0xFFFF*128) - 16,
 	.exposure_step = 1,
 	.exposure_margin = 16,
 	.saturation_info = &imgsensor_saturation_info_10bit,
 
 	.frame_length_max = 0xFFFF,
 	.ae_effective_frame = 2,
-	.frame_time_delay_frame = 1,
+	.frame_time_delay_frame = 2,
 	.start_exposure_offset = 0,
 
 #if ENABLE_GC13A2_PD
@@ -455,12 +455,12 @@ static struct subdrv_static_ctx static_ctx = {
 	.reg_addr_mirror_flip = PARAM_UNDEFINED,
 	.reg_addr_exposure = {{0x0202, 0x0203},},
 	.long_exposure_support = TRUE,
-	.reg_addr_exposure_lshift = PARAM_UNDEFINED,
+	.reg_addr_exposure_lshift = 0x022d,
 	.reg_addr_ana_gain = {{0x0204, 0x0205, 0x0206},},
 	.reg_addr_frame_length = {0x0340, 0x0341},
 	.reg_addr_temp_en = PARAM_UNDEFINED,
 	.reg_addr_temp_read = PARAM_UNDEFINED,
-	.reg_addr_auto_extend = PARAM_UNDEFINED,
+	.reg_addr_auto_extend = 0,
 	.reg_addr_frame_count = PARAM_UNDEFINED,
 	.init_setting_table = gc13a2_init_setting,
 	.init_setting_len = ARRAY_SIZE(gc13a2_init_setting),
@@ -608,16 +608,104 @@ static int gc13a2_set_fast_standby_stream_on(struct subdrv_ctx *ctx, u8 *para, u
 }
 #endif
 
+
+static void gc13a2_set_long_exposure(struct subdrv_ctx *ctx)
+{
+	u32 shutter = ctx->exposure[0];
+	u32 l_shutter = 0;
+	u16 l_shift = 0;
+	static int longexposue = 0;
+	u32 cal_shutter = 0;
+
+	if (shutter > 0xffee) {
+		DRV_LOGE(ctx, "gc13a2 enter long exposure!");
+		longexposue = 1;
+		if (ctx->s_ctx.long_exposure_support == FALSE) {
+			DRV_LOGE(ctx, "sensor no support of exposure lshift!\n");
+			return;
+		}
+		if (ctx->s_ctx.reg_addr_exposure_lshift == PARAM_UNDEFINED) {
+			DRV_LOGE(ctx, "please implement lshift register address\n");
+			return;
+		}
+		for (l_shift = 1; l_shift < 7; l_shift++) {
+			l_shutter = ((shutter - 1) >> l_shift) + 1;
+			if (l_shutter
+				< (ctx->s_ctx.frame_length_max - ctx->s_ctx.exposure_margin))
+				break;
+		}
+		if (l_shift > 7) {
+			DRV_LOGE(ctx, "unable to set exposure:%u, set to max\n", shutter);
+			l_shift = 7;
+		}
+
+		cal_shutter = (shutter - 0xd10)- 1;
+		subdrv_i2c_wr_u8(ctx, 0x0202, 0x0d);
+		subdrv_i2c_wr_u8(ctx, 0x0203, 0x10);
+		subdrv_i2c_wr_u8(ctx, 0x0340, 0x0d);
+		subdrv_i2c_wr_u8(ctx, 0x0341, 0x20);
+		subdrv_i2c_wr_u8(ctx, 0x022c, 0x8c);
+		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_exposure_lshift, (cal_shutter >> 16) & 0xFF);
+		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_exposure_lshift+1, (cal_shutter >> 8) & 0xFF);
+		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_exposure_lshift+2, (cal_shutter) & 0xFF);
+		subdrv_i2c_wr_u8(ctx, 0x0230, 0x0c);
+
+		shutter = ((shutter - 1) >> l_shift) + 1;
+		shutter = min(shutter, ctx->s_ctx.exposure_max);
+		ctx->frame_length = shutter + ctx->s_ctx.exposure_margin;
+		ctx->frame_length_rg = ctx->frame_length;
+		ctx->l_shift = l_shift;
+	    DRV_LOGE(ctx, "long exposure mode: lshift %u times, normal shutter=0x%x, long shutter=0x%x\n",
+				l_shift,
+				cal_shutter - shutter - 1,
+				cal_shutter);
+
+		/* Frame exposure mode customization for LE*/
+		ctx->ae_frm_mode.frame_mode_1 = IMGSENSOR_AE_MODE_SE;
+		ctx->ae_frm_mode.frame_mode_2 = IMGSENSOR_AE_MODE_SE;
+		ctx->current_ae_effective_frame = 2;
+	} else {
+		if (longexposue == 1) {
+			DRV_LOGE(ctx, "gc13a2 exit long exposure!");
+			subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_exposure_lshift+2, 0x00);
+			subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_exposure_lshift+1, 0x00);
+			subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_exposure_lshift, 0x00);
+			subdrv_i2c_wr_u8(ctx, 0x0232, 0x00);
+			subdrv_i2c_wr_u8(ctx, 0x0230, 0x08);
+			longexposue = 0;
+		}
+
+		if (ctx->s_ctx.reg_addr_exposure_lshift != PARAM_UNDEFINED) {
+			ctx->l_shift = l_shift;
+		}
+		shutter = min(shutter, ctx->s_ctx.exposure_max);
+		/* write framelength&shutter */
+		if (set_auto_flicker(ctx, 0) || ctx->frame_length) {
+			subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_frame_length.addr[0],
+				(ctx->frame_length >> 8) & 0xFF);
+			subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_frame_length.addr[1],
+				ctx->frame_length & 0xFF);
+		}
+		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_exposure[0].addr[0],
+			(ctx->exposure[0] >> 8) & 0xFF);
+		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_exposure[0].addr[1],
+			ctx->exposure[0] & 0xFF);
+		DRV_LOG(ctx, "normal exposure mode: lshift %u times, normal shutter=0x%x, frame_length=%d\n",
+				l_shift,
+				shutter,
+				ctx->frame_length);
+
+		ctx->current_ae_effective_frame = 2;
+	}
+	ctx->exposure[0] = shutter;
+}
+
 static int gc13a2_set_shutter_frame_length(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	u64 *feature_data = (u64 *)para;
 	u32 shutter = *feature_data;
-	u32 frame_length = *(feature_data + 1);
+	u32 frame_length = 0;
 	u32 fine_integ_line = 0;
-	static int longexposue = 0;
-	u32 fll = 0;
-	u32 fll_step = 0;
-	u32 dol_cnt = 1;
 
 	DRV_LOG(ctx, "13a2_shutter = 0x%x \n", shutter);
 	DRV_LOG(ctx, "13a2_frame_length = 0x%x \n", frame_length);
@@ -633,57 +721,24 @@ static int gc13a2_set_shutter_frame_length(struct subdrv_ctx *ctx, u8 *para, u32
 	/* restore shutter */
 	memset(ctx->exposure, 0, sizeof(ctx->exposure));
 	ctx->exposure[0] = shutter;
+
 	/* set_long_exposure */
 	if (ctx->s_ctx.long_exposure_support == TRUE) {
-		if (shutter > 0xffee) {
-			DRV_LOGE(ctx, "gc13a2 enter long exposure!");
-			longexposue = 1;
-			shutter = (shutter - 0xd10)- 1;
-			subdrv_i2c_wr_u8(ctx, 0x0202, 0x0d);
-			subdrv_i2c_wr_u8(ctx, 0x0203, 0x10);
-			subdrv_i2c_wr_u8(ctx, 0x0340, 0x0d);
-			subdrv_i2c_wr_u8(ctx, 0x0341, 0x20);
-			subdrv_i2c_wr_u8(ctx, 0x022c, 0x8c);
-			subdrv_i2c_wr_u8(ctx, 0x022d, (shutter >> 16) & 0xFF);
-			subdrv_i2c_wr_u8(ctx, 0x022e, (shutter >> 8) & 0xFF);
-			subdrv_i2c_wr_u8(ctx, 0x022f, (shutter) & 0xFF);
-			subdrv_i2c_wr_u8(ctx, 0x0230, 0x0c);
-		} else {
-			if (longexposue == 1) {
-				DRV_LOGE(ctx, "gc13a2 exit long exposure!");
-				subdrv_i2c_wr_u8(ctx, 0x022f, 0x00);
-				subdrv_i2c_wr_u8(ctx, 0x022e, 0x00);
-				subdrv_i2c_wr_u8(ctx, 0x022d, 0x00);
-				subdrv_i2c_wr_u8(ctx, 0x0232, 0x00);
-				subdrv_i2c_wr_u8(ctx, 0x0230, 0x08);
-				longexposue = 0;
-			}
+		gc13a2_set_long_exposure(ctx);
+	} else {
+		shutter = min(shutter, ctx->s_ctx.exposure_max);
+		/* write framelength&shutter */
+		if (set_auto_flicker(ctx, 0) || ctx->frame_length) {
+		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_frame_length.addr[0],
+			(ctx->frame_length >> 8) & 0xFF);
+		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_frame_length.addr[1],
+			ctx->frame_length & 0xFF);
 		}
+		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_exposure[0].addr[0],
+			(ctx->exposure[0] >> 8) & 0xFF);
+		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_exposure[0].addr[1],
+			ctx->exposure[0] & 0xFF);
 	}
-	shutter = min(shutter, ctx->s_ctx.exposure_max);
-	/* write framelength */
-	if (set_auto_flicker(ctx, 0) || frame_length ||
-		!ctx->s_ctx.reg_addr_auto_extend) {
-		fll = ctx->frame_length;
-		fll_step = ctx->s_ctx.mode[ctx->current_scenario_id].framelength_step;
-		if (fll_step)
-			fll = round_up(fll, fll_step);
-		ctx->frame_length = fll;
-		if (ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_STAGGER)
-			dol_cnt = ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt;
-		fll = fll / dol_cnt;
-		if (ctx->extend_frame_length_en == FALSE) {
-			subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_frame_length.addr[0],
-				(fll >> 8) & 0xFF);
-			subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_frame_length.addr[1],
-				fll & 0xFF);
-		}
-	}
-	/* write shutter */
-	subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_exposure[0].addr[0],
-		(ctx->exposure[0] >> 8) & 0xFF);
-	subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_exposure[0].addr[1],
-		ctx->exposure[0] & 0xFF);
 
 	DRV_LOG(ctx, "exp[0x%x], fll(input/output):%u/%u, flick_en:%u\n",
 		ctx->exposure[0], frame_length, ctx->frame_length, ctx->autoflicker_en);
