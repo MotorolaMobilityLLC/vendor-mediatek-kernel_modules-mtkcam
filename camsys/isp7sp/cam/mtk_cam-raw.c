@@ -261,10 +261,6 @@ void initialize(struct mtk_raw_device *dev, int is_slave, int is_srt, int is_slb
 	writel_relaxed(val, dev->base + REG_CAMCQ_CQ_THR0_CTL);
 	writel_relaxed(val, dev->base + REG_CAMCQ_CQ_SUB_THR0_CTL);
 
-
-	        /* enable interrupt */
-        writel_relaxed(0x7fffffff, dev->base + REG_CAMCTL_INT_EN);
-
 	/* enable interrupt */
 	val = FBIT(CAMCTL_CQ_THR0_DONE_EN) | FBIT(CAMCTL_CQ_THRSUB_DONE_EN);
 	writel_relaxed(val, dev->base + REG_CAMCTL_INT6_EN);
@@ -1076,7 +1072,7 @@ static irqreturn_t mtk_irq_raw(int irq, void *data)
 	tg_cnt = (raw_dev->tg_count & 0xffffff00) + ((tg_cnt & 0xff000000) >> 24);
 	err_status = irq_status & INT_ST_MASK_CAM_ERR;
 
-///	if (CAM_DEBUG_ENABLED(RAW_INT))
+	if (CAM_DEBUG_ENABLED(RAW_INT))
 		dev_info(dev,
 			 "INT:0x%x(err:0x%x) 2~7 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x (in:0x%x) tg_cnt:%d/%lld\n",
 			 irq_status, err_status,
