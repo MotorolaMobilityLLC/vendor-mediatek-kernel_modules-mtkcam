@@ -245,36 +245,6 @@ static __maybe_unused struct dma_debug_item dbg_YUVCO_R1[] = {
 	{0x00000080, "yuvo_r1_smi_port / smi_latency_mon output"},
 };
 
-static __maybe_unused struct dma_debug_item cqi_stat[] = {
-	{0x00009000, "CQ 9000 "},
-	{0x00009100, "CQ 9100 "},
-	{0x00009200, "CQ 9200 "},
-	{0x00009300, "CQ 9300 "},
-	{0x00009400, "CQ 9400 "},
-	{0x00009500, "CQ 9500 "},
-	{0x00009600, "CQ 9600 "},
-	{0x00009700, "CQ 9700 "},
-	{0x00009800, "CQ 9800 "},
-	{0x00009900, "CQ 9900 "},
-	{0x00009a00, "CQ 9a00 "},
-	{0x00009a00, "CQ 9a00 "},
-};
-
-static __maybe_unused struct dma_debug_item cqi_sum[] = {
-	{0x00009000, "CQ 9000 "},
-	{0x00009100, "CQ 9100 "},
-	{0x00009200, "CQ 9200 "},
-	{0x00009400, "CQ 9400 "},
-	{0x00009500, "CQ 9500 "},
-	{0x00009600, "CQ 9600 "},
-	{0x00009800, "CQ 9800 "},
-	{0x00009900, "CQ 9900 "},
-	{0x00009A00, "CQ 9a00 "},
-	{0x00009C00, "CQ 9c00 "},
-	{0x00009D00, "CQ 9d00 "},
-	{0x00009300, "CQ 9e00 "},
-};
-
 static __maybe_unused struct dma_debug_item dbg_YUVO_R3[] = {
 	{0x00000004, "yuvo_r3 32(hex) 0000"},
 	{0x00000104, "yuvo_r3 state_checksum"},
