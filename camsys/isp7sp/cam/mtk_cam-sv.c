@@ -280,29 +280,6 @@ int mtk_camsv_translation_fault_callback(int port, dma_addr_t mva, void *data)
 	return 0;
 }
 
-void mtk_cam_dump_sv_cq_debug(struct mtk_camsv_device *sv_dev)
-{
-
-	dev_info(sv_dev->dev, "%s cq interrupt en 0x%x cq done status:0x%x",
-		__func__,
-		readl_relaxed(sv_dev->base_scq + 0x18),
-		readl_relaxed(sv_dev->base_scq + REG_CAMSVCQTOP_INT_0_STATUS));
-
-	writel(0x2000100, sv_dev->base_scq + REG_CAMSVCQDMATOP_DMA_DBG_SEL);
-	dev_info(sv_dev->dev, "camsv cqi1 state_checksum 0x%x",
-		readl(sv_dev->base_scq + REG_CAMSVCQDMATOP_DMA_DBG_PORT));
-	writel(0x2000500, sv_dev->base_scq + REG_CAMSVCQDMATOP_DMA_DBG_SEL);
-	dev_info(sv_dev->dev, "camsv cqi1 smi debug data case0 0x%x",
-		readl(sv_dev->base_scq + REG_CAMSVCQDMATOP_DMA_DBG_PORT));
-	writel(0x2000101, sv_dev->base_scq + REG_CAMSVCQDMATOP_DMA_DBG_SEL);
-	dev_info(sv_dev->dev, "camsv cqi2 state_checksum 0x%x",
-		readl(sv_dev->base_scq + REG_CAMSVCQDMATOP_DMA_DBG_PORT));
-	writel(0x2000501, sv_dev->base_scq + REG_CAMSVCQDMATOP_DMA_DBG_SEL);
-	dev_info(sv_dev->dev, "camsv cqi2 smi debug data case0 0x%x",
-		readl(sv_dev->base_scq + REG_CAMSVCQDMATOP_DMA_DBG_PORT));
-
-}
-
 void mtk_cam_sv_backup(struct mtk_camsv_device *sv_dev)
 {
 	struct mtk_camsv_backup_setting *s = &sv_dev->backup_setting;
@@ -1204,16 +1181,6 @@ int mtk_cam_sv_cq_config(struct mtk_camsv_device *sv_dev, unsigned int sub_ratio
 	/* cq int en */
 	CAMSV_WRITE_BITS(sv_dev->base_scq + REG_CAMSVCQTOP_INT_0_EN,
 		CAMSVCQTOP_INT_0_EN, CAMSVCQTOP_CSR_SCQ_SUB_THR_DONE_INT_EN, 1);
-	CAMSV_WRITE_BITS(sv_dev->base_scq + REG_CAMSVCQTOP_INT_0_EN,
-		CAMSVCQTOP_INT_0_EN, CAMSVCQTOP_CSR_SCQ_MAX_START_DLY_ERR_INT_EN, 1);
-	CAMSV_WRITE_BITS(sv_dev->base_scq + REG_CAMSVCQTOP_INT_0_EN,
-		CAMSVCQTOP_INT_0_EN, CAMSVCQTOP_CSR_SCQ_SUB_CODE_ERR_INT_EN, 1);
-	CAMSV_WRITE_BITS(sv_dev->base_scq + REG_CAMSVCQTOP_INT_0_EN,
-		CAMSVCQTOP_INT_0_EN, CAMSVCQTOP_CSR_SCQ_SUB_VB_ERR_INT_EN, 1);
-	CAMSV_WRITE_BITS(sv_dev->base_scq + REG_CAMSVCQTOP_INT_0_EN,
-		CAMSVCQTOP_INT_0_EN, CAMSVCQTOP_CSR_SCQ_TRIG_DLY_INT_EN, 1);
-	CAMSV_WRITE_BITS(sv_dev->base_scq + REG_CAMSVCQTOP_INT_0_EN,
-		CAMSVCQTOP_INT_0_EN, CAMSVCQTOP_CSR_DMA_ERR_INT_EN, 1);
 	wmb(); /* TBC */
 
 	dev_dbg(sv_dev->dev, "[%s] cq_en:0x%x_%x start_period:0x%x cq_sub_thr0_ctl:0x%x cq_int_en:0x%x\n",
@@ -1775,7 +1742,7 @@ static irqreturn_t mtk_irq_camsv_cq_done(int irq, void *data)
 	cq_done_status =
 		readl_relaxed(sv_dev->base_scq + REG_CAMSVCQTOP_INT_0_STATUS);
 
-	dev_info(sv_dev->dev, "camsv-%d: cq done status:0x%x seq_no:%d_%d",
+	dev_dbg(sv_dev->dev, "camsv-%d: cq done status:0x%x seq_no:%d_%d",
 		sv_dev->id, cq_done_status,
 		frm_seq_no_inner, frm_seq_no);
 

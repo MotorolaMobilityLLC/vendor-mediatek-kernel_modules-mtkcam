@@ -8,7 +8,6 @@
 #include "mtk_cam-raw.h"
 #include "mtk_cam-raw_regs.h"
 #include "mtk_cam-raw_debug.h"
-#include "mtk_cam-dmadbg.h"
 
 #define DMA_OFFSET_ERR_STAT	0x34
 
@@ -326,85 +325,6 @@ void mtk_cam_dump_dma_debug(struct mtk_raw_device *raw_dev,
 	for (i = 0; i < n; i++)
 		dev_info(dev, "%08x: %08x [%s]\n",
 			 crc_en | items[i].debug_sel, vals[i], items[i].msg);
-}
-
-
-void mtk_cam_dump_cq_debug(struct mtk_raw_device *raw_dev,
-			    const char *mod_name,
-			    struct dma_debug_item *items, int n)
-{
-	struct device *dev = raw_dev->dev;
-	void __iomem *dbg_sel =  raw_dev->base + REG_CAMCTL_DBG_SET;
-	void __iomem *dbg_port = raw_dev->base + REG_CAMCTL_DBG_PORT;
-	void __iomem *cam_cq_en = raw_dev->base + 0x400;
-	void __iomem *int_stat = raw_dev->base + 0x100;
-	void __iomem *int_statx = raw_dev->base + 0x108;
-	void __iomem *int6_stat = raw_dev->base + 0x154;
-	void __iomem *int_trigger = raw_dev->base + 0x380;
-	
-	int i = 0;
-	unsigned int vals[MAX_DEBUG_SIZE],int_state;
-
-	if (n >= MAX_DEBUG_SIZE) {
-		dev_info(dev, "%s: should enlarge array size for n(%d)\n",
-			__func__, n);
-		return;
-	}
-
-
-	writel(readl(cam_cq_en) | 0x10000000, cam_cq_en);
-	dev_info(dev,"%s: cq sum:\n",__func__);
-	for (i = 0; i < 12; i++) {
-		int cur_sel, actual_sel;
-
-		cur_sel = cqi_sum[i].debug_sel;
-		writel(cur_sel, dbg_sel);
-
-		actual_sel = readl(dbg_sel);
-		if ((actual_sel ^ cur_sel) & 0xffffff)
-			dev_info(dev, "failed to write dbg_sel %08x actual %08x\n",
-				 cur_sel, actual_sel);
-
-		vals[i] = readl(dbg_port);
-	};
-
-	dev_info(dev, "%s: %s\n", __func__, mod_name);
-	for (i = 0; i < 12; i++)
-		dev_info(dev, "%08x: %08x [%s]\n",
-			 items[i].debug_sel, vals[i], items[i].msg);
-			 
-			 
-	writel(readl(cam_cq_en) & 0xefffffff, cam_cq_en);
-	dev_info(dev,"%s: cq stat:\n",__func__);
-	for (i = 0; i < 12; i++) {
-		int cur_sel, actual_sel;
-
-		cur_sel = cqi_stat[i].debug_sel;
-		writel(cur_sel, dbg_sel);
-
-		actual_sel = readl(dbg_sel);
-		if ((actual_sel ^ cur_sel) & 0xffffff)
-			dev_info(dev, "failed to write dbg_sel %08x actual %08x\n",
-				 cur_sel, actual_sel);
-
-		vals[i] = readl(dbg_port);
-	};
-
-	dev_info(dev, "%s: %s\n", __func__, mod_name);
-	for (i = 0; i < 12; i++)
-		dev_info(dev, "%08x: %08x [%s]\n",
-			 items[i].debug_sel, vals[i], items[i].msg);	
-
-	
-	int_state = readl(int6_stat);
-	
-	dev_info(dev, "%s: cq timeout cq int6_stat = 0x%x int_stat = 0x%x\n", __func__, int_state, readl(int_stat));
-
-	writel(0x80000001, int_trigger);
-	
-	int_state =  readl(int_statx);
-	dev_info(dev, "%s: cq timeout  immidate trigger int_statx = 0x%x int_trigger=0x%x \n", __func__, int_state, readl(int_trigger));
-			 
 }
 
 void mtk_cam_dump_ufd_debug(struct mtk_raw_device *raw_dev,
