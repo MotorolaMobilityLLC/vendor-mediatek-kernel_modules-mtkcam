@@ -245,7 +245,7 @@ void mtk_cam_update_sensor_resource(struct mtk_cam_ctx *ctx);
 struct mtk_cam_seninf_sentest_param *
 	mtk_cam_get_sentest_param(struct mtk_cam_ctx *ctx);
 int mtk_camsv_translation_fault_callback(int port, dma_addr_t mva, void *data);
-void mtk_cam_dump_sv_cq_debug(struct mtk_camsv_device *sv_dev);
+
 void mtk_cam_sv_backup(struct mtk_camsv_device *sv_dev);
 void mtk_cam_sv_restore(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_golden_set(struct mtk_camsv_device *sv_dev, bool is_golden_set);
