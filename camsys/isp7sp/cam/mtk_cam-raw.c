@@ -893,14 +893,23 @@ static void raw_handle_error(struct mtk_raw_device *raw_dev,
 {
 	int err_status = data->e.err_status;
 	unsigned int fh_cookie = data->frame_idx_inner;
+	struct mtk_cam_device *cam = raw_dev->cam;
+	struct mtk_cam_ctx *ctx;
+	int hsf_en = 0, i = 0;
 
-	if (err_status & FBIT(CAMCTL_DMA_ERR_ST))
+	for (i = 0; i < cam->max_stream_num; i++) {
+		ctx = &cam->ctxs[i];
+		hsf_en += ctx->enable_hsf_raw;
+	}
+
+
+	if ((err_status & FBIT(CAMCTL_DMA_ERR_ST)) && (hsf_en == 0))
 		raw_handle_dma_err(raw_dev, fh_cookie);
 
 	if (err_status & FBIT(CAMCTL_TG_GRABERR_ST))
 		raw_handle_tg_grab_err(raw_dev, fh_cookie);
 
-	if (err_status & FBIT(CAMCTL_TG_OVRUN_ST))
+	if ((err_status & FBIT(CAMCTL_TG_OVRUN_ST)) && (hsf_en == 0))
 		raw_handle_tg_overrun_err(raw_dev, fh_cookie);
 
 	dev_info(raw_dev->dev, "%s: err_status:0x%x, fh_cookie:0x%x\n",
