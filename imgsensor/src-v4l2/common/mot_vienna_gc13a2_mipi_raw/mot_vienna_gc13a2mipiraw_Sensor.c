@@ -557,14 +557,16 @@ static int gc13a2_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	memset(ctx->ana_gain, 0, sizeof(ctx->ana_gain));
 	ctx->ana_gain[0] = gain;
 	/* write gain */
-	subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_ana_gain[0].addr[0],
+	set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_ana_gain[0].addr[0],
 		(rg_gain >> 16) & 0xFF);
-	subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_ana_gain[0].addr[1],
+	set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_ana_gain[0].addr[1],
 		(rg_gain >> 8) & 0xFF);
-	subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_ana_gain[0].addr[2],
+	set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_ana_gain[0].addr[2],
 		rg_gain & 0xFF);
 
 	DRV_LOG(ctx, "13a2_rg_gain = 0x%x \n", rg_gain);
+	commit_i2c_buffer(ctx);
+
 	return ERROR_NONE;
 }
 
