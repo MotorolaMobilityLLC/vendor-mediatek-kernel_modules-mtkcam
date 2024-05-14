@@ -20,7 +20,22 @@
 
 #include "kd_camera_typedef.h"
 
-static u16 sensor_init_setting_array1_burst[] = {
+static u16 sensor_init_setting_array1[] = {
+    0x6028, 0x2000,
+    0x0000, 0x0002,
+    0x0000, 0x30B1,
+    0x6010, 0x0001,
+};
+
+static u16 sensor_init_setting_array2[] = {
+    0x6214,0xFF7D,
+    0x6218,0x0000,
+    0x0A02,0x00C0,
+    0x6028,0x2000,
+    0x602A,0x8E70,
+};
+
+static u16 sensor_init_setting_array3_burst[] = {
     0x00F0,
     0x82B8,
     0x0000,
@@ -263,7 +278,7 @@ static u16 sensor_init_setting_array1_burst[] = {
     0x0000,
 };
 
-static u16 sensor_init_setting_array2[] = {
+static u16 sensor_init_setting_array4[] = {
     0x6028,0x2000,
     0x602A,0x1492,
     0x6F12,0x0100,

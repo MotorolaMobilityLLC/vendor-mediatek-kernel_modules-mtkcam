@@ -680,22 +680,15 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 static void mot_vienna_s5k3k1_sensor_init(struct subdrv_ctx *ctx)
 {
 	DRV_LOG(ctx, "E\n");
-	subdrv_i2c_wr_u16(ctx, 0x6028, 0x2000);
-	subdrv_i2c_wr_u16(ctx, 0x0000, 0x0002);
-	subdrv_i2c_wr_u16(ctx, 0x0000, 0x30B1);
-	subdrv_i2c_wr_u16(ctx, 0x6010, 0x0001);
+	i2c_table_write(ctx, sensor_init_setting_array1, ARRAY_SIZE(sensor_init_setting_array1));
 	mdelay(5);
-	subdrv_i2c_wr_u16(ctx, 0x6214,0xFF7D);
-	subdrv_i2c_wr_u16(ctx, 0x6218,0x0000);
-	subdrv_i2c_wr_u16(ctx, 0x0A02,0x00C0);
-	subdrv_i2c_wr_u16(ctx, 0x6028,0x2000);
-	subdrv_i2c_wr_u16(ctx, 0x602A,0x8E70);
+	i2c_table_write(ctx, sensor_init_setting_array2, ARRAY_SIZE(sensor_init_setting_array2));
 
-	subdrv_i2c_wr_p16(ctx, 0x6F12, sensor_init_setting_array1_burst,
-		ARRAY_SIZE(sensor_init_setting_array1_burst));
+	subdrv_i2c_wr_p16(ctx, 0x6F12, sensor_init_setting_array3_burst,
+		ARRAY_SIZE(sensor_init_setting_array3_burst));
 
-	subdrv_i2c_wr_regs_u16(ctx, sensor_init_setting_array2,
-		ARRAY_SIZE(sensor_init_setting_array2));
+	subdrv_i2c_wr_regs_u16(ctx, sensor_init_setting_array4,
+		ARRAY_SIZE(sensor_init_setting_array4));
 
 	/* set pdaf DT to 0x2B */
 	//subdrv_i2c_wr_u8(ctx, 0x0116, 0x2B);
