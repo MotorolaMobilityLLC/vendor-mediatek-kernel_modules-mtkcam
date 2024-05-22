@@ -680,6 +680,7 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 static void mot_vienna_s5k3k1_sensor_init(struct subdrv_ctx *ctx)
 {
 	DRV_LOG(ctx, "E\n");
+	mdelay(10);
 	i2c_table_write(ctx, sensor_init_setting_array1, ARRAY_SIZE(sensor_init_setting_array1));
 	mdelay(5);
 	i2c_table_write(ctx, sensor_init_setting_array2, ARRAY_SIZE(sensor_init_setting_array2));
