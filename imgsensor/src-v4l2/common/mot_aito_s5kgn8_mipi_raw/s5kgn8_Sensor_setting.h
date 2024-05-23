@@ -21,7 +21,13 @@
 #include "kd_camera_typedef.h"
 
 
+
 //common
+static u16 uTnpArrayInit_0[] = {
+0xFCFC, 0x4000,
+0x6010, 0x0001,
+};
+
 static u16 uTnpArrayInit_1[] = {
 #include "setting/s5kgn8_initsettting_1.h"
 };
