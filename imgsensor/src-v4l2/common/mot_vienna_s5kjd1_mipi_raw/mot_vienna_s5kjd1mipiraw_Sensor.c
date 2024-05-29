@@ -27,7 +27,6 @@
 static void set_group_hold(void *arg, u8 en);
 static u16 get_gain2reg(u32 gain);
 static int s5kjd1_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
-static int s5kjd1_set_test_pattern_data(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
 static void s5kjd1_sensor_init(struct subdrv_ctx *ctx);
 static int open(struct subdrv_ctx *ctx);
@@ -42,7 +41,6 @@ static void s5kjd1_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter,
 
 static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, s5kjd1_set_test_pattern},
-	{SENSOR_FEATURE_SET_TEST_PATTERN_DATA, s5kjd1_set_test_pattern_data},
 #if  ENABLE_S5KJD1_LONG_EXPOSURE
 	{SENSOR_FEATURE_SET_ESHUTTER, s5kjd1_set_shutter},
 #endif
@@ -625,24 +623,6 @@ static int s5kjd1_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 		subdrv_i2c_wr_u16(ctx, 0x0600, 0x0000); /*No pattern*/
 
 	ctx->test_pattern = mode;
-	return ERROR_NONE;
-}
-
-static int s5kjd1_set_test_pattern_data(struct subdrv_ctx *ctx, u8 *para, u32 *len)
-{
-	struct mtk_test_pattern_data *data = (struct mtk_test_pattern_data *)para;
-	u16 R = (data->Channel_R >> 22) & 0x3ff;
-	u16 Gr = (data->Channel_Gr >> 22) & 0x3ff;
-	u16 Gb = (data->Channel_Gb >> 22) & 0x3ff;
-	u16 B = (data->Channel_B >> 22) & 0x3ff;
-
-	subdrv_i2c_wr_u16(ctx, 0x0602, R);
-	subdrv_i2c_wr_u16(ctx, 0x0604, Gr);
-	subdrv_i2c_wr_u16(ctx, 0x0606, B);
-	subdrv_i2c_wr_u16(ctx, 0x0608, Gb);
-
-	DRV_LOG(ctx, "mode(%u) R/Gr/Gb/B = 0x%04x/0x%04x/0x%04x/0x%04x\n",
-		ctx->test_pattern, R, Gr, Gb, B);
 	return ERROR_NONE;
 }
 
