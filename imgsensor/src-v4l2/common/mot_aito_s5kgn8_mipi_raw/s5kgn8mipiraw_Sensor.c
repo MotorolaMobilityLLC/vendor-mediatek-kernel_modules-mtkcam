@@ -43,6 +43,9 @@ static int s5kgn8_get_min_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static void s5kgn8_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter, u32 frame_length);
 #endif
 
+static	UINT32 rgain_32;
+static	UINT32 bgain_32;
+static	UINT32 ggain_32;
 static int mot_s5kgn8_Manufacturer_ID = 0;
 module_param(mot_s5kgn8_Manufacturer_ID,int, 0644);
 /* STRUCT */
@@ -271,6 +274,12 @@ static int s5kgn8_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	if (ae_ctrl) {
 		subdrv_i2c_wr_u16(ctx, 0x0202, ae_ctrl->exposure.le_exposure);
 		subdrv_i2c_wr_u16(ctx, 0x0204, gain);
+	}
+	if( scenario_id == SENSOR_SCENARIO_ID_CUSTOM6 )
+	{
+		subdrv_i2c_wr_u16(ctx, 0x0d82, rgain_32);
+		subdrv_i2c_wr_u16(ctx, 0x0d84, ggain_32);
+		subdrv_i2c_wr_u16(ctx, 0x0d86, bgain_32);
 	}
 	subdrv_i2c_wr_u16(ctx, 0x0104, 0x0001);
 	ctx->fast_mode_on = TRUE;
@@ -2101,7 +2110,7 @@ static int s5kgn8_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	struct SET_SENSOR_AWB_GAIN *pSetSensorAWB = (( struct SET_SENSOR_AWB_GAIN  *)para);
 
-	UINT32 rgain_32, grgain_32, gbgain_32, bgain_32, ggain_32;
+	UINT32 gbgain_32,grgain_32;
 	if ((ctx->current_scenario_id == SENSOR_SCENARIO_ID_CUSTOM1) ||
 		(ctx->current_scenario_id == SENSOR_SCENARIO_ID_CUSTOM6))
 	{
@@ -2120,6 +2129,19 @@ static int s5kgn8_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 		subdrv_i2c_wr_u16(ctx, 0x0d82, rgain_32);
 		subdrv_i2c_wr_u16(ctx, 0x0d84, ggain_32);
 		subdrv_i2c_wr_u16(ctx, 0x0d86, bgain_32);
+	} else if (ctx->current_scenario_id == SENSOR_SCENARIO_ID_NORMAL_PREVIEW) {
+		grgain_32 = (pSetSensorAWB->ABS_GAIN_GR * REG_GAIN ) / WB_GAIN_FACTOR;
+		rgain_32 = (pSetSensorAWB->ABS_GAIN_R * REG_GAIN ) / WB_GAIN_FACTOR;
+		bgain_32 = (pSetSensorAWB->ABS_GAIN_B * REG_GAIN ) / WB_GAIN_FACTOR;
+		gbgain_32 = (pSetSensorAWB->ABS_GAIN_GB * REG_GAIN ) / WB_GAIN_FACTOR;
+		ggain_32 = (grgain_32+gbgain_32)/2;
+
+		DRV_LOG(ctx, "[%s] ABS_GAIN_GR:%d, grgain_32:%d, ABS_GAIN_R:%d, rgain_32:%d , ABS_GAIN_B:%d, bgain_32:%d,ABS_GAIN_GB:%d, gbgain_32:%d\n",
+			__func__,
+			pSetSensorAWB->ABS_GAIN_GR, grgain_32,
+			pSetSensorAWB->ABS_GAIN_R, rgain_32,
+			pSetSensorAWB->ABS_GAIN_B, bgain_32,
+			pSetSensorAWB->ABS_GAIN_GB, gbgain_32);
 	}
 	return ERROR_NONE;
 }
