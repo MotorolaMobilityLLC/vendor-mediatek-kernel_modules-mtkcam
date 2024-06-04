@@ -2182,6 +2182,7 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 static void s5kgn8sensor_init(struct subdrv_ctx *ctx)
 {
 	DRV_LOG(ctx, "E\n");
+	mdelay(10);
 	i2c_table_write(ctx, uTnpArrayInit_0,ARRAY_SIZE(uTnpArrayInit_0));
 	mdelay(10);
 	// 1 4 5 7
