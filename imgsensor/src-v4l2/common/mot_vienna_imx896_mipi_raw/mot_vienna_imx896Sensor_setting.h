@@ -2049,8 +2049,8 @@ static u16 imx896_preview_setting[] = {
     0x0205, 0x00,
     0x020E, 0x01,
     0x020F, 0x00,
-    0x0100, 0x01,
 };
+
 static u16 imx896_capture_setting[] = {
     0x0112, 0x0A,
     0x0113, 0x0A,
@@ -2145,7 +2145,6 @@ static u16 imx896_capture_setting[] = {
     0x0205, 0x00,
     0x020E, 0x01,
     0x020F, 0x00,
-    0x0100, 0x01,
 };
 static u16 imx896_normal_video_setting[] = {
     0x0112, 0x0A,
@@ -2241,7 +2240,6 @@ static u16 imx896_normal_video_setting[] = {
     0x0205, 0x00,
     0x020E, 0x01,
     0x020F, 0x00,
-    0x0100, 0x01,
 };
 static u16 imx896_hs_video_setting[] = {
     0x0112, 0x0A,
@@ -2444,7 +2442,6 @@ static u16 imx896_slim_video_setting[] = {
     0x0205, 0x00,
     0x020E, 0x01,
     0x020F, 0x00,
-    0x0100, 0x01,
 };
 
 static u16 addr_data_pair_custom1[] = {
@@ -2541,7 +2538,6 @@ static u16 addr_data_pair_custom1[] = {
     0x0205,0x00,
     0x020E,0x01,
     0x020F,0x00,
-    0x0100,0x01,
 };
 
 static u16 addr_data_pair_custom2[] = {
@@ -2650,7 +2646,6 @@ static u16 addr_data_pair_custom2[] = {
     0x30A2,0x00,
     0x30F1,0x01,
     0x30A3,0x30,
-    0x0100,0x01,
 };
 static u16 addr_data_pair_custom3[] = {
     0x0112, 0x0A,
@@ -3102,7 +3097,6 @@ static u16 imx896_seamless_preview[] = {
     0x0205, 0x00,
     0x020E, 0x01,
     0x020F, 0x00,
-    0x0100, 0x01,
 };
 
 static u16 imx896_seamless_custom1[] = {
@@ -3199,7 +3193,6 @@ static u16 imx896_seamless_custom1[] = {
     0x0205,0x00,
     0x020E,0x01,
     0x020F,0x00,
-    0x0100,0x01,
 };
 
 #endif
