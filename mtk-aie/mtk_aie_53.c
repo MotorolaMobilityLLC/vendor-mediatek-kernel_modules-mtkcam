@@ -672,6 +672,7 @@ static void mtk_aie_hw_disconnect(struct mtk_aie_dev *fd)
 		!fd->is_shutdown) {
 		aie_disable_secure_domain(fd);
 #if CMDQ_SEC_READY
+		aie_dev_info(fd->dev, "[aie_debug] uninit cl=%p\n", fd->fdvt_secure_clt);
 		cmdq_sec_mbox_stop(fd->fdvt_secure_clt);
 #endif
 	}
@@ -1829,6 +1830,7 @@ static int mtk_aie_probe(struct platform_device *pdev)
 #if CMDQ_SEC_READY
 	fd->fdvt_secure_clt = cmdq_mbox_create(dev, 1);
 
+    aie_dev_info(dev, "[aie_debug] probe cl=%p \n", fd->fdvt_secure_clt);
 	if (!fd->fdvt_secure_clt)
 		aie_dev_info(dev, "cmdq mbox create fail\n");
 	else
