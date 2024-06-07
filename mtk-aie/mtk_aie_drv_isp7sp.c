@@ -3538,6 +3538,7 @@ static void AieSecPktCB(struct cmdq_cb_data data)
 
 void config_aie_cmdq_secure_init(struct mtk_aie_dev *fd)
 {
+	aie_dev_info(fd->dev, "[aie_debug] init cl=%p \n", fd->fdvt_secure_clt);
 	g_sec_pkt = cmdq_pkt_create(fd->fdvt_secure_clt);
 
 #if CMDQ_SEC_READY
