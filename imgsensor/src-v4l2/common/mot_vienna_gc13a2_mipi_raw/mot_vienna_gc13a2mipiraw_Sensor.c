@@ -446,7 +446,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.pdaf_type = PDAF_SUPPORT_NA,
 #endif
 
-	.hdr_type = HDR_SUPPORT_DCG,
+	.hdr_type = HDR_SUPPORT_NA,
 	.seamless_switch_support = FALSE,
 	.temperature_support = FALSE,
 	.g_temp = PARAM_UNDEFINED,
