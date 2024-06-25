@@ -1235,7 +1235,7 @@ static void imx896_set_long_exposure(struct subdrv_ctx *ctx)
 	} else {
 		if (ctx->s_ctx.reg_addr_exposure_lshift != PARAM_UNDEFINED) {
 			set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure_lshift, l_shift);
-			set_i2c_buffer(ctx, 0x301C, 1);
+			set_i2c_buffer(ctx, 0x301C, 0);
 			ctx->l_shift = l_shift;
 		}
 		ctx->current_ae_effective_frame = 2;
