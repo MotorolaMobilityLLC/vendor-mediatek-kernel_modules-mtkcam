@@ -354,6 +354,11 @@ static int get_sv_two_smi_setting(int *sv_two_smi_en, int *sv_support_two_smi_ou
 
 	return 0;
 }
+static int get_sv_mmdvfs_plus_enable(bool *mmdvfs_plus_enable)
+{
+	*mmdvfs_plus_enable = true;
+	return 0;
+}
 static int get_single_sv_opp_idx(unsigned int *opp_idx)
 {
 	*opp_idx = 1;
@@ -813,6 +818,7 @@ static const struct plat_v4l2_data mt6989_v4l2_data = {
 	.set_sv_meta_stats_info = set_sv_meta_stats_info,
 	.get_sv_dma_th_setting = get_sv_dma_th_setting,
 	.get_sv_two_smi_setting = get_sv_two_smi_setting,
+	.get_sv_mmdvfs_plus_enable = get_sv_mmdvfs_plus_enable,
 	.get_single_sv_opp_idx = get_single_sv_opp_idx,
 	.get_mraw_dmao_common_setting = get_mraw_dmao_common_setting,
 	.set_mraw_meta_stats_info = set_mraw_meta_stats_info,

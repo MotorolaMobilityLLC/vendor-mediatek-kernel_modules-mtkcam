@@ -1038,14 +1038,17 @@ struct mtk_cam_seninf_sentest_param *
 
 int mtk_cam_sv_golden_set(struct mtk_camsv_device *sv_dev, bool is_golden_set)
 {
-	int ret = 0;
+	bool mmdvfs_plus_enable = false;
 
-	mtk_mmdvfs_camsv_dc_enable(sv_dev->id, is_golden_set);
+	CALL_PLAT_V4L2(get_sv_mmdvfs_plus_enable, &mmdvfs_plus_enable);
 
-	dev_info(sv_dev->dev, "%s: is_golden_set:%d",
-		__func__, (is_golden_set) ? 1 : 0);
+	if (mmdvfs_plus_enable) {
+		mtk_mmdvfs_camsv_dc_enable(sv_dev->id, is_golden_set);
 
-	return ret;
+		dev_info(sv_dev->dev, "%s: is_golden_set:%d",
+			__func__, (is_golden_set) ? 1 : 0);
+	}
+	return 0;
 }
 
 unsigned int mtk_cam_get_sv_tag_index(struct mtk_camsv_tag_info *arr_tag,
