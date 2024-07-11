@@ -109,7 +109,8 @@ static int ut_seninf_set_testmdl(struct device *dev,
 	int i;
 	struct mtk_cam_ut_tm_para *para;
 	struct mtk_ut_seninf_device *seninf = dev_get_drvdata(dev);
-	int seninf_idx, outmux_idx, tag, exp_no;
+	unsigned int seninf_idx, outmux_idx;
+	int tag, exp_no;
 	void __iomem *seninf_top;
 	void __iomem *seninf_async;
 	void __iomem *seninf_tm;
@@ -121,7 +122,7 @@ static int ut_seninf_set_testmdl(struct device *dev,
 					      height + h_margin,
 					      clk_div_cnt, 416, 30);
 	int width_tm = (width >> 1);
-	u8 set_outmux_list[SENINF_MUX_NUM];
+	u8 set_outmux_list[camsys_tg_max];
 	u8 pix_m = 0;
 	u8 last_vc = 0;
 
@@ -172,16 +173,16 @@ static int ut_seninf_set_testmdl(struct device *dev,
 	for (i = 0; i < para_cnt; i++) {
 		para = tm_para + i;
 		if (!strcasecmp(iomem_ver, MT6899_IOMOM_VERSIONS))
-			outmux_idx = tg_remap(para->tg_idx);
+			outmux_idx = (unsigned int)tg_remap(para->tg_idx);
 		else
-			outmux_idx = para->tg_idx;
+			outmux_idx = (unsigned int)para->tg_idx;
 		exp_no = para->exp_no;
 		tag = para->tag;
 		pix_m = (para->pixmode == tm_pix_mode_16) ? 1 : 0;
-		dev_info(dev, "%s seninf_idx %d outmux_idx %d tag %d pixmode %d\n",
+		dev_info(dev, "%s seninf_idx %u outmux_idx %u tag %d pixmode %d\n",
 			 __func__, seninf_idx, outmux_idx, tag, para->pixmode);
 
-		if (outmux_idx >= SENINF_MUX_NUM)
+		if (outmux_idx >= (unsigned int)camsys_tg_max)
 			continue;
 
 		set_outmux_list[outmux_idx] = 1;
@@ -199,7 +200,7 @@ static int ut_seninf_set_testmdl(struct device *dev,
 			writel((exp_no << ((tag - tag_4) * 8)), ISP_SENINF_OUTMUX_SOURCE_CFG2(outmux_base));
 	}
 
-	for (i = 0; i < SENINF_MUX_NUM; i++) {
+	for (i = 0; i < camsys_tg_max; i++) {
 		if (set_outmux_list[i]) {
 			outmux_base = seninf->base_outmux[i];
 			writel(0x1, ISP_SENINF_OUTMUX_CFG_RDY(outmux_base));
