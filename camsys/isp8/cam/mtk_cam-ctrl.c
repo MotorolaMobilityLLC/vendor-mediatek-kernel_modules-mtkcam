@@ -1587,7 +1587,7 @@ static void mtk_cam_ctrl_raw_switch_flow(struct mtk_cam_job *job)
 	int r;
 
 	prev_seq = prev_frame_seq(job->frame_seq_no);
-	if (mtk_cam_ctrl_wait_event(ctrl, check_done, &prev_seq, 1000))
+	if (mtk_cam_ctrl_wait_event(ctrl, check_done, &prev_seq, 30000))
 		dev_info(dev, "[%s] check_done timeout: prev_seq=0x%x\n",
 			 __func__, prev_seq);
 
