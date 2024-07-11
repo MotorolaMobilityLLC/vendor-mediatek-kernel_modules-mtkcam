@@ -425,6 +425,9 @@ int qof_setup_twin(struct mtk_raw_device *raw, bool is_master, bool next_raw)
 	u32 val = 0;
 	u32 voter_sel = (is_master) ? 0 : 1; //0: from raw; 1: from master
 
+	if (!GET_PLAT_HW(qof_support))
+		return ret;
+
 #ifdef QOF_CCU_READY
 	// NOTE: raw A emits signal to raw B, raw B to raw C
 	ret = mtk_cam_hsf_qof_config(raw, is_master, is_master, !next_raw);
@@ -1216,4 +1219,3 @@ void qof_ddren_setting(struct mtk_raw_device *raw, int frm_time_us)
 			readl_relaxed(raw->qof_base + REG_QOF_CAM_A_QOF_DDREN_CYC_MAX_1),
 			readl_relaxed(raw->qof_base + REG_QOF_CAM_A_QOF_BWQOS_CYC_MAX_1));
 }
-
