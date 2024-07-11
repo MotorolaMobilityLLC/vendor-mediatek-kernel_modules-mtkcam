@@ -2574,8 +2574,7 @@ int mtk_raw_runtime_suspend(struct device *dev)
 	int i;
 	unsigned int pr_detect_count;
 
-	if (CAM_DEBUG_ENABLED(RAW_CG))
-		dev_dbg(dev, "%s:disable clock\n", __func__);
+	dev_info(dev, "%s:disable clock\n", __func__);
 
 	pr_detect_count = get_detect_count();
 	if (pr_detect_count > drvdata->default_printk_cnt)
@@ -2610,8 +2609,7 @@ int mtk_raw_runtime_resume(struct device *dev)
 	pr_detect_count = get_detect_count();
 	if (pr_detect_count < KERNEL_LOG_MAX)
 		set_detect_count(KERNEL_LOG_MAX);
-	if (CAM_DEBUG_ENABLED(RAW_CG))
-		dev_dbg(dev, "%s:enable clock\n", __func__);
+	dev_info(dev, "%s:enable clock\n", __func__);
 	mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_CAM);
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		cg_dump_and_test(dev, CG_RAW, 1);
