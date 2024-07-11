@@ -1288,7 +1288,7 @@ __maybe_unused static int isp_composer_handle_ack(struct mtk_cam_device *cam,
 	return 0;
 }
 
-static int mtk_cam_power_rproc(struct mtk_cam_device *cam, int on)
+int mtk_cam_power_rproc(struct mtk_cam_device *cam, int on)
 {
 	int ret = 0;
 
@@ -1485,7 +1485,7 @@ static int mtk_cam_initialize(struct mtk_cam_device *cam)
 	return ret;
 }
 
-static int mtk_cam_uninitialize(struct mtk_cam_device *cam)
+int mtk_cam_uninitialize(struct mtk_cam_device *cam)
 {
 	if (!atomic_sub_and_test(1, &cam->initialize_cnt))
 		return 0;
@@ -2715,7 +2715,7 @@ static int mtk_cam_ctx_prepare_session(struct mtk_cam_ctx *ctx)
 	return ret;
 }
 
-static int mtk_cam_ctx_unprepare_session(struct mtk_cam_ctx *ctx)
+int mtk_cam_ctx_unprepare_session(struct mtk_cam_ctx *ctx)
 {
 	struct device *dev = ctx->cam->dev;
 	int ret;
@@ -2723,7 +2723,7 @@ static int mtk_cam_ctx_unprepare_session(struct mtk_cam_ctx *ctx)
 	if (!ctx->session_created)
 		return 0;
 
-	dev_dbg(dev, "%s:ctx(%d): wait for session destroy\n",
+	dev_info(dev, "%s:ctx(%d): wait for session destroy\n",
 		__func__, ctx->stream_id);
 
 	isp_composer_destroy_session(ctx);
@@ -2939,7 +2939,6 @@ void mtk_cam_stop_ctx(struct mtk_cam_ctx *ctx, struct media_entity *entity)
 		mtk_cam_ctrl_stop(&ctx->cam_ctrl);
 	}
 
-	mtk_cam_ctx_unprepare_session(ctx);
 	mtk_cam_ctx_destroy_sensor_meta_pool(ctx);
 	mtk_cam_ctx_destroy_pool(ctx);
 	mtk_cam_ctx_clean_img_pool(ctx);
@@ -2971,8 +2970,6 @@ void mtk_cam_stop_ctx(struct mtk_cam_ctx *ctx, struct media_entity *entity)
 
 	ctx->used_pipe = 0;
 	mtk_cam_ctx_put(ctx);
-
-	mtk_cam_uninitialize(cam);
 }
 
 int mtk_cam_ctx_init_scenario(struct mtk_cam_ctx *ctx)
