@@ -2,8 +2,6 @@
 //
 // Copyright (c) 2019 MediaTek Inc.
 
-#include <linux/fs.h>
-
 #include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>
 #include <media/videobuf2-dma-contig.h>
@@ -573,6 +571,7 @@ static void mtk_cam_vb2_stop_streaming(struct vb2_queue *vq)
 	/* for no req in driver and stream off case */
 	mtk_cam_ctx_stream_off(ctx);
 	mtk_cam_stop_ctx(ctx, &node->vdev.entity);
+
 }
 
 static void mtk_cam_vb2_buf_queue(struct vb2_buffer *vb)
@@ -635,48 +634,6 @@ static int mtk_cam_vb2_buf_out_validate(struct vb2_buffer *vb)
 	return 0;
 }
 
-static long int mtk_cam_v4l2_file_ioctl(struct file *file,
-		      unsigned int cmd, unsigned long int arg)
-{
-	int ret;
-	struct mtk_cam_video_device *node = NULL;
-	struct mtk_cam_device *cam = NULL;
-	struct mtk_cam_ctx *ctx = NULL;
-
-	if (cmd == VIDIOC_STREAMOFF) {
-		node = file_to_mtk_cam_node(file);
-		cam = vb2_get_drv_priv(&node->vb2_q);
-		ctx = (cam) ? mtk_cam_find_ctx(cam, &node->vdev.entity) : NULL;
-	}
-
-	if (cmd == VIDIOC_STREAMOFF) {
-		/* NOTE: MTK_RAW_META_SV_OUT_0 for 2 phase enque sensor request */
-		if (ctx && (node->desc.id == MTK_RAW_META_SV_OUT_0)) {
-			MTK_CAM_TRACE_BEGIN(BASIC, "%s->power_on_ccu", __func__);
-			mtk_cam_power_ctrl_ccu(ctx->cam->dev, 1);
-			MTK_CAM_TRACE_END(BASIC);
-		}
-	}
-
-	MTK_CAM_TRACE_BEGIN(BASIC, "%s->video_ioctl2", __func__);
-	ret = video_ioctl2(file, cmd, arg);
-	MTK_CAM_TRACE_END(BASIC);
-
-	if (cmd == VIDIOC_STREAMOFF) {
-		if (ctx && mtk_cam_ctx_all_nodes_idle(ctx)) {
-			MTK_CAM_TRACE_BEGIN(BASIC, "%s->power_off_ccu", __func__);
-			mtk_cam_power_ctrl_ccu(ctx->cam->dev, 0);
-			MTK_CAM_TRACE_END(BASIC);
-			MTK_CAM_TRACE_BEGIN(BASIC, "%s->unprepare_session", __func__);
-			mtk_cam_ctx_unprepare_session(ctx);
-			mtk_cam_uninitialize(cam);
-			MTK_CAM_TRACE_END(BASIC);
-		}
-	}
-
-	return ret;
-}
-
 static const struct vb2_ops mtk_cam_vb2_ops = {
 	.queue_setup = mtk_cam_vb2_queue_setup,
 
@@ -697,7 +654,7 @@ static const struct vb2_ops mtk_cam_vb2_ops = {
 };
 
 static const struct v4l2_file_operations mtk_cam_v4l2_fops = {
-	.unlocked_ioctl = mtk_cam_v4l2_file_ioctl,
+	.unlocked_ioctl = video_ioctl2,
 	.open = v4l2_fh_open,
 	.release = vb2_fop_release,
 	.poll = vb2_fop_poll,

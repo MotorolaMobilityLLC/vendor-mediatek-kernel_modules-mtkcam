@@ -461,7 +461,6 @@ int mtk_cam_ctx_flush_session(struct mtk_cam_ctx *ctx);
 int isp_composer_create_session(struct mtk_cam_ctx *ctx);
 void isp_composer_destroy_session(struct mtk_cam_ctx *ctx);
 void isp_composer_flush_session(struct mtk_cam_ctx *ctx);
-int mtk_cam_ctx_unprepare_session(struct mtk_cam_ctx *ctx);
 
 int mtk_cam_call_seninf_set_pixelmode(struct mtk_cam_ctx *ctx,
 				      struct v4l2_subdev *sd,
@@ -556,8 +555,5 @@ void mtk_cam_device_refcnt_buf_put(struct mtk_cam_device_refcnt_buf *buf);
 int mtk_cam_assign_ltms_buffer(struct mtk_cam_ctx *ctx,
 			 struct mtk_cam_pool_buffer *in,
 			 struct mtk_cam_pool_buffer *out);
-
-int mtk_cam_power_rproc(struct mtk_cam_device *cam, int on);
-int mtk_cam_uninitialize(struct mtk_cam_device *cam);
 
 #endif /*__MTK_CAM_H*/
