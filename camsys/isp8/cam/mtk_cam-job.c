@@ -1186,7 +1186,8 @@ _stream_on(struct mtk_cam_job *job, bool on)
 			if (job->enable_hsf_raw) {
 				ccu_stream_on(ctx, on);
 			} else {
-				update_scq_start_period(raw_dev, job->scq_period);
+				update_scq_start_period(raw_dev, job->scq_period,
+					get_sensor_interval_us(job) / 1000);
 				stream_on(raw_dev, on, true);
 			}
 		}
@@ -1604,7 +1605,8 @@ static void set_cq_deadline(struct mtk_cam_job *job, int cq_deadline)
 			dev = dev_get_drvdata(cam->engines.raw_devs[i]);
 
 			if (!dev->is_slave)
-				update_scq_start_period(dev, cq_deadline);
+				update_scq_start_period(dev, cq_deadline,
+					get_sensor_interval_us(job) / 1000);
 		}
 	}
 
