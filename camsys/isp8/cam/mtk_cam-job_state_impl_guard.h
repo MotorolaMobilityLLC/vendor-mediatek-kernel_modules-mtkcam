@@ -128,7 +128,10 @@ static inline int guard_next_compose(struct state_accessor *s_acc,
 	ret = allow_composing(s_acc) &&
 		(unsigned int)(cur_seq_no(s_acc) - p->info->ack_seq_no) == 1;
 	spin_unlock(p->info_lock);
-
+	if (ret == 0)
+		pr_info("[mtk-cam:guard_next_compose] allow/cur/ack:%d/%d/%d (%llu)",
+			allow_composing(s_acc), cur_seq_no(s_acc), p->info->ack_seq_no,
+			ktime_get_boottime_ns());
 	return ret;
 }
 
@@ -264,11 +267,19 @@ static inline bool valid_cq_execution_subsample(
 
 static inline bool valid_cq_execution(struct transition_param *p)
 {
-	if (unlikely(!p->s_params))
-		return false;
+	bool ret = false;
 
-	return ((p->event_ts - p->info->sof_l_ts_ns) < p->cq_trigger_thres) &&
+	if (unlikely(!p->s_params))
+		return ret;
+	ret = ((p->event_ts - p->info->sof_l_ts_ns) < p->cq_trigger_thres) &&
 		(p->info->sof_ts_ns <= p->info->sof_l_ts_ns);
+
+	if (ret == false)
+		pr_info("[mtk-cam:valid_cq_execution] event/l_sof/cq:%llu/%llu/%llu sof:%llu(%llu)",
+			p->event_ts, p->info->sof_l_ts_ns, p->cq_trigger_thres, p->info->sof_ts_ns,
+			ktime_get_boottime_ns());
+
+	return ret;
 }
 
 #define SCQ_THRES_FOR_AEWA 27000000
