@@ -298,7 +298,19 @@ int mtk_camsv_translation_fault_callback(int port, dma_addr_t mva, void *data)
 {
 	int index;
 	struct mtk_camsv_device *sv_dev = (struct mtk_camsv_device *)data;
+	unsigned int first_tag, tag_idx;
+	unsigned int frame_idx_inner;
 
+	first_tag = readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_FIRST_TAG);
+
+	if (first_tag == 0) {
+		dev_info(sv_dev->dev, "abnormal tf callback first_tag=0\n");
+		return 0;
+	}
+
+	tag_idx = ffs(first_tag) - 1;
+	frame_idx_inner = readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_FH_SPARE_TAG_1 +
+			tag_idx * CAMSVCENTRAL_FH_SPARE_SHIFT);
 	dev_info_ratelimited(sv_dev->dev, "tg_sen_mode:0x%x tg_vf_con:0x%x tg_path_cfg:0x%x",
 		readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_SEN_MODE),
 		readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_VF_CON),
@@ -336,7 +348,8 @@ int mtk_camsv_translation_fault_callback(int port, dma_addr_t mva, void *data)
 				REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG1 +
 				index * CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG_SHIFT));
 	}
-
+	mtk_cam_ctrl_dump_request(sv_dev->cam, CAMSYS_ENGINE_CAMSV, sv_dev->id,
+		frame_idx_inner, MSG_M4U_TF);
 	return 0;
 }
 

@@ -91,6 +91,9 @@ static int mraw_process_fsm(struct mtk_mraw_device *mraw_dev,
 int mtk_mraw_translation_fault_callback(int port, dma_addr_t mva, void *data)
 {
 	struct mtk_mraw_device *mraw_dev = (struct mtk_mraw_device *)data;
+	unsigned int frame_idx_inner;
+
+	frame_idx_inner = readl_relaxed(mraw_dev->base_inner + REG_MRAW_FRAME_SEQ_NUM);
 
 	dev_info_ratelimited(mraw_dev->dev, "seq_no:%d_%d tg_sen_mode:0x%x tg_vf_con:0x%x tg_path_cfg:0x%x tg_grab_pxl:0x%x tg_grab_lin:0x%x\n",
 		readl_relaxed(mraw_dev->base_inner + REG_MRAW_FRAME_SEQ_NUM),
@@ -136,6 +139,9 @@ int mtk_mraw_translation_fault_callback(int port, dma_addr_t mva, void *data)
 		readl_relaxed(mraw_dev->base_inner + REG_MRAW_CPIO_BASE_ADDR),
 		readl_relaxed(mraw_dev->base_inner + REG_MRAW_CPIO_OFST_ADDR_MSB),
 		readl_relaxed(mraw_dev->base_inner + REG_MRAW_CPIO_OFST_ADDR));
+
+	mtk_cam_ctrl_dump_request(mraw_dev->cam, CAMSYS_ENGINE_MRAW, mraw_dev->id,
+		frame_idx_inner, MSG_M4U_TF);
 
 	return 0;
 }
