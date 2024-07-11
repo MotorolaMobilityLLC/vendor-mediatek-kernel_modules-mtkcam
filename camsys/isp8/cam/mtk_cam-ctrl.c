@@ -2421,6 +2421,8 @@ static int try_launch_watchdog_sensor_worker(struct mtk_cam_watchdog *wd,
 		goto SKIP_SCHEDULE_WORK;
 
 	reset_cnt = atomic_inc_return(&wd->reset_sensor_cnt);
+	if (reset_cnt == 1)
+		vsync_collector_dump(&ctrl->vsync_col);
 	if (reset_cnt > WATCHDOG_MAX_SENSOR_RETRY_CNT) {
 		complete(&wd->work_complete);
 		goto SKIP_SCHEDULE_WORK;
