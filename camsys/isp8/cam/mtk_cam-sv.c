@@ -1657,7 +1657,7 @@ int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tag
 	tg_sen_mode = readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_SEN_MODE);
 	tg_vf_con = readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_VF_CON);
 	tg_path_cfg = readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_PATH_CFG);
-	dev_info_ratelimited(sv_dev->dev,
+	dev_info(sv_dev->dev,
 		"tg_sen_mode:0x%x tg_vf_con:0x%x tg_path_cfg:0x%x\n",
 		tg_sen_mode, tg_vf_con, tg_path_cfg);
 
@@ -1712,7 +1712,7 @@ int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tag
 	/* check dcif setting */
 	dcif_set = readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_DCIF_SET);
 	dcif_sel = readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_DCIF_SEL);
-	dev_info_ratelimited(sv_dev->dev, "dcif_set:0x%x dcif_sel:0x%x\n",
+	dev_info(sv_dev->dev, "dcif_set:0x%x dcif_sel:0x%x\n",
 		dcif_set, dcif_sel);
 
 	/* check tag/group setting */
@@ -1750,7 +1750,7 @@ void camsv_handle_err(
 	ctx = &sv_dev->cam->ctxs[ctx_id];
 
 	/* dump error status */
-	dev_info_ratelimited(sv_dev->dev, "error_status:0x%x\n", err_status);
+	dev_info(sv_dev->dev, "error_status:0x%x\n", err_status);
 
 	/* dump seninf debug data */
 	if (ctx && ctx->seninf)
@@ -1764,7 +1764,7 @@ void camsv_handle_err(
 		if (camsv_fifo_detect)
 			mtk_cam_sv_execute_fifo_dump(sv_dev, data->ts_ns);
 
-		dev_info_ratelimited(sv_dev->dev, "camsv dma fifo full\n");
+		dev_info(sv_dev->dev, "camsv dma fifo full\n");
 
 #if !IS_ENABLED(CONFIG_MTK_EMI_LEGACY)
 		mtk_emiisu_record_off();
