@@ -1198,11 +1198,11 @@ static void apply_adl_qos(struct mtk_cam_job *job)
 
 		is_w_port = is_w_merge_port(i, RAW_DOMAIN);
 		a_bw = job->raw_mmqos[i].avg_bw;
-		p_bw = job->raw_w_mmqos[i].peak_bw;
-		avg_bw_r += is_w_port ? p_bw : 0;
+		p_bw = job->raw_mmqos[i].peak_bw;
+		avg_bw_r += is_w_port ? 0 : a_bw;
 		avg_bw_w += is_w_port ? a_bw : 0;
 		peak_bw_r += is_w_port ? 0 : p_bw;
-		peak_bw_w += is_w_port ? 0 : a_bw;
+		peak_bw_w += is_w_port ? p_bw : 0;
 		a_bw_ttl += a_bw;
 		p_bw_ttl += p_bw;
 
@@ -1212,7 +1212,7 @@ static void apply_adl_qos(struct mtk_cam_job *job)
 		if (apply) {
 			mtk_icc_set_bw(raw_dev->qos.cam_path[i].path, a_bw, p_bw);
 
-			mtk_cam_bwr_set_chn_bw(cam->bwr, ENGINE_CAM_MAIN, SYS_PORT,
+			mtk_cam_bwr_set_chn_bw(cam->bwr, ENGINE_CAM_MAIN, MDP0_PORT,
 				KBps_to_bwr(avg_bw_r), KBps_to_bwr(avg_bw_w),
 				KBps_to_bwr(peak_bw_r), KBps_to_bwr(peak_bw_w), true);
 
