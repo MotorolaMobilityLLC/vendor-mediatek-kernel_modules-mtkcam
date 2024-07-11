@@ -1287,7 +1287,7 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 		}
 	}
 
-	if (mtk_cam_power_ctrl_ccu(cam->dev, 1))
+	if (GET_PLAT_HW(qof_support) && mtk_cam_power_ctrl_ccu(cam->dev, 1))
 		goto SWITCH_FAILURE;
 
 	dev_info(dev, "[%s] master raw changed case : wait engines:0x%x setting done\n",
@@ -1371,7 +1371,8 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 		}
 	}
 
-	mtk_cam_power_ctrl_ccu(cam->dev, 0);
+	if (GET_PLAT_HW(qof_support))
+		mtk_cam_power_ctrl_ccu(cam->dev, 0);
 
 	dev_info(dev, "[%s] finish, uninit engines:0x%x, new frame inner:%d\n",
 		__func__, engine_uninit, check_args.expect_inner);
@@ -1379,9 +1380,12 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 	return;
 
 SWITCH_FAILURE:
-	mtk_cam_power_ctrl_ccu(cam->dev, 0);
+	if (GET_PLAT_HW(qof_support))
+		mtk_cam_power_ctrl_ccu(cam->dev, 0);
+
 	dev_info(dev, "[%s] failed: ctx-%d job %d frame_seq 0x%x\n",
 		 __func__, ctx->stream_id, job->req_seq, job->frame_seq_no);
+
 	vsync_collector_dump(&ctrl->vsync_col);
 	mtk_cam_seninf_dump(ctx->seninf, job->frame_seq_no, true);
 	mtk_engine_dump_debug_status(ctx->cam, job->used_engine, false);
@@ -1421,7 +1425,7 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 		}
 	}
 
-	if (mtk_cam_power_ctrl_ccu(cam->dev, 1))
+	if (GET_PLAT_HW(qof_support) && mtk_cam_power_ctrl_ccu(cam->dev, 1))
 		goto SWITCH_FAILURE;
 
 	if (mtk_cam_ctrl_wait_event(ctrl, check_for_seamless, &check_args,
@@ -1548,16 +1552,20 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 		}
 	}
 
-	mtk_cam_power_ctrl_ccu(cam->dev, 0);
+	if (GET_PLAT_HW(qof_support))
+		mtk_cam_power_ctrl_ccu(cam->dev, 0);
 
 	dev_info(dev, "[%s] finish, used_engine:0x%x\n",
 		 __func__, job->used_engine);
 	return;
 
 SWITCH_FAILURE:
-	mtk_cam_power_ctrl_ccu(cam->dev, 0);
+	if (GET_PLAT_HW(qof_support))
+		mtk_cam_power_ctrl_ccu(cam->dev, 0);
+
 	dev_info(dev, "[%s] failed: ctx-%d job %d frame_seq 0x%x\n",
 		 __func__, ctx->stream_id, job->req_seq, job->frame_seq_no);
+
 	vsync_collector_dump(&ctrl->vsync_col);
 	WRAP_AEE_EXCEPTION(MSG_SWITCH_FAILURE, __func__);
 	for (i = 0; i < cam->engines.num_raw_devices; i++) {
