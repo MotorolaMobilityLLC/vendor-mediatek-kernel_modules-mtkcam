@@ -164,6 +164,7 @@ struct mtk_ae_debug_data {
 /* CQ setting */
 void initialize(struct mtk_raw_device *dev, struct engine_callback *cb,
 			    int is_slave, int is_srt, int frm_time_us);
+void init_camsys_settings(struct mtk_raw_device *dev, bool is_srt, int frm_time_us);
 void subsample_enable(struct mtk_raw_device *dev, int ratio);
 void stagger_enable(struct mtk_raw_device *dev);
 void stagger_disable(struct mtk_raw_device *dev);

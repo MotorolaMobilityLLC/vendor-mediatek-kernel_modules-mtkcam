@@ -4047,6 +4047,7 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 	struct mtk_raw_ctrl_data *ctrl_data;
 	int i;
 	int ret = 0;
+	bool is_srt = is_dc_mode(job) || is_m2m(job);
 
 	if (raw_id < 0) {
 		ret = -1;
@@ -4076,6 +4077,8 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 		}
 	}
 
+	raw_dev = dev_get_drvdata(cam->engines.raw_devs[raw_id]);
+	init_camsys_settings(raw_dev, is_srt, get_sensor_interval_us(job));
 	set_cq_deadline(job, -1);
 	ret = mtk_cam_job_manually_apply_isp_sync(job);
 	apply_camcq_stagger_en(job);
@@ -4089,7 +4092,6 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 	mtk_cam_job_uninit_engine(
 		job, job->raw_change_uninit_engine);
 
-	raw_dev = dev_get_drvdata(cam->engines.raw_devs[raw_id]);
 	stream_on(raw_dev, 1, false);
 
 	/* sv on */

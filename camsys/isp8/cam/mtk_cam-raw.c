@@ -122,11 +122,32 @@ static struct mtk_raw_device *get_raw_dev(struct mtk_yuv_device *yuv_dev)
 	return dev_get_drvdata(dev);
 }
 
-static void init_camsys_settings(struct mtk_raw_device *dev, bool is_srt)
+static void init_raw_ddren(struct mtk_raw_device *dev, int is_srt, int frm_time_us)
+{
+	int val = 0;
+
+	if (debug_ddren_sw_mode) {
+		SET_FIELD(&val, CAMCTL_DDREN_SW_SET, 1);
+		raw_writel(val, dev, dev->base, REG_CAMCTL_DDREN_CTL);
+	} else {
+		SET_FIELD(&val, CAMCTL_DDREN_HW_EN, 1);
+		raw_writel(val, dev, dev->base, REG_CAMCTL_DDREN_CTL);
+
+		/* hrt ddren timer for master */
+		if (!dev->is_slave && !is_srt)
+			qof_ddren_setting(dev, frm_time_us);
+	}
+	if (CAM_DEBUG_ENABLED(RAW_INT))
+		dev_info(dev->dev, "ddren_sw_mode:%d\n", debug_ddren_sw_mode);
+}
+
+void init_camsys_settings(struct mtk_raw_device *dev, bool is_srt, int frm_time_us)
 {
 	struct mtk_cam_device *cam_dev = dev->cam;
 	unsigned int reg_raw_urgent, reg_yuv_urgent;
 	unsigned int raw_urgent, yuv_urgent;
+
+	init_raw_ddren(dev, is_srt, frm_time_us);
 
 	//Set rdy/req snapshot
 	// TODO: QOF io ops?
@@ -513,25 +534,6 @@ static void reset_error_handling(struct mtk_raw_device *dev)
 	dev->tg_overrun_handle_cnt = 0;
 }
 
-static void init_raw_ddren(struct mtk_raw_device *dev, int is_srt, int frm_time_us)
-{
-	int val = 0;
-
-	if (debug_ddren_sw_mode) {
-		SET_FIELD(&val, CAMCTL_DDREN_SW_SET, 1);
-		raw_writel(val, dev, dev->base, REG_CAMCTL_DDREN_CTL);
-	} else {
-		SET_FIELD(&val, CAMCTL_DDREN_HW_EN, 1);
-		raw_writel(val, dev, dev->base, REG_CAMCTL_DDREN_CTL);
-
-		//hrt ddren timer for master
-		if (!dev->is_slave && !is_srt)
-			qof_ddren_setting(dev, frm_time_us);
-	}
-	if (CAM_DEBUG_ENABLED(RAW_INT))
-		dev_info(dev->dev, "ddren_sw_mode:%d\n", debug_ddren_sw_mode);
-}
-
 #define CAMCQ_CQ_EN_DEFAULT	0x14
 void initialize(struct mtk_raw_device *dev, struct engine_callback *cb,
 			    int is_slave, int is_srt, int frm_time_us)
@@ -571,9 +573,8 @@ void initialize(struct mtk_raw_device *dev, struct engine_callback *cb,
 	atomic_set(&dev->vf_en, 0);
 	reset_msgfifo(dev);
 
-	init_camsys_settings(dev, is_srt);
+	init_camsys_settings(dev, is_srt, frm_time_us);
 	init_ADLWR_settings(dev->cam);
-	init_raw_ddren(dev, is_srt, frm_time_us);
 #ifdef RAW_DEBUG_INIT
 	dump_topdebug_rdyreq_status(dev);
 #endif
