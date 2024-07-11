@@ -5189,6 +5189,7 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 	struct mtk_cam_device *cam_dev  = dev_get_drvdata(dev);
 	int i;
 
+	dev_info(dev, "%s:suspend\n", __func__);
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		dev_dbg(dev, "%s++:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
 		readl(cam_dev->vcore_cg_con + 0x00),
@@ -5229,6 +5230,7 @@ static int mtk_cam_runtime_resume(struct device *dev)
 	struct mtk_cam_device *cam_dev  = dev_get_drvdata(dev);
 	int i, ret;
 
+	dev_info(dev, "%s: resume\n", __func__);
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		dev_dbg(dev, "%s++:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
 		readl(cam_dev->vcore_cg_con + 0x00),
