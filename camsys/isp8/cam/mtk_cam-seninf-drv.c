@@ -4292,10 +4292,8 @@ int mtk_cam_seninf_check_timeout(struct v4l2_subdev *sd, u64 time_after_sof)
 		return -EINVAL;
 
 	ctx = sd_to_ctx(sd);
-	if (!ctx) {
-		dev_info(ctx->dev, "null seninf_ctx\n");
+	if (!ctx)
 		return -EINVAL;
-	}
 
 	if (ctx->is_test_model) {
 		if ((time_after_sof) > ((frame_time * SOF_TIMEOUT_RATIO) / 100))
@@ -4370,10 +4368,8 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check)
 		return -EINVAL;
 
 	ctx = sd_to_ctx(sd);
-	if (!ctx) {
-		dev_info(ctx->dev, "null seninf_ctx\n");
+	if (!ctx)
 		return -EINVAL;
-	}
 
 	if (!force_check && ctx->dbg_last_dump_req != 0 &&
 		ctx->dbg_last_dump_req == seq_id) {
