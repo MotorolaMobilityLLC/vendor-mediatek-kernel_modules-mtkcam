@@ -23,9 +23,9 @@ static unsigned int c2ps_max_cpu_idle_rate = 30;
 /**************************************************************************/
 int c2ps_regulator_base_update_um = 5;
 int c2ps_regulator_um_min = 65;
+int c2ps_lcore_mcore_um_ratio = 10;
 static int c2ps_regulator_um_max = 125;
 static int c2ps_fix_um;
-static int L_dvide_M_ratio = 10;
 static int c2ps_converge_target = 50;
 static int c2ps_um_monitor;
 static int c2ps_safe_idle_rate = 7;
@@ -56,7 +56,7 @@ module_param(lat_th, int, 0644);
 
 /**************************************************************************/
 module_param(c2ps_fix_um, int, 0644);
-module_param(L_dvide_M_ratio, int, 0644);
+module_param(c2ps_lcore_mcore_um_ratio, int, 0644);
 module_param(c2ps_um_monitor, int, 0644);
 /**************************************************************************/
 
@@ -497,10 +497,14 @@ void c2ps_regulator_bgpolicy_um_stable(struct regulator_req *req)
 		action_um = max(idle_rate_um, max(latency_um, jitter_um));
 		if (force_use_idle_rate_um) {
 			action_um = idle_rate_um;
-			C2PS_LOGD(
-				"force_use_idle_rate_um action_um : %d, idle_rate_um: %d, latency_um: %d, jitter_um: %d",
-				action_um, idle_rate_um, latency_um, jitter_um);
 		}
+
+		C2PS_LOGD(
+			"force_use_idle_rate_um: %d, action_um: %d, idle_rate_um: %d, latency_um: %d, jitter_um: %d",
+			force_use_idle_rate_um, action_um, idle_rate_um, latency_um, jitter_um);
+		c2ps_main_systrace(
+			"force_use_idle_rate_um: %d, action_um: %d, idle_rate_um: %d, latency_um: %d, jitter_um: %d",
+			force_use_idle_rate_um, action_um, idle_rate_um, latency_um, jitter_um);
 
 		if (action_um > curr_um) {
 			if (req->glb_info->um_vote.vote_result > 0)
@@ -532,16 +536,15 @@ void c2ps_regulator_bgpolicy_um_stable(struct regulator_req *req)
 	if (need_update_um) {
 		action_um = min(c2ps_regulator_um_max,
 							max(action_um, c2ps_regulator_um_min));
-
 		c2ps_set_util_margin(0, action_um);
-		c2ps_set_util_margin(1, action_um*10/L_dvide_M_ratio);
+		c2ps_set_util_margin(1, action_um*10/c2ps_lcore_mcore_um_ratio);
 		c2ps_set_util_margin(2, action_um);
 
 		req->glb_info->curr_um = action_um;
 		c2ps_um_monitor = action_um;
 		_item->um_stay_cnt = 0;
-		C2PS_LOGD("anchor id: %d, update um to %d, is_last_anchor: %d",
-			req->anc_info->anchor_id, action_um, req->anc_info->is_last_anchor);
+		C2PS_LOGD("anchor id: %d, update um to %d, is_last_anchor: %d, c2ps_lcore_mcore_um_ratio: %d",
+			req->anc_info->anchor_id, action_um, req->anc_info->is_last_anchor, c2ps_lcore_mcore_um_ratio);
 	} else {
 		_item->um_stay_cnt++;
 	}

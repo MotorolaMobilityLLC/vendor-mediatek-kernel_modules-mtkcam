@@ -44,7 +44,9 @@
 #define LxF_F_KF_QVAL 20
 #define LxF_DIFF_THRES 10000
 
+#define DEFAULT_UM_MIN 65
 #define RESET_VAL 999999
+#define LMCORE_UM_RATIO_MAX 20
 
 extern int proc_time_window_size;
 extern int debug_log_on;
@@ -52,6 +54,7 @@ extern unsigned int c2ps_nr_clusters;
 extern bool c2ps_um_mode_on;
 extern int c2ps_regulator_base_update_um;
 extern int c2ps_regulator_um_min;
+extern int c2ps_lcore_mcore_um_ratio;
 
 enum c2ps_env_status : int {
 	C2PS_STAT_NODEF = 0,
@@ -229,6 +232,7 @@ struct global_info {
 	enum c2ps_env_status stat;
 	bool has_anchor_spec;
 	u32 single_shot_enable_ineff_cpufreq_cnt;
+	bool switch_um_idle_rate_mode;
 	struct mutex mlock;
 };
 
