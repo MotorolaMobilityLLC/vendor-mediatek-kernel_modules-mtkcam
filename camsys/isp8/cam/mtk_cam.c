@@ -3448,6 +3448,34 @@ void mtk_cam_ctx_engine_disable_irq(struct mtk_cam_ctx *ctx)
 	}
 }
 
+void mtk_cam_ctx_engine_reset_msgfifo(struct mtk_cam_ctx *ctx)
+{
+	struct mtk_raw_device *raw_dev;
+	struct mtk_camsv_device *sv_dev;
+	struct mtk_mraw_device *mraw_dev;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
+		if (ctx->hw_raw[i]) {
+			raw_dev = dev_get_drvdata(ctx->hw_raw[i]);
+			mtk_cam_raw_reset_msgfifo(raw_dev);
+		}
+	}
+
+	if (ctx->hw_sv) {
+		sv_dev = dev_get_drvdata(ctx->hw_sv);
+		for (i = 0; i < ARRAY_SIZE(sv_dev->irq); i++)
+			mtk_cam_sv_reset_msgfifo(sv_dev);
+	}
+
+	for (i = 0; i < ARRAY_SIZE(ctx->hw_mraw); i++) {
+		if (ctx->hw_mraw[i]) {
+			mraw_dev = dev_get_drvdata(ctx->hw_mraw[i]);
+			mtk_cam_mraw_reset_msgfifo(mraw_dev);
+		}
+	}
+}
+
 void mtk_cam_ctx_engine_clear(struct mtk_cam_ctx *ctx)
 {
 	struct mtk_raw_device *raw_dev;

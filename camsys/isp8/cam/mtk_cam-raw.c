@@ -52,7 +52,6 @@ MODULE_PARM_DESC(debug_ddren_sw_mode, "debug: 1 : active sw mode");
 
 #define RAW_DEBUG 0
 #define AEO_SW_WORKAROUND 1
-static int reset_msgfifo(struct mtk_raw_device *dev);
 
 #define FIFO_THRESHOLD(FIFO_SIZE, HEIGHT_RATIO, LOW_RATIO) \
 	(((FIFO_SIZE * HEIGHT_RATIO) & 0xFFF) << 16 | \
@@ -571,7 +570,7 @@ void initialize(struct mtk_raw_device *dev, struct engine_callback *cb,
 	dev->sub_sensor_ctrl_en = false;
 	dev->time_shared_busy = 0;
 	atomic_set(&dev->vf_en, 0);
-	reset_msgfifo(dev);
+	mtk_cam_raw_reset_msgfifo(dev);
 
 	init_camsys_settings(dev, is_srt, frm_time_us);
 	init_ADLWR_settings(dev->cam);
@@ -1355,7 +1354,7 @@ void adlrd_reset(struct mtk_cam_device *cam_dev)
 	dev_info(cam_dev->dev, "%s done\n", __func__);
 }
 
-static int reset_msgfifo(struct mtk_raw_device *dev)
+int mtk_cam_raw_reset_msgfifo(struct mtk_raw_device *dev)
 {
 	atomic_set(&dev->is_fifo_overflow, 0);
 	return kfifo_init(&dev->msg_fifo, dev->msg_buffer, dev->fifo_size);
@@ -2602,7 +2601,7 @@ int mtk_raw_runtime_resume(struct device *dev)
 	unsigned int pr_detect_count;
 
 	/* reset_msgfifo before enable_irq */
-	ret = reset_msgfifo(drvdata);
+	ret = mtk_cam_raw_reset_msgfifo(drvdata);
 	if (ret)
 		return ret;
 

@@ -160,6 +160,7 @@ struct mtk_mraw_device {
 };
 
 void mraw_reset(struct mtk_mraw_device *mraw_dev);
+int mtk_cam_mraw_reset_msgfifo(struct mtk_mraw_device *mraw_dev);
 int mtk_cam_mraw_dev_config(struct mtk_mraw_device *mraw_dev, unsigned int sub_ratio,
 	int frm_time_us);
 void mtk_cam_mraw_update_start_period(struct mtk_mraw_device *mraw_dev, int scq_ms);
