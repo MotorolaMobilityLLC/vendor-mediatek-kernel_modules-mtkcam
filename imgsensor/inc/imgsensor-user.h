@@ -644,6 +644,14 @@ struct mtk_fsync_hw_mcss_mask_frm_info {
 	__u32 is_critical; // write I2C immediately
 };
 
+
+struct mtk_fake_sensor_info {
+	__u32 is_fake_sensor;
+	__u32 fps; /* 300 -> 30 FPS */
+	enum IMGSENSOR_HDR_MODE_ENUM hdr_mode;
+};
+
+
 /* GET */
 
 #define VIDIOC_MTK_G_DEF_FPS_BY_SCENARIO \

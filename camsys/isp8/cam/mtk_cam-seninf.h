@@ -275,6 +275,9 @@ struct seninf_ctx {
 	int pad2cam[PAD_MAXCNT][MAX_DEST_NUM];
 	int pad_tag_id[PAD_MAXCNT][MAX_DEST_NUM];
 
+	/* fake sensor */
+	struct mtk_fake_sensor_info fake_sensor_info;
+
 	/* remote sensor */
 	struct v4l2_subdev *sensor_sd;
 	int sensor_pad_idx;

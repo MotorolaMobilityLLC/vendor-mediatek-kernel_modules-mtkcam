@@ -1363,6 +1363,217 @@ static int mtk_cam_seninf_set_test_model(struct seninf_ctx *ctx, int intf)
 	return 0;
 }
 
+
+static int mtk_cam_seninf_set_test_model_fake_sensor(struct seninf_ctx *ctx, int intf)
+{
+	void *pSeninf_tg;
+	struct seninf_vcinfo *vcinfo = &ctx->vcinfo;
+	struct seninf_vc *vc = &vcinfo->vc[0];
+	int i;
+	u64 tm_width = vc->exp_hsize;
+	u64 tm_height = vc->exp_vsize;
+	u32 vs_diff = 0;
+
+	/* default isp clk: 564 Mhz */
+	u32 tm_vsync = (tm_height >= 3072) ? 256 : 1024; /* HB */
+	u32 tm_dummypxl = 2048; /* VB */
+	u8 clk_cnt = 2;
+
+	if (ctx->fake_sensor_info.fps == 4800) {
+		clk_cnt = 0;
+		tm_dummypxl = 360;
+		tm_vsync = 128;
+	}
+
+	switch (ctx->fake_sensor_info.hdr_mode) {
+	case HDR_NONE:
+		break;
+	case HDR_RAW_DCG_RAW:
+		vs_diff = 0;
+		tm_dummypxl = 632;
+		break;
+	case HDR_RAW_STAGGER:
+		vs_diff = 0x10;
+		tm_dummypxl = 632;
+		break;
+	case HDR_RAW_LBMF:
+		vs_diff = tm_height / 2;
+		tm_dummypxl = 632;
+		break;
+	default:
+		dev_err(ctx->dev,
+			"fake sensor not support: ctx->fake_sensor_info.hdr_mode:%u\n",
+			ctx->fake_sensor_info.hdr_mode);
+		break;
+	}
+
+	pSeninf_tg = ctx->reg_if_tg[(unsigned int)intf];
+	mtk_cam_seninf_set_async(ctx, intf, 0, 1);
+
+	/* tm size */
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_SIZE,
+		    SENINF_TG_SENINF_TG_TM_LINE, tm_height);
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_SIZE,
+		    SENINF_TG_SENINF_TG_TM_PXL, (tm_width >> 1));
+
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL,
+		    SENINF_TG_SENINF_TG_TM_CORE0_CLK_CNT, clk_cnt);
+
+	/* tm vb hb */
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_DUM,
+		    SENINF_TG_SENINF_TG_TM_VB, tm_vsync );
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_DUM,
+		    SENINF_TG_SENINF_TG_TM_HB, tm_dummypxl);
+
+	/* vc dt setup */
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL,
+		    SENINF_TG_SENINF_TG_TM_CORE0_EXP_NUM,
+		    (vcinfo->cnt - 1));
+
+	/* 2-line interleave */
+	if (ctx->fake_sensor_info.hdr_mode == HDR_RAW_DCG_RAW)
+		SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL,
+			    SENINF_TG_SENINF_TG_TM_CORE0_INTLV_NUM, 0x1);
+
+	for (i = 0 ; i < vcinfo->cnt; i++) {
+		vc = &vcinfo->vc[i];
+		switch (i) {
+		case 0:
+			SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_STAGGER_CON0,
+				    SENINF_TG_SENINF_TG_TM_EXP0_HSYNC_VC, vc->vc);
+			SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_STAGGER_CON0,
+				    SENINF_TG_SENINF_TG_TM_EXP0_VSYNC_VC, vc->vc);
+			SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_STAGGER_CON0,
+				    SENINF_TG_SENINF_TG_TM_EXP0_DT, vc->dt);
+			break;
+		case 1:
+			SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_STAGGER_CON1,
+					SENINF_TG_SENINF_TG_TM_EXP1_HSYNC_VC, vc->vc);
+			SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_STAGGER_CON1,
+					SENINF_TG_SENINF_TG_TM_EXP1_VSYNC_VC, vc->vc);
+			SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_STAGGER_CON1,
+					SENINF_TG_SENINF_TG_TM_EXP1_DT, vc->dt);
+
+			if ((vc->feature >= VC_PDAF_STATS) && (vc->feature < VC_PDAF_MAX_NUM)) {
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP1_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP1_DELAY, (vs_diff * (i-1)));
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP1_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP1_VC_MODE, 0);
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP1_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP1_DATA_MODE, 1);
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP1_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP1_HT_RATIO, 2);
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP1_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP1_SLICE_SIZE, 8);
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP1_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP1_SLICE_INTERVAL, 10);
+			} else if (vc->feature == VC_RAW_DATA) {
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP1_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP1_DELAY, (vs_diff * i));
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP1_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP1_VC_MODE, 1);
+			} else {
+				dev_err(ctx->dev,
+					"fake sensor not support: vc[%d] vcid:%d vcdt:0x%x vcfeature:0x%x\n",
+					i, vc->vc, vc->dt, vc->feature);
+			}
+			break;
+		case 2:
+			SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_STAGGER_CON2,
+					SENINF_TG_SENINF_TG_TM_EXP2_HSYNC_VC, vc->vc);
+			SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_STAGGER_CON2,
+					SENINF_TG_SENINF_TG_TM_EXP2_VSYNC_VC, vc->vc);
+			SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_STAGGER_CON2,
+					SENINF_TG_SENINF_TG_TM_EXP2_DT, vc->dt);
+
+			if ((vc->feature >= VC_PDAF_STATS) && (vc->feature < VC_PDAF_MAX_NUM)) {
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP2_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP2_DELAY, (vs_diff * (i-1)));
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP2_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP2_VC_MODE, 0);
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP2_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP2_DATA_MODE, 1);
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP2_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP2_HT_RATIO, 2);
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP2_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP2_SLICE_SIZE, 8);
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP2_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP2_SLICE_INTERVAL, 10);
+			} else if (vc->feature == VC_RAW_DATA) {
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP2_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP2_DELAY, (vs_diff * i));
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP2_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP2_VC_MODE, 1);
+			} else {
+				dev_err(ctx->dev,
+					"fake sensor not support: vc[%d] vcid:%d vcdt:0x%x vcfeature:0x%x\n",
+					i, vc->vc, vc->dt, vc->feature);
+			}
+			break;
+		case 3:
+			SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_STAGGER_CON3,
+					SENINF_TG_SENINF_TG_TM_EXP3_HSYNC_VC, vc->vc);
+			SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_STAGGER_CON3,
+					SENINF_TG_SENINF_TG_TM_EXP3_VSYNC_VC, vc->vc);
+			SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_STAGGER_CON3,
+					SENINF_TG_SENINF_TG_TM_EXP3_DT, vc->dt);
+
+			if ((vc->feature >= VC_PDAF_STATS) && (vc->feature < VC_PDAF_MAX_NUM)) {
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP3_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP3_DELAY, (vs_diff * (i-1)));
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP3_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP3_VC_MODE, 0);
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP3_CTL,
+					SENINF_TG_SENINF_TG_TM_EXP3_DATA_MODE, 1);
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP3_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP3_HT_RATIO, 2);
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP3_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP3_SLICE_SIZE, 8);
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP3_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP3_SLICE_INTERVAL, 10);
+			} else if (vc->feature == VC_RAW_DATA) {
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP3_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP3_DELAY, (vs_diff * i));
+				SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_EXP3_CTL,
+						SENINF_TG_SENINF_TG_TM_EXP3_VC_MODE, 1);
+			} else {
+				dev_err(ctx->dev,
+					"fake sensor not support: vc[%d] vcid:%d vcdt:0x%x vcfeature:0x%x\n",
+					i, vc->vc, vc->dt, vc->feature);
+			}
+			break;
+		default:
+			dev_err(ctx->dev,
+					"fake sensor not support: vc[%d] vcid:%d vcdt:0x%x vcfeature:0x%x\n",
+					i, vc->vc, vc->dt, vc->feature);
+			break;
+		}
+	}
+
+	/* tm pattern Color Bar */
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL,
+		    SENINF_TG_SENINF_TG_TM_CORE0_PAT, 0x8);
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_RAND_SEED,
+		    SENINF_TG_SENINF_TG_TM_SEED, 0x1);
+
+	/* tm rst */
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL,
+		    SENINF_TG_SENINF_TG_TM_CORE0_RST, 1);
+	udelay(300);
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL,
+		    SENINF_TG_SENINF_TG_TM_CORE0_RST, 0);
+	/* tm enable */
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL,
+		    SENINF_TG_SENINF_TG_TM_CORE0_EN, 1);
+
+	/* Set as non single mode */
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL,
+		    SENINF_TG_SENINF_TG_TM_CORE0_SINGLE, 0);
+
+
+	return 0;
+}
+
 static int csirx_phyA_power_on(struct seninf_ctx *ctx, int portIdx, int en)
 {
 	void *base = ctx->reg_ana_csi_rx[(unsigned int)portIdx];
@@ -6633,6 +6844,7 @@ struct mtk_cam_seninf_ops mtk_csi_phy_3_0 = {
 	._set_outmux_grp_en = mtk_cam_seninf_set_outmux_grp_en,
 	._set_outmux_cfg_rdy = mtk_cam_seninf_set_outmux_cfg_rdy,
 	._set_test_model = mtk_cam_seninf_set_test_model,
+	._set_test_model_fake_sensor = mtk_cam_seninf_set_test_model_fake_sensor,
 	._get_async_irq_st = mtk_cam_seninf_get_async_irq_st,
 	._set_csi_mipi = mtk_cam_seninf_set_csi_mipi,
 	._poweroff = mtk_cam_seninf_poweroff,
