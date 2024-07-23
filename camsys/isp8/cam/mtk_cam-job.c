@@ -1439,11 +1439,9 @@ _apply_sensor(struct mtk_cam_job *job)
 		mtk_cam_set_sensor_mstream_mode(ctx, 0);
 
 	update_sensor_fmt(job);
-
-	v4l2_ctrl_request_setup(&req->req, job->sensor->ctrl_handler);
-
 	ctx->cam_ctrl.sensor_sync_id= job->req_info_id;
 	ctx->cam_ctrl.sensor_seq = job->req_seq;
+	v4l2_ctrl_request_setup(&req->req, job->sensor->ctrl_handler);
 	if (CAM_DEBUG_ENABLED(JOB_ACTION))
 		dev_info(cam->dev, "[%s] ctx:%d seq 0x%x\n",
 			 __func__, ctx->stream_id, job->frame_seq_no);
@@ -3596,8 +3594,8 @@ static void job_cancel(struct mtk_cam_job *job)
 
 	if (!job->req)
 		return;
-
-	pr_info("%s: #%d\n", __func__, job->req_seq);
+	if (CAM_DEBUG_ENABLED(JOB))
+		pr_info("%s: #%d\n", __func__, job->req_seq);
 	if (!job->src_ctx)
 		return;
 	used_pipe = job->req->used_pipe & job->src_ctx->used_pipe;

@@ -957,7 +957,7 @@ void mtk_cam_sensor_req_buffer_done(struct mtk_cam_job *job,
 			pipe_id, node_id,
 			is_sv_pure_raw(job) && is_proc,
 			&done_list_sensor, &ids_sensor);
-	if (buf_error || CAM_DEBUG_ENABLED(V4L2))
+	if (CAM_DEBUG_ENABLED(V4L2))
 		dev_info(dev, "%s: ctx-%d req:%s(%d) pipe_id:%d node_id:%d bufs:0x%lx ts:%lld%s%s\n",
 			 __func__, job->src_ctx->stream_id,
 			 req->debug_str, job->req_seq,
