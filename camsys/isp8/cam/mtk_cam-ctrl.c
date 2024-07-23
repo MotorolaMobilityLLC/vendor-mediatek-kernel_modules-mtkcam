@@ -1156,6 +1156,16 @@ static int mtk_cam_ctrl_stream_on_job(struct mtk_cam_job *job)
 	struct mtk_cam_ctrl *ctrl = &ctx->cam_ctrl;
 	struct device *dev = ctx->cam->dev;
 
+	if (job->do_pending_aid_config) {
+#ifdef SUPPORT_SLB_DC
+		if (is_dc_mode(job) && ctx->slb_addr)
+			mtk_cam_hsf_aid(ctx, 1, AID_CAM_DC, job->used_engine);
+#else
+		if (is_dc_mode(job) && ctx->slc_data_valid)
+			mtk_cam_hsf_aid(ctx, 1, AID_CAM_DC, job->used_engine);
+#endif
+	}
+
 	if (mtk_cam_job_manually_apply_sensor(job))
 		goto STREAM_ON_FAIL;
 
@@ -1291,8 +1301,10 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 		}
 	}
 
+#ifdef QOF_CCU_READY
 	if (GET_PLAT_HW(qof_support) && mtk_cam_power_ctrl_ccu(cam->dev, 1))
 		goto SWITCH_FAILURE;
+#endif
 
 	dev_info(dev, "[%s] master raw changed case : wait engines:0x%x setting done\n",
 			 __func__, ctx->used_engine);
@@ -1375,8 +1387,10 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 		}
 	}
 
+#ifdef QOF_CCU_READY
 	if (GET_PLAT_HW(qof_support))
 		mtk_cam_power_ctrl_ccu(cam->dev, 0);
+#endif
 
 	dev_info(dev, "[%s] finish, uninit engines:0x%x, new frame inner:%d\n",
 		__func__, engine_uninit, check_args.expect_inner);
@@ -1384,9 +1398,10 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 	return;
 
 SWITCH_FAILURE:
+#ifdef QOF_CCU_READY
 	if (GET_PLAT_HW(qof_support))
 		mtk_cam_power_ctrl_ccu(cam->dev, 0);
-
+#endif
 	dev_info(dev, "[%s] failed: ctx-%d job %d frame_seq 0x%x\n",
 		 __func__, ctx->stream_id, job->req_seq, job->frame_seq_no);
 
@@ -1429,8 +1444,10 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 		}
 	}
 
+#ifdef QOF_CCU_READY
 	if (GET_PLAT_HW(qof_support) && mtk_cam_power_ctrl_ccu(cam->dev, 1))
 		goto SWITCH_FAILURE;
+#endif
 
 	if (mtk_cam_ctrl_wait_event(ctrl, check_for_seamless, &check_args,
 				    5000)) {
@@ -1558,17 +1575,20 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 		}
 	}
 
+#ifdef QOF_CCU_READY
 	if (GET_PLAT_HW(qof_support))
 		mtk_cam_power_ctrl_ccu(cam->dev, 0);
+#endif
 
 	dev_info(dev, "[%s] finish, used_engine:0x%x\n",
 		 __func__, job->used_engine);
 	return;
 
 SWITCH_FAILURE:
+#ifdef QOF_CCU_READY
 	if (GET_PLAT_HW(qof_support))
 		mtk_cam_power_ctrl_ccu(cam->dev, 0);
-
+#endif
 	dev_info(dev, "[%s] failed: ctx-%d job %d frame_seq 0x%x\n",
 		 __func__, ctx->stream_id, job->req_seq, job->frame_seq_no);
 
