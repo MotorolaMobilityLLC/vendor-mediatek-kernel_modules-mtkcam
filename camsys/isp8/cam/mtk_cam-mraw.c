@@ -615,7 +615,7 @@ void mtk_cam_mraw_get_dbg_size(struct mtk_cam_device *cam, unsigned int pipe_id,
 	}
 }
 
-static int reset_msgfifo(struct mtk_mraw_device *mraw_dev)
+int mtk_cam_mraw_reset_msgfifo(struct mtk_mraw_device *mraw_dev)
 {
 	atomic_set(&mraw_dev->is_fifo_overflow, 0);
 	return kfifo_init(&mraw_dev->msg_fifo, mraw_dev->msg_buffer, mraw_dev->fifo_size);
@@ -1917,7 +1917,7 @@ int mtk_mraw_runtime_resume(struct device *dev)
 	int i, ret;
 
 	/* reset_msgfifo before enable_irq */
-	ret = reset_msgfifo(mraw_dev);
+	ret = mtk_cam_mraw_reset_msgfifo(mraw_dev);
 	if (ret)
 		return ret;
 

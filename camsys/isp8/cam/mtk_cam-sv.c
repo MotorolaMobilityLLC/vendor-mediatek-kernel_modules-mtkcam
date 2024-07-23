@@ -419,7 +419,7 @@ void mtk_cam_sv_restore(struct mtk_camsv_device *sv_dev)
 	CAMSV_WRITE_REG(sv_dev->base + REG_CAMSVCENTRAL_DCIF_SEL, s->dcif_sel);
 }
 
-static int reset_msgfifo(struct mtk_camsv_device *sv_dev)
+int mtk_cam_sv_reset_msgfifo(struct mtk_camsv_device *sv_dev)
 {
 	atomic_set(&sv_dev->is_fifo_overflow, 0);
 	return kfifo_init(&sv_dev->msg_fifo, sv_dev->msg_buffer, sv_dev->fifo_size);
@@ -2615,7 +2615,7 @@ int mtk_camsv_runtime_resume(struct device *dev)
 	int i, ret;
 
 	/* reset_msgfifo before enable_irq */
-	ret = reset_msgfifo(sv_dev);
+	ret = mtk_cam_sv_reset_msgfifo(sv_dev);
 	if (ret)
 		return ret;
 

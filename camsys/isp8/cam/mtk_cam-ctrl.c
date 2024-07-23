@@ -1608,6 +1608,8 @@ static void mtk_cam_ctrl_raw_switch_flow(struct mtk_cam_job *job)
 	mtk_cam_ctx_engine_disable_irq(ctx);
 	mtk_cam_ctx_engine_reset(ctx);
 
+	mtk_cam_ctx_engine_reset_msgfifo(ctx);
+
 	/* re-initialized the new stream required engines with raw switch flow */
 	mtk_cam_job_initialize_engines(ctx, job, job->init_params);
 
