@@ -244,7 +244,7 @@ static void log_event(const char *func, int ctx_id, struct v4l2_event *e)
 	}
 }
 
-static void mtk_cam_event_eos(struct mtk_cam_ctrl *cam_ctrl)
+void mtk_cam_event_eos(struct mtk_cam_ctrl *cam_ctrl)
 {
 	struct mtk_cam_ctx *ctx = cam_ctrl->ctx;
 	struct v4l2_event event = {
@@ -259,6 +259,7 @@ static void mtk_cam_event_eos(struct mtk_cam_ctrl *cam_ctrl)
 	if (CAM_DEBUG_ENABLED(V4L2_EVENT))
 		log_event(__func__, ctx->stream_id, &event);
 }
+
 void mtk_cam_event_esd_recovery(struct mtk_cam_ctrl *cam_ctrl,
 				     unsigned int frame_seq_no)
 {
@@ -2133,8 +2134,6 @@ void mtk_cam_ctrl_stop(struct mtk_cam_ctrl *cam_ctrl)
 	mtk_cam_ctx_engine_reset(ctx);
 	/* clear hw some regs */
 	mtk_cam_ctx_engine_clear(ctx);
-
-	mtk_cam_event_eos(cam_ctrl);
 
 	/* await done work finished */
 	kthread_flush_worker(&ctx->done_worker);
