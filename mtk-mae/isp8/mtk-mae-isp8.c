@@ -87,11 +87,13 @@ static struct clk_bulk_data mae_clks_isp8_m6899[] = {
 static struct mae_data mae_data_isp8 = {
 	.internal_buffer_size = 3 * 512 * 1024,
 	.base_address = 0x34310000,
+	.fd_fpn_threshold = 0xAA,
 };
 
 static struct mae_data mae_data_isp8_mt6899 = {
 	.internal_buffer_size = 3 * 512 * 1024,
 	.base_address = 0x15310000,
+	.fd_fpn_threshold = 0x9B,
 };
 
 struct mae_priv_data priv_data_isp8 = {
@@ -271,7 +273,7 @@ struct mae_priv_data priv_data_isp8_mt6899 = {
 	},
 	.fd_v1_fpn_config_info = {
 		.size = 448,
-		.rotate_offset = 6275,
+		.rotate_offset = 6278,
 		.rotate_size = 453,
 	},
 	.fd_v1_fpn_coef_info = {
@@ -1721,7 +1723,7 @@ static void mtk_mae_fd_post(struct mtk_mae_dev *mae_dev,
 				(uint32_t)image->imgWidth);
 		MAE_CMDQ_WRITE_REG(pkt, MAE_REG_V_MAX0 + core_offset,
 				(uint32_t)image->imgHeight);
-		MAE_CMDQ_WRITE_REG(pkt, MAE_REG_SCORE_TH0 + core_offset, 0xAA); // 170
+		MAE_CMDQ_WRITE_REG(pkt, MAE_REG_SCORE_TH0 + core_offset, g_data->data->fd_fpn_threshold);
 	}
 }
 
