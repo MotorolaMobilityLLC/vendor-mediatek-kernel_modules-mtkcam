@@ -219,6 +219,7 @@ struct mtk_camsv_device {
 };
 
 void sv_reset(struct mtk_camsv_device *sv_dev);
+int mtk_cam_sv_reset_msgfifo(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tags);
 int mtk_cam_sv_dev_config(struct mtk_camsv_device *sv_dev, unsigned int sub_ratio,
 	int frm_time_us);
