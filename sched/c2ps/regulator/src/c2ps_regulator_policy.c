@@ -18,7 +18,7 @@ static unsigned int c2ps_regulator_bg_update_uclamp_fast;
 static unsigned int c2ps_uclamp_bg_up_margin_cluster0 = 1000;
 static unsigned int c2ps_uclamp_bg_up_margin_cluster1 = 1000;
 static unsigned int c2ps_uclamp_bg_up_margin_cluster2 = 1000;
-static unsigned int c2ps_max_cpu_idle_rate = 30;
+static unsigned int c2ps_max_cpu_idle_rate = 50;
 
 /**************************************************************************/
 int c2ps_regulator_base_update_um = 5;
