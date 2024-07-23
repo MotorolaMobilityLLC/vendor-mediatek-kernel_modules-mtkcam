@@ -4391,8 +4391,15 @@ static void update_job_state_init_sensor_param(struct mtk_cam_job *job)
 	struct mtk_cam_ctrl *ctrl = &job->src_ctx->cam_ctrl;
 	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
 
-	job->job_state.s_params.i2c_thres_ns =
-		infer_i2c_deadline_ns(job, ctrl->frame_interval_ns);
+	if (job->src_ctx->last_req_exposue.long_exposure_flow) {
+		u64 frame_time_ns = max(job->src_ctx->last_req_exposue.le_exp_ns,
+								ctrl->frame_interval_ns);
+
+		job->job_state.s_params.i2c_thres_ns =
+			infer_i2c_deadline_ns(job, frame_time_ns);
+	} else
+		job->job_state.s_params.i2c_thres_ns =
+			infer_i2c_deadline_ns(job, ctrl->frame_interval_ns);
 
 	job->job_state.s_params.latched_timing =
 		is_stagger_lbmf(job) ? SENSOR_LATCHED_L_SOF : SENSOR_LATCHED_F_SOF;
@@ -4414,7 +4421,8 @@ static void update_job_state_init_sensor_param(struct mtk_cam_job *job)
 		ctrl->frame_interval_ns *= ((job_exp_num(job) == 1)? 2:1);
 	}
 
-	if (CAM_DEBUG_ENABLED(JOB))
+	if (CAM_DEBUG_ENABLED(JOB) ||
+		job->src_ctx->last_req_exposue.long_exposure_flow)
 		pr_info("%s: job i2c_thres_ns %llu, latched_timing:%d, cq_trigger_thres:%llu always:%d\n",
 			__func__,
 			job->job_state.s_params.i2c_thres_ns,
@@ -4851,7 +4859,7 @@ static void update_sen_expo_diff(struct mtk_cam_job *job)
 		return;
 
 	next = &ctrl_data->rc_data.exp_ns;
-	last = &ctx->ctrldata.rc_data.exp_ns;
+	last = &ctx->last_req_exposue;
 
 	if (is_sensor_changed(job)) {
 		job->exp_diff_ns_le = 0;
@@ -4872,6 +4880,8 @@ static void update_sen_expo_diff(struct mtk_cam_job *job)
 	}
 
 	check_sen_expo_change(job);
+
+	*last = *next;
 }
 
 static int job_sen_req_pack(struct mtk_cam_job *job)
@@ -4889,7 +4899,6 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 	 * and job->job->raw_switch
 	 */
 	update_job_sensor(job);
-
 	update_job_state_init_sensor_param(job);
 
 	job->sensor_hdl_obj = job->sensor ?
