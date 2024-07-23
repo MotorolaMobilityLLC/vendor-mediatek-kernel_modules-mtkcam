@@ -206,6 +206,7 @@ struct mtk_cam_seninf_ops {
 	int (*_set_outmux_grp_en)(struct seninf_ctx *ctx, u8 outmux_idx, bool grp_en);
 	int (*_set_outmux_cfg_rdy)(struct seninf_ctx *ctx, u8 outmux_idx, bool cfg_rdy);
 	int (*_set_test_model)(struct seninf_ctx *ctx, int intf);
+	int (*_set_test_model_fake_sensor)(struct seninf_ctx *ctx, int intf);
 	int (*_get_async_irq_st)(struct seninf_ctx *ctx, int async, bool clear);
 	int (*_set_csi_mipi)(struct seninf_ctx *ctx);
 	int (*_poweroff)(struct seninf_ctx *ctx);
