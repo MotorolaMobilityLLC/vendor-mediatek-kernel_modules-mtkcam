@@ -243,7 +243,9 @@ static int find_max_oppidx(struct mtk_camsys_dvfs *dvfs,
 	int i;
 
 	for (i = 0; i < dvfs->max_stream_num; i++)
-		max_opp = max(max_opp, dvfs->stream_infos[i].opp_idx);
+		max_opp = max3(max_opp,
+			dvfs->stream_infos[i].opp_idx,
+			dvfs->stream_infos[i].switching_opp_idx);
 
 	if (!is_switching)
 		return max_opp;
