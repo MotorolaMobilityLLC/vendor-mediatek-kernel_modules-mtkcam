@@ -1437,6 +1437,7 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 		dev_info(dev, "[%s] check_for_seamless timeout: expected in=0x%x ack=0x%x\n",
 			 __func__,
 			 check_args.expect_inner, check_args.expect_ack);
+		mtk_cam_job_uninit_engine(job, job->raw_change_uninit_engine);
 		goto SWITCH_FAILURE;
 	}
 
@@ -1485,6 +1486,7 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 	if (mtk_cam_ctrl_wait_event(ctrl, check_done, &prev_seq, 4999)) {
 		dev_info(dev, "[%s] check_done timeout: prev_seq=0x%x\n",
 			 __func__, prev_seq);
+		mtk_cam_job_uninit_engine(job, job->raw_change_uninit_engine);
 		goto SWITCH_FAILURE;
 	}
 	/* should set ts for next job's apply_sensor */
@@ -2448,6 +2450,7 @@ static int mtk_cam_watchdog_monitor_vsync(struct mtk_cam_watchdog *wd)
 		container_of(wd, struct mtk_cam_ctrl, watchdog);
 	struct mtk_cam_ctx *ctx = ctrl->ctx;
 	u64 new_sof;
+	int i;
 
 	if (!ctx)
 		return -1;
@@ -2460,10 +2463,13 @@ static int mtk_cam_watchdog_monitor_vsync(struct mtk_cam_watchdog *wd)
 		return 0;
 	}
 
-	dev_info_ratelimited(ctx->cam->dev,
-			     "%s: vsync may timeout, last ts = %lld\n",
-			     __func__, wd->last_sof_ts);
-
+	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
+		if (ctx->hw_raw[i]) {
+			dev_info_ratelimited(ctx->cam->dev,
+			"%s: vsync may timeout, ctx:%d(%d/0x%x), last ts = %lld\n",
+			__func__, ctx->stream_id, i, ctx->used_engine, wd->last_sof_ts);
+		}
+	}
 	try_launch_watchdog_sensor_worker(wd, 1);
 	return -1;
 }
@@ -2690,8 +2696,9 @@ int mtk_cam_ctrl_ae_workaround(struct mtk_cam_device *cam,
 			/* raw b sof will disable raw c ae_stat */
 			if ((engine_id != raw_dev->id) &&
 				(raw_dev->is_slave == false))
-				dev_info(cam->dev, "%s: engine %d id %d seq 0x%x\n",
-					__func__, engine_type, engine_id, inner_cookie);
+				dev_info(cam->dev, "%s: engine %d id %d seq 0x%x (id:%d)\n",
+					__func__, engine_type, engine_id, inner_cookie,
+					raw_dev->id);
 			else
 				ae_disable(raw_dev);
 		}
