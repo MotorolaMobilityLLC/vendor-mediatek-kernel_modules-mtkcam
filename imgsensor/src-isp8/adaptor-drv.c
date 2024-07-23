@@ -591,10 +591,7 @@ static int imgsensor_get_pad_format(struct v4l2_subdev *sd,
 	struct adaptor_ctx *ctx = to_ctx(sd);
 	int ret;
 
-	mutex_lock(&ctx->mutex);
 	ret = __imgsensor_get_pad_format(ctx, state, fmt);
-	mutex_unlock(&ctx->mutex);
-
 	return ret;
 }
 
