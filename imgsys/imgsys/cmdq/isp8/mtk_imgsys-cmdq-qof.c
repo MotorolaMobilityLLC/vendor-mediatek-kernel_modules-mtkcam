@@ -552,6 +552,8 @@ static int qof_smi_isp_module_get_if_in_use(void *data, int module)
 		return -1;
 	}
 
+	if (g_qof_ver == 0)
+		return 1;
 	spin_lock_irqsave(&qof_lock, flag);
 
 	if (imgsys_voter_cnt_locked == 0) {
@@ -615,6 +617,8 @@ static int qof_smi_isp_module_get(void *data, int module)
 {
 	unsigned long flag;
 
+	if (g_qof_ver == 0)
+		return 1;
 	/* get is for smi force_all_on dbg mode use */
 	if (imgsys_voter_cnt_locked == 0) {
 		QOF_LOGI("Staus occur before stream on, turn off qof\n");
@@ -642,6 +646,8 @@ static int qof_smi_isp_module_put(void *data, int module)
 	unsigned long flag;
 	bool smi_use_qof;
 
+	if (g_qof_ver == 0)
+		return 1;
 	spin_lock_irqsave(&qof_lock, flag);
 	if (data == NULL) {
 		QOF_LOGE("data is null,set to default\n");
