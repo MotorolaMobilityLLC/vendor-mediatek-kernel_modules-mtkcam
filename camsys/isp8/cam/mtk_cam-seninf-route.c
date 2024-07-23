@@ -1157,14 +1157,25 @@ int mtk_cam_seninf_set_pixelmode(struct v4l2_subdev *sd,
 
 	return 0;
 }
-
-#ifdef SEAMLESS_OUTMUX_V2
+#ifndef SEAMLESS_OUTMUX_V3
 static bool is_using_swith_v2(struct seninf_ctx *ctx, bool grp_en, bool from_switch, int outmux)
 {
 	bool ret = false;
 
 	if (ctx)
 		ret = from_switch && (!grp_en) && (ctx->outmux_disable_list_for_v2[outmux]);
+
+	return ret;
+}
+#endif
+
+#ifdef SEAMLESS_OUTMUX_V3
+static bool is_using_swith_v3(struct seninf_ctx *ctx, bool from_switch, int outmux)
+{
+	bool ret = false;
+
+	if (ctx)
+		ret = from_switch && (ctx->outmux_disable_list_for_v2[outmux]);
 
 	return ret;
 }
@@ -1181,7 +1192,7 @@ static int mtk_cam_seninf_outmux_switch_prepare(struct seninf_ctx *ctx, struct o
 	if (!g_seninf_ops->_is_outmux_used(ctx, outmux_idx))
 		g_seninf_ops->_set_outmux_cg(ctx, outmux_idx, 1);
 
-#ifdef SEAMLESS_OUTMUX_V2
+#ifndef SEAMLESS_OUTMUX_V3
 	if (is_using_swith_v2(ctx, grp_en, from_switch, outmux_idx)) {
 		// for seamless switch v2 prepare
 		if ((!skip_chk) || (*skip_chk == false)) {
@@ -1195,7 +1206,7 @@ static int mtk_cam_seninf_outmux_switch_prepare(struct seninf_ctx *ctx, struct o
 		// Check if csr_sw_cfg_done == 0
 		g_seninf_ops->_wait_outmux_cfg_done(ctx, outmux_idx);
 
-#ifdef SEAMLESS_OUTMUX_V2
+#ifndef SEAMLESS_OUTMUX_V3
 	}
 #endif
 
@@ -1219,7 +1230,7 @@ static int mtk_cam_seninf_outmux_switch_apply(struct seninf_ctx *ctx, struct out
 	seninf_logi(ctx, "outmux_idx %d, src_mipi %d, src_sen %d, pixmode %d, cfg_mode %d, grp_en %d",
 		    outmux_idx, src_mipi, src_sen, pix_mode, cfg_mode, grp_en);
 
-#ifdef SEAMLESS_OUTMUX_V2
+#ifndef SEAMLESS_OUTMUX_V3
 	if (is_using_swith_v2(ctx, grp_en, from_switch, outmux_idx)) {
 		// using seamless outmux v2
 		cfg_mode = MTK_CAM_OUTMUX_CFG_MODE_EXP_NC;
@@ -1228,10 +1239,17 @@ static int mtk_cam_seninf_outmux_switch_apply(struct seninf_ctx *ctx, struct out
 	} else {
 #endif
 
+#ifdef SEAMLESS_OUTMUX_V3
+	if (is_using_swith_v3(ctx, from_switch, outmux_idx)) {
+		/* using seamless outmux v3 */
+		ctx->outmux_disable_list_for_v2[outmux_idx] = false;
+	}
+#endif
+
 		// Program double buffer register
 		g_seninf_ops->_config_outmux(ctx, outmux_idx, src_mipi, src_sen, cfg_mode, cfg->tag_cfg);
 
-#ifdef SEAMLESS_OUTMUX_V2
+#ifndef SEAMLESS_OUTMUX_V3
 	}
 #endif
 
@@ -1245,12 +1263,14 @@ static int mtk_cam_seninf_outmux_switch_apply(struct seninf_ctx *ctx, struct out
 	if (grp_en)
 		g_seninf_ops->_set_outmux_cfg_rdy(ctx, outmux_idx, 0);
 
-	//Wait I2C settings done
-	//Program csr_sw_cfg_done to 1
-	g_seninf_ops->_set_outmux_cfg_done(ctx, outmux_idx);
+	return 0;
+}
 
-	//Set csr_cam_cfg_rdy to 1 after cq_done (or other conditions) of all CAMs on this device
-	//Wait cfg_done interrupt
+static int mtk_cam_seninf_outmux_switch_config(struct seninf_ctx *ctx, struct outmux_cfg *cfg)
+{
+	int outmux_idx = cfg->outmux_idx;
+
+	g_seninf_ops->_set_outmux_cfg_done(ctx, outmux_idx);
 
 	return 0;
 }
@@ -1268,6 +1288,10 @@ static void mtk_cam_seninf_outmux_config_all(struct seninf_ctx *ctx,
 	}
 	list_for_each_entry(ent, outmux_cfgs, list) {
 		mtk_cam_seninf_outmux_switch_apply(ctx, ent, grp_en, from_switch, sensor_delay);
+	}
+	/* raise all outmux cfg done at same time */
+	list_for_each_entry(ent, outmux_cfgs, list) {
+		mtk_cam_seninf_outmux_switch_config(ctx, ent);
 	}
 }
 
@@ -1295,6 +1319,19 @@ static void mtk_cam_seninf_outmux_release_all(struct seninf_ctx *ctx,
 		list_del(pos);
 		kfree(ent);
 	}
+}
+
+static void mtk_cam_seninf_outmux_reset_all(struct seninf_ctx *ctx,
+		struct list_head *outmux_cfgs)
+{
+#ifdef SEAMLESS_OUTMUX_V3
+	struct outmux_cfg *ent;
+
+	list_for_each_entry(ent, outmux_cfgs, list) {
+		if (ctx->outmux_disable_list_for_v2[ent->outmux_idx])
+			g_seninf_ops->_disable_outmux(ctx, ent->outmux_idx, true);
+	}
+#endif
 }
 
 static struct outmux_cfg *get_outmux_cfg_from_list(struct seninf_ctx *ctx,
@@ -1591,7 +1628,6 @@ int mtk_cam_seninf_set_camtg_camsv(struct v4l2_subdev *sd, int pad_id, int camtg
 
 int mtk_cam_seninf_apply_disable_mux(struct v4l2_subdev *sd)
 {
-#ifdef SEAMLESS_OUTMUX_V2
 	struct seninf_ctx *ctx = NULL;
 	int i;
 	int irq_st;
@@ -1616,7 +1652,6 @@ int mtk_cam_seninf_apply_disable_mux(struct v4l2_subdev *sd)
 			ctx->outmux_disable_list_for_v2[i] = true;
 		}
 	}
-#endif
 
 	return 0;
 }
@@ -2159,6 +2194,9 @@ mtk_cam_seninf_streaming_mux_change(struct mtk_cam_seninf_mux_param *param, bool
 	}
 
 	if (ctx) {
+		/* (seamless only) reset all selected outmux firstly*/
+		mtk_cam_seninf_outmux_reset_all(ctx, &outmux_cfgs);
+
 		/* enable all selected outmux */
 		mtk_cam_seninf_outmux_config_all(ctx, &outmux_cfgs, grp_en, true);
 
@@ -2172,9 +2210,15 @@ mtk_cam_seninf_streaming_mux_change(struct mtk_cam_seninf_mux_param *param, bool
 				g_seninf_ops->_set_outmux_cfg_done(ctx, i);
 				ctx->outmux_disable_list[i] = false;
 			}
-#ifdef SEAMLESS_OUTMUX_V2
+#ifndef SEAMLESS_OUTMUX_V3
 			else if (ctx->outmux_disable_list_for_v2[i]) {
 				g_seninf_ops->_set_outmux_ref_vsync_inner(ctx, i);
+				ctx->outmux_disable_list_for_v2[i] = false;
+			}
+#endif
+#ifdef SEAMLESS_OUTMUX_V3
+			else if (ctx->outmux_disable_list_for_v2[i]) {
+				g_seninf_ops->_disable_outmux(ctx, i, true);
 				ctx->outmux_disable_list_for_v2[i] = false;
 			}
 #endif

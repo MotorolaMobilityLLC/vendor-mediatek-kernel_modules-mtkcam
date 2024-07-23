@@ -30,7 +30,7 @@
 #define MAX_TS_SIZE 4
 
 /* isp8 used. suspose isp8s no need, use grp rdy instead */
-#define SEAMLESS_OUTMUX_V2
+ #define SEAMLESS_OUTMUX_V3
 
 /*ULPS-mode support*/
 #undef CDPHY_ULPS_MODE_SUPPORT
