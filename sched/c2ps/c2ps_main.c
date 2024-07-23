@@ -281,9 +281,9 @@ static void c2ps_notifier_task_single_shot(
 		g_info->um_placeholder3 = um_placeholder3;
 }
 
-static void c2ps_queue_work(struct C2PS_NOTIFIER_PUSH_TAG *vpPush)
+static void c2ps_queue_work(struct C2PS_NOTIFIER_PUSH_TAG *vpPush, bool update_timer)
 {
-	if (likely(timer_pending(&self_uninit_timer)))
+	if (update_timer && likely(timer_pending(&self_uninit_timer)))
 		mod_timer(&self_uninit_timer, jiffies + 5*HZ);
 	mutex_lock(&notifier_wq_lock);
 	list_add_tail(&vpPush->queue_list, &head);
@@ -467,7 +467,7 @@ int c2ps_notify_uninit(void)
 	}
 
 	vpPush->ePushType = C2PS_NOTIFIER_UNINIT;
-	c2ps_queue_work(vpPush);
+	c2ps_queue_work(vpPush, true /* update uninit timer */);
 
 out:
 	return ret;
@@ -630,7 +630,7 @@ int c2ps_notify_single_shot_control(
 	vpPush->switch_um_idle_rate_mode = switch_um_idle_rate_mode;
 	vpPush->ePushType = C2PS_NOTIFIER_TASK_SINGLE_SHOT;
 
-	c2ps_queue_work(vpPush);
+	c2ps_queue_work(vpPush, false /* do not update uninit timer */);
 
 out:
 	return ret;
@@ -678,7 +678,7 @@ int c2ps_notify_anchor(
 	vpPush->cur_ts = c2ps_get_time();
 	vpPush->latency_spec = latency_spec;
 	vpPush->jitter_spec = jitter_spec;
-	c2ps_queue_work(vpPush);
+	c2ps_queue_work(vpPush, true /* update uninit timer */);
 
 out:
 	return ret;
