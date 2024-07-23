@@ -420,6 +420,8 @@ struct my_wq_t {
 };
 
 /*  function prototype declaration */
+static void mtk_hcp_purge_msg_internal(struct mtk_hcp *hcp_dev);
+
 static void module_notify(struct mtk_hcp *hcp_dev,
 						struct share_buf *user_data_addr);
 static int hcp_send_internal(struct mtk_hcp *hcp_dev,
@@ -1819,8 +1821,8 @@ static int mtk_hcp_open(struct inode *inode, struct file *file)
 	struct mtk_hcp *hcp_dev = NULL;
 
 	hcp_dev = container_of(inode->i_cdev, struct mtk_hcp, hcp_cdev);
-    if (hcp_dbg_enable())
-	dev_dbg(hcp_dev->dev, "open inode->i_cdev = 0x%p\n", inode->i_cdev);
+	if (hcp_dbg_enable())
+		dev_dbg(hcp_dev->dev, "open inode->i_cdev = 0x%p\n", inode->i_cdev);
 
 	/*  */
 	file->private_data = hcp_dev;
@@ -1830,8 +1832,11 @@ static int mtk_hcp_open(struct inode *inode, struct file *file)
 
 	hcp_dev->current_task = current;
 
-    if (hcp_dbg_enable())
-	dev_dbg(hcp_dev->dev, "- X. hcp open.\n");
+	/* purge old messages */
+	mtk_hcp_purge_msg_internal(hcp_dev);
+
+	if (hcp_dbg_enable())
+		dev_dbg(hcp_dev->dev, "- X. hcp open.\n");
 
 	return 0;
 }
@@ -2422,13 +2427,15 @@ int mtk_hcp_get_mem_info(struct platform_device *pdev,
 EXPORT_SYMBOL(mtk_hcp_get_mem_info);
 #endif
 
-void mtk_hcp_purge_msg(struct platform_device *pdev)
+static void mtk_hcp_purge_msg_internal(struct mtk_hcp *hcp_dev)
 {
-	struct mtk_hcp *hcp_dev = platform_get_drvdata(pdev);
 	unsigned long flag = 0;
 	int i = 0;
 	struct msg *msg = NULL;
 	struct msg *tmp = NULL;
+
+	if (!hcp_dev)
+		return;
 
 	spin_lock_irqsave(&hcp_dev->msglock, flag);
 	for (i = 0; i < MODULE_MAX_ID; i++) {
@@ -2440,6 +2447,13 @@ void mtk_hcp_purge_msg(struct platform_device *pdev)
 	}
 	atomic_set(&hcp_dev->seq, 0);
 	spin_unlock_irqrestore(&hcp_dev->msglock, flag);
+}
+
+void mtk_hcp_purge_msg(struct platform_device *pdev)
+{
+	struct mtk_hcp *hcp_dev = platform_get_drvdata(pdev);
+
+	mtk_hcp_purge_msg_internal(hcp_dev);
 }
 EXPORT_SYMBOL(mtk_hcp_purge_msg);
 
