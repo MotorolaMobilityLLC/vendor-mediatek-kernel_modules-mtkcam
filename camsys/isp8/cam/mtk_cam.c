@@ -3320,7 +3320,9 @@ static void mtk_cam_ctx_raw_qof_disable(struct mtk_cam_ctx *ctx)
 	struct mtk_camsv_device *sv;
 
 	qof_mtcmos_voter_handle(&ctx->cam->engines, 0, &ctx->DOL_not_support);
+#ifdef QOF_CCU_READY
 	mtk_cam_power_ctrl_ccu(ctx->cam->dev, 1);
+#endif
 	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
 		if (!ctx->hw_raw[i])
 			continue;
@@ -3333,7 +3335,9 @@ static void mtk_cam_ctx_raw_qof_disable(struct mtk_cam_ctx *ctx)
 			mtk_cam_sv_set_queue_mode(sv, false);
 		}
 	}
+#ifdef QOF_CCU_READY
 	mtk_cam_power_ctrl_ccu(ctx->cam->dev, 0);
+#endif
 
 	qof_reset_mtcmos_voter(ctx);
 	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
