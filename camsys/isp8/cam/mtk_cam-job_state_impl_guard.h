@@ -244,6 +244,28 @@ static inline bool valid_i2c_period(struct transition_param *p)
 		((p->event_ts - p->info->sof_l_ts_ns) < I2C_THRES_FROM_L_SOF_NS);
 }
 
+static inline bool allow_subsample_2_i2c_by_ts(
+	struct state_accessor *s_acc, struct transition_param *p)
+{
+	bool ret = false;
+
+	ret = ((s_acc->s->s_params.subsample == 2) &&
+		(s_acc->seq_no == p->info->outer_seq_no + 1) &&
+		(p->event_ts - p->info->sof_ts_ns) < 2000000);
+
+	return ret;
+}
+static inline bool allow_subsample_4_i2c_by_inner(
+	struct state_accessor *s_acc, struct transition_param *p)
+{
+	bool ret = false;
+
+	ret = ((s_acc->s->s_params.subsample == 4) &&
+		(s_acc->seq_no == p->info->inner_seq_no + 1));
+
+	return ret;
+}
+
 static inline bool valid_i2c_period_l(struct transition_param *p)
 {
 	if (unlikely(!p->s_params))
@@ -340,6 +362,16 @@ static inline bool valid_cq_execution_threaded_irq_race_with_topirq(
 	}
 	return ret;
 }
+static inline int guard_apply_sensor_subsample_2(struct state_accessor *s_acc,
+					       struct transition_param *p)
+{
+	/* TODO: add ts check */
+	return allow_applying_hw(s_acc) &&
+		ops_call(s_acc, prev_allow_apply_sensor) &&
+		((s_acc->s->s_params.subsample == 2) &&
+		ops_call(s_acc, prev_allow_apply_isp) &&
+		(p->event_ts - p->info->sof_ts_ns) < 4000000);
+}
 
 static inline int guard_apply_sensor_subsample(struct state_accessor *s_acc,
 					       struct transition_param *p)
@@ -347,7 +379,9 @@ static inline int guard_apply_sensor_subsample(struct state_accessor *s_acc,
 	/* TODO: add ts check */
 	return allow_applying_hw(s_acc) &&
 		ops_call(s_acc, prev_allow_apply_sensor) &&
-		ops_call(s_acc, cur_isp_state) >= S_ISP_APPLYING;
+		(ops_call(s_acc, cur_isp_state) >= S_ISP_APPLYING ||
+		allow_subsample_2_i2c_by_ts(s_acc, p) ||
+		allow_subsample_4_i2c_by_inner(s_acc, p));
 }
 
 static inline int guard_apply_sensor(struct state_accessor *s_acc,

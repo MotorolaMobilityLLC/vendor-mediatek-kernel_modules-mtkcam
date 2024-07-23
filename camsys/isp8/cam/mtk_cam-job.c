@@ -1447,8 +1447,7 @@ _apply_sensor(struct mtk_cam_job *job)
 	if (CAM_DEBUG_ENABLED(JOB_ACTION))
 		dev_info(cam->dev, "[%s] ctx:%d seq 0x%x\n",
 			 __func__, ctx->stream_id, job->frame_seq_no);
-	else
-		job->local_apply_sensor_ts = local_clock();
+	job->local_apply_sensor_ts = local_clock();
 
 	frame_sync_end(job);
 
@@ -2160,6 +2159,8 @@ static int apply_engines_cq(struct mtk_cam_job *job,
 		_apply_mraw_cq(job, subset, cq, cq_rst);
 
 	ts = local_clock();
+	job->local_1st_l_sof_ts = ts -
+		(ktime_get_boottime_ns() - ctx->cam_ctrl.r_info.sof_l_ts_ns);
 
 	mtk_cam_apply_qos(job);
 	ctx->cam_ctrl.frame_sync_id = job->req_info_id;
@@ -4403,6 +4404,8 @@ static void update_job_state_init_sensor_param(struct mtk_cam_job *job)
 
 	job->job_state.s_params.latched_timing =
 		is_stagger_lbmf(job) ? SENSOR_LATCHED_L_SOF : SENSOR_LATCHED_F_SOF;
+	job->job_state.s_params.subsample =
+		get_subsample_ratio(&job->job_scen);
 
 	job->job_state.cq_trigger_thres_ns =
 		(ctrl_data && ctrl_data->trigger_cq_deadline > 0) ?
@@ -6317,6 +6320,11 @@ static int debug_str_local_ts(struct mtk_cam_job *job,
 	if (job->local_apply_sensor_ts) {
 		n += scnprintf(buff + n, size - n, " s@");
 		n += print_time(job->local_apply_sensor_ts,
+				buff + n, size - n);
+	}
+	if (job->local_1st_l_sof_ts) {
+		n += scnprintf(buff + n, size - n, " 1sof@");
+		n += print_time(job->local_1st_l_sof_ts,
 				buff + n, size - n);
 	}
 	if (job->local_enqueue_isp_ts) {

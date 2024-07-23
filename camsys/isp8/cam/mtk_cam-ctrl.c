@@ -964,9 +964,6 @@ static int mtk_cam_event_handle_raw(struct mtk_cam_ctrl *ctrl,
 				  CAMSYS_ENGINE_RAW, engine_id,
 				  seq_from_fh_cookie(irq_info->cookie_done));
 
-	/* raw's subsample n-2 vsync coming */
-	if (irq_info->irq_type & BIT(CAMSYS_IRQ_TRY_SENSOR_SET))
-		handle_ss_try_set_sensor(ctrl);
 
 	/* raw's SOF (proc engine frame start) */
 	if (irq_info->irq_type & BIT(CAMSYS_IRQ_FRAME_START)) {
@@ -985,6 +982,10 @@ static int mtk_cam_event_handle_raw(struct mtk_cam_ctrl *ctrl,
 		handle_engine_frame_start(ctrl, irq_info,
 					  &vsync_res);
 	}
+
+	/* raw's subsample n-2 vsync coming */
+	if (irq_info->irq_type & BIT(CAMSYS_IRQ_TRY_SENSOR_SET))
+		handle_ss_try_set_sensor(ctrl);
 
 	/* note: should handle SOF before CQ done for trigger delay cases */
 	/* raw's CQ done */

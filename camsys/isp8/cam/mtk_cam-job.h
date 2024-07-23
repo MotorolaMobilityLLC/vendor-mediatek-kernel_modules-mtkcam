@@ -167,6 +167,7 @@ struct sensor_apply_params {
 	u64 i2c_thres_ns; /* valid period from vsync */
 	int latched_timing;
 	bool always_allow;
+	int subsample;
 };
 
 struct transition_param {
@@ -446,6 +447,7 @@ struct mtk_cam_job {
 	/* debug only: use local_clock() to be consitent with printk */
 	u64 local_enqueue_ts;
 	u64 local_apply_sensor_ts;
+	u64 local_1st_l_sof_ts;
 	u64 local_enqueue_isp_ts;
 	u64 local_compose_isp_ts;
 	u64 local_ack_isp_ts;
