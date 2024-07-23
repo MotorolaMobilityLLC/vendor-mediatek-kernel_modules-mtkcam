@@ -348,6 +348,7 @@ int c2ps_get_cpu_max_uclamp(const int cpu);
 bool c2ps_boost_cur_uclamp_max(
 	const int cluster, int cpu_floor_freq, struct global_info *g_info);
 int c2ps_get_first_cpu_of_cluster(int cluster);
+int c2ps_get_nr_cpus_of_cluster(int cluster);
 unsigned long c2ps_get_cluster_uclamp_freq(int cluster,  unsigned int uclamp);
 bool need_update_single_shot_uclamp_max(int *uclamp_max);
 bool need_update_critical_task_uclamp(int *critical_task_uclamp);

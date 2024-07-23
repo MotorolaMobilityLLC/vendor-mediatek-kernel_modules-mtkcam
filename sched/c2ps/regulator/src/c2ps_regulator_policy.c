@@ -287,6 +287,7 @@ void c2ps_regulator_bgpolicy_um_stable_default(struct regulator_req *req)
 	int cluster_index = 0;
 	int curr_um = 0;
 	bool decrease_um = true;
+	bool dangerous_idle_rate = false;
 
 	if (unlikely(!req->glb_info))
 		return;
@@ -301,12 +302,17 @@ void c2ps_regulator_bgpolicy_um_stable_default(struct regulator_req *req)
 			c2ps_reset_cpu_freq_ceiling(cluster_index);
 		if (req->glb_info->need_update_bg[1 + cluster_index] > 0)
 			decrease_um = false;
+		if (req->glb_info->need_update_bg[1 + cluster_index] == 2)
+			dangerous_idle_rate = true;
 	}
 
 	if (decrease_um)
 		curr_um -= c2ps_regulator_base_update_um;
 	else
 		curr_um += c2ps_regulator_base_update_um;
+
+	if (dangerous_idle_rate)
+		curr_um = max(curr_um, 100);
 
 	curr_um = min(c2ps_regulator_um_max, max(curr_um, c2ps_regulator_um_min));
 	c2ps_set_util_margin(0, curr_um);
@@ -436,6 +442,7 @@ static int _cal_idle_rate_um(
 	short _cluster_index = 0;
 	bool is_safe_idle_rate = true;
 	int idle_rate_um = req->glb_info->curr_um;
+	bool is_dangerous_idle_rate = false;
 
 	*force_use_idle_rate_um = true;
 
@@ -453,12 +460,17 @@ static int _cal_idle_rate_um(
 					c2ps_max_cpu_idle_rate) {
 			*force_use_idle_rate_um = false;
 		}
+		if (req->glb_info->need_update_bg[1 + _cluster_index] == 2)
+			is_dangerous_idle_rate = true;
 	}
 
 	if (!is_safe_idle_rate)
 		idle_rate_um += c2ps_regulator_base_update_um;
 	else
 		idle_rate_um -= c2ps_regulator_base_update_um;
+
+	if (is_dangerous_idle_rate)
+		idle_rate_um = max(idle_rate_um, 100);
 
 	return idle_rate_um;
 }
@@ -571,4 +583,7 @@ void c2ps_regulator_bgpolicy_um_transient(struct regulator_req *req)
 	c2ps_set_util_margin(2, action_um);
 	C2PS_LOGD("transient state um=%d", action_um);
 	c2ps_bg_info_um_systrace("transient state um=%d", action_um);
+
+	req->glb_info->curr_um = max(req->glb_info->curr_um, 100);
+	req->glb_info->curr_um_idle = max(req->glb_info->curr_um_idle, 100);
 }
