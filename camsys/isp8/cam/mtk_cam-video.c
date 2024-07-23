@@ -679,6 +679,38 @@ static long int mtk_cam_v4l2_file_ioctl(struct file *file,
 	return ret;
 }
 
+static int mtk_cam_vb2_fop_release(struct file *file)
+{
+	struct video_device *vdev = video_devdata(file);
+	struct mutex *lock = vdev->queue->lock ? vdev->queue->lock : vdev->lock;
+	struct mtk_cam_video_device *node = file_to_mtk_cam_node(file);
+	struct mtk_cam_device *cam = vb2_get_drv_priv(&node->vb2_q);
+	struct mtk_cam_ctx *ctx;
+
+	if (lock)
+		mutex_lock(lock);
+
+	ctx = (cam) ? mtk_cam_find_ctx(cam, &node->vdev.entity) : NULL;
+
+	if (!vdev->queue->owner || file->private_data == vdev->queue->owner) {
+		vb2_queue_release(vdev->queue);
+
+		if (ctx && mtk_cam_ctx_all_nodes_idle(ctx)) {
+			mtk_cam_power_ctrl_ccu(ctx->cam->dev, 0);
+			mtk_cam_ctx_unprepare_session(ctx);
+			mtk_cam_uninitialize(cam);
+			mtk_cam_event_eos(&ctx->cam_ctrl);
+			mtk_cam_ctx_put(ctx);
+		}
+
+		vdev->queue->owner = NULL;
+	}
+	if (lock)
+		mutex_unlock(lock);
+
+	return v4l2_fh_release(file);
+}
+
 static const struct vb2_ops mtk_cam_vb2_ops = {
 	.queue_setup = mtk_cam_vb2_queue_setup,
 
@@ -701,7 +733,7 @@ static const struct vb2_ops mtk_cam_vb2_ops = {
 static const struct v4l2_file_operations mtk_cam_v4l2_fops = {
 	.unlocked_ioctl = mtk_cam_v4l2_file_ioctl,
 	.open = v4l2_fh_open,
-	.release = vb2_fop_release,
+	.release = mtk_cam_vb2_fop_release,
 	.poll = vb2_fop_poll,
 	.mmap = vb2_fop_mmap,
 };
