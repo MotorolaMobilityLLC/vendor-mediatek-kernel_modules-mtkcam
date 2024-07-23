@@ -378,6 +378,7 @@ struct mtk_cam_job {
 	struct mtk_cam_job_state job_state;
 	const struct mtk_cam_job_ops *ops;
 	const struct initialize_params *init_params;
+	bool do_pending_aid_config;
 
 	/* for cq_done handling */
 	struct apply_cq_ref cq_ref;

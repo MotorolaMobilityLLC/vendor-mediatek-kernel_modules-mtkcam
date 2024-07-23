@@ -428,10 +428,8 @@ int qof_setup_twin(struct mtk_raw_device *raw, bool is_master, bool next_raw)
 	if (!GET_PLAT_HW(qof_support))
 		return ret;
 
-#ifdef QOF_CCU_READY
 	// NOTE: raw A emits signal to raw B, raw B to raw C
 	ret = mtk_cam_hsf_qof_config(raw, is_master, is_master, !next_raw);
-#endif
 
 	if (ret) {
 		dev_info(raw->dev, "ERROR: fail to setup QOF lock");
