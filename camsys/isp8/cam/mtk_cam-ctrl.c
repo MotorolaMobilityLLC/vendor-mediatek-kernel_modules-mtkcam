@@ -835,8 +835,10 @@ static void ctrl_vsync_preprocess(struct mtk_cam_ctrl *ctrl,
 	}
 
 	if (vsync_res->is_last) {
-		ctrl->r_info.sof_l_ts_ns = irq_info->ts_ns;
-		ctrl->r_info.sof_l_ts_mono_ns = ktime_get_ns();
+		ctrl->r_info.sof_l_ts_ns =
+			max(irq_info->ts_ns, ctrl->r_info.sof_ts_ns);
+		ctrl->r_info.sof_l_ts_mono_ns =
+			max(ktime_get_ns(), ctrl->r_info.sof_ts_mono_ns);
 
 		if (cq_ref) {
 			if (apply_cq_ref_is_to_inner(cq_ref)) {

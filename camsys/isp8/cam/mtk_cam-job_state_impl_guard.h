@@ -261,7 +261,7 @@ static inline bool valid_cq_execution_subsample(
 		return ret;
 	ret = ((p->event_ts - p->info->sof_ts_ns) < p->cq_trigger_thres)&&
 		(s_acc->seq_no == p->info->inner_seq_no + 1);
-	/* for sentest NE -> SE duration 25ms case*/
+
 	return ret;
 }
 
@@ -271,8 +271,11 @@ static inline bool valid_cq_execution(struct transition_param *p)
 
 	if (unlikely(!p->s_params))
 		return ret;
-	ret = ((p->event_ts - p->info->sof_l_ts_ns) < p->cq_trigger_thres) &&
-		(p->info->sof_ts_ns <= p->info->sof_l_ts_ns);
+	/* check if ack between camsv/raw and mraw sof */
+	/* for sentest/dual stream: large NE -> SE duration over 25ms case*/
+	ret = (p->info->sof_ts_ns <= p->info->sof_l_ts_ns) &&
+	(((p->event_ts - p->info->sof_ts_ns) < p->cq_trigger_thres) ||
+	((p->event_ts - p->info->sof_l_ts_ns) < SQC_THRES_FROM_L_SOF_NS));
 
 	if (ret == false)
 		pr_info("[mtk-cam:valid_cq_execution] event/l_sof/cq:%llu/%llu/%llu sof:%llu(%llu)",
