@@ -10,6 +10,8 @@
 #include <linux/sched.h>
 #include <aee.h>
 
+#include "mtk_cam-seninf_control-8.h"
+
 #define SENINF_AEE_GENERAL "Seninf"
 #define SENINF_AEE_OUTMUX "Seninf: outmux error"
 #define SENINF_AEE_FS_SEQ "Seninf: sensor fs sequence"
@@ -241,6 +243,8 @@ struct mtk_cam_seninf_ops {
 	int (*_get_device_sel_setting)(struct device *dev, struct mtk_cam_seninf_dev *dev_setting);
 	void (*_seninf_dump_mipi_err)(struct seninf_core *core, struct mtk_cam_seninf_vsync_info *vsync_info);
 	int (*_show_mac_chk_status)(struct seninf_ctx *ctx, int is_clear);
+	int (*_get_csi_HV_HB_meter)(struct seninf_ctx *ctx, struct mtk_cam_seninf_meter_info *info,
+										const int valid_measure_req);
 	unsigned int async_num;
 	unsigned int outmux_num;
 	const char *iomem_ver;

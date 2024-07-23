@@ -6818,8 +6818,212 @@ static int mtk_cam_show_mac_chk_status(struct seninf_ctx *ctx, int is_clear)
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 5);
 	} else
 		seninf_logi(ctx, "warning: iomem_ver is invalid. mac checker is not set.\n");
+	return 0;
+}
+
+static inline int mtk_cam_csi_mac_get_measure_probe_id_by_req(const int measure_req)
+{
+	return measure_req % CSIMAC_MEASURE_MAX_NUM;
+}
+
+static int mtk_cam_csi_mac_hv_hb_config(struct seninf_ctx *ctx,
+	const struct mtk_cam_seninf_meter_info *pInfo, const int measure_req)
+{
+	void *pCsi2_mac = ctx->reg_csirx_mac_csi[(uint32_t)ctx->port];
+	u8 probe_id = mtk_cam_csi_mac_get_measure_probe_id_by_req(measure_req);
+	/* implement config csi mac hw */
+
+	if (unlikely(pCsi2_mac == NULL)) {
+		pr_info("[%s][ERROR] pCsi2_mac is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (probe_id >= CSIMAC_MEASURE_MAX_NUM) {
+		pr_info("[%s][ERROR] probe_id %d is invald\n", __func__, probe_id);
+		return -EINVAL;
+	}
+
+	switch (probe_id) {
+	case 1:
+		SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT3, RG_CSI2_VC_FOR_MEASURE1,
+					pInfo->target_vc);
+
+		SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT3, RG_CSI2_DT_FOR_MEASURE1,
+					pInfo->target_dt);
+
+		SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT3, RG_CSI2_V_LINE1,
+					pInfo->probes[1].measure_line);
+		break;
+
+	default:
+		SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT1, RG_CSI2_VC_FOR_MEASURE0,
+					pInfo->target_vc);
+
+		SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT1, RG_CSI2_DT_FOR_MEASURE0,
+					pInfo->target_dt);
+
+		SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT1, RG_CSI2_V_LINE0,
+					pInfo->probes[0].measure_line);
+		break;
+	}
+
+	pr_info("[%s] vc 0x%x dt 0x%x target_line %d", __func__,
+			pInfo->target_vc,
+			pInfo->target_dt,
+			pInfo->probes[probe_id].measure_line);
+
+	pr_info("[%s] csi_mac_mipi measure probe %d cfg done", __func__,
+			probe_id);
 
 	return 0;
+}
+
+static int mtk_cam_csi_mac_hv_hb_measure_en(struct seninf_ctx *ctx, bool en, int measure_req)
+{
+	void *pCsi2_mac = ctx->reg_csirx_mac_csi[(uint32_t)ctx->port];
+
+	if (unlikely(pCsi2_mac == NULL)) {
+		pr_info("[%s][ERROR] pCsi2_mac is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	switch (mtk_cam_csi_mac_get_measure_probe_id_by_req(measure_req)) {
+	case 1:
+		SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT5, RG_CSI2_MIPI_MEASURE_EN1, en);
+		break;
+	default:
+		SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT5, RG_CSI2_MIPI_MEASURE_EN0, en);
+		break;
+	}
+
+	pr_info("[%s] probe %d en %d\n",
+		__func__,
+		mtk_cam_csi_mac_get_measure_probe_id_by_req(measure_req),
+		en);
+
+	return 0;
+}
+
+static int mtk_cam_csi_mac_hv_hb_wait_measure_done(struct seninf_ctx *ctx, int measure_req)
+{
+
+	void *pCsi2_mac = ctx->reg_csirx_mac_csi[(uint32_t)ctx->port];
+
+	if (unlikely(pCsi2_mac == NULL)) {
+		pr_info("[%s][ERROR] pCsi2_mac is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	switch (mtk_cam_csi_mac_get_measure_probe_id_by_req(measure_req)) {
+	case 1:
+		while(!SENINF_READ_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT5, RO_CSI2_MIPI_MEASURE_DONE1))
+			mdelay(5);
+
+		mtk_cam_csi_mac_hv_hb_measure_en(ctx, false, measure_req);
+		break;
+
+	default:
+		while(!SENINF_READ_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT5, RO_CSI2_MIPI_MEASURE_DONE0))
+			mdelay(5);
+
+		mtk_cam_csi_mac_hv_hb_measure_en(ctx, false, measure_req);
+		break;
+
+	}
+	return 0;
+}
+
+static int mtk_cam_csi_mac_hv_hb_get_result_by_line(struct seninf_ctx *ctx,
+	struct mtk_cam_seninf_meter_info *pInfo, const int measure_req)
+{
+	void *pCsi2_mac = ctx->reg_csirx_mac_csi[(uint32_t)ctx->port];
+
+	if (unlikely(pCsi2_mac == NULL)) {
+		pr_info("[%s][ERROR] pCsi2_mac is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	switch (mtk_cam_csi_mac_get_measure_probe_id_by_req(measure_req)) {
+	case 1:
+		mtk_cam_csi_mac_hv_hb_wait_measure_done(ctx, measure_req);
+		pInfo->probes[1].measure_HV_cnt = SENINF_READ_BITS(pCsi2_mac,
+											CSIRX_MAC_MIPI_MEASUREMENT4,
+											RO_CSI2_H_VALID_CNT1);
+
+		pInfo->probes[1].measure_HB_cnt = SENINF_READ_BITS(pCsi2_mac,
+											CSIRX_MAC_MIPI_MEASUREMENT4,
+											RO_CSI2_H_BLANKING_CNT1);
+		break;
+	default:
+		mtk_cam_csi_mac_hv_hb_wait_measure_done(ctx, measure_req);
+		pInfo->probes[0].measure_HV_cnt = SENINF_READ_BITS(pCsi2_mac,
+											CSIRX_MAC_MIPI_MEASUREMENT2,
+											RO_CSI2_H_VALID_CNT0);
+
+		pInfo->probes[0].measure_HB_cnt = SENINF_READ_BITS(pCsi2_mac,
+											CSIRX_MAC_MIPI_MEASUREMENT2,
+											RO_CSI2_H_BLANKING_CNT0);
+		break;
+	}
+
+	return 0;
+}
+
+static int mtk_cam_csi_mac_hv_hb_reset(struct seninf_ctx *ctx)
+{
+	void *pCsi2_mac = ctx->reg_csirx_mac_csi[(uint32_t)ctx->port];
+
+	if (unlikely(pCsi2_mac == NULL)) {
+		pr_info("[%s][ERROR] pCsi2_mac is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	/* CLR the previous measure en */
+	SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT5, RG_CSI2_MIPI_MEASURE_EN0, false);
+	SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT5, RG_CSI2_MIPI_MEASURE_EN1, false);
+
+	/* CLR the previous measure result */
+	SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT5, RG_CSI2_MIPI_MEASURE_CLR0, true);
+	SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT5, RG_CSI2_MIPI_MEASURE_CLR1, true);
+	SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT5, RG_CSI2_MIPI_MEASURE_CLR0, false);
+	SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT5, RG_CSI2_MIPI_MEASURE_CLR1, false);
+
+	/* set measure line as default line: 0 */
+	SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT1, RG_CSI2_V_LINE0, 0);
+	SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT3, RG_CSI2_V_LINE1, 0);
+
+
+	return 0;
+}
+
+static int mtk_cam_csi_mac_get_hv_hb(struct seninf_ctx *ctx,
+	struct mtk_cam_seninf_meter_info *pInfo, const int valid_measure_req)
+{
+	int i, ret = 0;
+
+	if (mtk_cam_csi_mac_hv_hb_reset(ctx)) {
+		pr_info("[%s][ERROR] mtk_cam_csi_mac_hv_hb_reset fail\n", __func__);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < valid_measure_req; i++) {
+		if (mtk_cam_csi_mac_hv_hb_config(ctx, pInfo, i)) {
+			pr_info("[%s][ERROR] mtk_cam_csi_mac_hv_hb_config fail\n", __func__);
+			return -EINVAL;
+		}
+	}
+
+	for (i = 0; i < valid_measure_req; i++)
+		ret |= mtk_cam_csi_mac_hv_hb_measure_en(ctx, true, i);
+
+	for (i = 0; i < valid_measure_req; i++) {
+		if (mtk_cam_csi_mac_hv_hb_get_result_by_line(ctx, pInfo, i)) {
+			pr_info("[%s][ERROR] mtk_cam_csi_mac_hv_hb_get_result_by_line fail\n", __func__);
+			return -EINVAL;
+		}
+	}
+
+	 return 0;
 }
 
 struct mtk_cam_seninf_ops mtk_csi_phy_3_0 = {
@@ -6884,4 +7088,5 @@ struct mtk_cam_seninf_ops mtk_csi_phy_3_0 = {
 	._get_device_sel_setting = mtk_cam_seninf_device_sel_setting,
 	._seninf_dump_mipi_err = seninf_dump_vsync_info,
 	._show_mac_chk_status = mtk_cam_show_mac_chk_status,
+	._get_csi_HV_HB_meter = mtk_cam_csi_mac_get_hv_hb,
 };
