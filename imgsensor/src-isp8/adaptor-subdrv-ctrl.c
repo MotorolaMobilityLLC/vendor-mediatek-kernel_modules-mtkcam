@@ -2354,6 +2354,7 @@ void streaming_control(struct subdrv_ctx *ctx, bool enable)
 		set_dummy(ctx);
 		subdrv_ixc_wr_u8(ctx, ctx->s_ctx.reg_addr_stream, 0x01);
 		ctx->stream_ctrl_start_time = ktime_get_boottime_ns();
+		ctx->stream_ctrl_start_time_mono = ktime_get_ns();
 	} else {
 		ctx->stream_ctrl_end_time = ktime_get_boottime_ns();
 		if (ctx->s_ctx.custom_stream_ctrl_delay &&
@@ -2385,6 +2386,7 @@ void streaming_control(struct subdrv_ctx *ctx, bool enable)
 			check_stream_off(ctx);
 		ctx->stream_ctrl_start_time = 0;
 		ctx->stream_ctrl_end_time = 0;
+		ctx->stream_ctrl_start_time_mono = 0;
 
 		ctx->mcss_init_info.enable_mcss = 0;
 		if (ctx->s_ctx.mcss_init != NULL)
@@ -3044,7 +3046,7 @@ void update_hw_init_time(struct subdrv_ctx *ctx, u64 fisrt_vsync_time)
 	}
 	shutter_time = shutter_lines*line_time_ns;
 	cur_init_time = fisrt_vsync_time
-					- ctx->stream_ctrl_start_time
+					- ctx->stream_ctrl_start_time_mono
 					- shutter_time;
 	if (cur_init_time < HW_INIT_TIME_MAX) {
 		new_init_time =
@@ -3054,10 +3056,11 @@ void update_hw_init_time(struct subdrv_ctx *ctx, u64 fisrt_vsync_time)
 				? MAX_UPDATED_TIMES : times+1;
 	}
 	DRV_LOG_MUST(ctx,
-			"sid:%d, fisrt_vsync_time:%llu, stream_ctrl_start_time:%llu, cur_init_time:%llu, new_init_time:%llu, old_init_time:%llu, times:%u, shutter_time:%llu, shutter_lines:%u, line_time_ns:%llu\n",
+			"sid:%d, fisrt_vsync_time:%llu, stream_ctrl_start_time:%llu, stream_ctrl_start_time_mono:%llu, cur_init_time:%llu, new_init_time:%llu, old_init_time:%llu, times:%u, shutter_time:%llu, shutter_lines:%u, line_time_ns:%llu\n",
 			cur_id,
 			fisrt_vsync_time,
 			ctx->stream_ctrl_start_time,
+			ctx->stream_ctrl_start_time_mono,
 			cur_init_time,
 			new_init_time,
 			old_init_time,
