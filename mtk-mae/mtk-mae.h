@@ -459,6 +459,7 @@ struct mtk_mae_req_work {
 struct mae_data {
 	const uint32_t internal_buffer_size;
 	const uint32_t base_address;
+	const uint32_t fd_fpn_threshold;
 };
 
 struct mae_plat_data {
