@@ -4501,6 +4501,7 @@ struct initialize_params m2m_init = {
 };
 
 #define DYNAMIC_TWIN_DRV_TRIGGER 0
+#define DYNAMIC_TWIN_SW_OVERHEAD_NS 6000000
 static int update_job_raw_change(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -4522,6 +4523,7 @@ static int update_job_raw_change(struct mtk_cam_job *job)
 		cur_raws = (int)bit_map_subset_of(MAP_HW_RAW, ctx->used_engine);
 		if (cur_raws &&
 			cur_raws != res->raws) {
+			job->job_state.cq_trigger_thres_ns -= DYNAMIC_TWIN_SW_OVERHEAD_NS;
 			if (get_master_raw_id(cur_raws) == get_master_raw_id(res->raws))
 				job->raw_change = JOB_RAW_MASTER_UNCHANGED;
 			else
