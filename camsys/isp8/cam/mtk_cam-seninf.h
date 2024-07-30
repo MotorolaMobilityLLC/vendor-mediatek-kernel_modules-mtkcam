@@ -140,6 +140,30 @@ struct outmux_cfg {
 	struct outmux_tag_cfg tag_cfg[MAX_OUTMUX_TAG_NUM];
 };
 
+struct mtk_cam_seninf_bit_error {
+	u32 bit_err_ctrl;
+	u32 bit_err_cnt;
+	u64 min_bit;
+	u64 max_bit;
+	u32 min_cycle_msb;
+	u32 min_cycle_lsb;
+	u32 max_cycle_msb;
+	u32 max_cycle_lsb;
+	u32 seninf_clk_mhz;
+	u32 bit_rate_mhz;
+};
+
+struct mtk_cam_seninf_spacer_detector {
+	u32 spacer;
+	u32 vc;
+	u32 dt;
+	u32 valid_cnt;
+	u32 num_hs1;
+	u32 num_hs2;
+	u32 wc;
+	u32 trio;
+};
+
 struct seninf_core {
 	struct device *dev;
 	int pm_domain_cnt;
@@ -274,6 +298,10 @@ struct seninf_ctx {
 	int seninfSelSensor;
 	int pad2cam[PAD_MAXCNT][MAX_DEST_NUM];
 	int pad_tag_id[PAD_MAXCNT][MAX_DEST_NUM];
+	/* bit error rate */
+	struct mtk_cam_seninf_bit_error ber;
+	/* cphy lrte spacer detector */
+	struct mtk_cam_seninf_spacer_detector lrte_sd;
 
 	/* fake sensor */
 	struct mtk_fake_sensor_info fake_sensor_info;
