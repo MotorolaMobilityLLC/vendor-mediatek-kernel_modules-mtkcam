@@ -2058,7 +2058,6 @@ static int csirx_mac_csi_checker_v2(struct seninf_ctx *ctx)
 	RESET_MAC_CHECKER_V2(csirx_mac_csi, 1);
 	RESET_MAC_CHECKER_V2(csirx_mac_csi, 2);
 	RESET_MAC_CHECKER_V2(csirx_mac_csi, 3);
-	RESET_MAC_CHECKER_V2(csirx_mac_csi, 4);
 	RESET_MAC_CHECKER_V2(csirx_mac_csi, 5);
 
 	/* Clear status and IRQ status */
@@ -2066,15 +2065,13 @@ static int csirx_mac_csi_checker_v2(struct seninf_ctx *ctx)
 	CLEAR_MAC_CHECKER_IRQ_V2(csirx_mac_csi, 1);
 	CLEAR_MAC_CHECKER_IRQ_V2(csirx_mac_csi, 2);
 	CLEAR_MAC_CHECKER_IRQ_V2(csirx_mac_csi, 3);
-	CLEAR_MAC_CHECKER_IRQ_V2(csirx_mac_csi, 4);
 	CLEAR_MAC_CHECKER_IRQ_V2(csirx_mac_csi, 5);
 
 	/* Set VC/DT selection and enable */
 	SET_MAC_CHECKER_V2(csirx_mac_csi, 0, 0, 0x2b, 0, 0);
 	SET_MAC_CHECKER_V2(csirx_mac_csi, 1, 1, 0x2b, 0, 0);
 	SET_MAC_CHECKER_V2(csirx_mac_csi, 2, 2, 0x2b, 0, 0);
-	SET_MAC_CHECKER_V2(csirx_mac_csi, 3, 3, 0x2b, 0, 0);
-	SET_MAC_CHECKER_V2(csirx_mac_csi, 4, 0, 0x30, 0, 0);
+	SET_MAC_CHECKER_V2(csirx_mac_csi, 3, 0, 0x30, 0, 0);
 	SET_MAC_CHECKER_V2(csirx_mac_csi, 5, 1, 0x30, 0, 0);
 
 	return 0;
@@ -2254,6 +2251,8 @@ static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 	/* Enable BER */
 	SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_BIT_ERR_CTRL, RG_CSI2_BIT_ERR_CNT_EN, 0);
 	SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_BIT_ERR_CTRL, RG_CSI2_BIT_ERR_CNT_CLR, 1);
+	mdelay(1);
+	SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_BIT_ERR_CTRL, RG_CSI2_BIT_ERR_CNT_CLR, 0);
 	SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_BIT_ERR_CTRL, RG_CSI2_BIT_ERR_CNT_EN, 1);
 	SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_BIT_ERR_CTRL, RG_CSI2_BIT_ERR_CNT_IRQ_THRESHOLD, 5);
 
@@ -3549,14 +3548,15 @@ static int mtk_cam_seninf_debug_core_dump(struct seninf_ctx *ctx,
 	return (ofs > 0) ? 0 : -EPERM;
 }
 
-static int calculate_bit_error_rate(struct seninf_ctx *ctx, u64 *min_bit, u64 *max_bit)
+static int calculate_bit_error_rate(struct seninf_ctx *ctx)
 {
 	void *base_csi_mac = ctx->reg_csirx_mac_csi[(uint32_t)ctx->port];
-	u64 min_cycle, max_cycle;
-	u64 min_cycle_msb, min_cycle_lsb, max_cycle_msb, max_cycle_lsb;
-	u32 seninf_clk_mhz = SENINF_CK / 1000000;
-	u32 data_rate_mhz;
+	struct mtk_cam_seninf_bit_error *ber = &ctx->ber;
+	u64 min_cycle = 0;
+	u64 max_cycle = 0;
 	int bit_per_pixel = 10;
+	u16 hsize = 0;
+	u16 vsize = 0;
 	struct seninf_vc *vc = mtk_cam_seninf_get_vc_by_pad(ctx, PAD_SRC_RAW0);
 	struct seninf_vc *vc1 = mtk_cam_seninf_get_vc_by_pad(ctx, PAD_SRC_RAW_EXT0);
 
@@ -3565,62 +3565,61 @@ static int calculate_bit_error_rate(struct seninf_ctx *ctx, u64 *min_bit, u64 *m
 		return -1;
 	}
 
-	if (vc)
+	memset(ber, 0, sizeof(struct mtk_cam_seninf_bit_error));
+	ber->seninf_clk_mhz = SENINF_CK / 1000000;
+
+	if (vc) {
 		bit_per_pixel = vc->bit_depth;
-	else if (vc1)
+		hsize = vc->exp_hsize;
+		vsize = vc->exp_vsize;
+	} else if (vc1) {
 		bit_per_pixel = vc1->bit_depth;
-
-	min_cycle_lsb = SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_BIT_ERR_MIN_CYCLE_LSB);
-	min_cycle_msb = SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_BIT_ERR_MIN_CYCLE_MSB);
-	max_cycle_lsb = SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_BIT_ERR_MAX_CYCLE_LSB);
-	max_cycle_msb = SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_BIT_ERR_MAX_CYCLE_MSB);
-
-	min_cycle = (min_cycle_msb << 32) | min_cycle_lsb;
-	max_cycle = (max_cycle_msb << 32) | max_cycle_lsb;
-
-	if (!bit_per_pixel || !ctx->num_data_lanes) {
-		dev_info(ctx->dev, "error: %dbit or %dlane\n", bit_per_pixel, ctx->num_data_lanes);
-		return -1;
+		hsize = vc1->exp_hsize;
+		vsize = vc1->exp_vsize;
 	}
+
+	ber->bit_err_ctrl = SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_BIT_ERR_CTRL);
+	ber->bit_err_cnt = SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_BIT_ERR_CNT);
+	ber->min_cycle_lsb = SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_BIT_ERR_MIN_CYCLE_LSB);
+	ber->min_cycle_msb = SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_BIT_ERR_MIN_CYCLE_MSB);
+	ber->max_cycle_lsb = SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_BIT_ERR_MAX_CYCLE_LSB);
+	ber->max_cycle_msb = SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_BIT_ERR_MAX_CYCLE_MSB);
+
+	min_cycle = ((u64)ber->min_cycle_msb << 32) | ber->min_cycle_lsb;
+	max_cycle = ((u64)ber->max_cycle_msb << 32) | ber->max_cycle_lsb;
 
 	if (!ctx->is_cphy)
-		data_rate_mhz = ctx->mipi_pixel_rate / 1000000 * bit_per_pixel / ctx->num_data_lanes;
+		ber->bit_rate_mhz = hsize * vsize / 1000 * ctx->fps_n / ctx->fps_d * bit_per_pixel / 1000;
 	else
-		data_rate_mhz = ctx->mipi_pixel_rate / 1000000 * bit_per_pixel * 7 / 16 / ctx->num_data_lanes;
+		ber->bit_rate_mhz = hsize * vsize / 1000 * ctx->fps_n / ctx->fps_d * bit_per_pixel * 7 / 16 / 1000;
 
-	if (min_cycle_msb > 0xffff) {
-		do_div(min_cycle, seninf_clk_mhz);
-		*min_bit = min_cycle * data_rate_mhz;
-	} else {
-		min_cycle = min_cycle * data_rate_mhz;
-		*min_bit = do_div(min_cycle, seninf_clk_mhz);
-	}
+	if (min_cycle == 0xFFFFFFFFFFFF)
+		min_cycle = 0;
 
-	if (max_cycle_msb > 0xffff) {
-		do_div(max_cycle, seninf_clk_mhz);
-		*max_bit = max_cycle * data_rate_mhz;
-	} else {
-		max_cycle = max_cycle * data_rate_mhz;
-		*max_bit = do_div(max_cycle, seninf_clk_mhz);
-	}
+	ber->min_bit = min_cycle * ber->bit_rate_mhz;
+	do_div(ber->min_bit, ber->seninf_clk_mhz);
+
+	ber->max_bit = max_cycle * ber->bit_rate_mhz;
+	do_div(ber->max_bit, ber->seninf_clk_mhz);
 
 	return 0;
 }
 
-static int calculate_cphy_lrte_spacer(struct seninf_ctx *ctx, u32 *spacer, u32 *vc, u32 *dt)
+static int calculate_cphy_lrte_spacer(struct seninf_ctx *ctx)
 {
 	void *base_csi_mac = ctx->reg_csirx_mac_csi[(uint32_t)ctx->port];
-	u32 valid_cnt, num_hs1, num_hs2, wc, trio;
+	struct mtk_cam_seninf_spacer_detector *lrte_sd = &ctx->lrte_sd;
 
-	valid_cnt = SENINF_READ_BITS(base_csi_mac, CSIRX_MAC_SPACER_DET_2, RO_CSI2_SPACER_DET_VALID_CNT);
-	num_hs1 = SENINF_READ_BITS(base_csi_mac, CSIRX_MAC_SPACER_DET_1, RO_CSI2_SPACER_DET_HS1);
-	num_hs2 = SENINF_READ_BITS(base_csi_mac, CSIRX_MAC_SPACER_DET_1, RO_CSI2_SPACER_DET_HS2);
-	wc = SENINF_READ_BITS(base_csi_mac, CSIRX_MAC_SPACER_DET_1, RO_CSI2_SPACER_DET_WC);
-	*vc = SENINF_READ_BITS(base_csi_mac, CSIRX_MAC_SPACER_DET_2, RO_CSI2_SPACER_DET_VC);
-	*dt = SENINF_READ_BITS(base_csi_mac, CSIRX_MAC_SPACER_DET_1, RO_CSI2_SPACER_DET_DT);
-	trio = ctx->num_data_lanes;
-
-	*spacer = (valid_cnt - 1) * 4 + num_hs2 + num_hs1 - 4 - (wc + 1) / 2 / trio;
+	lrte_sd->valid_cnt = SENINF_READ_BITS(base_csi_mac, CSIRX_MAC_SPACER_DET_2, RO_CSI2_SPACER_DET_VALID_CNT);
+	lrte_sd->num_hs1 = SENINF_READ_BITS(base_csi_mac, CSIRX_MAC_SPACER_DET_1, RO_CSI2_SPACER_DET_HS1);
+	lrte_sd->num_hs2 = SENINF_READ_BITS(base_csi_mac, CSIRX_MAC_SPACER_DET_1, RO_CSI2_SPACER_DET_HS2);
+	lrte_sd->wc = SENINF_READ_BITS(base_csi_mac, CSIRX_MAC_SPACER_DET_1, RO_CSI2_SPACER_DET_WC);
+	lrte_sd->vc = SENINF_READ_BITS(base_csi_mac, CSIRX_MAC_SPACER_DET_2, RO_CSI2_SPACER_DET_VC);
+	lrte_sd->dt = SENINF_READ_BITS(base_csi_mac, CSIRX_MAC_SPACER_DET_1, RO_CSI2_SPACER_DET_DT);
+	lrte_sd->trio = ctx->num_data_lanes;
+	lrte_sd->spacer =
+		(lrte_sd->valid_cnt - 1) * 4 + lrte_sd->num_hs2 + lrte_sd->num_hs1 - 4 -
+		(lrte_sd->wc + 1) / 2 / lrte_sd->trio;
 
 	return 0;
 }
@@ -3637,8 +3636,6 @@ static ssize_t mtk_cam_seninf_show_status(struct device *dev,
 	struct mtk_cam_seninf_vcinfo_debug *vcinfo_debug;
 	void *rx, *base_ana, *csi_mac, *OutMux;
 	char *fmeter_dbg = kzalloc(sizeof(char) * 256, GFP_KERNEL);
-	u64 min_bit = 0, max_bit = 0;
-	u32 spacer = 0, vc = 0, dt = 0;
 
 	core = dev_get_drvdata(dev);
 	len = 0;
@@ -3681,7 +3678,7 @@ static ssize_t mtk_cam_seninf_show_status(struct device *dev,
 		rx = ctx->reg_ana_dphy_top[(unsigned int)ctx->port];
 		base_ana = ctx->reg_ana_csi_rx[(unsigned int)ctx->port];
 		SHOW(buf, len,
-			"csirx_mac_csi irq_stat 0x%08x, irq_g1_stat 0x%08x, seninf_async_irq 0x%08x\n",
+			"csirx_mac_csi2 irq_stat 0x%08x, irq_g1_stat 0x%08x, seninf_async_irq 0x%08x\n",
 		     debug_result.csi_mac_irq_status,
 			 SENINF_READ_REG(csi_mac, CSIRX_MAC_CSI2_IRQ_G1_STATUS),
 			 debug_result.seninf_async_irq);
@@ -3698,22 +3695,32 @@ static ssize_t mtk_cam_seninf_show_status(struct device *dev,
 			SHOW_MAC_CHECKER_V2(buf, len, csi_mac, 1);
 			SHOW_MAC_CHECKER_V2(buf, len, csi_mac, 2);
 			SHOW_MAC_CHECKER_V2(buf, len, csi_mac, 3);
-			SHOW_MAC_CHECKER_V2(buf, len, csi_mac, 4);
 			SHOW_MAC_CHECKER_V2(buf, len, csi_mac, 5);
 		}
 
 		if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
 			/* Bit Error Rate (BER) */
-			calculate_bit_error_rate(ctx, &min_bit, &max_bit);
-			SHOW(buf, len, "1/BER = [%llu, %llu]\n", min_bit, max_bit);
-			if (min_bit && min_bit < 1000000000000)
-				SHOW(buf, len, "warning: max(BER) > 10^-12\n");
-			if (max_bit && max_bit < 1000000000000)
-				SHOW(buf, len, "warning: min(BER) > 10^-12\n");
+			calculate_bit_error_rate(ctx);
+			SHOW(buf, len,
+				"csirx_mac_csi2 BIT_ERR_CTRL/MIN_CYCLE/MAX_CYCLE:(0x%08x)/(0x%08x%08x)/(%08x%08x)\n",
+				ctx->ber.bit_err_ctrl,
+				ctx->ber.min_cycle_msb, ctx->ber.min_cycle_lsb,
+				ctx->ber.max_cycle_msb, ctx->ber.max_cycle_lsb);
+			SHOW(buf, len, "seninf_ck(%uMHz) bit_rate(%uMHz)\n",
+				ctx->ber.seninf_clk_mhz, ctx->ber.bit_rate_mhz);
+			SHOW(buf, len, "bit_err_cnt <%u> bit_err_rate(1/[%llu,%llu])\n",
+				ctx->ber.bit_err_cnt, ctx->ber.min_bit, ctx->ber.max_bit);
+			if (ctx->ber.min_bit && ctx->ber.min_bit < 1000000000000)
+				SHOW(buf, len, "WARN: max(BER) > 10^-12\n");
+			if (ctx->ber.max_bit && ctx->ber.max_bit < 1000000000000)
+				SHOW(buf, len, "WARN: min(BER) > 10^-12\n");
 			/* CPHY LRTE Spacer */
 			if (ctx->is_cphy && ctx->csi_param.cphy_lrte_support) {
-				calculate_cphy_lrte_spacer(ctx, &spacer, &vc, &dt);
-				SHOW(buf, len, "vc(0x%02x) dt(0x%02x) spacer = %u\n", vc, dt, spacer);
+				calculate_cphy_lrte_spacer(ctx);
+				SHOW(buf, len,
+					"cphy_lrte_spacer <%u> vc(0x%02x) dt(0x%02x) valid_cnt/num_hs1/num_hs2/wc/trio: %u/%u/%u/%u/%u\n",
+					ctx->lrte_sd.spacer, ctx->lrte_sd.vc, ctx->lrte_sd.dt, ctx->lrte_sd.valid_cnt,
+					ctx->lrte_sd.num_hs1, ctx->lrte_sd.num_hs2, ctx->lrte_sd.wc, ctx->lrte_sd.trio);
 			}
 		}
 
@@ -3956,8 +3963,6 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 	unsigned int temp = 0;
 	void *pSeninf_top = ctx->reg_if_top;
 	void *pSeninf_asytop = ctx->reg_if_async;
-	u64 min_bit = 0, max_bit = 0;
-	u32 spacer = 0, vc = 0, dt = 0;
 
 	mtk_cam_sensor_get_frame_cnt(ctx, &frame_cnt1);
 
@@ -4256,30 +4261,40 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 1);
 		DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 2);
 		DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 3);
-		DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 4);
 		DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 5);
 		/* Clear MAC CHECKER status and IRQ status */
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 0);
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 1);
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 2);
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 3);
-		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 4);
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 5);
 	} else
 		seninf_logi(ctx, "warning: iomem_ver is invalid. mac checker is not set.\n");
 
 	if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
 		/* Bit Error Rate (BER) */
-		calculate_bit_error_rate(ctx, &min_bit, &max_bit);
-		seninf_logi(ctx, "1/BER = [%llu, %llu]\n", min_bit, max_bit);
-		if (!min_bit && min_bit < 1000000000000)
-			seninf_logi(ctx, "warning: max(BER) > 10^-12\n");
-		if (!max_bit && max_bit < 1000000000000)
-			seninf_logi(ctx, "warning: min(BER) > 10^-12\n");
+		calculate_bit_error_rate(ctx);
+		seninf_logi(ctx,
+			"CSI-%d,CSIRX_MAC_CSI2_BIT_ERR_CTRL/MIN_CYCLE/MAX_CYCLE:(0x%08x)/(0x%08x%08x)/(%08x%08x)\n",
+			(uint32_t)ctx->portNum, ctx->ber.bit_err_ctrl,
+			ctx->ber.min_cycle_msb, ctx->ber.min_cycle_lsb,
+			ctx->ber.max_cycle_msb, ctx->ber.max_cycle_lsb);
+		seninf_logi(ctx,
+			"seninf_ck(%uMHz) bit_rate(%uMHz) bit_err_cnt(%u) bit_err_rate(1/[%llu,%llu])\n",
+			ctx->ber.seninf_clk_mhz, ctx->ber.bit_rate_mhz,
+			ctx->ber.bit_err_cnt, ctx->ber.min_bit, ctx->ber.max_bit);
+		if (ctx->ber.min_bit && ctx->ber.min_bit < 1000000000000)
+			seninf_logi(ctx, "WARN: max(BER) > 10^-12\n");
+		if (ctx->ber.max_bit && ctx->ber.max_bit < 1000000000000)
+			seninf_logi(ctx, "WARN: min(BER) > 10^-12\n");
 		/* CPHY LRTE Spacer */
 		if (ctx->is_cphy && ctx->csi_param.cphy_lrte_support) {
-			calculate_cphy_lrte_spacer(ctx, &spacer, &vc, &dt);
-			seninf_logi(ctx, "vc(0x%02x) dt(0x%02x) spacer = %u\n", vc, dt, spacer);
+			calculate_cphy_lrte_spacer(ctx);
+			seninf_logi(ctx, "CSI-%d,cphy_lrte_spacer(%u) vc(0x%02x) dt(0x%02x)\n",
+				(uint32_t)ctx->portNum, ctx->lrte_sd.spacer, ctx->lrte_sd.vc, ctx->lrte_sd.dt);
+			seninf_logi(ctx, "CSI-%d,valid_cnt/num_hs1/num_hs2/wc/trio: %u/%u/%u/%u/%u\n",
+				(uint32_t)ctx->portNum, ctx->lrte_sd.valid_cnt,
+				ctx->lrte_sd.num_hs1, ctx->lrte_sd.num_hs2, ctx->lrte_sd.wc, ctx->lrte_sd.trio);
 		}
 	}
 
@@ -4364,7 +4379,6 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 1);
 		DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 2);
 		DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 3);
-		DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 4);
 		DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 5);
 	} else
 		seninf_logi(ctx, "[%s] warning: iomem_ver is invalid. mac checker is not set.\n", __func__);
@@ -4500,7 +4514,6 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 			DUMP_CUR_MAC_CHECKER_V2(ctx, 1);
 			DUMP_CUR_MAC_CHECKER_V2(ctx, 2);
 			DUMP_CUR_MAC_CHECKER_V2(ctx, 3);
-			DUMP_CUR_MAC_CHECKER_V2(ctx, 4);
 			DUMP_CUR_MAC_CHECKER_V2(ctx, 5);
 		} else
 			seninf_logi(ctx, "[%s] warning: iomem_ver is invalid. mac checker is not set.\n", __func__);
@@ -4515,8 +4528,6 @@ static int mtk_cam_seninf_debug_current_status(struct seninf_ctx *ctx)
 	int i, ret = 0;
 	enum CSI_PORT csi_port = CSI_PORT_0;
 	char *fmeter_dbg = kzalloc(sizeof(char) * 256, GFP_KERNEL);
-	u64 min_bit = 0, max_bit = 0;
-	u32 spacer = 0, vc = 0, dt = 0;
 
 	ctx->debug_cur_sys_time_in_ns = ktime_get_boottime_ns();
 
@@ -4662,35 +4673,44 @@ static int mtk_cam_seninf_debug_current_status(struct seninf_ctx *ctx)
 		READ_CUR_MAC_CHECKER_V2(base_csi_mac, 1);
 		READ_CUR_MAC_CHECKER_V2(base_csi_mac, 2);
 		READ_CUR_MAC_CHECKER_V2(base_csi_mac, 3);
-		READ_CUR_MAC_CHECKER_V2(base_csi_mac, 4);
 		READ_CUR_MAC_CHECKER_V2(base_csi_mac, 5);
 		DUMP_CUR_MAC_CHECKER_V2(ctx, 0);
 		DUMP_CUR_MAC_CHECKER_V2(ctx, 1);
 		DUMP_CUR_MAC_CHECKER_V2(ctx, 2);
 		DUMP_CUR_MAC_CHECKER_V2(ctx, 3);
-		DUMP_CUR_MAC_CHECKER_V2(ctx, 4);
 		DUMP_CUR_MAC_CHECKER_V2(ctx, 5);
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 0);
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 1);
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 2);
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 3);
-		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 4);
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 5);
 	} else
 		seninf_logi(ctx, "warning: iomem_ver is invalid. mac checker is not set.\n");
 
 	if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
 		/* Bit Error Rate (BER) */
-		calculate_bit_error_rate(ctx, &min_bit, &max_bit);
-		seninf_logi(ctx, "1/BER = [%llu, %llu]\n", min_bit, max_bit);
-		if (!min_bit && min_bit < 1000000000000)
-			seninf_logi(ctx, "warning: max(BER) > 10^-12\n");
-		if (!max_bit && max_bit < 1000000000000)
-			seninf_logi(ctx, "warning: min(BER) > 10^-12\n");
+		calculate_bit_error_rate(ctx);
+		seninf_logi(ctx,
+			"CSI-%d,CSIRX_MAC_CSI2_BIT_ERR_CTRL/MIN_CYCLE/MAX_CYCLE:(0x%08x)/(0x%08x%08x)/(%08x%08x)\n",
+			(uint32_t)ctx->portNum, ctx->ber.bit_err_ctrl,
+			ctx->ber.min_cycle_msb, ctx->ber.min_cycle_lsb,
+			ctx->ber.max_cycle_msb, ctx->ber.max_cycle_lsb);
+		seninf_logi(ctx,
+			"seninf_ck(%uMHz) bit_rate(%uMHz) bit_err_cnt(%u) bit_err_rate(1/[%llu,%llu])\n",
+			ctx->ber.seninf_clk_mhz, ctx->ber.bit_rate_mhz,
+			ctx->ber.bit_err_cnt, ctx->ber.min_bit, ctx->ber.max_bit);
+		if (ctx->ber.min_bit && ctx->ber.min_bit < 1000000000000)
+			seninf_logi(ctx, "WARN: max(BER) > 10^-12\n");
+		if (ctx->ber.max_bit && ctx->ber.max_bit < 1000000000000)
+			seninf_logi(ctx, "WARN: min(BER) > 10^-12\n");
 		/* CPHY LRTE Spacer */
 		if (ctx->is_cphy && ctx->csi_param.cphy_lrte_support) {
-			calculate_cphy_lrte_spacer(ctx, &spacer, &vc, &dt);
-			seninf_logi(ctx, "vc(0x%02x) dt(0x%02x) spacer = %u\n", vc, dt, spacer);
+			calculate_cphy_lrte_spacer(ctx);
+			seninf_logi(ctx, "CSI-%d,cphy_lrte_spacer(%u) vc(0x%02x) dt(0x%02x)\n",
+				(uint32_t)ctx->portNum, ctx->lrte_sd.spacer, ctx->lrte_sd.vc, ctx->lrte_sd.dt);
+			seninf_logi(ctx, "CSI-%d,valid_cnt/num_hs1/num_hs2/wc/trio: %u/%u/%u/%u/%u\n",
+				(uint32_t)ctx->portNum, ctx->lrte_sd.valid_cnt,
+				ctx->lrte_sd.num_hs1, ctx->lrte_sd.num_hs2, ctx->lrte_sd.wc, ctx->lrte_sd.trio);
 		}
 	}
 
@@ -6807,14 +6827,12 @@ static int mtk_cam_show_mac_chk_status(struct seninf_ctx *ctx, int is_clear)
 		DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 1);
 		DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 2);
 		DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 3);
-		DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 4);
 		DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 5);
 		/* Clear MAC CHECKER status and IRQ status */
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 0);
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 1);
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 2);
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 3);
-		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 4);
 		CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 5);
 	} else
 		seninf_logi(ctx, "warning: iomem_ver is invalid. mac checker is not set.\n");

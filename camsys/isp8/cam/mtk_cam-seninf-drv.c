@@ -50,8 +50,6 @@
 #endif
 #endif
 
-#define REDUCE_KO_DEPENDENCY_FOR_SMT
-
 #define is_irq_ready 1
 
 #define ESD_RESET_SUPPORT 1
@@ -817,7 +815,9 @@ static int seninf_core_pm_runtime_get_sync(struct seninf_core *core)
 	int ret = 0;
 
 	if (core->pm_domain_cnt == 1) {
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 		mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_SENIF);
+#endif
 		ret = pm_runtime_get_sync(core->dev);
 		if (ret < 0) {
 			dev_info(core->dev, "pm_runtime_get_sync(fail),ret(%d)\n", ret);
@@ -831,7 +831,9 @@ static int seninf_core_pm_runtime_get_sync(struct seninf_core *core)
 
 		for (i = 0; i < core->pm_domain_cnt; i++) {
 			if (core->pm_domain_devs[i] != NULL) {
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 				mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_SENIF);
+#endif
 				ret = pm_runtime_get_sync(core->pm_domain_devs[i]);
 				if (ret < 0) {
 					dev_info(core->dev,
@@ -858,7 +860,9 @@ static int seninf_core_pm_runtime_put(struct seninf_core *core)
 		ret = pm_runtime_put_sync(core->dev);
 		if (ret < 0)
 			dev_info(core->dev, "pm_runtime_put_sync(fail),ret(%d)\n", ret);
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 		mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_SENIF);
+#endif
 	} else if (core->pm_domain_cnt > 1) {
 		if (!core->pm_domain_devs)
 			return -ENOMEM;
@@ -870,7 +874,9 @@ static int seninf_core_pm_runtime_put(struct seninf_core *core)
 					dev_info(core->dev,
 						"pm_runtime_put_sync(fail),ret(%d)\n",
 						ret);
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 				mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_SENIF);
+#endif
 			}
 		}
 	} else
@@ -3549,8 +3555,10 @@ static int seninf_probe(struct platform_device *pdev)
 #endif  /*CSI_EFUSE_VERIFY_GORDAN_TABLE_EN*/
 	if (csi_efuse_value_verify(ctx) < 0) {
 		dev_info(dev, "Failed to verify efuse data\n");
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 		aee_kernel_warning_api(__FILE__, __LINE__, DB_OPT_DEFAULT,
 		"seninf", "Failed to verify efuse data");
+#endif
 	}
 #endif  /*CSI_EFUSE_VERIFY_EN*/
 #endif  /*CSI_EFUSE_SET*/
