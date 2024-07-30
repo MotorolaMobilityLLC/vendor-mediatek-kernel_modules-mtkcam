@@ -225,6 +225,11 @@ struct plat_data_hw {
 	u32 camsys_axi_mux;
 	u32 platform_id;
 	int cammux_id_raw_start;
+	/**
+	 * ICC patch number need to be same across the
+	 * same-generation ISP version chipsets to
+	 * have the correct qos calculation report software flow.
+	 */
 	int raw_icc_path_num;
 	int yuv_icc_path_num;
 	int max_main_pipe_w;
