@@ -30,7 +30,8 @@ subdir-ccflags-y += \
 	-I$(MTK_ISP_DRIVER_PATH)/include/ \
 	-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/mt-plat/ \
 	-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/i3c_i2c_wrap \
-	-I$(DEVICE_MODULES_PATH)/drivers/i3c/master
+	-I$(DEVICE_MODULES_PATH)/drivers/i3c/master \
+	-I$(srctree)/drivers/thermal
 
 obj-y += imgsensor-glue/
 
