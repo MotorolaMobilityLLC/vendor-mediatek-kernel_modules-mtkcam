@@ -237,11 +237,16 @@ static inline bool bypass_guard_check(struct transition_param *p)
 
 static inline bool valid_i2c_period(struct transition_param *p)
 {
+	int ret = false;
+
 	if (unlikely(!p->s_params))
 		return false;
-
-	return ((p->event_ts - p->info->sof_ts_ns) < p->s_params->i2c_thres_ns) ||
+	spin_lock(p->info_lock);
+	ret = ((p->event_ts - p->info->sof_ts_ns) < p->s_params->i2c_thres_ns) ||
 		((p->event_ts - p->info->sof_l_ts_ns) < I2C_THRES_FROM_L_SOF_NS);
+	spin_unlock(p->info_lock);
+
+	return ret;
 }
 
 static inline bool allow_subsample_2_i2c_by_ts(
@@ -249,9 +254,11 @@ static inline bool allow_subsample_2_i2c_by_ts(
 {
 	bool ret = false;
 
+	spin_lock(p->info_lock);
 	ret = ((s_acc->s->s_params.subsample == 2) &&
 		(s_acc->seq_no == p->info->outer_seq_no + 1) &&
 		(p->event_ts - p->info->sof_ts_ns) < 2000000);
+	spin_unlock(p->info_lock);
 
 	return ret;
 }
@@ -260,18 +267,24 @@ static inline bool allow_subsample_4_i2c_by_inner(
 {
 	bool ret = false;
 
+	spin_lock(p->info_lock);
 	ret = ((s_acc->s->s_params.subsample == 4) &&
 		(s_acc->seq_no == p->info->inner_seq_no + 1));
+	spin_unlock(p->info_lock);
 
 	return ret;
 }
 
 static inline bool valid_i2c_period_l(struct transition_param *p)
 {
+	bool ret = false;
 	if (unlikely(!p->s_params))
 		return false;
+	spin_lock(p->info_lock);
+	ret = (p->event_ts - p->info->sof_ts_ns) >= (p->event_ts - p->info->sof_l_ts_ns);
+	spin_unlock(p->info_lock);
 
-	return (p->event_ts - p->info->sof_ts_ns) >= (p->event_ts - p->info->sof_l_ts_ns);
+	return ret;
 }
 
 static inline bool valid_cq_execution_subsample(
@@ -281,8 +294,11 @@ static inline bool valid_cq_execution_subsample(
 
 	if (unlikely(!p->s_params))
 		return ret;
+
+	spin_lock(p->info_lock);
 	ret = ((p->event_ts - p->info->sof_ts_ns) < p->cq_trigger_thres)&&
 		(s_acc->seq_no == p->info->inner_seq_no + 1);
+	spin_unlock(p->info_lock);
 
 	return ret;
 }
@@ -295,6 +311,7 @@ static inline bool valid_cq_execution(struct transition_param *p)
 		return ret;
 	/* check if ack between camsv/raw and mraw sof */
 	/* for sentest/dual stream: large NE -> SE duration over 25ms case*/
+	spin_lock(p->info_lock);
 	ret = (p->info->sof_ts_ns <= p->info->sof_l_ts_ns) &&
 	(((p->event_ts - p->info->sof_ts_ns) < p->cq_trigger_thres) ||
 	((p->event_ts - p->info->sof_l_ts_ns) < SQC_THRES_FROM_L_SOF_NS));
@@ -303,6 +320,7 @@ static inline bool valid_cq_execution(struct transition_param *p)
 		pr_info("[mtk-cam:valid_cq_execution] event/l_sof/cq:%llu/%llu/%llu sof:%llu(%llu)",
 			p->event_ts, p->info->sof_l_ts_ns, p->cq_trigger_thres, p->info->sof_ts_ns,
 			ktime_get_boottime_ns());
+	spin_unlock(p->info_lock);
 
 	return ret;
 }
@@ -311,15 +329,26 @@ static inline bool valid_cq_execution(struct transition_param *p)
 
 static inline bool valid_cq_execution_ref_sof(struct transition_param *p)
 {
+	bool ret = false;
+
 	if (unlikely(!p->s_params))
 		return false;
 
 	if (!p->reference_sof_ns)
 		return false;
-
+	/* check if ack between camsv/raw and mraw sof */
 	/* for sentest NE -> SE duration 25ms case*/
-	return (p->event_ts - p->reference_sof_ns) < p->cq_trigger_thres ||
-		((p->event_ts - p->info->sof_l_ts_ns) < SQC_THRES_FROM_L_SOF_NS);
+	spin_lock(p->info_lock);
+	ret = (p->info->sof_ts_ns <= p->info->sof_l_ts_ns) &&
+		(((p->event_ts - p->reference_sof_ns) < p->cq_trigger_thres) ||
+	((p->event_ts - p->info->sof_l_ts_ns) < SQC_THRES_FROM_L_SOF_NS));
+	if (ret == false)
+		pr_info("[mtk-cam:valid_cq_execution] event/l_sof/cq:%llu/%llu/%llu sof:%llu(%llu) ref:%llu",
+			p->event_ts, p->info->sof_l_ts_ns, p->cq_trigger_thres, p->info->sof_ts_ns,
+			ktime_get_boottime_ns(), p->reference_sof_ns);
+	spin_unlock(p->info_lock);
+
+	return ret;
 }
 
 static inline bool valid_cq_execution_avoid_race_with_topirq(
@@ -331,14 +360,14 @@ static inline bool valid_cq_execution_avoid_race_with_topirq(
 		return ret;
 	if (p->info->ae_wa_enable == 0)
 		return true;
-
+	spin_lock(p->info_lock);
 	ret = (p->event_ts - p->info->sof_l_ts_ns) > SCQ_THRES_FOR_AEWA ? false : true;
 
 	if (ret == false)
 		pr_info("[mtk-cam:WA] race with top-half case, event/f_sof/l_sof:%llu/%llu/%llu (%llu)",
 			p->event_ts, p->info->sof_ts_ns, p->info->sof_l_ts_ns,
 			ktime_get_boottime_ns());
-
+	spin_unlock(p->info_lock);
 	return ret;
 }
 static inline bool valid_cq_execution_threaded_irq_race_with_topirq(
@@ -353,6 +382,7 @@ static inline bool valid_cq_execution_threaded_irq_race_with_topirq(
 	if (s_acc->s->bypass_by_aewa == 0)
 		return true;
 	/* for case that one engines lost sof signal case */
+	spin_lock(p->info_lock);
 	if ((p->info->sof_l_ts_ns - p->info->sof_ts_ns) > 30000000 &&
 		(p->event_ts - p->info->sof_ts_ns) > p->cq_trigger_thres) {
 		ret = false;
@@ -360,6 +390,7 @@ static inline bool valid_cq_execution_threaded_irq_race_with_topirq(
 			p->event_ts, p->info->sof_ts_ns, p->info->sof_l_ts_ns,
 			ktime_get_boottime_ns());
 	}
+	spin_unlock(p->info_lock);
 	return ret;
 }
 static inline int guard_apply_sensor_subsample_2(struct state_accessor *s_acc,
