@@ -422,12 +422,14 @@ mtk_get_client_msgdevice(struct rproc_subdev *subdev,
 	listen_obj_rdy = atomic_read(&mtk_subdev->listen_obj_rdy);
 	if (listen_obj_rdy == CCD_LISTEN_OBJECT_READY) {
 		mutex_unlock(&mtk_subdev->master_listen_lock);
-		ret = wait_event_interruptible
+		ret = wait_event_interruptible_timeout
 			(mtk_subdev->ccd_listen_wq,
 			 (atomic_read(&mtk_subdev->listen_obj_rdy) ==
-			 CCD_LISTEN_OBJECT_PREPARING));
-
-		if (ret != 0)
+			 CCD_LISTEN_OBJECT_PREPARING),
+			 msecs_to_jiffies(2000));
+		if (ret == 0)
+			dev_info(&mtk_subdev->pdev->dev, "%s wait timeout\n", __func__);
+		else if (ret < 0)
 			dev_info(&mtk_subdev->pdev->dev,
 				"ccd listen wait error: %d\n", ret);
 
