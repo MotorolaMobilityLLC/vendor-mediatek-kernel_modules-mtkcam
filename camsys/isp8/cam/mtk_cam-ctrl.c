@@ -1409,10 +1409,14 @@ SWITCH_FAILURE:
 		 __func__, ctx->stream_id, job->req_seq, job->frame_seq_no);
 
 	vsync_collector_dump(&ctrl->vsync_col);
-	mtk_cam_seninf_dump(ctx->seninf, job->frame_seq_no, true);
-	mtk_engine_dump_debug_status(ctx->cam, job->used_engine, false);
-	mtk_cam_job_uninit_engine(job, engine_uninit);
-	WRAP_AEE_EXCEPTION(MSG_RAW_CHANGE_FAILURE, __func__);
+	if (mtk_cam_seninf_dump(ctx->seninf, job->frame_seq_no, true, true)
+		!= -ESTRPIPE) {
+		mtk_engine_dump_debug_status(ctx->cam, job->used_engine, false);
+		mtk_cam_job_uninit_engine(job, engine_uninit);
+		WRAP_AEE_EXCEPTION(MSG_RAW_CHANGE_FAILURE, __func__);
+	} else {
+		mtk_cam_event_error(ctrl, MSG_SENINF_FRAME_ERROR);
+	}
 }
 
 static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
@@ -2326,7 +2330,7 @@ static void mtk_cam_watchdog_sensor_worker(struct work_struct *work)
 	struct mtk_cam_watchdog *wd;
 	struct mtk_cam_ctrl *ctrl;
 	struct mtk_cam_ctx *ctx;
-	int seq_no;
+	int seq_no, ret = 0;
 
 	dbg_work = container_of(work, struct watchdog_debug_work, work);
 	wd = dbg_work->wd;
@@ -2356,7 +2360,7 @@ static void mtk_cam_watchdog_sensor_worker(struct work_struct *work)
 	seq_no = ctrl_fetch_inner(ctrl);
 
 	/* handle timeout */
-	if (mtk_cam_seninf_dump(ctx->seninf, seq_no, true)) {
+	if (mtk_cam_seninf_dump(ctx->seninf, seq_no, true, false)) {
 		mtk_cam_event_esd_recovery(ctrl, seq_no);
 		pr_info("%s: TODO: add esd event\n", __func__);
 
@@ -2369,9 +2373,14 @@ static void mtk_cam_watchdog_sensor_worker(struct work_struct *work)
 	mtk_dump_debug_for_no_vsync(ctx);
 	vsync_collector_dump(&ctrl->vsync_col);
 
+	ret = mtk_cam_seninf_dump(ctx->seninf, seq_no, true, true);
 	if (!mtk_cam_is_display_ic(ctx)) {
-		mtk_cam_event_error(ctrl, MSG_VSYNC_TIMEOUT);
-		WRAP_AEE_EXCEPTION(MSG_VSYNC_TIMEOUT, "watchdog timeout");
+		if (ret != -ESTRPIPE) {
+			mtk_cam_event_error(ctrl, MSG_VSYNC_TIMEOUT);
+			WRAP_AEE_EXCEPTION(MSG_VSYNC_TIMEOUT, "watchdog timeout");
+		} else {
+			mtk_cam_event_error(ctrl, MSG_SENINF_FRAME_ERROR);
+		}
 	}
 
 EXIT_WORK:
