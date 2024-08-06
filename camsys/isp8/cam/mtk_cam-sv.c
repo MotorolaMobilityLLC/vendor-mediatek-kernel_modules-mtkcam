@@ -1397,7 +1397,8 @@ int mtk_cam_sv_get_tag_param(struct mtk_camsv_tag_param *arr_tag_param,
 	int ret = 0;
 
 	if (hw_scen == (1 << HWPATH_ID(MTKCAM_IPI_HW_PATH_STAGGER)) ||
-		hw_scen == (1 << HWPATH_ID(MTKCAM_IPI_HW_PATH_DC_STAGGER))) {
+		hw_scen == (1 << HWPATH_ID(MTKCAM_IPI_HW_PATH_DC_STAGGER)) ||
+		hw_scen == (1 << HWPATH_ID(MTKCAM_IPI_HW_PATH_OFFLINE_STAGGER))) {
 		if (exp_no == 2)
 			memcpy(arr_tag_param, sv_tag_param_2exp_stagger,
 				sizeof(struct mtk_camsv_tag_param) * req_amount);
@@ -1903,14 +1904,10 @@ static irqreturn_t mtk_irq_camsv_hybrid(int irq, void *data)
 	}
 
 	if (done_status) {
-
-		dev_dbg(sv_dev->dev, "camsv-%d: done status:0x%x seq_no:%d_%d",
+		dev_dbg(sv_dev->dev, "camsv-%d: done status:0x%x seq_no:0x%x_0x%x",
 			sv_dev->id, done_status, frm_seq_no_inner, frm_seq_no);
-
 		sv_dev->camsv_error_count = 0;
-
 		irq_info.irq_type |= (1 << CAMSYS_IRQ_FRAME_DONE);
-
 		if (done_status & CAMSVCENTRAL_SW_GP_PASS1_DONE_0_ST)
 			irq_info.done_tags |= sv_dev->active_group_info[0];
 		if (done_status & CAMSVCENTRAL_SW_GP_PASS1_DONE_1_ST)
@@ -1919,13 +1916,12 @@ static irqreturn_t mtk_irq_camsv_hybrid(int irq, void *data)
 			irq_info.done_tags |= sv_dev->active_group_info[2];
 		if (done_status & CAMSVCENTRAL_SW_GP_PASS1_DONE_3_ST)
 			irq_info.done_tags |= sv_dev->active_group_info[3];
-
 		trace_camsv_irq_done(sv_dev->dev, frm_seq_no_inner, frm_seq_no,
 					 done_status);
 	}
 
 	if (cq_done_status) {
-		dev_dbg(sv_dev->dev, "camsv-%d: cq done status:0x%x seq_no:%d_%d",
+		dev_dbg(sv_dev->dev, "camsv-%d: cq done status:0x%x seq_no:0x%x_0x%x",
 			sv_dev->id, cq_done_status,
 			frm_seq_no_inner, frm_seq_no);
 
@@ -1993,7 +1989,7 @@ static irqreturn_t mtk_irq_camsv_sof(int irq, void *data)
 	tg_cnt = (sv_dev->tg_cnt & 0xffffff00) + ((tg_cnt & 0xff000000) >> 24);
 
 	if (CAM_DEBUG_ENABLED(RAW_INT))
-		dev_info(sv_dev->dev, "camsv-%d: sof status:0x%x channel status:0x%x seq_no:%d_%d group_tags:0x%x_%x_%x_%x first_tag:0x%x last_tag:0x%x tg_cnt:%d/%lld dcif sel/set:0x%x_%x",
+		dev_info(sv_dev->dev, "camsv-%d: sof status:0x%x channel status:0x%x seq_no:0x%x_0x%x group_tags:0x%x_%x_%x_%x first_tag:0x%x last_tag:0x%x tg_cnt:%d/%lld dcif sel/set:0x%x_%x",
 		sv_dev->id, irq_sof_status,
 		irq_channel_status,
 		frm_seq_no_inner, frm_seq_no,

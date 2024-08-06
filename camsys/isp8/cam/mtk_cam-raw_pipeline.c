@@ -114,7 +114,7 @@ static int res_calc_fill_sensor(struct mtk_cam_res_calc *c,
 
 	if (res_raw_is_dc_mode(r))
 		c->raw_line_time = interval / max(s->height + DC_MODE_VB_MARGIN, 1U);
-	else if (scen_is_m2m(&r->scen))
+	else if (scen_is_m2m(&r->scen) || scen_is_timeshare(&r->scen))
 		c->raw_line_time = interval /
 			max(s->height + s->height * M2M_MODE_VB_RATIO / 100, 1U);
 	else
@@ -291,7 +291,7 @@ static void scen_validate_exp_num(struct mtk_cam_scen *scen)
 		}
 	}
 }
-
+#define BUFFER_NUM_FOR_TIMESHARED 2
 static void
 mtk_cam_resource_update_work_buf(struct mtk_cam_resource_v2 *user_ctrl)
 {
@@ -313,9 +313,11 @@ mtk_cam_resource_update_work_buf(struct mtk_cam_resource_v2 *user_ctrl)
 	case MTK_CAM_SCEN_MSTREAM:
 		buf_require = res_raw_is_dc_mode(r) ? 2 : 1;
 		break;
-	case MTK_CAM_SCEN_EXT_ISP:
-		/* TODO */
-		buf_require = 1;
+	case MTK_CAM_SCEN_TIMESHARE:
+		/* TODO - considering enlarge */
+		exp_num = (scen->scen.normal.max_exp_num == 0) ?
+					1 : scen->scen.normal.max_exp_num;
+		buf_require = BUFFER_NUM_FOR_TIMESHARED * exp_num;
 		break;
 	default:
 		break;

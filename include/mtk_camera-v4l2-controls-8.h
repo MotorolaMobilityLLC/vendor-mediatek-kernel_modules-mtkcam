@@ -143,12 +143,16 @@ struct mtk_cam_scen_extisp {
 	enum mtk_cam_extisp_type type;
 };
 
-enum mtk_cam_timeshare_group {
-	MTK_CAM_TIMESHARE_GROUP_1 = 1,
-};
-
 struct mtk_cam_scen_timeshare {
-	__u8 group;
+	__u8 max_exp_num : 4;
+	__u8 exp_num : 4;
+	__u8 exp_order : 4;
+	__u8 w_chn_supported : 4;
+	__u8 w_chn_enabled : 4;
+	__u8 frame_order : 4;
+	__u8 mem_saving : 4;
+	__u8 stagger_type : 4;
+	__u8 group : 4;
 };
 
 struct mtk_cam_scen {

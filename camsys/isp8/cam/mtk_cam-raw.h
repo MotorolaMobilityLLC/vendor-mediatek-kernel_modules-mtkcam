@@ -67,7 +67,7 @@ struct mtk_raw_device {
 
 	int fps;
 	int subsample_ratio;
-
+	bool is_timeshared;
 	bool is_slave;
 
 	u64 sof_count;
@@ -78,8 +78,6 @@ struct mtk_raw_device {
 	int set_sensor_idx;
 	int cur_vsync_idx;
 
-	u8 time_shared_busy;
-	u8 time_shared_busy_ctx_id;
 	atomic_t vf_en;
 
 	/* error handling related */
@@ -98,6 +96,8 @@ struct mtk_raw_device {
 	bool trigger_cq_by_qof;
 	int apmcu_voter_cnt;
 	spinlock_t apmcu_voter_lock;
+	atomic_t time_share_used;/*identify first and last*/
+	atomic_t time_share_on_process;/*identify busy*/
 };
 
 struct mtk_yuv_device {
