@@ -127,11 +127,12 @@ static inline int guard_next_compose(struct state_accessor *s_acc,
 	spin_lock(p->info_lock);
 	ret = allow_composing(s_acc) &&
 		(unsigned int)(cur_seq_no(s_acc) - p->info->ack_seq_no) == 1;
-	spin_unlock(p->info_lock);
 	if (ret == 0 && allow_composing(s_acc))
 		pr_info("[mtk-cam:guard_next_compose] allow/cur/ack:%d/%d/%d (%llu)",
 			allow_composing(s_acc), cur_seq_no(s_acc), p->info->ack_seq_no,
 			ktime_get_boottime_ns());
+	spin_unlock(p->info_lock);
+
 	return ret;
 }
 
@@ -142,6 +143,17 @@ static inline int guard_ack_eq(struct state_accessor *s_acc,
 
 	spin_lock(p->info_lock);
 	ret = p->info->ack_seq_no == cur_seq_no(s_acc);
+	spin_unlock(p->info_lock);
+
+	return ret;
+}
+static inline int guard_outer_eq_ts(struct state_accessor *s_acc,
+				 struct transition_param *p)
+{
+	int ret = 0;
+
+	spin_lock(p->info_lock);
+	ret = p->info->outer_seq_no_ts == cur_seq_no(s_acc);
 	spin_unlock(p->info_lock);
 
 	return ret;
@@ -391,6 +403,7 @@ static inline bool valid_cq_execution_threaded_irq_race_with_topirq(
 			ktime_get_boottime_ns());
 	}
 	spin_unlock(p->info_lock);
+
 	return ret;
 }
 static inline int guard_apply_sensor_subsample_2(struct state_accessor *s_acc,
@@ -473,13 +486,19 @@ static inline int guard_apply_isp(struct state_accessor *s_acc,
 			valid_cq_execution(p) &&
 			valid_cq_execution_threaded_irq_race_with_topirq(s_acc, p);
 }
-
 static inline int guard_apply_m2m(struct state_accessor *s_acc,
 				  struct transition_param *p)
 {
 	return allow_applying_hw(s_acc) &&
 		ops_call(s_acc, prev_allow_apply_isp);
 }
+static inline int guard_apply_ts_m2m(struct state_accessor *s_acc,
+				  struct transition_param *p)
+{	/*TBD: time share raw atomic on_using */
+	return allow_applying_hw(s_acc) &&
+		ops_call(s_acc, prev_allow_apply_extisp_procraw);
+}
+
 static inline int guard_apply_isp_subsample(struct state_accessor *s_acc,
 				  struct transition_param *p)
 {

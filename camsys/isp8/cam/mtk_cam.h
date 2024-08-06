@@ -254,6 +254,7 @@ struct mtk_cam_engines {
 
 	unsigned long full_set;
 	unsigned long occupied_engine;
+	unsigned long timeshared_engine;
 };
 
 struct cmdq_client;

@@ -57,6 +57,7 @@ $(CAM_MODULE)-objs := \
     mtk_cam-job_state_subsample.o \
     mtk_cam-job_state_mstream.o \
     mtk_cam-job_state_extisp.o \
+    mtk_cam-job_state_timeshare.o \
     mtk_cam-job_utils.o \
     mtk_cam-job-subsample.o \
     mtk_cam-job-extisp.o \
