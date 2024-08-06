@@ -6448,8 +6448,13 @@ int mtk_cam_job_manually_apply_sensor(struct mtk_cam_job *job)
 	sensor_state = mtk_cam_job_state_get(&job->job_state, SENSOR_STATE);
 	if (sensor_state == S_SENSOR_NONE) {
 		pr_info("%s: without sensor setting to apply\n", __func__);
-		ctx->cam_ctrl.sensor_sync_id= job->req_info_id;
-		ctx->cam_ctrl.sensor_seq = job->req_seq;
+		if (job->req_info_id > ctx->cam_ctrl.sensor_sync_id) {
+			ctx->cam_ctrl.sensor_sync_id = job->req_info_id;
+			ctx->cam_ctrl.sensor_seq = job->req_seq;
+		} else {
+			pr_info("%s: pass assign job#%d sync id avoid revert %d/%d\n", __func__,
+				job->frame_seq_no, job->req_info_id, ctx->cam_ctrl.sensor_sync_id);
+		}
 		return 0;
 	}
 
