@@ -1274,6 +1274,10 @@ faile_release_msg_dev:
 static void isp_composer_uninit(struct mtk_cam_ctx *ctx)
 {
 	struct mtk_cam_device *cam = ctx->cam;
+
+	if (!cam->rproc_handle)
+		return;
+
 	struct mtk_ccd *ccd = cam->rproc_handle->priv;
 
 	mtk_destroy_client_msgdevice(ccd->rpmsg_subdev, &ctx->rpmsg_channel);
