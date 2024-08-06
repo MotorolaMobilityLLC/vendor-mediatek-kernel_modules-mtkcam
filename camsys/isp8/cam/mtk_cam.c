@@ -1004,7 +1004,7 @@ void mtk_cam_req_buffer_done(struct mtk_cam_job *job,
 	ids = 0;
 	is_buf_empty = !mtk_cam_req_collect_vb_bufs(req,
 				pipe_id, node_id,
-				is_sv_pure_raw(job) && is_proc,
+				is_sv_pure_raw(job) && is_proc && !is_offline_timeshare(job),
 				&done_list, &ids);
 
 	if (node_id == -1)
@@ -3383,7 +3383,17 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 
 			if (raw_dev->is_slave)
 				continue;
-
+			if (raw_dev->is_timeshared) {
+				if (!atomic_sub_and_test(1, &raw_dev->time_share_used)) {
+					dev_info(raw_dev->dev, "time-share: ctx:%d return pass uninitialize",
+						ctx->stream_id);
+					continue;
+				}
+				raw_dev->is_timeshared = false;
+				atomic_set(&raw_dev->time_share_on_process, 0);
+				dev_info(raw_dev->dev, "time-share: ctx:%d last uninitialize",
+						ctx->stream_id);
+			}
 			if (ctx->enable_hsf_raw)
 				ccu_stream_on(ctx, false);
 			else
@@ -4345,15 +4355,18 @@ int mtk_cam_update_engine_status(struct mtk_cam_device *cam,
 				 bool available)
 {
 	unsigned long err_mask, occupied;
+	unsigned long pass_check;
 
 	spin_lock(&cam->streaming_lock);
 
 	occupied = cam->engines.occupied_engine;
+	pass_check = cam->engines.timeshared_engine;
 	if (available) {
 		err_mask = (occupied & engine_mask) ^ engine_mask;
 		occupied &= ~engine_mask;
 	} else {
 		err_mask = occupied & engine_mask;
+		err_mask &= ~pass_check;
 		occupied |= engine_mask;
 	}
 

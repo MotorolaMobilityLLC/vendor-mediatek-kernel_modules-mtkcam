@@ -568,7 +568,6 @@ void initialize(struct mtk_raw_device *dev, struct engine_callback *cb,
 	dev->tg_count = 0;
 	dev->vsync_count = 0;
 	dev->sub_sensor_ctrl_en = false;
-	dev->time_shared_busy = 0;
 	atomic_set(&dev->vf_en, 0);
 	mtk_cam_raw_reset_msgfifo(dev);
 
@@ -1638,7 +1637,9 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 	irq_info.debug_en = raw_readl_relaxed(raw, raw->base_inner, REG_CAMCTL_MOD5_EN);
 	/* CQ done */
 	if (cq_status & FBIT(CAMCTL_CQ_THR0_DONE_ST)) {
-		if (raw->cq_ref != NULL) {
+		if (raw->is_timeshared) {
+			irq_info.irq_type |= 1 << CAMSYS_IRQ_SETTING_DONE;
+		} else if (raw->cq_ref != NULL) {
 			long mask = bit_map_bit(MAP_HW_RAW, raw->id);
 
 			if (engine_handle_cq_done(&raw->cq_ref, mask)) {

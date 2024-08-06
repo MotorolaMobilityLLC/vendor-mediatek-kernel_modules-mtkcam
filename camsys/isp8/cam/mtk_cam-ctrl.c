@@ -585,6 +585,9 @@ static int mtk_cam_ctrl_send_event(struct mtk_cam_ctrl *ctrl, int event)
 	p.info_lock = &ctrl->info_lock;
 
 	if (CAM_DEBUG_ENABLED(STATE))
+		dump_runtime_info(ctrl);
+
+	if (CAM_DEBUG_ENABLED(STATE))
 		debug_send_event(&p);
 
 	ctrl_send_event(ctrl, &p);
@@ -643,7 +646,11 @@ static void handle_frame_done(struct mtk_cam_ctrl *ctrl,
 			__func__,  seq_no);
 		return;
 	}
-
+	if (ctrl->r_info.timeshare_enable &&
+		engine_type == CAMSYS_ENGINE_CAMSV) {
+		mtk_cam_ctrl_send_event(ctrl, CAMSYS_EVENT_IRQ_EXTMETA_FRAME_DONE);
+		mtk_cam_ctrl_send_event(ctrl, CAMSYS_EVENT_IRQ_TRY_TS_TRIGGER);
+	}
 	if (call_jobop(job, mark_engine_done,
 		       engine_type, engine_id, seq_no)) {
 
@@ -654,6 +661,46 @@ static void handle_frame_done(struct mtk_cam_ctrl *ctrl,
 		spin_unlock(&ctrl->info_lock);
 
 		mtk_cam_ctrl_send_event(ctrl, CAMSYS_EVENT_IRQ_FRAME_DONE);
+		if (ctrl->r_info.timeshare_enable) {
+			struct mtk_cam_ctx *ctx = ctrl->ctx;
+			int i;
+			/* unlock time share raw on process */
+			for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
+				if (ctx->hw_raw[i]) {
+					struct mtk_raw_device *raw_dev =
+						dev_get_drvdata(ctx->hw_raw[i]);
+
+					if (atomic_read(&raw_dev->time_share_on_process) > 0)
+						atomic_dec(&raw_dev->time_share_on_process);
+					else
+						dev_info(raw_dev->dev, "timeshare:warning count <= 0");
+					break;
+				}
+			}
+			if (ctx) {
+				struct mtk_cam_ctrl *same_ts_raw_ctrl = NULL;
+				int group_id = ctx->ctrldata.resource.user_data
+					.raw_res.scen.scen.timeshare.group;
+				int ctx_id;
+
+				for (ctx_id = 0; ctx_id < ctx->cam->max_stream_num; ctx_id++) {
+					/* no need to check current ctx */
+					if (ctx_id == ctx->stream_id)
+						continue;
+					/* check same group id ctx */
+					if (group_id ==
+						ctx->cam->ctxs[ctx_id].ctrldata.resource.user_data
+						.raw_res.scen.scen.timeshare.group) {
+						same_ts_raw_ctrl = &ctrl->ctx->cam->ctxs[ctx_id].cam_ctrl;
+						dev_info(ctx->cam->dev, "[%s] TRY_TS_TRIGGER other same groupid:%d ctx:%d\n",
+							__func__, group_id, ctx_id);
+						break;
+					}
+				}
+				if (same_ts_raw_ctrl)
+					mtk_cam_ctrl_send_event(same_ts_raw_ctrl, CAMSYS_EVENT_IRQ_TRY_TS_TRIGGER);
+			}
+		}
 	}
 
 	mtk_cam_job_put(job);
@@ -993,11 +1040,17 @@ static int mtk_cam_event_handle_raw(struct mtk_cam_ctrl *ctrl,
 	/* note: should handle SOF before CQ done for trigger delay cases */
 	/* raw's CQ done */
 	if (irq_info->irq_type & BIT(CAMSYS_IRQ_SETTING_DONE)) {
-		spin_lock(&ctrl->info_lock);
-		ctrl->r_info.outer_seq_no =
-			seq_from_fh_cookie(irq_info->frame_idx);
-		spin_unlock(&ctrl->info_lock);
-
+		if (ctrl->r_info.timeshare_enable) {
+			spin_lock(&ctrl->info_lock);
+			ctrl->r_info.outer_seq_no_ts =
+				seq_from_fh_cookie(irq_info->frame_idx);
+			spin_unlock(&ctrl->info_lock);
+		} else {
+			spin_lock(&ctrl->info_lock);
+			ctrl->r_info.outer_seq_no =
+				seq_from_fh_cookie(irq_info->frame_idx);
+			spin_unlock(&ctrl->info_lock);
+		}
 		handle_setting_done(ctrl);
 	}
 
@@ -1049,7 +1102,8 @@ static int mtk_camsys_event_handle_camsv(struct mtk_cam_ctrl *ctrl,
 		ctrl->r_info.outer_seq_no =
 			seq_from_fh_cookie(irq_info->frame_idx);
 		spin_unlock(&ctrl->info_lock);
-		if (extisp_listen_each_cq_done(ctrl))
+		if (extisp_listen_each_cq_done(ctrl) ||
+			timeshare_pureraw_pd_cq_done(ctrl))
 			handle_extmeta_setting_done(ctrl);
 		else
 			handle_setting_done(ctrl);
@@ -1094,7 +1148,10 @@ static int mtk_camsys_event_handle_mraw(struct mtk_cam_ctrl *ctrl,
 		ctrl->r_info.outer_seq_no =
 			seq_from_fh_cookie(irq_info->frame_idx);
 		spin_unlock(&ctrl->info_lock);
-		handle_setting_done(ctrl);
+		if (timeshare_pureraw_pd_cq_done(ctrl))
+			handle_extmeta_setting_done(ctrl);
+		else
+			handle_setting_done(ctrl);
 	}
 
 	return 0;
@@ -1901,6 +1958,12 @@ void mtk_cam_ctrl_isp_job_enque(struct mtk_cam_ctrl *cam_ctrl,
 			pr_info("[%s:extisp] ctx:%d, extisp_enable:0x%x\n",
 				__func__, cam_ctrl->ctx->stream_id, cam_ctrl->r_info.extisp_enable);
 		}
+		if (is_offline_timeshare(job)) {
+			cam_ctrl->r_info.timeshare_enable = 1;
+			vsync_set_desired_ts(&cam_ctrl->vsync_col, job->master_engine);
+			pr_info("[%s:timeshare] ctx:%d, timeshare_enable:0x%x\n",
+				__func__, cam_ctrl->ctx->stream_id, cam_ctrl->r_info.timeshare_enable);
+		}
 	}
 
 	/* following would trigger actions */
@@ -2205,6 +2268,11 @@ int extisp_listen_each_cq_done(
 	spin_unlock(&ctrl->info_lock);
 
 	return ret;
+}
+int timeshare_pureraw_pd_cq_done(
+	struct mtk_cam_ctrl *ctrl)
+{
+	return ctrl->r_info.timeshare_enable;
 }
 
 int vsync_update_extisp(struct mtk_cam_ctrl *ctrl,
