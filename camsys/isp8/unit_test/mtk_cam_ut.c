@@ -1260,36 +1260,38 @@ static int cam_open(struct inode *inode, struct file *filp)
 					     struct mtk_cam_ut, cdev);
 #if WITH_POWER_DRIVER
 	int i;
+	int ret;
 #endif
 	get_device(ut->dev);
 #if WITH_POWER_DRIVER
-	pm_runtime_get_sync(ut->dev);
+	ret = pm_runtime_get_sync(ut->seninf);
+	pr_info("get_sync seninf, ret(%d)\n", ret);
+
+	ret = pm_runtime_get_sync(ut->dev);
+	pr_info("get_sync cam_vcore, ret(%d)\n", ret);
 
 	for (i = 0; i < ut->num_raw; i++) {
-		pr_info("get_sync raw %d\n", i);
-		pm_runtime_get_sync(ut->raw[i]);
+		ret = pm_runtime_get_sync(ut->raw[i]);
+		pr_info("get_sync raw%d, ret(%d)\n", i, ret);
 	}
 	for (i = 0; i < ut->num_rms; i++) {
-		pr_info("get_sync rms %d\n", i);
-		pm_runtime_get_sync(ut->rms[i]);
+		ret = pm_runtime_get_sync(ut->rms[i]);
+		pr_info("get_sync rms%d, ret(%d)\n", i, ret);
 	}
 	for (i = 0; i < ut->num_yuv; i++) {
-		pr_info("get_sync yuv %d\n", i);
-		pm_runtime_get_sync(ut->yuv[i]);
+		ret = pm_runtime_get_sync(ut->yuv[i]);
+		pr_info("get_sync yuv%d, ret(%d)\n", i, ret);
 	}
 
 	for (i = 0; i < ut->num_camsv; i++) {
-		pr_info("get_sync camsv %d\n", i);
-		pm_runtime_get_sync(ut->camsv[i]);
+		ret = pm_runtime_get_sync(ut->camsv[i]);
+		pr_info("get_sync camsv%d, ret(%d)\n", i, ret);
 	}
 
 	for (i = 0; i < ut->num_mraw; i++) {
-		pr_info("get_sync mraw %d\n", i);
-		pm_runtime_get_sync(ut->mraw[i]);
+		ret = pm_runtime_get_sync(ut->mraw[i]);
+		pr_info("get_sync mraw%d, ret(%d)\n", i, ret);
 	}
-
-	/* Note: seninf's dts have no power-domains now, so do it after raw's */
-	pm_runtime_get_sync(ut->seninf);
 #endif
 	filp->private_data = ut;
 
@@ -1306,8 +1308,6 @@ static int cam_release(struct inode *inode, struct file *filp)
 #endif
 	cam_composer_uninit(ut);
 #if WITH_POWER_DRIVER
-	pm_runtime_put(ut->seninf);
-
 	for (i = 0; i < ut->num_mraw; i++)
 		pm_runtime_put(ut->mraw[i]);
 
@@ -1324,6 +1324,7 @@ static int cam_release(struct inode *inode, struct file *filp)
 		pm_runtime_put(ut->raw[i]);
 
 	pm_runtime_put(ut->dev);
+	pm_runtime_put(ut->seninf);
 
 	put_device(ut->dev);
  #endif
