@@ -157,6 +157,8 @@ struct mtk_mraw_device {
 	/* for BWR */
 	int mraw_avg_applied_bw_w;
 	int mraw_peak_applied_bw_w;
+
+	unsigned int mraw_error_count;
 };
 
 void mraw_reset(struct mtk_mraw_device *mraw_dev);

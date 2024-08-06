@@ -1766,8 +1766,17 @@ void camsv_handle_err(
 	dev_info(sv_dev->dev, "error_status:0x%x\n", err_status);
 
 	/* dump seninf debug data */
-	if (ctx && ctx->seninf)
-		mtk_cam_seninf_dump_current_status(ctx->seninf);
+	if (ctx && ctx->seninf) {
+		ctx->is_sv_mraw_error = true;
+		sv_dev->camsv_error_count += 1;
+		if (sv_dev->camsv_error_count >= 2 && !ctx->is_seninf_error_trigger)
+			ctx->is_seninf_error_trigger = mtk_cam_seninf_dump_current_status(ctx->seninf,
+				true);
+		else
+			ctx->is_seninf_error_trigger = mtk_cam_seninf_dump_current_status(ctx->seninf,
+				false);
+
+	}
 
 	/* dump camsv debug data */
 	mtk_cam_sv_debug_dump(sv_dev, data->err_tags);
@@ -1894,9 +1903,11 @@ static irqreturn_t mtk_irq_camsv_hybrid(int irq, void *data)
 	}
 
 	if (done_status) {
+
 		dev_dbg(sv_dev->dev, "camsv-%d: done status:0x%x seq_no:%d_%d",
-			sv_dev->id, done_status,
-			frm_seq_no_inner, frm_seq_no);
+			sv_dev->id, done_status, frm_seq_no_inner, frm_seq_no);
+
+		sv_dev->camsv_error_count = 0;
 
 		irq_info.irq_type |= (1 << CAMSYS_IRQ_FRAME_DONE);
 

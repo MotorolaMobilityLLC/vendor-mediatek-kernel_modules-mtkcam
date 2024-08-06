@@ -211,6 +211,8 @@ struct mtk_cam_ctx {
 
 	struct qof_voter_handle DOL_not_support;
 	struct mtk_cam_exp_shutter last_req_exposue;
+	bool is_sv_mraw_error;
+	bool is_seninf_error_trigger;
 };
 
 struct mtk_cam_v4l2_pipelines {

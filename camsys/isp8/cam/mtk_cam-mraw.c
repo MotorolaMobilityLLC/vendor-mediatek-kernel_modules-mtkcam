@@ -1372,9 +1372,16 @@ void mraw_handle_error(struct mtk_mraw_device *mraw_dev,
 	mtk_cam_mraw_debug_dump(mraw_dev);
 
 	/* dump seninf debug data */
-	if (ctx && ctx->seninf)
-		mtk_cam_seninf_dump_current_status(ctx->seninf);
-
+	if (ctx && ctx->seninf) {
+		ctx->is_sv_mraw_error = 1;
+		mraw_dev->mraw_error_count += 1;
+		if (mraw_dev->mraw_error_count >= 2 && !ctx->is_seninf_error_trigger)
+			ctx->is_seninf_error_trigger = mtk_cam_seninf_dump_current_status(ctx->seninf,
+				true);
+		else
+			ctx->is_seninf_error_trigger = mtk_cam_seninf_dump_current_status(ctx->seninf,
+				false);
+	}
 	dev_info_ratelimited(mraw_dev->dev, "fbc empty or not:%d\n",
 		(data->fbc_empty) ? 1 : 0);
 }
@@ -1458,6 +1465,7 @@ static irqreturn_t mtk_irq_mraw(int irq, void *data)
 			readl_relaxed(mraw_dev->base + REG_MRAW_TG_HW_DDR_GEN_PLUS_CNT),
 			readl_relaxed(mraw_dev->base + REG_MRAW_CTL_DDREN_CTL),
 			readl_relaxed(mraw_dev->base + REG_MRAW_CTL_DDREN_ST));
+		mraw_dev->mraw_error_count = 0;
 	}
 	/* Frame start */
 	if (irq_status & MRAWCTL_SOF_INT_ST) {
