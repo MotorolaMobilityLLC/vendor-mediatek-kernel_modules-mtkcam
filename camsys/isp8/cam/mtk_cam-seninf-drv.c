@@ -4389,7 +4389,8 @@ u64 mtk_cam_seninf_get_frame_time(struct v4l2_subdev *sd, u32 seq_id)
 	return tmp * 1000;
 }
 
-int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check)
+int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
+			bool assert_when_error)
 {
 	int ret = 0;
 	struct seninf_ctx *ctx;
@@ -4398,6 +4399,7 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check)
 	int val = 0;
 	int reset_by_user = 0;
 	bool in_reset = 0;
+	bool asserted = false;
 
 	if (!sd)
 		return -EINVAL;
@@ -4451,8 +4453,14 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check)
 	if (ctx->streaming) {
 		if (!in_reset) {
 			ret = g_seninf_ops->_debug(sd_to_ctx(sd));
+			/* assert */
+			if (assert_when_error && ret != 0) {
+				seninf_aee_print(SENINF_AEE_FRMERR,
+						"Seninf dump with error code: %d\n", ret);
+				asserted = true;
+			}
 #if ESD_RESET_SUPPORT
-			if (ret != 0 && !ctx->is_test_model) {
+			else if (ret != 0 && !ctx->is_test_model) {
 				reset_by_user = is_reset_by_user(sd_to_ctx(sd));
 				if (!reset_by_user){
 					reset_sensor(sd_to_ctx(sd));
@@ -4467,10 +4475,13 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check)
 
 	pm_runtime_put_sync(ctx->dev);
 
-	dev_info(ctx->dev, "%s ret(%d), req(%u), force(%d) reset_by_user(%d)\n",
-		 __func__, ret, seq_id, force_check, reset_by_user);
+	dev_info(ctx->dev, "%s ret(%d), req(%u), force(%d) reset_by_user(%d) asserted(%d)\n",
+		 __func__, ret, seq_id, force_check, reset_by_user, asserted);
 
-	return (ret && reset_by_user);
+	/* return -ESTRPIPE if seninf already assertion,
+	 * or non-zero 1 if need to reset by user
+	 */
+	return asserted ? -ESTRPIPE : (ret && reset_by_user);
 }
 
 int mtk_cam_seninf_get_csi_irq_status(struct v4l2_subdev *sd, struct v4l2_ctrl *ctrl)
@@ -4485,13 +4496,13 @@ int mtk_cam_seninf_get_csi_irq_status(struct v4l2_subdev *sd, struct v4l2_ctrl *
 	return 0;
 }
 
-int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd)
+int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd, bool assert_when_error)
 {
 	int ret = 0;
 	struct seninf_ctx *ctx = sd_to_ctx(sd);
 	struct v4l2_subdev *sensor_sd = ctx->sensor_sd;
-	int reset_by_user = 0;
 	bool in_reset = 0;
+	bool asserted = false;
 
 	ret = pm_runtime_get_sync(ctx->dev);
 	if (ret < 0) {
@@ -4509,6 +4520,12 @@ int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd)
 	if (ctx->streaming) {
 		if (!in_reset) {
 			ret = g_seninf_ops->_debug_current_status(sd_to_ctx(sd));
+			/* assert */
+			if (assert_when_error && ret != 0) {
+				seninf_aee_print(SENINF_AEE_FRMERR,
+						"Seninf dump with error code: %d\n", ret);
+				asserted = true;
+			}
 		} else
 			dev_info(ctx->dev, "%s skip dump, sensor is in resetting\n", __func__);
 	} else
@@ -4516,10 +4533,13 @@ int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd)
 
 	pm_runtime_put_sync(ctx->dev);
 
-	dev_info(ctx->dev, "%s ret(%d),reset_by_user(%d)\n",
-		 __func__, ret, reset_by_user);
+	dev_info(ctx->dev, "%s ret(%d),asserted(%d)\n",
+		 __func__, ret, asserted);
 
-	return (ret && reset_by_user);
+	/* return -ESTRPIPE if seninf already assertion,
+	 * or non-zero 1 if need to reset by user
+	 */
+	return asserted ? -ESTRPIPE : ret;
 }
 
 void mtk_cam_seninf_set_secure(struct v4l2_subdev *sd, int enable, u64 SecInfo_addr)
