@@ -215,7 +215,7 @@ struct mtk_camsv_device {
 	void __iomem *debug_use_mraw_in_base;
 
 	bool enable_stash_eco_fun;
-
+	unsigned int camsv_error_count;
 };
 
 void sv_reset(struct mtk_camsv_device *sv_dev);
