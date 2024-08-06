@@ -521,6 +521,9 @@ static bool check_for_inner(struct mtk_cam_ctrl *ctrl, void *arg)
 	struct seamless_check_args *args = arg;
 	int inner_seq;
 
+	if (atomic_read(&ctrl->ctx->streaming) == 0)
+		return 1;
+
 	spin_lock(&ctrl->info_lock);
 	inner_seq = ctrl->r_info.inner_seq_no;
 	spin_unlock(&ctrl->info_lock);
