@@ -984,11 +984,17 @@ void set_max_framerate_by_scenario(struct subdrv_ctx *ctx,
 	frame_length_max = ctx->s_ctx.frame_length_max;
 	frame_length_max = frame_length_step ?
 		(frame_length_max - (frame_length_max % frame_length_step)) : frame_length_max;
+
+
 	/* set in the range of frame length */
 	ctx->frame_length = max(frame_length, frame_length_min);
 	ctx->frame_length = min(ctx->frame_length, frame_length_max);
 	ctx->frame_length = frame_length_step ?
 		roundup(ctx->frame_length,frame_length_step) : ctx->frame_length;
+
+	/* set default frame length if given default framerate */
+	if (framerate == ctx->s_ctx.mode[scenario_id].max_framerate)
+		ctx->frame_length = ctx->s_ctx.mode[scenario_id].framelength;
 
 	ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
 	ctx->min_frame_length = ctx->frame_length;
@@ -1029,6 +1035,10 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 		(frame_length - (frame_length % frame_length_step)) : frame_length;
 	ctx->frame_length =
 		max(frame_length, ctx->s_ctx.mode[scenario_id].framelength);
+
+	/* set default frame length if given default framerate */
+	if (framerate ==  ctx->s_ctx.mode[scenario_id].max_framerate)
+		ctx->frame_length = ctx->s_ctx.mode[scenario_id].framelength;
 
 	// manual mode
 	exp_cnt = ctx->s_ctx.mode[scenario_id].exp_cnt;
