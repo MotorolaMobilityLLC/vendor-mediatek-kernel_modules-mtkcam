@@ -1574,6 +1574,8 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 		goto SWITCH_FAILURE;
 	}
 	/* should set ts for next job's apply_sensor */
+	ctrl->frame_interval_ns =
+			mtk_cam_query_interval_from_sensor(ctx->sensor);
 	ctrl->r_info.sof_ts_ns = ktime_get_boottime_ns();
 	ctrl->r_info.sof_l_ts_ns = ctrl->r_info.sof_ts_ns;
 
