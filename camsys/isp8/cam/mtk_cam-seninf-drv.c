@@ -734,8 +734,8 @@ static int __seninf_dfs_set(struct seninf_ctx *ctx, unsigned long freq)
 		return -EINVAL;
 	}
 
-	dev_info(ctx->dev, "freq %ld require %ld selected %ld\n",
-		 freq, require, dfs->freqs[i]);
+	dev_info(ctx->dev, "freq %ld require %ld selected %ld, volts %ld\n",
+		 freq, require, dfs->freqs[i], dfs->volts[i]);
 
 	return 0;
 }
@@ -2073,6 +2073,7 @@ int update_isp_clk(struct seninf_ctx *ctx)
 	int i, ret;
 	struct seninf_dfs *dfs = &ctx->core->dfs;
 	struct seninf_core *core = ctx->core;
+	const unsigned long MAX_VALID_VMM_VOL = 750000;
 
 #ifndef USING_MAX_ISP_CLK
 	int pixelmode;
@@ -2098,8 +2099,11 @@ int update_isp_clk(struct seninf_ctx *ctx)
 
 
 #ifdef USING_MAX_ISP_CLK
-	/* always choose the highest freq index */
-	i = dfs->cnt - 1;
+	/* always choose the highest freq index but check if vol is available */
+	for (i = (dfs->cnt - 1); i >= 0; i--) {
+		if (dfs->volts[i] < MAX_VALID_VMM_VOL)
+			break;
+	}
 
 #else
 	vc = mtk_cam_seninf_get_vc_by_pad(ctx, PAD_SRC_RAW0);
