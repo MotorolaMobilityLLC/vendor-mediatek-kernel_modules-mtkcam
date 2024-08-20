@@ -2676,6 +2676,7 @@ static int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 
 	/* reset all sentest flag */
 	seninf_sentest_flag_init(ctx);
+	ctx->set_abort_flag = false;
 
 	return 0;
 }
@@ -4544,6 +4545,26 @@ int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd, bool assert_when_
 	 * or non-zero 1 if need to reset by user
 	 */
 	return asserted ? -ESTRPIPE : ret;
+}
+
+int mtk_cam_seninf_set_abort(struct v4l2_subdev *sd)
+{
+	int ret = 0;
+	struct seninf_ctx *ctx = NULL;
+
+	if(sd) {
+		ctx = sd_to_ctx(sd);
+	} else {
+		ret = -1;
+		pr_info("[%s] Null v4l2_subdev sd\n", __func__);
+		return ret;
+	}
+
+	ctx->set_abort_flag = 1;
+
+	dev_info(ctx->dev, "%s Streaming(%d) set_abort_flag(%d)\n",
+		__func__, ctx->streaming, ctx->set_abort_flag);
+	return ret;
 }
 
 void mtk_cam_seninf_set_secure(struct v4l2_subdev *sd, int enable, u64 SecInfo_addr)

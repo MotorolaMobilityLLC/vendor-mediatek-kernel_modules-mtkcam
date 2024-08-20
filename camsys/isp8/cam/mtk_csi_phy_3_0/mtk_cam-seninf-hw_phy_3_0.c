@@ -3931,6 +3931,10 @@ static ssize_t mtk_cam_seninf_show_outmux_status(struct device *dev,
 		if (!ctx->streaming)
 			break;
 
+		if (ctx->set_abort_flag) {
+			dev_info(ctx->dev, "%s abort\n", __func__);
+			return false;
+		}
 		delay_step = min((unsigned long)MAX_DELAY_STEP, delay - delay_inc);
 		mdelay(delay_step);
 		delay_inc += delay_step;
