@@ -220,8 +220,8 @@ void init_camsys_settings(struct mtk_raw_device *dev, bool is_srt, int frm_time_
 	}
 
 	wmb(); /* TBC */
-	if (CAM_DEBUG_ENABLED(RAW_INT))
-		dev_info_ratelimited(dev->dev, "%s: is srt:%d halt1~10,13:0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+
+	dev_info_ratelimited(dev->dev, "%s: is srt:%d halt1~10,13:0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
 		__func__, is_srt,
 		readl(cam_dev->base + REG_HALT1_EN), readl(cam_dev->base + REG_HALT2_EN),
 		readl(cam_dev->base + REG_HALT3_EN), readl(cam_dev->base + REG_HALT4_EN),
@@ -1450,6 +1450,20 @@ static void raw_dump_debug_cqi_status(struct mtk_raw_device *dev)
 			       dbg_CQI_R4, ARRAY_SIZE(dbg_CQI_R4));
 }
 
+static void dump_halt_setting(struct mtk_raw_device *dev)
+{
+	struct mtk_cam_device *cam_dev = dev->cam;
+
+	dev_info_ratelimited(dev->dev, "%s: halt1~10,13:0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		__func__,
+		readl(cam_dev->base + REG_HALT1_EN), readl(cam_dev->base + REG_HALT2_EN),
+		readl(cam_dev->base + REG_HALT3_EN), readl(cam_dev->base + REG_HALT4_EN),
+		readl(cam_dev->base + REG_HALT5_EN), readl(cam_dev->base + REG_HALT6_EN),
+		readl(cam_dev->base + REG_HALT7_EN), readl(cam_dev->base + REG_HALT8_EN),
+		readl(cam_dev->base + REG_HALT9_EN), readl(cam_dev->base + REG_HALT10_EN),
+		readl(cam_dev->base + REG_HALT13_EN));
+}
+
 static void raw_handle_skip_frame(struct mtk_raw_device *raw_dev,
 			     struct mtk_camsys_irq_info *data)
 {
@@ -1460,6 +1474,7 @@ static void raw_handle_skip_frame(struct mtk_raw_device *raw_dev,
 			__func__, err_status, fh_cookie);
 
 	if (err_status & FBIT(CAMCTL_P1_SKIP_FRAME_DC_STAG_INT_ST)) {
+		dump_halt_setting(raw_dev);
 		mtk_cam_bwr_dbg_dump(raw_dev->cam->bwr);
 		mmdvfs_debug_status_dump(NULL);
 #if KERNEL_VERSION(6, 7, 0) >= LINUX_VERSION_CODE
@@ -2001,6 +2016,7 @@ static void raw_handle_tg_overrun_err(struct mtk_raw_device *raw_dev,
 		dump_topdebug_rdyreq_status(raw_dev);
 
 	else if (cnt == (OVERRUN_DUMP_CNT + raw_dev->sub_sensor_ctrl_en * 10)) {
+		dump_halt_setting(raw_dev);
 		mtk_cam_bwr_dbg_dump(raw_dev->cam->bwr);
 		mmdvfs_debug_status_dump(NULL);
 #if KERNEL_VERSION(6, 7, 0) >= LINUX_VERSION_CODE
