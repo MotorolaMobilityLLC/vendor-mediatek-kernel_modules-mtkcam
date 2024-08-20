@@ -2096,9 +2096,10 @@ static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 		dt = vc1->dt;
 	}
 
+#ifdef DOUBLE_PIXEL_EN
 	/* enable raw8 pixel double for raw8 data, only impact dt = 0x2a */
 	SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_OPT, RG_RAW8_PIXEL_DOUBLE, 1);
-
+#endif
 	/* select C / D phy */
 	SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_OPT, RG_CSI2_CPHY_SEL, (ctx->is_cphy) ? 1 : 0);
 	/* Select CSI2 8p/16p pixel mode */
@@ -2120,8 +2121,10 @@ static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 	}
 	SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_OPT, RG_CSI2_VS_1T, 1);
 	SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_OPT, RG_CSI2_EARLY_VSYNC, 1);
+#ifdef DOUBLE_PIXEL_EN
 	/* enable pixel double for ext dt data, impact dt = 0x18/1a/1c/1e/20~26/28/29 */
 	SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_OPT, RG_EXTDT_PIXEL_DOUBLE, 1);
+#endif
 	/* mt6899 only end */
 
 	/* enable resync cycle cnt */
