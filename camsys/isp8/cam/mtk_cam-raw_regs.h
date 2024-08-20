@@ -10409,4 +10409,9 @@
 
 #define REG_AA_ACT_WIN_X               0x59dc
 #define REG_AA_ACT_WIN_Y               0x59e0
+
+#define REG_CAM_RAW_LARB_VCSEL       0x3a8c00d0
+#define REG_CAM_YUV_LARB_VCSEL       0x3a8e00d0
+#define LARB_VCSEL_OFFSET            0x100000
+
 #endif	/* _MTK_CAM_RAW_REGS_H */
