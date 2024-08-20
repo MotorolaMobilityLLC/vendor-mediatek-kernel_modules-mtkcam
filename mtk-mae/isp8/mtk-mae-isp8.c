@@ -199,7 +199,7 @@ struct mae_priv_data priv_data_isp8 = {
 	},
 	.fd_v1_fpn_config_info = {
 		.size = 777,
-		.rotate_offset = 4091,
+		.rotate_offset = 4093,
 		.rotate_size = 777,
 	},
 	.fd_v1_fpn_coef_info = {
