@@ -2116,10 +2116,12 @@ static int mtk_cam_ctx_release_slc(struct mtk_cam_ctx *ctx)
 {
 	int ret = 0;
 #if IS_ENABLED(CONFIG_MTK_SLBC)
-	ret = slbc_gid_release(ID_CAM, ctx->slc_gid);
-	dev_info(ctx->cam->dev, "%s: slc_data bw/dma size:%d/%d\n", __func__,
-		ctx->slc_data.bw, ctx->slc_data.dma_size);
-	ctx->slc_data_valid = false;
+	if (ctx->slc_data_valid) {
+		ret = slbc_gid_release(ID_CAM, ctx->slc_gid);
+		dev_info(ctx->cam->dev, "%s: slc_data bw/dma size:%d/%d\n", __func__,
+			ctx->slc_data.bw, ctx->slc_data.dma_size);
+		ctx->slc_data_valid = false;
+	}
 #endif
 	return ret;
 }
