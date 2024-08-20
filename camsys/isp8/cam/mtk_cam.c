@@ -4526,7 +4526,7 @@ void clear_pcrp(struct mtk_cam_ctx *ctx,
 }
 
 void mtk_engine_dump_debug_status(struct mtk_cam_device *cam,
-				  unsigned long engines, bool is_srt)
+				  unsigned long engines, int dma_debug_dump)
 {
 	struct mtk_raw_device *dev;
 	struct mtk_camsv_device *sv_dev;
@@ -4541,7 +4541,7 @@ void mtk_engine_dump_debug_status(struct mtk_cam_device *cam,
 		if (subset & BIT(i)) {
 			dev = dev_get_drvdata(cam->engines.raw_devs[i]);
 
-			need_smi_dump |= raw_dump_debug_status(dev, is_srt);
+			need_smi_dump |= raw_dump_debug_status(dev, dma_debug_dump);
 		}
 	}
 

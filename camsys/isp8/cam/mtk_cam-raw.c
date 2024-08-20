@@ -1430,6 +1430,26 @@ static void raw_dump_debug_ufbc_status(struct mtk_raw_device *dev)
 
 }
 
+static void raw_dump_debug_cqi_status(struct mtk_raw_device *dev)
+{
+	mtk_cam_dump_dma_debug(dev,
+			       dev->dmatop_base, /* DMATOP_BASE */
+			       "CQI_R1",
+			       dbg_CQI_R1, ARRAY_SIZE(dbg_CQI_R1));
+	mtk_cam_dump_dma_debug(dev,
+			       dev->dmatop_base, /* DMATOP_BASE */
+			       "CQI_R2",
+			       dbg_CQI_R2, ARRAY_SIZE(dbg_CQI_R2));
+	mtk_cam_dump_dma_debug(dev,
+			       dev->dmatop_base, /* DMATOP_BASE */
+			       "CQI_R3",
+			       dbg_CQI_R3, ARRAY_SIZE(dbg_CQI_R3));
+	mtk_cam_dump_dma_debug(dev,
+			       dev->dmatop_base, /* DMATOP_BASE */
+			       "CQI_R4",
+			       dbg_CQI_R4, ARRAY_SIZE(dbg_CQI_R4));
+}
+
 static void raw_handle_skip_frame(struct mtk_raw_device *raw_dev,
 			     struct mtk_camsys_irq_info *data)
 {
@@ -3529,7 +3549,7 @@ int raw_to_tg_idx(int raw_id)
 }
 
 //#define DEBUG_RAWI_R5
-int raw_dump_debug_status(struct mtk_raw_device *dev, bool is_srt)
+int raw_dump_debug_status(struct mtk_raw_device *dev, int dma_debug_dump)
 {
 	int need_smi_dump;
 
@@ -3548,9 +3568,14 @@ int raw_dump_debug_status(struct mtk_raw_device *dev, bool is_srt)
 
 	qof_force_dump_all(dev);
 
-	if (is_srt) {
+	if (dma_debug_dump) {
 		dump_topdebug_rdyreq_status(dev);
-		raw_dump_debug_ufbc_status(dev);
+
+		if (dma_debug_dump & DD_DUMP_SRT)
+			raw_dump_debug_ufbc_status(dev);
+
+		if (dma_debug_dump & DD_DUMP_CQ)
+			raw_dump_debug_cqi_status(dev);
 	}
 
 #ifdef DEBUG_RAWI_R5

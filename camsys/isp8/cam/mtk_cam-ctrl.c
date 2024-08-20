@@ -1471,7 +1471,7 @@ SWITCH_FAILURE:
 	vsync_collector_dump(&ctrl->vsync_col);
 	if (mtk_cam_seninf_dump(ctx->seninf, job->frame_seq_no, true, true)
 		!= -ESTRPIPE) {
-		mtk_engine_dump_debug_status(ctx->cam, job->used_engine, false);
+		mtk_engine_dump_debug_status(ctx->cam, job->used_engine, DD_DUMP_NONE);
 		mtk_cam_job_uninit_engine(job, engine_uninit);
 		WRAP_AEE_EXCEPTION(MSG_RAW_CHANGE_FAILURE, __func__);
 	} else {
@@ -2390,10 +2390,10 @@ static void mtk_dump_debug_for_no_vsync(struct mtk_cam_ctx *ctx)
 
 	job = mtk_cam_ctrl_get_job(ctrl, cond_first_job, 0);
 	if (job) {
-		mtk_engine_dump_debug_status(cam, job->used_engine, false);
+		mtk_engine_dump_debug_status(cam, job->used_engine, DD_DUMP_NONE);
 		mtk_cam_job_put(job);
 	} else {
-		mtk_engine_dump_debug_status(cam, ctx->used_engine, false);
+		mtk_engine_dump_debug_status(cam, ctx->used_engine, DD_DUMP_NONE);
 	}
 }
 
