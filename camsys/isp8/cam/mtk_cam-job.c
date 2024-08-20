@@ -4545,7 +4545,7 @@ static struct pack_job_ops_helper m2m_pack_helper = {
 	.update_raw_rawi_to_ipi = fill_m2m_rawi_to_img_in_ipi,
 	.update_raw_imgo_to_ipi = fill_m2m_imgo_to_img_out_ipi,
 	.update_raw_yuvo_to_ipi = NULL,
-	.append_work_buf_to_ipi = update_work_buffer_to_ipi_frame,
+	.append_work_buf_to_ipi = NULL,
 };
 
 static struct pack_job_ops_helper timeshare_pack_helper = {
