@@ -2519,15 +2519,15 @@ static void csirx_phyA_cphy_setting(void *base, u64 data_rate)
 			SENINF_BITS(base, CDPHY_RX_ANA_6, RG_CSI0_CPHY_T0_CDR_AB_WIDTH, 0x8);
 			SENINF_BITS(base, CDPHY_RX_ANA_6, RG_CSI0_CPHY_T0_CDR_BC_WIDTH, 0x8);
 			SENINF_BITS(base, CDPHY_RX_ANA_6, RG_CSI0_CPHY_T0_CDR_CA_WIDTH, 0x8);
-			SENINF_BITS(base, CDPHY_RX_ANA_6, RG_CSI0_CPHY_T0_CDR_CK_DELAY, 0x2);
+			SENINF_BITS(base, CDPHY_RX_ANA_6, RG_CSI0_CPHY_T0_CDR_CK_DELAY, 0x6);
 			SENINF_BITS(base, CDPHY_RX_ANA_7, RG_CSI0_CPHY_T1_CDR_AB_WIDTH, 0x8);
 			SENINF_BITS(base, CDPHY_RX_ANA_7, RG_CSI0_CPHY_T1_CDR_BC_WIDTH, 0x8);
 			SENINF_BITS(base, CDPHY_RX_ANA_7, RG_CSI0_CPHY_T1_CDR_CA_WIDTH, 0x8);
-			SENINF_BITS(base, CDPHY_RX_ANA_7, RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0x2);
+			SENINF_BITS(base, CDPHY_RX_ANA_7, RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0x6);
 			SENINF_BITS(base, CDPHY_RX_ANA_4, RG_CSI0_CPHY_T0_CDR_RSTB_CODE, 0x0);
-			SENINF_BITS(base, CDPHY_RX_ANA_4, RG_CSI0_CPHY_T0_CDR_SEC_EDGE_CODE, 0x2);
+			SENINF_BITS(base, CDPHY_RX_ANA_4, RG_CSI0_CPHY_T0_CDR_SEC_EDGE_CODE, 0x6);
 			SENINF_BITS(base, CDPHY_RX_ANA_4, RG_CSI0_CPHY_T1_CDR_RSTB_CODE, 0x0);
-			SENINF_BITS(base, CDPHY_RX_ANA_4, RG_CSI0_CPHY_T1_CDR_SEC_EDGE_CODE, 0x2);
+			SENINF_BITS(base, CDPHY_RX_ANA_4, RG_CSI0_CPHY_T1_CDR_SEC_EDGE_CODE, 0x6);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_IS, 0x2);
 			SENINF_BITS(base, CDPHY_RX_ANA_8, RG_CSI0_RESERVE, 0x680 | (en_16bit_mode<<8));
 		}
@@ -5690,24 +5690,46 @@ static int mtk_cam_seninf_eye_scan(struct seninf_ctx *ctx, u32 key, int val_sign
 			for (i = 0; i <= ctx->is_4d1c; i++) {
 				port = i ? ctx->portB : ctx->port;
 				base = ctx->reg_ana_csi_rx[(unsigned int)port];
-				// T0
-				SENINF_BITS(base, CDPHY_RX_ANA_6,
-						RG_CSI0_CPHY_T0_CDR_CK_DELAY, val);
-				SENINF_BITS(base, CDPHY_RX_ANA_13,
-						RG_CSI0_CPHY_T0_CDR_SEL_CODE, val);
-				// T1
-				SENINF_BITS(base, CDPHY_RX_ANA_7,
-						RG_CSI0_CPHY_T1_CDR_CK_DELAY, val);
-				SENINF_BITS(base, CDPHY_RX_ANA_13,
-						RG_CSI0_CPHY_T1_CDR_SEL_CODE, val);
+				if (!strcasecmp(_seninf_ops->iomem_ver, MT6991_IOMOM_VERSIONS)) {
+					SENINF_BITS(base, CDPHY_RX_ANA_6,
+							RG_CSI0_CPHY_T0_CDR_CK_DELAY, val);
+					SENINF_BITS(base, CDPHY_RX_ANA_13,
+							RG_CSI0_CPHY_T0_CDR_SEL_CODE, val);
+					SENINF_BITS(base, CDPHY_RX_ANA_7,
+							RG_CSI0_CPHY_T1_CDR_CK_DELAY, val);
+					SENINF_BITS(base, CDPHY_RX_ANA_13,
+							RG_CSI0_CPHY_T1_CDR_SEL_CODE, val);
 
-				log_len += snprintf(plog + log_len, logbuf_size - log_len,
-				"SENINF_BITS set RG_CSI0_CPHY_T0_CDR_CK_DELAY, val=0x%x\n"
-				"SENINF_BITS set RG_CSI0_CPHY_T0_CDR_SEL_CODE, val=0x%x\n"
-				"SENINF_BITS set RG_CSI0_CPHY_T1_CDR_CK_DELAY, val=0x%x\n"
-				"SENINF_BITS set RG_CSI0_CPHY_T1_CDR_SEL_CODE, val=0x%x\n",
-				val, val, val, val);
+					log_len += snprintf(plog + log_len, logbuf_size - log_len,
+					"SENINF_BITS set RG_CSI0_CPHY_T0_CDR_CK_DELAY, val=0x%x\n"
+					"SENINF_BITS set RG_CSI0_CPHY_T0_CDR_SEL_CODE, val=0x%x\n"
+					"SENINF_BITS set RG_CSI0_CPHY_T1_CDR_CK_DELAY, val=0x%x\n"
+					"SENINF_BITS set RG_CSI0_CPHY_T1_CDR_SEL_CODE, val=0x%x\n",
+					val, val, val, val);
+				} else if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
+					SENINF_BITS(base, CDPHY_RX_ANA_4,
+							RG_CSI0_CPHY_T0_CDR_RSTB_CODE, ((val & 0x38) >> 3));
+					SENINF_BITS(base, CDPHY_RX_ANA_4,
+							RG_CSI0_CPHY_T0_CDR_SEC_EDGE_CODE, (val & 0x7));
+					SENINF_BITS(base, CDPHY_RX_ANA_6,
+							RG_CSI0_CPHY_T0_CDR_CK_DELAY, val);
+					SENINF_BITS(base, CDPHY_RX_ANA_4,
+							RG_CSI0_CPHY_T1_CDR_RSTB_CODE, ((val & 0x38) >> 3));
+					SENINF_BITS(base, CDPHY_RX_ANA_4,
+							RG_CSI0_CPHY_T1_CDR_SEC_EDGE_CODE, (val & 0x7));
+					SENINF_BITS(base, CDPHY_RX_ANA_6,
+							RG_CSI0_CPHY_T1_CDR_CK_DELAY, val);
 
+					log_len += snprintf(plog + log_len, logbuf_size - log_len,
+					"SENINF_BITS set RG_CSI0_CPHY_T0_CDR_RSTB_CODE, val=0x%x\n"
+					"SENINF_BITS set RG_CSI0_CPHY_T0_CDR_SEC_EDGE_CODE, val=0x%x\n"
+					"SENINF_BITS set RG_CSI0_CPHY_T0_CDR_CK_DELAY, val=0x%x\n"
+					"SENINF_BITS set RG_CSI0_CPHY_T1_CDR_RSTB_CODE, val=0x%x\n"
+					"SENINF_BITS set RG_CSI0_CPHY_T1_CDR_SEC_EDGE_CODE, val=0x%x\n"
+					"SENINF_BITS set RG_CSI0_CPHY_T1_CDR_CK_DELAY, val=0x%x\n",
+					((val & 0x38) >> 3), (val & 0x7), val,
+					((val & 0x38) >> 3), (val & 0x7), val);
+				}
 				dev_info(ctx->dev,
 				"EYE_SCAN_KEYS_CDR_DELAY input val_signed=%d, write to reg val=0x%x\n",
 					val, val);
