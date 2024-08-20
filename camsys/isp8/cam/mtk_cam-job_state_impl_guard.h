@@ -352,7 +352,7 @@ static inline bool valid_cq_execution_ref_sof(struct transition_param *p)
 	/* for sentest NE -> SE duration 25ms case*/
 	spin_lock(p->info_lock);
 	ret = (p->info->sof_ts_ns <= p->info->sof_l_ts_ns) &&
-		(((p->event_ts - p->reference_sof_ns) < p->cq_trigger_thres) ||
+		(((p->event_ts < (p->cq_trigger_thres + p->reference_sof_ns))) ||
 	((p->event_ts - p->info->sof_l_ts_ns) < SQC_THRES_FROM_L_SOF_NS));
 	if (ret == false)
 		pr_info("[mtk-cam:valid_cq_execution] event/l_sof/cq:%llu/%llu/%llu sof:%llu(%llu) ref:%llu",
