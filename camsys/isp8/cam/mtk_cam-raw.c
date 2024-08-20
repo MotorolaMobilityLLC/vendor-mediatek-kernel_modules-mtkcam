@@ -143,6 +143,7 @@ static void init_raw_ddren(struct mtk_raw_device *dev, int is_srt, int frm_time_
 void init_camsys_settings(struct mtk_raw_device *dev, bool is_srt, int frm_time_us)
 {
 	struct mtk_cam_device *cam_dev = dev->cam;
+	struct mtk_yuv_device *yuv_dev = get_yuv_dev(dev);
 	unsigned int reg_raw_urgent, reg_yuv_urgent;
 	unsigned int raw_urgent, yuv_urgent;
 
@@ -214,9 +215,17 @@ void init_camsys_settings(struct mtk_raw_device *dev, bool is_srt, int frm_time_
 	if (is_srt) {
 		writel_relaxed(0x0, cam_dev->base + reg_raw_urgent);
 		writel_relaxed(0x0, cam_dev->base + reg_yuv_urgent);
+		if (dev->larb_vcsel)
+			writel_relaxed(0x0, dev->larb_vcsel);
+		if (yuv_dev->larb_vcsel)
+			writel_relaxed(0x0, yuv_dev->larb_vcsel);
 	} else {
 		writel_relaxed(raw_urgent, cam_dev->base + reg_raw_urgent);
 		writel_relaxed(yuv_urgent, cam_dev->base + reg_yuv_urgent);
+		if (dev->larb_vcsel)
+			writel_relaxed(0x7ffff, dev->larb_vcsel);
+		if (yuv_dev->larb_vcsel)
+			writel_relaxed(0x7f, yuv_dev->larb_vcsel);
 	}
 
 	wmb(); /* TBC */
@@ -2305,6 +2314,17 @@ static int mtk_raw_of_probe(struct platform_device *pdev,
 		dev_dbg(dev, "failed to map register qof_base\n");
 		return PTR_ERR(raw->qof_base);
 	}
+
+	if (GET_PLAT_HW(snoc_support)) {
+		raw->larb_vcsel = ioremap(REG_CAM_RAW_LARB_VCSEL +
+				(phys_addr_t) raw->id * LARB_VCSEL_OFFSET, 0x4);
+		if (IS_ERR(raw->larb_vcsel)) {
+			dev_err(dev, "%s: failed to map larb_vcsel\n", __func__);
+			raw->larb_vcsel = NULL;
+		}
+	} else
+		raw->larb_vcsel = NULL;
+
 	/* will be assigned later */
 	raw->yuv_base = NULL;
 
@@ -2844,6 +2864,17 @@ static int mtk_yuv_of_probe(struct platform_device *pdev,
 		dev_dbg(dev, "failed to map register dmatop_base_inner\n");
 		return PTR_ERR(drvdata->dmatop_base_inner);
 	}
+
+	if (GET_PLAT_HW(snoc_support)) {
+		drvdata->larb_vcsel = ioremap(REG_CAM_YUV_LARB_VCSEL +
+					(phys_addr_t) drvdata->id * LARB_VCSEL_OFFSET, 0x4);
+		if (IS_ERR(drvdata->larb_vcsel)) {
+			dev_err(dev, "%s: failed to map larb_vcsel\n", __func__);
+			drvdata->larb_vcsel = NULL;
+		}
+	} else
+		drvdata->larb_vcsel = NULL;
+
 	clks = of_count_phandle_with_args(pdev->dev.of_node, "clocks",
 			"#clock-cells");
 
