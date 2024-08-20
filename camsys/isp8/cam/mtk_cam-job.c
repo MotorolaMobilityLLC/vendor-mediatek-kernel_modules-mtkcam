@@ -4270,11 +4270,11 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 			struct mtk_raw_device *r = dev_get_drvdata(cam->engines.raw_devs[i]);
 
 			reset(r);
+			init_camsys_settings(r, is_srt, get_sensor_interval_us(job));
 		}
 	}
 
 	raw_dev = dev_get_drvdata(cam->engines.raw_devs[raw_id]);
-	init_camsys_settings(raw_dev, is_srt, get_sensor_interval_us(job));
 	set_cq_deadline(job, -1);
 	ret = mtk_cam_job_manually_apply_isp_sync(job);
 	apply_camcq_stagger_en(job);
