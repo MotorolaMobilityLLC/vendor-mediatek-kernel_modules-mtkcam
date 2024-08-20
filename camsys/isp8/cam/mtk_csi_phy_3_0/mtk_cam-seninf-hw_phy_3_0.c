@@ -1217,7 +1217,8 @@ static int mtk_cam_seninf_set_async(struct seninf_ctx *ctx, int async, int split
 
 	mutex_unlock(&ctx->core->seninf_top_rg_mutex);
 
-	seninf_logi(ctx, "input async:%d, ASYNC CFG = 0x%x\n", async,
+	seninf_logd(ctx, "input async:%d, ASYNC CFG = 0x%x\n",
+		async,
 		SENINF_READ_REG(pSeninf, SENINF_ASYTOP_SENINF_ASYNC_CFG));
 
 	mtk_cam_seninf_en_async_overrun_irq(ctx, async);
@@ -1634,7 +1635,7 @@ static int apply_efuse_data(struct seninf_ctx *ctx)
 		SENINF_BITS(base, CDPHY_RX_ANA_3, RG_CSI0_L1N_T1A_HSRT_CODE, (m_csi_efuse >> 22) & 0x1f);
 		SENINF_BITS(base, CDPHY_RX_ANA_4, RG_CSI0_L2P_T1B_HSRT_CODE, (m_csi_efuse >> 17) & 0x1f);
 		SENINF_BITS(base, CDPHY_RX_ANA_4, RG_CSI0_L2N_T1C_HSRT_CODE, (m_csi_efuse >> 17) & 0x1f);
-		dev_info(ctx->dev, "CSI%dA,CDPHY_RX_ANA_2/3/4:(0x%x)/(0x%x)/(0x%x),Efuse Data:(0x%08x)",
+		seninf_logd(ctx, "CSI%dA,CDPHY_RX_ANA_2/3/4:(0x%x)/(0x%x)/(0x%x),Efuse Data:(0x%08x)",
 			ctx->portNum,
 			SENINF_READ_REG(base, CDPHY_RX_ANA_2),
 			SENINF_READ_REG(base, CDPHY_RX_ANA_3),
@@ -1651,7 +1652,7 @@ static int apply_efuse_data(struct seninf_ctx *ctx)
 		SENINF_BITS(base, CDPHY_RX_ANA_3, RG_CSI0_L1N_T1A_HSRT_CODE, (m_csi_efuse >> 7) & 0x1f);
 		SENINF_BITS(base, CDPHY_RX_ANA_4, RG_CSI0_L2P_T1B_HSRT_CODE, (m_csi_efuse >> 2) & 0x1f);
 		SENINF_BITS(base, CDPHY_RX_ANA_4, RG_CSI0_L2N_T1C_HSRT_CODE, (m_csi_efuse >> 2) & 0x1f);
-		dev_info(ctx->dev, "CSI%dB,CDPHY_RX_ANA_2/3/4:(0x%x)/(0x%x)/(0x%x),Efuse Data:(0x%08x)",
+		seninf_logd(ctx, "CSI%dB,CDPHY_RX_ANA_2/3/4:(0x%x)/(0x%x)/(0x%x),Efuse Data:(0x%08x)",
 			ctx->portNum,
 			SENINF_READ_REG(base, CDPHY_RX_ANA_2),
 			SENINF_READ_REG(base, CDPHY_RX_ANA_3),
@@ -4086,8 +4087,9 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		SENINF_READ_REG(pSeninf_top, SENINF_TOP_OUTMUX_CG_EN),
 		SENINF_READ_REG(pSeninf_top, SENINF_TOP_ASYNC_OVERRUN_IRQ_EN));
 	seninf_logi(ctx,
-		"current async%d:ASYNC0_DBG0(0x%x),ASYNC1_DBG0(0x%x),ASYNC2_DBG0(0x%x),ASYNC3_DBG0(0x%x),ASYNC4_DBG0(0x%x),ASYNC5_DBG0(0x%x)\n",
+		"current async%d:ASYNC_CFG(0x%x),ASYNC0_DBG0(0x%x),ASYNC1_DBG0(0x%x),ASYNC2_DBG0(0x%x),ASYNC3_DBG0(0x%x),ASYNC4_DBG0(0x%x),ASYNC5_DBG0(0x%x)\n",
 		ctx->seninfAsyncIdx,
+		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_CFG),
 		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_DBG_PORT0_0),
 		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_DBG_PORT0_1),
 		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_DBG_PORT0_2),
@@ -4528,6 +4530,7 @@ static int mtk_cam_seninf_debug_current_status(struct seninf_ctx *ctx)
 	int i, ret = 0;
 	enum CSI_PORT csi_port = CSI_PORT_0;
 	char *fmeter_dbg = kzalloc(sizeof(char) * 256, GFP_KERNEL);
+	void *pSeninf_asytop = ctx->reg_if_async;
 
 	ctx->debug_cur_sys_time_in_ns = ktime_get_boottime_ns();
 
@@ -4717,6 +4720,41 @@ static int mtk_cam_seninf_debug_current_status(struct seninf_ctx *ctx)
 	if ((ctx->debug_cur_mac_irq & 0xD0) ||
 		(ctx->debug_cur_seninf_irq & 0x10000000))
 		ret = -2; //multi lanes sync error, crc error, ecc error
+
+	dev_info(ctx->dev,
+		"current async%d:ASYNC_CFG(0x%x),ASYNC0_DBG0(0x%x),ASYNC1_DBG0(0x%x),ASYNC2_DBG0(0x%x),ASYNC3_DBG0(0x%x),ASYNC4_DBG0(0x%x),ASYNC5_DBG0(0x%x)\n",
+		ctx->seninfAsyncIdx,
+		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_CFG),
+		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_DBG_PORT0_0),
+		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_DBG_PORT0_1),
+		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_DBG_PORT0_2),
+		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_DBG_PORT0_3),
+		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_DBG_PORT0_4),
+		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_DBG_PORT0_5));
+	dev_info(ctx->dev,
+		"current async%d:ASYNC0_DBG1(0x%x),ASYNC1_DBG1(0x%x),ASYNC2_DBG1(0x%x),ASYNC3_DBG1(0x%x),ASYNC4_DBG1(0x%x),ASYNC5_DBG1(0x%x)\n",
+		ctx->seninfAsyncIdx,
+		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_DBG_PORT1_0),
+		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_DBG_PORT1_1),
+		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_DBG_PORT1_2),
+		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_DBG_PORT1_3),
+		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_DBG_PORT1_4),
+		SENINF_READ_REG(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_DBG_PORT1_5));
+	dev_info(ctx->dev,
+		"current async%d:BIST_RST0(0x%x),BIST_RST1(0x%x),BIST_RST2(0x%x),BIST_RST3(0x%x),BIST_RST4(0x%x),BIST_RST5(0x%x)\n",
+		ctx->seninfAsyncIdx,
+		SENINF_READ_BITS(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_FIFO_BIST_CTRL_0,
+				 SENINF_ASYTOP_AFIFO_BIST_RST_0),
+		SENINF_READ_BITS(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_FIFO_BIST_CTRL_1,
+				 SENINF_ASYTOP_AFIFO_BIST_RST_1),
+		SENINF_READ_BITS(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_FIFO_BIST_CTRL_2,
+				 SENINF_ASYTOP_AFIFO_BIST_RST_2),
+		SENINF_READ_BITS(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_FIFO_BIST_CTRL_3,
+				 SENINF_ASYTOP_AFIFO_BIST_RST_3),
+		SENINF_READ_BITS(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_FIFO_BIST_CTRL_4,
+				 SENINF_ASYTOP_AFIFO_BIST_RST_4),
+		SENINF_READ_BITS(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_FIFO_BIST_CTRL_5,
+				 SENINF_ASYTOP_AFIFO_BIST_RST_5));
 
 	/* dump all outmux */
 	for (i = 0; i < _seninf_ops->outmux_num; i++) {
