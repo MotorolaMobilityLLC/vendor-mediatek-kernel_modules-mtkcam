@@ -6377,9 +6377,14 @@ static void job_dump_engines_debug_status(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_cam_device *cam = ctx->cam;
-	bool is_srt = is_dc_mode(job) || is_m2m(job);
+	int dma_debug_dump = (is_dc_mode(job) || is_m2m(job)) ?
+		DD_DUMP_SRT : DD_DUMP_NONE;
+	int isp_state = mtk_cam_job_state_get(&job->job_state, ISP_STATE);
 
-	mtk_engine_dump_debug_status(cam, job->used_engine, is_srt);
+	if (isp_state == S_ISP_APPLYING)
+		dma_debug_dump |= DD_DUMP_CQ;
+
+	mtk_engine_dump_debug_status(cam, job->used_engine, dma_debug_dump);
 	if (ctx->seninf) {
 #ifdef NOT_FPGA_STAGE
 		mtk_cam_seninf_dump(ctx->seninf, job->frame_seq_no, false, false);
