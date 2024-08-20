@@ -502,7 +502,7 @@ int mtk_cam_mraw_link_validate(struct v4l2_subdev *sd,
 			  struct v4l2_subdev_format *sink_fmt);
 
 void mtk_engine_dump_debug_status(struct mtk_cam_device *cam,
-				  unsigned long engines, bool is_srt);
+				  unsigned long engines, int dma_debug_dump);
 
 u64 mtk_cam_query_interval_from_sensor(struct v4l2_subdev *sensor);
 u64 mtk_cam_query_interval_from_ctrl_data(struct mtk_cam_ctx *ctx);
