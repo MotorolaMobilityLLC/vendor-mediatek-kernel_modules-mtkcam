@@ -27,6 +27,7 @@
 #define CSI_EFUSE_SET
 //#define SENINF_UT_DUMP
 #define ERR_DETECT_TEST
+#undef DOUBLE_PIXEL_EN
 
 #define seninf_logi(_ctx, format, args...) do { \
 	if ((_ctx)) { \

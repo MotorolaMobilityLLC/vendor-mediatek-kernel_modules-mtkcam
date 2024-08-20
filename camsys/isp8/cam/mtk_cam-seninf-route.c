@@ -859,38 +859,89 @@ int mtk_cam_seninf_get_vcinfo(struct seninf_ctx *ctx)
 		if (mtk_cam_seninf_fill_outpad_to_vc(ctx, vc, desc, &fsync_ext_vsync_pad_code))
 			continue;
 
-		vc->exp_hsize = fd.entry[i].bus.csi2.hsize;
+		switch (vc->dt) {
+		/* Generic Long 0x10~0x17 */
+		case 0x10:
+		case 0x11:
+		case 0x12:
+		case 0x13:
+		case 0x14:
+		case 0x15:
+		case 0x16:
+		case 0x17:
+			vc->exp_hsize = conv_ebd_hsize_raw14(fd.entry[i].bus.csi2.hsize,
+						fd.entry[i].bus.csi2.ebd_parsing_type);
+			break;
+		/* YUV 0x18~0x1F */
+		case 0x1E:
+		case 0x1F:
+			vc->exp_hsize = fd.entry[i].bus.csi2.hsize * 2; /* YUV422 */
+			break;
+		/* RGB 0x20~0x27 */
+		case 0x24:
+			vc->exp_hsize = fd.entry[i].bus.csi2.hsize * 3; /* RGB888 */
+			break;
+		/* RAW 0x28~0x2F */
+		case 0x2A:
+		case 0x2B:
+		case 0x2C:
+		case 0x2D:
+		case 0x2E:
+		case 0x2F:
+		case 0x27:
+		default:
+			vc->exp_hsize = fd.entry[i].bus.csi2.hsize;
+			break;
+		}
+
+#ifdef DOUBLE_PIXEL_EN
+		/* double pixel mode */
+		switch (vc->dt) {
+		/* ExtDT */
+		case 0x18:
+		case 0x1A:
+		case 0x1C:
+		case 0x1E:
+		case 0x20:
+		case 0x21:
+		case 0x22:
+		case 0x23:
+		case 0x24:
+		case 0x25:
+		case 0x26:
+		case 0x28:
+		case 0x29:
+			if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS))
+				vc->exp_hsize = vc->exp_hsize / 2;
+			break;
+		/* Raw8 */
+		case 0x2A:
+			vc->exp_hsize = vc->exp_hsize / 2;
+			break;
+		default:
+			break;
+		}
+#endif
+
 		vc->exp_vsize = fd.entry[i].bus.csi2.vsize;
 
-		/*YUV422 FMT*/
-		if (vc->dt == 0x1e) {
-			vc->exp_hsize = vc->exp_hsize * 2;
-		}
-
-		if (vc->dt >= 0x10 && vc->dt <= 0x17) {
-			vc->exp_hsize = conv_ebd_hsize_raw14(vc->exp_hsize,
-						fd.entry[i].bus.csi2.ebd_parsing_type);
-		}
-		if (vc->dt == 0x24)
-			vc->exp_hsize = fd.entry[i].bus.csi2.hsize * 3;
-
 		switch (vc->dt) {
-		case 0x28:
-			vc->bit_depth = 6;
+		/* YUV 0x18~0x1F */
+		case 0x1E:
+			vc->bit_depth = 8;
 			break;
-		case 0x29:
-			vc->bit_depth = 7;
+		case 0x1F:
+			vc->bit_depth = 10;
 			break;
+		/* RGB 0x20~0x27 */
+		case 0x24:
+			vc->bit_depth = 8;
+			break;
+		/* RAW 0x28~0x2F */
 		case 0x2A:
-		case 0x1C:
-		case 0x1A:
-		case 0x18:
 			vc->bit_depth = 8;
 			break;
 		case 0x2B:
-		case 0x1F:
-		case 0x19:
-		case 0x1D:
 			vc->bit_depth = 10;
 			break;
 		case 0x2C:
@@ -899,15 +950,11 @@ int mtk_cam_seninf_get_vcinfo(struct seninf_ctx *ctx)
 		case 0x2D:
 			vc->bit_depth = 14;
 			break;
-		case 0x1E:
 		case 0x2E:
 			vc->bit_depth = 16;
 			break;
 		case 0x2F:
 			vc->bit_depth = 20;
-			break;
-		case 0x24:
-			vc->bit_depth = 24;
 			break;
 		case 0x27:
 			vc->bit_depth = 24;
@@ -917,6 +964,7 @@ int mtk_cam_seninf_get_vcinfo(struct seninf_ctx *ctx)
 			break;
 		}
 
+		/* User Defined 0x30~0x37 */
 		switch (vc->dt_remap_to_type) {
 		case MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10:
 			vc->bit_depth = 10;
@@ -931,6 +979,34 @@ int mtk_cam_seninf_get_vcinfo(struct seninf_ctx *ctx)
 			break;
 		}
 
+#ifdef DOUBLE_PIXEL_EN
+		/* double pixel mode */
+		switch (vc->dt) {
+		/* ExtDT */
+		case 0x18:
+		case 0x1A:
+		case 0x1C:
+		case 0x1E:
+		case 0x20:
+		case 0x21:
+		case 0x22:
+		case 0x23:
+		case 0x24:
+		case 0x25:
+		case 0x26:
+		case 0x28:
+		case 0x29:
+			if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS))
+				vc->bit_depth = vc->bit_depth * 2;
+			break;
+		/* Raw8 */
+		case 0x2A:
+			vc->bit_depth = vc->bit_depth * 2;
+			break;
+		default:
+			break;
+		}
+#endif
 
 		/* update pad fotmat */
 		if (vc->exp_hsize && vc->exp_vsize) {
