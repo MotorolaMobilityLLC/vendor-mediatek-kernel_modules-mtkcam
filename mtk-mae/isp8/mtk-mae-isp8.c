@@ -485,6 +485,8 @@ static void mtk_mae_set_default_value(struct mtk_mae_dev *mae_dev, struct cmdq_p
 		MAE_CMDQ_WRITE_REG(pkt, MAE_REG_H_MAX0 + COMMON_REG_SIZE * i, 0x01F4);
 		MAE_CMDQ_WRITE_REG(pkt, MAE_REG_V_MAX0 + COMMON_REG_SIZE * i, 0x01F4);
 	}
+
+	MAE_CMDQ_WRITE_REG(pkt, MAE_0174_MAISR, 0xc000);
 }
 
 static bool select_outer_loop_by_mae_mode(struct mtk_mae_dev *mae_dev,
