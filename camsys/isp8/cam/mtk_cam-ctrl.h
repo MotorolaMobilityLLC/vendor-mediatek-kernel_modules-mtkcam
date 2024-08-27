@@ -148,6 +148,7 @@ struct mtk_cam_ctrl {
 
 	struct mtk_cam_watchdog watchdog;
 	unsigned int hw_hang_count_down;
+	unsigned int frame_seq;
 	unsigned int sensor_seq;
 	unsigned int frame_sync_id;
 	unsigned int sensor_sync_id;
