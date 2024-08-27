@@ -1825,11 +1825,14 @@ static int raw_process_fsm(struct mtk_raw_device *raw_dev,
 			   int *recovered_done)
 {
 	struct engine_fsm *fsm = &raw_dev->fsm;
-	int done_type;
+	int done_type, sof_type;
 	int cookie_done;
 	int ret;
-	int recovered = 0;
+	int recovered = 0, postponed = 0;
 
+	sof_type = irq_info->irq_type &
+		(BIT(CAMSYS_IRQ_FRAME_START) |
+		BIT(CAMSYS_IRQ_FRAME_START_DCIF_MAIN));
 	done_type = irq_info->irq_type &
 	    (BIT(CAMSYS_IRQ_AFO_DONE) | BIT(CAMSYS_IRQ_FRAME_DONE));
 
@@ -1843,6 +1846,8 @@ static int raw_process_fsm(struct mtk_raw_device *raw_dev,
 		ret = engine_fsm_hw_done(fsm, &cookie_done);
 		if (ret > 0)
 			irq_info->cookie_done = cookie_done;
+		else if (sof_type && (irq_info->fbc_empty == 0))
+			postponed = 1;
 		else {
 			/* handle for fake p1 done */
 			dev_info_ratelimited(raw_dev->dev, "warn: fake done in/out: 0x%x 0x%x\n",
@@ -1858,6 +1863,12 @@ static int raw_process_fsm(struct mtk_raw_device *raw_dev,
 					   irq_info->frame_idx,
 					   irq_info->fbc_empty,
 					   recovered_done);
+	if (postponed) {
+		irq_info->cookie_done = engine_update_for_done(fsm);
+		dev_info(raw_dev->dev, "postponed sof in/out: 0x%x 0x%x\n",
+			 irq_info->frame_idx_inner,
+			 irq_info->frame_idx);
+	}
 
 	if (recovered)
 		dev_info(raw_dev->dev, "recovered done 0x%x in/out: 0x%x 0x%x\n",
