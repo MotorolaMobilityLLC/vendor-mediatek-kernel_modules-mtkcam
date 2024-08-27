@@ -34,6 +34,12 @@ static int gc13a2_set_fast_standby_stream_on(struct subdrv_ctx *ctx,u8 *para, u3
 static int gc13a2_ops_close(struct subdrv_ctx *ctx);
 #endif
 
+static int gc13a2_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
+static DEFINE_SPINLOCK(imgsensor_drv_lock);
+#define GC13A2_EEPROM_SLAVE_ID 0xA0
+#define EEPROM_ACTUATOR_ID_POSITION 12
+#define GC13A2_ZET_ACTUATOR_ID 0x30
+
 //#define MOT_GC13A2_PDAF_DEBUG
 #ifdef MOT_GC13A2_PDAF_DEBUG
 static unsigned int gc13a2_pd_dt = 0x32;
@@ -44,10 +50,12 @@ module_param(gc13a2_pd_ddesc, uint, 0644);
 module_param(gc13a2_pd_en, uint, 0644);
 #endif
 
+
 #define ENABLE_GC13A2_PD TRUE
 #define GC13A2_PD_DT 0x32
 //#define GC13A2_DATA_DESC VC_PDAF_STATS_NE_PIX_1
 #define GC13A2_DATA_DESC VC_PDAF_STATS
+
 
 /* STRUCT */
 
@@ -504,7 +512,7 @@ int gc13a2_overlay_pd_settings(void)
 #endif
 
 static struct subdrv_ops ops = {
-	.get_id = common_get_imgsensor_id,
+	.get_id = gc13a2_get_imgsensor_id,
 	.init_ctx = init_ctx,
 	.open = common_open,
 	.get_info = common_get_info,
@@ -595,6 +603,73 @@ static int gc13a2_ops_close(struct subdrv_ctx *ctx)
 {
 	gc13a2_streaming_control(ctx, KAL_FALSE);
 	DRV_LOG_MUST(ctx, "subdrv close \n");
+	return ERROR_NONE;
+}
+
+
+static uint8_t gc13a2_read_actuator_id_from_eeprom(struct subdrv_ctx *ctx, uint8_t device_id, uint16_t eeprom_addr)
+{
+	uint8_t actuator_id = 0;
+	uint8_t origin_id = 0;
+	struct subdrv_ctx *tmp_ctx;
+
+	tmp_ctx = ctx;
+	origin_id = tmp_ctx->i2c_write_id;
+
+	spin_lock(&imgsensor_drv_lock);
+	tmp_ctx->i2c_write_id = device_id;
+	spin_unlock(&imgsensor_drv_lock);
+
+	actuator_id = subdrv_i2c_rd_u8(ctx, eeprom_addr -1); //eeprom data start is 0
+
+	spin_lock(&imgsensor_drv_lock);
+	tmp_ctx->i2c_write_id = origin_id;
+	spin_unlock(&imgsensor_drv_lock);
+
+	pr_err("gc13a2 eeprom actuator id =0x%x\n, origin_id =%x", actuator_id, origin_id);
+	return actuator_id;
+}
+
+static kal_uint32 gc13a2_return_sensor_id(struct subdrv_ctx *ctx)
+{
+	uint8_t actuator_id = 0;
+	actuator_id = gc13a2_read_actuator_id_from_eeprom(ctx, GC13A2_EEPROM_SLAVE_ID, EEPROM_ACTUATOR_ID_POSITION);
+	pr_err("gc13a2 actuator_id = %x", actuator_id);
+	if(actuator_id == GC13A2_ZET_ACTUATOR_ID) {
+		return ((subdrv_i2c_rd_u8(ctx, ctx->s_ctx.reg_addr_sensor_id.addr[0]) << 8) | subdrv_i2c_rd_u8(ctx, ctx->s_ctx.reg_addr_sensor_id.addr[1]));
+	} else {
+		pr_err("gc13a2 actuator id cur:0x%x, exp:0x30 not match, sensor probe failed; maybe gc13a2_vcm_blad id 0x32 can match.\n", actuator_id);
+		return 0;
+	}
+}
+
+static int gc13a2_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
+{
+	uint8_t i = 0;
+	uint8_t retry = 2;
+	// uint32_t addr_h = ctx->s_ctx.reg_addr_sensor_id.addr[0];
+	// uint32_t addr_l = ctx->s_ctx.reg_addr_sensor_id.addr[1];
+	uint32_t addr_ll = ctx->s_ctx.reg_addr_sensor_id.addr[2];
+
+	while (ctx->s_ctx.i2c_addr_table[i] != 0xFF) {
+		ctx->i2c_write_id = ctx->s_ctx.i2c_addr_table[i];
+		do {
+			*sensor_id = gc13a2_return_sensor_id(ctx);
+			if (addr_ll)
+				*sensor_id = ((*sensor_id) << 8) | subdrv_i2c_rd_u8(ctx, addr_ll);
+			DRV_LOG(ctx, "i2c_write_id:0x%x sensor_id(cur/exp):0x%x/0x%x\n",
+				ctx->i2c_write_id, *sensor_id, ctx->s_ctx.sensor_id);
+			if (*sensor_id == ctx->s_ctx.sensor_id)
+				return ERROR_NONE;
+			retry--;
+		} while (retry > 0);
+		i++;
+		retry = 2;
+	}
+	if (*sensor_id != ctx->s_ctx.sensor_id) {
+		*sensor_id = 0xFFFFFFFF;
+		return ERROR_SENSOR_CONNECT_FAIL;
+	}
 	return ERROR_NONE;
 }
 
