@@ -252,6 +252,7 @@ struct regulator_req {
 	struct list_head queue_list;
 	enum c2ps_env_status stat;
 	bool is_flush;
+	int curr_um;
 };
 
 #define C2PS_LOGD(fmt, ...)                                                 \

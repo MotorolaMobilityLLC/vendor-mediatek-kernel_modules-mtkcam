@@ -134,6 +134,7 @@ void c2ps_regulator_policy_simple(struct regulator_req *req)
 						  (100 + c2ps_uclamp_up_margin) / 100),
 				 new_uclamp));
 
+	new_uclamp = new_uclamp * 100 / req->curr_um;
 	new_uclamp = max(0, min(1024, new_uclamp));
 	req->tsk_info->latest_uclamp = new_uclamp;
 
