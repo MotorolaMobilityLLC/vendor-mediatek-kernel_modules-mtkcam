@@ -332,8 +332,13 @@ void mtk_cam_event_frame_sync(struct mtk_cam_ctrl *cam_ctrl,
 		.type = V4L2_EVENT_FRAME_SYNC,
 		.u.frame_sync.frame_sequence = frame_seq_no,
 	};
+	if (frame_seq_no >= cam_ctrl->frame_seq)
+		cam_ctrl->frame_seq = frame_seq_no;
+	else
+		pr_info("%s:revert frame_seq %d < %d", __func__,
+			frame_seq_no, cam_ctrl->frame_seq);
 	struct mtk_cam_event_frame_sync_data data = {
-		.frame_sequence = frame_seq_no,
+		.frame_sequence = cam_ctrl->frame_seq,
 		.sensor_sequence = cam_ctrl->sensor_seq,
 		.frame_sync_id = cam_ctrl->frame_sync_id,
 		.sensor_sync_id = cam_ctrl->sensor_sync_id,
@@ -2117,6 +2122,7 @@ void mtk_cam_ctrl_start(struct mtk_cam_ctrl *cam_ctrl, struct mtk_cam_ctx *ctx)
 	cam_ctrl->sensor_sync_id = 0;
 	cam_ctrl->frame_sync_id = 0;
 	cam_ctrl->sensor_seq = 0;
+	cam_ctrl->frame_seq = 0;
 
 	atomic_set(&cam_ctrl->stopped, 0);
 	atomic_set(&cam_ctrl->stream_on_cnt, 1);
