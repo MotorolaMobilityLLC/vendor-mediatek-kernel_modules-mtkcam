@@ -1607,7 +1607,7 @@ int imgsys_cmdq_sendtask_plat8(struct mtk_imgsys_dev *imgsys_dev,
 				frm_info->user_info[frm_idx].hw_comb, frm_info->frm_owner,
 				frm_idx, frm_num, blk_idx);
 			// Add secure token begin
-			#if IMGSYS_SECURE_ENABLE
+			#if 0
 			if (frm_info->user_info[frm_idx].is_secFrm)
 				imgsys_cmdq_sec_cmd_plat8(pkt);
 			#endif
@@ -1633,7 +1633,7 @@ int imgsys_cmdq_sendtask_plat8(struct mtk_imgsys_dev *imgsys_dev,
 			cmd_idx += ret;
 
 			// Add secure token end
-			#if IMGSYS_SECURE_ENABLE
+			#if 0
 			if (frm_info->user_info[frm_idx].is_secFrm)
 				imgsys_cmdq_sec_cmd_plat8(pkt);
 			#endif
