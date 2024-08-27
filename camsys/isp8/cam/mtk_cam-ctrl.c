@@ -1680,6 +1680,9 @@ SWITCH_FAILURE:
 			qof_mtcmos_raw_voter(raw_dev, false);
 		}
 	}
+	if (atomic_read(&ctx->streaming))
+		mtk_cam_watchdog_schedule_job_dump(&ctrl->watchdog,
+			is_dc_mode(job) ? MSG_DC_SKIP_FRAME : MSG_DEQUE_ERROR);
 }
 
 static void mtk_cam_ctrl_raw_switch_flow(struct mtk_cam_job *job)
@@ -2530,7 +2533,7 @@ static int mtk_cam_watchdog_schedule_sensor_reset(struct mtk_cam_watchdog *wd,
 					     desc, check_timeout);
 }
 
-static int mtk_cam_watchdog_schedule_job_dump(struct mtk_cam_watchdog *wd,
+int mtk_cam_watchdog_schedule_job_dump(struct mtk_cam_watchdog *wd,
 						  const char *desc)
 {
 	return watchdog_schedule_debug_work(wd, mtk_cam_watchdog_job_worker,

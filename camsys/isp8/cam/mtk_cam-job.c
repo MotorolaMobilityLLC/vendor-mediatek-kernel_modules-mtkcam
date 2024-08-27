@@ -2581,9 +2581,9 @@ static void job_dump(struct mtk_cam_job *job, int seq_no, const char *desc)
 	}
 
 	dump_job_info(job, desc);
-	dev_info(dev, "%s: (dump seq 0x%x) ISP_STATE %s\n",
+	dev_info(dev, "%s: (dump seq 0x%x) ISP_STATE %s done:0x%lx\n",
 		 __func__, seq_no,
-		 str_isp_state(isp_state));
+		 str_isp_state(isp_state), atomic_long_read(&job->done_set));
 
 	if (isp_in_done_state(isp_state))
 		return;
