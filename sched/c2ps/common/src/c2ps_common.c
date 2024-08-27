@@ -1434,21 +1434,22 @@ void update_cpu_idle_rate(void)
 					c2ps_get_first_cpu_of_cluster(_cluster_index));
 		u32 cur_cpu_floor = c2ps_get_cur_cpu_freq_floor(
 					c2ps_get_first_cpu_of_cluster(_cluster_index));
+		bool is_cpu_boost = false;
 
 		if (c2ps_boost_cur_uclamp_max(_cluster_index, cur_cpu_floor, glb_info))
 			continue;
 
 		glb_info->scn_cpu_freq_floor[_cluster_index] =
 			min(cur_cpu_floor, glb_info->scn_cpu_freq_floor[_cluster_index]);
-		glb_info->is_cpu_boost =
+		is_cpu_boost =
 			(cur_cpu_floor > glb_info->scn_cpu_freq_floor[_cluster_index] ||
 			cur_cpu_floor > glb_info->possible_config_cpu_freq[_cluster_index]);
 
-		if (glb_info->is_cpu_boost) {
+		if (is_cpu_boost) {
 			C2PS_LOGD("is_cpu_boost");
 			c2ps_main_systrace("cpu boost: %u", cur_cpu_floor);
+			glb_info->is_cpu_boost = true;
 			glb_info->need_update_bg[0] = 1;
-			break;
 		}
 
 		glb_info->s_loadxfreq[_cluster_index] =

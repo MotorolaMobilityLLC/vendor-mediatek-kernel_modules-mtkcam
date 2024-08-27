@@ -572,11 +572,20 @@ void c2ps_regulator_bgpolicy_um_stable(struct regulator_req *req)
 void c2ps_regulator_bgpolicy_um_transient(struct regulator_req *req)
 {
 	int action_um = 125;
+	int cluster_index = 0;
 
 	if (unlikely(req->glb_info->overwrite_util_margin ||
 				req->glb_info->decided_um_placeholder_val)) {
 		action_um = max(req->glb_info->overwrite_util_margin,
 						req->glb_info->decided_um_placeholder_val);
+	}
+
+	for (; cluster_index < c2ps_nr_clusters; cluster_index++) {
+		if (req->glb_info->need_update_bg[1 + cluster_index] == 2 ||
+			req->glb_info->single_shot_enable_ineff_cpufreq_cnt)
+			c2ps_update_cpu_freq_ceiling(cluster_index, FREQ_QOS_MAX_DEFAULT_VALUE);
+		else
+			c2ps_reset_cpu_freq_ceiling(cluster_index);
 	}
 
 	c2ps_set_util_margin(0, action_um);
