@@ -720,7 +720,7 @@ static int mtk_cam_get_outmux_sel(struct seninf_ctx *ctx, int outmux_idx, int *a
 	if (!asyncIdx || !sensorSel)
 		return -EINVAL;
 
-	pSeninf_outmux = ctx->reg_if_outmux[outmux_idx];
+	pSeninf_outmux = ctx->reg_if_outmux_inner[outmux_idx];
 
 	*asyncIdx = SENINF_READ_BITS(pSeninf_outmux, SENINF_OUTMUX_SRC_SEL,
 				SENINF_OUTMUX_SRC_SEL_MIPI);
@@ -3269,7 +3269,8 @@ static int _reset_seninf(struct seninf_ctx *ctx, int seninfAsyncIdx)
 			udelay(1);
 			SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_SW_RST,
 				    SENINF_OUTMUX_LOCAL_SW_RST, 0);
-			dev_info(ctx->dev, "reset outmux %d\n", i);
+			dev_info(ctx->dev, "Async%d reset outmux %d, selSensor:%d\n",
+					selAsync, i, selSensor);
 		}
 
 	return 0;
