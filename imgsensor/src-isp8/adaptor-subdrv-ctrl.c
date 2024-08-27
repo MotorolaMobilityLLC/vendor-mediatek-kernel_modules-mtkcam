@@ -996,7 +996,9 @@ void set_max_framerate_by_scenario(struct subdrv_ctx *ctx,
 	if (framerate == ctx->s_ctx.mode[scenario_id].max_framerate)
 		ctx->frame_length = ctx->s_ctx.mode[scenario_id].framelength;
 
-	ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+	ctx->current_fps = ctx->s_ctx.mode[scenario_id].pclk /
+						ctx->frame_length * 10 /
+						ctx->s_ctx.mode[scenario_id].linelength;
 	ctx->min_frame_length = ctx->frame_length;
 	DRV_LOG(ctx, "max_fps(input/output):%u/%u(sid:%u), min_fl_en:1, ctx->frame_length:%u\n",
 		framerate, ctx->current_fps, scenario_id, ctx->frame_length);
