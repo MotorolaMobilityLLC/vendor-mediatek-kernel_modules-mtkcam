@@ -5,7 +5,7 @@
  *
  * Filename:
  * ---------
- *	 gc13a2mipiraw_Sensor.c
+ *	 gc13a2vcmblad_Sensor.c
  *
  * Project:
  * --------
@@ -20,28 +20,29 @@
  * Upper this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
  *============================================================================
  ****************************************************************************/
-#include "mot_vienna_gc13a2mipiraw_Sensor.h"
+#include "mot_vienna_gc13a2vcmblad_Sensor.h"
 
-static int gc13a2_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
-static int gc13a2_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
-static int gc13a2_set_shutter_frame_length(struct subdrv_ctx *ctx,u8 *para, u32 *len);
-static int gc13a2_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int gc13a2_vcm_blad_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int gc13a2_vcm_blad_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int gc13a2_vcm_blad_set_shutter_frame_length(struct subdrv_ctx *ctx,u8 *para, u32 *len);
+static int gc13a2_vcm_blad_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
-#if ENABLE_GC13A2_FAST_STANDBY
-static int gc13a2_streaming_control(struct subdrv_ctx *ctx, kal_bool enable);
-static int gc13a2_set_fast_standby_stream_off(struct subdrv_ctx *ctx,u8 *para, u32 *len);
-static int gc13a2_set_fast_standby_stream_on(struct subdrv_ctx *ctx,u8 *para, u32 *len);
-static int gc13a2_ops_close(struct subdrv_ctx *ctx);
+#if ENABLE_GC13A2_VCM_BLAD_FAST_STANDBY
+static int gc13a2_vcm_blad_streaming_control(struct subdrv_ctx *ctx, kal_bool enable);
+static int gc13a2_vcm_blad_set_fast_standby_stream_off(struct subdrv_ctx *ctx,u8 *para, u32 *len);
+static int gc13a2_vcm_blad_set_fast_standby_stream_on(struct subdrv_ctx *ctx,u8 *para, u32 *len);
+static int gc13a2_vcm_blad_ops_close(struct subdrv_ctx *ctx);
 #endif
 
-static int gc13a2_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
+static int gc13a2_vcm_blad_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
+static int gc13a2_vcm_blad_open(struct subdrv_ctx *ctx);
 static DEFINE_SPINLOCK(imgsensor_drv_lock);
-#define GC13A2_EEPROM_SLAVE_ID 0xA0
+#define GC13A2_VCM_BLAD_EEPROM_SLAVE_ID 0xA0
 #define EEPROM_ACTUATOR_ID_POSITION 12
-#define GC13A2_ZET_ACTUATOR_ID 0x30
+#define GC13A2_VCM_BLAD_ACTUATOR_ID 0x32
 
-//#define MOT_GC13A2_PDAF_DEBUG
-#ifdef MOT_GC13A2_PDAF_DEBUG
+//#define MOT_GC13A2_VCM_BLAD_PDAF_DEBUG
+#ifdef MOT_GC13A2_VCM_BLAD_PDAF_DEBUG
 static unsigned int gc13a2_pd_dt = 0x32;
 static unsigned int gc13a2_pd_ddesc = VC_PDAF_STATS_NE_PIX_1;
 static unsigned int gc13a2_pd_en = 1;
@@ -50,23 +51,21 @@ module_param(gc13a2_pd_ddesc, uint, 0644);
 module_param(gc13a2_pd_en, uint, 0644);
 #endif
 
-
 #define ENABLE_GC13A2_PD TRUE
 #define GC13A2_PD_DT 0x32
 //#define GC13A2_DATA_DESC VC_PDAF_STATS_NE_PIX_1
 #define GC13A2_DATA_DESC VC_PDAF_STATS
 
-
 /* STRUCT */
 
 static struct subdrv_feature_control feature_control_list[] = {
-	{SENSOR_FEATURE_SET_TEST_PATTERN, gc13a2_set_test_pattern},
-	{SENSOR_FEATURE_SET_GAIN, gc13a2_set_gain},
-	{SENSOR_FEATURE_SET_ESHUTTER, gc13a2_set_shutter},
-	{SENSOR_FEATURE_SET_SHUTTER_FRAME_TIME, gc13a2_set_shutter_frame_length},
-#if ENABLE_GC13A2_FAST_STANDBY
-	{SENSOR_FEATURE_SET_STREAMING_SUSPEND, gc13a2_set_fast_standby_stream_off},
-	{SENSOR_FEATURE_SET_STREAMING_RESUME, gc13a2_set_fast_standby_stream_on},
+	{SENSOR_FEATURE_SET_TEST_PATTERN, gc13a2_vcm_blad_set_test_pattern},
+	{SENSOR_FEATURE_SET_GAIN, gc13a2_vcm_blad_set_gain},
+	{SENSOR_FEATURE_SET_ESHUTTER, gc13a2_vcm_blad_set_shutter},
+	{SENSOR_FEATURE_SET_SHUTTER_FRAME_TIME, gc13a2_vcm_blad_set_shutter_frame_length},
+#if ENABLE_GC13A2_VCM_BLAD_FAST_STANDBY
+	{SENSOR_FEATURE_SET_STREAMING_SUSPEND, gc13a2_vcm_blad_set_fast_standby_stream_off},
+	{SENSOR_FEATURE_SET_STREAMING_RESUME, gc13a2_vcm_blad_set_fast_standby_stream_on},
 #endif
 };
 
@@ -208,8 +207,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_prev,
 		.num_entries = ARRAY_SIZE(frame_desc_prev),
-		.mode_setting_table = gc13a2_4160x3120_data_raw10,
-		.mode_setting_len = ARRAY_SIZE(gc13a2_4160x3120_data_raw10),
+		.mode_setting_table = gc13a2_vcm_blad_4160x3120_data_raw10,
+		.mode_setting_len = ARRAY_SIZE(gc13a2_vcm_blad_4160x3120_data_raw10),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -255,8 +254,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_cap,
 		.num_entries = ARRAY_SIZE(frame_desc_cap),
-		.mode_setting_table = gc13a2_4160x3120_data_raw10,
-		.mode_setting_len = ARRAY_SIZE(gc13a2_4160x3120_data_raw10),
+		.mode_setting_table = gc13a2_vcm_blad_4160x3120_data_raw10,
+		.mode_setting_len = ARRAY_SIZE(gc13a2_vcm_blad_4160x3120_data_raw10),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -302,8 +301,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_vid,
 		.num_entries = ARRAY_SIZE(frame_desc_vid),
-		.mode_setting_table = gc13a2_4160x3120_data_raw10,
-		.mode_setting_len = ARRAY_SIZE(gc13a2_4160x3120_data_raw10),
+		.mode_setting_table = gc13a2_vcm_blad_4160x3120_data_raw10,
+		.mode_setting_len = ARRAY_SIZE(gc13a2_vcm_blad_4160x3120_data_raw10),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -350,8 +349,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_hs_vid,
 		.num_entries = ARRAY_SIZE(frame_desc_hs_vid),
-		.mode_setting_table = gc13a2_4160x3120_data_raw12,
-		.mode_setting_len = ARRAY_SIZE(gc13a2_4160x3120_data_raw12),
+		.mode_setting_table = gc13a2_vcm_blad_4160x3120_data_raw12,
+		.mode_setting_len = ARRAY_SIZE(gc13a2_vcm_blad_4160x3120_data_raw12),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -407,7 +406,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 };
 
 static struct subdrv_static_ctx static_ctx = {
-	.sensor_id = MOT_VIENNA_GC13A2_SENSOR_ID,
+	.sensor_id = MOT_VIENNA_GC13A2_VCM_BLAD_SENSOR_ID,
 	.reg_addr_sensor_id = {0x03F0, 0x03F1},
 	.i2c_addr_table = {0x72, 0x20, 0xFF},
 	.i2c_burst_write_support = TRUE,
@@ -473,8 +472,8 @@ static struct subdrv_static_ctx static_ctx = {
 	.reg_addr_temp_read = PARAM_UNDEFINED,
 	.reg_addr_auto_extend = 0,
 	.reg_addr_frame_count = PARAM_UNDEFINED,
-	.init_setting_table = gc13a2_init_setting,
-	.init_setting_len = ARRAY_SIZE(gc13a2_init_setting),
+	.init_setting_table = gc13a2_vcm_blad_init_setting,
+	.init_setting_len = ARRAY_SIZE(gc13a2_vcm_blad_init_setting),
 	.mode = mode_struct,
 	.sensor_mode_num = ARRAY_SIZE(mode_struct),
 	.list = feature_control_list,
@@ -487,7 +486,7 @@ static struct subdrv_static_ctx static_ctx = {
 #endif
 };
 
-#ifdef MOT_GC13A2_PDAF_DEBUG
+#ifdef MOT_GC13A2_VCM_BLAD_PDAF_DEBUG
 int gc13a2_overlay_pd_settings(void)
 {
 	int i, len;
@@ -512,15 +511,15 @@ int gc13a2_overlay_pd_settings(void)
 #endif
 
 static struct subdrv_ops ops = {
-	.get_id = gc13a2_get_imgsensor_id,
+	.get_id = gc13a2_vcm_blad_get_imgsensor_id,
 	.init_ctx = init_ctx,
-	.open = common_open,
+	.open = gc13a2_vcm_blad_open,
 	.get_info = common_get_info,
 	.get_resolution = common_get_resolution,
 	.control = common_control,
 	.feature_control = common_feature_control,
-#if ENABLE_GC13A2_FAST_STANDBY
-	.close = gc13a2_ops_close,
+#if ENABLE_GC13A2_VCM_BLAD_FAST_STANDBY
+	.close = gc13a2_vcm_blad_ops_close,
 #else
 	.close = common_close,
 #endif
@@ -530,7 +529,7 @@ static struct subdrv_ops ops = {
 	.update_sof_cnt = common_update_sof_cnt,
 };
 
-#ifdef MOT_GC13A2_PDAF_DEBUG
+#ifdef MOT_GC13A2_VCM_BLAD_PDAF_DEBUG
 	gc13a2_overlay_pd_settings();
 #endif
 
@@ -544,9 +543,9 @@ static struct subdrv_pw_seq_entry pw_seq[] = {
 	{HW_ID_RST, 1, 5},
 };
 
-const struct subdrv_entry mot_vienna_gc13a2_mipi_raw_entry = {
-	.name = "mot_vienna_gc13a2_mipi_raw",
-	.id = MOT_VIENNA_GC13A2_SENSOR_ID,
+const struct subdrv_entry mot_vienna_gc13a2_vcm_blad_entry = {
+	.name = "mot_vienna_gc13a2_vcm_blad",
+	.id = MOT_VIENNA_GC13A2_VCM_BLAD_SENSOR_ID,
 	.pw_seq = pw_seq,
 	.pw_seq_cnt = ARRAY_SIZE(pw_seq),
 	.ops = &ops,
@@ -554,7 +553,7 @@ const struct subdrv_entry mot_vienna_gc13a2_mipi_raw_entry = {
 
 /* FUNCTION */
 
-static int gc13a2_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+static int gc13a2_vcm_blad_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	u32 gain = *((u32 *)para);
 	u32 rg_gain;
@@ -581,14 +580,14 @@ static int gc13a2_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	return ERROR_NONE;
 }
 
-static int gc13a2_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+static int gc13a2_vcm_blad_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
-	return gc13a2_set_shutter_frame_length(ctx, para, len);
+	return gc13a2_vcm_blad_set_shutter_frame_length(ctx, para, len);
 }
 
 
-#if ENABLE_GC13A2_FAST_STANDBY
-static int gc13a2_streaming_control(struct subdrv_ctx *ctx, kal_bool enable)
+#if ENABLE_GC13A2_VCM_BLAD_FAST_STANDBY
+static int gc13a2_vcm_blad_streaming_control(struct subdrv_ctx *ctx, kal_bool enable)
 {
 	DRV_LOG_MUST(ctx, "13a2 fast_standby streming. enable=%d(0=stream off, 1=stream on) \n", enable);
 	if(enable)
@@ -599,15 +598,14 @@ static int gc13a2_streaming_control(struct subdrv_ctx *ctx, kal_bool enable)
 	return ERROR_NONE;
 }
 
-static int gc13a2_ops_close(struct subdrv_ctx *ctx)
+static int gc13a2_vcm_blad_ops_close(struct subdrv_ctx *ctx)
 {
-	gc13a2_streaming_control(ctx, KAL_FALSE);
+	gc13a2_vcm_blad_streaming_control(ctx, KAL_FALSE);
 	DRV_LOG_MUST(ctx, "subdrv close \n");
 	return ERROR_NONE;
 }
 
-
-static uint8_t gc13a2_read_actuator_id_from_eeprom(struct subdrv_ctx *ctx, uint8_t device_id, uint16_t eeprom_addr)
+static uint8_t gc13a2_vcm_blad_read_actuator_id_from_eeprom(struct subdrv_ctx *ctx, uint8_t device_id, uint16_t eeprom_addr)
 {
 	uint8_t actuator_id = 0;
 	uint8_t origin_id = 0;
@@ -630,20 +628,20 @@ static uint8_t gc13a2_read_actuator_id_from_eeprom(struct subdrv_ctx *ctx, uint8
 	return actuator_id;
 }
 
-static kal_uint32 gc13a2_return_sensor_id(struct subdrv_ctx *ctx)
+static kal_uint32 gc13a2_vcm_blad_return_sensor_id(struct subdrv_ctx *ctx)
 {
 	uint8_t actuator_id = 0;
-	actuator_id = gc13a2_read_actuator_id_from_eeprom(ctx, GC13A2_EEPROM_SLAVE_ID, EEPROM_ACTUATOR_ID_POSITION);
-	pr_err("gc13a2 actuator_id = %x", actuator_id);
-	if(actuator_id == GC13A2_ZET_ACTUATOR_ID) {
-		return ((subdrv_i2c_rd_u8(ctx, ctx->s_ctx.reg_addr_sensor_id.addr[0]) << 8) | subdrv_i2c_rd_u8(ctx, ctx->s_ctx.reg_addr_sensor_id.addr[1]));
+	actuator_id = gc13a2_vcm_blad_read_actuator_id_from_eeprom(ctx, GC13A2_VCM_BLAD_EEPROM_SLAVE_ID, EEPROM_ACTUATOR_ID_POSITION);
+	pr_err("gc13a2_vcm_blad actuator_id = %x", actuator_id);
+	if(actuator_id == GC13A2_VCM_BLAD_ACTUATOR_ID) {
+		return ((subdrv_i2c_rd_u8(ctx, ctx->s_ctx.reg_addr_sensor_id.addr[0]) << 8) | subdrv_i2c_rd_u8(ctx, ctx->s_ctx.reg_addr_sensor_id.addr[1]) + 1);
 	} else {
-		pr_err("gc13a2 actuator id cur:0x%x, exp:0x30 not match, sensor probe failed; maybe gc13a2_vcm_blad id 0x32 can match.\n", actuator_id);
+		pr_err("gc13a2_vcm_blad actuator id cur:0x%x, exp:0x32 not match, sensor probe failed; maybe gc13a2 id 0x30 can match.\n", actuator_id);
 		return 0;
 	}
 }
 
-static int gc13a2_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
+static int gc13a2_vcm_blad_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 {
 	uint8_t i = 0;
 	uint8_t retry = 2;
@@ -654,7 +652,7 @@ static int gc13a2_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 	while (ctx->s_ctx.i2c_addr_table[i] != 0xFF) {
 		ctx->i2c_write_id = ctx->s_ctx.i2c_addr_table[i];
 		do {
-			*sensor_id = gc13a2_return_sensor_id(ctx);
+			*sensor_id = gc13a2_vcm_blad_return_sensor_id(ctx);
 			if (addr_ll)
 				*sensor_id = ((*sensor_id) << 8) | subdrv_i2c_rd_u8(ctx, addr_ll);
 			DRV_LOG(ctx, "i2c_write_id:0x%x sensor_id(cur/exp):0x%x/0x%x\n",
@@ -673,23 +671,94 @@ static int gc13a2_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 	return ERROR_NONE;
 }
 
-static int gc13a2_set_fast_standby_stream_off(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+static int gc13a2_vcm_blad_open(struct subdrv_ctx *ctx)
 {
-	return gc13a2_streaming_control(ctx, KAL_FALSE);
+	u32 sensor_id = 0;
+	u32 scenario_id = 0;
+
+	/* get sensor id */
+	if (gc13a2_vcm_blad_get_imgsensor_id(ctx, &sensor_id) != ERROR_NONE)
+		return ERROR_SENSOR_CONNECT_FAIL;
+
+	/* initail setting */
+	if (ctx->s_ctx.aov_sensor_support && !ctx->s_ctx.init_in_open)
+		DRV_LOG_MUST(ctx, "sensor init not in open stage!\n");
+	else
+		sensor_init(ctx);
+
+	if (ctx->s_ctx.s_cali != NULL)
+		ctx->s_ctx.s_cali((void *) ctx);
+	else
+		write_sensor_Cali(ctx);
+
+	memset(ctx->exposure, 0, sizeof(ctx->exposure));
+	memset(ctx->ana_gain, 0, sizeof(ctx->gain));
+	ctx->exposure[0] = ctx->s_ctx.exposure_def;
+	ctx->ana_gain[0] = ctx->s_ctx.ana_gain_def;
+	ctx->current_scenario_id = scenario_id;
+	ctx->pclk = ctx->s_ctx.mode[scenario_id].pclk;
+	ctx->line_length = ctx->s_ctx.mode[scenario_id].linelength;
+	ctx->frame_length = ctx->s_ctx.mode[scenario_id].framelength;
+	ctx->frame_length_rg = ctx->frame_length;
+	ctx->current_fps = ctx->pclk / ctx->line_length * 10 / ctx->frame_length;
+	ctx->readout_length = ctx->s_ctx.mode[scenario_id].readout_length;
+	ctx->read_margin = ctx->s_ctx.mode[scenario_id].read_margin;
+	ctx->min_frame_length = ctx->frame_length;
+	ctx->autoflicker_en = FALSE;
+	ctx->test_pattern = 0;
+	ctx->ihdr_mode = 0;
+	ctx->pdaf_mode = 0;
+	ctx->hdr_mode = 0;
+	ctx->extend_frame_length_en = 0;
+	ctx->is_seamless = 0;
+	ctx->fast_mode_on = 0;
+	ctx->sof_cnt = 0;
+	ctx->ref_sof_cnt = 0;
+	ctx->is_streaming = 0;
+	if (ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_LBMF) {
+		memset(ctx->frame_length_in_lut, 0,
+			sizeof(ctx->frame_length_in_lut));
+
+		switch (ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt) {
+		case 2:
+			ctx->frame_length_in_lut[0] = ctx->readout_length + ctx->read_margin;
+			ctx->frame_length_in_lut[1] = ctx->frame_length -
+				ctx->frame_length_in_lut[0];
+			break;
+		case 3:
+			ctx->frame_length_in_lut[0] = ctx->readout_length + ctx->read_margin;
+			ctx->frame_length_in_lut[1] = ctx->readout_length + ctx->read_margin;
+			ctx->frame_length_in_lut[2] = ctx->frame_length -
+				ctx->frame_length_in_lut[1] - ctx->frame_length_in_lut[0];
+			break;
+		default:
+			break;
+		}
+
+		memcpy(ctx->frame_length_in_lut_rg, ctx->frame_length_in_lut,
+			sizeof(ctx->frame_length_in_lut_rg));
+	}
+
+	return ERROR_NONE;
 }
 
-static int gc13a2_set_fast_standby_stream_on(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+static int gc13a2_vcm_blad_set_fast_standby_stream_off(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	return gc13a2_vcm_blad_streaming_control(ctx, KAL_FALSE);
+}
+
+static int gc13a2_vcm_blad_set_fast_standby_stream_on(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	unsigned long long *feature_data = (unsigned long long *)para;
 
 	if(*feature_data != 0)
-		gc13a2_set_shutter(ctx, para, len);
-	return gc13a2_streaming_control(ctx, KAL_TRUE);
+		gc13a2_vcm_blad_set_shutter(ctx, para, len);
+	return gc13a2_vcm_blad_streaming_control(ctx, KAL_TRUE);
 }
 #endif
 
 
-static void gc13a2_set_long_exposure(struct subdrv_ctx *ctx)
+static void gc13a2_vcm_blad_set_long_exposure(struct subdrv_ctx *ctx)
 {
 	u32 shutter = ctx->exposure[0];
 	u32 l_shutter = 0;
@@ -780,7 +849,7 @@ static void gc13a2_set_long_exposure(struct subdrv_ctx *ctx)
 	ctx->exposure[0] = shutter;
 }
 
-static int gc13a2_set_shutter_frame_length(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+static int gc13a2_vcm_blad_set_shutter_frame_length(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	u64 *feature_data = (u64 *)para;
 	u32 shutter = *feature_data;
@@ -804,7 +873,7 @@ static int gc13a2_set_shutter_frame_length(struct subdrv_ctx *ctx, u8 *para, u32
 
 	/* set_long_exposure */
 	if (ctx->s_ctx.long_exposure_support == TRUE) {
-		gc13a2_set_long_exposure(ctx);
+		gc13a2_vcm_blad_set_long_exposure(ctx);
 	} else {
 		shutter = min(shutter, ctx->s_ctx.exposure_max);
 		/* write framelength&shutter */
@@ -825,7 +894,7 @@ static int gc13a2_set_shutter_frame_length(struct subdrv_ctx *ctx, u8 *para, u32
 	return ERROR_NONE;
 }
 
-static int gc13a2_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+static int gc13a2_vcm_blad_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	u32 mode = *((u32 *)para);
 	bool enable = mode;
