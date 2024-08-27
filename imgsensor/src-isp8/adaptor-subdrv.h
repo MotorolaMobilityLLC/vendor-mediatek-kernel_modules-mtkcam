@@ -242,6 +242,7 @@ struct subdrv_mode_struct {
 	u32 coarse_integ_step;
 	u32 min_exposure_line;
 	u32 min_vblanking_line;
+	u32 exposure_margin;
 	struct SENSOR_WINSIZE_INFO_STRUCT imgsensor_winsize_info;
 
 	enum IMGSENSOR_RGBW_OUTPUT_MODE rgbw_output_mode;
