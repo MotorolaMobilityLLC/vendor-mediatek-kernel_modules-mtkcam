@@ -2449,16 +2449,23 @@ static void mtk_cam_watchdog_sensor_worker(struct work_struct *work)
 	if (atomic_read(&wd->reset_sensor_cnt) < WATCHDOG_MAX_SENSOR_RETRY_CNT)
 		goto EXIT_WORK;
 
-	dev_info(ctx->cam->dev, "ctx-%d reset sensor failed\n", ctx->stream_id);
+	dev_info(ctx->cam->dev, "ctx-%d reset sensor failed%s\n",
+		ctx->stream_id, ctx->is_sv_mraw_error ?
+		" due to " MSG_SENINF_FRAME_ERROR : "");
 	mtk_dump_debug_for_no_vsync(ctx);
 	vsync_collector_dump(&ctrl->vsync_col);
 
 	ret = mtk_cam_seninf_dump(ctx->seninf, seq_no, true, true);
 	if (!mtk_cam_is_display_ic(ctx)) {
-		if (ret != -ESTRPIPE) {
+		if (ret != -ESTRPIPE && !ctx->is_sv_mraw_error) {
 			mtk_cam_event_error(ctrl, MSG_VSYNC_TIMEOUT);
 			WRAP_AEE_EXCEPTION(MSG_VSYNC_TIMEOUT, "watchdog timeout");
 		} else {
+			/**
+			 * NOTE: skip raise aee exception if
+			 * camsv/mraw has received error interrupt status
+			 */
+			ctx->is_sv_mraw_error = false;
 			mtk_cam_event_error(ctrl, MSG_SENINF_FRAME_ERROR);
 		}
 	}
