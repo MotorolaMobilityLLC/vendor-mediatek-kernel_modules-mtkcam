@@ -1430,8 +1430,8 @@ static irqreturn_t mtk_irq_mraw(int irq, void *data)
 	imgo_overr_status = irq_status5 & MRAWCTL_IMGO_M1_OTF_OVERFLOW_ST;
 	imgbo_overr_status = irq_status5 & MRAWCTL_IMGBO_M1_OTF_OVERFLOW_ST;
 	cpio_overr_status = irq_status5 & MRAWCTL_CPIO_M1_OTF_OVERFLOW_ST;
-
-	dev_dbg(dev,
+	if (CAM_DEBUG_ENABLED(RAW_INT))
+		dev_info(dev,
 		"%i status:0x%x_%x(err:0x%x)/0x%x dma_err:0x%x seq_num:%d/%d\n",
 		mraw_dev->id, irq_status, irq_status2, err_status, irq_status6, dma_err_status,
 		dequeued_imgo_seq_no_inner, dequeued_imgo_seq_no);
@@ -1544,6 +1544,13 @@ static irqreturn_t mtk_thread_irq_mraw(int irq, void *data)
 		int len = kfifo_out(&mraw_dev->msg_fifo, &irq_info, sizeof(irq_info));
 
 		WARN_ON(len != sizeof(irq_info));
+		if (CAM_DEBUG_ENABLED(CTRL))
+			dev_info(mraw_dev->dev, "ts=%llu irq_type %d, req:0x%x/0x%x, tg_cnt:%d\n",
+					irq_info.ts_ns / 1000,
+					irq_info.irq_type,
+					irq_info.frame_idx_inner,
+					irq_info.frame_idx,
+					irq_info.tg_cnt);
 
 		/* error case */
 		if (unlikely(irq_info.irq_type == (1 << CAMSYS_IRQ_ERROR))) {
