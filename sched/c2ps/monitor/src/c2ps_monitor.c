@@ -101,7 +101,14 @@ int monitor_task_start(int pid, int task_id)
 		if (likely(req != NULL)) {
 			req->tsk_info = tsk_info;
 			req->glb_info = get_glb_info();
+			req->curr_um = 100;
 
+			if (likely(req->glb_info)) {
+				if (req->glb_info->has_anchor_spec && req->glb_info->curr_um > 0)
+					req->curr_um = req->glb_info->curr_um;
+				else if (req->glb_info->curr_um_idle > 0)
+					req->curr_um = req->glb_info->curr_um_idle;
+			}
 			send_regulator_req(req);
 		}
 	}
