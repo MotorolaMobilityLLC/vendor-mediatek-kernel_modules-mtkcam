@@ -461,6 +461,41 @@ static void dump_awb_reg(struct mtk_raw_device *dev, bool force)
 		__func__, dev->id, awbo_x, awbo_y, awbo_s, awbo_basic,
 		con0, con1, con2, con3, con4);
 }
+static void dump_af_reg(struct mtk_raw_device *dev, bool force)
+{
+	u32 af_size, af_vld, af_blk_prot, af_blk_0, af_blk_1;
+	u32 afo_xsize, afo_ysize, afo_stride;
+	u32 qbn_ctl, qbn_pcrp_ctl, pcrp0_xpos, pcrp0_ypos, pcrp1_xpos, pcrp1_ypos;
+
+	af_size = raw_readl_relaxed(dev, dev->base_inner, 0x5710);
+	af_vld = raw_readl_relaxed(dev, dev->base_inner, 0x5714);
+	af_blk_prot = raw_readl_relaxed(dev, dev->base_inner, 0x5718);
+	af_blk_0 = raw_readl_relaxed(dev, dev->base_inner, 0x571c);
+	af_blk_1 = raw_readl_relaxed(dev, dev->base_inner, 0x5720);
+	afo_xsize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1600);
+	afo_ysize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1604);
+	afo_stride = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1608);
+	qbn_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x56c0);
+	qbn_pcrp_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x56c4);
+	pcrp0_xpos = raw_readl_relaxed(dev, dev->base_inner, 0x56c8);
+	pcrp0_ypos = raw_readl_relaxed(dev, dev->base_inner, 0x56d0);
+	pcrp1_xpos = raw_readl_relaxed(dev, dev->base_inner, 0x56d4);
+	pcrp1_ypos = raw_readl_relaxed(dev, dev->base_inner, 0x56d8);
+
+	if (CAM_DEBUG_ENABLED(RAW_INT) || force)
+		dev_info(dev->dev,
+			 "[%s] raw%d - [in] af_size/af_vld/af_blk_prot/af_blk_0/af_blk_1:0x%x/0x%x/0x%x/0x%x/0x%x\n",
+			 __func__, dev->id, af_size, af_vld, af_blk_prot, af_blk_0, af_blk_1);
+	if (CAM_DEBUG_ENABLED(RAW_INT) || force)
+		dev_info(dev->dev,
+			 "[%s] raw%d - [in] afo_xsize/afo_ysize/afo_stride:0x%x/0x%x/0x%x\n",
+			 __func__, dev->id, afo_xsize, afo_ysize, afo_stride);
+	if (CAM_DEBUG_ENABLED(RAW_INT) || force)
+		dev_info(dev->dev,
+		"[%s] raw%d - [in] qbn_r6_ctl/qbn_r6_pcrp_ctl/pcrp0_xpos/pcrp0_ypos/pcrp1_xpos/pcrp1_ypos:0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		__func__, dev->id, qbn_ctl, qbn_pcrp_ctl,
+		pcrp0_xpos, pcrp0_ypos, pcrp1_xpos, pcrp1_ypos);
+}
 
 static void dump_dc_setting(struct mtk_raw_device *dev)
 {
@@ -733,30 +768,6 @@ void stagger_enable(struct mtk_raw_device *dev)
 		dev_info(dev->dev,
 			 "[%s] raw%d - CQ_EN:0x%x\n",
 			 __func__, dev->id, raw_readl_relaxed(dev, dev->base, REG_CAMCQ_CQ_EN));
-}
-
-void dump_af_reg(struct mtk_raw_device *dev)
-{
-	u32 af_size, af_vld, af_blk_prot, af_blk_0, af_blk_1;
-	u32 afo_xsize, afo_ysize, afo_stride;
-
-	af_size = raw_readl_relaxed(dev, dev->base_inner, 0x5710);
-	af_vld = raw_readl_relaxed(dev, dev->base_inner, 0x5714);
-	af_blk_prot = raw_readl_relaxed(dev, dev->base_inner, 0x5718);
-	af_blk_0 = raw_readl_relaxed(dev, dev->base_inner, 0x571c);
-	af_blk_1 = raw_readl_relaxed(dev, dev->base_inner, 0x5720);
-	afo_xsize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1600);
-	afo_ysize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1604);
-	afo_stride = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1608);
-
-	if (CAM_DEBUG_ENABLED(RAW_INT))
-		dev_info(dev->dev,
-			 "[%s] raw%d - [in] af_size/af_vld/af_blk_prot/af_blk_0/af_blk_1:0x%x/0x%x/0x%x/0x%x/0x%x\n",
-			 __func__, dev->id, af_size, af_vld, af_blk_prot, af_blk_0, af_blk_1);
-	if (CAM_DEBUG_ENABLED(RAW_INT))
-		dev_info(dev->dev,
-			 "[%s] raw%d - [in] afo_xsize/afo_ysize/afo_stride:0x%x/0x%x/0x%x\n",
-			 __func__, dev->id, afo_xsize, afo_ysize, afo_stride);
 }
 
 void ae_disable(struct mtk_raw_device *dev)
@@ -1896,7 +1907,8 @@ static irqreturn_t mtk_thread_irq_raw(int irq, void *data)
 
 		if (irq_info.irq_type & BIT(CAMSYS_IRQ_FRAME_START) ||
 			irq_info.irq_type & BIT(CAMSYS_IRQ_DEBUG_1) ||
-			irq_info.irq_type & BIT(CAMSYS_IRQ_ERROR)) {
+			irq_info.irq_type & BIT(CAMSYS_IRQ_ERROR) ||
+			irq_info.irq_type & BIT(CAMSYS_IRQ_FRAME_DONE)) {
 			char *str_buf;
 			size_t str_buf_size;
 
@@ -1905,7 +1917,8 @@ static irqreturn_t mtk_thread_irq_raw(int irq, void *data)
 			memset(str_buf, 0, str_buf_size);
 
 			if ((irq_info.ts_ns - raw_dev->apply_ts) >= LOG_THREADED_IRQ ||
-				raw_dev->log_en)
+				raw_dev->log_en ||
+				CAM_DEBUG_ENABLED(CTRL))
 				dev_info(raw_dev->dev,
 					"ts=%llu irq %d, req:0x%x/0x%x mod_5:0x%x td:%llu (0x%x/0x%x/0x%x) qof:0x%x\n",
 					irq_info.ts_ns / 1000,
@@ -3623,7 +3636,7 @@ int raw_dump_debug_status(struct mtk_raw_device *dev, int dma_debug_dump)
 	dump_dmai_reg(dev);
 	dump_ae_reg(dev, 1);
 	dump_awb_reg(dev, 1);
-
+	dump_af_reg(dev, 1);
 	qof_force_dump_all(dev);
 
 	if (dma_debug_dump) {

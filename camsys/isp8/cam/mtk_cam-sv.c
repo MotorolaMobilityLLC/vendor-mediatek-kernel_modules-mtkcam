@@ -2085,14 +2085,14 @@ static irqreturn_t mtk_thread_irq_camsv(int irq, void *data)
 
 		WARN_ON(len != sizeof(irq_info));
 
-#if CAMSV_DEBUG
-		dev_info(sv_dev->dev, "ts=%llu irq_type %d, req:0x%x/0x%x, tg_cnt:%d\n",
+		if (CAM_DEBUG_ENABLED(CTRL))
+			dev_info(sv_dev->dev, "ts=%llu irq_type %d, req:0x%x/0x%x, tg_cnt:%d\n",
 			irq_info.ts_ns / 1000,
 			irq_info.irq_type,
 			irq_info.frame_idx_inner,
 			irq_info.frame_idx,
 			irq_info.tg_cnt);
-#endif
+
 		/* error case */
 		if (unlikely(irq_info.irq_type == (1 << CAMSYS_IRQ_ERROR))) {
 			camsv_handle_err(sv_dev, &irq_info);
