@@ -513,6 +513,9 @@ static void mtk_mae_hw_done(struct mtk_mae_dev *mae_dev,
 	v4l2_m2m_job_finish(mae_dev->m2m_dev, ctx->fh.m2m_ctx);
 
 	complete_all(&mae_dev->mae_job_finished);
+	atomic_dec(&mae_dev->num_composing);
+	wake_up(&mae_dev->flushing_waitq);
+
 #else
 	// MAE_TO_DO
 #endif
@@ -656,6 +659,8 @@ static void mtk_mae_device_run(void *priv)
 			mae_dev_info(mae_dev->dev, "set dma address fail\n");
 			return;
 		}
+
+		atomic_inc(&mae_dev->num_composing);
 
 		mtk_mae_get_kernel_time(mae_dev, param, MAE_CONFIG_HW_START);
 
@@ -1351,7 +1356,7 @@ static __poll_t mtk_mae_video_device_poll(struct file *file, poll_table *wait)
 {
 	struct mtk_mae_dev *mae_dev = video_drvdata(file);
 
-	if(!wait_for_completion_timeout(&mae_dev->mae_job_finished, msecs_to_jiffies(1500))) {
+	if(!wait_for_completion_timeout(&mae_dev->mae_job_finished, msecs_to_jiffies(MTK_FD_HW_TIMEOUT))) {
 		mae_dev_info(mae_dev->dev, "%s: wait job finish timeout\n", __func__);
 		return EPOLLERR;
 	}
@@ -2013,27 +2018,27 @@ err_unreg_v4l2_dev:
 }
 
 
+
 static int mtk_mae_suspend(struct device *dev)
 {
 	struct mtk_mae_dev *mae_dev = dev_get_drvdata(dev);
-	int ret;
+	int ret, num;
 
-	mae_dev_info(dev, "%s: suspend mae job start\n", __func__);
+	num = atomic_read(&mae_dev->num_composing);
+	mae_dev_info(dev, "%s: suspend mae job start, num(%d)\n", __func__, num);
+
+	ret = wait_event_timeout
+		(mae_dev->flushing_waitq,
+		 !(num = atomic_read(&mae_dev->num_composing)),
+		 msecs_to_jiffies(MTK_FD_HW_TIMEOUT));
+	if (!ret && num) {
+		mae_dev_info(dev, "%s: flushing mae job timeout, num(%d)\n",
+			__func__, num);
+
+		return -EBUSY;
+	}
 
 	if (!mae_dev->is_shutdown) {
-		if (pm_runtime_suspended(dev))
-			return 0;
-
-		cmdq_mbox_disable(mae_dev->mae_clt->chan);
-
-		mtk_mae_ccf_disable(dev);
-		ret = pm_runtime_put_sync(dev);
-		if (ret) {
-			mae_dev_info(dev, "%s: pm_runtime_put_sync failed:(%d)\n",
-				__func__, ret);
-			return ret;
-		}
-
 		/* unavailable: 0 available: 1 */
 		if (m_aov_notify != NULL)
 			m_aov_notify(mae_dev->aov_pdev, AOV_NOTIFY_AIE_AVAIL, 1);
@@ -2048,33 +2053,12 @@ static int mtk_mae_suspend(struct device *dev)
 static int mtk_mae_resume(struct device *dev)
 {
 	struct mtk_mae_dev *mae_dev = dev_get_drvdata(dev);
-	int ret;
 
 	mae_dev_info(dev, "%s: resume mae job start\n", __func__);
 
 	if (!mae_dev->is_shutdown) {
-		if (pm_runtime_suspended(dev)) {
-			mae_dev_info(dev, "%s: pm_runtime_suspended is true, no action\n",
-				__func__);
-			return 0;
-		}
-
 		if (m_aov_notify != NULL)
 			m_aov_notify(mae_dev->aov_pdev, AOV_NOTIFY_AIE_AVAIL, 0);
-
-		ret = pm_runtime_get_sync(dev);
-		if (ret) {
-			mae_dev_info(dev, "%s: pm_runtime_get_sync failed:(%d)\n",
-				__func__, ret);
-			return ret;
-		}
-
-		ret = mtk_mae_ccf_enable(dev);
-		if (ret)
-			return ret;
-
-		cmdq_mbox_enable(mae_dev->mae_clt->chan);
-		cmdq_clear_event(mae_dev->mae_clt->chan, mae_dev->mae_event_id);
 	}
 
 	mae_dev_info(dev, "%s: resume aie job end)\n", __func__);
@@ -2210,6 +2194,8 @@ int mtk_mae_probe(struct platform_device *pdev)
 
 	mutex_init(&mae_dev->vdev_lock);
 	init_completion(&mae_dev->mae_job_finished);
+	init_waitqueue_head(&mae_dev->flushing_waitq);
+	atomic_set(&mae_dev->num_composing, 0);
 
 	mutex_init(&mae_dev->mae_device_lock);
 	mutex_init(&mae_dev->mae_stream_lock);

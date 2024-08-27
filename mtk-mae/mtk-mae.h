@@ -19,6 +19,7 @@
 typedef void (*mtk_mae_register_tf_cb)(void *);
 void register_mtk_mae_reg_tf_cb(mtk_mae_register_tf_cb mtk_mae_register_tf_cb_fn);
 
+#define MTK_FD_HW_TIMEOUT 1500
 #define M2M_ENABLE 1
 #define MEMCPY_KERNEL_STRUCT_ENABLE 1
 #define MAE_CMDQ_SEC_READY 1
@@ -497,6 +498,8 @@ struct mtk_mae_dev {
 	struct completion mae_job_finished;
 	struct workqueue_struct *frame_done_wq;
 	struct mtk_mae_req_work req_work;
+	wait_queue_head_t flushing_waitq;
+	atomic_t num_composing;
 
 	void __iomem *mae_base;
 	int mae_event_id;
