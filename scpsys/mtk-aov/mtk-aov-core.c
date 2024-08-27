@@ -103,7 +103,8 @@ static int send_cmd_internal(struct aov_core *core_info,
 						"%s: send cmd(%d/%d/%d) interrupted !\n",
 						__func__, cmd_code, scp_ready, count);
 
-					// retry again
+					/* retry again after 1ms */
+					udelay(1000);
 					continue;
 				} else {
 					AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
@@ -164,7 +165,8 @@ static int send_cmd_internal(struct aov_core *core_info,
 						"%s: wait cmd(%d/%d) ack interrupted\n",
 						__func__, cmd_code, count);
 
-					// retry again
+					/* retry again after 1ms */
+					udelay(1000);
 					continue;
 				} else {
 					AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
