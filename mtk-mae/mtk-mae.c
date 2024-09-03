@@ -317,8 +317,8 @@ static int mtk_mae_ccf_enable(struct device *dev)
 	struct mtk_mae_dev *mae_dev = dev_get_drvdata(dev);
 	int ret;
 
-	ret = clk_bulk_prepare_enable(mae_dev->clks_data.clk_num,
-			mae_dev->clks_data.clks);
+	ret = clk_bulk_prepare_enable(g_mae_data.clk_num,
+			g_mae_data.clks);
 	if (ret) {
 		dev_info(mae_dev->dev, "failed to enable mae clock:%d\n", ret);
 		return ret;
@@ -329,10 +329,8 @@ static int mtk_mae_ccf_enable(struct device *dev)
 
 static void mtk_mae_ccf_disable(struct device *dev)
 {
-	struct mtk_mae_dev *mae_dev = dev_get_drvdata(dev);
-
-	clk_bulk_disable_unprepare(mae_dev->clks_data.clk_num,
-			mae_dev->clks_data.clks);
+	clk_bulk_disable_unprepare(g_mae_data.clk_num,
+			g_mae_data.clks);
 }
 
 static struct dma_buf *mae_imem_sec_alloc(struct mtk_mae_dev *mae_dev,
@@ -2155,17 +2153,6 @@ int mtk_mae_probe(struct platform_device *pdev)
 	ret = mtk_mae_dev_larb_init(mae_dev);
 	if (ret)
 		dev_info(dev, "Failed to init larb : %d\n", ret);
-
-	/* Clock get */
-	mae_dev->clks_data.clk_num = g_mae_data.clk_num;
-	mae_dev->clks_data.clks = g_mae_data.clks;
-	ret = devm_clk_bulk_get(dev,
-			mae_dev->clks_data.clk_num,
-			mae_dev->clks_data.clks);
-	if (ret) {
-		dev_info(dev, "Failed to get clks: %d\n", ret);
-		return ret;
-	}
 
 	mae_dev->mae_clt = cmdq_mbox_create(dev, 0);
 	if (!mae_dev->mae_clt)

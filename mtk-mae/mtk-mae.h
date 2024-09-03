@@ -447,11 +447,6 @@ struct aiseg_crop_setting_out {
 	uint32_t reg_postproc_en;
 };
 
-struct mae_clocks {
-	struct clk_bulk_data *clks;
-	unsigned int clk_num;
-};
-
 struct mtk_mae_req_work {
 	struct work_struct work;
 	struct mtk_mae_dev *mae_dev;
@@ -477,7 +472,6 @@ struct mtk_mae_dev {
 	struct media_device mdev;
 	struct v4l2_device v4l2_dev;
 	struct device *larb;
-	struct mae_clocks clks_data;
 #if M2M_ENABLE
 	struct v4l2_m2m_dev *m2m_dev;
 	uint64_t mae_out;
