@@ -5304,7 +5304,10 @@ static int mtk_cam_runtime_resume(struct device *dev)
 
 	mtk_cam_plat_resource_ctrl(cam_dev, 1);
 	mtk_cam_bwr_enable(cam_dev->bwr);
-	mtk_cam_reset_itc(cam_dev);
+
+	if (GET_PLAT_HW(qof_support))
+		mtk_cam_reset_itc(cam_dev);
+
 	enable_irq(cam_dev->qoftop_irq);
 
 	return 0;
