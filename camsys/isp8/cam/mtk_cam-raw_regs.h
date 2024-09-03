@@ -10280,8 +10280,6 @@
 #define REG_DRZH1NBO_R3_BASE   0x19e0
 #define REG_FHO_R3_BASE   	   0x1a30
 #define REG_STG_R3_BASE   	   0x1a80
-
-
 /* aa debug info */
 #define REG_OBC_R1A                    0x2000
 #define OFFSET_OBC_R1_R_SUM_L          (REG_OBC_R1A + 0x4)

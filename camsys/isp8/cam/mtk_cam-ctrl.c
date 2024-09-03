@@ -713,6 +713,7 @@ static void handle_frame_done(struct mtk_cam_ctrl *ctrl,
 
 	mtk_cam_job_put(job);
 }
+
 static void handle_ss_try_set_sensor(struct mtk_cam_ctrl *cam_ctrl)
 {
 	mtk_cam_ctrl_send_event(cam_ctrl, CAMSYS_EVENT_TIMER_SENSOR);
@@ -1005,6 +1006,32 @@ static void handle_engine_frame_start(struct mtk_cam_ctrl *ctrl,
 
 }
 
+static void handle_tuning_update(struct mtk_cam_ctrl *ctrl, int seq_no, u64 ts_ns)
+{
+	struct mtk_cam_job *job;
+
+	job = mtk_cam_ctrl_get_job(ctrl, cond_frame_no_belong, &seq_no);
+	if (!job) {
+		pr_info("%s: warn. job not found seq 0x%x\n",
+			__func__, seq_no);
+		return;
+	}
+
+	if (atomic_cmpxchg(&job->tuning_work_queued, 0, 1)) {
+		pr_info("%s: warn. tuning work is queued 0x%x\n", __func__, seq_no);
+		mtk_cam_job_put(job);
+		return;
+	}
+
+	job->tuning_param.begin_ts_ns = ts_ns;
+	spin_lock(&ctrl->info_lock);
+	job->tuning_param.sof_boottime_ns = ctrl->r_info.sof_ts_ns;
+	spin_unlock(&ctrl->info_lock);
+
+	if (mtk_cam_ctx_queue_tuning_worker(ctrl->ctx, &job->tuning_work))
+		mtk_cam_job_put(job);
+}
+
 static int mtk_cam_event_handle_raw(struct mtk_cam_ctrl *ctrl,
 				       unsigned int engine_id,
 				       struct mtk_camsys_irq_info *irq_info)
@@ -1116,6 +1143,11 @@ static int mtk_camsys_event_handle_camsv(struct mtk_cam_ctrl *ctrl,
 		else
 			handle_setting_done(ctrl);
 	}
+
+	/* ois compensation */
+	if (irq_info->irq_type & BIT(CAMSYS_IRQ_TUNING_UPDATE))
+		handle_tuning_update(ctrl,
+			seq_from_fh_cookie(irq_info->frame_idx), irq_info->ts_ns);
 
 	return 0;
 }
@@ -1354,6 +1386,7 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 	int engine_uninit = job->raw_change_uninit_engine;
 	int raw_after_change = bit_map_subset_of(MAP_HW_RAW, job->used_engine);
 	int raw_uninit = bit_map_subset_of(MAP_HW_RAW, job->raw_change_uninit_engine);
+	int ois_comp = is_ois_compensation(job);
 
 	dev_info(dev, "[%s] begin waiting 1.dynamic raw changes no:%d seq 0x%x cq done\n",
 		__func__, job->req_seq, job->frame_seq_no);
@@ -1396,14 +1429,16 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 		goto SWITCH_FAILURE;
 	}
 
-	if (mtk_cam_job_uninit_engine(job, engine_uninit)) {
-		dev_info(dev, "[%s] uninit engine failed, uninit raw:0x%x\n",
-			__func__, job->raw_change_uninit_engine);
-		goto SWITCH_FAILURE;
-	}
+	if (!ois_comp) {
+		if (mtk_cam_job_uninit_engine(job, engine_uninit)) {
+			dev_info(dev, "[%s] uninit engine failed, uninit raw:0x%x\n",
+				__func__, job->raw_change_uninit_engine);
+			goto SWITCH_FAILURE;
+		}
 
-	if (engine_uninit)
-		mtk_cam_event_camsys_resource_ready(&ctx->cam_ctrl, engine_uninit);
+		if (engine_uninit)
+			mtk_cam_event_camsys_resource_ready(&ctx->cam_ctrl, engine_uninit);
+	}
 
 	/* NOTE: qof_setup_twin has been called in job_raw_change_hw_init */
 	for (i = 0; i < cam->engines.num_raw_devices; i++) {
@@ -1434,6 +1469,17 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 			 __func__,
 			 check_args.expect_inner, check_args.expect_ack);
 		goto SWITCH_FAILURE;
+	}
+
+	if (ois_comp) {
+		if (mtk_cam_job_uninit_engine(job, engine_uninit)) {
+			dev_info(dev, "[%s] uninit engine failed, uninit raw:0x%x\n",
+				__func__, job->raw_change_uninit_engine);
+			goto SWITCH_FAILURE;
+		}
+
+		if (engine_uninit)
+			mtk_cam_event_camsys_resource_ready(&ctx->cam_ctrl, engine_uninit);
 	}
 
 	mtk_cam_job_update_clk_switching(job, 0);
@@ -2262,6 +2308,7 @@ void mtk_cam_ctrl_stop(struct mtk_cam_ctrl *cam_ctrl)
 	/* await done work finished */
 	kthread_flush_worker(&ctx->done_worker);
 	kthread_flush_worker(&ctx->sensor_worker);
+	kthread_flush_worker(&ctx->tuning_worker);
 
 	INIT_LIST_HEAD(&job_list);
 

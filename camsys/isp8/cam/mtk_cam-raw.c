@@ -499,20 +499,22 @@ static void dump_af_reg(struct mtk_raw_device *dev, bool force)
 
 static void dump_dc_setting(struct mtk_raw_device *dev)
 {
-	dev_info_ratelimited(dev->dev, "[outer] CAMCTL_SCENARIO_CTL/MODE 0x%08x/0x%08x DCIF_CTL/2:0x%08x/0x%08x, CHASING_SRC_SEL:0x%08x, TG_DCIF_CTL:0x%08x\n",
+	dev_info_ratelimited(dev->dev, "[outer] CAMCTL_SCENARIO_CTL/MODE 0x%08x/0x%08x DCIF_CTL/2:0x%08x/0x%08x, CHASING_SRC_SEL:0x%08x, TG_DCIF_CTL:0x%08x, LOCK_DONE:0x%08x\n",
 		 raw_readl(dev, dev->base, REG_CAMCTL_SCENARIO_CTL),
 		 raw_readl(dev, dev->base, REG_CAMCTL_SCENARIO_MODE),
 		 raw_readl(dev, dev->base, REG_CAMCTL_DCIF_CTL),
 		 raw_readl(dev, dev->base, REG_CAMCTL_DCIF2_CTL),
 		 raw_readl(dev, dev->base, REG_CAMCTL_DCIF_CHASING_SRC_SEL),
-		 raw_readl(dev, dev->base, REG_TG_DCIF_CTL));
-	dev_info_ratelimited(dev->dev, "[inner] CAMCTL_SCENARIO_CTL/MODE 0x%08x/0x%08x DCIF_CTL/2:0x%08x/0x%08x, CHASING_SRC_SEL:0x%08x, TG_DCIF_CTL:0x%08x\n",
+		 raw_readl(dev, dev->base, REG_TG_DCIF_CTL),
+		 raw_readl(dev, dev->base, REG_CAMCTL_LOCK_DONE_SEL));
+	dev_info_ratelimited(dev->dev, "[inner] CAMCTL_SCENARIO_CTL/MODE 0x%08x/0x%08x DCIF_CTL/2:0x%08x/0x%08x, CHASING_SRC_SEL:0x%08x, TG_DCIF_CTL:0x%08x, LOCK_DONE:0x%08x\n",
 		 raw_readl(dev, dev->base_inner, REG_CAMCTL_SCENARIO_CTL),
 		 raw_readl(dev, dev->base_inner, REG_CAMCTL_SCENARIO_MODE),
 		 raw_readl(dev, dev->base_inner, REG_CAMCTL_DCIF_CTL),
 		 raw_readl(dev, dev->base_inner, REG_CAMCTL_DCIF2_CTL),
 		 raw_readl(dev, dev->base_inner, REG_CAMCTL_DCIF_CHASING_SRC_SEL),
-		 raw_readl(dev, dev->base_inner, REG_TG_DCIF_CTL));
+		 raw_readl(dev, dev->base_inner, REG_TG_DCIF_CTL),
+		 raw_readl(dev, dev->base, REG_CAMCTL_LOCK_DONE_SEL));
 }
 
 
@@ -612,6 +614,7 @@ void initialize(struct mtk_raw_device *dev, struct engine_callback *cb,
 	dev->tg_count = 0;
 	dev->vsync_count = 0;
 	dev->sub_sensor_ctrl_en = false;
+	dev->lock_done_ctrl = false;
 	atomic_set(&dev->vf_en, 0);
 	mtk_cam_raw_reset_msgfifo(dev);
 
@@ -709,6 +712,7 @@ static void reset_reg(struct mtk_raw_device *dev)
 
 	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT21_EN);
 	raw_writel(0, dev, dev->base, REG_CAMCTL_INT21_EN);
+
 	wmb(); /* make sure committed */
 	reset_error_handling(dev);
 	if (CAM_DEBUG_ENABLED(RAW_INT))
@@ -813,6 +817,15 @@ void stagger_disable(struct mtk_raw_device *dev)
 		dev_info(dev->dev,
 			 "[%s] raw%d - CQ_EN:0x%x\n",
 			 __func__, dev->id, raw_readl_relaxed(dev, dev->base, REG_CAMCQ_CQ_EN));
+}
+
+void lock_done_ctrl_enable(struct mtk_raw_device *dev, int on)
+{
+	raw_writel(on, dev, dev->base, REG_CAMCTL_LOCK_DONE_SEL);
+
+	dev->lock_done_ctrl = on;
+
+	dev_info(dev->dev, "[%s] raw%d - on:%d\n", __func__, dev->id, on);
 }
 
 void apply_cq(struct mtk_raw_device *dev,
@@ -1501,7 +1514,7 @@ static void raw_handle_skip_frame(struct mtk_raw_device *raw_dev,
 		mmqos_hrt_dump();
 #endif
 
-		if (DISABLE_RECOVER_FLOW)
+		if (DISABLE_RECOVER_FLOW || raw_dev->lock_done_ctrl)
 			do_engine_callback(raw_dev->engine_cb, dump_request,
 				raw_dev->cam, CAMSYS_ENGINE_RAW, raw_dev->id,
 				fh_cookie, MSG_DC_SKIP_FRAME);
@@ -1617,7 +1630,7 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 	struct mtk_camsys_irq_info irq_info;
 	/* raw part */
 	unsigned int frame_idx, frame_idx_inner;
-	unsigned int frame_status, tg1_status, tg2_status, cq_status, dcif_status;
+	unsigned int frame_status, tg1_status, tg2_status, cq_status, dcif_status, lock_done_sel;
 	unsigned int frame_e_status, tg1_e_status, tg2_e_status, cq_e_status;
 	unsigned int dma_ofl_status, dmao_done_status, dmai_done_status;
 	unsigned int dma_ufl_status, dma_ring_ufl_status, tfm_mismatch_status;
@@ -1668,6 +1681,7 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 
 	frame_idx	= raw_readl_relaxed(raw, raw->base, REG_FRAME_IDX);
 	frame_idx_inner	= raw_readl_relaxed(raw, raw->base_inner, REG_FRAME_IDX);
+	lock_done_sel = raw_readl_relaxed(raw, raw->base, REG_CAMCTL_LOCK_DONE_SEL);
 	tg_cnt = raw_readl_relaxed(raw, raw->base, REG_TG_INTER_ST);
 	tg_cnt = (raw->tg_count & 0xffffff00) + ((tg_cnt & 0xff000000) >> 24);
 
@@ -1679,9 +1693,9 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 
 	if (CAM_DEBUG_ENABLED(RAW_INT))
 		dev_info(dev,
-			"RAW-INT: 17/18/19/20/21/2/3/8 0x%x(err:0x%x)/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x, in:0x%x\n",
+			"RAW-INT: 17/18/19/20/21/2/3/8 0x%x(err:0x%x)/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x, in:0x%x\n",
 			frame_status, err_status, tg1_status, tg2_status, dcif_status, cq_status,
-			dmao_done_status, dmai_done_status, tfm_mismatch_status,
+			dmao_done_status, dmai_done_status, tfm_mismatch_status, lock_done_sel,
 			frame_idx_inner);
 
 	irq_info.irq_type = 0;
@@ -1724,12 +1738,17 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 		irq_info.irq_type |= 1 << CAMSYS_IRQ_DEBUG_1;
 #endif
 	/* Frame done */
-	if (frame_status & FBIT(CAMCTL_SW_PASS1_DONE_ST)) {
+	if (frame_status & FBIT(CAMCTL_SW_PASS1_DONE_ST) ||
+		frame_status_y & FBIT(CAMCTL2_YUV_PASS1_DONE_ST)) {
 		irq_info.irq_type |= 1 << CAMSYS_IRQ_FRAME_DONE;
 		qof_dump_trigger_cnt(raw);
 		qof_dump_voter(raw);
 		qof_dump_power_state(raw);
 	}
+
+	/* ois compensation */
+	if (raw->lock_done_ctrl && dmao_done_status & FBIT(CAMCTL_FHO_R1_DONE_ST))
+		raw_writel(1, raw, raw->base, REG_CAMCTL_LOCK_DONE_SEL);
 
 	/* Frame start */
 	if (tg1_status & FBIT(CAMCTL_TG_SOF_INT_ST) ||

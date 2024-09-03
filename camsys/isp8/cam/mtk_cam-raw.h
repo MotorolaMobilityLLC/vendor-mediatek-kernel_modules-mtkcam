@@ -97,8 +97,12 @@ struct mtk_raw_device {
 	bool trigger_cq_by_qof;
 	int apmcu_voter_cnt;
 	spinlock_t apmcu_voter_lock;
+
 	atomic_t time_share_used;/*identify first and last*/
 	atomic_t time_share_on_process;/*identify busy*/
+
+	/* ois compensation */
+	bool lock_done_ctrl;
 };
 
 struct mtk_yuv_device {
@@ -212,6 +216,8 @@ void clear_reg(struct mtk_raw_device *dev);
 
 /* workaround */
 void ae_disable(struct mtk_raw_device *dev);
+/* ois compensation */
+void lock_done_ctrl_enable(struct mtk_raw_device *dev, int on);
 
 /* iommu debug */
 int mtk_raw_translation_fault_cb(int port, dma_addr_t mva, void *data);
