@@ -2744,9 +2744,6 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job)
 				/* the necessity of hw ddren */
 				qof_init_timer_freq(raw);
 
-				if (check_qof_support(job))
-					mtk_cam_enable_itc(raw);
-
 				// TODO: replace "0x7"
 				if (BIT(raw->id) == (selected_need_init & 0x7))
 					initialize(raw, &engine_cb, 1, is_srt,
