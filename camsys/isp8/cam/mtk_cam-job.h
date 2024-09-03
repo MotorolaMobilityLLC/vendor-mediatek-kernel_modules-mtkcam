@@ -17,6 +17,7 @@
 #include "mtk_cam-engine.h"
 #include "mtk_cam-dvfs_qos.h"
 #include "mtk_cam-qof.h"
+#include "mtk_cam-tuning.h"
 
 #define JOB_NUM_PER_STREAM 8
 #define JOB_NUM_PER_STREAM_DISPLAY_IC 16
@@ -28,6 +29,8 @@
 #define MAX_RAW_PER_STREAM 3 // twin, 3raw
 #define MAX_SV_PIPES_PER_STREAM (MAX_PIPES_PER_STREAM - 1)
 #define MAX_MRAW_PIPES_PER_STREAM (MAX_PIPES_PER_STREAM - 1)
+
+#define JOB_WORK_BUF_NUM 3
 
 struct mtk_cam_job;
 
@@ -467,6 +470,11 @@ struct mtk_cam_job {
 	struct qof_voter_handle luma_dump;
 	struct qof_voter_handle sen_exposure;
 	int qof_v_eng_sen_exp_change;
+
+	/* ois compensagtion */
+	struct kthread_work tuning_work;
+	struct mtk_cam_tuning tuning_param;
+	atomic_t tuning_work_queued;
 };
 
 static inline struct mtk_cam_job *mtk_cam_job_get(struct mtk_cam_job *job)
