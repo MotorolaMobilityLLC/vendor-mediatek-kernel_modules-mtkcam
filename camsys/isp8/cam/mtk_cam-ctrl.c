@@ -478,6 +478,10 @@ static void mtk_cam_ctrl_wake_up_on_event(struct mtk_cam_ctrl *ctrl, int event)
 
 /* note: just to support little margin for sw latency here */
 #define VALID_SWITCH_PERIOD_FROM_VSYNC_MS	23
+#define VALID_SWITCH_PERIOD_120FPS_FROM_VSYNC_NS	3300000
+#define VALID_SWITCH_PERIOD_60FPS_FROM_VSYNC_MS		11600000
+#define VALID_SWITCH_PERIOD_30FPS_FROM_VSYNC_MS		23000000
+
 
 struct seamless_check_args {
 	int expect_inner;
@@ -491,6 +495,7 @@ static bool check_for_seamless(struct mtk_cam_ctrl *ctrl, void *arg)
 	int inner_seq;
 	int ack_seq;
 	u64 ts;
+	u64 frame_interval_ns, ts_margin;
 
 	spin_lock(&ctrl->info_lock);
 	inner_seq = ctrl->r_info.inner_seq_no;
@@ -505,7 +510,15 @@ static bool check_for_seamless(struct mtk_cam_ctrl *ctrl, void *arg)
 		return 0;
 
 	ts = ktime_get_boottime_ns();
-	if (ts - last_sof_ts >= VALID_SWITCH_PERIOD_FROM_VSYNC_MS * 1000000)
+	frame_interval_ns = ctrl->frame_interval_ns;
+	if (frame_interval_ns < INTERVAL_NS(60))
+		ts_margin = VALID_SWITCH_PERIOD_120FPS_FROM_VSYNC_NS;
+	else if (INTERVAL_NS(60) <= frame_interval_ns &&
+		 frame_interval_ns < INTERVAL_NS(30))
+		ts_margin = VALID_SWITCH_PERIOD_60FPS_FROM_VSYNC_MS;
+	else
+		ts_margin = VALID_SWITCH_PERIOD_30FPS_FROM_VSYNC_MS;
+	if (ts - last_sof_ts >= ts_margin)
 		return 0;
 	/*
 	 * check if already got ack
