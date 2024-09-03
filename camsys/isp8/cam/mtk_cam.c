@@ -1463,19 +1463,11 @@ static int mtk_cam_initialize(struct mtk_cam_device *cam)
 
 	WARN_ON(pm_runtime_get_sync(cam->dev));
 
-	mtk_cam_plat_resource_ctrl(cam, 1);
-
-	mtk_cam_reset_itc(cam);
-
 	ret = mtk_cam_power_rproc(cam, 1);
 	if (ret)
 		return ret; //TODO: goto
 
 	mtk_cam_debug_exp_reset(&cam->dbg);
-
-	mtk_cam_bwr_enable(cam->bwr);
-
-	enable_irq(cam->qoftop_irq);
 
 	return ret;
 }
@@ -1487,13 +1479,8 @@ int mtk_cam_uninitialize(struct mtk_cam_device *cam)
 
 	dev_info(cam->dev, "camsys uninitialize\n");
 
-	disable_irq(cam->qoftop_irq);
-	mtk_cam_bwr_disable(cam->bwr);
-
 	mtk_cam_power_rproc(cam, 0);
-	mtk_cam_plat_resource_ctrl(cam, 0);
 	pm_runtime_put_sync(cam->dev);
-
 	wake_up(&cam->shutdown_wq);
 
 	return 0;
@@ -5231,6 +5218,11 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 	int i;
 
 	dev_info(dev, "%s:suspend\n", __func__);
+
+	disable_irq(cam_dev->qoftop_irq);
+	mtk_cam_bwr_disable(cam_dev->bwr);
+	mtk_cam_plat_resource_ctrl(cam_dev, 0);
+
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		dev_dbg(dev, "%s++:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
 		readl(cam_dev->vcore_cg_con + 0x00),
@@ -5290,6 +5282,11 @@ static int mtk_cam_runtime_resume(struct device *dev)
 
 	init_camsys_main_adl_setting(cam_dev);
 	mtk_cam_timesync_init(true);
+
+	mtk_cam_plat_resource_ctrl(cam_dev, 1);
+	mtk_cam_bwr_enable(cam_dev->bwr);
+	mtk_cam_reset_itc(cam_dev);
+	enable_irq(cam_dev->qoftop_irq);
 
 	return 0;
 }
