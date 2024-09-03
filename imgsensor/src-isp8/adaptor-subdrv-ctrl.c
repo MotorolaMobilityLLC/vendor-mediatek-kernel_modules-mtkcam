@@ -3391,6 +3391,7 @@ int common_get_info(struct subdrv_ctx *ctx,
 		sensor_info->fine_integ_line[i] = ctx->s_ctx.mode[i].fine_integ_line;
 		sensor_info->aov_mode[i] = ctx->s_ctx.mode[i].aov_mode;
 		sensor_info->support_mcss[i] = ctx->s_ctx.mode[i].support_mcss;
+		sensor_info->SensorAwbEnabled[i] = ctx->s_ctx.mode[i].awb_enabled;
 	}
 	sensor_info->SensorDrivingCurrent = ctx->s_ctx.isp_driving_current;
 	sensor_info->IHDR_Support = 0;
