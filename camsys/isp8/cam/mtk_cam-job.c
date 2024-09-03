@@ -6519,6 +6519,7 @@ static void job_mark_dc_engine_error_buffer(struct mtk_cam_job *job)
 	// update runtime info to trigger wait event in switch case
 	spin_lock(&ctrl->info_lock);
 	ctrl->r_info.done_seq_no = job->frame_seq_no;
+	ctrl->r_info.inner_seq_no = job->frame_seq_no;
 	spin_unlock(&ctrl->info_lock);
 }
 
