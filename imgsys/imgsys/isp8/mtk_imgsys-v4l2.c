@@ -3787,7 +3787,7 @@ int mtk_imgsys_remove(struct platform_device *pdev)
 }
 EXPORT_SYMBOL(mtk_imgsys_remove);
 
-#define SHUTDOWN_TIMEOUT (3000)
+#define SHUTDOWN_TIMEOUT (10000)
 void mtk_imgsys_shutdown(struct platform_device *pdev)
 {
 	struct mtk_imgsys_dev *imgsys_dev = dev_get_drvdata(&pdev->dev);
