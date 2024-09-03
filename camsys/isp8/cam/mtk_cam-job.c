@@ -25,6 +25,7 @@
 #include "mtk_cam-qof.h"
 #include "mtk_cam-trace.h"
 #include "mtk_cam-raw_ctrl.h"
+#include "mtk_cam_vb2-dma-contig.h"
 
 #define SCQ_DEADLINE_US(fi)		((fi) * 9 / 10) // 0.9 frame interval
 
@@ -66,7 +67,7 @@ static inline int job_debug_exception_dump(struct mtk_cam_job *job,
 
 static inline bool check_qof_support(struct mtk_cam_job *job)
 {
-	return (GET_PLAT_HW(qof_support) && !disable_qof && !job->enable_hsf_raw);
+	return (GET_PLAT_HW(qof_support) && !disable_qof && !job->enable_hsf_raw && !is_ois_compensation(job));
 }
 
 static struct mtk_raw_request_data *req_get_raw_data(struct mtk_cam_ctx *ctx,
@@ -161,6 +162,43 @@ static int check_processing(struct mtk_cam_job *job)
 		ctx->cam_ctrl.frame_sync_event_cnt = job->req_seq;
 	}
 	return 0;
+}
+
+static void mtk_cam_tuning_work(struct kthread_work *work)
+{
+	struct mtk_cam_job *job =
+		container_of(work, struct mtk_cam_job, tuning_work);
+	struct mtk_cam_tuning *p = &job->tuning_param;
+
+	/* shading update */
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s:update-%d", __func__, job->frame_seq_no);
+	mtk_cam_tuning_update(p);
+	MTK_CAM_TRACE_END(BASIC);
+
+	/* flush shading table */
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s:flush-%d", __func__, job->frame_seq_no);
+	mtk_cam_vb2_sync_range_for_device(
+			p->meta_cfg_vb2_buf,
+			GET_PLAT_V4L2(shading_tbl_ofst),
+			MTK_CAM_LSCI_TABLE_SIZE);
+	MTK_CAM_TRACE_END(BASIC);
+
+	/* check time stamp if or not over time */
+	p->end_ts_ns = ktime_get_boottime_ns();
+	MTK_CAM_TRACE_BEGIN(
+		BASIC, "%s:check-(b:%lluns, e:%lluns, diff:%lluns)", __func__,
+		p->begin_ts_ns, p->end_ts_ns, p->end_ts_ns - p->begin_ts_ns);
+	if (p->end_ts_ns - p->begin_ts_ns < CAM_TUNING_DEADLINE_NS)
+		job->is_error = 0;
+	MTK_CAM_TRACE_END(BASIC);
+
+	if (CAM_DEBUG_ENABLED(JOB))
+		pr_info("%s seq_no:0x%x-processing time:%llu ns (b:%llu ns, e:%llu ns)\n",
+				__func__, job->frame_seq_no,
+				p->end_ts_ns - p->begin_ts_ns,
+				p->begin_ts_ns, p->end_ts_ns);
+
+	mtk_cam_job_put(job);
 }
 
 static int handle_cq_done(struct mtk_cam_job *job)
@@ -455,8 +493,10 @@ static int mtk_cam_job_pack_init(struct mtk_cam_job *job,
 	apply_cq_ref_reset(&job->cq_ref);
 
 	kthread_init_work(&job->sensor_work, mtk_cam_sensor_work);
+	kthread_init_work(&job->tuning_work, mtk_cam_tuning_work);
 	atomic_long_set(&job->afo_done, 0);
 	atomic_long_set(&job->done_set, 0);
+	atomic_set(&job->tuning_work_queued, 0);
 	job->done_handled = 0;
 	job->done_pipe = 0;
 
@@ -473,7 +513,7 @@ static int mtk_cam_job_pack_init(struct mtk_cam_job *job,
 
 	memset(&job->ufbc_header, 0, sizeof(job->ufbc_header));
 
-	job->is_error = 0;
+	job->is_error = is_ois_compensation(job) ? 1 : 0;
 	job->rms_disable = 0;
 	job->dump_luma = ctx->enable_luma_dump && ctx->has_raw_subdev;
 
@@ -911,7 +951,8 @@ handle_raw_frame_done(struct mtk_cam_job *job)
 	/* skip if meta0 does not exist */
 	if (ctx->has_raw_subdev && job->timestamp_buf) {
 		if (job->job_type == JOB_TYPE_M2M ||
-			job->job_type == JOB_TYPE_SW_TIMESHARED)
+			job->job_type == JOB_TYPE_SW_TIMESHARED ||
+			(is_ois_compensation(job) && job->timestamp))
 			cpu_timestamp_to_meta(job);
 		else
 			convert_fho_timestamp_to_meta(job);
@@ -933,6 +974,10 @@ handle_raw_frame_done(struct mtk_cam_job *job)
 			 job->frame_seq_no,
 			 mtk_cam_job_state_get(&job->job_state, ISP_STATE),
 			 job->timestamp, job->timestamp_mono);
+
+	/* ois compensation */
+	if (!atomic_cmpxchg(&job->tuning_work_queued, 0, 1))
+		kthread_flush_work(&job->tuning_work);
 
 	for (i = MTKCAM_SUBDEV_RAW_START; i < MTKCAM_SUBDEV_RAW_END; i++) {
 		if (used_pipe & (1 << i)) {
@@ -1198,10 +1243,16 @@ _stream_on(struct mtk_cam_job *job, bool on)
 		if (ctrl_data != NULL)
 			mtk_cam_ctx_slc_stream(ctx, on, ctrl_data->slc_mode);
 	}
+
 	if (is_offline_timeshare(job)) {
 		pad_bitmask = 0;
 		raw_tg_idx = -1;
 	}
+
+	/* ois compensation */
+	if (is_ois_compensation(job))
+		mtk_cam_tuning_init(&job->tuning_param);
+
 	/* TODO: separate seninf api to cammux setting and enable */
 	if (job->stream_on_seninf || job->raw_switch)
 		ctx_stream_on_seninf_sensor(job, pad_bitmask, raw_tg_idx);
@@ -1233,7 +1284,11 @@ _stream_on(struct mtk_cam_job *job, bool on)
 
 	if (ctx->hw_sv) {
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
-			mtk_cam_sv_update_start_period(sv_dev, job->scq_period);
+
+		mtk_cam_sv_update_start_period(sv_dev, job->scq_period);
+		if (is_ois_compensation(job) && on)
+			mtk_cam_sv_exp_setup(sv_dev,
+				get_tuning_begin_line(job), get_tuning_end_line(job));
 		mtk_cam_sv_dev_stream_on(sv_dev, on,
 			job->enabled_tags, job->used_tag_cnt);
 	}
@@ -2852,6 +2907,14 @@ _job_pack_subsample(struct mtk_cam_job *job,
 	return ret;
 }
 
+static int master_raw_set_normal(struct mtk_cam_job *job, struct device *dev)
+{
+	lock_done_ctrl_enable(
+		dev_get_drvdata(dev), is_ois_compensation(job));
+
+	return 0;
+}
+
 static int master_raw_set_stagger(struct mtk_cam_job *job, struct device *dev)
 {
 	struct mtk_raw_device *raw;
@@ -2860,6 +2923,8 @@ static int master_raw_set_stagger(struct mtk_cam_job *job, struct device *dev)
 
 	if (job_exp_num(job) > 1)
 		stagger_enable(raw);
+
+	lock_done_ctrl_enable(raw, is_ois_compensation(job));
 
 	return 0;
 }
@@ -2914,7 +2979,7 @@ _job_pack_otf_stagger(struct mtk_cam_job *job,
 	//	(!job->first_job && !sensor_change) && is_sensor_mode_update(job);
 	job->sub_ratio = get_subsample_ratio(&job->job_scen);
 	job->stream_on_seninf = false;
-	job->scq_period = -1;
+	job->scq_period = is_ois_compensation(job) ? job->scq_period * 10 : -1;
 	if (!ctx->used_engine) {
 		if (job_related_hw_init(job))
 			return -1;
@@ -3189,6 +3254,9 @@ _job_pack_normal(struct mtk_cam_job *job,
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_cam_device *cam = ctx->cam;
 	int ret;
+
+	if (is_ois_compensation(job))
+		job->scq_period = job->scq_period * 10;
 
 	// job->seamless_switch = is_sensor_mode_update(job);
 	job->sub_ratio = get_subsample_ratio(&job->job_scen);
@@ -4241,6 +4309,7 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 	int i;
 	int ret = 0;
 	bool is_srt = is_dc_mode(job) || is_m2m(job);
+	bool is_ois_comp = is_ois_compensation(job);
 
 	if (raw_id < 0) {
 		ret = -1;
@@ -4285,10 +4354,17 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 	mtk_cam_job_uninit_engine(
 		job, job->raw_change_uninit_engine);
 
+	if (is_ois_comp)
+		mtk_cam_tuning_init(&job->tuning_param);
+	lock_done_ctrl_enable(raw_dev, is_ois_comp);
+
 	stream_on(raw_dev, 1, false);
 
 	/* sv on */
 	sv_dev = dev_get_drvdata(cam->engines.sv_devs[raw_id]);
+	if (is_ois_comp)
+		mtk_cam_sv_exp_setup(sv_dev,
+			get_tuning_begin_line(job), get_tuning_end_line(job));
 	mtk_cam_sv_dev_stream_on(sv_dev, true,
 			job->enabled_tags, job->used_tag_cnt);
 
@@ -4704,6 +4780,7 @@ static int raw_qof_init(struct mtk_cam_job *job, struct device *dev)
 }
 
 struct initialize_params basic_init = {
+	.master_raw_init = master_raw_set_normal,
 	.qof_init = raw_qof_init,
 };
 
@@ -5115,6 +5192,38 @@ static void update_sen_expo_diff(struct mtk_cam_job *job)
 	*last = *next;
 }
 
+static void update_tuning_param(struct mtk_cam_job *job)
+{
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
+	struct mtk_cam_exp_shutter *exp_shutter;
+	struct mtk_cam_debug *dbg = &ctx->cam->dbg;
+	int pipe_idx = get_raw_subdev_idx(ctx->used_pipe);
+
+	if (!is_ois_compensation(job))
+		return;
+
+	if (!ctrl_data)
+		return;
+
+	exp_shutter = &ctrl_data->rc_data.exp_ns;
+
+	if (job_exp_num(job) == 1)
+		job->tuning_param.exp_time_ns = exp_shutter->le_exp_ns;
+	else if (job_exp_num(job) == 2)
+		job->tuning_param.exp_time_ns = exp_shutter->me_exp_ns;
+	else
+		pr_info("%s: ois compensation can't support", __func__);
+
+	job->tuning_param.sensor_mode = get_sensor_mode(job);
+	job->tuning_param.width = get_binning_w(job);
+	job->tuning_param.height = get_binning_h(job);
+	job->tuning_param.readout_ns = get_line_time(job) * get_sensor_h(job);
+	job->tuning_param.seq_num = job->frame_seq_no;
+	job->tuning_param.normal_dump_enabled =
+		  (pipe_idx >= 0 && mtk_cam_debug_dump_enabled(dbg, pipe_idx)) ? 1 : 0;
+}
+
 static int job_sen_req_pack(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -5147,6 +5256,8 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 	init_completion(&job->cq_exe_completion);
 
 	memset(&job->hdr_ts_cache, 0, sizeof(job->hdr_ts_cache));
+	memset(&job->tuning_param, 0, sizeof(job->tuning_param));
+
 	job->init_params = NULL;
 	if (!job->sensor_hdl_obj) {
 		ctx->cam_ctrl.sensor_sync_id= job->req_info_id;
@@ -5227,6 +5338,7 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 	}
 	update_sensor_fl_low_latency(job);
 	update_sen_expo_diff(job);
+	update_tuning_param(job);
 
 	if (CAM_DEBUG_ENABLED(JOB))
 		pr_info("[%s] ctx:%d|type:%d|%s|exp(cur:%d,prev:%d)|sw/scene:%d/%d, req_id:%d",
@@ -5522,6 +5634,7 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 
 		config->line_interleave =
 			ctrl->resource.user_data.sensor_res.line_interleave;
+		config->ois_compensation = is_ois_compensation(job);
 
 		if (scen_support_rgbw(&job->job_scen)) {
 			if (WARN_ON(!job->w_caci_buf))
@@ -6109,6 +6222,13 @@ static int fill_raw_meta_header(struct req_buffer_helper *helper)
 		if (ltmsgo_low_latency)
 			job->need_copy_ltmsgo =
 			CALL_PLAT_V4L2(get_ltmsgo_freerun_need_copy, &p) == 1;
+
+		/* ois compensation */
+		if(is_ois_compensation(job)) {
+			job->tuning_param.meta_cfg_vb2_buf = &buf->vbb.vb2_buf;
+			job->tuning_param.shading_tbl =
+				helper->meta_cfg_buf_va + GET_PLAT_V4L2(shading_tbl_ofst);
+		}
 	}
 
 	if (helper->meta_stats0_buf) {

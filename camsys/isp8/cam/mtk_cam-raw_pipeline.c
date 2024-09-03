@@ -309,6 +309,7 @@ mtk_cam_resource_update_work_buf(struct mtk_cam_resource_v2 *user_ctrl)
 		buf_require = res_raw_is_dc_mode(r) ? exp_num : exp_num - 1;
 		buf_require = !!(scen->scen.normal.w_chn_supported) ?
 					buf_require * 2 : buf_require;
+		buf_require = buf_require * (r->ois_compensation ? 2 : 1);
 		break;
 	case MTK_CAM_SCEN_MSTREAM:
 		buf_require = res_raw_is_dc_mode(r) ? 2 : 1;
@@ -675,6 +676,11 @@ static int mtk_raw_calc_raw_resource(struct mtk_raw_pipeline *pipeline,
 			 "debug:pipe(%d):replace raws, 0x%x--> 0x%x\n",
 			 pipeline->id, r->raws, debug_user_raws_must[pipeline->id]);
 		r->raws = debug_user_raws_must[pipeline->id];
+	}
+
+	if (!res_raw_is_dc_mode(r) && res_raw_ois_compensation(r)) {
+		dev_info(cam->dev, "%s: failed with ois compensation\n", __func__);
+		return -EINVAL;
 	}
 
 	ret = mtk_raw_calc_raw_mask_chk(cam->dev, cam->engines.num_raw_devices,

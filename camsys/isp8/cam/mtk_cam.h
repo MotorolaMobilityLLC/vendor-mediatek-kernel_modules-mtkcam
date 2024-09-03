@@ -41,6 +41,7 @@
 
 #include "mtk_cam-hsf-def.h"
 #include "mtk_cam-bwr.h"
+#include "mtk_cam-tuning.h"
 
 #define CCD_READY 1
 #define NO_CHECK_RETURN(ret) (void) ret
@@ -125,6 +126,8 @@ struct mtk_cam_ctx {
 	struct kthread_worker flow_worker;
 	struct task_struct *done_task;
 	struct kthread_worker done_worker;
+	struct task_struct *tuning_task;
+	struct kthread_worker tuning_worker;
 	char str_ae_data[1024];
 
 	struct mtk_cam_device_buf cq_buffer;
@@ -454,6 +457,8 @@ int mtk_cam_ctx_queue_sensor_worker(struct mtk_cam_ctx *ctx,
 int mtk_cam_ctx_queue_flow_worker(struct mtk_cam_ctx *ctx,
 				  struct kthread_work *work);
 int mtk_cam_ctx_queue_done_worker(struct mtk_cam_ctx *ctx,
+				  struct kthread_work *work);
+int mtk_cam_ctx_queue_tuning_worker(struct mtk_cam_ctx *ctx,
 				  struct kthread_work *work);
 
 int mtk_cam_ctx_fetch_devices(struct mtk_cam_ctx *ctx, unsigned long engines);

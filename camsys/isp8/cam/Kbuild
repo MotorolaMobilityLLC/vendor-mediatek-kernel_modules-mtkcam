@@ -91,6 +91,7 @@ $(CAM_MODULE)-objs := \
     mtk_cam-debug.o \
     mtk_cam-hsf.o \
     mtk_cam-bwr.o \
+    mtk_cam-tuning.o \
 
     #mtk_cam-size_assertion.o \
     #mtk_cam-raw_debug.o \

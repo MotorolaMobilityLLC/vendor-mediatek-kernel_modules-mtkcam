@@ -199,6 +199,8 @@ struct plat_v4l2_data {
 	int meta_mraw_ext_size;
 
 	int timestamp_buffer_ofst;
+	int shading_tbl_ofst;
+
 	int reserved_camsv_dev_id;
 	u8 *vb2_queues_support_list;
 	int vb2_queues_support_list_num;
@@ -219,6 +221,7 @@ struct plat_v4l2_data {
 	int (*get_mraw_stats_cfg_param)(void *addr, struct mraw_stats_cfg_param *param);
 	int (*get_ltmsgo_freerun_need_copy)(const struct set_meta_stats_info_param *p);
 	int (*ltmsgo_buffer_ofst)(void *addr);
+	int (*get_raw_lock_sel_addr)(unsigned int dev_id, unsigned int *addr);
 };
 
 struct plat_data_hw {
