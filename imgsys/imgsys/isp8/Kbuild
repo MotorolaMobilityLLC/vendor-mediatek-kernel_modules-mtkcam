@@ -27,6 +27,15 @@ ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/slbc
 ccflags-y += -I$(DEVICE_MODULES_PATH)/include/soc/mediatek
 ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/
 
+ifeq ($(CONFIG_MTK_MBRAINK_BRIDGE), m)
+ccflags-y += -DCFG_SUPPORT_MBRAIN=1
+ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/mbraink
+
+$(info "isp8 ccflags-y = $(ccflags-y)")
+
+check_path := $(shell if [ ! -d $(DEVICE_MODULES_PATH)/drivers/misc/mediatek/mbraink/bridge ]; then echo "Error: Path $(DEVICE_MODULES_PATH)/drivers/misc/mediatek/mbraink/bridge not found" >&2; exit 1; fi)
+endif
+
 ccflags-y += -ferror-limit=0
 
 $(info "imgsys, isp8 device_module_path = $(DEVICE_MODULES_PATH)")
