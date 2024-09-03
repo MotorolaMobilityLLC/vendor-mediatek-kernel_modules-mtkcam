@@ -275,6 +275,7 @@ struct subdrv_mode_struct {
 
 	bool dpc_enabled; /* defect pixel correction */
 	bool pdc_enabled; /* pd correction */
+	bool awb_enabled; /* awb_enabled */
 	struct mtk_sensor_saturation_info *saturation_info;
 	struct dcg_info_struct dcg_info;
 	u32 exposure_order_in_lbmf;
