@@ -266,10 +266,10 @@ void mtk_cam_enable_itc(struct mtk_raw_device *raw)
 
 	dev_info(raw->dev, "qof: %s: misc1/2/3 0x%x 0x%x 0x%x (0x%x 0x%x 0x%x)", __func__,
 			 readl(raw->base + REG_CAMCTL_MISC),
-			 readl(raw->base_inner + REG_CAMCTL2_MISC),
-			 readl(raw->yuv_base + REG_CAMCTL3_MISC),
-			 readl(raw->yuv_base_inner + REG_CAMCTL_MISC),
-			 readl(raw->rms_base + REG_CAMCTL2_MISC),
+			 readl(raw->yuv_base + REG_CAMCTL2_MISC),
+			 readl(raw->rms_base + REG_CAMCTL3_MISC),
+			 readl(raw->base_inner + REG_CAMCTL_MISC),
+			 readl(raw->yuv_base_inner + REG_CAMCTL2_MISC),
 			 readl(raw->rms_base_inner + REG_CAMCTL3_MISC));
 
 	writel(val, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
@@ -284,8 +284,24 @@ void mtk_cam_enable_itc(struct mtk_raw_device *raw)
 #define ITC_RESET		(BIT(9)|BIT(8)|BIT(7)|BIT(6))
 void mtk_cam_reset_itc(struct mtk_cam_device *cam)
 {
+	int i;
+	u32 val;
+
 	writel(ITC_RESET, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_SW_RST);
 	writel(0, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_SW_RST);
+
+	val = readl(cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
+	SET_FIELD(&val, QOF_CAM_TOP_ITC_SRC_SEL_1, 1);
+	SET_FIELD(&val, QOF_CAM_TOP_ITC_SRC_SEL_2, 1);
+	SET_FIELD(&val, QOF_CAM_TOP_ITC_SRC_SEL_3, 1);
+	writel(val, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
+
+	for (i = 0; i < cam->engines.num_raw_devices; i++) {
+		struct mtk_raw_device *raw_dev;
+
+		raw_dev = dev_get_drvdata(cam->engines.raw_devs[i]);
+		raw_dev->io_ops = &itc_only_io_ops;
+	}
 
 	dev_info(cam->dev, "qof: %s: top_ctrl 0x%x itc_status 0x%x", __func__,
 			 readl(cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL),
