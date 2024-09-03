@@ -6443,6 +6443,55 @@ int mtk_cam_job_fill_dump_param(struct mtk_cam_job *job,
 
 	return 0;
 }
+static int check_req_buffer_valid_for_dump(struct mtk_cam_job *job,
+	struct mtk_cam_dump_param *p)
+{
+	struct mtk_cam_request *req = job->req;
+	struct mtk_cam_buffer *buf;
+	struct mtk_cam_video_device *node;
+	int pipe_id;
+	int i;
+
+	list_for_each_entry(buf, &req->buf_list, list) {
+		node = mtk_cam_buf_to_vdev(buf);
+		pipe_id = node->uid.pipe_id;
+		/* skip if it does not belong to current ctx */
+		if (!belong_to_current_ctx(job, pipe_id))
+			break;
+		if (node->image_info.width) {
+			if (CAM_DEBUG_ENABLED(JOB))
+				dev_info(job->src_ctx->cam->dev, "%s: ctx:%d, id=%d, w/h/size:%d/%d/%d\n",
+			__func__,
+			pipe_id, node->uid.id,
+			node->image_info.width, node->image_info.height,
+			node->image_info.size[0]);
+		}
+		/* check if node's size is 0, if yes than assign uid as 0 for tool avoiding parsing this buffer */
+		if (is_raw_subdev(pipe_id)) {
+			for (i = 0; i < CAM_MAX_IMAGE_OUTPUT; i++) {
+				if (p->frame_params->img_outs[i].uid.id == node->uid.id &&
+					p->frame_params->img_outs[i].buf[0][0].size == 0) {
+					dev_info(job->src_ctx->cam->dev, "%s:job mismatch ctx:%d, id=%d, w/h/size:%d/%d/%d\n",
+						__func__,
+						pipe_id, node->uid.id,
+						node->image_info.width,
+						node->image_info.height,
+						node->image_info.size[0]);
+					dev_info(job->src_ctx->cam->dev, "%s:dump mismatch ctx:%d, id=%d, w/h/size:%d/%d/%d\n",
+						__func__,
+						p->stream_id, p->frame_params->img_outs[i].uid.id,
+						p->frame_params->img_outs[i].fmt.s.w,
+						p->frame_params->img_outs[i].fmt.s.h,
+						p->frame_params->img_outs[i].buf[0][0].size);
+						p->frame_params->img_outs[i].uid.id = 0;
+						p->frame_params->img_outs[i].uid.pipe_id = 0;
+				}
+			}
+		}
+	}
+
+	return 0;
+}
 
 static int job_debug_dump(struct mtk_cam_job *job, const char *desc,
 			  bool is_exception, int raw_pipe_idx)
@@ -6457,7 +6506,7 @@ static int job_debug_dump(struct mtk_cam_job *job, const char *desc,
 
 	if (mtk_cam_job_fill_dump_param(job, &p, desc))
 		goto DUMP_FAILED;
-
+	check_req_buffer_valid_for_dump(job, &p);
 	dbg = &job->src_ctx->cam->dbg;
 	if (is_exception) {
 		if (mtk_cam_debug_exp_dump(dbg, &p))
