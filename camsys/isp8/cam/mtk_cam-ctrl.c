@@ -1523,9 +1523,16 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 
 	if (mtk_cam_ctrl_wait_event(ctrl, check_for_seamless, &check_args,
 				    5000)) {
-		dev_info(dev, "[%s] check_for_seamless timeout: expected in=0x%x ack=0x%x\n",
+		int inner, ack;
+
+		spin_lock(&ctrl->info_lock);
+		inner = ctrl->r_info.inner_seq_no;
+		ack = ctrl->r_info.ack_seq_no;
+		spin_unlock(&ctrl->info_lock);
+		dev_info(dev, "[%s] check_for_seamless timeout: expected in=0x%x ack=0x%x (in=0x%x ack=0x%x)\n",
 			 __func__,
-			 check_args.expect_inner, check_args.expect_ack);
+			 check_args.expect_inner, check_args.expect_ack,
+			 inner, ack);
 		mtk_cam_job_uninit_engine(job, job->raw_change_uninit_engine);
 		goto SWITCH_FAILURE;
 	}
