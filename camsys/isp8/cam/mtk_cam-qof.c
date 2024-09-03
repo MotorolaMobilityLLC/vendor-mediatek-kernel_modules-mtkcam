@@ -264,12 +264,32 @@ void mtk_cam_enable_itc(struct mtk_raw_device *raw)
 		return;
 	}
 
+	dev_info(raw->dev, "qof: %s: misc1/2/3 0x%x 0x%x 0x%x (0x%x 0x%x 0x%x)", __func__,
+			 readl(raw->base + REG_CAMCTL_MISC),
+			 readl(raw->base_inner + REG_CAMCTL2_MISC),
+			 readl(raw->yuv_base + REG_CAMCTL3_MISC),
+			 readl(raw->yuv_base_inner + REG_CAMCTL_MISC),
+			 readl(raw->rms_base + REG_CAMCTL2_MISC),
+			 readl(raw->rms_base_inner + REG_CAMCTL3_MISC));
+
 	writel(val, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
 
 	raw->io_ops = (qof_enabled) ? &qof_io_ops : &itc_only_io_ops;
 
-	if (CAM_DEBUG_ENABLED(QOF) || FORCE_DUMP(raw->id))
-		dev_info(raw->dev, "qof: %s", __func__);
+	dev_info(raw->dev, "qof: %s: top_ctrl 0x%x itc_status 0x%x", __func__,
+			 readl(raw->cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL),
+			 readl(raw->cam->qoftop_base + REG_QOF_CAM_TOP_ITC_STATUS));
+}
+
+#define ITC_RESET		(BIT(9)|BIT(8)|BIT(7)|BIT(6))
+void mtk_cam_reset_itc(struct mtk_cam_device *cam)
+{
+	writel(ITC_RESET, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_SW_RST);
+	writel(0, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_SW_RST);
+
+	dev_info(cam->dev, "qof: %s: top_ctrl 0x%x itc_status 0x%x", __func__,
+			 readl(cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL),
+			 readl(cam->qoftop_base + REG_QOF_CAM_TOP_ITC_STATUS));
 }
 
 void qof_init_timer_freq(struct mtk_raw_device *raw)

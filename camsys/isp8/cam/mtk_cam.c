@@ -1476,6 +1476,8 @@ static int mtk_cam_initialize(struct mtk_cam_device *cam)
 
 	mtk_cam_plat_resource_ctrl(cam, 1);
 
+	mtk_cam_reset_itc(cam);
+
 	ret = mtk_cam_power_rproc(cam, 1);
 	if (ret)
 		return ret; //TODO: goto
