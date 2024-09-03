@@ -3610,6 +3610,8 @@ const struct mtk_mae_drv_ops mae_ops_isp8 = {
 
 int mtk_mae_isp8_probe(struct platform_device *pdev)
 {
+	int ret;
+
 	dev_info(&pdev->dev ,"%s +", __func__);
 
 	g_data = of_device_get_match_data(&pdev->dev);
@@ -3619,6 +3621,14 @@ int mtk_mae_isp8_probe(struct platform_device *pdev)
 	}
 
 	mtk_mae_set_data(g_data);
+
+	ret = devm_clk_bulk_get(&pdev->dev,
+			g_data->clk_num,
+			g_data->clks);
+	if (ret) {
+		dev_info(&pdev->dev, "Failed to get clks: %d\n", ret);
+		return ret;
+	}
 
 #ifdef MAE_TF_DUMP_8
 	dev_info(&pdev->dev , "register MAE isp8 tf cb");
