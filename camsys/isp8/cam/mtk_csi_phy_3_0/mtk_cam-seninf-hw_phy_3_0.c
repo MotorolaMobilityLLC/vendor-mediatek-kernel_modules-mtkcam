@@ -3279,11 +3279,21 @@ static int _reset_seninf(struct seninf_ctx *ctx, int seninfAsyncIdx)
 static int _reset_csi(struct seninf_ctx *ctx)
 {
 	void *csirx_mac_top = ctx->reg_csirx_mac_top[(unsigned int)ctx->port];
+	void *csirx_mac_csi = ctx->reg_csirx_mac_csi[(unsigned int)ctx->port];
+	unsigned int csi_irq = 0;
 
 	/* Reset csi */
 	SENINF_BITS(csirx_mac_top, CSIRX_MAC_TOP_CTRL, SENINF_TOP_SW_RST, 1);
 	udelay(1);
 	SENINF_BITS(csirx_mac_top, CSIRX_MAC_TOP_CTRL, SENINF_TOP_SW_RST, 0);
+
+	/* clear CSI IRQ status */
+	csi_irq = SENINF_READ_REG(csirx_mac_csi, CSIRX_MAC_CSI2_IRQ_STATUS);
+	if (csi_irq)
+		seninf_logi(ctx, "Current csi irq status(0x%x) non-zero, clear it\n", csi_irq);
+	SENINF_WRITE_REG(csirx_mac_csi,
+			 CSIRX_MAC_CSI2_IRQ_STATUS,
+			 0xffffffff);
 
 	return 0;
 }
