@@ -936,7 +936,8 @@ void mtk_cam_sensor_req_buffer_done(struct mtk_cam_job *job,
 			     bool is_proc)
 {
 	struct mtk_cam_request *req = job->req_sensor;
-	struct device *dev = req->req.mdev->dev;
+	struct device *dev;
+	struct media_request *mreq = &req->req;
 	struct list_head done_list_sensor;
 	unsigned long ids_sensor;
 	bool is_buf_empty_sensor;
@@ -945,12 +946,10 @@ void mtk_cam_sensor_req_buffer_done(struct mtk_cam_job *job,
 	if (node_id != -1 ||
 		pipe_id >= MTKCAM_SUBDEV_RAW_END)
 		return;
-
-	if (CAM_DEBUG_ENABLED(JOB))
-		dev_info(dev,
-		"%s: req:%s pipe_id:%d check sensor req buffers\n",
-		__func__, job->req_sensor->debug_str, pipe_id);
+	if (!mreq)
+		return;
 	media_request_get(&req->req);
+	dev = req->req.mdev->dev;
 	INIT_LIST_HEAD(&done_list_sensor);
 	ids_sensor = 0;
 	is_buf_empty_sensor = !mtk_cam_req_collect_vb_bufs(req,
