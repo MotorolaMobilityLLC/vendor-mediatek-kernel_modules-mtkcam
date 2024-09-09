@@ -531,9 +531,8 @@ int mtk_cam_seninf_get_csi_param(struct seninf_ctx *ctx)
 	ctrl->p_new.p = csi_param;
 
 	ret = get_ctrl(ctrl);
-	dev_info(ctx->dev,
-		"%s get_ctrl ret:%d %d|%d|%d|%d|%d|%d|%d|%d|%d dphy_init_deskew_en:%d, cphy_lrte_en:%d\n",
-		__func__,
+	seninf_logi(ctx,
+		"get_ctrl ret:%d %d|%d|%d|%d|%d|%d|%d|%d|%d dphy_init_deskew_en:%d, cphy_lrte_en:%d\n",
 		ret, csi_param->cphy_settle,
 		csi_param->dphy_clk_settle,
 		csi_param->dphy_data_settle,

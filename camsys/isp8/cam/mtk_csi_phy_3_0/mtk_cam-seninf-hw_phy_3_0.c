@@ -1824,7 +1824,7 @@ static int csirx_dphy_init(struct seninf_ctx *ctx)
 		if (!ctx->csi_param.not_fixed_dphy_settle) {
 			settle_delay_dt = settle_delay_ck = settle_formula(DPHY_SETTLE_DEF, csi_clk);
 			settle_delay_ck = 0;
-			dev_info(ctx->dev, "dphy settle val: (%u, %llu) => %llu\n",
+			seninf_logi(ctx, "dphy settle val: (%u, %llu) => %llu\n",
 				 DPHY_SETTLE_DEF, csi_clk, settle_delay_dt);
 		} else {
 			if (ctx->csi_param.not_fixed_trail_settle) {
@@ -1838,7 +1838,7 @@ static int csirx_dphy_init(struct seninf_ctx *ctx)
 				settle_delay_dt = ctx->csi_param.dphy_data_settle;
 				if (settle_delay_dt == 0) {
 					settle_delay_dt = settle_formula(DPHY_SETTLE_DEF, csi_clk);
-					dev_info(ctx->dev, "dphy settle val: (%u, %llu) => %llu\n",
+					seninf_logi(ctx, "dphy settle val: (%u, %llu) => %llu\n",
 						 DPHY_SETTLE_DEF, csi_clk, settle_delay_dt);
 				} else {
 					temp = csi_clk * settle_delay_dt;
@@ -1851,7 +1851,7 @@ static int csirx_dphy_init(struct seninf_ctx *ctx)
 				settle_delay_ck = ctx->csi_param.dphy_clk_settle;
 				if (settle_delay_ck == 0) {
 					settle_delay_ck = settle_formula(DPHY_SETTLE_DEF, csi_clk);
-					dev_info(ctx->dev, "dphy settle val: (%u, %llu) => %llu\n",
+					seninf_logi(ctx, "dphy settle val: (%u, %llu) => %llu\n",
 						 DPHY_SETTLE_DEF, csi_clk, settle_delay_dt);
 				} else {
 					temp = csi_clk * settle_delay_ck;
