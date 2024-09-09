@@ -2601,6 +2601,7 @@ static int mtk_raw_probe(struct platform_device *pdev)
 
 	raw_dev->apmcu_voter_cnt = 0;
 	spin_lock_init(&raw_dev->apmcu_voter_lock);
+	spin_lock_init(&raw_dev->qof_ctrl_lock);
 
 	pm_runtime_enable(dev);
 
