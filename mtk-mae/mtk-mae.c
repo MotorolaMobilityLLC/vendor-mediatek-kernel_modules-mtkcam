@@ -511,7 +511,6 @@ static void mtk_mae_hw_done(struct mtk_mae_dev *mae_dev,
 	v4l2_m2m_job_finish(mae_dev->m2m_dev, ctx->fh.m2m_ctx);
 
 	complete_all(&mae_dev->mae_job_finished);
-	atomic_dec(&mae_dev->num_composing);
 	wake_up(&mae_dev->flushing_waitq);
 
 #else
@@ -657,8 +656,6 @@ static void mtk_mae_device_run(void *priv)
 			mae_dev_info(mae_dev->dev, "set dma address fail\n");
 			return;
 		}
-
-		atomic_inc(&mae_dev->num_composing);
 
 		mtk_mae_get_kernel_time(mae_dev, param, MAE_CONFIG_HW_START);
 
@@ -960,7 +957,10 @@ static int mtk_mae_hw_connect(struct mtk_mae_dev *mae_dev)
 		mtk_mae_cmdq_alloc_buf(mae_dev->mae_clt,
 			&(mae_dev->mae_time_ed_va),
 			&(mae_dev->mae_time_ed_pa));
+
+		atomic_inc(&mae_dev->num_composing);
 	}
+
 
 	mutex_unlock(&mae_dev->mae_stream_lock);
 
@@ -1123,7 +1123,10 @@ static void mtk_mae_hw_disconnect(struct mtk_mae_dev *mae_dev)
 		cmdq_mbox_buf_free(mae_dev->mae_clt,
 			mae_dev->mae_time_ed_va,
 			mae_dev->mae_time_ed_pa);
+
+		atomic_dec(&mae_dev->num_composing);
 	}
+
 
 	mutex_unlock(&mae_dev->mae_stream_lock);
 }
