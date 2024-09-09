@@ -125,7 +125,8 @@ u32 get_sensor_h(struct mtk_cam_job *job)
 
 u32 get_tuning_begin_line(struct mtk_cam_job *job)
 {
-	return get_sensor_h(job) * CAM_TUNING_BEGIN_F_RATIO / 100;
+	return min(get_sensor_h(job) * CAM_TUNING_BEGIN_F_RATIO / 100 +
+		CAM_TUNING_DELAY_NS / get_line_time(job), get_sensor_h(job));
 }
 
 u32 get_tuning_end_line(struct mtk_cam_job *job)

@@ -222,7 +222,8 @@ struct mtk_camsv_device {
 	unsigned int camsv_error_count;
 
 	/* ois compensation */
-	bool is_ois_compensation;
+	bool is_skip_raw_unlock_done;
+	unsigned int ois_updated_seq;
 	void __iomem *raw_lock_done_sel;
 };
 
