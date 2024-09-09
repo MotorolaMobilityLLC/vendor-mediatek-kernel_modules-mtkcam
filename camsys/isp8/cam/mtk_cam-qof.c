@@ -1240,6 +1240,9 @@ void qof_force_dump_all(struct mtk_raw_device *raw)
 	qof_dump_voter(raw);
 	qof_dump_trigger_cnt(raw);
 
+	dev_info(raw->dev, "[%s] QOF CQ_START_MAX_1:0x%08x\n",
+				 __func__, readl(raw->qof_base + REG_QOF_CAM_A_QOF_CQ_START_MAX_1));
+
 	qof_set_force_dump(raw, false);
 
 }

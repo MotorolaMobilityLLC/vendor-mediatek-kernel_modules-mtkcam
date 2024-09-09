@@ -213,6 +213,21 @@ static int handle_cq_done(struct mtk_cam_job *job)
 	if (job->first_job || job->first_frm_switch)
 		goto EXIT;
 
+	if (job->disable_qof_cq_ctrl && job->back_to_qof_cq_ctrl) {
+		struct mtk_raw_device *r;
+		int i;
+
+		for (i = 0; i < cam->engines.num_raw_devices; ++i) {
+			if (!(BIT(i) & bit_map_subset_of(MAP_HW_RAW, job->used_engine)))
+				continue;
+
+			r = dev_get_drvdata(cam->engines.raw_devs[i]);
+			qof_enable_cq_trigger_by_qof(r, true);
+		}
+		qof_mtcmos_voter(&cam->engines, job->used_engine, false);
+		pr_info("%s: back to qof %x", __func__, job->used_engine);
+	}
+
 	/* turn on mraw vf when first frame setting applied */
 	for (i = 0; i < ctx->num_mraw_subdevs; i++) {
 		mraw_idx = ctx->mraw_subdev_idx[i];
@@ -245,7 +260,7 @@ bool mtk_cam_job_has_pending_action(struct mtk_cam_job *job)
 	return mtk_cam_job_state_has_action(&job->job_state);
 }
 
-static int update_ref_sof_cq_threshold(struct mtk_cam_job *job)
+static int update_ref_sof_cq_ctrl(struct mtk_cam_job *job)
 {
 	int scq_period;
 
@@ -257,7 +272,12 @@ static int update_ref_sof_cq_threshold(struct mtk_cam_job *job)
 		return 0;
 	}
 
-	scq_period = (job->job_state.reference_sof_ns)? -1 : job->scq_period;
+	if (job->job_state.reference_sof_ns) {
+		scq_period = -1;
+		job->disable_qof_cq_ctrl = true;
+	} else
+		scq_period = job->scq_period;
+
 	if (scq_period != job->src_ctx->last_cq_deadline)
 		set_cq_deadline(job, scq_period);
 
@@ -277,7 +297,7 @@ int mtk_cam_job_apply_pending_action(struct mtk_cam_job *job)
 
 	if (action & ACTION_APPLY_ISP) {
 		ret = ret ||
-			update_ref_sof_cq_threshold(job) ||
+			update_ref_sof_cq_ctrl(job) ||
 			call_jobop(job, apply_isp);
 	}
 
@@ -519,6 +539,8 @@ static int mtk_cam_job_pack_init(struct mtk_cam_job *job,
 
 	memset(&job->luma_dump, 0, sizeof(job->luma_dump));
 	memset(&job->sen_exposure, 0, sizeof(job->sen_exposure));
+	job->disable_qof_cq_ctrl = false;
+	job->back_to_qof_cq_ctrl = false;
 
 	job->local_enqueue_ts = local_clock();
 	job->local_apply_sensor_ts = 0;
@@ -1976,11 +1998,29 @@ static int _apply_raw_cq(struct mtk_cam_job *job,
 			cq->daddr, cq_rst->main.size,
 			cq_rst->main.offset, cq_rst->sub.size,
 			cq_rst->sub.offset);
-	else
+	else {
+		if (job->disable_qof_cq_ctrl) {
+			struct mtk_raw_device *r;
+			int i;
+
+			job->back_to_qof_cq_ctrl = true;
+
+			qof_mtcmos_voter(&cam->engines, job->used_engine, true);
+
+			for (i = 0; i < cam->engines.num_raw_devices; ++i) {
+				if (!(BIT(i) & bit_map_subset_of(MAP_HW_RAW, job->used_engine)))
+					continue;
+
+				r = dev_get_drvdata(cam->engines.raw_devs[i]);
+				qof_enable_cq_trigger_by_qof(r, false);
+			}
+		}
+
 		apply_cq(raw_dev,
 			cq->daddr,
 			cq_rst->main.size, cq_rst->main.offset,
 			cq_rst->sub.size, cq_rst->sub.offset);
+	}
 
 	return 0;
 }
@@ -5102,7 +5142,7 @@ static void update_sensor_fl_low_latency(struct mtk_cam_job *job)
 	}
 }
 
-static inline s64 calc_exp_diff(u64 last, u64 next)
+static inline s64 calc_exp_diff(u64 next, u64 last)
 {
 	return (last == 0 || next == 0) ? 0 : ((s64)next - (s64)last);
 }
