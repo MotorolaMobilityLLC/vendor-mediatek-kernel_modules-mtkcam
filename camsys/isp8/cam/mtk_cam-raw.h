@@ -97,6 +97,7 @@ struct mtk_raw_device {
 	bool trigger_cq_by_qof;
 	int apmcu_voter_cnt;
 	spinlock_t apmcu_voter_lock;
+	spinlock_t qof_ctrl_lock;
 
 	atomic_t time_share_used;/*identify first and last*/
 	atomic_t time_share_on_process;/*identify busy*/
