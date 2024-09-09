@@ -443,6 +443,9 @@ void mtk_cam_sv_exp_setup(struct mtk_camsv_device *sv_dev, int exp0, int exp1)
 	unsigned int first_tag, tag_idx, grab_pxl, grab_lin;
 	unsigned int x, y, w, h, value;
 
+	/* skip unlock raw done sel for first frame */
+	sv_dev->is_skip_raw_unlock_done = true;
+
 	first_tag =
 		CAMSV_READ_REG(sv_dev->base + REG_CAMSVCENTRAL_FIRST_TAG);
 	if (first_tag)
@@ -466,8 +469,14 @@ void mtk_cam_sv_exp_setup(struct mtk_camsv_device *sv_dev, int exp0, int exp1)
 	w = (grab_pxl >> 16) - x;
 	h = (grab_lin >> 16) - y;
 
+	if (w + x <= 16) {
+		dev_info(sv_dev->dev, "%s camsv_id:%d - width too small:%d_%d\n",
+			__func__, sv_dev->id, x, w);
+		goto EXIT;
+	}
+
 	/* setup exp0 */
-	value = (ALIGN(w + x - 1, 16) << 16) | (exp0 + y - 1);
+	value = (ALIGN(w + x - 16, 16) << 16) | (exp0 + y);
 	CAMSV_WRITE_REG(sv_dev->base +
 		REG_CAMSVCENTRAL_INT_EXP0_TAG1 +
 		(CAMSVCENTRAL_INT_EXP0_OFFSET * tag_idx),
@@ -479,7 +488,7 @@ void mtk_cam_sv_exp_setup(struct mtk_camsv_device *sv_dev, int exp0, int exp1)
 
 
 	/* setup exp1 */
-	value = (ALIGN(w + x - 1, 16) << 16) | (exp1 + y - 1);
+	value = (ALIGN(w + x - 16, 16) << 16) | (exp1 + y);
 	CAMSV_WRITE_REG(sv_dev->base +
 		REG_CAMSVCENTRAL_INT_EXP1_TAG1 +
 		(CAMSVCENTRAL_INT_EXP1_OFFSET * tag_idx),
@@ -1439,6 +1448,7 @@ int mtk_cam_sv_dev_config(struct mtk_camsv_device *sv_dev,
 	sv_dev->streaming_tag_cnt = 0;
 	sv_dev->sof_count = 0;
 	sv_dev->tg_cnt = 0;
+	sv_dev->ois_updated_seq = 0;
 
 	atomic_set(&sv_dev->is_otf, 0);
 	atomic_set(&sv_dev->is_seamless, 0);
@@ -2208,9 +2218,10 @@ static irqreturn_t mtk_irq_camsv_debug(int irq, void *data)
 		readl_relaxed(sv_dev->base + REG_CAMSVCENTRAL_COMMON_STATUS);
 
 	if (CAM_DEBUG_ENABLED(RAW_INT))
-		dev_info(sv_dev->dev, "camsv-%d: common_status:0x%x\n", sv_dev->id, common_status);
+		dev_info(sv_dev->dev, "camsv-%d: common_status:0x%x, frm_seq_no:0x%x/0x%x, ts:%llu\n",
+			sv_dev->id, common_status, frm_seq_no, frm_seq_no_inner, irq_info.ts_ns);
 
-	if (first_tag && frm_seq_no_inner > 0) {
+	if (first_tag) {
 		exp_1_bid = CAMSVCENTRAL_DBG_INT_BIT_START +
 			(CAMSVCENTRAL_DBG_INT_BIT_OFFSET * (ffs(first_tag) - 1));
 		exp_0_bid = exp_1_bid + 1;
@@ -2220,8 +2231,14 @@ static irqreturn_t mtk_irq_camsv_debug(int irq, void *data)
 			irq_info.irq_type |= (1 << CAMSYS_IRQ_TUNING_UPDATE);
 
 		/* exp1 */
-		if (common_status & BIT(exp_1_bid))
-			writel_relaxed(0, sv_dev->raw_lock_done_sel);
+		if (common_status & BIT(exp_1_bid)) {
+			if (sv_dev->is_skip_raw_unlock_done)
+				sv_dev->is_skip_raw_unlock_done = false;
+			else if (sv_dev->ois_updated_seq < frm_seq_no_inner) {
+				writel_relaxed(0, sv_dev->raw_lock_done_sel);
+				sv_dev->ois_updated_seq = frm_seq_no_inner;
+			}
+		}
 	}
 
 	if (irq_info.irq_type && push_msgfifo(sv_dev, &irq_info) == 0)
@@ -2497,7 +2514,7 @@ static int mtk_camsv_of_probe(struct platform_device *pdev,
 		CALL_PLAT_V4L2(
 			get_raw_lock_sel_addr, sv_dev->id, &raw_lock_sel_addr);
 
-		sv_dev->is_ois_compensation = false;
+		sv_dev->is_skip_raw_unlock_done = false;
 		if (raw_lock_sel_addr)
 			sv_dev->raw_lock_done_sel =
 				ioremap(raw_lock_sel_addr, 0x4);
@@ -2505,7 +2522,7 @@ static int mtk_camsv_of_probe(struct platform_device *pdev,
 			sv_dev->raw_lock_done_sel = NULL;
 
 	} else {
-		sv_dev->is_ois_compensation = false;
+		sv_dev->is_skip_raw_unlock_done = false;
 		sv_dev->raw_lock_done_sel = NULL;
 	}
 
