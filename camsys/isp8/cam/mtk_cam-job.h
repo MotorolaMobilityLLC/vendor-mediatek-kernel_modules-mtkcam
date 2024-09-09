@@ -470,6 +470,8 @@ struct mtk_cam_job {
 	struct qof_voter_handle luma_dump;
 	struct qof_voter_handle sen_exposure;
 	int qof_v_eng_sen_exp_change;
+	bool disable_qof_cq_ctrl;
+	bool back_to_qof_cq_ctrl;
 
 	/* ois compensagtion */
 	struct kthread_work tuning_work;
