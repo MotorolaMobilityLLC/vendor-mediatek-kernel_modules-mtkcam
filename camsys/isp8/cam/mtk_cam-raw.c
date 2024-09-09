@@ -514,7 +514,7 @@ static void dump_dc_setting(struct mtk_raw_device *dev)
 		 raw_readl(dev, dev->base_inner, REG_CAMCTL_DCIF2_CTL),
 		 raw_readl(dev, dev->base_inner, REG_CAMCTL_DCIF_CHASING_SRC_SEL),
 		 raw_readl(dev, dev->base_inner, REG_TG_DCIF_CTL),
-		 raw_readl(dev, dev->base, REG_CAMCTL_LOCK_DONE_SEL));
+		 raw_readl(dev, dev->base_inner, REG_CAMCTL_LOCK_DONE_SEL));
 }
 
 
@@ -1693,7 +1693,7 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 
 	if (CAM_DEBUG_ENABLED(RAW_INT))
 		dev_info(dev,
-			"RAW-INT: 17/18/19/20/21/2/3/8 0x%x(err:0x%x)/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x, in:0x%x\n",
+			"RAW-INT: 17/18/19/20/21/2/3/8 0x%x(err:0x%x)/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x lock:0x%x, in:0x%x\n",
 			frame_status, err_status, tg1_status, tg2_status, dcif_status, cq_status,
 			dmao_done_status, dmai_done_status, tfm_mismatch_status, lock_done_sel,
 			frame_idx_inner);

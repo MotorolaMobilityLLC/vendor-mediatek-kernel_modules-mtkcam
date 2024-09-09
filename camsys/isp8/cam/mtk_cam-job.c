@@ -4110,7 +4110,7 @@ static void singleframe_on_transit(struct mtk_cam_job_state *s, int state_type,
 		case S_ISP_PROCESSING:
 			if (old_state != S_ISP_PROCESSING) {
 				job->timestamp = info->sof_ts_ns;
-				job->timestamp_mono = ktime_get_ns(); /* FIXME */
+				job->timestamp_mono = info->sof_ts_mono_ns;
 				fill_hdr_timestamp(job, info);
 				handle_rms_disable(job);
 
