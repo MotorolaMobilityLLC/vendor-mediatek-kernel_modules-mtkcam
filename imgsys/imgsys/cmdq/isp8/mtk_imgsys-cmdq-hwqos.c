@@ -245,15 +245,13 @@ static void imgsys_hwqos_dbg_reg_dump(uint8_t level)
 			BWR_IMG_E1A_BASE + BWR_IMG_SRT_TTL_ENG_BW5_OFT);
 	}
 
-	if (level >= 0) {
-		// BWR status
-		imgsys_hwqos_dbg_reg_read(
-				BWR_IMG_E1A_BASE + BWR_IMG_RPT_STATE_OFT);
-		imgsys_hwqos_dbg_reg_read(
-				BWR_IMG_E1A_BASE + BWR_IMG_SEND_BW_ZERO_OFT);
-		imgsys_hwqos_dbg_reg_read(
-				BWR_IMG_E1A_BASE + BWR_IMG_SEND_DONE_ST_OFT);
-	}
+	/* BWR status */
+	imgsys_hwqos_dbg_reg_read(
+		BWR_IMG_E1A_BASE + BWR_IMG_RPT_STATE_OFT);
+	imgsys_hwqos_dbg_reg_read(
+		BWR_IMG_E1A_BASE + BWR_IMG_SEND_BW_ZERO_OFT);
+	imgsys_hwqos_dbg_reg_read(
+		BWR_IMG_E1A_BASE + BWR_IMG_SEND_DONE_ST_OFT);
 }
 
 static int imgsys_hwqos_dbg_thread(void *data)
@@ -926,6 +924,8 @@ static void imgsys_qos_config_bwr(struct cmdq_pkt *pkt,
 	case BWR_STOP:
 		// Report 0
 		imgsys_qos_set_fix_bw(pkt, 0, 0);
+		/* Wait for 150 us (BWR_IMG_RPT_TIMER is 100 us) */
+		cmdq_pkt_sleep(pkt, CMDQ_US_TO_TICK(150), 0 /*don't care*/);
 		cmdq_pkt_poll_sleep(pkt, 0x1,
 			BWR_IMG_E1A_BASE + BWR_IMG_SEND_BW_ZERO_OFT, CMDQ_REG_MASK);
 		cmdq_pkt_poll_sleep(pkt, BIT(BWR_IMG_RPT_WAIT),
