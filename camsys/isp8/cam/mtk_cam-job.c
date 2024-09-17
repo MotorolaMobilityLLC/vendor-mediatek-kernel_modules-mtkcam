@@ -533,7 +533,7 @@ static int mtk_cam_job_pack_init(struct mtk_cam_job *job,
 
 	memset(&job->ufbc_header, 0, sizeof(job->ufbc_header));
 
-	job->is_error = is_ois_compensation(job) ? 1 : 0;
+	job->is_error = 0;
 	job->rms_disable = 0;
 	job->dump_luma = ctx->enable_luma_dump && ctx->has_raw_subdev;
 
@@ -5262,6 +5262,8 @@ static void update_tuning_param(struct mtk_cam_job *job)
 	job->tuning_param.seq_num = job->frame_seq_no;
 	job->tuning_param.normal_dump_enabled =
 		  (pipe_idx >= 0 && mtk_cam_debug_dump_enabled(dbg, pipe_idx)) ? 1 : 0;
+
+	job->is_error = (job->first_job || job->seamless_switch) ? 0 : 1;
 }
 
 static int job_sen_req_pack(struct mtk_cam_job *job)
