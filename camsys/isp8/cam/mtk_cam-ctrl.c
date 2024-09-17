@@ -1987,7 +1987,12 @@ void mtk_cam_ctrl_sensor_job_enque(struct mtk_cam_ctrl *cam_ctrl,
 
 	mtk_cam_ctrl_update_seq(cam_ctrl, job);
 
-
+	if (!job->sensor_hdl_obj) {
+		cam_ctrl->sensor_sync_id= job->req_info_id;
+		cam_ctrl->sensor_seq = job->req_seq;
+		pr_info("no sensor obj: #%d , sync_id:%d\n",
+				job->req_seq, job->req_info_id);
+	}
 	if (job->seamless_switch)
 		mtk_cam_job_set_fsm(job, 0);
 	if (job->raw_switch)
