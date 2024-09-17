@@ -2260,7 +2260,8 @@ static irqreturn_t mtk_irq_camsv_debug(int irq, void *data)
 		exp_0_bid = exp_1_bid + 1;
 
 		/* exp0 */
-		if (common_status & BIT(exp_0_bid))
+		if (common_status & BIT(exp_0_bid) &&
+				!sv_dev->is_skip_raw_unlock_done)
 			irq_info.irq_type |= (1 << CAMSYS_IRQ_TUNING_UPDATE);
 
 		/* exp1 */
