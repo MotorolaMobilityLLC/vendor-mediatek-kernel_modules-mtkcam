@@ -224,7 +224,7 @@ static u32 get_active_line_num(struct adaptor_ctx *ctx, u32 scenario_id)
 {
 	int ret, j;
 	struct mtk_mbus_frame_desc fd_tmp;
-	u32 result = 0;
+	u32 result = 0, height = 0;
 
 	ret = subdrv_call(ctx, get_frame_desc, scenario_id, &fd_tmp);
 	if (!ret) {
@@ -238,7 +238,13 @@ static u32 get_active_line_num(struct adaptor_ctx *ctx, u32 scenario_id)
 			    (fd_tmp.entry[j].bus.csi2.user_data_desc != VC_PDAF_STATS_SE_PIX_2)) {
 				result += fd_tmp.entry[j].bus.csi2.vsize;
 			}
+			/*set default active line*/
+			if ((fd_tmp.entry[j].bus.csi2.user_data_desc == VC_STAGGER_NE) ||
+				(fd_tmp.entry[j].bus.csi2.user_data_desc == VC_RAW_DATA))
+				height = fd_tmp.entry[j].bus.csi2.vsize;
 		}
+		if (!result)
+			result = height;
 	}
 
 	return result;
