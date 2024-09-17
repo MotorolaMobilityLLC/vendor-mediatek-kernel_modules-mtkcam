@@ -18,6 +18,7 @@
 #include <uapi/linux/dma-heap.h>
 #include <linux/pm_runtime.h>
 #include <linux/suspend.h>
+#include <linux/vmalloc.h>
 
 #include <linux/device.h>
 #include <linux/version.h>
