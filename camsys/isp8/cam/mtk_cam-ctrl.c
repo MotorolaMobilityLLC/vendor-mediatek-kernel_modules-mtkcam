@@ -1160,7 +1160,7 @@ static int mtk_camsys_event_handle_camsv(struct mtk_cam_ctrl *ctrl,
 	/* ois compensation */
 	if (irq_info->irq_type & BIT(CAMSYS_IRQ_TUNING_UPDATE))
 		handle_tuning_update(ctrl,
-			seq_from_fh_cookie(irq_info->frame_idx), irq_info->ts_ns);
+			seq_from_fh_cookie(irq_info->frame_idx_inner), irq_info->ts_ns);
 
 	return 0;
 }

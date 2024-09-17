@@ -998,7 +998,7 @@ handle_raw_frame_done(struct mtk_cam_job *job)
 			 job->timestamp, job->timestamp_mono);
 
 	/* ois compensation */
-	if (!atomic_cmpxchg(&job->tuning_work_queued, 0, 1))
+	if (atomic_cmpxchg(&job->tuning_work_queued, 0, 1))
 		kthread_flush_work(&job->tuning_work);
 
 	for (i = MTKCAM_SUBDEV_RAW_START; i < MTKCAM_SUBDEV_RAW_END; i++) {
