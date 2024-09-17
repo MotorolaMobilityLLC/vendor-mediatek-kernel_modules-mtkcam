@@ -606,12 +606,14 @@ static int mtk_cam_seninf_is_outmux_used(struct seninf_ctx *ctx, int outmux)
 static int mtk_cam_seninf_disable_outmux(struct seninf_ctx *ctx, int outmux, bool immed)
 {
 	void *pSeninf_outmux = NULL;
+	unsigned int outmux_irq;
 
 	if (outmux < 0 || outmux >= _seninf_ops->outmux_num) {
 		seninf_logi(ctx, "err outmux %d invalid (0~SENINF_OUTMUX_NUM:%d)\n", outmux, _seninf_ops->outmux_num);
 		return 0;
 	}
 	pSeninf_outmux = ctx->reg_if_outmux[outmux];
+	outmux_irq = _seninf_ops->_get_outmux_irq_st(ctx, outmux, 1);
 
 	if (!immed)
 		_seninf_ops->_wait_outmux_cfg_done(ctx, outmux);
@@ -644,7 +646,7 @@ static int mtk_cam_seninf_disable_outmux(struct seninf_ctx *ctx, int outmux, boo
 
 	seninf_logi(ctx, "clear outmux:%d (disable en:%d) immediately(%d),current irq(0x%x)\n",
 		    outmux, ctx->outmux_disable_list[outmux], immed,
-		    _seninf_ops->_get_outmux_irq_st(ctx, outmux, 1));
+		    outmux_irq);
 
 	return 0;
 }

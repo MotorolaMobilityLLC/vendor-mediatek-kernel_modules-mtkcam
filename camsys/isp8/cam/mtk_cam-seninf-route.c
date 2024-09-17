@@ -1397,14 +1397,19 @@ static void mtk_cam_seninf_outmux_release_all(struct seninf_ctx *ctx,
 }
 
 static void mtk_cam_seninf_outmux_reset_all(struct seninf_ctx *ctx,
-		struct list_head *outmux_cfgs)
+		struct list_head *outmux_cfgs, int is_mux_change)
 {
 #ifdef SEAMLESS_OUTMUX_V3
 	struct outmux_cfg *ent;
 
 	list_for_each_entry(ent, outmux_cfgs, list) {
-		if (ctx->outmux_disable_list_for_v2[ent->outmux_idx])
+		if (is_mux_change){
+			/*(seamless only) reset all selected outmux*/
+			if (ctx->outmux_disable_list_for_v2[ent->outmux_idx])
+				g_seninf_ops->_disable_outmux(ctx, ent->outmux_idx, true);
+		} else {
 			g_seninf_ops->_disable_outmux(ctx, ent->outmux_idx, true);
+		}
 	}
 #endif
 }
@@ -2107,7 +2112,8 @@ int mtk_cam_seninf_s_stream_mux(struct seninf_ctx *ctx)
 		seninf_logd(ctx, "is sensor streamed: %u, config outmux cnt: %lu\n",
 			    is_sensor_stream, seninf_list_count(&outmux_cfgs));
 	}
-
+	/* reset all selected outmux */
+	mtk_cam_seninf_outmux_reset_all(ctx, &outmux_cfgs, 0);
 	/* enable all selected outmux */
 	mtk_cam_seninf_outmux_config_all(ctx, &outmux_cfgs, grp_en, false);
 
@@ -2270,7 +2276,7 @@ mtk_cam_seninf_streaming_mux_change(struct mtk_cam_seninf_mux_param *param, bool
 
 	if (ctx) {
 		/* (seamless only) reset all selected outmux firstly*/
-		mtk_cam_seninf_outmux_reset_all(ctx, &outmux_cfgs);
+		mtk_cam_seninf_outmux_reset_all(ctx, &outmux_cfgs, 1);
 
 		/* enable all selected outmux */
 		mtk_cam_seninf_outmux_config_all(ctx, &outmux_cfgs, grp_en, true);
