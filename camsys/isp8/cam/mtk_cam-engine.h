@@ -40,6 +40,7 @@ struct mtk_camsys_irq_normal_data {
 
 struct mtk_camsys_irq_error_data {
 	int err_status;
+	int err_status2;
 };
 
 struct mtk_camsys_irq_info {

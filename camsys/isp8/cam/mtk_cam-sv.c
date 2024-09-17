@@ -1571,8 +1571,9 @@ int mtk_cam_sv_cq_config(struct mtk_camsv_device *sv_dev, unsigned int sub_ratio
 		CAMSVCQ_CQ_SUB_THR0_CTL, CAMSVCQ_CQ_SUB_THR0_EN, 1);
 
 	/* cq int en */
-	CAMSV_WRITE_BITS(sv_dev->base_scq + REG_CAMSVCQTOP_INT_0_EN,
-		CAMSVCQTOP_INT_0_EN, CAMSVCQTOP_CSR_SCQ_SUB_THR_DONE_INT_EN, 1);
+	CAMSV_WRITE_REG(sv_dev->base_scq + REG_CAMSVCQTOP_INT_0_EN,
+		ERR_ST_MASK_CQ_ERR | CAMSVCQTOP_SCQ_SUB_THR_DONE);
+
 	wmb(); /* TBC */
 
 	dev_dbg(sv_dev->dev, "[%s] cq_en:0x%x_%x start_period:0x%x cq_sub_thr0_ctl:0x%x cq_int_en:0x%x cq_dcm0x%x\n",
@@ -1864,6 +1865,30 @@ int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tag
 	return need_smi_dump;
 }
 
+void camsv_handle_cq_err(
+	struct mtk_camsv_device *sv_dev,
+	struct mtk_camsys_irq_info *data)
+{
+	struct mtk_cam_ctx *ctx;
+	unsigned int ctx_id;
+	int err_status = data->e.err_status2;
+	int frame_idx_inner = data->frame_idx_inner;
+
+	ctx_id = ctx_from_fh_cookie(frame_idx_inner);
+	ctx = &sv_dev->cam->ctxs[ctx_id];
+
+	/* dump error status */
+	dev_info(sv_dev->dev, "cq error_status:0x%x\n", err_status);
+
+	/* dump seninf debug data */
+	if (ctx && ctx->seninf)
+		mtk_cam_seninf_dump_current_status(ctx->seninf, false);
+
+	/* dump camsv debug data */
+	mtk_cam_sv_debug_dump(sv_dev, 0);
+
+	mtk_smi_dbg_hang_detect("camsys-camsv");
+}
 void camsv_handle_err(
 	struct mtk_camsv_device *sv_dev,
 	struct mtk_camsys_irq_info *data)
@@ -1956,7 +1981,7 @@ static irqreturn_t mtk_irq_camsv_hybrid(int irq, void *data)
 	struct mtk_camsv_device *sv_dev = (struct mtk_camsv_device *)data;
 	struct mtk_camsys_irq_info irq_info;
 	unsigned int frm_seq_no, frm_seq_no_inner;
-	unsigned int i, err_status, done_status, cq_done_status;
+	unsigned int i, err_status, done_status, cq_status;
 	unsigned int first_tag, addr_frm_seq_no = REG_CAMSVCENTRAL_FH_SPARE_TAG_1;
 	bool wake_thread = false;
 
@@ -1980,7 +2005,7 @@ static irqreturn_t mtk_irq_camsv_hybrid(int irq, void *data)
 		readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_ERR_STATUS);
 	done_status	=
 		readl_relaxed(sv_dev->base + REG_CAMSVCENTRAL_DONE_STATUS);
-	cq_done_status =
+	cq_status =
 		readl_relaxed(sv_dev->base_scq + REG_CAMSVCQTOP_INT_0_STATUS);
 
 	irq_info.ts_ns = ktime_get_boottime_ns();
@@ -2033,12 +2058,20 @@ static irqreturn_t mtk_irq_camsv_hybrid(int irq, void *data)
 					 done_status);
 	}
 
-	if (cq_done_status) {
-		dev_dbg(sv_dev->dev, "camsv-%d: cq done status:0x%x seq_no:0x%x_0x%x",
-			sv_dev->id, cq_done_status,
-			frm_seq_no_inner, frm_seq_no);
+	if (cq_status) {
+		if (cq_status & ERR_ST_MASK_CQ_ERR) {
+			dev_dbg(sv_dev->dev, "camsv-%d: cq error status:0x%x seq_no:%d_%d",
+				sv_dev->id, cq_status,
+				frm_seq_no_inner, frm_seq_no);
 
-		if (cq_done_status & CAMSVCQTOP_SCQ_SUB_THR_DONE) {
+			irq_info.irq_type |= (1 << CAMSYS_IRQ_ERROR);
+			irq_info.e.err_status2 = cq_status & ERR_ST_MASK_CQ_ERR;
+		}
+
+		if (cq_status & CAMSVCQTOP_SCQ_SUB_THR_DONE) {
+			dev_dbg(sv_dev->dev, "camsv-%d: cq done status:0x%x seq_no:%d_%d",
+				sv_dev->id, cq_status,
+			frm_seq_no_inner, frm_seq_no);
 			if (sv_dev->cq_ref != NULL) {
 				long mask = bit_map_bit(MAP_HW_CAMSV, sv_dev->id);
 
@@ -2048,7 +2081,7 @@ static irqreturn_t mtk_irq_camsv_hybrid(int irq, void *data)
 		}
 
 		trace_camsv_irq_cq_done(sv_dev->dev, frm_seq_no_inner, frm_seq_no,
-					cq_done_status);
+					cq_status);
 	}
 
 	if (irq_info.irq_type && push_msgfifo(sv_dev, &irq_info) == 0)
@@ -2271,8 +2304,16 @@ static irqreturn_t mtk_thread_irq_camsv(int irq, void *data)
 			irq_info.tg_cnt);
 
 		/* error case */
-		if (unlikely(irq_info.irq_type == (1 << CAMSYS_IRQ_ERROR))) {
+		if (unlikely(irq_info.irq_type == (1 << CAMSYS_IRQ_ERROR)) &&
+			irq_info.e.err_status != 0) {
 			camsv_handle_err(sv_dev, &irq_info);
+			continue;
+		}
+
+		/* error cq case */
+		if (unlikely(irq_info.irq_type == (1 << CAMSYS_IRQ_ERROR)) &&
+			irq_info.e.err_status2 != 0) {
+			camsv_handle_cq_err(sv_dev, &irq_info);
 			continue;
 		}
 
