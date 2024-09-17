@@ -196,6 +196,29 @@ u32 g_sensor_margin(struct adaptor_ctx *ctx, unsigned int scenario)
 	}
 }
 
+u32 g_sensor_frame_length_delay(struct adaptor_ctx *ctx,
+	const u32 scenario_id, const char *caller)
+{
+	const u32 g_fdelay = ctx->subctx.frame_time_delay_frame;
+	u32 fdelay = g_fdelay;            /* final result */
+	u32 m_fdelay = 0, sw_fdelay = 0;  /* from sensor drv mode info struct */
+
+	/* error handling */
+	if (unlikely(!chk_is_valid_scenario_id(ctx, scenario_id, caller)))
+		return g_fdelay;
+	if (unlikely(ctx->subctx.s_ctx.mode == NULL))
+		return g_fdelay;
+
+	m_fdelay = ctx->subctx.s_ctx.mode[scenario_id].delay_frame;
+	sw_fdelay = ctx->subctx.s_ctx.mode[scenario_id].sw_fl_delay;
+
+	/* priority: g_fdelay < m_fdelay < sw_fdelay */
+	fdelay = (m_fdelay) ? m_fdelay : fdelay;
+	fdelay = (sw_fdelay) ? sw_fdelay : fdelay;
+
+	return fdelay;
+}
+
 int g_sensor_fine_integ_line(struct adaptor_ctx *ctx,
 	const unsigned int scenario)
 {
