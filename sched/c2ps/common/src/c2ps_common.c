@@ -10,6 +10,7 @@
 #include <linux/prefetch.h>
 #include <linux/preempt.h>
 #include <linux/kernel.h>
+#include <linux/vmalloc.h>
 #include <trace/trace.h>
 
 #include "sched/sched.h"
