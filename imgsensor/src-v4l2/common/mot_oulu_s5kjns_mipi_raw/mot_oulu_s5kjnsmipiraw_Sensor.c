@@ -20,7 +20,7 @@
  * Upper this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
  *============================================================================
  ****************************************************************************/
-#include "mot_scout_s5kjnsmipiraw_Sensor.h"
+#include "mot_oulu_s5kjnsmipiraw_Sensor.h"
 
 #define USING_DPHY_N_LANE 4
 
@@ -31,6 +31,7 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 static void s5kjns_sensor_init(struct subdrv_ctx *ctx);
 static int open(struct subdrv_ctx *ctx);
 static int s5kjns_set_ctrl_locker(struct subdrv_ctx *ctx, u32 cid, bool *is_lock);
+static int s5kjns_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
 
 #define ENABLE_S5KJNS_LONG_EXPOSURE FALSE
 #if  ENABLE_S5KJNS_LONG_EXPOSURE
@@ -224,8 +225,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_prev,
 		.num_entries = ARRAY_SIZE(frame_desc_prev),
-		.mode_setting_table = addr_data_pair_preview_mot_scout_s5kjns,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview_mot_scout_s5kjns),
+		.mode_setting_table = addr_data_pair_preview_mot_oulu_s5kjns,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview_mot_oulu_s5kjns),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -267,8 +268,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_cap,
 		.num_entries = ARRAY_SIZE(frame_desc_cap),
-		.mode_setting_table = addr_data_pair_preview_mot_scout_s5kjns,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview_mot_scout_s5kjns),
+		.mode_setting_table = addr_data_pair_preview_mot_oulu_s5kjns,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview_mot_oulu_s5kjns),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -310,8 +311,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_vid,
 		.num_entries = ARRAY_SIZE(frame_desc_vid),
-		.mode_setting_table = addr_data_pair_preview_mot_scout_s5kjns,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview_mot_scout_s5kjns),
+		.mode_setting_table = addr_data_pair_preview_mot_oulu_s5kjns,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview_mot_oulu_s5kjns),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -353,8 +354,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_hs_vid,
 		.num_entries = ARRAY_SIZE(frame_desc_hs_vid),
-		.mode_setting_table = addr_data_pair_preview_mot_scout_s5kjns,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview_mot_scout_s5kjns),
+		.mode_setting_table = addr_data_pair_preview_mot_oulu_s5kjns,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview_mot_oulu_s5kjns),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -396,8 +397,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_slim_vid,
 		.num_entries = ARRAY_SIZE(frame_desc_slim_vid),
-		.mode_setting_table = addr_data_pair_preview_mot_scout_s5kjns,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview_mot_scout_s5kjns),
+		.mode_setting_table = addr_data_pair_preview_mot_oulu_s5kjns,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview_mot_oulu_s5kjns),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -482,7 +483,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 };
 
 static struct subdrv_static_ctx static_ctx = {
-	.sensor_id = MOT_SCOUT_S5KJNS_SENSOR_ID,
+	.sensor_id = MOT_OULU_S5KJNS_SENSOR_ID,
 	.reg_addr_sensor_id = {0x0000,0x0001},
 	.i2c_addr_table = {0x20, 0xFF},
 	.i2c_burst_write_support = FALSE,
@@ -562,7 +563,7 @@ static struct subdrv_static_ctx static_ctx = {
 };
 
 static struct subdrv_ops ops = {
-	.get_id = common_get_imgsensor_id,
+	.get_id = s5kjns_get_imgsensor_id,
 	.init_ctx = init_ctx,
 	.open = open,
 	.get_info = common_get_info,
@@ -585,9 +586,9 @@ static struct subdrv_pw_seq_entry pw_seq[] = {
 	{HW_ID_RST, 1, 14},
 };
 
-const struct subdrv_entry mot_scout_s5kjns_mipi_raw_entry = {
-	.name = "mot_scout_s5kjns_mipi_raw",
-	.id = MOT_SCOUT_S5KJNS_SENSOR_ID,
+const struct subdrv_entry mot_oulu_s5kjns_mipi_raw_entry = {
+	.name = "mot_oulu_s5kjns_mipi_raw",
+	.id = MOT_OULU_S5KJNS_SENSOR_ID,
 	.pw_seq = pw_seq,
 	.pw_seq_cnt = ARRAY_SIZE(pw_seq),
 	.ops = &ops,
@@ -614,6 +615,40 @@ static u16 get_gain2reg(const u32 gain)
 	return (u32) reg_gain;
 }
 
+static int s5kjns_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
+{
+	u8 i = 0;
+	u8 retry = 2;
+	u32 addr_h = ctx->s_ctx.reg_addr_sensor_id.addr[0];
+	u32 addr_l = ctx->s_ctx.reg_addr_sensor_id.addr[1];
+	DRV_LOG(ctx, "Enter");
+
+	while (ctx->s_ctx.i2c_addr_table[i] != 0xFF) {
+		ctx->i2c_write_id = ctx->s_ctx.i2c_addr_table[i];
+		do {
+			*sensor_id = (subdrv_i2c_rd_u8(ctx, addr_h) << 8) |
+				subdrv_i2c_rd_u8(ctx, addr_l);
+
+			//sensor id +1 for s5kjns only
+			if(*sensor_id == 0x38EE)
+			*sensor_id += 2;
+
+			DRV_LOG_MUST(ctx, "i2c_write_id:0x%x sensor_id(cur/exp):0x%x/0x%x\n",
+				ctx->i2c_write_id, *sensor_id, ctx->s_ctx.sensor_id);
+			if (*sensor_id == ctx->s_ctx.sensor_id)
+				return ERROR_NONE;
+			retry--;
+		} while (retry > 0);
+		i++;
+		retry = 2;
+	}
+	if (*sensor_id != ctx->s_ctx.sensor_id) {
+		*sensor_id = 0xFFFFFFFF;
+		return ERROR_SENSOR_CONNECT_FAIL;
+	}
+	DRV_LOG(ctx, "Exit");
+	return ERROR_NONE;
+}
 
 static int s5kjns_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
@@ -643,7 +678,7 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 static void s5kjns_sensor_init(struct subdrv_ctx *ctx)
 {
 	DRV_LOG(ctx, "E\n");
-	DRV_LOG(ctx, "MOT SCOUT S5KJNS init start\n");
+	DRV_LOG(ctx, "MOT OULU S5KJNS init start\n");
 	subdrv_i2c_wr_u16(ctx, 0x6028, 0x4000);
 	subdrv_i2c_wr_u16(ctx, 0x0000, 0x0003);
 	subdrv_i2c_wr_u16(ctx, 0x0000, 0x38E1);
@@ -653,9 +688,9 @@ static void s5kjns_sensor_init(struct subdrv_ctx *ctx)
 	mdelay(13);
 	subdrv_i2c_wr_u16(ctx, 0x6226, 0x0001);
 
-	i2c_table_write(ctx, addr_data_pair_init_mot_scout_s5kjns,
-			ARRAY_SIZE(addr_data_pair_init_mot_scout_s5kjns));
-	DRV_LOG(ctx, "MOT SCOUT S5KJNS init end\n");
+	i2c_table_write(ctx, addr_data_pair_init_mot_oulu_s5kjns,
+			ARRAY_SIZE(addr_data_pair_init_mot_oulu_s5kjns));
+	DRV_LOG(ctx, "MOT OULU S5KJNS init end\n");
 	DRV_LOG(ctx, "X\n");
 }
 
