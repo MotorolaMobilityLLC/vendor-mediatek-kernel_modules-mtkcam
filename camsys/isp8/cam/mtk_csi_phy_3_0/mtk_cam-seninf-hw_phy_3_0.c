@@ -18,6 +18,7 @@
 #include "mtk_csi_phy_3_0/mtk_cam-seninf-csi0-dphy.h"
 #include "mtk_csi_phy_3_0/mtk_cam-seninf-csirx_mac_csi0.h"
 #include "mtk_csi_phy_3_0/mtk_cam-seninf-csirx_mac_top.h"
+#include "mtk_csi_phy_3_0/mtk_cam-seninf-mipi_csi_top_ctrl.h"
 
 #include "mtk_cam-seninf_control-8.h"
 #include "mtk_cam-seninf-route.h"
@@ -327,6 +328,7 @@ static int mtk_cam_seninf_init_iomem(struct seninf_ctx *ctx,
 				void __iomem *if_top_base, void __iomem *if_async_base,
 				void __iomem *if_tm_base, void __iomem *if_outmux[],
 				void __iomem *if_outmux_inner[],
+				void __iomem *csi_top_0, void __iomem *csi_top_1,
 				struct csi_reg_base *csi_base)
 {
 	int i;
@@ -504,6 +506,9 @@ static int mtk_cam_seninf_init_iomem(struct seninf_ctx *ctx,
 
 	for (i = SENINF_OUTMUX0; i < _seninf_ops->outmux_num; i++)
 		ctx->reg_if_outmux_inner[i] = if_outmux_inner[i];
+
+	ctx->reg_csi_top_0 = csi_top_0;
+	ctx->reg_csi_top_1 = csi_top_1;
 
 	return 0;
 }
@@ -3278,16 +3283,103 @@ static int _reset_seninf(struct seninf_ctx *ctx, int seninfAsyncIdx)
 	return 0;
 }
 
+static int _reset_csi_top(struct seninf_ctx *ctx)
+{
+	int csi_port = ctx->portNum;
+	void *csi_top = ctx->reg_csi_top_0;
+	int rst_bit_sft = 0;
+	unsigned int top_ctrl = 0;
+	unsigned int rst_val = 0;
+
+	if (!ctx->is_4d1c) {
+		seninf_logi(ctx, "Ignor reset CSI-%d due to split mode\n", csi_port);
+		return 0;
+	}
+
+	if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
+		/* MT6899 */
+		switch (csi_port) {
+		case 0:
+			csi_top = ctx->reg_csi_top_0;
+			rst_bit_sft = 0;
+			break;
+		case 1:
+			csi_top = ctx->reg_csi_top_0;
+			rst_bit_sft = 4;
+			break;
+		case 2:
+			csi_top = ctx->reg_csi_top_0;
+			rst_bit_sft = 8;
+			break;
+		case 3:
+			csi_top = ctx->reg_csi_top_0;
+			rst_bit_sft = 12;
+			break;
+		case 4:
+			csi_top = ctx->reg_csi_top_0;
+			rst_bit_sft = 16;
+			break;
+		case 5:
+			csi_top = ctx->reg_csi_top_0;
+			rst_bit_sft = 20;
+			break;
+		}
+	} else {
+		switch (csi_port) {
+		case 0:
+			csi_top = ctx->reg_csi_top_0;
+			rst_bit_sft = 0;
+			break;
+		case 1:
+			csi_top = ctx->reg_csi_top_0;
+			rst_bit_sft = 4;
+			break;
+		case 2:
+			csi_top = ctx->reg_csi_top_1;
+			rst_bit_sft = 0;
+			break;
+		case 3:
+			csi_top = ctx->reg_csi_top_1;
+			rst_bit_sft = 4;
+			break;
+		case 4:
+			csi_top = ctx->reg_csi_top_1;
+			rst_bit_sft = 8;
+			break;
+		case 5:
+			csi_top = ctx->reg_csi_top_1;
+			rst_bit_sft = 12;
+			break;
+		}
+	}
+
+	mutex_lock(&ctx->core->seninf_top_rg_mutex);
+
+	top_ctrl = SENINF_READ_REG(csi_top, CSI_CSR_TOP_SW_RESET_B);
+	rst_val = top_ctrl & (~(0xF << rst_bit_sft));
+
+	SENINF_WRITE_REG(csi_top, CSI_CSR_TOP_SW_RESET_B, rst_val);
+	udelay(1);
+	SENINF_WRITE_REG(csi_top, CSI_CSR_TOP_SW_RESET_B, top_ctrl);
+
+	mutex_unlock(&ctx->core->seninf_top_rg_mutex);
+
+	seninf_logi(ctx, "Reset CSI-%d top_ctrl_%d, (0x%08x -> 0x%08x -> 0x%08x)\n",
+		    csi_port, (csi_top == ctx->reg_csi_top_1),
+		    top_ctrl, rst_val, top_ctrl);
+
+	return 0;
+}
+
 static int _reset_csi(struct seninf_ctx *ctx)
 {
-	void *csirx_mac_top = ctx->reg_csirx_mac_top[(unsigned int)ctx->port];
 	void *csirx_mac_csi = ctx->reg_csirx_mac_csi[(unsigned int)ctx->port];
+	void *base_cphy = ctx->reg_ana_cphy_top[(unsigned int)ctx->port];
+	void *base_dphy = ctx->reg_ana_dphy_top[(unsigned int)ctx->port];
 	unsigned int csi_irq = 0;
 
-	/* Reset csi */
-	SENINF_BITS(csirx_mac_top, CSIRX_MAC_TOP_CTRL, SENINF_TOP_SW_RST, 1);
-	udelay(1);
-	SENINF_BITS(csirx_mac_top, CSIRX_MAC_TOP_CTRL, SENINF_TOP_SW_RST, 0);
+	/* Reset csi mac & phyd */
+	_reset_csi_top(ctx);
 
 	/* clear CSI IRQ status */
 	csi_irq = SENINF_READ_REG(csirx_mac_csi, CSIRX_MAC_CSI2_IRQ_STATUS);
@@ -3296,6 +3388,10 @@ static int _reset_csi(struct seninf_ctx *ctx)
 	SENINF_WRITE_REG(csirx_mac_csi,
 			 CSIRX_MAC_CSI2_IRQ_STATUS,
 			 0xffffffff);
+
+	/* clear SOT status */
+	SENINF_WRITE_REG(base_dphy, DPHY_RX_IRQ_CLR, 0xffffffff);
+	SENINF_WRITE_REG(base_cphy, CPHY_RX_IRQ_CLR, 0x0f0f0000);
 
 	return 0;
 }

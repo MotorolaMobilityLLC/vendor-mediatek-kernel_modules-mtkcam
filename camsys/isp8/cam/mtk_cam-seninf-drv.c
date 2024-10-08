@@ -1075,6 +1075,16 @@ static int seninf_core_probe(struct platform_device *pdev)
 	if (IS_ERR(core->reg_seninf_tm))
 		return PTR_ERR(core->reg_seninf_tm);
 
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "csi-top-0");
+	core->reg_csi_top_0 = devm_ioremap_resource(dev, res);
+	if (IS_ERR(core->reg_csi_top_0))
+		return PTR_ERR(core->reg_csi_top_0);
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "csi-top-1");
+	core->reg_csi_top_1 = devm_ioremap_resource(dev, res);
+	if (IS_ERR(core->reg_csi_top_1))
+		return PTR_ERR(core->reg_csi_top_1);
+
 	ret = get_seninf_ops(dev, core);
 	if (ret) {
 		dev_info(dev, "[%s] failed to get seninf ops\n", __func__);
@@ -3507,6 +3517,8 @@ static int seninf_probe(struct platform_device *pdev)
 					core->reg_seninf_tm,
 					core->reg_seninf_outmux,
 					core->reg_seninf_outmux_inner,
+					core->reg_csi_top_0,
+					core->reg_csi_top_1,
 					core->reg_csi_base);
 	if (ret) {
 		dev_info(dev, "g_seninf_ops->_init_iomem failed ret %d\n", ret);
