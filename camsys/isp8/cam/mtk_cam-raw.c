@@ -678,6 +678,145 @@ void clear_reg(struct mtk_raw_device *dev)
 	diable_rms_pcrp(dev);
 	diable_rms_module(dev);
 }
+
+static void reset_camctl_misc(struct mtk_raw_device *dev)
+{
+	u32 val = 0;
+
+	SET_FIELD(&val, CAMCTL_VHDR_WAIT_2ND_PASS_TRIG, 0x1);
+	SET_FIELD(&val, CAMCTL_SOF_CYCLE, 0x8);
+
+	raw_writel(val, dev, dev->base_inner, REG_CAMCTL_MISC);
+	raw_writel(val, dev, dev->base, REG_CAMCTL_MISC);
+
+	dev_info(dev->dev,
+		"[%s] CAMCTL_MISC [in] 0x%x [out] 0x%x",
+		__func__,
+		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_MISC),
+		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_MISC));
+}
+
+static void reset_int_en(struct mtk_raw_device *dev)
+{
+	/* camctl */
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_INT_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT2_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_INT2_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT3_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_INT3_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT5_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_INT5_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT6_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_INT6_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT7_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_INT7_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT8_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_INT8_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT17_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_INT17_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT18_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_INT18_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT19_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_INT19_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT20_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_INT20_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT21_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_INT21_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT25_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_INT25_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT26_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_INT26_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_TFMR_INT_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_TFMR_INT_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_TFMR_INT2_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_TFMR_INT2_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_TFMR_INT3_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_TFMR_INT3_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_TFMR_INT5_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_TFMR_INT5_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_TFMR_INT6_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_TFMR_INT6_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_TFMR_INT7_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_TFMR_INT7_EN);
+
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_TFMR_INT8_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_TFMR_INT8_EN);
+
+	/* camctl2 */
+	raw_writel(0, dev, dev->yuv_base_inner, REG_CAMCTL2_INT_EN);
+	raw_writel(0, dev, dev->yuv_base, REG_CAMCTL2_INT_EN);
+
+	raw_writel(0, dev, dev->yuv_base_inner, REG_CAMCTL2_INT2_EN);
+	raw_writel(0, dev, dev->yuv_base, REG_CAMCTL2_INT2_EN);
+
+	raw_writel(0, dev, dev->yuv_base_inner, REG_CAMCTL2_INT5_EN);
+	raw_writel(0, dev, dev->yuv_base, REG_CAMCTL2_INT5_EN);
+
+	raw_writel(0, dev, dev->yuv_base_inner, REG_CAMCTL2_INT8_EN);
+	raw_writel(0, dev, dev->yuv_base, REG_CAMCTL2_INT8_EN);
+
+	raw_writel(0, dev, dev->yuv_base_inner, REG_CAMCTL2_INT17_EN);
+	raw_writel(0, dev, dev->yuv_base, REG_CAMCTL2_INT17_EN);
+
+	raw_writel(0, dev, dev->yuv_base_inner, REG_CAMCTL2_INT25_EN);
+	raw_writel(0, dev, dev->yuv_base, REG_CAMCTL2_INT25_EN);
+
+	raw_writel(0, dev, dev->yuv_base_inner, REG_CAMCTL2_TFMR_INT_EN);
+	raw_writel(0, dev, dev->yuv_base, REG_CAMCTL2_TFMR_INT_EN);
+
+	raw_writel(0, dev, dev->yuv_base_inner, REG_CAMCTL2_TFMR_INT2_EN);
+	raw_writel(0, dev, dev->yuv_base, REG_CAMCTL2_TFMR_INT2_EN);
+
+	raw_writel(0, dev, dev->yuv_base_inner, REG_CAMCTL2_TFMR_INT5_EN);
+	raw_writel(0, dev, dev->yuv_base, REG_CAMCTL2_TFMR_INT5_EN);
+
+	raw_writel(0, dev, dev->yuv_base_inner, REG_CAMCTL2_TFMR_INT8_EN);
+	raw_writel(0, dev, dev->yuv_base, REG_CAMCTL2_TFMR_INT8_EN);
+	dev_info_ratelimited(dev->dev,
+		"[%s] INT2/3/5/17/18/19/20/21_EN [in] 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x",
+		__func__,
+		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT2_EN),
+		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT3_EN),
+		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT5_EN),
+		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT17_EN),
+		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT18_EN),
+		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT19_EN),
+		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT20_EN),
+		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT21_EN));
+
+	dev_info_ratelimited(dev->dev,
+		"[%s] INT2/3/5/17/18/19/20/21_EN [out] 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x",
+		__func__,
+		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT2_EN),
+		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT3_EN),
+		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT5_EN),
+		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT17_EN),
+		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT18_EN),
+		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT19_EN),
+		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT20_EN),
+		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT21_EN));
+}
+
 static void reset_reg(struct mtk_raw_device *dev)
 {
 	u32 cq_en, sw_done, sw_sub_ctl;
@@ -698,20 +837,7 @@ static void reset_reg(struct mtk_raw_device *dev)
 	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_SW_SUB_CTL);
 	raw_writel(0, dev, dev->base, REG_CAMCTL_SW_SUB_CTL);
 
-	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT17_EN);
-	raw_writel(0, dev, dev->base, REG_CAMCTL_INT17_EN);
-
-	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT18_EN);
-	raw_writel(0, dev, dev->base, REG_CAMCTL_INT18_EN);
-
-	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT19_EN);
-	raw_writel(0, dev, dev->base, REG_CAMCTL_INT19_EN);
-
-	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT20_EN);
-	raw_writel(0, dev, dev->base, REG_CAMCTL_INT20_EN);
-
-	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT21_EN);
-	raw_writel(0, dev, dev->base, REG_CAMCTL_INT21_EN);
+	reset_int_en(dev);
 
 	wmb(); /* make sure committed */
 	reset_error_handling(dev);
@@ -1337,6 +1463,8 @@ void reset(struct mtk_raw_device *dev)
 	raw_writel(FBIT(CAMCTL_GLOBAL_HW_RST), dev, dev->base, REG_CAMCTL_GLOBAL_HW_RST_CTL);
 	raw_writel(0, dev, dev->base, REG_CAMCTL_SW_CTL);
 	raw_writel(0, dev, dev->base, REG_CAMCTL_GLOBAL_HW_RST_CTL);
+
+	reset_int_en(dev);
 
 RESET_FAILURE:
 
@@ -2729,6 +2857,9 @@ int mtk_raw_runtime_resume(struct device *dev)
 		cg_dump_and_test(dev, CG_RAW, 0);
 
 	reset(drvdata);
+	reset_camctl_misc(drvdata);
+	qof_dump_int_en_addr(drvdata);
+
 	enable_irq(drvdata->irq);
 
 	return 0;
