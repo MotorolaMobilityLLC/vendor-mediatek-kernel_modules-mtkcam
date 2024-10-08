@@ -965,6 +965,11 @@ void set_max_framerate_by_scenario(struct subdrv_ctx *ctx,
 			ctx->s_ctx.mode[scenario_id].linelength);
 		return;
 	}
+	if (framerate > ctx->s_ctx.mode[scenario_id].max_framerate) {
+		DRV_LOGE(ctx, "framerate (%u) is greater than max_framerate (%u)\n",
+			framerate, ctx->s_ctx.mode[scenario_id].max_framerate);
+		framerate = ctx->s_ctx.mode[scenario_id].max_framerate;
+	}
 	if (ctx->s_ctx.mode[scenario_id].hdr_mode == HDR_RAW_LBMF) {
 		set_max_framerate_in_lut_by_scenario(ctx, scenario_id, framerate);
 		return;
@@ -1210,7 +1215,9 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 			ctx->frame_length_in_lut[0] +
 			ctx->frame_length_in_lut[1] +
 			ctx->frame_length_in_lut[2];
-		ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+		ctx->current_fps = ctx->s_ctx.mode[scenario_id].pclk /
+							ctx->frame_length * 10 /
+							ctx->s_ctx.mode[scenario_id].linelength;
 		ctx->min_frame_length = ctx->frame_length;
 		DRV_LOG(ctx,
 			"sid:%u,max_fps(input/output):%u/%u,min_fl_en:1,lut order:%u,fll(input/ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u/%u\n",
