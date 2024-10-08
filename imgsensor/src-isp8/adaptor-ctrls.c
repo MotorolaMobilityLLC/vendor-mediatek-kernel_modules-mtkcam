@@ -2917,7 +2917,7 @@ int adaptor_init_ctrls(struct adaptor_ctx *ctx)
 	max = def = cur_mode->max_framerate;
 	memcpy(&cfg, &cfg_max_fps, sizeof(cfg));
 	cfg.min = 1;
-	cfg.max = max;
+	cfg.max = 0xffff;
 	cfg.def = def;
 	ctx->max_fps = v4l2_ctrl_new_custom(&ctx->ctrls, &cfg, NULL);
 
