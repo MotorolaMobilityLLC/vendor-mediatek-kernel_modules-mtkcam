@@ -713,6 +713,7 @@ static u32 seninf_get_outmux_rg_val_inner(struct seninf_ctx *ctx, int outmux_idx
 static int mtk_cam_get_outmux_sel(struct seninf_ctx *ctx, int outmux_idx, int *asyncIdx, int *sensorSel)
 {
 	void *pSeninf_outmux = NULL;
+	u32 rg_src_val = 0;
 
 	/* test parameter */
 	if (unlikely(ctx == NULL)) {
@@ -729,13 +730,13 @@ static int mtk_cam_get_outmux_sel(struct seninf_ctx *ctx, int outmux_idx, int *a
 
 	pSeninf_outmux = ctx->reg_if_outmux_inner[outmux_idx];
 
-	*asyncIdx = SENINF_READ_BITS(pSeninf_outmux, SENINF_OUTMUX_SRC_SEL,
-				SENINF_OUTMUX_SRC_SEL_MIPI);
-	*sensorSel = SENINF_READ_BITS(pSeninf_outmux, SENINF_OUTMUX_SRC_SEL,
-				SENINF_OUTMUX_SRC_SEL_SEN);
+	rg_src_val = SENINF_READ_REG(pSeninf_outmux, SENINF_OUTMUX_SRC_SEL);
 
-	seninf_logd(ctx, "%s get asyncIdx %d sensorSel %d\n",
-		__func__, *asyncIdx, *sensorSel);
+	*asyncIdx = SENINF_GET_BITS(rg_src_val, SENINF_OUTMUX_SRC_SEL_MIPI);
+	*sensorSel = SENINF_GET_BITS(rg_src_val, SENINF_OUTMUX_SRC_SEL_SEN);
+
+	seninf_logd(ctx, "src_val(0x%08x) get asyncIdx %d sensorSel %d from outmux %d\n",
+		rg_src_val, *asyncIdx, *sensorSel, outmux_idx);
 
 	return 0;
 }
