@@ -1160,6 +1160,17 @@ void qof_dump_hw_timer(struct mtk_raw_device *raw)
 	}
 }
 
+void qof_dump_int_en_addr(struct mtk_raw_device *raw)
+{
+	dev_info(raw->dev, "%s: %p %p %p", __func__, raw->io_ops, &qof_io_ops, &itc_only_io_ops);
+
+	dev_info(raw->dev, "qof: %s: INT_ADDR_2/9/12_ADDR_1 0x%x 0x%x 0x%x",
+		__func__,
+		readl_relaxed(raw->qof_base + REG_QOF_CAM_A_INT2_STATUS_ADDR_1),
+		 readl_relaxed(raw->qof_base + REG_QOF_CAM_A_INT9_STATUS_ADDR_1),
+		 readl_relaxed(raw->qof_base + REG_QOF_CAM_A_INT12_STATUS_ADDR_1));
+}
+
 void qof_dump_cq_addr(struct mtk_raw_device *raw)
 {
 	if (CAM_DEBUG_ENABLED(QOF) || FORCE_DUMP(raw->id)) {

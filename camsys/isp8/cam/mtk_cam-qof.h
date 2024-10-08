@@ -70,6 +70,7 @@ void qof_dump_hw_timer(struct mtk_raw_device *raw);
 void qof_dump_cq_addr(struct mtk_raw_device *raw);
 void qof_dump_ctrl(struct mtk_raw_device *raw);
 void qof_dump_qoftop_status(struct mtk_raw_device *raw);
+void qof_dump_int_en_addr(struct mtk_raw_device *raw);
 
 void qof_set_force_dump(struct mtk_raw_device *raw, bool en);
 void qof_force_dump_all(struct mtk_raw_device *raw);
