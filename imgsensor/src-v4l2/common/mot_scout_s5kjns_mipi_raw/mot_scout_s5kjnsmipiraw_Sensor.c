@@ -262,6 +262,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
+		.ana_gain_min = BASEGAIN * 1,
+		.ana_gain_max = BASEGAIN * 64,
 		.csi_param = {0},
 	},
 	{
@@ -305,6 +307,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
+		.ana_gain_min = BASEGAIN * 1,
+		.ana_gain_max = BASEGAIN * 64,
 		.csi_param = {0},
 	},
 	{
@@ -348,6 +352,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
+		.ana_gain_min = BASEGAIN * 1,
+		.ana_gain_max = BASEGAIN * 64,
 		.csi_param = {0},
 	},
 	{
@@ -391,6 +397,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
+		.ana_gain_min = BASEGAIN * 1,
+		.ana_gain_max = BASEGAIN * 64,
 		.csi_param = {0},
 	},
 	{
@@ -434,6 +442,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
+		.ana_gain_min = BASEGAIN * 1,
+		.ana_gain_max = BASEGAIN * 64,
 		.csi_param = {0},
 	},
 	{
@@ -477,6 +487,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
+		.ana_gain_min = BASEGAIN * 1,
+		.ana_gain_max = BASEGAIN * 16,
 		.csi_param = {0},
 	},
 };
