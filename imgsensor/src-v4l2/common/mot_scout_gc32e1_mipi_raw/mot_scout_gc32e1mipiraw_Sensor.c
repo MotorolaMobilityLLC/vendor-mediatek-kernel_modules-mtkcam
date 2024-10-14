@@ -431,7 +431,7 @@ static void set_group_hold(void *arg, u8 en)
 
 static u16 get_gain2reg(u32 gain)
 {
-	return gain * 32 / BASEGAIN;
+	return gain * 1024 / BASEGAIN;
 }
 
 static int gc32e1_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len)
