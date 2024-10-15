@@ -10,6 +10,8 @@
 #define SQC_THRES_FROM_L_SOF_NS 3000000
 #define SCQ_THRES_FROM_F_SOF_NS 15000000
 
+#include "mtk_cam-job.h"
+
 struct state_accessor;
 
 struct state_accessor_ops {
@@ -126,7 +128,7 @@ static inline int guard_next_compose(struct state_accessor *s_acc,
 
 	spin_lock(p->info_lock);
 	ret = allow_composing(s_acc) &&
-		(unsigned int)(cur_seq_no(s_acc) - p->info->ack_seq_no) == 1;
+		frame_seq_diff(cur_seq_no(s_acc), p->info->ack_seq_no) == 1;
 	if (ret == 0 && allow_composing(s_acc))
 		pr_info("[mtk-cam:guard_next_compose] allow/cur/ack:%d/%d/%d (%llu)",
 			allow_composing(s_acc), cur_seq_no(s_acc), p->info->ack_seq_no,
@@ -205,7 +207,7 @@ static inline int guard_inner_ge(struct state_accessor *s_acc,
 	int ret = 0;
 
 	spin_lock(p->info_lock);
-	ret = p->info->inner_seq_no >= cur_seq_no(s_acc);
+	ret = frame_seq_ge(p->info->inner_seq_no, cur_seq_no(s_acc));
 	spin_unlock(p->info_lock);
 
 	return ret;
@@ -217,7 +219,7 @@ static inline int guard_inner_greater(struct state_accessor *s_acc,
 	int ret = 0;
 
 	spin_lock(p->info_lock);
-	ret = p->info->inner_seq_no > cur_seq_no(s_acc);
+	ret = frame_seq_gt(p->info->inner_seq_no, cur_seq_no(s_acc));
 	spin_unlock(p->info_lock);
 
 	return ret;
@@ -268,7 +270,7 @@ static inline bool allow_subsample_2_i2c_by_ts(
 
 	spin_lock(p->info_lock);
 	ret = ((s_acc->s->s_params.subsample == 2) &&
-		(s_acc->seq_no == p->info->outer_seq_no + 1) &&
+		frame_seq_diff(s_acc->seq_no, p->info->outer_seq_no) == 1 &&
 		(p->event_ts - p->info->sof_ts_ns) < 2000000);
 	spin_unlock(p->info_lock);
 
@@ -281,7 +283,7 @@ static inline bool allow_subsample_4_i2c_by_inner(
 
 	spin_lock(p->info_lock);
 	ret = ((s_acc->s->s_params.subsample == 4) &&
-		(s_acc->seq_no == p->info->inner_seq_no + 1));
+		frame_seq_diff(s_acc->seq_no, p->info->inner_seq_no) == 1);
 	spin_unlock(p->info_lock);
 
 	return ret;
@@ -310,7 +312,7 @@ static inline bool valid_cq_execution_subsample(
 	spin_lock(p->info_lock);
 	ret = (p->info->sof_ts_ns <= p->info->sof_l_ts_ns) &&
 		((p->event_ts - p->info->sof_ts_ns) < p->cq_trigger_thres) &&
-		(s_acc->seq_no == p->info->inner_seq_no + 1);
+		frame_seq_diff(s_acc->seq_no, p->info->inner_seq_no) == 1;
 	if (ret == false)
 		pr_info("[mtk-cam:vld_cq_exesubsample:%d/%d] event/l_sof/cq:%llu/%llu/%llu sof:%llu(%llu)",
 			s_acc->seq_no, p->info->inner_seq_no,
