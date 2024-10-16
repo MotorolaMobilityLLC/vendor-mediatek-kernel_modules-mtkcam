@@ -47,7 +47,7 @@ module_param(gc13a2_pd_ddesc, uint, 0644);
 module_param(gc13a2_pd_en, uint, 0644);
 #endif
 
-#define ENABLE_GC13A2_PD FALSE
+#define ENABLE_GC13A2_PD TRUE
 #define GC13A2_PD_DT 0x32
 //#define GC13A2_DATA_DESC VC_PDAF_STATS_NE_PIX_1
 #define GC13A2_DATA_DESC VC_PDAF_STATS
@@ -228,6 +228,7 @@ static struct SET_PD_BLOCK_INFO_T gc13a2_pd_info = {
 	.i4VCPackNum = 2,
 	.i4FullRawW = 4160,
 	.i4FullRawH = 3120,
+	.i4ModeIndex = 0,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV,
 	/* VC's PD pattern description */
 };
