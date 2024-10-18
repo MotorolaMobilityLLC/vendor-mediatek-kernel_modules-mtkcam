@@ -269,6 +269,7 @@ unsigned int mot_lens_id_to_name(uint8_t id,unsigned int block_size,unsigned cha
     const struct STRUCT_MOT_LENS__ID lens_table[] =
     {
 	{0x21,"38134A-400"},
+	{0x66,"38127B-400"},
 	{0x22,"39411A-400"},
 	{0xE0,"ZD0017J1"},
 	{0x23,"39292B-400"},
