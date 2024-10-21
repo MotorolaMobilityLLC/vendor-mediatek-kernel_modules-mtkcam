@@ -307,6 +307,7 @@ unsigned int mot_lens_id_to_name(uint8_t id,unsigned int block_size,unsigned cha
 	{0xA2,"39799A-400"},
 	{0xA3,"39807A-400"},
 	{0xA5,"39800A-400"},
+	{0xA6,"39831A-400"},
 	{0x61,"39668A-400"},
     };
 
