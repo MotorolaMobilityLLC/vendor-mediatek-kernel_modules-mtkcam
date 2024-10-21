@@ -21,6 +21,7 @@
  *============================================================================
  ****************************************************************************/
 #include "mot_nice_imx882mipiraw_Sensor.h"
+#include "mot_nice_imx882_cali.h"
 
 #define IMX882_EMBEDDED_DATA_EN 0
 
@@ -410,6 +411,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.s_gph = set_group_hold,
 	//.s_cali = set_sensor_cali,
 
+	.s_cali = mot_imx882_apply_qsc_spc_data,
 	.reg_addr_stream = 0x0100,
 	.reg_addr_mirror_flip = 0x0101,
 	.reg_addr_exposure = {
