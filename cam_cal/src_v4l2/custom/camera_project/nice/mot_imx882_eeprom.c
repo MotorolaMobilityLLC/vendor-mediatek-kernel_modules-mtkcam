@@ -423,8 +423,8 @@ unsigned int mot_imx882_do_2a_gain(struct EEPROM_DRV_FD_DATA *pdata,
 	}
 
 	if(pCamCalData->sensorID == MOT_NICE_IMX882_SENSOR_ID) {
-		#define AF_POSTURE_LEN 21
-		#define AF_POSTURE_START 0x19D9
+		#define AF_POSTURE_LEN   IMX882_MOT_MTK_NECESSARY_DATA_SIZE + 2
+		#define AF_POSTURE_START IMX882_MOT_MTK_NECESSARY_DATA_ADDR
 		//af posture calibration data
 		unsigned char AF_POSTURE[AF_POSTURE_LEN];
 		unsigned int af_posture_data_offset = AF_POSTURE_START;
@@ -452,9 +452,8 @@ unsigned int mot_imx882_do_2a_gain(struct EEPROM_DRV_FD_DATA *pdata,
 			return err;
 		}
 
-		//nice's IMX882 AF is close loop driver IC, AF drift is 0, the programmed values is 0xFFFF.
-		af_inf_posture = 0;
-		af_macro_posture = 0;
+		af_inf_posture = AF_POSTURE[10]<<8|AF_POSTURE[9];
+		af_macro_posture = AF_POSTURE[12]<<8|AF_POSTURE[11];
 		AF_infinite_calibration_temperature = AF_POSTURE[17];
 		pCamCalData->Single2A.S2aAF_t.Posture_AF_infinite_calibration = af_inf_posture;
 		pCamCalData->Single2A.S2aAF_t.Posture_AF_macro_calibration = af_macro_posture;
