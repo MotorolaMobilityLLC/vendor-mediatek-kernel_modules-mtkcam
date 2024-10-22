@@ -24,6 +24,7 @@
 
 static int gc32e1_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
 static int gc32e1_open(struct subdrv_ctx *ctx);
+static int gc32e1_close(struct subdrv_ctx *ctx);
 static void set_group_hold(void *arg, u8 en);
 static u16 get_gain2reg(u32 gain);
 static int gc32e1_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
@@ -394,7 +395,7 @@ static struct subdrv_ops ops = {
 	.get_resolution = common_get_resolution,
 	.control = common_control,
 	.feature_control = common_feature_control,
-	.close = common_close,
+	.close = gc32e1_close,
 	.get_frame_desc = common_get_frame_desc,
 	.get_temp = common_get_temp,
 	.get_csi_param = common_get_csi_param,
@@ -526,6 +527,13 @@ static int gc32e1_open(struct subdrv_ctx *ctx)
 
 	return ERROR_NONE;
 } /* gc32e1_open */
+
+static int gc32e1_close(struct subdrv_ctx *ctx)
+{
+	gc32e1_streaming_control(ctx, KAL_FALSE);
+	DRV_LOG_MUST(ctx, "subdrv gc32e1 close \n");
+	return ERROR_NONE;
+} /* gc32e1_close */
 
 static void set_group_hold(void *arg, u8 en)
 {
