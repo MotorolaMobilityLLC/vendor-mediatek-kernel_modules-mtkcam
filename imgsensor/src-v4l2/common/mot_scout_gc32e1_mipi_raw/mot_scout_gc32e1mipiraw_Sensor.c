@@ -31,6 +31,7 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 static int gc32e1_streaming_control(struct subdrv_ctx *ctx, kal_bool enable);
 static int gc32e1_set_fast_standby_stream_off(struct subdrv_ctx *ctx,u8 *para, u32 *len);
 static int gc32e1_set_fast_standby_stream_on(struct subdrv_ctx *ctx,u8 *para, u32 *len);
+static int gc32e1_ops_close(struct subdrv_ctx *ctx);
 
 
 /* STRUCT */
@@ -392,7 +393,7 @@ static struct subdrv_ops ops = {
 	.get_resolution = common_get_resolution,
 	.control = common_control,
 	.feature_control = common_feature_control,
-	.close = common_close,
+	.close = gc32e1_ops_close,
 	.get_frame_desc = common_get_frame_desc,
 	.get_temp = common_get_temp,
 	.get_csi_param = common_get_csi_param,
@@ -437,6 +438,13 @@ static u16 get_gain2reg(u32 gain)
 static int gc32e1_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	return gc32e1_set_shutter_frame_length(ctx, para, len);
+}
+
+static int gc32e1_ops_close(struct subdrv_ctx *ctx)
+{
+	gc32e1_streaming_control(ctx, KAL_FALSE);
+	DRV_LOG_MUST(ctx, "subdrv close \n");
+	return ERROR_NONE;
 }
 
 static int gc32e1_streaming_control(struct subdrv_ctx *ctx, kal_bool enable)
