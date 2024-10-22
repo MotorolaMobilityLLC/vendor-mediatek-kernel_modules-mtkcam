@@ -125,10 +125,10 @@ static struct SET_PD_BLOCK_INFO_T s5k3k1_pd_info = {
 	.i4SubBlkW = 8,
 	.i4SubBlkH = 8,
 	.i4PosL = {
-		{1, 14}, {5, 18}, {1, 26}, {5, 38}
+		{2, 9}, {6, 21}, {2, 29}, {6, 33}
 	},
 	.i4PosR = {
-		{1, 10}, {5, 22}, {1, 30}, {5, 34}
+		{2, 13}, {6, 17}, {2, 25}, {6, 37}
 	},
 	.i4BlockNumX = 456,
 	.i4BlockNumY = 85,
@@ -156,7 +156,7 @@ static struct SET_PD_BLOCK_INFO_T s5k3k1_pd_info = {
 	.sPDMapInfo[0] = {
 		.i4PDPattern = 3, // sparse PD non-interleaved
 		.i4PDRepetition = 8,
-		.i4PDOrder = { 1, 0, 0, 1, 0, 1, 1, 0 }, // L = 0, R = 1
+		.i4PDOrder = { 0, 1, 1, 0, 1, 0, 0, 1 }, // L = 0, R = 1
 	},
 };
 #endif

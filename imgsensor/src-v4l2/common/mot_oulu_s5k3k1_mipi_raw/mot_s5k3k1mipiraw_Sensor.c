@@ -37,7 +37,7 @@ static int s5k3k1_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static void s5k3k1_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter, u32 frame_length);
 #endif
 
-#define ENABLE_S5K3K1_PD FALSE
+#define ENABLE_S5K3K1_PD TRUE
 #define S5K3K1_PD_DT 0x2b
 #define S5K3K1_DATA_DESC VC_PDAF_STATS
 #define S5K3K1_PD_X_SIZE 456
@@ -150,7 +150,7 @@ static struct SET_PD_BLOCK_INFO_T s5k3k1_pd_info = {
 	},
 	.i4FullRawW = 3648,
 	.i4FullRawH = 2736,
-	.iMirrorFlip = 0,
+	.iMirrorFlip = 3,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV,
 	/* VC's PD pattern description */
 	.sPDMapInfo[0] = {
