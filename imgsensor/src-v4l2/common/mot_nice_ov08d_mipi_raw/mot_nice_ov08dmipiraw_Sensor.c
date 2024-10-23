@@ -24,6 +24,9 @@
 #include "mot_nice_ov08dSensor_setting.h"
 #define PFX "NOV08D"
 #define LOG_INF(format, args...) pr_info(PFX "[%s] " format, __func__, ##args)
+#define OV08D_BASEGAIN 128
+#define OV08D_MAX_GAIN_PLATFORM 1984     /* 15.5*128, 128 GAINBASE */
+int vblank_convert = 0;
 static void set_group_hold(void *arg, u8 en);
 static u16 get_gain2reg(u32 gain);
 //static int motniceov08d_set_test_pattern(struct subdrv_ctx *ctx, kal_bool enable);
@@ -137,7 +140,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_ctrl_support = 1,
 		.pdaf_cap = FALSE,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
-		.ae_binning_ratio = 1000,
+		.ae_binning_ratio = 1,
 		.fine_integ_line = 1,
 		.delay_frame = 0,
 		.csi_param = {
@@ -181,7 +184,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_ctrl_support = 1,
 		.pdaf_cap = FALSE,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
-		.ae_binning_ratio = 1000,
+		.ae_binning_ratio = 1,
 		.fine_integ_line = 1,
 		.delay_frame = 0,
 		.csi_param = {
@@ -225,7 +228,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_ctrl_support = 1,
 		.pdaf_cap = FALSE,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
-		.ae_binning_ratio = 1000,
+		.ae_binning_ratio = 1,
 		.fine_integ_line = 1,
 		.delay_frame = 0,
 		.csi_param = {
@@ -268,7 +271,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_ctrl_support = 1,
 		.pdaf_cap = FALSE,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
-		.ae_binning_ratio = 1000,
+		.ae_binning_ratio = 1,
 		.fine_integ_line = 1,
 		.delay_frame = 0,
 		.csi_param = {
@@ -312,7 +315,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_ctrl_support = 1,
 		.pdaf_cap = FALSE,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
-		.ae_binning_ratio = 1000,
+		.ae_binning_ratio = 1,
 		.fine_integ_line = 1,
 		.delay_frame = 0,
 		.csi_param = {
@@ -335,22 +338,22 @@ static struct subdrv_static_ctx static_ctx = {
 	.mipi_lane_num = SENSOR_MIPI_2_LANE,
 	.ob_pedestal = 0x40,
 	.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_R,
-	.ana_gain_def = 64,
-	.ana_gain_min = 4,
+	.ana_gain_def = 256,
+	.ana_gain_min = 64,
 	.ana_gain_max = 992,
-	.ana_gain_type = 4,
+	.ana_gain_type = 1,
 	.ana_gain_step = 1,
 	.ana_gain_table = ov08d_ana_gain_table,
 	.ana_gain_table_size = sizeof(ov08d_ana_gain_table),
 	.min_gain_iso = 100,
 	.exposure_def = 0x3D0,
-	.exposure_min = 8,  //24
+	.exposure_min = 4,  //24
 	.exposure_max = 0x3FFFEB,
 	.exposure_step = 1, //4
 	.exposure_margin = 20,
 	.frame_length_max = 0x3FFFFF,
 	.ae_effective_frame = 2,
-	.frame_time_delay_frame = 3,
+	.frame_time_delay_frame = 2,
 	.start_exposure_offset = 500000,
 	.pdaf_type = PDAF_SUPPORT_NA,
 	.hdr_type = HDR_SUPPORT_NA,
@@ -359,8 +362,8 @@ static struct subdrv_static_ctx static_ctx = {
 	.g_gain2reg = get_gain2reg,
 	.s_gph = set_group_hold,
 	//.s_cali = set_sensor_cali,
-	.reg_addr_stream = 0x0100,
-	.reg_addr_mirror_flip = 0x0101,
+	//.reg_addr_stream = 0x0100,
+	.reg_addr_mirror_flip = PARAM_UNDEFINED,
 	//.reg_addr_exposure = {},
 	.long_exposure_support = FALSE,
 	.reg_addr_exposure_lshift = PARAM_UNDEFINED,
@@ -368,7 +371,7 @@ static struct subdrv_static_ctx static_ctx = {
 	//.reg_addr_frame_length = {0x0340, 0x0341},
 	//.reg_addr_temp_en = 0x4D12,
 	//.reg_addr_temp_read = 0x4D13,
-	.reg_addr_auto_extend = PARAM_UNDEFINED,
+	//.reg_addr_auto_extend = PARAM_UNDEFINED,
 	//.reg_addr_frame_count = 0x387F,
 	.init_setting_table = addr_data_pair_init_mot_nice_ov08d,
 	.init_setting_len = ARRAY_SIZE(addr_data_pair_init_mot_nice_ov08d),
@@ -455,11 +458,17 @@ static kal_uint16 ov08d_table_write_cmos_sensor(struct subdrv_ctx *ctx,
 
 static void ov08d_set_dummy(struct subdrv_ctx *ctx)
 {
-	//LOG_INF("dummyline = %d, dummypixels = %d ctx->frame_length %d, ctx->vblank_convert = %d\n",
-	//ctx->dummy_line, ctx->dummy_pixel, ctx->frame_length, ctx->vblank_convert);
+	if (ctx->frame_length%2 != 0) {
+		ctx->frame_length = ctx->frame_length - ctx->frame_length % 2;
+	}
+
+	ctx->frame_length = ((ctx->frame_length + 3) >> 2) << 2;// need to set to  multi 4
+	if (ctx->frame_length > static_ctx.frame_length_max) {
+		ctx->frame_length = static_ctx.frame_length_max;
+	}
 	write_cmos_sensor_8(ctx, 0xfd, 0x01);
-	write_cmos_sensor_8(ctx, 0x05, (ctx->frame_length & 0xFF00) >> 8);
-	write_cmos_sensor_8(ctx, 0x06, ctx->frame_length & 0xFF);
+	write_cmos_sensor_8(ctx, 0x05, (((ctx->frame_length - vblank_convert)*2) & 0xFF00) >> 8);
+	write_cmos_sensor_8(ctx, 0x06, ((ctx->frame_length - vblank_convert)*2) & 0xFF);
 	write_cmos_sensor_8(ctx, 0x01, 0x01);
 }
 static void ov08d_set_max_framerate(struct subdrv_ctx *ctx, UINT16 framerate, kal_bool min_framelength_en)
@@ -470,8 +479,8 @@ static void ov08d_set_max_framerate(struct subdrv_ctx *ctx, UINT16 framerate, ka
 			frame_length : ctx->min_frame_length;
 	ctx->dummy_line = ctx->frame_length -
 		ctx->min_frame_length;
-	if (ctx->frame_length > 0x7FEA) {
-		ctx->frame_length = 0x7FEA;
+	if (ctx->frame_length > static_ctx.frame_length_max) {
+		ctx->frame_length = static_ctx.frame_length_max;
 		ctx->dummy_line = ctx->frame_length - ctx->min_frame_length;
 	}
 	if (min_framelength_en)
@@ -486,17 +495,17 @@ static void write_shutter(struct subdrv_ctx *ctx, kal_uint32 shutter)
 
 	// OV Recommend Solution
 	// if shutter bigger than frame_length, should extend frame length first
-	if (shutter > ctx->min_frame_length - 20)
-		ctx->frame_length = shutter + 20;
+	if (shutter > ctx->min_frame_length - static_ctx.exposure_margin)
+		ctx->frame_length = shutter + static_ctx.exposure_margin;
 	else
 		ctx->frame_length = ctx->min_frame_length;
-	if (ctx->frame_length > 0x7FEA)
-		ctx->frame_length = 0x7FEA;
-	shutter = (shutter < 8) ?
-				8 : shutter;
+	if (ctx->frame_length > static_ctx.frame_length_max)
+		ctx->frame_length = static_ctx.frame_length_max;
+	shutter = (shutter < ctx->exposure_min) ?
+				ctx->exposure_min : shutter;
 	shutter = (shutter >
-				(0x7FEA - 20)) ?
-				(0x7FEA - 20) :
+				(static_ctx.frame_length_max - static_ctx.exposure_margin)) ?
+				(static_ctx.frame_length_max - static_ctx.exposure_margin) :
 				shutter;
 	//frame_length and shutter should be an even number.
 	shutter = (shutter >> 1) << 1;
@@ -514,7 +523,7 @@ static void write_shutter(struct subdrv_ctx *ctx, kal_uint32 shutter)
 	}
 	//LOG_INF("my_realtime_fps = %d\n", realtime_fps);
 	/* long expsoure */
-	if (shutter > (0x7FEA - 20)) {
+	if (shutter > (static_ctx.frame_length_max - static_ctx.exposure_margin)) {
 	        //Frame exposure mode customization for LE
 	        ctx->ae_frm_mode.frame_mode_1 = IMGSENSOR_AE_MODE_SE;
 	        ctx->ae_frm_mode.frame_mode_2 = IMGSENSOR_AE_MODE_SE;
@@ -537,7 +546,14 @@ static void write_shutter(struct subdrv_ctx *ctx, kal_uint32 shutter)
 	}
 	ctx->current_ae_effective_frame = 2;
 	if(long_exposure_status == 0){
-		ov08d_set_dummy(ctx);
+		ctx->frame_length = ((ctx->frame_length + 3) >> 2) << 2;// need to set to  multi 4
+		if (ctx->frame_length > static_ctx.frame_length_max) {
+			ctx->frame_length = static_ctx.frame_length_max;
+		}
+		write_cmos_sensor_8(ctx, 0xfd, 0x01);
+		write_cmos_sensor_8(ctx, 0x05, (((ctx->frame_length - vblank_convert)*2) & 0xFF00) >> 8);
+		write_cmos_sensor_8(ctx, 0x06, ((ctx->frame_length - vblank_convert)*2) & 0xFF);
+		write_cmos_sensor_8(ctx, 0x01, 0x01);
 	}
 	////LOG_INF("shutter_write_to_register = %d, frame_length = %d\n", shutter, ctx->frame_length);
 	write_cmos_sensor_8(ctx, 0xfd, 0x01);
@@ -561,13 +577,14 @@ static kal_uint16 ov08d_gain2reg(struct subdrv_ctx *ctx, const kal_uint32 gain)
 {
 	kal_uint16 iReg = 0x0000;
 	//platform 1xgain = 64, sensor driver 1*gain = 0x100
-	iReg = gain*16/BASEGAIN;
+	iReg = gain*16/OV08D_BASEGAIN;
 	return iReg;		/* sensorGlobalGain */
 }
 
 static void ov08d_sensor_init(struct subdrv_ctx *ctx)
 {
 	LOG_INF("%s E\n", __func__);
+	vblank_convert = 0;
 	write_cmos_sensor_8(ctx, 0xfd, 0x01);
 	LOG_INF("%s x\n", __func__);
 }
@@ -651,6 +668,7 @@ static kal_uint32 preview(struct subdrv_ctx *ctx, MSDK_SENSOR_EXPOSURE_WINDOW_ST
 	ov08d_table_write_cmos_sensor(ctx, addr_data_pair_preview_mot_nice_ov08d,
 			sizeof(addr_data_pair_preview_mot_nice_ov08d)/sizeof(kal_uint16));
 	//LOG_INF("%s X\n", __func__);
+	vblank_convert = 2504;
 	return ERROR_NONE;
 }
 static kal_uint32 capture(struct subdrv_ctx *ctx, MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
@@ -668,6 +686,7 @@ static kal_uint32 capture(struct subdrv_ctx *ctx, MSDK_SENSOR_EXPOSURE_WINDOW_ST
 	ov08d_table_write_cmos_sensor(ctx, addr_data_pair_capture_mot_nice_ov08d,
 			sizeof(addr_data_pair_capture_mot_nice_ov08d)/sizeof(kal_uint16));
 	LOG_INF("%s X\n", __func__);
+	vblank_convert = 2504;
 	return ERROR_NONE;
 } /* capture(ctx) */
 static kal_uint32 normal_video(struct subdrv_ctx *ctx,
@@ -687,6 +706,7 @@ static kal_uint32 normal_video(struct subdrv_ctx *ctx,
 	ov08d_table_write_cmos_sensor(ctx, addr_data_pair_video_mot_nice_ov08d,
 			sizeof(addr_data_pair_video_mot_nice_ov08d)/sizeof(kal_uint16));
 	//LOG_INF("%s X\n", __func__);
+	vblank_convert = 2504;
 	return ERROR_NONE;
 }
 static kal_uint32 hs_video(struct subdrv_ctx *ctx,
@@ -708,6 +728,7 @@ static kal_uint32 hs_video(struct subdrv_ctx *ctx,
 	ov08d_table_write_cmos_sensor(ctx, addr_data_pair_hs_video_mot_nice_ov08d,
 			sizeof(addr_data_pair_hs_video_mot_nice_ov08d)/sizeof(kal_uint16));
 	//LOG_INF("%s X\n", __func__);
+	vblank_convert = 2504;
 	return ERROR_NONE;
 }
 static kal_uint32 slim_video(struct subdrv_ctx *ctx,
@@ -729,6 +750,7 @@ static kal_uint32 slim_video(struct subdrv_ctx *ctx,
 	ov08d_table_write_cmos_sensor(ctx, addr_data_pair_slim_video_mot_nice_ov08d,
 			sizeof(addr_data_pair_slim_video_mot_nice_ov08d)/sizeof(kal_uint16));
 	//LOG_INF("%s X\n", __func__);
+	vblank_convert = 2504;
 	return ERROR_NONE;
 }
 #if 0
@@ -883,17 +905,19 @@ static int ov08d_set_shutter_by(struct subdrv_ctx *ctx,  u8 *para, u32 *len)
 }
 static int ov08d_set_gain_by(struct subdrv_ctx *ctx,  u8 *para, u32 *len)
 {
-	kal_uint16 reg_gain;
-	kal_uint32 ana_gain_max = static_ctx.ana_gain_max;
+	kal_uint16 reg_gain, max_gain = OV08D_MAX_GAIN_PLATFORM;
 	kal_uint32 gain = *((kal_uint32 *) para);
 	LOG_INF("gain_from_external = %d\n", gain);
-	if (gain < static_ctx.ana_gain_min || gain > ana_gain_max) {
-		//LOG_INF("Error gain setting\n");
-		if (gain < static_ctx.ana_gain_min)
-			gain = static_ctx.ana_gain_min;
-		else if (gain > ana_gain_max)
-			gain = ana_gain_max;
+
+	if (gain < OV08D_BASEGAIN || gain > max_gain) {
+		pr_debug("Error gain setting");
+
+		if (gain < OV08D_BASEGAIN)
+			gain = OV08D_BASEGAIN;
+		else if (gain > max_gain)
+			gain = max_gain;
 	}
+
 	reg_gain = ov08d_gain2reg(ctx, gain);
 	ctx->gain = reg_gain;
 	write_cmos_sensor_8(ctx, 0xfd, 0x01);
@@ -913,8 +937,8 @@ static int ov08d_set_frame_length_by(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 		ctx->frame_length = ctx->min_frame_length;
 	/* Extend frame length */
 	write_cmos_sensor_8(ctx, 0xfd, 0x01);
-	write_cmos_sensor_8(ctx, 0x05, (ctx->frame_length & 0x7F00) >> 8);
-	write_cmos_sensor_8(ctx, 0x06, ctx->frame_length & 0xFF);
+	write_cmos_sensor_8(ctx, 0x05, (((ctx->frame_length - vblank_convert)*2) & 0xFF00) >> 8);
+	write_cmos_sensor_8(ctx, 0x06, ((ctx->frame_length - vblank_convert)*2) & 0xFF);
 	write_cmos_sensor_8(ctx, 0x01, 0x01);
 	LOG_INF("Framelength: set=%d/input=%d/min=%d\n",
 		ctx->frame_length, frame_length, ctx->min_frame_length);
@@ -1092,7 +1116,7 @@ static void set_group_hold(void *arg, u8 en)
 }
 static u16 get_gain2reg(u32 gain)
 {
-	return gain * 256 / BASEGAIN;
+	return gain*16/OV08D_BASEGAIN;
 }
 static int motniceov08d_get_imgsensor_id(struct subdrv_ctx *ctx, UINT32 *sensor_id)
 {
