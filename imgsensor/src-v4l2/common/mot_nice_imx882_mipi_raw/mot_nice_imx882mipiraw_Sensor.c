@@ -49,6 +49,17 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 			//.is_active_line = TRUE,
 		},
 	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x1000,
+			.vsize = 0x0300,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
+		},
+	},
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 	{
@@ -61,6 +72,17 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 			//.is_active_line = TRUE,
 		},
 	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x1000,
+			.vsize = 0x0300,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
+		},
+	},
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 	{
@@ -71,6 +93,17 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.vsize = 0x0c00,
 			.user_data_desc = VC_STAGGER_NE,
 			//.is_active_line = TRUE,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x1000,
+			.vsize = 0x0300,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
 		},
 	},
 };
@@ -97,6 +130,17 @@ static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 			//.is_active_line = TRUE,
 		},
 	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x1000,
+			.vsize = 0x0300,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
+		},
+	},
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_cus1[] = {
@@ -109,6 +153,27 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus1[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
+};
+
+static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
+	.i4OffsetX = 0,
+	.i4OffsetY = 0,
+	.i4PitchX = 0,
+	.i4PitchY = 0,
+	.i4PairNum = 0,
+	.i4SubBlkW = 0,
+	.i4SubBlkH = 0,
+	.i4PosL = {{0, 0} },
+	.i4PosR = {{0, 0} },
+	.i4BlockNumX = 0,
+	.i4BlockNumY = 0,
+	.i4LeFirst = 0,
+	.i4Crop = {
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}
+	},
+	.i4ModeIndex = 3,
+	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
 };
 
 static struct subdrv_mode_struct mode_struct[] = {
@@ -151,8 +216,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
-		//.pdaf_cap = FALSE,
-		//.imgsensor_pd_info = &imgsensor_pd_info,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1465,
 		.fine_integ_line = 826,
 		.delay_frame = 3,
@@ -201,8 +266,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
-		//.pdaf_cap = FALSE,
-		//.imgsensor_pd_info = &imgsensor_pd_info,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1465,
 		.fine_integ_line = 826,
 		.delay_frame = 3,
@@ -251,8 +316,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
-		//.pdaf_cap = FALSE,
-		//.imgsensor_pd_info = &imgsensor_pd_info,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1465,
 		.fine_integ_line = 826,
 		.delay_frame = 3,
@@ -357,8 +422,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
-		//.pdaf_cap = FALSE,
-		//.imgsensor_pd_info = &imgsensor_pd_info,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1465,
 		.fine_integ_line = 826,
 		.delay_frame = 3,
@@ -460,6 +525,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.ae_effective_frame = 2,
 	.frame_time_delay_frame = 3,
 	.start_exposure_offset = 500000,
+	.pdaf_type = PDAF_SUPPORT_CAMSV_QPD,
 
 	//.pdaf_type = PDAF_SUPPORT_CAMSV_QPD,
 	//.hdr_type = HDR_SUPPORT_STAGGER_FDOL,
