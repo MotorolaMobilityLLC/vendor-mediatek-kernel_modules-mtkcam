@@ -21,7 +21,7 @@
  *============================================================================
  ****************************************************************************/
 #include "mot_oulu_s5kjnsuwmipiraw_Sensor.h"
-
+#include "mot_s5kjns_uw_cali.h"
 #define USING_DPHY_N_LANE 4
 
 static void set_group_hold(void *arg, u8 en);
@@ -756,7 +756,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.g_temp = PARAM_UNDEFINED,
 	.g_gain2reg = get_gain2reg,
 	.s_gph = set_group_hold,
-
+	.s_cali = mot_s5kjns_uw_apply_xtc_data,
 	.reg_addr_stream = 0x0100,
 	.reg_addr_mirror_flip = 0x0101,
 	.reg_addr_exposure = {{0x0202, 0x0203},},
@@ -970,6 +970,14 @@ static int s5kjns_uw_open(struct subdrv_ctx *ctx)
 		return ERROR_SENSOR_CONNECT_FAIL;
 	/* initail setting */
 	s5kjns_uw_sensor_init(ctx);
+
+	if (ctx->s_ctx.s_cali != NULL){
+        DRV_LOG_MUST(ctx, "HW_GGC: will apply hw_ggc data");
+		ctx->s_ctx.s_cali((void *) ctx);
+	} else {
+		write_sensor_Cali(ctx);
+	}
+
 	memset(ctx->exposure, 0, sizeof(ctx->exposure));
 	memset(ctx->ana_gain, 0, sizeof(ctx->gain));
 	ctx->exposure[0] = ctx->s_ctx.exposure_def;
