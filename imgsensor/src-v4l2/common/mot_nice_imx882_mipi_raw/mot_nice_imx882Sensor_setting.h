@@ -980,6 +980,7 @@ static u16 imx882_init_setting[] = {
 	0xAB7B, 0x0A,
 	0xAB7D, 0x0A,
 	0x0D08, 0x00,
+	0x0106, 0x01, //fast standby enable
 };
 
 static u16 imx882_preview_setting[] = {
