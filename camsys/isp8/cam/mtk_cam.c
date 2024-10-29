@@ -1393,7 +1393,7 @@ int mtk_cam_power_ctrl_ccu(struct device *dev, int on_off)
 		++cam->ccu_use_cnt;
 	} else {
 
-		if (WARN_ON(!cam->ccu_use_cnt)) {
+		if (!cam->ccu_use_cnt) {
 			ret = -1;
 			goto EXIT;
 		}
