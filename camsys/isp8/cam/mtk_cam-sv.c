@@ -1688,8 +1688,10 @@ int mtk_cam_sv_dev_pertag_stream_on(
 	int ret = 0;
 
 	if (on) {
-		sv_dev->streaming_tag_cnt++;
+		if (sv_dev->streaming_tag_cnt == sv_dev->used_tag_cnt)
+			goto EXIT;
 
+		sv_dev->streaming_tag_cnt++;
 		if (sv_dev->streaming_tag_cnt == sv_dev->used_tag_cnt)
 			ret |= mtk_cam_sv_central_common_enable(sv_dev);
 	} else {
