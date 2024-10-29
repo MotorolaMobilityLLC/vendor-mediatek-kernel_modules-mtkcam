@@ -6698,7 +6698,7 @@ static bool test_do_engine_reset_for_recovery(struct mtk_cam_ctx *ctx)
 	u64 ts;
 
 	ts = ktime_get_boottime_ns();
-	if (ts - ctx->sw_recovery_ts > 500000000ULL) {
+	if (ts - ctx->sw_recovery_ts > 300000000ULL) {
 		ctx->sw_recovery_ts = ts;
 
 		return true;

@@ -651,6 +651,12 @@ static void handle_frame_done(struct mtk_cam_ctrl *ctrl,
 {
 	struct mtk_cam_job *job;
 
+	if (atomic_read(&ctrl->is_error) && engine_type == CAMSYS_ENGINE_RAW) {
+		pr_info("%s: warn. bypass eng %d-%d seq 0x%x frame done\n",
+			__func__, engine_type, engine_id, seq_no);
+		return;
+	}
+
 	job = mtk_cam_ctrl_get_job(ctrl, cond_frame_no_belong, &seq_no);
 
 	/*
@@ -895,8 +901,10 @@ static void ctrl_vsync_preprocess(struct mtk_cam_ctrl *ctrl,
 			ctrl->hw_hang_count_down);
 
 		--ctrl->hw_hang_count_down;
-		if (!ctrl->hw_hang_count_down)
+		if (!ctrl->hw_hang_count_down) {
+			atomic_set(&ctrl->is_error, 0);
 			mtk_cam_ctrl_send_event(ctrl, CAMSYS_EVENT_HW_HANG);
+		}
 	}
 
 	spin_lock(&ctrl->info_lock);
@@ -2193,6 +2201,7 @@ void mtk_cam_ctrl_start(struct mtk_cam_ctrl *cam_ctrl, struct mtk_cam_ctx *ctx)
 
 	atomic_set(&cam_ctrl->stopped, 0);
 	atomic_set(&cam_ctrl->stream_on_cnt, 1);
+	atomic_set(&cam_ctrl->is_error, 0);
 
 	init_waitqueue_head(&cam_ctrl->event_wq);
 	init_waitqueue_head(&cam_ctrl->done_wq);
@@ -2966,6 +2975,7 @@ int mtk_cam_ctrl_notify_hw_hang(struct mtk_cam_device *cam,
 	unsigned int ctx_id = ctx_from_fh_cookie(inner_cookie);
 	struct mtk_cam_ctrl *ctrl = &cam->ctxs[ctx_id].cam_ctrl;
 	struct mtk_cam_job *job;
+	int raw_id;
 
 	dev_info(cam->dev, "%s: warn. eng %d-%d seq 0x%x\n",
 		 __func__, engine_type, engine_id, inner_cookie);
@@ -2974,12 +2984,15 @@ int mtk_cam_ctrl_notify_hw_hang(struct mtk_cam_device *cam,
 	if (!job)
 		return 0;
 
-	if (is_dc_mode(job)) {
+	if (is_dc_mode(job) && !atomic_cmpxchg(&ctrl->is_error, 0, 1)) {
+		raw_id = get_master_raw_id(job->used_engine);
+		backup_dc_max_delay(
+			dev_get_drvdata(cam->engines.raw_devs[raw_id]));
 		/*
 		 * count frames before doing recovery to avoid various hw timing.
-		 * 'set 10 to enable recovery'
+		 * 'set 2 to enable recovery'
 		 */
-		ctrl->hw_hang_count_down = (DISABLE_RECOVER_FLOW) ? 0 : 10;
+		ctrl->hw_hang_count_down = (DISABLE_RECOVER_FLOW) ? 0 : 2;
 		job->is_error = 1;
 	}
 	mtk_cam_job_put(job);

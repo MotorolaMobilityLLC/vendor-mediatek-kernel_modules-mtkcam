@@ -104,6 +104,9 @@ struct mtk_raw_device {
 
 	/* ois compensation */
 	bool lock_done_ctrl;
+
+	/* recover */
+	unsigned int dc_max_delay;
 };
 
 struct mtk_yuv_device {
@@ -265,5 +268,8 @@ void diable_rms_module(struct mtk_raw_device *dev);
 void diable_rms_pcrp(struct mtk_raw_device *raw);
 
 int mtk_cam_raw_reset_msgfifo(struct mtk_raw_device *dev);
+
+void backup_dc_max_delay(struct mtk_raw_device *dev);
+void restore_dc_max_delay(struct mtk_raw_device *dev);
 
 #endif /*__MTK_CAM_RAW_H*/
