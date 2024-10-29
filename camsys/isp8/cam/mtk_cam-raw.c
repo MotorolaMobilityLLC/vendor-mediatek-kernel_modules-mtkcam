@@ -1321,21 +1321,23 @@ void write_pkt_trigger_apu_frame_mode(struct mtk_raw_device *dev,
 	write_pkt_apu_raw(dev, pkt, false /* is_apu_dc */);
 }
 
-bool is_rawi_ufdi_rdone_zero(struct mtk_raw_device *dev)
+bool is_rawi_ufdi_read_done(struct mtk_raw_device *dev)
 {
-	u32 rawi_r2_dbg, ufdi_r2_dbg, rawi_r5_dbg, ufdi_r5_dbg;
+	u32 rawi_r2_stat, ufdi_r2_stat, rawi_r5_stat, ufdi_r5_stat;
 
-	writel(DBG_SEL_RAWI_R2_SMI_DBG_DATA, dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_SEL);
-	rawi_r2_dbg = readl(dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_PORT);
-	writel(DBG_SEL_UFDI_R2_SMI_DBG_DATA, dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_SEL);
-	ufdi_r2_dbg = readl(dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_PORT);
-	writel(DBG_SEL_RAWI_R5_SMI_DBG_DATA, dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_SEL);
-	rawi_r5_dbg = readl(dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_PORT);
-	writel(DBG_SEL_UFDI_R5_SMI_DBG_DATA, dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_SEL);
-	ufdi_r5_dbg = readl(dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_PORT);
+	writel(DBG_SEL_RAWI_R2_SMI_PORT, dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_SEL);
+	rawi_r2_stat = readl(dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_PORT);
+	writel(DBG_SEL_UFDI_R2_SMI_PORT, dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_SEL);
+	ufdi_r2_stat = readl(dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_PORT);
+	writel(DBG_SEL_RAWI_R5_SMI_PORT, dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_SEL);
+	rawi_r5_stat = readl(dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_PORT);
+	writel(DBG_SEL_UFDI_R5_SMI_PORT, dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_SEL);
+	ufdi_r5_stat = readl(dev->dmatop_base + REG_CAMRAWDMATOP_DMA_DBG_PORT);
 
-	if (rawi_r2_dbg & BIT(19) && ufdi_r2_dbg & BIT(19) &&
-	    rawi_r5_dbg & BIT(19) && ufdi_r5_dbg & BIT(19))
+	if ((rawi_r2_stat >> 16) == (rawi_r2_stat & 0xffff) &&
+		(ufdi_r2_stat >> 16) == (ufdi_r2_stat & 0xffff) &&
+		(rawi_r5_stat >> 16) == (rawi_r5_stat & 0xffff) &&
+		(ufdi_r5_stat >> 16) == (ufdi_r5_stat & 0xffff))
 		return true;
 
 	return false;
@@ -1403,7 +1405,7 @@ bool is_all_dma_idle(struct mtk_raw_device *dev)
 	if (raw_rst_stat == REG_CAMRAWDMATOP_DMA_SOFT_RST_STAT_MASK &&
 		raw_rst_stat2 == REG_CAMRAWDMATOP_DMA_SOFT_RST2_STAT_MASK &&
 		yuv_rst_stat == REG_CAMYUVDMATOP_DMA_SOFT_RST_STAT_MASK)
-		return is_rawi_ufdi_rdone_zero(dev);
+		return is_rawi_ufdi_read_done(dev);
 
 	return false;
 }
@@ -1463,8 +1465,6 @@ void reset(struct mtk_raw_device *dev)
 	raw_writel(FBIT(CAMCTL_GLOBAL_HW_RST), dev, dev->base, REG_CAMCTL_GLOBAL_HW_RST_CTL);
 	raw_writel(0, dev, dev->base, REG_CAMCTL_SW_CTL);
 	raw_writel(0, dev, dev->base, REG_CAMCTL_GLOBAL_HW_RST_CTL);
-
-	reset_int_en(dev);
 
 RESET_FAILURE:
 
@@ -2857,6 +2857,7 @@ int mtk_raw_runtime_resume(struct device *dev)
 		cg_dump_and_test(dev, CG_RAW, 0);
 
 	reset(drvdata);
+	reset_int_en(drvdata);
 	reset_camctl_misc(drvdata);
 	qof_dump_int_en_addr(drvdata);
 
@@ -3814,4 +3815,23 @@ int raw_dump_debug_status(struct mtk_raw_device *dev, int dma_debug_dump)
 	need_smi_dump = dev->tg_overrun_handle_cnt > 0 ? 1 : 0;
 
 	return need_smi_dump;
+}
+
+void backup_dc_max_delay(struct mtk_raw_device *dev)
+{
+	qof_mtcmos_raw_voter(dev, true);
+	dev->dc_max_delay = raw_readl_relaxed(dev, dev->base, REG_CAMCTL_DC_STAG_CTL);
+	raw_writel_relaxed(0, dev, dev->base, REG_CAMCTL_DC_STAG_CTL);
+	raw_writel_relaxed(0, dev, dev->base_inner, REG_CAMCTL_DC_STAG_CTL);
+	qof_mtcmos_raw_voter(dev, false);
+}
+
+void restore_dc_max_delay(struct mtk_raw_device *dev)
+{
+	qof_mtcmos_raw_voter(dev, true);
+	raw_writel_relaxed(dev->dc_max_delay,
+			dev, dev->base, REG_CAMCTL_DC_STAG_CTL);
+	raw_writel_relaxed(dev->dc_max_delay,
+			dev, dev->base_inner, REG_CAMCTL_DC_STAG_CTL);
+	qof_mtcmos_raw_voter(dev, false);
 }

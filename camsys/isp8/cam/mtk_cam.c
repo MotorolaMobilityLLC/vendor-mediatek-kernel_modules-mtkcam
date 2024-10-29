@@ -3566,6 +3566,7 @@ void mtk_cam_ctx_engine_dc_sw_recovery(struct mtk_cam_ctx *ctx)
 			raw_dev = dev_get_drvdata(ctx->hw_raw[i]);
 
 			toggle_db(raw_dev);
+			restore_dc_max_delay(raw_dev);
 
 			if (raw_dev->is_slave)
 				continue;

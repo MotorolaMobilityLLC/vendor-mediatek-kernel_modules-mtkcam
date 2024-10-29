@@ -123,6 +123,7 @@ struct mtk_cam_ctrl {
 
 	atomic_t stopped;
 	atomic_t ref_cnt;
+	atomic_t is_error;
 
 	atomic_t stream_on_cnt;
 
