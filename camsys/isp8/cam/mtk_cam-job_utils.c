@@ -510,7 +510,15 @@ u64 infer_cq_trigger_deadline_ns(struct mtk_cam_job *job, u64 frame_interval_ns)
 
 	/* consider vsync is subsampled */
 	if (scen->id == MTK_CAM_SCEN_SMVR)
-		return frame_interval_ns * (scen->scen.smvr.subsample_num - 1) - CQ_PROCESSING_TIME_NS;
+		/* for subsample is 2 case , raw and mraw both use subsample mode */
+		/* once one engine incomplete frame happen, sub-sof will mismatch to not apply cq forever */
+		/* so relax cq thres here for subsample 2 case, apply in last frame also cause drop frame by the way */
+		if (scen->scen.smvr.subsample_num > 2)
+			return frame_interval_ns * (scen->scen.smvr.subsample_num - 1)
+				- CQ_PROCESSING_TIME_NS;
+		else
+			return frame_interval_ns * (scen->scen.smvr.subsample_num)
+				- frame_interval_ns * 3 / 4;
 	else
 		return frame_interval_ns * 3 / 4 - CQ_PROCESSING_TIME_NS;
 }
