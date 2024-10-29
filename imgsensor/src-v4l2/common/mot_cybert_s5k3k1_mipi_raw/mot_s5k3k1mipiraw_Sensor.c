@@ -74,6 +74,28 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 	}
 #endif
 };
+
+static struct mtk_mbus_frame_desc_entry frame_desc_cus1[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2b,
+			.hsize = 0xe40,
+			.vsize = 0x42a,
+		},
+	},
+#if ENABLE_S5K3K1_PD
+	{
+		.bus.csi2 = {
+			.channel = 1,
+			.data_type = S5K3K1_PD_DT,
+			.hsize = S5K3K1_PD_X_SIZE,
+			.vsize = S5K3K1_PD_Y_SIZE,
+			.user_data_desc = S5K3K1_DATA_DESC,
+		},
+	}
+#endif
+};
 /*static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 	{
 		.bus.csi2 = {
@@ -389,6 +411,54 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.y2_tg_offset = 0,
 			.w2_tg_size = 3648,
 			.h2_tg_size = 2736,
+		},
+#if ENABLE_S5K3K1_PD
+		.pdaf_cap = ENABLE_S5K3K1_PD,
+		.imgsensor_pd_info = &s5k3k1_pd_info,
+#else
+		.pdaf_cap = FALSE,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+#endif
+		.ae_binning_ratio = 1,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {0},
+	},
+	{//60fps_video
+		.frame_desc = frame_desc_cus1,
+		.num_entries = ARRAY_SIZE(frame_desc_cus1),
+		.mode_setting_table = custom1_setting_array,
+		.mode_setting_len = ARRAY_SIZE(custom1_setting_array),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 796000000,
+		.linelength = 5760,
+		.framelength = 2300,
+		.max_framerate = 600,
+		.mipi_pixel_rate = 576000000,
+		.readout_length = 0,
+		.read_margin = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 3648,
+			.full_h = 2736,
+			.x0_offset = 0,
+			.y0_offset = 342,
+			.w0_size = 3648,
+			.h0_size = 2052,
+			.scale_w = 3648,
+			.scale_h = 2052,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 3648,
+			.h1_size = 2052,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 3648,
+			.h2_tg_size = 2052,
 		},
 #if ENABLE_S5K3K1_PD
 		.pdaf_cap = ENABLE_S5K3K1_PD,
