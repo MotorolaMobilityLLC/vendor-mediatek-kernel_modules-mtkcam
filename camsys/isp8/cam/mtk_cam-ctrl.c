@@ -928,14 +928,7 @@ static void ctrl_vsync_preprocess(struct mtk_cam_ctrl *ctrl,
 			}
 		}
 
-		/* note:
-		 *   cpu0 busy or low performance may causes sof out of order.
-		 *   to correct this order, rewait sof that module is not to inner.
-		 */
-		if (hint_inner_err)
-			vsync_rewait(&ctrl->vsync_col, inner_not_ready);
-		else
-			vsync_clear_collected(&ctrl->vsync_col);
+		vsync_clear_collected(&ctrl->vsync_col);
 	}
 
 	spin_unlock(&ctrl->info_lock);
