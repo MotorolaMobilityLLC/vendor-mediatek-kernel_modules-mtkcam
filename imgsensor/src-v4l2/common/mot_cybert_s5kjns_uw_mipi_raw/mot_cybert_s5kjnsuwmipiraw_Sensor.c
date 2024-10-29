@@ -36,6 +36,7 @@ static int s5kjns_uw_ops_close(struct subdrv_ctx *ctx);
 static int s5kjns_uw_streaming_off(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 
 #define ENABLE_S5KJNS_UW_PD FALSE
+#define ENABLE_S5KJNS_UW_60FPS_PD FALSE
 
 #define ENABLE_S5KJNS_UW_LONG_EXPOSURE FALSE
 #if  ENABLE_S5KJNS_UW_LONG_EXPOSURE
@@ -303,11 +304,11 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cust2[] = {
 		.bus.csi2 = {
 			.channel = 0,
 			.data_type = 0x2b,
-			.hsize = 0x0FF0,
-			.vsize = 0x0BF4,
+			.hsize = 0x0F00,
+			.vsize = 0x0870,
 		},
 	},
-#if ENABLE_S5KJNS_UW_PD
+#if ENABLE_S5KJNS_UW_60FPS_PD
 	{
 		.bus.csi2 = {
 			.channel = 1,
@@ -610,7 +611,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 	},
 	{
 		.frame_desc = frame_desc_cust1,
-		.num_entries = ARRAY_SIZE(frame_desc_slim_vid),
+		.num_entries = ARRAY_SIZE(frame_desc_cust1),
 		.mode_setting_table = addr_data_pair_preview_mot_cybert_s5kjns_uw,
 		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview_mot_cybert_s5kjns_uw),
 		.seamless_switch_group = PARAM_UNDEFINED,
@@ -658,9 +659,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 	},
 	{
 		.frame_desc = frame_desc_cust2,
-		.num_entries = ARRAY_SIZE(frame_desc_slim_vid),
-		.mode_setting_table = addr_data_pair_preview_mot_cybert_s5kjns_uw,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview_mot_cybert_s5kjns_uw),
+		.num_entries = ARRAY_SIZE(frame_desc_cust2),
+		.mode_setting_table = addr_data_pair_custom2_s5kjns_uw,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom2_s5kjns_uw),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -668,33 +669,33 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.raw_cnt = 1,
 		.exp_cnt = 1,
 		.pclk = 560000000,
-		.linelength = 4224,
-		.framelength = 4416,
-		.max_framerate = 300,
+		.linelength = 4096,
+		.framelength = 2276,
+		.max_framerate = 600,
 		.mipi_pixel_rate = 792000000,
 		.readout_length = 0,
 		.read_margin = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 8160,
 			.full_h = 6120,
-			.x0_offset = 0,
-			.y0_offset = 0,
-			.w0_size = 8160,
-			.h0_size = 6120,
-			.scale_w = 4080,
-			.scale_h = 3060,
+			.x0_offset = 240,
+			.y0_offset = 900,
+			.w0_size = 7680,
+			.h0_size = 4320,
+			.scale_w = 3840,
+			.scale_h = 2160,
 			.x1_offset = 0,
 			.y1_offset = 0,
-			.w1_size = 4080,
-			.h1_size = 3060,
+			.w1_size = 3840,
+			.h1_size = 2160,
 			.x2_tg_offset = 0,
 			.y2_tg_offset = 0,
-			.w2_tg_size = 4080,
-			.h2_tg_size = 3060,
+			.w2_tg_size = 3840,
+			.h2_tg_size = 2160,
 		},
-#if ENABLE_S5KJNS_UW_PD
-		.pdaf_cap = ENABLE_S5KJNS_UW_PD,
-		.imgsensor_pd_info = &s5kjns_uw_pd_info,
+#if ENABLE_S5KJNS_UW_60FPS_PD
+		.pdaf_cap = ENABLE_S5KJNS_UW_60FPS_PD,
+		.imgsensor_pd_info = &s5kjns_uw_60fps_pd_info,
 #else
 		.pdaf_cap = PARAM_UNDEFINED,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
