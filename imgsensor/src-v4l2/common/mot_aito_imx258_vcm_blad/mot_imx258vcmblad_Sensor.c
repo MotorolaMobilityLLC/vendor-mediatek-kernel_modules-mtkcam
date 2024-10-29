@@ -5,7 +5,7 @@
  *
  * Filename:
  * ---------
- *	 imx258mipiraw_Sensor.c
+ *	 imx258vcmblad_Sensor.c
  *
  * Project:
  * --------
@@ -20,29 +20,29 @@
  * Upper this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
  *============================================================================
  ****************************************************************************/
-#include "mot_imx258mipiraw_Sensor.h"
+#include "mot_imx258vcmblad_Sensor.h"
 
 //static int get_sensor_temperature(void *arg);
 static void set_group_hold(void *arg, u8 en);
 static u16 get_gain2reg(u32 gain);
-static int imx258_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
-static int imx258_set_test_pattern_data(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int imx258_vcm_blad_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int imx258_vcm_blad_set_test_pattern_data(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
 static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt);
-static void mot_imx258_apply_spc_data(void *sensor_ctx);
+static void mot_imx258_vcm_blad_apply_spc_data(void *sensor_ctx);
 #define ENABLE_IMX258_LONG_EXPOSURE TRUE
 #if  ENABLE_IMX258_LONG_EXPOSURE
-static int imx258_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
-static void imx258_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter, u32 frame_length);
+static int imx258_vcm_blad_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static void imx258_vcm_blad_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter, u32 frame_length);
 #endif
 
 static DEFINE_SPINLOCK(imgsensor_drv_lock);
-#define IMX258_EEPROM_SLAVE_ID 0xA0
+#define IMX258_VCM_BLAD_EEPROM_SLAVE_ID 0xA0
 #define EEPROM_ACTUATOR_ID_POSITION 12
-#define IMX258_ZET_ACTUATOR_ID 0x30
+#define IMX258_VCM_BLAD_ACTUATOR_ID 0x31
 
-//#define MOT_IMX258_PDAF_DEBUG
-#ifdef MOT_IMX258_PDAF_DEBUG
+//#define MOT_IMX258_VCM_BLAD_PDAF_DEBUG
+#ifdef MOT_IMX258_VCM_BLAD_PDAF_DEBUG
 static unsigned int imx258_pd_dt = 0x30;
 static unsigned int imx258_pd_ddesc = VC_PDAF_STATS_NE_PIX_1;
 static unsigned int imx258_pd_en = 1;
@@ -61,10 +61,10 @@ module_param(imx258_pd_en, uint, 0644);
 
 /* STRUCT */
 static struct subdrv_feature_control feature_control_list[] = {
-	{SENSOR_FEATURE_SET_TEST_PATTERN, imx258_set_test_pattern},
-	{SENSOR_FEATURE_SET_TEST_PATTERN_DATA, imx258_set_test_pattern_data},
+	{SENSOR_FEATURE_SET_TEST_PATTERN, imx258_vcm_blad_set_test_pattern},
+	{SENSOR_FEATURE_SET_TEST_PATTERN_DATA, imx258_vcm_blad_set_test_pattern_data},
 #if  ENABLE_IMX258_LONG_EXPOSURE
-	{SENSOR_FEATURE_SET_ESHUTTER, imx258_set_shutter},
+	{SENSOR_FEATURE_SET_ESHUTTER, imx258_vcm_blad_set_shutter},
 #endif
 };
 
@@ -196,7 +196,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus1[] = {
 };
 
 #ifdef ENABLE_IMX258_PD
-static struct SET_PD_BLOCK_INFO_T imx258_pd_info = {
+static struct SET_PD_BLOCK_INFO_T imx258_vcm_blad_pd_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 24,
 	.i4PitchX = 32,
@@ -254,8 +254,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_prev,
 		.num_entries = ARRAY_SIZE(frame_desc_prev),
-		.mode_setting_table = imx258_4160x3120_30fps_setting,
-		.mode_setting_len = ARRAY_SIZE(imx258_4160x3120_30fps_setting),
+		.mode_setting_table = imx258_vcm_blad_4160x3120_30fps_setting,
+		.mode_setting_len = ARRAY_SIZE(imx258_vcm_blad_4160x3120_30fps_setting),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -292,7 +292,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 #ifdef ENABLE_IMX258_PD
 		.pdaf_cap = ENABLE_IMX258_PD,
-		.imgsensor_pd_info = &imx258_pd_info,
+		.imgsensor_pd_info = &imx258_vcm_blad_pd_info,
 #endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
@@ -306,8 +306,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_cap,
 		.num_entries = ARRAY_SIZE(frame_desc_cap),
-		.mode_setting_table = imx258_4160x3120_30fps_setting,
-		.mode_setting_len = ARRAY_SIZE(imx258_4160x3120_30fps_setting),
+		.mode_setting_table = imx258_vcm_blad_4160x3120_30fps_setting,
+		.mode_setting_len = ARRAY_SIZE(imx258_vcm_blad_4160x3120_30fps_setting),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -344,7 +344,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 #ifdef ENABLE_IMX258_PD
 		.pdaf_cap = ENABLE_IMX258_PD,
-		.imgsensor_pd_info = &imx258_pd_info,
+		.imgsensor_pd_info = &imx258_vcm_blad_pd_info,
 #endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
@@ -358,8 +358,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_vid,
 		.num_entries = ARRAY_SIZE(frame_desc_vid),
-		.mode_setting_table = imx258_4160x2340_30fps_setting,
-		.mode_setting_len = ARRAY_SIZE(imx258_4160x2340_30fps_setting),
+		.mode_setting_table = imx258_vcm_blad_4160x2340_30fps_setting,
+		.mode_setting_len = ARRAY_SIZE(imx258_vcm_blad_4160x2340_30fps_setting),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -396,7 +396,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 #ifdef ENABLE_IMX258_PD
 		.pdaf_cap = ENABLE_IMX258_PD,
-		.imgsensor_pd_info = &imx258_pd_info,
+		.imgsensor_pd_info = &imx258_vcm_blad_pd_info,
 #endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
@@ -410,8 +410,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_slim_vid,
 		.num_entries = ARRAY_SIZE(frame_desc_slim_vid),
-		.mode_setting_table = imx258_4160x3120_30fps_setting,
-		.mode_setting_len = ARRAY_SIZE(imx258_4160x3120_30fps_setting),
+		.mode_setting_table = imx258_vcm_blad_4160x3120_30fps_setting,
+		.mode_setting_len = ARRAY_SIZE(imx258_vcm_blad_4160x3120_30fps_setting),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -448,7 +448,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 #ifdef ENABLE_IMX258_PD
 		.pdaf_cap = ENABLE_IMX258_PD,
-		.imgsensor_pd_info = &imx258_pd_info,
+		.imgsensor_pd_info = &imx258_vcm_blad_pd_info,
 #endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
@@ -462,8 +462,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_hs_vid,
 		.num_entries = ARRAY_SIZE(frame_desc_hs_vid),
-		.mode_setting_table = imx258_4160x3120_30fps_setting,
-		.mode_setting_len = ARRAY_SIZE(imx258_4160x3120_30fps_setting),
+		.mode_setting_table = imx258_vcm_blad_4160x3120_30fps_setting,
+		.mode_setting_len = ARRAY_SIZE(imx258_vcm_blad_4160x3120_30fps_setting),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -500,7 +500,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 #ifdef ENABLE_IMX258_PD
 		.pdaf_cap = ENABLE_IMX258_PD,
-		.imgsensor_pd_info = &imx258_pd_info,
+		.imgsensor_pd_info = &imx258_vcm_blad_pd_info,
 #endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
@@ -514,8 +514,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_cus1,
 		.num_entries = ARRAY_SIZE(frame_desc_cus1),
-		.mode_setting_table = imx258_2080x1170_60fps_setting,
-		.mode_setting_len = ARRAY_SIZE(imx258_2080x1170_60fps_setting),
+		.mode_setting_table = imx258_vcm_blad_2080x1170_60fps_setting,
+		.mode_setting_len = ARRAY_SIZE(imx258_vcm_blad_2080x1170_60fps_setting),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -566,7 +566,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 };
 
 static struct subdrv_static_ctx static_ctx = {
-	.sensor_id = MOT_AITO_IMX258_SENSOR_ID,
+	.sensor_id = MOT_AITO_IMX258_VCM_BLAD_SENSOR_ID,
 	.reg_addr_sensor_id = {0x0A26, 0x0A27},
 	.i2c_addr_table = {0x20, 0xFF},
 	.i2c_burst_write_support = TRUE,
@@ -589,8 +589,8 @@ static struct subdrv_static_ctx static_ctx = {
 	.ana_gain_max = BASEGAIN * 16,
 	.ana_gain_type = 0,//0:sony, 1:ov or samusng....etc no used
 	.ana_gain_step = 1,// no used
-	.ana_gain_table = imx258_ana_gain_table,
-	.ana_gain_table_size = sizeof(imx258_ana_gain_table),
+	.ana_gain_table = imx258_vcm_blad_ana_gain_table,
+	.ana_gain_table_size = sizeof(imx258_vcm_blad_ana_gain_table),
 	.min_gain_iso = 100, // no change
 	.exposure_def = 0x3D0, //no change
 	.exposure_min = 1,
@@ -617,7 +617,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.g_temp = NULL,//get_sensor_temperature,
 	.g_gain2reg = get_gain2reg,
 	.s_gph = set_group_hold,
-	.s_cali = mot_imx258_apply_spc_data,
+	.s_cali = mot_imx258_vcm_blad_apply_spc_data,
 
 	.reg_addr_stream = 0x0100,
 	.reg_addr_mirror_flip = 0x0101,
@@ -638,8 +638,8 @@ static struct subdrv_static_ctx static_ctx = {
 	.reg_addr_auto_extend = 0x0350,
 	.reg_addr_frame_count = 0x0005,
 
-	.init_setting_table = imx258_init_setting,
-	.init_setting_len = ARRAY_SIZE(imx258_init_setting),
+	.init_setting_table = imx258_vcm_blad_init_setting,
+	.init_setting_len = ARRAY_SIZE(imx258_vcm_blad_init_setting),
 	.mode = mode_struct,
 	.sensor_mode_num = ARRAY_SIZE(mode_struct),
 	.list = feature_control_list,
@@ -653,7 +653,7 @@ static struct subdrv_static_ctx static_ctx = {
 
 
 #if  ENABLE_IMX258_LONG_EXPOSURE
-static void imx258_set_long_exposure(struct subdrv_ctx *ctx)
+static void imx258_vcm_blad_set_long_exposure(struct subdrv_ctx *ctx)
 {
 	u32 shutter = ctx->exposure[IMGSENSOR_STAGGER_EXPOSURE_LE];
 	u32 l_shutter = 0;
@@ -697,7 +697,7 @@ static void imx258_set_long_exposure(struct subdrv_ctx *ctx)
 	ctx->exposure[IMGSENSOR_STAGGER_EXPOSURE_LE] = shutter;
 }
 
-static void imx258_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter, u32 frame_length)
+static void imx258_vcm_blad_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter, u32 frame_length)
 {
 	int fine_integ_line = 0;
 	bool gph = !ctx->is_seamless && (ctx->s_ctx.s_gph != NULL);
@@ -720,7 +720,7 @@ static void imx258_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter,
 	if (gph)
 		ctx->s_ctx.s_gph((void *)ctx, 1);
 	/* write shutter */
-	imx258_set_long_exposure(ctx);
+	imx258_vcm_blad_set_long_exposure(ctx);
 	/* write framelength */
 	write_frame_length(ctx, ctx->frame_length);
 
@@ -747,10 +747,10 @@ static void imx258_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter,
 	/* group hold end */
 }
 
-static int imx258_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+static int imx258_vcm_blad_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	u64 shutter = *((u64 *)para);
-	imx258_set_shutter_frame_length(ctx, shutter,0);
+	imx258_vcm_blad_set_shutter_frame_length(ctx, shutter,0);
 	return 0;
 }
 #endif
@@ -778,7 +778,7 @@ static uint8_t imx258_read_actuator_id_from_eeprom(struct subdrv_ctx *ctx, uint8
 	return actuator_id;
 }
 
-int imx258_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
+int imx258_vcm_blad_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 {
 	u8 i = 0;
 	u8 retry = 10;
@@ -794,16 +794,16 @@ int imx258_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 
  			if (subdrv_i2c_rd_u8(ctx, 0x0A01) == 0x01)
 			{
-				actuator_id = imx258_read_actuator_id_from_eeprom(ctx, IMX258_EEPROM_SLAVE_ID, EEPROM_ACTUATOR_ID_POSITION);
+				actuator_id = imx258_read_actuator_id_from_eeprom(ctx, IMX258_VCM_BLAD_EEPROM_SLAVE_ID, EEPROM_ACTUATOR_ID_POSITION);
 				pr_err("imx258 actuator_id = %x", actuator_id);
-				if(actuator_id == IMX258_ZET_ACTUATOR_ID)
+				if(actuator_id == IMX258_VCM_BLAD_ACTUATOR_ID)
 				{
 					*sensor_id = (subdrv_i2c_rd_u8(ctx, addr_h) << 8) | subdrv_i2c_rd_u8(ctx, addr_l);
-					*sensor_id = (*sensor_id >> 4) & 0x0fff;
+					*sensor_id = ((*sensor_id >> 4) & 0x0fff) + 1;
 					DRV_LOG(ctx, "i2c_write_id:0x%x sensor_id(cur/exp):0x%x/0x%x\n", ctx->i2c_write_id, *sensor_id, ctx->s_ctx.sensor_id);
 				}
 				else {
-					pr_err("imx258 actuator id cur:0x%x, exp:0x30 not match, sensor probe failed; maybe imx258_vcm_blad id 0x31 can match.\n", actuator_id);
+					pr_err("imx258_vcm_blad actuator id cur:0x%x, exp:0x31 not match, sensor probe failed; maybe imx258 id 0x30 can match.\n", actuator_id);
 				}
 				if (*sensor_id == ctx->s_ctx.sensor_id)
 					return ERROR_NONE;
@@ -821,8 +821,8 @@ int imx258_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 	return ERROR_NONE;
 }
 
-#ifdef MOT_IMX258_PDAF_DEBUG
-int imx258_overlay_pd_settings(void)
+#ifdef MOT_IMX258_VCM_BLAD_PDAF_DEBUG
+int imx258_vcm_blad_overlay_pd_settings(void)
 {
 	int i, len;
 
@@ -845,13 +845,13 @@ int imx258_overlay_pd_settings(void)
 }
 #endif
 
-int imx258_open(struct subdrv_ctx *ctx)
+int imx258_vcm_blad_open(struct subdrv_ctx *ctx)
 {
 	u32 sensor_id = 0;
 	u32 scenario_id = 0;
 
 	/* get sensor id */
-	if (imx258_get_imgsensor_id(ctx, &sensor_id) != ERROR_NONE)
+	if (imx258_vcm_blad_get_imgsensor_id(ctx, &sensor_id) != ERROR_NONE)
 		return ERROR_SENSOR_CONNECT_FAIL;
 
 	/* initail setting */
@@ -914,17 +914,17 @@ int imx258_open(struct subdrv_ctx *ctx)
 			sizeof(ctx->frame_length_in_lut_rg));
 	}
 
-#ifdef MOT_IMX258_PDAF_DEBUG
-	imx258_overlay_pd_settings();
+#ifdef MOT_IMX258_VCM_BLAD_PDAF_DEBUG
+	imx258_vcm_blad_overlay_pd_settings();
 #endif
 
 	return ERROR_NONE;
 }
 
 static struct subdrv_ops ops = {
-	.get_id = imx258_get_imgsensor_id,
+	.get_id = imx258_vcm_blad_get_imgsensor_id,
 	.init_ctx = init_ctx,
-	.open = imx258_open,
+	.open = imx258_vcm_blad_open,
 	.get_info = common_get_info,
 	.get_resolution = common_get_resolution,
 	.control = common_control,
@@ -942,15 +942,15 @@ static struct subdrv_pw_seq_entry pw_seq[] = {
 	{HW_ID_RST, 0, 1},
 	{HW_ID_MCLK_DRIVING_CURRENT, 4, 1},
 	{HW_ID_AFVDD, 2800000, 1},
-	{HW_ID_AVDD, 2800000, 2},
-	{HW_ID_DVDD, 1200000, 2},
+	{HW_ID_AVDD, 2800000, 1},
+	{HW_ID_DVDD, 1200000, 1},
 	{HW_ID_DOVDD, 1800000, 2},
 	{HW_ID_RST, 1, 13},
 };
 
-const struct subdrv_entry mot_aito_imx258_mipi_raw_entry = {
-	.name = "mot_aito_imx258_mipi_raw",
-	.id = MOT_AITO_IMX258_SENSOR_ID,
+const struct subdrv_entry mot_aito_imx258_vcm_blad_entry = {
+	.name = "mot_aito_imx258_vcm_blad",
+	.id = MOT_AITO_IMX258_VCM_BLAD_SENSOR_ID,
 	.pw_seq = pw_seq,
 	.pw_seq_cnt = ARRAY_SIZE(pw_seq),
 	.ops = &ops,
@@ -996,7 +996,7 @@ static u16 get_gain2reg(u32 gain)
 	return (512 - (512 * BASEGAIN) / gain);
 }
 
-static int imx258_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+static int imx258_vcm_blad_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	u32 mode = *((u32 *)para);
 
@@ -1013,7 +1013,7 @@ static int imx258_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	return ERROR_NONE;
 }
 
-static int imx258_set_test_pattern_data(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+static int imx258_vcm_blad_set_test_pattern_data(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	struct mtk_test_pattern_data *data = (struct mtk_test_pattern_data *)para;
 	u16 R = (data->Channel_R >> 22) & 0x3ff;
@@ -1069,24 +1069,24 @@ static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt)
 #define IMX258_SPC_DATA_LEN 126
 #define IMX258_SPC_REG1_START 0xD04C
 #define IMX258_SPC_REG2_START 0xD08C
-static u8 imx258_spc_data[IMX258_SPC_DATA_LEN+2];
-static u8 imx258_spc_data_ready = 0;
+static u8 imx258_vcm_blad_spc_data[IMX258_SPC_DATA_LEN+2];
+static u8 imx258_vcm_blad_spc_data_ready = 0;
 #if IMX258_SPC_DEBUG
 #ifdef DRV_LOG
 #undef DRV_LOG
 #define DRV_LOG DRV_LOG_MUST
 #endif
-static u8 imx258_spc_readback[IMX258_SPC_DATA_LEN+2];
+static u8 imx258_vcm_blad_spc_readback[IMX258_SPC_DATA_LEN+2];
 #endif
 
 
-static int imx258_crc_reverse_byte(int data)
+static int imx258_vcm_blad_crc_reverse_byte(int data)
 {
 	return ((data * 0x0802LU & 0x22110LU) |
 		(data * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16;
 }
 
-static int32_t imx258_check_crc16(struct subdrv_ctx *ctx, uint8_t  *data, uint32_t size, uint32_t ref_crc)
+static int32_t imx258_vcm_blad_check_crc16(struct subdrv_ctx *ctx, uint8_t  *data, uint32_t size, uint32_t ref_crc)
 {
 	int32_t crc_match = 0;
 	uint16_t crc = 0x0000;
@@ -1099,7 +1099,7 @@ static int32_t imx258_check_crc16(struct subdrv_ctx *ctx, uint8_t  *data, uint32
 	/* Calculate both methods of CRC since integrators differ on
 	  * how CRC should be calculated. */
 	for (i = 0; i < size; i++) {
-		tmp_reverse = imx258_crc_reverse_byte(data[i]);
+		tmp_reverse = imx258_vcm_blad_crc_reverse_byte(data[i]);
 		tmp = data[i] & 0xff;
 		for (j = 0; j < 8; j++) {
 			if (((crc & 0x8000) >> 8) ^ (tmp & 0x80))
@@ -1117,8 +1117,8 @@ static int32_t imx258_check_crc16(struct subdrv_ctx *ctx, uint8_t  *data, uint32
 		}
 	}
 
-	crc_reverse = (imx258_crc_reverse_byte(crc_reverse) << 8) |
-		imx258_crc_reverse_byte(crc_reverse >> 8);
+	crc_reverse = (imx258_vcm_blad_crc_reverse_byte(crc_reverse) << 8) |
+		imx258_vcm_blad_crc_reverse_byte(crc_reverse >> 8);
 
 	if (crc == ref_crc || crc_reverse == ref_crc)
 		crc_match = 1;
@@ -1129,24 +1129,24 @@ static int32_t imx258_check_crc16(struct subdrv_ctx *ctx, uint8_t  *data, uint32
 	return crc_match;
 }
 
-static int mot_imx258_read_spc_data(struct subdrv_ctx *ctx)
+static int mot_imx258_vcm_blad_read_spc_data(struct subdrv_ctx *ctx)
 {
 	int ret = 0;
 	u16 ref_crc = 0;
-	if (imx258_spc_data_ready) {
+	if (imx258_vcm_blad_spc_data_ready) {
 		DRV_LOG_MUST(ctx, "spc data is ready.");
 		return 0;
 	}
 
-	ret = adaptor_i2c_rd_p8(ctx->i2c_client, (IMX258_SPC_EEPROM_ADDR >> 1), IMX258_SPC_DATA_START, imx258_spc_data, IMX258_SPC_DATA_LEN+2) ;
+	ret = adaptor_i2c_rd_p8(ctx->i2c_client, (IMX258_SPC_EEPROM_ADDR >> 1), IMX258_SPC_DATA_START, imx258_vcm_blad_spc_data, IMX258_SPC_DATA_LEN+2) ;
 	if (ret < 0) {
 		DRV_LOGE(ctx, "Read SPC data failed. ret:%d", ret);
 		return -1;
 	}
 
-	ref_crc = ((imx258_spc_data[IMX258_SPC_DATA_LEN] << 8) |imx258_spc_data[IMX258_SPC_DATA_LEN+1]);
-	if (imx258_check_crc16(ctx, imx258_spc_data, IMX258_SPC_DATA_LEN, ref_crc)) {
-		imx258_spc_data_ready = 1;
+	ref_crc = ((imx258_vcm_blad_spc_data[IMX258_SPC_DATA_LEN] << 8) |imx258_vcm_blad_spc_data[IMX258_SPC_DATA_LEN+1]);
+	if (imx258_vcm_blad_check_crc16(ctx, imx258_vcm_blad_spc_data, IMX258_SPC_DATA_LEN, ref_crc)) {
+		imx258_vcm_blad_spc_data_ready = 1;
 		DRV_LOG(ctx, "SPC data ready now.");
 	} else {
 		/*When CRC error, each time camera open will try to read SPC data from EEPROM, maybe retry for several time is better. Currently
@@ -1157,23 +1157,23 @@ static int mot_imx258_read_spc_data(struct subdrv_ctx *ctx)
 	return 0;
 }
 
-static void mot_imx258_apply_spc_data(void *sensor_ctx)
+static void mot_imx258_vcm_blad_apply_spc_data(void *sensor_ctx)
 {
 	struct subdrv_ctx *ctx = (struct subdrv_ctx *)sensor_ctx;
 
-	if (!imx258_spc_data_ready) {
-		mot_imx258_read_spc_data(ctx);
+	if (!imx258_vcm_blad_spc_data_ready) {
+		mot_imx258_vcm_blad_read_spc_data(ctx);
 	}
 
-	if (imx258_spc_data_ready) {
-		int ret =	adaptor_i2c_wr_p8(ctx->i2c_client, (ctx->i2c_write_id>>1), IMX258_SPC_REG1_START, imx258_spc_data, IMX258_SPC_DATA_LEN/2);
+	if (imx258_vcm_blad_spc_data_ready) {
+		int ret =	adaptor_i2c_wr_p8(ctx->i2c_client, (ctx->i2c_write_id>>1), IMX258_SPC_REG1_START, imx258_vcm_blad_spc_data, IMX258_SPC_DATA_LEN/2);
 		if (ret < 0) {
 			DRV_LOGE(ctx, "Write Left SPC data failed. ret:%d", ret);
 			return;
 		}
 
 		ret = adaptor_i2c_wr_p8(ctx->i2c_client, (ctx->i2c_write_id>>1), IMX258_SPC_REG2_START,
-		                        &imx258_spc_data[IMX258_SPC_DATA_LEN/2], IMX258_SPC_DATA_LEN/2);
+		                        &imx258_vcm_blad_spc_data[IMX258_SPC_DATA_LEN/2], IMX258_SPC_DATA_LEN/2);
 		if (ret < 0) {
 			DRV_LOGE(ctx, "Read Right SPC data failed. ret:%d", ret);
 			return;
@@ -1183,14 +1183,14 @@ static void mot_imx258_apply_spc_data(void *sensor_ctx)
 			int i;
 			u8 spc_en_reg[2];
 
-			ret = adaptor_i2c_rd_p8(ctx->i2c_client, (ctx->i2c_write_id>>1), IMX258_SPC_REG1_START, imx258_spc_readback, IMX258_SPC_DATA_LEN/2) ;
+			ret = adaptor_i2c_rd_p8(ctx->i2c_client, (ctx->i2c_write_id>>1), IMX258_SPC_REG1_START, imx258_vcm_blad_spc_readback, IMX258_SPC_DATA_LEN/2) ;
 			if (ret < 0) {
 				DRV_LOGE(ctx, "L SPC data readback failed. ret:%d", ret);
 				return;
 			} else {
 				for (i=0; i<IMX258_SPC_DATA_LEN/2; i++) {
-					if (imx258_spc_data[i] != imx258_spc_readback[i]) {
-						DRV_LOGE(ctx, "SPC[%d] E(%02x) != R(%02x)", i, imx258_spc_data[i], imx258_spc_readback[i]);
+					if (imx258_vcm_blad_spc_data[i] != imx258_vcm_blad_spc_readback[i]) {
+						DRV_LOGE(ctx, "SPC[%d] E(%02x) != R(%02x)", i, imx258_vcm_blad_spc_data[i], imx258_vcm_blad_spc_readback[i]);
 						return;
 					}
 				}
@@ -1198,14 +1198,14 @@ static void mot_imx258_apply_spc_data(void *sensor_ctx)
 			}
 
 			ret = adaptor_i2c_rd_p8(ctx->i2c_client, (ctx->i2c_write_id>>1), IMX258_SPC_REG2_START,
-			                        &imx258_spc_readback[IMX258_SPC_DATA_LEN/2], IMX258_SPC_DATA_LEN/2) ;
+			                        &imx258_vcm_blad_spc_readback[IMX258_SPC_DATA_LEN/2], IMX258_SPC_DATA_LEN/2) ;
 			if (ret < 0) {
 				DRV_LOGE(ctx, "R SPC data readback failed. ret:%d", ret);
 				return;
 			} else {
 				for (i=IMX258_SPC_DATA_LEN/2; i<IMX258_SPC_DATA_LEN; i++) {
-					if (imx258_spc_data[i] != imx258_spc_readback[i]) {
-						DRV_LOGE(ctx, "SPC[%d] E(%02x) != R(%02x)", i, imx258_spc_data[i], imx258_spc_readback[i]);
+					if (imx258_vcm_blad_spc_data[i] != imx258_vcm_blad_spc_readback[i]) {
+						DRV_LOGE(ctx, "SPC[%d] E(%02x) != R(%02x)", i, imx258_vcm_blad_spc_data[i], imx258_vcm_blad_spc_readback[i]);
 						return;
 					}
 				}
@@ -1220,7 +1220,7 @@ static void mot_imx258_apply_spc_data(void *sensor_ctx)
 
 #if IMX258_SPC_DUMP
 			for (i=0; i<IMX258_SPC_DATA_LEN; i++) {
-				DRV_LOG(ctx, "SPC[%d]\t%02x\t%02x", i, imx258_spc_data[i], imx258_spc_readback[i]);
+				DRV_LOG(ctx, "SPC[%d]\t%02x\t%02x", i, imx258_vcm_blad_spc_data[i], imx258_vcm_blad_spc_readback[i]);
 			}
 #endif
 		}
