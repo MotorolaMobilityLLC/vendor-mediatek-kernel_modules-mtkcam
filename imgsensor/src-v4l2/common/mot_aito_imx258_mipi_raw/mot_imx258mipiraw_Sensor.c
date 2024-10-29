@@ -35,8 +35,13 @@ static void mot_imx258_apply_spc_data(void *sensor_ctx);
 static int imx258_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static void imx258_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter, u32 frame_length);
 #endif
-//#define MOT_IMX258_PDAF_DEBUG
 
+static DEFINE_SPINLOCK(imgsensor_drv_lock);
+#define IMX258_EEPROM_SLAVE_ID 0xA0
+#define EEPROM_ACTUATOR_ID_POSITION 12
+#define IMX258_ZET_ACTUATOR_ID 0x30
+
+//#define MOT_IMX258_PDAF_DEBUG
 #ifdef MOT_IMX258_PDAF_DEBUG
 static unsigned int imx258_pd_dt = 0x30;
 static unsigned int imx258_pd_ddesc = VC_PDAF_STATS_NE_PIX_1;
@@ -749,27 +754,57 @@ static int imx258_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	return 0;
 }
 #endif
+
+static uint8_t imx258_read_actuator_id_from_eeprom(struct subdrv_ctx *ctx, uint8_t device_id, uint16_t eeprom_addr)
+{
+	uint8_t actuator_id = 0;
+	uint8_t origin_id = 0;
+	struct subdrv_ctx *tmp_ctx;
+
+	tmp_ctx = ctx;
+	origin_id = tmp_ctx->i2c_write_id;
+
+	spin_lock(&imgsensor_drv_lock);
+	tmp_ctx->i2c_write_id = device_id;
+	spin_unlock(&imgsensor_drv_lock);
+
+	actuator_id = subdrv_i2c_rd_u8(ctx, eeprom_addr -1); //eeprom data start is 0
+
+	spin_lock(&imgsensor_drv_lock);
+	tmp_ctx->i2c_write_id = origin_id;
+	spin_unlock(&imgsensor_drv_lock);
+
+	pr_err("imx258 eeprom actuator id =0x%x\n, origin_id =%x", actuator_id, origin_id);
+	return actuator_id;
+}
+
 int imx258_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 {
 	u8 i = 0;
 	u8 retry = 10;
 	u32 addr_h = ctx->s_ctx.reg_addr_sensor_id.addr[0];
 	u32 addr_l = ctx->s_ctx.reg_addr_sensor_id.addr[1];
+	uint8_t actuator_id = 0;
 
 	while (ctx->s_ctx.i2c_addr_table[i] != 0xFF) {
 		ctx->i2c_write_id = ctx->s_ctx.i2c_addr_table[i];
 		do {
-		        subdrv_i2c_wr_u8(ctx, 0x0A02, 0x0F);
+		    subdrv_i2c_wr_u8(ctx, 0x0A02, 0x0F);
 			subdrv_i2c_wr_u8(ctx, 0x0A00, 0x01);
 
  			if (subdrv_i2c_rd_u8(ctx, 0x0A01) == 0x01)
 			{
-				*sensor_id = (subdrv_i2c_rd_u8(ctx, addr_h) << 8) |
-					subdrv_i2c_rd_u8(ctx, addr_l);
-				*sensor_id = (*sensor_id >> 4) & 0x0fff;
-				DRV_LOG(ctx, "i2c_write_id:0x%x sensor_id(cur/exp):0x%x/0x%x\n",
-					ctx->i2c_write_id, *sensor_id, ctx->s_ctx.sensor_id);
-
+				actuator_id = imx258_read_actuator_id_from_eeprom(ctx, IMX258_EEPROM_SLAVE_ID, EEPROM_ACTUATOR_ID_POSITION);
+				pr_err("imx258 actuator_id = %x", actuator_id);
+				if(actuator_id == IMX258_ZET_ACTUATOR_ID)
+				{
+					*sensor_id = (subdrv_i2c_rd_u8(ctx, addr_h) << 8) | subdrv_i2c_rd_u8(ctx, addr_l);
+					*sensor_id = (*sensor_id >> 4) & 0x0fff;
+					DRV_LOG(ctx, "i2c_write_id:0x%x sensor_id(cur/exp):0x%x/0x%x\n", ctx->i2c_write_id, *sensor_id, ctx->s_ctx.sensor_id);
+				}
+				else {
+					pr_err("imx258 actuator id cur:0x%x, exp:0x30 not match, sensor probe failed; maybe imx258_vcm_blad id 0x31 can match.\n", actuator_id);
+				}
 				if (*sensor_id == ctx->s_ctx.sensor_id)
 					return ERROR_NONE;
 			}
