@@ -27,7 +27,7 @@
 int vblank_convert = 0;
 static void set_group_hold(void *arg, u8 en);
 static u16 get_gain2reg(u32 gain);
-//static int motniceov08d_set_test_pattern(struct subdrv_ctx *ctx, kal_bool enable);
+static int motniceov08d_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
 static int ov08d_streaming_on(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int ov08d_streaming_off(struct subdrv_ctx *ctx, u8 *para, u32 *len);
@@ -45,7 +45,7 @@ static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_FRAMELENGTH,ov08d_set_frame_length_by},
 	{SENSOR_FEATURE_SET_SHUTTER_FRAME_TIME,ov08d_set_shutter_frame_length_by},
 	{SENSOR_FEATURE_SET_MAX_FRAME_RATE_BY_SCENARIO,ov08d_set_max_framerate_by_scenario_by},
-	//{SENSOR_FEATURE_SET_TEST_PATTERN,motniceov08d_set_test_pattern},
+	{SENSOR_FEATURE_SET_TEST_PATTERN,motniceov08d_set_test_pattern},
 };
 /* STRUCT */
 static struct mtk_mbus_frame_desc_entry frame_desc_cap [] = {
@@ -850,20 +850,28 @@ static int ov08dcontrol(struct subdrv_ctx *ctx, enum MSDK_SCENARIO_ID_ENUM scena
 	return ERROR_NONE;
 }   /* control(ctx) */
 
-/*static int motniceov08d_set_test_pattern(struct subdrv_ctx *ctx, kal_bool enable)
+static int motniceov08d_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
-	//DEBUG_LOG(ctx, "Test_Pattern modes: %d\n", enable);
-	if (enable) {
-		write_cmos_sensor_8(ctx, 0xfd, 0x00);
-		write_cmos_sensor_8(ctx, 0xb6, 0x21);
-	} else {
-		write_cmos_sensor_8(ctx, 0xfd, 0x00);
-		write_cmos_sensor_8(ctx, 0xb6, 0x20);
-    }
-	//DEBUG_LOG(ctx, "Test_Pattern modes: %d -> %d\n", ctx->test_pattern, enable);
-	ctx->test_pattern = enable;
+	u32 mode = *((u32 *)para);
+
+	if (mode != ctx->test_pattern)
+		LOG_INF("mode(%u->%u)\n", ctx->test_pattern, mode);
+	if (mode){
+		write_cmos_sensor_8(ctx, 0xfd, 0x01);
+		write_cmos_sensor_8(ctx, 0x21, 0x00);
+		write_cmos_sensor_8(ctx, 0x22, 0x00);
+		write_cmos_sensor_8(ctx, 0x01, 0x01);
+	}
+	else if (ctx->test_pattern){
+		write_cmos_sensor_8(ctx, 0xfd, 0x01);
+		write_cmos_sensor_8(ctx, 0x21, 0x02);
+		write_cmos_sensor_8(ctx, 0x22, 0x00);
+		write_cmos_sensor_8(ctx, 0x01, 0x01);
+	}
+	ctx->test_pattern = mode;
+
 	return ERROR_NONE;
-}*/
+}
 
 bool my_is_streaming = KAL_FALSE;
 static int ov08d_streaming_on(struct subdrv_ctx *ctx, u8 *para, u32 *len)
