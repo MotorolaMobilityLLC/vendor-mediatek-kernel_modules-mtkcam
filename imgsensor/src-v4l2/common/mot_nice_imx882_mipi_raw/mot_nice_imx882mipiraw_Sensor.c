@@ -29,6 +29,7 @@
 static void set_group_hold(void *arg, u8 en);
 static u16 get_gain2reg(u32 gain);
 static int imx882_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int imx882_get_min_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
 static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt);
 
@@ -36,6 +37,7 @@ static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt);
 
 static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, imx882_set_test_pattern},
+	{SENSOR_FEATURE_GET_MIN_SHUTTER_BY_SCENARIO, imx882_get_min_shutter},
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
@@ -195,8 +197,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mipi_pixel_rate = 800000000,
 		.readout_length = 0,
 		.read_margin = 10,
-		.framelength_step = 2,
-		.coarse_integ_step = 1,
+		.framelength_step = 4,
+		.coarse_integ_step = 4,
+		.min_exposure_line = 6,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 8,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
@@ -218,9 +221,14 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info,
-		.ae_binning_ratio = 1465,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 826,
 		.delay_frame = 3,
+		.ana_gain_min = 1.4287*BASEGAIN,
+		.ana_gain_max = 64*BASEGAIN,
+		.dig_gain_min = 1*BASEGAIN,
+		.dig_gain_max = 1*BASEGAIN,
+		.dig_gain_step = 4,
 		.csi_param = {
 			.cphy_settle = 73,
 		},
@@ -244,8 +252,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mipi_pixel_rate = 800000000,
 		.readout_length = 0,
 		.read_margin = 10,
-		.framelength_step = 2,
-		.coarse_integ_step = 1,
+		.framelength_step = 4,
+		.coarse_integ_step = 4,
+		.min_exposure_line = 6,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 8,
 
 		.imgsensor_winsize_info = {
@@ -268,9 +277,14 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info,
-		.ae_binning_ratio = 1465,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 826,
 		.delay_frame = 3,
+		.ana_gain_min = 1.4287*BASEGAIN,
+		.ana_gain_max = 64*BASEGAIN,
+		.dig_gain_min = 1*BASEGAIN,
+		.dig_gain_max = 1*BASEGAIN,
+		.dig_gain_step = 4,
 		.csi_param = {
 			.cphy_settle = 73,
 		},
@@ -294,8 +308,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mipi_pixel_rate = 800000000,
 		.readout_length = 0,
 		.read_margin = 10,
-		.framelength_step = 2,
-		.coarse_integ_step = 1,
+		.framelength_step = 4,
+		.coarse_integ_step = 4,
+		.min_exposure_line = 6,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 8,
 
 		.imgsensor_winsize_info = {
@@ -318,9 +333,14 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info,
-		.ae_binning_ratio = 1465,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 826,
 		.delay_frame = 3,
+		.ana_gain_min = 1.4287*BASEGAIN,
+		.ana_gain_max = 64*BASEGAIN,
+		.dig_gain_min = 1*BASEGAIN,
+		.dig_gain_max = 1*BASEGAIN,
+		.dig_gain_step = 4,
 		.csi_param = {
 			.cphy_settle = 73,
 		},
@@ -344,8 +364,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mipi_pixel_rate = 800000000,
 		.readout_length = 0,
 		.read_margin = 10,
-		.framelength_step = 4,
-		.coarse_integ_step = 4,
+		.framelength_step = 2,
+		.coarse_integ_step = 2,
 		.min_exposure_line = 8,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 8,
 
@@ -369,10 +389,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		//.pdaf_cap = FALSE,
 		//.imgsensor_pd_info = &imgsensor_pd_info,
-		.ae_binning_ratio = 1428,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 826,
 		.delay_frame = 3,
-		.ana_gain_min = 1.4*BASEGAIN,
+		.ana_gain_min = 1.4287*BASEGAIN,
 		.ana_gain_max = 64*BASEGAIN,
 		.dig_gain_min = 1*BASEGAIN,
 		.dig_gain_max = 1*BASEGAIN,
@@ -400,8 +420,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mipi_pixel_rate = 800000000,
 		.readout_length = 0,
 		.read_margin = 10,
-		.framelength_step = 2,
-		.coarse_integ_step = 1,
+		.framelength_step = 4,
+		.coarse_integ_step = 4,
+		.min_exposure_line = 6,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 8,
 
 		.imgsensor_winsize_info = {
@@ -424,9 +445,14 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info,
-		.ae_binning_ratio = 1465,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 826,
 		.delay_frame = 3,
+		.ana_gain_min = 1.4287*BASEGAIN,
+		.ana_gain_max = 64*BASEGAIN,
+		.dig_gain_min = 1*BASEGAIN,
+		.dig_gain_max = 1*BASEGAIN,
+		.dig_gain_step = 4,
 		.csi_param = {
 			.cphy_settle = 73,
 		},
@@ -444,8 +470,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mipi_pixel_rate = 800000000,
 		.readout_length = 0,
 		.read_margin = 10,
-		.framelength_step = 4,
-		.coarse_integ_step = 4,
+		.framelength_step = 2,
+		.coarse_integ_step = 2,
 		.min_exposure_line = 8,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 8,
 		.imgsensor_winsize_info = {
@@ -468,10 +494,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = FALSE,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
-		.ae_binning_ratio = 1428,
+		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 1,
-		.ana_gain_min = 1.4*BASEGAIN,
+		.ana_gain_min = 1.4287*BASEGAIN,
 		.ana_gain_max = 64*BASEGAIN,
 		.dig_gain_min = 1*BASEGAIN,
 		.dig_gain_max = 1*BASEGAIN,
@@ -505,7 +531,7 @@ static struct subdrv_static_ctx static_ctx = {
 
 	.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_B,
 	.ana_gain_def = BASEGAIN * 4,
-	.ana_gain_min = BASEGAIN * 1,
+	.ana_gain_min = BASEGAIN * 1.4287,
 	.ana_gain_max = BASEGAIN * 64,
 	.ana_gain_type = 0,
 	.ana_gain_step = 1,
@@ -513,15 +539,15 @@ static struct subdrv_static_ctx static_ctx = {
 	.ana_gain_table_size = sizeof(imx882_ana_gain_table),
 	.min_gain_iso = 100,
 	.exposure_def = 0x3D0,
-	.exposure_min = 4,  //24
-	.exposure_max = 128 * (0xFFFC - 48),
-	.exposure_step = 1, //4
-	.exposure_margin = 48,
+	.exposure_min = 6,
+	.exposure_max = 128 * (0xFFFF - 56),
+	.exposure_step = 4, //4
+	.exposure_margin = 56,
 	.dig_gain_min = BASE_DGAIN * 1,
 	.dig_gain_max = BASE_DGAIN * 1,
 	.dig_gain_step = 4,
 
-	.frame_length_max = 0xFFFC,
+	.frame_length_max = 0xFFC7,
 	.ae_effective_frame = 2,
 	.frame_time_delay_frame = 3,
 	.start_exposure_offset = 500000,
@@ -549,20 +575,14 @@ static struct subdrv_static_ctx static_ctx = {
 	.reg_addr_mirror_flip = 0x0101,
 	.reg_addr_exposure = {
 			{0x0202, 0x0203},
-			//{0x313A, 0x313B},
-			{0x0224, 0x0225},
 	},
 	.long_exposure_support = TRUE,
-	.reg_addr_exposure_lshift = 0x3128,
+	.reg_addr_exposure_lshift = 0x3160,
 	.reg_addr_ana_gain = {
 			{0x0204, 0x0205},
-			//{0x313C, 0x313D},
-			{0x0216, 0x0217},
 	},
 	.reg_addr_dig_gain = {
 			{0x020E, 0x020F},
-			//{0x313E, 0x313F},
-			{0x0218, 0x0219},
 	},
 	.reg_addr_frame_length = {0x0340, 0x0341},
 	//.reg_addr_temp_en = 0x0138,
@@ -695,8 +715,10 @@ static void set_group_hold(void *arg, u8 en)
 }
 
 static u16 get_gain2reg(u32 gain)
-{
-	return (16384 - (16384 * BASEGAIN) / gain);
+{//Should be multiple of 4
+	u32 regGain = (16384 - (16384 * BASEGAIN) / gain);
+	regGain = (regGain+2)/4*4;
+	return regGain;
 }
 
 static int imx882_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
@@ -748,4 +770,38 @@ static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt)
 		commit_i2c_buffer(ctx);
 	}
 	return 0;
+}
+
+static int imx882_get_min_shutter_by_scenario(struct subdrv_ctx *ctx,
+		enum SENSOR_SCENARIO_ID_ENUM scenario_id,
+		u64 *min_shutter, u64 *exposure_step)
+{
+	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
+		DRV_LOG(ctx, "invalid cur_sid:%u, mode_num:%u set default\n",
+			scenario_id, ctx->s_ctx.sensor_mode_num);
+		scenario_id = 0;
+	}
+
+	if (ctx->s_ctx.mode[scenario_id].min_exposure_line) {
+		*min_shutter = ctx->s_ctx.mode[scenario_id].min_exposure_line;
+	} else {
+		*min_shutter = ctx->s_ctx.exposure_min;
+	}
+
+	if (ctx->s_ctx.mode[scenario_id].coarse_integ_step) {
+		*exposure_step = ctx->s_ctx.mode[scenario_id].coarse_integ_step;
+	} else {
+		*exposure_step = ctx->s_ctx.exposure_step;
+	}
+	DRV_LOG(ctx, "scenario_id:%d, min shutter:%llu, exp_step:%llu",
+				scenario_id, *min_shutter, *exposure_step);
+	return ERROR_NONE;
+}
+
+static int imx882_get_min_shutter(struct subdrv_ctx *ctx, u8 *feature_para, u32 *feature_para_len)
+{
+	u64 *feature_data = (u64 *) feature_para;
+	return imx882_get_min_shutter_by_scenario(ctx,
+			(enum SENSOR_SCENARIO_ID_ENUM)*(feature_data),
+			feature_data + 1, feature_data + 2);
 }
