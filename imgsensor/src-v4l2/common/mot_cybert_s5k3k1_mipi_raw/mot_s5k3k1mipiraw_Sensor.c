@@ -37,11 +37,12 @@ static int s5k3k1_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static void s5k3k1_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter, u32 frame_length);
 #endif
 
-#define ENABLE_S5K3K1_PD FALSE
+#define ENABLE_S5K3K1_PD TRUE
 #define S5K3K1_PD_DT 0x2b
 #define S5K3K1_DATA_DESC VC_PDAF_STATS
 #define S5K3K1_PD_X_SIZE 456
 #define S5K3K1_PD_Y_SIZE 680
+#define S5K3K1_PD_Y_SIZE_60fps 504
 
 /* STRUCT */
 
@@ -90,7 +91,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus1[] = {
 			.channel = 1,
 			.data_type = S5K3K1_PD_DT,
 			.hsize = S5K3K1_PD_X_SIZE,
-			.vsize = S5K3K1_PD_Y_SIZE,
+			.vsize = S5K3K1_PD_Y_SIZE_60fps,
 			.user_data_desc = S5K3K1_DATA_DESC,
 		},
 	}
@@ -172,13 +173,57 @@ static struct SET_PD_BLOCK_INFO_T s5k3k1_pd_info = {
 	},
 	.i4FullRawW = 3648,
 	.i4FullRawH = 2736,
-	.iMirrorFlip = 0,
+	.iMirrorFlip = 3,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV,
 	/* VC's PD pattern description */
 	.sPDMapInfo[0] = {
 		.i4PDPattern = 3, // sparse PD non-interleaved
 		.i4PDRepetition = 8,
-		.i4PDOrder = { 0, 1, 1, 0, 1, 0, 0, 1 }, // L = 0, R = 1
+		.i4PDOrder = { 1, 0, 0, 1, 0, 1, 1, 0 }, // L = 0, R = 1
+	},
+};
+
+static struct SET_PD_BLOCK_INFO_T s5k3k1_pd_info_60fps = {
+	.i4OffsetX = 0,
+	.i4OffsetY = 18,
+	.i4PitchX = 8,
+	.i4PitchY = 32,
+	.i4PairNum = 4,
+	.i4SubBlkW = 8,
+	.i4SubBlkH = 8,
+	.i4PosL = {
+		{2, 19}, {6, 31}, {2, 39}, {6, 43}
+	},
+	.i4PosR = {
+		{2, 23}, {6, 27}, {2, 35}, {6, 47}
+	},
+	.i4BlockNumX = 456,
+	.i4BlockNumY = 63,
+	.i4Crop = {
+		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
+		{0, 342}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <cust6> <cust7> <cust8> cust9 cust10
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// cust11 cust12 cust13 <cust14> <cust15>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <cust16> <cust17> cust18 <cust19> cust20
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <cust21> <cust22> <cust23> <cust24> <cust25>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// cust26 <cust27> cust28
+		{0, 0}, {0, 0}, {0, 0},
+	},
+	.i4FullRawW = 3648,
+	.i4FullRawH = 2736,
+	.iMirrorFlip = 3,
+	.PDAF_Support = PDAF_SUPPORT_CAMSV,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		.i4PDPattern = 3, // sparse PD non-interleaved
+		.i4PDRepetition = 8,
+		.i4PDOrder = { 1, 0, 0, 1, 0, 1, 1, 0 }, // L = 0, R = 1
 	},
 };
 #endif
@@ -462,7 +507,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 #if ENABLE_S5K3K1_PD
 		.pdaf_cap = ENABLE_S5K3K1_PD,
-		.imgsensor_pd_info = &s5k3k1_pd_info,
+		.imgsensor_pd_info = &s5k3k1_pd_info_60fps,
 #else
 		.pdaf_cap = FALSE,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
