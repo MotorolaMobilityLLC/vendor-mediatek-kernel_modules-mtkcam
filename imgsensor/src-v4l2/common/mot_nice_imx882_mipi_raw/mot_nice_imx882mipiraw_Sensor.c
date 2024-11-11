@@ -169,6 +169,19 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = {
 	},
 };
 
+
+static struct mtk_mbus_frame_desc_entry frame_desc_cus3[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2b,
+			.hsize = 0x1000,
+			.vsize = 0x0900,
+			.user_data_desc = VC_STAGGER_NE,
+		},
+	},
+};
+
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 0,
@@ -566,6 +579,55 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
+		.csi_param = {
+			.cphy_settle = 73,
+		},
+		.dpc_enabled = true, /* reg 0x0b06 */
+	},
+	{//custom3  (4096x2304)FHD@60fps
+		.frame_desc = frame_desc_cus3,
+		.num_entries = ARRAY_SIZE(frame_desc_cus3),
+		.mode_setting_table = addr_data_pair_custom3,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom3),
+		.pclk = 804000000,
+		.linelength = 4984,
+		.framelength = 2684,
+		.max_framerate = 600,
+		.mipi_pixel_rate = 800000000,
+		.readout_length = 0,
+		.read_margin = 0,
+		.framelength_step = 1,
+		.coarse_integ_step = 1,
+		.min_exposure_line = 5,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 5,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 768,
+			.w0_size = 8192,
+			.h0_size = 4608,
+			.scale_w = 4096,
+			.scale_h = 2304,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2304,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2304,
+		},
+		.pdaf_cap = FALSE,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.ana_gain_min = 1.4287*BASEGAIN,
+		.ana_gain_max = 64*BASEGAIN,
+		.dig_gain_min = 1*BASEGAIN,
+		.dig_gain_max = 1*BASEGAIN,
+		.dig_gain_step = 4,
 		.csi_param = {
 			.cphy_settle = 73,
 		},
