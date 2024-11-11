@@ -35,7 +35,7 @@ static int s5kjns_uw_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
 static int s5kjns_uw_ops_close(struct subdrv_ctx *ctx);
 static int s5kjns_uw_streaming_off(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 
-#define ENABLE_S5KJNS_UW_PD FALSE
+#define ENABLE_S5KJNS_UW_PD TRUE
 #define ENABLE_S5KJNS_UW_60FPS_PD FALSE
 
 #define ENABLE_S5KJNS_UW_LONG_EXPOSURE FALSE
@@ -175,12 +175,12 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 		.bus.csi2 = {
 			.channel = 1,
 			.data_type = 0x30,
-			.hsize = 0x01E0,
-			.vsize = 0x0B30,
+			.hsize = 0x0200,
+			.vsize = 0x0BF0,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10, // for dt 0x30
 			.user_data_desc = VC_PDAF_STATS,
 		},
-	}
+	},
 #endif
 };
 
@@ -198,12 +198,12 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 		.bus.csi2 = {
 			.channel = 1,
 			.data_type = 0x30,
-			.hsize = 0x01E0,
-			.vsize = 0x0B30,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.hsize = 0x0200,
+			.vsize = 0x0BF0,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10, // for dt 0x30
 			.user_data_desc = VC_PDAF_STATS,
 		},
-	}
+	},
 #endif
 };
 
@@ -221,12 +221,12 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 		.bus.csi2 = {
 			.channel = 1,
 			.data_type = 0x30,
-			.hsize = 0x01E0,
-			.vsize = 0x0B30,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.hsize = 0x0200,
+			.vsize = 0x0BF0,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10, // for dt 0x30
 			.user_data_desc = VC_PDAF_STATS,
 		},
-	}
+	},
 #endif
 };
 
@@ -244,12 +244,12 @@ static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
 		.bus.csi2 = {
 			.channel = 1,
 			.data_type = 0x30,
-			.hsize = 0x01E0,
-			.vsize = 0x0B30,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.hsize = 0x0200,
+			.vsize = 0x0BF0,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10, // for dt 0x30
 			.user_data_desc = VC_PDAF_STATS,
 		},
-	}
+	},
 #endif
 };
 
@@ -267,12 +267,12 @@ static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 		.bus.csi2 = {
 			.channel = 1,
 			.data_type = 0x30,
-			.hsize = 0x01E0,
-			.vsize = 0x0B30,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.hsize = 0x0200,
+			.vsize = 0x0BF0,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10, // for dt 0x30
 			.user_data_desc = VC_PDAF_STATS,
 		},
-	}
+	},
 #endif
 };
 
@@ -290,12 +290,12 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cust1[] = {
 		.bus.csi2 = {
 			.channel = 1,
 			.data_type = 0x30,
-			.hsize = 0x01E0,
-			.vsize = 0x0B30,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.hsize = 0x0200,
+			.vsize = 0x0BF0,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10, // for dt 0x30
 			.user_data_desc = VC_PDAF_STATS,
 		},
-	}
+	},
 #endif
 };
 
@@ -314,16 +314,52 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cust2[] = {
 			.channel = 1,
 			.data_type = 0x30,
 			.hsize = 0x01E0,
-			.vsize = 0x0B30,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.vsize = 0x0860,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10, // for dt 0x30
 			.user_data_desc = VC_PDAF_STATS,
 		},
-	}
+	},
 #endif
 };
 
 #if ENABLE_S5KJNS_UW_PD
 static struct SET_PD_BLOCK_INFO_T s5kjns_uw_pd_info = {
+	.i4OffsetX = 8,
+	.i4OffsetY = 2,
+	.i4PitchX = 8,
+	.i4PitchY = 8,
+	.i4PairNum = 4,
+	.i4SubBlkW = 8,
+	.i4SubBlkH = 2,
+	.i4PosL = {
+		{11, 2}, {9, 5}, {13, 6}, {15, 9}
+	},
+	.i4PosR = {
+		{10, 2}, {8, 5}, {12, 6}, {14, 9}
+	},
+	.i4BlockNumX = 512,
+	.i4BlockNumY = 382,
+	.i4Crop = {
+		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+	},
+	.i4FullRawW = 4080,
+	.i4FullRawH = 3060,
+	.iMirrorFlip = IMAGE_HV_MIRROR,
+	.PDAF_Support = PDAF_SUPPORT_CAMSV,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		.i4PDPattern = 3, // sparse PD non-interleaved
+		.i4PDRepetition = 8,
+		.i4PDOrder = {0,1,0,1,0,1,0,1}, // L = 0, R = 1
+	},
+};
+#endif
+
+#if ENABLE_S5KJNS_UW_60FPS_PD
+static struct SET_PD_BLOCK_INFO_T s5kjns_uw_60fps_pd_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 8,
 	.i4PitchX = 8,
@@ -338,7 +374,7 @@ static struct SET_PD_BLOCK_INFO_T s5kjns_uw_pd_info = {
 		{2, 8}, {0, 11}, {4, 12}, {6, 15}
 	},
 	.i4BlockNumX = 480,
-	.i4BlockNumY = 358,
+	.i4BlockNumY = 268,
 	.i4Crop = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
@@ -356,7 +392,7 @@ static struct SET_PD_BLOCK_INFO_T s5kjns_uw_pd_info = {
 		{0, 0}, {0, 0}, {0, 0},
 	},
 	.i4FullRawW = 3840,
-	.i4FullRawH = 2880,
+	.i4FullRawH = 3060,
 	.iMirrorFlip = IMAGE_HV_MIRROR,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV,
 	/* VC's PD pattern description */
@@ -804,9 +840,9 @@ static struct subdrv_pw_seq_entry pw_seq[] = {
 	{HW_ID_RST, 0, 1},
 	{HW_ID_MCLK, 24, 1},
 	{HW_ID_MCLK_DRIVING_CURRENT, 6, 0},
-	{HW_ID_DOVDD, 1800000, 0},
+	{HW_ID_DOVDD, 1800000, 1},
 	{HW_ID_DVDD, 1050000, 1},
-	{HW_ID_AVDD, 2800000,1},
+	{HW_ID_AVDD, 2800000,3},
 	{HW_ID_RST, 1, 14},
 };
 
