@@ -2031,6 +2031,10 @@ unsigned int mode = imgsys_streaming;
 	#else
 	gce_virt = mtk_hcp_get_gce_mem_virt(imgsys_dev->scp_pdev);
 	#endif
+	if (unlikely(!gce_virt)) {
+		pr_info("%s: null gce buffer\n", __func__);
+		return;
+	}
 	swfrm_info = (struct swfrm_info_t *)(gce_virt + (swbuf_data->offset));
 #if SMVR_DECOUPLE
  //dev_info(imgsys_dev->dev,
