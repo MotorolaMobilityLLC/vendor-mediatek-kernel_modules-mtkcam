@@ -1216,8 +1216,16 @@ int mtk_cam_ctrl_isr_event(struct mtk_cam_device *cam,
 			   struct mtk_camsys_irq_info *irq_info)
 {
 	unsigned int ctx_id = ctx_from_fh_cookie(irq_info->frame_idx);
-	struct mtk_cam_ctrl *cam_ctrl = &cam->ctxs[ctx_id].cam_ctrl;
+	struct mtk_cam_ctrl *cam_ctrl = NULL;
 	int ret = 0;
+
+	if (ctx_id >= cam->max_stream_num) {
+		dev_info(cam->dev, "unexpected ctx_id, engine_type:0x%x engine_id:0x%x irq_type:0x%x seq_no:0x%x_0x%x\n",
+				engine_type, engine_id, irq_info->irq_type,
+				irq_info->frame_idx_inner, irq_info->frame_idx);
+		return 0;
+	}
+	cam_ctrl = &cam->ctxs[ctx_id].cam_ctrl;
 
 	if (mtk_cam_ctrl_get(cam_ctrl))
 		return 0;
