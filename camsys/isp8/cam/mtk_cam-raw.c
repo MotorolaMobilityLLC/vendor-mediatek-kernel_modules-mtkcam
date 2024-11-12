@@ -2184,16 +2184,23 @@ static void raw_handle_tg_overrun_err(struct mtk_raw_device *raw_dev,
 				      unsigned int fh_cookie)
 {
 	int cnt;
+	unsigned int ctx_id;
+	struct mtk_cam_ctx *ctx;
 
 	cnt = raw_dev->tg_overrun_handle_cnt++;
+	ctx_id = ctx_from_fh_cookie(fh_cookie);
+	ctx = &raw_dev->cam->ctxs[ctx_id];
 
-	dev_info_ratelimited(raw_dev->dev, "%s: cnt=%d, seq 0x%x\n",
-			     __func__, cnt, fh_cookie);
+	dev_info_ratelimited(raw_dev->dev, "%s: ctx-%u cnt=%d, seq 0x%x\n",
+			     __func__, ctx_id, cnt, fh_cookie);
 
 	qof_mtcmos_raw_voter(raw_dev, true);
 
-	if (cnt < (OVERRUN_DUMP_CNT + raw_dev->sub_sensor_ctrl_en * 10))
+	if (cnt < (OVERRUN_DUMP_CNT + raw_dev->sub_sensor_ctrl_en * 10)) {
+		mtk_cam_seninf_dump(ctx->seninf, fh_cookie, true, true);
 		dump_topdebug_rdyreq_status(raw_dev);
+	}
+
 
 	else if (cnt == (OVERRUN_DUMP_CNT + raw_dev->sub_sensor_ctrl_en * 10)) {
 		dump_halt_setting(raw_dev);
