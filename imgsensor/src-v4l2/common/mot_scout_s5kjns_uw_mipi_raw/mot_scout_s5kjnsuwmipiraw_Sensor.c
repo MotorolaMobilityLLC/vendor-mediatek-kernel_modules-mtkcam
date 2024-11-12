@@ -37,7 +37,7 @@ static int s5kjns_uw_streaming_off(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 
 #define ENABLE_S5KJNS_UW_PD TRUE
 
-#define ENABLE_S5KJNS_UW_LONG_EXPOSURE FALSE
+#define ENABLE_S5KJNS_UW_LONG_EXPOSURE TRUE
 #if  ENABLE_S5KJNS_UW_LONG_EXPOSURE
 static int s5kjns_uw_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static void s5kjns_uw_set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter, u32 frame_length);
@@ -734,7 +734,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.min_gain_iso = 100,
 	.exposure_def = 0x3D0,
 	.exposure_min = 4,
-	.exposure_max = 0xFFFF - 10,
+	.exposure_max = 0xFFFF*128 - 10,
 	.exposure_step = 2,
 	.exposure_margin = 10,
 
