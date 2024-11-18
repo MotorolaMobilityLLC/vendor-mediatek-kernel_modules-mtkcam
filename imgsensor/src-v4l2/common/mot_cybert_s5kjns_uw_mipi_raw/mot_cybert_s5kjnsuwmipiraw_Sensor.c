@@ -36,7 +36,7 @@ static int s5kjns_uw_ops_close(struct subdrv_ctx *ctx);
 static int s5kjns_uw_streaming_off(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 
 #define ENABLE_S5KJNS_UW_PD TRUE
-#define ENABLE_S5KJNS_UW_60FPS_PD FALSE
+#define ENABLE_S5KJNS_UW_60FPS_PD TRUE
 
 #define ENABLE_S5KJNS_UW_LONG_EXPOSURE TRUE
 #if  ENABLE_S5KJNS_UW_LONG_EXPOSURE
@@ -379,27 +379,17 @@ static struct SET_PD_BLOCK_INFO_T s5kjns_uw_60fps_pd_info = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
-		// <cust6> <cust7> <cust8> cust9 cust10
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
-		// cust11 cust12 cust13 <cust14> <cust15>
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
-		// <cust16> <cust17> cust18 <cust19> cust20
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
-		// <cust21> <cust22> <cust23> <cust24> <cust25>
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
-		// cust26 <cust27> cust28
-		{0, 0}, {0, 0}, {0, 0},
+		{0, 0}, {120, 450}, {0, 0}, {0, 0}, {0, 0},
 	},
 	.i4FullRawW = 3840,
-	.i4FullRawH = 3060,
+	.i4FullRawH = 2160,
 	.iMirrorFlip = IMAGE_HV_MIRROR,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV,
 	/* VC's PD pattern description */
 	.sPDMapInfo[0] = {
 		.i4PDPattern = 3, // sparse PD
-		.i4PDRepetition = 2,
-		.i4PDOrder = {1, 0}, // L = 0, R = 1
+		.i4PDRepetition = 8,
+		.i4PDOrder = {0,1,0,1,0,1,0,1}, // L = 0, R = 1
 	},
 };
 #endif
