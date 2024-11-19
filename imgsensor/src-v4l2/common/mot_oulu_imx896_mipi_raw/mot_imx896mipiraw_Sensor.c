@@ -40,8 +40,6 @@ static int imx896_set_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int imx896_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 #endif
 
-static int imx896_hw_ver = -1;
-module_param(imx896_hw_ver, int, 0644);
 
 /* STRUCT */
 static struct subdrv_feature_control feature_control_list[] = {
@@ -266,6 +264,13 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	},
 	.i4ModeIndex = 3,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
+		.sPDMapInfo[0] = {
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
+		.i4PDPattern = 1,//all-pd
+		.i4BinFacX = 2,
+		.i4BinFacY = 4,
+		.i4PDOrder = {1}, //R=1, L=0
+	},
 };
 
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus1_info = {
@@ -292,6 +297,13 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus1_info = {
 	.i4FullRawH = 6144,
 	.i4ModeIndex = 3,
 	.i4VCPackNum = 1,
+	.sPDMapInfo[0] = {
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
+		.i4PDPattern = 1,//all-pd
+		.i4BinFacX = 4,
+		.i4BinFacY = 2,
+		.i4PDOrder = {1}, //R=1, L=0
+	},
 };
 
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
@@ -323,6 +335,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 	/* VC's PD pattern description */
 	.sPDMapInfo[0] = {
 		.i4PDPattern = 3, //pair PD
+		.i4VCFeature = VC_PDAF_STATS,
 		.i4PDRepetition = 8,
 		.i4PDOrder = {1,1,0,0,0,0,1,1}, // R = 1, L = 0
 	},
@@ -1052,22 +1065,6 @@ static int imx896_get_min_shutter(struct subdrv_ctx *ctx, u8 *feature_para, u32 
 			feature_data + 1, feature_data + 2);
 }
 
-static void imx896_select_setting_version(struct subdrv_ctx *ctx)
-{
-	if (imx896_hw_ver == -1) {
-		imx896_hw_ver = subdrv_i2c_rd_u8(ctx, 0x0018);
-		if (imx896_hw_ver & 0x10) {//MP sensor
-			static_ctx.init_setting_table = imx896_mp_init_setting;
-			static_ctx.init_setting_len = ARRAY_SIZE(imx896_mp_init_setting);
-			memcpy(&(ctx->s_ctx), &static_ctx, sizeof(struct subdrv_static_ctx));
-			DRV_LOG_MUST(ctx, "MP Sensor detected. HW Ver: 0x%x\n",imx896_hw_ver);
-			return;
-		}
-		DRV_LOG_MUST(ctx, "ES Sensor detected. HW Ver: 0x%x\n",imx896_hw_ver);
-	} else {
-		DRV_LOG(ctx, "Sensor HW Ver: 0x%x\n",imx896_hw_ver);
-	}
-}
 
 static int imx896_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 {
@@ -1088,7 +1085,6 @@ static int imx896_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 			DRV_LOG(ctx, "i2c_write_id:0x%x sensor_id(cur/exp):0x%x/0x%x\n",
 				ctx->i2c_write_id, *sensor_id, ctx->s_ctx.sensor_id);
 			if (*sensor_id == ctx->s_ctx.sensor_id) {
-				imx896_select_setting_version(ctx);
 				return ERROR_NONE;
 			}
 			retry--;
