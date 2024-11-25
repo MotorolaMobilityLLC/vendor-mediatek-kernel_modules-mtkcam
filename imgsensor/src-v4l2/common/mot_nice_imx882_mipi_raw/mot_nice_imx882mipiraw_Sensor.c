@@ -218,6 +218,18 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus4[] = {
 	},
 };
 
+static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2b,
+			.hsize = 0x0800,
+			.vsize = 0x0600,
+			.user_data_desc = VC_STAGGER_NE,
+		},
+	},
+};
+
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 0,
@@ -787,6 +799,61 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
+	{//custom5  2048x1536@30fps
+		.frame_desc = frame_desc_cus5,
+		.num_entries = ARRAY_SIZE(frame_desc_cus5),
+		.mode_setting_table = addr_data_pair_custom5,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom5),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 878400000,
+		.linelength = 4024,
+		.framelength = 7272,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 800000000,
+		.readout_length = 0,
+		.read_margin = 0,
+		.framelength_step = 8,
+		.coarse_integ_step = 8,
+		.min_exposure_line = 12,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 12,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 0,
+			.w0_size = 8192,
+			.h0_size = 6144,
+			.scale_w = 2048,
+			.scale_h = 1536,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 2048,
+			.h1_size = 1536,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 2048,
+			.h2_tg_size = 1536,
+		},
+		//.pdaf_cap = TRUE,
+		//.imgsensor_pd_info = &imgsensor_pd_info,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.ana_gain_min = 1.4287*BASEGAIN,
+		.ana_gain_max = 64*BASEGAIN,//36dB
+		.dig_gain_min = 1*BASEGAIN,
+		.dig_gain_max = 1*BASEGAIN,
+		.dig_gain_step = 4,
+		.csi_param = {
+			.cphy_settle = 73,
+		},
+		.dpc_enabled = true, /* reg 0x0b06 */
+	}
 };
 
 static struct subdrv_static_ctx static_ctx = {
