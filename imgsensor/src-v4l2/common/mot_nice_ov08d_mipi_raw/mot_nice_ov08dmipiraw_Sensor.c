@@ -140,7 +140,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.imgsensor_pd_info = PARAM_UNDEFINED,
 		.ae_binning_ratio = 1,
 		.fine_integ_line = 0,
-		.delay_frame = 0,
+		.delay_frame = 2,
 		.csi_param = {
 			.cphy_settle = 85,
 		},
@@ -184,7 +184,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.imgsensor_pd_info = PARAM_UNDEFINED,
 		.ae_binning_ratio = 1,
 		.fine_integ_line = 0,
-		.delay_frame = 0,
+		.delay_frame = 2,
 		.csi_param = {
 			.cphy_settle = 85,
 		},
@@ -228,7 +228,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.imgsensor_pd_info = PARAM_UNDEFINED,
 		.ae_binning_ratio = 1,
 		.fine_integ_line = 0,
-		.delay_frame = 0,
+		.delay_frame = 2,
 		.csi_param = {
 			.cphy_settle = 85,
 		},
@@ -272,7 +272,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.imgsensor_pd_info = PARAM_UNDEFINED,
 		.ae_binning_ratio = 1,
 		.fine_integ_line = 0,
-		.delay_frame = 0,
+		.delay_frame = 2,
 		.csi_param = {
 			.cphy_settle = 85,
 		},
@@ -316,7 +316,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.imgsensor_pd_info = PARAM_UNDEFINED,
 		.ae_binning_ratio = 1,
 		.fine_integ_line = 0,
-		.delay_frame = 0,
+		.delay_frame = 2,
 		.csi_param = {
 			.cphy_settle = 85,
 		},
@@ -350,10 +350,10 @@ static struct subdrv_static_ctx static_ctx = {
 	.min_gain_iso = 100,
 	.exposure_def = 0x3D0,
 	.exposure_min = 4,  //24
-	.exposure_max = 8000,
+	.exposure_max = 78260,
 	.exposure_step = 1, //4
 	.exposure_margin = 20,
-	.frame_length_max = 8020,
+	.frame_length_max = 0x89c7,
 	.ae_effective_frame = 2,
 	.frame_time_delay_frame = 2,
 	.start_exposure_offset = 0,
@@ -366,14 +366,14 @@ static struct subdrv_static_ctx static_ctx = {
 	//.s_cali = set_sensor_cali,
 	//.reg_addr_stream = 0x0100,
 	.reg_addr_mirror_flip = PARAM_UNDEFINED,
-	//.reg_addr_exposure = {},
-	.long_exposure_support = FALSE,
-	.reg_addr_exposure_lshift = PARAM_UNDEFINED,
+	.reg_addr_exposure = {{0x05,0x06},},
+	.long_exposure_support = TRUE,
+	.reg_addr_exposure_lshift = 0x02,
 	//.reg_addr_ana_gain = {},
-	//.reg_addr_frame_length = {0x0340, 0x0341},
+	.reg_addr_frame_length = {0x34, 0x35, 0x36},
 	//.reg_addr_temp_en = 0x4D12,
 	//.reg_addr_temp_read = 0x4D13,
-	//.reg_addr_auto_extend = PARAM_UNDEFINED,
+	.reg_addr_auto_extend = 0,
 	//.reg_addr_frame_count = 0x387F,
 	.init_setting_table = addr_data_pair_init_mot_nice_ov08d,
 	.init_setting_len = ARRAY_SIZE(addr_data_pair_init_mot_nice_ov08d),
@@ -473,110 +473,161 @@ static void ov08d_set_dummy(struct subdrv_ctx *ctx)
 	write_cmos_sensor_8(ctx, 0x06, ((ctx->frame_length - vblank_convert)*2) & 0xFF);
 	write_cmos_sensor_8(ctx, 0x01, 0x01);
 }
-static void ov08d_set_max_framerate(struct subdrv_ctx *ctx, UINT16 framerate, kal_bool min_framelength_en)
-{
-	kal_uint32 frame_length = ctx->frame_length;
-	frame_length = ctx->pclk / framerate * 10 / ctx->line_length;
-	ctx->frame_length = (frame_length > ctx->min_frame_length) ?
-			frame_length : ctx->min_frame_length;
-	ctx->dummy_line = ctx->frame_length -
-		ctx->min_frame_length;
-	if (ctx->frame_length > static_ctx.frame_length_max) {
-		ctx->frame_length = static_ctx.frame_length_max;
-		ctx->dummy_line = ctx->frame_length - ctx->min_frame_length;
-	}
-	if (min_framelength_en)
-		ctx->min_frame_length = ctx->frame_length;
-}
 
-static int long_exposure_status = 0;
-static void write_shutter(struct subdrv_ctx *ctx, kal_uint32 shutter)
+static void ov08d_set_long_exposure(struct subdrv_ctx *ctx)
 {
-	kal_uint16 realtime_fps = 0;
-	//LOG_INF("shutter = %d frame_length %d\n", shutter, ctx->frame_length);
+	u32 shutter = ctx->exposure[0];
+	u32 l_shutter = 0;
+	u16 l_shift = 0;
+	static int longexposue = 0;
+	u32 cal_shutter = 0;
 
-	// OV Recommend Solution
-	// if shutter bigger than frame_length, should extend frame length first
-	if (shutter > ctx->min_frame_length - static_ctx.exposure_margin)
-		ctx->frame_length = shutter + static_ctx.exposure_margin;
-	else
-		ctx->frame_length = ctx->min_frame_length;
-	if (ctx->frame_length > static_ctx.frame_length_max)
-		ctx->frame_length = static_ctx.frame_length_max;
-	shutter = (shutter < ctx->exposure_min) ?
-				ctx->exposure_min : shutter;
-	//frame_length and shutter should be an even number.
-	shutter = (shutter >> 1) << 1;
-	ctx->frame_length = (ctx->frame_length >> 2) << 2;
-	if (ctx->autoflicker_en == KAL_TRUE) {
-		realtime_fps = ctx->pclk / ctx->line_length * 10 /
-			ctx->frame_length;
-		if (realtime_fps >= 297 && realtime_fps <= 305) {
-			realtime_fps = 296;
-			ov08d_set_max_framerate(ctx, realtime_fps, 0);
-		} else if (realtime_fps >= 147 && realtime_fps <= 150) {
-			realtime_fps = 146;
-			ov08d_set_max_framerate(ctx, realtime_fps, 0);
+	if (shutter > ctx->s_ctx.exposure_max) {
+		DRV_LOGE(ctx, "ov08d enter long exposure!");
+		longexposue = 1;
+		if (ctx->s_ctx.long_exposure_support == FALSE) {
+			DRV_LOGE(ctx, "sensor no support of exposure lshift!\n");
+			return;
 		}
-	}
-	LOG_INF("ov08d long exposure %d\n",shutter);
-	//LOG_INF("my_realtime_fps = %d\n", realtime_fps);
-	/* long expsoure */
-	if (shutter > static_ctx.exposure_max) {
-			shutter = (shutter >
-						(static_ctx.exposure_max)) ?
-						(static_ctx.exposure_max) :
-						shutter;
-		    LOG_INF("ov08d long exposure %d\n",shutter);
-	        //Frame exposure mode customization for LE
-	        ctx->ae_frm_mode.frame_mode_1 = IMGSENSOR_AE_MODE_SE;
-	        ctx->ae_frm_mode.frame_mode_2 = IMGSENSOR_AE_MODE_SE;
-	        write_cmos_sensor_8(ctx, 0xfd, 0x01);
-	        write_cmos_sensor_8(ctx, 0x24, 0x10);
-	        write_cmos_sensor_8(ctx, 0x02, 0x02);
-	        write_cmos_sensor_8(ctx, 0x03, 0x63);
-	        write_cmos_sensor_8(ctx, 0x04, 0x69);
-	        write_cmos_sensor_8(ctx, 0x01, 0x01);
-	        long_exposure_status = 1;
-	} else if(long_exposure_status == 1){
-	        //LOG_INF("le shutter is %d exit\n",shutter);
-	        write_cmos_sensor_8(ctx, 0xfd, 0x00);
-	        write_cmos_sensor_8(ctx, 0x24, 0x10);
-	        write_cmos_sensor_8(ctx, 0x02, 0x00);
-	        write_cmos_sensor_8(ctx, 0x03, 0x06);
-	        write_cmos_sensor_8(ctx, 0x04, 0x1D);
-	        write_cmos_sensor_8(ctx, 0x01, 0x01);
-	        long_exposure_status = 0;
-	}
-	ctx->current_ae_effective_frame = 2;
-	if(long_exposure_status == 0){
-		ctx->frame_length = ((ctx->frame_length + 3) >> 2) << 2;// need to set to  multi 4
-		if (ctx->frame_length > static_ctx.frame_length_max) {
-			ctx->frame_length = static_ctx.frame_length_max;
+		if (ctx->s_ctx.reg_addr_exposure_lshift == PARAM_UNDEFINED) {
+			DRV_LOGE(ctx, "please implement lshift register address\n");
+			return;
 		}
+		for (l_shift = 1; l_shift < 7; l_shift++) {
+			l_shutter = ((shutter - 1) >> l_shift) + 1;
+			if (l_shutter
+				< (ctx->s_ctx.frame_length_max - ctx->s_ctx.exposure_margin))
+				break;
+		}
+		if (l_shift > 7) {
+			DRV_LOGE(ctx, "unable to set exposure:%u, set to max\n", shutter);
+			l_shift = 7;
+		}
+
 		write_cmos_sensor_8(ctx, 0xfd, 0x01);
-		write_cmos_sensor_8(ctx, 0x05, (((ctx->frame_length - vblank_convert)*2) & 0xFF00) >> 8);
-		write_cmos_sensor_8(ctx, 0x06, ((ctx->frame_length - vblank_convert)*2) & 0xFF);
+		write_cmos_sensor_8(ctx, 0x24, 0x10);
+		write_cmos_sensor_8(ctx, 0x02, 0x02);
+		write_cmos_sensor_8(ctx, 0x03, 0x63);
+		write_cmos_sensor_8(ctx, 0x04, 0x69);
+
+		write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure_lshift, (shutter*2 >> 16) & 0xFF);
+		write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure_lshift+1, (shutter*2 >> 8) & 0xFF);
+		write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure_lshift+2, (shutter*2) & 0xFF);
+
 		write_cmos_sensor_8(ctx, 0x01, 0x01);
+
+		shutter = ((shutter - 1) >> l_shift) + 1;
+		shutter = min(shutter, ctx->s_ctx.exposure_max);
+		ctx->frame_length = shutter + ctx->s_ctx.exposure_margin;
+		ctx->frame_length_rg = ctx->frame_length;
+		ctx->l_shift = l_shift;
+	    DRV_LOGE(ctx, "long exposure mode: lshift %u times, normal shutter=0x%x, long shutter=0x%x\n",
+				l_shift,
+				cal_shutter - shutter - 1,
+				cal_shutter);
+
+		/* Frame exposure mode customization for LE*/
+		ctx->ae_frm_mode.frame_mode_1 = IMGSENSOR_AE_MODE_SE;
+		ctx->ae_frm_mode.frame_mode_2 = IMGSENSOR_AE_MODE_SE;
+		ctx->current_ae_effective_frame = 2;
+	} else {
+		if (longexposue == 1) {
+			DRV_LOGE(ctx, "ov08d exit long exposure!");
+			write_cmos_sensor_8(ctx, 0xfd, 0x00);
+			write_cmos_sensor_8(ctx, 0x24, 0x10);
+			write_cmos_sensor_8(ctx, 0x02, 0x00);
+			write_cmos_sensor_8(ctx, 0x03, 0x06);
+			write_cmos_sensor_8(ctx, 0x04, 0x1D);
+			write_cmos_sensor_8(ctx, 0x01, 0x01);
+			longexposue = 0;
+		}
+
+		if (ctx->s_ctx.reg_addr_exposure_lshift != PARAM_UNDEFINED) {
+			ctx->l_shift = l_shift;
+		}
+		shutter = min(shutter, ctx->s_ctx.exposure_max);
+		/* write framelength&shutter */
+		/*if (set_auto_flicker(ctx, 0) || ctx->frame_length) {
+			write_cmos_sensor_8(ctx, 0xfd,0x01);
+			write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_frame_length.addr[0],
+				(ctx->frame_length >> 8) & 0xFF);
+			write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_frame_length.addr[1],
+				ctx->frame_length & 0xFF);
+			write_cmos_sensor_8(ctx, 0x01,0x01);
+		}*/
+		if(longexposue == 0)
+		{
+			ctx->frame_length = ((ctx->frame_length + 3) >> 2) << 2;// need to set to  multi 4
+			if (ctx->frame_length > static_ctx.frame_length_max) {
+			ctx->frame_length = static_ctx.frame_length_max;
+			}
+			write_cmos_sensor_8(ctx, 0xfd, 0x01);
+			write_cmos_sensor_8(ctx, 0x05, (((ctx->frame_length - vblank_convert)*2) & 0xFF00) >> 8);
+			write_cmos_sensor_8(ctx, 0x06, ((ctx->frame_length - vblank_convert)*2) & 0xFF);
+			write_cmos_sensor_8(ctx, 0x01, 0x01);
+		}
+		write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure[0].addr[0],
+			(ctx->exposure[0] *2 >> 8) & 0xFF);
+		write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure[0].addr[1],
+			ctx->exposure[0] *2 & 0xFF);
+		write_cmos_sensor_8(ctx, 0x01,0x01);
+		DRV_LOG(ctx, "normal exposure mode: lshift %u times, normal shutter=0x%x, frame_length=%d\n",
+				l_shift,
+				shutter,
+				ctx->frame_length);
+
+		ctx->current_ae_effective_frame = 2;
 	}
-	////LOG_INF("shutter_write_to_register = %d, frame_length = %d\n", shutter, ctx->frame_length);
-	write_cmos_sensor_8(ctx, 0xfd, 0x01);
-	write_cmos_sensor_8(ctx, 0x02, (shutter*2 >> 16) & 0xFF);
-	write_cmos_sensor_8(ctx, 0x03, (shutter*2 >> 8) & 0xFF);
-	write_cmos_sensor_8(ctx, 0x04,  shutter*2  & 0xFF);
-	write_cmos_sensor_8(ctx, 0x01, 0x01);
-	// LOG_INF("0x05 = 0x%x, 0x06 = 0x%x\n", read_cmos_sensor_8(ctx, 0x05), read_cmos_sensor_8(ctx, 0x06));
-	// LOG_INF("0x02 = 0x%x, 0x03 = 0x%x, 0x04 = 0x%x\n", read_cmos_sensor_8(ctx, 0x02),
-	// read_cmos_sensor_8(ctx, 0x03), read_cmos_sensor_8(ctx, 0x04));
-	//DEBUG_LOG(ctx, "shutter =%d, framelength =%d, realtime_fps =%d\n",
-	//shutter, ctx->frame_length, realtime_fps);
+	ctx->exposure[0] = shutter;
 }
-//should not be kal_uint16 -- can't reach long exp
-static void ov08d_set_shutter(struct subdrv_ctx *ctx, kal_uint32 shutter)
+
+static int ov08d_set_shutter_frame_length_by(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
-	ctx->shutter = shutter;
-	write_shutter(ctx, shutter);
+	u64 *feature_data = (u64 *)para;
+	u32 shutter = *feature_data;
+	u32 frame_length = 0;
+	u32 fine_integ_line = 0;
+
+	DRV_LOG(ctx, "ov08d_shutter = 0x%x \n", shutter);
+	DRV_LOG(ctx, "ov08d_frame_length = 0x%x \n", frame_length);
+	ctx->frame_length = frame_length ? frame_length : ctx->frame_length;
+	check_current_scenario_id_bound(ctx);
+	/* check boundary of framelength */
+	ctx->frame_length =	max(shutter + ctx->s_ctx.exposure_margin, ctx->min_frame_length);
+	ctx->frame_length =	min(ctx->frame_length, ctx->s_ctx.frame_length_max);
+	/* check boundary of shutter */
+	fine_integ_line = ctx->s_ctx.mode[ctx->current_scenario_id].fine_integ_line;
+	shutter = FINE_INTEG_CONVERT(shutter, fine_integ_line);
+	shutter = max(shutter, ctx->s_ctx.exposure_min);
+	/* restore shutter */
+	memset(ctx->exposure, 0, sizeof(ctx->exposure));
+	ctx->exposure[0] = shutter;
+
+	/* set_long_exposure */
+	if (ctx->s_ctx.long_exposure_support == TRUE) {
+		ov08d_set_long_exposure(ctx);
+	} else {
+		shutter = min(shutter, ctx->s_ctx.exposure_max);
+		/* write framelength&shutter */
+		if (set_auto_flicker(ctx, 0) || ctx->frame_length) {
+		write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_frame_length.addr[0],
+			(ctx->frame_length >> 16) & 0xFF);
+		write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_frame_length.addr[1],
+			(ctx->frame_length >> 8) & 0xFF);
+		write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_frame_length.addr[2],
+			ctx->frame_length & 0xFF);
+		}
+		write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure[0].addr[0],
+			(ctx->exposure[0] >> 8) & 0xFF);
+		write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure[0].addr[1],
+			ctx->exposure[0] & 0xFF);
+	}
+
+	DRV_LOG(ctx, "exp[0x%x], fll(input/output):%u/%u, flick_en:%u\n",
+		ctx->exposure[0], frame_length, ctx->frame_length, ctx->autoflicker_en);
+	return ERROR_NONE;
 }
+
 static kal_uint16 ov08d_gain2reg(struct subdrv_ctx *ctx, const kal_uint32 gain)
 {
 	kal_uint16 iReg = 0x0000;
@@ -908,11 +959,7 @@ static int ov08d_streaming_on(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 }
 static int ov08d_set_shutter_by(struct subdrv_ctx *ctx,  u8 *para, u32 *len)
 {
-	u32 *shutter = (u32 *) para;
-	LOG_INF("%s *shutter = %d E\n", __func__,*shutter);
-	//*shutter = *shutter/500;
-	ctx->shutter = *shutter;
-	write_shutter(ctx, *shutter);
+	ov08d_set_shutter_frame_length_by(ctx, para, len);
 	return  ERROR_NONE;
 }
 static int ov08d_set_gain_by(struct subdrv_ctx *ctx,  u8 *para, u32 *len)
@@ -956,18 +1003,7 @@ static int ov08d_set_frame_length_by(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 		ctx->frame_length, frame_length, ctx->min_frame_length);
 	return  ERROR_NONE;
 }
-static int ov08d_set_shutter_frame_length_by(struct subdrv_ctx *ctx, u8 *para, u32 *len)
-{
-	unsigned long long *feature_data = (unsigned long long *) para;
-	kal_uint16 shutter = (UINT16)(*feature_data);
-	kal_uint16 target_frame_length = (UINT16)*(feature_data+1);
-	if (target_frame_length > 1)
-		ctx->dummy_line = target_frame_length - ctx->frame_length;
-	ctx->frame_length = ctx->frame_length + ctx->dummy_line;
-	ctx->min_frame_length = ctx->frame_length;
-	ov08d_set_shutter(ctx, shutter);
-	return  ERROR_NONE;
-}
+
 static int ov08d_set_max_framerate_by_scenario_by(struct subdrv_ctx *ctx,u8 *para, u32 *len)
 {
 	unsigned long long *feature_data = (unsigned long long *) para;
