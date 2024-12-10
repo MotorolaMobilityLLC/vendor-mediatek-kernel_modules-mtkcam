@@ -11,6 +11,13 @@
 #include <linux/jiffies.h>
 #include <uapi/linux/dma-heap.h>
 
+#include <linux/suspend.h>
+#ifdef CONFIG_PM_WAKELOCKS
+#include <linux/pm_wakeup.h>
+#else
+#include <linux/wakelock.h>
+#endif
+
 #include "mtk_heap.h"
 
 #include "mtk-aov-config.h"
@@ -37,6 +44,12 @@
 #else
 #define ALIGN16(x) (x)
 #endif  // AOV_EVENT_IN_PLACE
+
+#ifdef CONFIG_PM_WAKELOCKS
+struct wakeup_source *event_wake_lock;
+#else
+struct wake_lock event_wake_lock;
+#endif
 
 static struct mtk_aov *curr_dev;
 
@@ -775,6 +788,14 @@ int aov_core_send_cmd(struct mtk_aov *aov_dev, uint32_t cmd,
 		queue_deinit(&(core_info->event));
 		queue_init(&(core_info->event));
 
+		AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
+			"%s: release event wakelock when stop.\n", __func__);
+#ifdef CONFIG_PM_WAKELOCKS
+		__pm_relax(event_wake_lock);
+#else
+		wake_unlock(&event_wake_lock);
+#endif
+
 		// Reset queue to empty
 		while (!queue_empty(&(core_info->queue))) {
 			buf = queue_pop(&(core_info->queue));
@@ -1050,6 +1071,12 @@ int aov_core_init(struct mtk_aov *aov_dev)
 		dev_info(aov_dev->dev, "%s: failed to acquire semaphore\n", __func__);
 		return -EFAULT;
 	}
+
+#ifdef CONFIG_PM_WAKELOCKS
+	event_wake_lock = wakeup_source_register(aov_dev->dev, "aov_event_wakelock");
+#else
+	wake_lock_init(&event_wake_lock, WAKE_LOCK_SUSPEND, "aov_event_wakelock");
+#endif
 
 	if (curr_dev->op_mode == 0) {
 		dev_info(aov_dev->dev, "%s: bypass init operation", __func__);
@@ -1565,6 +1592,15 @@ int aov_core_poll(struct mtk_aov *aov_dev, struct file *file,
 	}
 	if (event != NULL) {
 		ret = copy_event_data(aov_dev, event);
+
+		AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
+			"%s: hold event wakelock after copy_event_data.\n", __func__);
+#ifdef CONFIG_PM_WAKELOCKS
+		__pm_stay_awake(event_wake_lock);
+#else
+		wake_lock(&event_wake_lock);
+#endif
+
 		if (ret >= 0)
 			return POLLPRI;
 	}
@@ -1585,9 +1621,26 @@ int aov_core_poll(struct mtk_aov *aov_dev, struct file *file,
 	}
 	if (event != NULL) {
 		ret = copy_event_data(aov_dev, event);
+
+		AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
+			"%s: hold event wakelock after copy_event_data.\n", __func__);
+#ifdef CONFIG_PM_WAKELOCKS
+		__pm_stay_awake(event_wake_lock);
+#else
+		wake_lock(&event_wake_lock);
+#endif
+
 		if (ret >= 0)
 			return POLLPRI;
 	}
+
+	AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
+		"%s: release event wakelock when no event data.\n", __func__);
+#ifdef CONFIG_PM_WAKELOCKS
+	__pm_relax(event_wake_lock);
+#else
+	wake_unlock(&event_wake_lock);
+#endif
 
 	AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag), "%s: poll start-: 0\n", __func__);
 
