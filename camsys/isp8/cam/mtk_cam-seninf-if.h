@@ -299,4 +299,12 @@ void mtk_cam_seninf_parse_ebd_line(struct v4l2_subdev *sd,
 void notify_sensor_set_fl_prolong(struct v4l2_subdev *sd,
 	unsigned int action);
 
+/**
+ * start or stop seninf streaming
+ *
+ * @param sd v4l2_subdev
+ * @param enable start or stop
+ */
+int seninf_s_stream(struct v4l2_subdev *sd, int enable);
+
 #endif
