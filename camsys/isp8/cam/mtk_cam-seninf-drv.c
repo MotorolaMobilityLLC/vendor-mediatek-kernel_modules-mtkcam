@@ -2543,7 +2543,7 @@ static int stream_sensor(struct seninf_ctx *ctx, bool enable)
 	return ret;
 }
 
-static int seninf_s_stream(struct v4l2_subdev *sd, int enable)
+int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct seninf_ctx *ctx = sd_to_ctx(sd);
 	struct seninf_core *core = ctx->core;
