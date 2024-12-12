@@ -101,6 +101,12 @@ struct mtk_cam_debug {
 	struct mtk_cam_normal_dump dump;
 };
 
+enum dma_debug_dump {
+	DD_DUMP_NONE    = 0,
+	DD_DUMP_SRT     = 1 << 0,
+	DD_DUMP_CQ      = 1 << 1,
+};
+
 int mtk_cam_debug_init(struct mtk_cam_debug *dbg, struct mtk_cam_device *cam);
 void mtk_cam_debug_deinit(struct mtk_cam_debug *dbg);
 
