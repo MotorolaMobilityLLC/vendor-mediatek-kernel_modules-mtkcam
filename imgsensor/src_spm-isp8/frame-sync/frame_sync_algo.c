@@ -1622,13 +1622,15 @@ static inline void fs_alg_sa_setup_dynamic_fps_info_by_dynamic_para(
 
 static void fs_alg_sa_reset_dynamic_fps_info(const unsigned int idx)
 {
+	struct fs_dynamic_fps_record_st *p_clr_st;
+
 	fs_spin_lock(&fs_alg_sa_dynamic_fps_op_lock);
 
 	FS_WRITE_BIT(idx, 0, &fs_sa_inst.unstable_fps_bits);
-	memset(&fs_sa_inst.dynamic_fps_recs[idx], 0,
-		sizeof(fs_sa_inst.dynamic_fps_recs[idx]));
-	memset(&fs_sa_inst.last_dynamic_fps_recs[idx], 0,
-		sizeof(fs_sa_inst.last_dynamic_fps_recs[idx]));
+	p_clr_st = &fs_sa_inst.dynamic_fps_recs[idx];
+	memset(p_clr_st, 0, sizeof(*p_clr_st));
+	p_clr_st = &fs_sa_inst.last_dynamic_fps_recs[idx];
+	memset(p_clr_st, 0, sizeof(*p_clr_st));
 
 	fs_spin_unlock(&fs_alg_sa_dynamic_fps_op_lock);
 }
@@ -1679,10 +1681,12 @@ static void fs_alg_sa_query_all_dynamic_fps_info(
 
 static void fs_alg_sa_reset_dynamic_para(const unsigned int idx)
 {
+	struct FrameSyncDynamicPara *p_clr_st;
+
 	fs_spin_lock(&fs_alg_sa_dynamic_para_op_lock);
 
-	memset(&fs_sa_inst.dynamic_paras[idx], 0,
-		sizeof(fs_sa_inst.dynamic_paras[idx]));
+	p_clr_st = &fs_sa_inst.dynamic_paras[idx];
+	memset(p_clr_st, 0, sizeof(*p_clr_st));
 
 	fs_spin_unlock(&fs_alg_sa_dynamic_para_op_lock);
 }
@@ -3443,7 +3447,9 @@ void fs_alg_reset_vsync_data(const unsigned int idx)
 
 void fs_alg_reset_fs_inst(unsigned int idx)
 {
-	memset(&fs_inst[idx], 0, sizeof(fs_inst[idx]));
+	struct FrameSyncInst *p_clr_st = &fs_inst[idx];
+
+	memset(p_clr_st, 0, sizeof(*p_clr_st));
 
 #ifdef SUPPORT_FS_NEW_METHOD
 	fs_alg_reset_fs_sa_inst(idx);
