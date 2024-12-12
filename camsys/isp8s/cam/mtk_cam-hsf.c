@@ -68,7 +68,8 @@ int mtk_cam_dmabuf_get_iova(struct mtk_cam_ctx *ctx,
 	struct mtk_cam_device *cam = ctx->cam;
 	struct dma_buf_attachment *attach;
 	struct sg_table *table;
-#if IS_ENABLED(CONFIG_MTK_TRUSTED_MEMORY_SUBSYSTEM)
+//#if IS_ENABLED(CONFIG_MTK_TRUSTED_MEMORY_SUBSYSTEM)
+#ifdef SKIP_IN_FPGA_EP
 	uint64_t handle;
 
 	handle = dmabuf_to_secure_handle(dmap->dbuf);
@@ -95,7 +96,8 @@ int mtk_cam_dmabuf_get_iova(struct mtk_cam_ctx *ctx,
 		dma_buf_detach(dmap->dbuf, attach);
 		return -1;
 	}
-#if IS_ENABLED(CONFIG_MTK_TRUSTED_MEMORY_SUBSYSTEM)
+//#if IS_ENABLED(CONFIG_MTK_TRUSTED_MEMORY_SUBSYSTEM)
+#ifdef SKIP_IN_FPGA_EP
 	dmap->hsf_handle = handle;
 #endif
 	dmap->attach = attach;
@@ -108,7 +110,8 @@ int mtk_cam_dmabuf_get_iova(struct mtk_cam_ctx *ctx,
 uint64_t mtk_cam_dmabuf_get_pa(struct mtk_cam_ctx *ctx,
 			       struct mtk_cam_dma_map *dmap)
 {
-#if IS_ENABLED(CONFIG_MTK_TRUSTED_MEMORY_SUBSYSTEM)
+//#if IS_ENABLED(CONFIG_MTK_TRUSTED_MEMORY_SUBSYSTEM)
+#ifdef SKIP_IN_FPGA_EP
 	struct mtk_cam_device *cam = ctx->cam;
 	uint64_t handle;
 	uint64_t pa = 0;
