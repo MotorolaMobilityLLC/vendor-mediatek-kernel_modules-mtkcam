@@ -6,6 +6,7 @@
 #ifndef __MIPI_RX_ANA_CDPHY_CSI0A_H__
 #define __MIPI_RX_ANA_CDPHY_CSI0A_H__
 
+
 #define CDPHY_RX_ANA_0 0x0000
 #define RG_CSI0_BG_CORE_EN_SHIFT 0
 #define RG_CSI0_BG_CORE_EN_MASK (0x1 << 0)

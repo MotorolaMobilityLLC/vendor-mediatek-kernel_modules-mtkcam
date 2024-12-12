@@ -37,6 +37,7 @@
 #define PIX_MODE_16_REG_VAL 4
 //#define SCAN_SETTLE
 
+#define MT6993_IOMOM_VERSIONS "mt6993" //jeff porting
 #define MT6899_IOMOM_VERSIONS "mt6899"
 #define MT6991_IOMOM_VERSIONS "mt6991"
 
@@ -1650,7 +1651,7 @@ static int csirx_phyA_power_on(struct seninf_ctx *ctx, int portIdx, int en)
 	udelay(200);
 
 	if (en) {
-		SENINF_BITS(base, CDPHY_RX_ANA_0, RG_CSI0_BG_CORE_EN, 1);
+		SENINF_BITS(base, CDPHY_RX_ANA_0, RG_CSI0_BG_CORE_EN, 1);//jeff porting ana page27
 		udelay(30);
 		SENINF_BITS(base, CDPHY_RX_ANA_0, RG_CSI0_BG_LPF_EN, 1);
 		udelay(5);
@@ -1662,7 +1663,14 @@ static int csirx_phyA_power_on(struct seninf_ctx *ctx, int portIdx, int en)
 		SENINF_BITS(base, CDPHY_RX_ANA_8, RG_CSI0_XX_T0BC_EQ_OS_CAL_EN, 1);
 		SENINF_BITS(base, CDPHY_RX_ANA_8, RG_CSI0_XX_T0CA_EQ_OS_CAL_EN, 1);
 		SENINF_BITS(base, CDPHY_RX_ANA_8, RG_CSI0_XX_T1CA_EQ_OS_CAL_EN, 1);
-		udelay(1);
+		udelay(25);//jeff porting ana page27
+		SENINF_BITS(base, CDPHY_RX_ANA_9, RGS_CSI0_CDPHY_L0_T0AB_OS_CAL_CPLT, 1);
+		SENINF_BITS(base, CDPHY_RX_ANA_9, RGS_CSI0_CDPHY_L1_T1AB_OS_CAL_CPLT, 1);
+		SENINF_BITS(base, CDPHY_RX_ANA_9, RGS_CSI0_CDPHY_L2_T1BC_OS_CAL_CPLT, 1);
+		SENINF_BITS(base, CDPHY_RX_ANA_9, RGS_CSI0_CPHY_T0BC_OS_CAL_CPLT, 1);
+		SENINF_BITS(base, CDPHY_RX_ANA_9, RGS_CSI0_CPHY_T0CA_OS_CAL_CPLT, 1);
+		SENINF_BITS(base, CDPHY_RX_ANA_9, RGS_CSI0_CPHY_T1CA_OS_CAL_CPLT, 1);
+		//jeff porting ana page27
 	}
 
 	seninf_logd(ctx, "portIdx %d en %d CDPHY_RX_ANA_0 0x%x ANA_8 0x%x\n",
@@ -1735,21 +1743,21 @@ static int csirx_phyA_init(struct seninf_ctx *ctx)
 		SENINF_BITS(base, CDPHY_RX_ANA_1, RG_CSI0_BG_LPRX_VTH_SEL, 0x4);
 		SENINF_BITS(base, CDPHY_RX_ANA_2, RG_CSI0_BG_ALP_RX_VTL_SEL, 0x4);
 		SENINF_BITS(base, CDPHY_RX_ANA_2, RG_CSI0_BG_ALP_RX_VTH_SEL, 0x4);
-		if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
-			SENINF_BITS(base, CDPHY_RX_ANA_1, RG_CSI0_BG_VREF_SEL, 0x8);
-			SENINF_BITS(base, CDPHY_RX_ANA_3, RG_CSI0_EQ_DES_VREF_SEL, 0x20);
-		} else {
+		if (!strcasecmp(_seninf_ops->iomem_ver, MT6993_IOMOM_VERSIONS)) {//jeff porting ana page5
 			SENINF_BITS(base, CDPHY_RX_ANA_1, RG_CSI0_BG_VREF_SEL, 0x4);
 			SENINF_BITS(base, CDPHY_RX_ANA_3, RG_CSI0_EQ_DES_VREF_SEL, 0x10);
+		} else {
+			seninf_logd(ctx, "No match iomem_ver\n");
 		}
 		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_BW, 0x1);
 		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_IS, 0x1);
-		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_LATCH_EN, 0x1);
+		SENINF_BITS(base, CDPHY_RX_ANA_14, RG_CSI0_CDPHY_EQ_OS_IS, 0x1);
+		// SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_LATCH_EN, 0x1);//jeff porting ana page5 no this
 		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x0);
 		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
 		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, 0x0);
 		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);
-		SENINF_BITS(base, CDPHY_RX_ANA_14, RG_CSI0_CDPHY_EQ_OS_IS, 0x1);
+
 		//r50 termination
 		SENINF_BITS(base, CDPHY_RX_ANA_2, RG_CSI0_L0P_T0A_HSRT_CODE, 0x10);
 		SENINF_BITS(base, CDPHY_RX_ANA_2, RG_CSI0_L0N_T0B_HSRT_CODE, 0x10);
@@ -2399,10 +2407,10 @@ static void csirx_phyA_dphy_setting(void *base, u64 data_rate)
 	SENINF_BITS(base, CDPHY_RX_ASYM_AFIFO_CTRL_0, L1_AFIFO_16BIT_EN, en_16bit_mode);
 	SENINF_BITS(base, CDPHY_RX_ASYM_AFIFO_CTRL_0, L2_AFIFO_16BIT_EN, en_16bit_mode);
 	SENINF_BITS(base, CDPHY_RX_ANA_3, RG_CSI0_CDPHY_16BIT_SEL, en_16bit_mode);
-	if (!strcasecmp(_seninf_ops->iomem_ver, MT6991_IOMOM_VERSIONS)) {
+	if (!strcasecmp(_seninf_ops->iomem_ver, MT6993_IOMOM_VERSIONS)) {
 		/* data rate < 1.5 Gbps */
 		if (data_rate < 1500000000) {
-			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);//jeff porting ana page17
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x0);
@@ -2413,7 +2421,7 @@ static void csirx_phyA_dphy_setting(void *base, u64 data_rate)
 		}
 		/* 1.5 Gbps <= data date < 2.5 Gbps */
 		else if (data_rate < 2500000000) {
-			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);//jeff porting ana page17
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x0);
@@ -2424,7 +2432,7 @@ static void csirx_phyA_dphy_setting(void *base, u64 data_rate)
 		}
 		/* 2.5 Gbps <= data date < 4.5 Gbps */
 		else if (data_rate < 4500000000) {
-			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);//jeff porting ana page16
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
@@ -2435,7 +2443,7 @@ static void csirx_phyA_dphy_setting(void *base, u64 data_rate)
 		}
 		/* 4.5 Gbps <= data date < 6.5 Gbps */
 		else if (data_rate < 6500000000) {
-			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);//jeff porting ana page16
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, 0x1);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
@@ -2446,7 +2454,7 @@ static void csirx_phyA_dphy_setting(void *base, u64 data_rate)
 		}
 		/* 6.5 Gbps <= data date */
 		else {
-			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);//jeff porting ana page16
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, 0x1);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
@@ -2498,13 +2506,13 @@ static void csirx_phyA_cphy_setting(void *base, u64 data_rate)
 	SENINF_BITS(base, CDPHY_RX_ASYM_AFIFO_CTRL_0, L2_AFIFO_16BIT_EN, en_16bit_mode);
 	SENINF_BITS(base, CDPHY_RX_ANA_3, RG_CSI0_CDPHY_16BIT_SEL, en_16bit_mode);
 	SENINF_WRITE_REG(base, CDPHY_RX_ANA_SETTING_0, 0x322);
-	if (!strcasecmp(_seninf_ops->iomem_ver, MT6991_IOMOM_VERSIONS)) {
+	if (!strcasecmp(_seninf_ops->iomem_ver, MT6993_IOMOM_VERSIONS)) {
 		SENINF_BITS(base, CDPHY_RX_ANA_14, RG_CSI0_LDO_X26M_EN, 0x0);
 		SENINF_BITS(base, CDPHY_RX_ANA_14, RG_CSI0_LDO_LP_EN, 0x1);
-		SENINF_BITS(base, CDPHY_RX_ANA_3, RG_CSI0_EQ_DES_VREF_SEL, 0x14);
-		SENINF_BITS(base, CDPHY_RX_ANA_0, RG_CSI0_CPHY_EN, 1);
+		SENINF_BITS(base, CDPHY_RX_ANA_3, RG_CSI0_EQ_DES_VREF_SEL, 0x14);//jeff porting ana page20
+		SENINF_BITS(base, CDPHY_RX_ANA_0, RG_CSI0_CPHY_EN, 1);//jeff porting ana page20
 		/* data rate < 2.5 Gsps */
-		if (data_rate < 2500000000) {
+		if (data_rate < 2500000000) {//jeff porting ana page20
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_BW, 0x1);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
@@ -2527,7 +2535,7 @@ static void csirx_phyA_cphy_setting(void *base, u64 data_rate)
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_IS_RDC, 0x1);
 		}
 		/* 2.5 Gsps<= data rate < 4.5 Gsps */
-		else if (data_rate < 4500000000) {
+		else if (data_rate < 4500000000) {//jeff porting ana page20
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_BW, 0x3);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
@@ -2550,7 +2558,32 @@ static void csirx_phyA_cphy_setting(void *base, u64 data_rate)
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_IS_RDC, 0x0);
 		}
 		/* 4.5 Gsps<= data rate < 6.37 Gsps */
+		else if (data_rate < 6370000000) {//jeff porting ana page20
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_BW, 0x3);
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, 0x1);
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);
+			SENINF_BITS(base, CDPHY_RX_ANA_0, RG_CSI0_CPHY_T0_HSMODE_EN, 0);
+			SENINF_BITS(base, CDPHY_RX_ANA_0, RG_CSI0_CPHY_T1_HSMODE_EN, 0);
+			SENINF_BITS(base, CDPHY_RX_ANA_6, RG_CSI0_CPHY_T0_CDR_AB_WIDTH, 0x8);
+			SENINF_BITS(base, CDPHY_RX_ANA_6, RG_CSI0_CPHY_T0_CDR_BC_WIDTH, 0x8);
+			SENINF_BITS(base, CDPHY_RX_ANA_6, RG_CSI0_CPHY_T0_CDR_CA_WIDTH, 0x8);
+			SENINF_BITS(base, CDPHY_RX_ANA_6, RG_CSI0_CPHY_T0_CDR_CK_DELAY, 0x2);
+			SENINF_BITS(base, CDPHY_RX_ANA_7, RG_CSI0_CPHY_T1_CDR_AB_WIDTH, 0x8);
+			SENINF_BITS(base, CDPHY_RX_ANA_7, RG_CSI0_CPHY_T1_CDR_BC_WIDTH, 0x8);
+			SENINF_BITS(base, CDPHY_RX_ANA_7, RG_CSI0_CPHY_T1_CDR_CA_WIDTH, 0x8);
+			SENINF_BITS(base, CDPHY_RX_ANA_7, RG_CSI0_CPHY_T1_CDR_CK_DELAY, 0x2);
+			SENINF_BITS(base, CDPHY_RX_ANA_13, RG_CSI0_CPHY_T0_CDR_SEL_CODE, 0x2);
+			SENINF_BITS(base, CDPHY_RX_ANA_13, RG_CSI0_CPHY_T1_CDR_SEL_CODE, 0x2);
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_IS, 0x2);
+			SENINF_BITS(base, CDPHY_RX_ANA_14, RG_CSI0_CDPHY_EQ_OS_IS, 0x1);
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_IS_RDC, 0x0);
+		}
+		/* data rate > 6.37 Gsps */
 		else {
+			//value need calibration update
+			//default using 4.5 Gsps<= data rate < 6.37 Gsps value
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_BW, 0x3);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
@@ -2697,7 +2730,7 @@ static int csirx_phyA_setting(struct seninf_ctx *ctx)
 			SENINF_BITS(baseB, CDPHY_RX_ANA_0, RG_CSI0_DPHY_L0_CKMODE_EN, 0);
 			SENINF_BITS(baseB, CDPHY_RX_ANA_0, RG_CSI0_DPHY_L1_CKMODE_EN, 0);
 			SENINF_BITS(baseB, CDPHY_RX_ANA_0, RG_CSI0_DPHY_L2_CKMODE_EN, 0);
-			SENINF_BITS(baseA, CDPHY_RX_ANA_0, RG_CSI0_DPHY_L0_CKSEL, 1);
+			SENINF_BITS(baseA, CDPHY_RX_ANA_0, RG_CSI0_DPHY_L0_CKSEL, 1);//
 			SENINF_BITS(baseA, CDPHY_RX_ANA_0, RG_CSI0_DPHY_L1_CKSEL, 1);
 			SENINF_BITS(baseA, CDPHY_RX_ANA_0, RG_CSI0_DPHY_L2_CKSEL, 1);
 			SENINF_BITS(baseB, CDPHY_RX_ANA_0, RG_CSI0_DPHY_L0_CKSEL, 1);
@@ -5871,7 +5904,8 @@ static int mtk_cam_seninf_eye_scan(struct seninf_ctx *ctx, u32 key, int val_sign
 			for (i = 0; i <= ctx->is_4d1c; i++) {
 				port = i ? ctx->portB : ctx->port;
 				base = ctx->reg_ana_csi_rx[(unsigned int)port];
-				if (!strcasecmp(_seninf_ops->iomem_ver, MT6991_IOMOM_VERSIONS)) {
+				if (!strcasecmp(_seninf_ops->iomem_ver, MT6991_IOMOM_VERSIONS) ||
+					!strcasecmp(_seninf_ops->iomem_ver, MT6993_IOMOM_VERSIONS)) {
 					SENINF_BITS(base, CDPHY_RX_ANA_6,
 							RG_CSI0_CPHY_T0_CDR_CK_DELAY, val);
 					SENINF_BITS(base, CDPHY_RX_ANA_13,
