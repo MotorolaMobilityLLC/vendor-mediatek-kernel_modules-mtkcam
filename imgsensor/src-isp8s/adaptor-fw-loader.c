@@ -54,18 +54,22 @@ static char *get_firmware_path(const char *folder, const char *file_name)
 static int add_fw_list(struct list_head *list, const char *file_name, const int len)
 {
 	struct sensor_firmware *item = NULL;
+	size_t buf_sz;
 
 	item = kzalloc(sizeof(*item), GFP_KERNEL);
 	if (!item)
 		return -ENOMEM;
 
-	if (len > ARRAY_SIZE(item->name) - 1) {
+	buf_sz = sizeof(item->name) - 1;
+
+	if (len > buf_sz) {
 		pr_info("firmware name size %d is larger than sizelimit %lu.\n",
-			len, ARRAY_SIZE(item->name) - 1);
+			len, buf_sz);
 		return -EINVAL;
 	}
 
-	strncpy(item->name, file_name, len);
+	strncpy(item->name, file_name, buf_sz);
+	item->name[buf_sz] = '\0';  /* ensure null terminated */
 	list_add_tail(&item->list, list);
 
 	pr_info("firmware %s has been added.", item->name);
