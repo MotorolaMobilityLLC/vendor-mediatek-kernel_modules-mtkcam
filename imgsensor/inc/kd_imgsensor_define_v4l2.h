@@ -148,6 +148,8 @@ enum SENSOR_SCENARIO_ID_ENUM {
 	SENSOR_SCENARIO_ID_CUSTOM52,
 	SENSOR_SCENARIO_ID_CUSTOM53,
 	SENSOR_SCENARIO_ID_CUSTOM54,
+	SENSOR_SCENARIO_ID_CUSTOM55,
+	SENSOR_SCENARIO_ID_CUSTOM56,
 	SENSOR_SCENARIO_ID_MAX,
 	/**************************************************************************
 	 * All unnamed scenario id for a specific sensor must be started with
