@@ -54,6 +54,9 @@ static int debug_ddren_camsv_hw_mode;
 module_param(debug_ddren_camsv_hw_mode, int, 0644);
 MODULE_PARM_DESC(debug_ddren_camsv_hw_mode, "debug: 1 : active camsv hw mode");
 
+static int sv_fifo_full_times;
+module_param(sv_fifo_full_times, int, 0644);
+
 #undef dev_dbg
 #define dev_dbg(dev, fmt, arg...)		\
 	do {					\
@@ -1887,17 +1890,19 @@ void camsv_handle_err(
 
 	/* check dma fifo status */
 	if (!(data->err_tags) && (err_status & CAMSVCENTRAL_DMA_SRAM_FULL_ST)) {
+		sv_fifo_full_times++;
 		if (camsv_fifo_detect)
 			mtk_cam_sv_execute_fifo_dump(sv_dev, data->ts_ns);
 
-		dev_info(sv_dev->dev, "camsv dma fifo full\n");
+		dev_info_ratelimited(sv_dev->dev, "camsv dma fifo full times:%d\n", sv_fifo_full_times);
 
 #if !IS_ENABLED(CONFIG_MTK_EMI_LEGACY)
 		mtk_emiisu_record_off();
 #endif
 		atomic_set(&sv_dev->is_fifo_full, 1);
 
-		if (DISABLE_RECOVER_FLOW) {
+		if (DISABLE_RECOVER_FLOW || sv_fifo_full_times > 100) {
+			sv_fifo_full_times = 0;
 			mtk_cam_bwr_dbg_dump(sv_dev->cam->bwr);
 			mmdvfs_debug_status_dump(NULL);
 #if KERNEL_VERSION(6, 7, 0) >= LINUX_VERSION_CODE
