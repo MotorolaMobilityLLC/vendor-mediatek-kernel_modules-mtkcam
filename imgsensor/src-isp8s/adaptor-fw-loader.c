@@ -1044,8 +1044,8 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 			memcpy(p->dynamic.dcg_info, data + offset, sz2);
 			offset += sz2;
 
-			if (p->dynamic.dcg_info->dcg_gain_table_size) {
-				sz = sizeof(u32) * p->dynamic.dcg_info->dcg_gain_table_size;
+			if (p->dynamic.dcg_info->dcg_gain_table_cnt) {
+				sz = sizeof(u32) * p->dynamic.dcg_info->dcg_gain_table_cnt;
 				p->dynamic.dcg_info->dcg_gain_table = kzalloc(sz, GFP_KERNEL);
 				if (!p->dynamic.dcg_info->dcg_gain_table)
 					return -ENOMEM;
@@ -1349,19 +1349,20 @@ static int update_s_ctx_mode(struct subdrv_mode_struct *pmode, struct fw_mode_in
 		COPY_COMMON_MEMBER(dcg_info, fw_struct->dynamic.dcg_info, dcg_gain_ratio_min);
 		COPY_COMMON_MEMBER(dcg_info, fw_struct->dynamic.dcg_info, dcg_gain_ratio_max);
 		COPY_COMMON_MEMBER(dcg_info, fw_struct->dynamic.dcg_info, dcg_gain_ratio_step);
-		COPY_COMMON_MEMBER(dcg_info, fw_struct->dynamic.dcg_info, dcg_gain_table_size);
 
 		for (i = 0; i < MAX_EXPOSURE_CNT; i++)
 			dcg_info->dcg_ratio_group[i] = fw_struct->dynamic.dcg_info->dcg_ratio_group[i];
 
-		if (dcg_info->dcg_gain_table_size) {
-			sz = sizeof(u32) * dcg_info->dcg_gain_table_size;
+		if (fw_struct->dynamic.dcg_info->dcg_gain_table_cnt) {
+			sz = sizeof(u32) * fw_struct->dynamic.dcg_info->dcg_gain_table_cnt;
+			dcg_info->dcg_gain_table_size = sz;
 			dcg_info->dcg_gain_table = kzalloc(sz, GFP_KERNEL);
 			if (!dcg_info->dcg_gain_table)
 				return -ENOMEM;
 
-			for (i = 0; i < dcg_info->dcg_gain_table_size; i++)
-				dcg_info->dcg_gain_table[i] = fw_struct->dynamic.dcg_info->dcg_gain_table[i];
+			memcpy(dcg_info->dcg_gain_table,
+			       fw_struct->dynamic.dcg_info->dcg_gain_table,
+			       sz);
 		}
 	}
 
@@ -2104,14 +2105,14 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 					}
 					if (modes.mode_list[j].dynamic.dcg_info) {
 						adaptor_logi(ctx,
-							"mode info dcg_info = %u / %u / %u / %u / %u / %u, tlb_sz(%u)\n",
+							"mode info dcg_info = %u / %u / %u / %u / %u / %u, tlb_cnt(%u)\n",
 							modes.mode_list[j].dynamic.dcg_info->dcg_mode,
 							modes.mode_list[j].dynamic.dcg_info->dcg_gain_mode,
 							modes.mode_list[j].dynamic.dcg_info->dcg_gain_base,
 							modes.mode_list[j].dynamic.dcg_info->dcg_gain_ratio_min,
 							modes.mode_list[j].dynamic.dcg_info->dcg_gain_ratio_max,
 							modes.mode_list[j].dynamic.dcg_info->dcg_gain_ratio_step,
-							modes.mode_list[j].dynamic.dcg_info->dcg_gain_table_size);
+							modes.mode_list[j].dynamic.dcg_info->dcg_gain_table_cnt);
 						adaptor_logi(ctx,
 							"mode info dcg_info.ratio_group = (%u/%u/%u/%u/%u)\n",
 							modes.mode_list[j].dynamic.dcg_info->dcg_ratio_group[0],
@@ -2122,7 +2123,7 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 					}
 					for (k = 0;
 					     (modes.mode_list[j].dynamic.dcg_info) &&
-					     (k < modes.mode_list[j].dynamic.dcg_info->dcg_gain_table_size);
+					     (k < modes.mode_list[j].dynamic.dcg_info->dcg_gain_table_cnt);
 					     k++) {
 						adaptor_logi(ctx,
 							"mode info dcg_info gain tlb[%d] = %u\n",
@@ -2370,6 +2371,8 @@ static bool compare_static_ctx(struct adaptor_ctx *ctx,
 	for (i = 0; i < target->sensor_mode_num; i++) {
 		struct subdrv_mode_struct *mode_target = target->mode + i;
 		struct subdrv_mode_struct *mode_legacy = legacy->mode + i;
+		struct dcg_info_struct *dcg_info_target = &mode_target->dcg_info;
+		struct dcg_info_struct *dcg_info_legacy = &mode_legacy->dcg_info;
 
 		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, mode_setting_len, "mode %d", i);
 		ret |= RET_IF_CHK_PTR_FAIL(ctx, mode_target, mode_legacy, mode_setting_table,
@@ -2443,7 +2446,26 @@ static bool compare_static_ctx(struct adaptor_ctx *ctx,
 		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, awb_enabled, "mode %d", i);
 		ret |= RET_IF_CHK_PTR_FAIL(ctx, mode_target, mode_legacy, saturation_info,
 				    sizeof(struct mtk_sensor_saturation_info), "mode %d", i);
-		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, dcg_info, "mode %d", i);
+
+		ret |= RET_IF_CHK_FAIL(ctx, dcg_info_target, dcg_info_legacy, dcg_mode,
+				       "dcg_info mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, dcg_info_target, dcg_info_legacy, dcg_gain_mode,
+				       "dcg_info mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, dcg_info_target, dcg_info_legacy, dcg_gain_base,
+				       "dcg_info mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, dcg_info_target, dcg_info_legacy, dcg_gain_ratio_min,
+				       "dcg_info mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, dcg_info_target, dcg_info_legacy, dcg_gain_ratio_max,
+				       "dcg_info mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, dcg_info_target, dcg_info_legacy, dcg_gain_ratio_step,
+				       "dcg_info mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, dcg_info_target, dcg_info_legacy, dcg_gain_table_size,
+				       "dcg_info mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, dcg_info_target, dcg_info_legacy, dcg_ratio_group,
+				       "dcg_info mode %d", i);
+		ret |= RET_IF_CHK_PTR_FAIL(ctx, dcg_info_target, dcg_info_legacy, dcg_gain_table,
+				dcg_info_target->dcg_gain_table_size, "dcg_info mode %d", i);
+
 		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, exposure_order_in_lbmf, "mode %d", i);
 		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, mode_type_in_lbmf, "mode %d", i);
 		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, sw_fl_delay, "mode %d", i);

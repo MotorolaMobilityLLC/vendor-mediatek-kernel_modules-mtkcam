@@ -369,7 +369,7 @@ struct fw_dcg_info_struct {
 	u32 dcg_gain_ratio_max;
 	u32 dcg_gain_ratio_step;
 	u32 dcg_ratio_group[MAX_EXPOSURE_CNT];
-	u32 dcg_gain_table_size;
+	u32 dcg_gain_table_cnt;
 	u32 *dcg_gain_table;
 } __packed;
 
