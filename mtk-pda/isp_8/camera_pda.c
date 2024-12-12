@@ -816,6 +816,14 @@ static int CheckDesignLimitation(struct PDA_Data_t *PDA_Data,
 	for (i = 0; i < RoiProcNum; i++) {
 		nROIIndex = i + ROIIndex;
 
+		if (g_rgn_x_buf[i] % 4 != 0) {
+			LOG_INF("ROI_%d x(%d) must be multiple of 4\n",
+				nROIIndex,
+				g_rgn_x_buf[i]);
+			PDA_Data->status = -31;
+			return -1;
+		}
+
 		if (g_rgn_w_buf[i] % 4 != 0) {
 			LOG_INF("ROI_%d width(%d) must be multiple of 4\n",
 				nROIIndex,
@@ -1017,6 +1025,13 @@ static int CheckDesignLimitation(struct PDA_Data_t *PDA_Data,
 	if (nTempVar < 5 || nTempVar > 2048) {
 		LOG_INF("PDA_TBL_STRIDE (%d) out of range\n", nTempVar);
 		PDA_Data->status = -18;
+		return -1;
+	}
+
+	nTempVar = PDA_Data->PDA_HW_Register.PDA_CFG_18.Bits.PDA_GRAD_DST;
+	if (nTempVar < 1 || nTempVar > 5) {
+		LOG_INF("PDA_GRAD_DST (%d) out of range, effective range:1~5\n", nTempVar);
+		PDA_Data->status = -32;
 		return -1;
 	}
 
