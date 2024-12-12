@@ -21,42 +21,63 @@
 #include "../../cmdq/isp8s/mtk_imgsys-cmdq-qof.h"
 
 const struct mtk_imgsys_init_array mtk_imgsys_dip_init_ary[] = {
-	{0x084, 0x00000001}, /* DIPCTL_D1A_DIPCTL_INT1_EN */
-	{0x294, 0x00000001}, /* DIPCTL_QOF_CTL */
+	{0x0B0, 0x00000001}, /* DIPCTL_D1A_DIPCTL_INT0_EN */
+	{0x240, 0x00000001}, /* DIPCTL_QOF_CTL */
 };
 
 static struct DIPRegDumpInfo g_DIPRegDumpTopIfo[] = {
-	{ 0x0000, 0x0364},
-	{ 0x10B4, 0x10E4},
+	{ 0x0000, 0x03E4},
+	{ 0x1070, 0x10C4},
 	{ 0x1200, 0x138C},
-	{ 0x1520, 0x2ABC},
-	{ 0x5000, 0x552C},
-	{ 0x6000, 0x6440},
-	{ 0x684C, 0x6E14},
-	{ 0x8400, 0x8628},
-	{ 0x9000, 0x9804},
+	{ 0x14A0, 0x1B1C},
+	{ 0x2000, 0x250C},
+	{ 0x26E0, 0x2CB8},
+	{ 0x3000, 0x3430},
+	{ 0x4000, 0x455C},
+	{ 0x5000, 0x5440},
+	{ 0x584C, 0x5E64},
+	{ 0x7400, 0x7648},
+	{ 0x9000, 0x994C},
 };
 
 static struct DIPRegDumpInfo g_DIPRegDumpNr1Ifo[] = {
-	{ 0x4400, 0x4820},
-	{ 0x7000, 0x70A4},
-	{ 0x8340, 0x8540},
-	{ 0x9000, 0x9804},
-	{ 0xA000, 0xA080},
-	{ 0xEF00, 0xEF08},
+	{ 0x0000, 0x0230},
+	{ 0x1000, 0x1030},
+	{ 0x2000, 0x2414},
+	{ 0x3000, 0x36AC},
+	{ 0x4000, 0x413C},
+	{ 0x4540, 0x4968},
+	{ 0x5004, 0x50EC},
+	{ 0x6534, 0x6874},
+	{ 0x7400, 0x7400},
+	{ 0x7804, 0x7804},
+	{ 0x8000, 0x8088},
+	{ 0xCF00, 0xCF08},
 };
 
 static struct DIPRegDumpInfo g_DIPRegDumpNr2Ifo[] = {
-	{ 0x1200, 0x1F4C},
-	{ 0x3000, 0x3BEC},
-	{ 0x4000, 0x4960},
-	{ 0x5000, 0x5B7C},
-	{ 0x6000, 0x6060},
-	{ 0x741C, 0x74DC},
-	{ 0x7D00, 0x8244},
+	{ 0x0000, 0x0230},
+	{ 0x1064, 0x10C4},
+	{ 0x1200, 0x1DBC},
+	{ 0x2000, 0x224C},
+	{ 0x3000, 0x38F8},
+	{ 0x4000, 0x4430},
+	{ 0x5400, 0x5994},
+	{ 0x6000, 0x6A14},
+	{ 0x7000, 0x75D0},
+	{ 0x8E00, 0x8EA0},
 };
 
-static struct DIPDmaDebugInfo g_DMATopDbgIfo[] = {
+static struct DIPRegDumpInfo g_DIPRegDumpCineIfo[] = {
+	{ 0x0000, 0x0230},
+	{ 0x18E4, 0x19B4},
+	{ 0x1D00, 0x1DCC},
+	{ 0x2000, 0x2040},
+	{ 0x2440, 0x2604},
+	{ 0x27C0, 0x282C},
+};
+
+static struct DIPDmaDebugInfo g_DMATopDbgIfo[] = {//YWTBD dma
 	{"IMGI", DIP_ORI_RDMA_UFO_DEBUG, 0x0},
 	{"IMGI_N", DIP_ORI_RDMA_UFO_DEBUG, 0x1000},
 	{"IMGBI", DIP_ORI_RDMA_UFO_DEBUG, 0x1},
@@ -162,7 +183,7 @@ struct mtk_imgsys_dip_dtable {
 	uint32_t addr_msb;
 };
 
-#define DIP_HW_SET 3
+#define DIP_HW_SET 4
 #define SW_RST   (0x000C)
 
 static void __iomem *gdipRegBA[DIP_HW_SET] = {0L};
@@ -170,6 +191,7 @@ static unsigned int g_RegBaseAddr = DIP_TOP_ADDR;
 static unsigned int g_RegBaseAddrTop = DIP_TOP_ADDR;
 static unsigned int g_RegBaseAddrNr1 = DIP_NR1_ADDR;
 static unsigned int g_RegBaseAddrNr2 = DIP_NR2_ADDR;
+static unsigned int g_RegBaseAddrCine = DIP_CINE_ADDR;
 
 int imgsys_dip_tfault_callback(int port,
 	dma_addr_t mva, void *data)
@@ -192,7 +214,7 @@ int imgsys_dip_tfault_callback(int port,
 	pr_info("%s: iommu port:0x%x, larb:%d, idx:%d, addr:0x%08lx\n", __func__,
 		port, larb, (port & 0x1F), (unsigned long)mva);
 
-	/* 0x15100000~ */
+	/* 0x34190000~ */
 	dipRegBA = gdipRegBA[0];
 
 	/* top reg */
@@ -208,7 +230,7 @@ int imgsys_dip_tfault_callback(int port,
 		}
 	}
 
-	/* 0x15150000~ */
+	/* 0x341A0000~ */
 	dipRegBA = gdipRegBA[1];
 
 	/* nr1 reg */
@@ -224,7 +246,7 @@ int imgsys_dip_tfault_callback(int port,
 		}
 	}
 
-	/* 0x15160000~ */
+	/* 0x341B0000~ */
 	dipRegBA = gdipRegBA[2];
 
 	/* nr2 reg */
@@ -233,6 +255,22 @@ int imgsys_dip_tfault_callback(int port,
 		for (i = k; i <= g_DIPRegDumpNr2Ifo[j].end; i += 0x10) {
 			pr_info("[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X",
 				(unsigned int)(g_RegBaseAddrNr2 + i),
+				(unsigned int)ioread32((void *)(dipRegBA + i)),
+				(unsigned int)ioread32((void *)(dipRegBA + i + 0x4)),
+				(unsigned int)ioread32((void *)(dipRegBA + i + 0x8)),
+				(unsigned int)ioread32((void *)(dipRegBA + i + 0xc)));
+		}
+	}
+
+	/* 0x341D0000~ */
+	dipRegBA = gdipRegBA[3];
+
+	/* cine reg */
+	for (j = 0; j < sizeof(g_DIPRegDumpCineIfo)/sizeof(struct DIPRegDumpInfo); j++) {
+		k = g_DIPRegDumpCineIfo[j].oft & 0xFFF0;
+		for (i = k; i <= g_DIPRegDumpCineIfo[j].end; i += 0x10) {
+			pr_info("[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X",
+				(unsigned int)(g_RegBaseAddrCine + i),
 				(unsigned int)ioread32((void *)(dipRegBA + i)),
 				(unsigned int)ioread32((void *)(dipRegBA + i + 0x4)),
 				(unsigned int)ioread32((void *)(dipRegBA + i + 0x8)),
@@ -249,7 +287,7 @@ void imgsys_dip_set_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 {
 	unsigned int hw_idx = 0, ary_idx = 0;
 
-	for (hw_idx = REG_MAP_E_DIP; hw_idx <= REG_MAP_E_DIP_NR2; hw_idx++) {
+	for (hw_idx = REG_MAP_E_DIP; hw_idx <= REG_MAP_E_DIP_CINE; hw_idx++) {
 		/* iomap registers */
 		ary_idx = hw_idx - REG_MAP_E_DIP;
 		gdipRegBA[ary_idx] = of_iomap(imgsys_dev->dev->of_node, hw_idx);
@@ -264,6 +302,7 @@ void imgsys_dip_set_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 		g_RegBaseAddrTop = DIP_TOP_ADDR_P;
 		g_RegBaseAddrNr1 = DIP_NR1_ADDR_P;
 		g_RegBaseAddrNr2 = DIP_NR2_ADDR_P;
+		g_RegBaseAddrCine = DIP_CINE_ADDR_P;
 	}
 
 }
@@ -310,7 +349,7 @@ void imgsys_dip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 				if ((dtable->addr_msb & PSEUDO_DESC_TUNING) == PSEUDO_DESC_TUNING) {
 					tun_ofst = dtable->addr;
 					dtable->addr = (tun_ofst + iova_addr) & 0xFFFFFFFF;
-					dtable->addr_msb = ((tun_ofst + iova_addr) >> 32) & 0xF;
+					dtable->addr_msb |= ((tun_ofst + iova_addr) >> 32) & 0xF;
 					if (imgsys_dip_8s_dbg_enable())
 						pr_debug("%s: tuning_buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
 							__func__, iova_addr,
@@ -573,7 +612,7 @@ static void imgsys_dip_dump_nr3d(struct mtk_imgsys_dev *a_pDev,
 
 }
 
-static void imgsys_dip_dump_dl(struct mtk_imgsys_dev *a_pDev,
+static void imgsys_dip_dump_dl(struct mtk_imgsys_dev *a_pDev,//YWTBD dbg
 				void __iomem *a_pRegBA,
 				unsigned int a_DdbSel,
 				unsigned int a_DbgOut)
@@ -671,7 +710,7 @@ static void imgsys_dip_dump_dl(struct mtk_imgsys_dev *a_pDev,
 
 }
 
-static void imgsys_dip_dump_snr(struct mtk_imgsys_dev *a_pDev,
+static void imgsys_dip_dump_snr(struct mtk_imgsys_dev *a_pDev,//YWTBD dbg
 				void __iomem *a_pRegBA,
 				unsigned int a_DdbSel,
 				unsigned int a_DbgOut)
@@ -697,7 +736,7 @@ static void imgsys_dip_dump_snr(struct mtk_imgsys_dev *a_pDev,
 
 }
 
-static void imgsys_dip_dump_eecnr(struct mtk_imgsys_dev *a_pDev,
+static void imgsys_dip_dump_eecnr(struct mtk_imgsys_dev *a_pDev,//YWTBD dbg
 				void __iomem *a_pRegBA,
 				unsigned int a_DdbSel,
 				unsigned int a_DbgOut)
@@ -718,7 +757,7 @@ static void imgsys_dip_dump_eecnr(struct mtk_imgsys_dev *a_pDev,
 
 }
 
-static void imgsys_dip_dump_ans(struct mtk_imgsys_dev *a_pDev,
+static void imgsys_dip_dump_ans(struct mtk_imgsys_dev *a_pDev,//YWTBD dbg
 				void __iomem *a_pRegBA,
 				unsigned int a_DdbSel,
 				unsigned int a_DbgOut)
@@ -739,7 +778,7 @@ static void imgsys_dip_dump_ans(struct mtk_imgsys_dev *a_pDev,
 
 }
 
-static void imgsys_dip_dump_bok(struct mtk_imgsys_dev *a_pDev,
+static void imgsys_dip_dump_bok(struct mtk_imgsys_dev *a_pDev,//YWTBD dbg
 				void __iomem *a_pRegBA,
 				unsigned int a_DdbSel,
 				unsigned int a_DbgOut)
@@ -765,7 +804,7 @@ static void imgsys_dip_dump_bok(struct mtk_imgsys_dev *a_pDev,
 
 }
 
-static void imgsys_dip_dump_yufdd1(struct mtk_imgsys_dev *a_pDev,
+static void imgsys_dip_dump_yufdd1(struct mtk_imgsys_dev *a_pDev,//YWTBD dbg
 				void __iomem *a_pRegBA,
 				unsigned int a_DdbSel,
 				unsigned int a_DbgOut)
@@ -807,7 +846,7 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 
 	pr_info("%s: +\n", __func__);
 
-	/* 0x15100000~ */
+	/* 0x34190000~ */
 	dipRegBA = gdipRegBA[0];
 
 	/* DL debug data */
@@ -826,7 +865,7 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 		}
 	}
 
-	/* 0x15150000~ */
+	/* 0x341A0000~ */
 	dipRegBA = gdipRegBA[1];
 
 	/* nr1 reg */
@@ -842,7 +881,7 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 		}
 	}
 
-	/* 0x15160000~ */
+	/* 0x341B0000~ */
 	dipRegBA = gdipRegBA[2];
 
 	/* nr2 reg */
@@ -851,6 +890,22 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 		for (i = k; i <= g_DIPRegDumpNr2Ifo[j].end; i += 0x10) {
 			pr_info("[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X",
 				(unsigned int)(g_RegBaseAddrNr2 + i),
+				(unsigned int)ioread32((void *)(dipRegBA + i)),
+				(unsigned int)ioread32((void *)(dipRegBA + i + 0x4)),
+				(unsigned int)ioread32((void *)(dipRegBA + i + 0x8)),
+				(unsigned int)ioread32((void *)(dipRegBA + i + 0xc)));
+		}
+	}
+
+	/* 0x341D0000~ */
+	dipRegBA = gdipRegBA[3];
+
+	/* cine reg */
+	for (j = 0; j < sizeof(g_DIPRegDumpCineIfo)/sizeof(struct DIPRegDumpInfo); j++) {
+		k = g_DIPRegDumpCineIfo[j].oft & 0xFFF0;
+		for (i = k; i <= g_DIPRegDumpCineIfo[j].end; i += 0x10) {
+			pr_info("[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X",
+				(unsigned int)(g_RegBaseAddrCine + i),
 				(unsigned int)ioread32((void *)(dipRegBA + i)),
 				(unsigned int)ioread32((void *)(dipRegBA + i + 0x4)),
 				(unsigned int)ioread32((void *)(dipRegBA + i + 0x8)),

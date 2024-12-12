@@ -28,35 +28,39 @@
  * Global Define
  ********************************************************************/
 /* DIP */
-#define DIP_TOP_ADDR	0x34100000
-#define DIP_TOP_ADDR_P	0x15100000
-#define IMGSYS_DIP_BASE		(0x34110000)
-#define IMGSYS_DIP_BASE_P	(0x15110000)
+#define DIP_TOP_ADDR	0x34190000
+#define DIP_TOP_ADDR_P	0x15190000
+#define IMGSYS_DIP_BASE		(0x34100000)
+#define IMGSYS_DIP_BASE_P	(0x15100000)//YWTBD
 
-#define DIP_DBG_SEL		0x230
-#define DIP_DBG_OUT		0x234
-#define DIP_DMATOP_DBG_SEL	0x1088
-#define DIP_DMATOP_DBG_PORT	0x108C
-#define DIP_DMANR2_DBG_SEL	0x1090
-#define DIP_DMANR2_DBG_PORT	0x1094
+#define DIP_DBG_SEL		0x210
+#define DIP_DBG_OUT		0x214
+#define DIP_DMATOP_DBG_SEL	0x1020
+#define DIP_DMATOP_DBG_PORT	0x1024
+#define DIP_DMANR2_DBG_SEL	0x1028
+#define DIP_DMANR2_DBG_PORT	0x102C
 
-#define DIP_NR3D_DBG_SEL	0x501C
-#define DIP_NR3D_DBG_CNT	0x5020
-#define DIP_NR3D_DBG_ST		0x5024
-#define DIP_NR3D_DBG_POINTS	64
+#define DIP_NR3D_DBG_SEL	0x401C
+#define DIP_NR3D_DBG_CNT	0x4020
+#define DIP_NR3D_DBG_ST		0x4024
+#define DIP_NR3D_DBG_POINTS	51
 #define DIP_YUFD_DBG_SEL	0x912C
 
 /* DIP NR1 */
-#define DIP_NR1_ADDR		0x34150000
-#define DIP_NR1_ADDR_P		0x15150000
+#define DIP_NR1_ADDR		0x341A0000
+#define DIP_NR1_ADDR_P		0x151A0000
 
 /* DIP NR2 */
-#define DIP_NR2_ADDR		0x34160000
-#define DIP_NR2_ADDR_P		0x15160000
+#define DIP_NR2_ADDR		0x341B0000
+#define DIP_NR2_ADDR_P		0x151B0000
+
+/* DIP CINE */
+#define DIP_CINE_ADDR		0x341D0000
+#define DIP_CINE_ADDR_P		0x151D0000
 
 #define DIP_DMA_NAME_MAX_SIZE	20
 
-#define DIP_IMGI_STATE_CHECKSUM		(0x00100)
+#define DIP_IMGI_STATE_CHECKSUM		(0x00100)//YWTBD dma
 #define DIP_IMGI_LINE_PIX_CNT_TMP	(0x00200)
 #define DIP_IMGI_LINE_PIX_CNT		(0x00300)
 #define DIP_IMGI_IMPORTANT_STATUS	(0x00400)
@@ -73,9 +77,9 @@
 #define DIP_YUVO_T1_FIFO_DEBUG_DATA_CASE1	(0x10700)
 #define DIP_YUVO_T1_FIFO_DEBUG_DATA_CASE3	(0x30700)
 
-#define DIP_CQ_DESC_NUM		280 // align with userspace
-#define DIP_REG_SIZE		(0x1D000) // align with userspace
-#define DIP_TDR_BUF_MAXSZ 163840 // align with userspace
+#define DIP_CQ_DESC_NUM		343 // align with userspace
+#define DIP_REG_SIZE		(0x2D000) // align with userspace
+#define DIP_TDR_BUF_MAXSZ 163840 // align with userspace //YWTBD
 /********************************************************************
  * Enum Define
  ********************************************************************/
