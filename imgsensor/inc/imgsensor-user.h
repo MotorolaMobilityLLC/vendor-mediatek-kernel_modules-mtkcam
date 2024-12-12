@@ -657,6 +657,11 @@ struct mtk_fake_sensor_info {
 	enum IMGSENSOR_HDR_MODE_ENUM hdr_mode;
 };
 
+struct mtk_dcg_ratio_group_by_scenario {
+	__u32 scenario_id;
+	__u32 *dcg_ratio_group;
+};
+
 struct mtk_sof_info {
 	__u64 cnt;
 	__u64 ts;
@@ -814,6 +819,10 @@ struct mtk_sof_info {
 
 #define VIDIOC_MTK_G_LINETIME_BY_SCENARIO \
 	_IOWR('M', BASE_VIDIOC_PRIVATE + 52, struct mtk_linetime_by_scenario)
+
+#define VIDIOC_MTK_G_DCG_RATIO_GROUP_BY_SCENARIO \
+	_IOWR('M', BASE_VIDIOC_PRIVATE + 53, struct mtk_dcg_ratio_group_by_scenario)
+
 /* SET */
 
 #define VIDIOC_MTK_S_VIDEO_FRAMERATE \
