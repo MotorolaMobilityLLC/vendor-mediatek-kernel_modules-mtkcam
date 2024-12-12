@@ -128,7 +128,7 @@ static inline int guard_next_compose(struct state_accessor *s_acc,
 	ret = allow_composing(s_acc) &&
 		(unsigned int)(cur_seq_no(s_acc) - p->info->ack_seq_no) == 1;
 	spin_unlock(p->info_lock);
-	if (ret == 0)
+	if (ret == 0 && allow_composing(s_acc))
 		pr_info("[mtk-cam:guard_next_compose] allow/cur/ack:%d/%d/%d (%llu)",
 			allow_composing(s_acc), cur_seq_no(s_acc), p->info->ack_seq_no,
 			ktime_get_boottime_ns());
