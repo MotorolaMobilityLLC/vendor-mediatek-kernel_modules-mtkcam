@@ -77,7 +77,7 @@ static struct DIPRegDumpInfo g_DIPRegDumpCineIfo[] = {
 	{ 0x27C0, 0x282C},
 };
 
-static struct DIPDmaDebugInfo g_DMATopDbgIfo[] = {//YWTBD dma
+static struct DIPDmaDebugInfo g_DMATopDbgIfo[] = {
 	{"IMGI", DIP_ORI_RDMA_UFO_DEBUG, 0x0},
 	{"IMGI_N", DIP_ORI_RDMA_UFO_DEBUG, 0x1000},
 	{"IMGBI", DIP_ORI_RDMA_UFO_DEBUG, 0x1},
@@ -86,19 +86,24 @@ static struct DIPDmaDebugInfo g_DMATopDbgIfo[] = {//YWTBD dma
 	{"IMGCI_N", DIP_ORI_RDMA_UFO_DEBUG, 0x1002},
 	{"IMGDI", DIP_ORI_RDMA_UFO_DEBUG, 0x3},
 	{"IMGDI_N", DIP_ORI_RDMA_UFO_DEBUG, 0x1003},
+	{"SMTI1", DIP_ULC_RDMA_DEBUG, 0x4},
+	{"SMTCI1", DIP_ULC_RDMA_DEBUG, 0x5},
+	{"SMTI2", DIP_ULC_RDMA_DEBUG, 0x6},
+	{"SMTCI2", DIP_ULC_RDMA_DEBUG, 0x7},
+	{"SMTI3", DIP_ULC_RDMA_DEBUG, 0x8},
+	{"SMTI10", DIP_ULC_RDMA_DEBUG, 0x9},
+	{"SMTI11", DIP_ULC_RDMA_DEBUG, 0xA},
 	{"TNRSI", DIP_ULC_RDMA_DEBUG, 0xB},
-	{"TNRMI", DIP_ULC_RDMA_DEBUG, 0x400B},
 	{"TNRWI", DIP_ULC_RDMA_DEBUG, 0xC},
-	{"TNRLYI", DIP_ULC_RDMA_DEBUG, 0xD},
-	{"TNRLCI", DIP_ULC_RDMA_DEBUG, 0xE},
-	{"TNRVBI", DIP_ULC_RDMA_DEBUG, 0xF},
-	{"SNRGMI", DIP_ULC_RDMA_DEBUG, 0x10},
-	{"TNRCI", DIP_ULC_RDMA_DEBUG, 0x11},
-	{"TNRCI_N", DIP_ULC_RDMA_DEBUG, 0x1011},
-	{"TNRFGMI", DIP_ULC_RDMA_DEBUG, 0x12},
-	{"TNRFGMI_N", DIP_ULC_RDMA_DEBUG, 0x1012},
-	{"TNRAIMI", DIP_ULC_RDMA_DEBUG, 0x13},
-	{"TNRAIMI_N", DIP_ULC_RDMA_DEBUG, 0x1013},
+	{"TNRMI", DIP_ULC_RDMA_DEBUG, 0xD},
+	{"TNRLYI", DIP_ULC_RDMA_DEBUG, 0xE},
+	{"TNRLCI", DIP_ULC_RDMA_DEBUG, 0xF},
+	{"TNRVBI", DIP_ULC_RDMA_DEBUG, 0x10},
+	{"SNRSGMI", DIP_ULC_RDMA_DEBUG, 0x11},
+	{"TNRCI", DIP_ULC_RDMA_DEBUG, 0x12},
+	{"TNRCI_N", DIP_ULC_RDMA_DEBUG, 0x1012},
+	{"TNRFGMI", DIP_ULC_RDMA_DEBUG, 0x13},
+	{"TNRFGMI_N", DIP_ULC_RDMA_DEBUG, 0x1013},
 	{"RECI1", DIP_ULC_RDMA_DEBUG, 0x14},
 	{"RECI1_N", DIP_ULC_RDMA_DEBUG, 0x1014},
 	{"RECBI1", DIP_ULC_RDMA_DEBUG, 0x15},
@@ -107,17 +112,42 @@ static struct DIPDmaDebugInfo g_DMATopDbgIfo[] = {//YWTBD dma
 	{"RECBI2", DIP_ULC_RDMA_DEBUG, 0x17},
 	{"RECI3", DIP_ULC_RDMA_DEBUG, 0x18},
 	{"RECBI3", DIP_ULC_RDMA_DEBUG, 0x19},
-	{"IMG4O", DIP_ORI_WDMA_DEBUG, 0x1C},
-	{"IMG4O_N", DIP_ORI_WDMA_DEBUG, 0x101C},
-	{"IMGBO", DIP_ORI_WDMA_DEBUG, 0x1D},
-	{"IMGCO", DIP_ORI_WDMA_DEBUG, 0x1E},
-	{"IMGCO_N", DIP_ORI_WDMA_DEBUG, 0x101E},
-	{"IMGDO", DIP_ORI_WDMA_DEBUG, 0x1F},
-	{"TNRMO", DIP_ULC_WDMA_DEBUG, 0x27},
-	{"TNRMO_N", DIP_ULC_WDMA_DEBUG, 0x1027},
-	{"TNRSO", DIP_ULC_WDMA_DEBUG, 0x4027},
-	{"TNRWO", DIP_ULC_WDMA_DEBUG, 0x28},
-	{"FHO1", DIP_ULC_WDMA_DEBUG, 0x4029},
+	{"YUFETI2", DIP_ULC_RDMA_DEBUG, 0x1A},
+	{"YUFETCI2", DIP_ULC_RDMA_DEBUG, 0x1B},
+	{"YUFETI3", DIP_ULC_RDMA_DEBUG, 0x1C},
+	{"YUFETCI3", DIP_ULC_RDMA_DEBUG, 0x1D},
+	{"IMG3O", DIP_ORI_WDMA_DEBUG, 0x1E},
+	{"IMG3O_N", DIP_ORI_WDMA_DEBUG, 0x101E},
+	{"IMG3BO", DIP_ORI_WDMA_DEBUG, 0x1F},
+	{"IMG3BO_N", DIP_ORI_WDMA_DEBUG, 0x101F},
+	{"IMG3CO", DIP_ORI_WDMA_DEBUG, 0x20},
+	{"IMG3CO_N", DIP_ORI_WDMA_DEBUG, 0x1020},
+	{"IMG3DO", DIP_ORI_WDMA_DEBUG, 0x21},
+	{"IMG3DO_N", DIP_ORI_WDMA_DEBUG, 0x1021},
+	{"IMG2O", DIP_ORI_WDMA_DEBUG, 0x22},
+	{"IMG2O_N", DIP_ORI_WDMA_DEBUG, 0x1022},
+	{"IMG2BO", DIP_ORI_WDMA_DEBUG, 0x23},
+	{"IMG2CO", DIP_ORI_WDMA_DEBUG, 0x24},
+	{"IMG2CO_N", DIP_ORI_WDMA_DEBUG, 0x1024},
+	{"IMG2DO", DIP_ORI_WDMA_DEBUG, 0x25},
+	{"SMTO1", DIP_ULC_WDMA_DEBUG, 0x26},
+	{"SMTCO1", DIP_ULC_WDMA_DEBUG, 0x27},
+	{"SMTO2", DIP_ULC_WDMA_DEBUG, 0x28},
+	{"SMTCO2", DIP_ULC_WDMA_DEBUG, 0x29},
+	{"SMTO3", DIP_ULC_WDMA_DEBUG, 0x2A},
+	{"SMTO10", DIP_ULC_WDMA_DEBUG, 0x2B},
+	{"SMTO11", DIP_ULC_WDMA_DEBUG, 0x2C},
+	{"TNRMO", DIP_ULC_WDMA_DEBUG, 0x2D},
+	{"TNRMO_N", DIP_ULC_WDMA_DEBUG, 0x102D},
+	{"TNRSO", DIP_ULC_WDMA_DEBUG, 0x2E},
+	{"TNRWO", DIP_ULC_WDMA_DEBUG, 0x2F},
+	{"YUFETO2", DIP_ULC_WDMA_DEBUG, 0x30},
+	{"YUFETCO2", DIP_ULC_WDMA_DEBUG, 0x31},
+	{"YUFETO3", DIP_ULC_WDMA_DEBUG, 0x32},
+	{"YUFETCO3", DIP_ULC_WDMA_DEBUG, 0x33},
+	{"FHO2", DIP_ULC_WDMA_DEBUG, 0x34},
+	{"FHO3", DIP_ULC_WDMA_DEBUG, 0x35},
+	{"FHO4", DIP_ULC_WDMA_DEBUG, 0x36},
 };
 
 static struct DIPDmaDebugInfo g_DMANrDbgIfo[] = {
@@ -126,55 +156,94 @@ static struct DIPDmaDebugInfo g_DMANrDbgIfo[] = {
 	{"VIPBI", DIP_ULC_RDMA_DEBUG, 0x1},
 	{"VIPBI_N", DIP_ULC_RDMA_DEBUG, 0x1001},
 	{"VIPCI", DIP_ULC_RDMA_DEBUG, 0x2},
-	{"VIPCI_N", DIP_ULC_RDMA_DEBUG, 0x1002},
-	{"SNRCSI", DIP_ULC_RDMA_DEBUG, 0xD},
-	{"SNRCSI_N", DIP_ULC_RDMA_DEBUG, 0x100D},
-	{"SNRAIMI", DIP_ULC_RDMA_DEBUG, 0xE},
-	{"SNRAIMI_N", DIP_ULC_RDMA_DEBUG, 0x100E},
-	{"SNRGMI", DIP_ULC_RDMA_DEBUG, 0xF},
-	{"EECSI", DIP_ULC_RDMA_DEBUG, 0x10},
-	{"CSMCSI", DIP_ULC_RDMA_DEBUG, 0x11},
-	{"CSMCSI_N", DIP_ULC_RDMA_DEBUG, 0x1011},
-	{"CSMCSTI", DIP_ULC_RDMA_DEBUG, 0x4011},
-	{"CSMCI", DIP_ULC_RDMA_DEBUG, 0x12},
-	{"BOKMI", DIP_ULC_RDMA_DEBUG, 0x16},
-	{"BOKMI_N", DIP_ULC_RDMA_DEBUG, 0x1016},
-	{"BOKPYI", DIP_ULC_RDMA_DEBUG, 0x17},
-	{"BOKPYI_N", DIP_ULC_RDMA_DEBUG, 0x1017},
-	{"BOKPCI", DIP_ULC_RDMA_DEBUG, 0x18},
-	{"DMGI", DIP_ULC_RDMA_DEBUG, 0x19},
-	{"DMGI_N", DIP_ULC_RDMA_DEBUG, 0x1019},
-	{"DEPI", DIP_ULC_RDMA_DEBUG, 0x1A},
-	{"IMG3O", DIP_ORI_WDMA_DEBUG, 0x1F},
-	{"IMG3O_N", DIP_ORI_WDMA_DEBUG, 0x101F},
-	{"IMG3BO", DIP_ORI_WDMA_DEBUG, 0x20},
-	{"IMG3BO_N", DIP_ORI_WDMA_DEBUG, 0x1020},
-	{"IMG3CO", DIP_ORI_WDMA_DEBUG, 0x21},
-	{"IMG3CO_N", DIP_ORI_WDMA_DEBUG, 0x1021},
-	{"IMG3DO", DIP_ORI_WDMA_DEBUG, 0x22},
-	{"IMG3DO_N", DIP_ORI_WDMA_DEBUG, 0x1022},
-	{"IMG7O", DIP_ORI_WDMA_DEBUG, 0x23},
-	{"IMG7O_N", DIP_ORI_WDMA_DEBUG, 0x1023},
-	{"IMG7BO", DIP_ORI_WDMA_DEBUG, 0x24},
-	{"IMG7CO", DIP_ORI_WDMA_DEBUG, 0x25},
-	{"IMG7CO_N", DIP_ORI_WDMA_DEBUG, 0x1025},
-	{"IMG7DO", DIP_ORI_WDMA_DEBUG, 0x26},
-	{"IMG5O", DIP_ORI_WDMA_DEBUG, 0x29},
-	{"IMG5BO", DIP_ORI_WDMA_DEBUG, 0x2A},
-	{"IMG6O", DIP_ORI_WDMA_DEBUG, 0x2B},
-	{"IMG6BO", DIP_ORI_WDMA_DEBUG, 0x2C},
-	{"SNRACTO", DIP_ULC_WDMA_DEBUG, 0x37},
-	{"SNRACTO_N", DIP_ULC_WDMA_DEBUG, 0x1037},
-	{"CNRO", DIP_ULC_WDMA_DEBUG, 0x3A},
-	{"CNRO_N", DIP_ULC_WDMA_DEBUG, 0x103A},
-	{"CNRBO", DIP_ULC_WDMA_DEBUG, 0x3B},
-	{"BOKMO", DIP_ULC_WDMA_DEBUG, 0x3C},
-	{"BOKMO_N", DIP_ULC_WDMA_DEBUG, 0x103C},
-	{"FEO", DIP_ULC_WDMA_DEBUG, 0x3D},
-	{"FHO2", DIP_ULC_WDMA_DEBUG, 0x403E},
-	{"CSMCSO", DIP_ULC_WDMA_DEBUG, 0x403F},
-	{"FHO3", DIP_ULC_WDMA_DEBUG, 0x4040},
-
+	{"SMTI4", DIP_ULC_RDMA_DEBUG, 0x3},
+	{"SMTCI4", DIP_ULC_RDMA_DEBUG, 0x4},
+	{"SMTI5", DIP_ULC_RDMA_DEBUG, 0x5},
+	{"SMTCI5", DIP_ULC_RDMA_DEBUG, 0x6},
+	{"SMTI6", DIP_ULC_RDMA_DEBUG, 0x7},
+	{"SMTCI6", DIP_ULC_RDMA_DEBUG, 0x8},
+	{"SMTI8", DIP_ULC_RDMA_DEBUG, 0x9},
+	{"SMTCI8", DIP_ULC_RDMA_DEBUG, 0xA},
+	{"SMTI9", DIP_ULC_RDMA_DEBUG, 0xB},
+	{"SMTCI9", DIP_ULC_RDMA_DEBUG, 0xC},
+	{"SMTI12", DIP_ULC_RDMA_DEBUG, 0xD},
+	{"SMTCI12", DIP_ULC_RDMA_DEBUG, 0xE},
+	{"SNRCSI1", DIP_ULC_RDMA_DEBUG, 0xF},
+	{"SNRCSI2", DIP_ULC_RDMA_DEBUG, 0x10},
+	{"SNRAIMI", DIP_ULC_RDMA_DEBUG, 0x11},
+	{"SNRAIMI_N", DIP_ULC_RDMA_DEBUG, 0x1011},
+	{"SNRGMI", DIP_ULC_RDMA_DEBUG, 0x12},
+	{"EECSI1", DIP_ULC_RDMA_DEBUG, 0x13},
+	{"EECSI2", DIP_ULC_RDMA_DEBUG, 0x14},
+	{"CSMCSI1", DIP_ULC_RDMA_DEBUG, 0x15},
+	{"CSMCSI1_N", DIP_ULC_RDMA_DEBUG, 0x1015},
+	{"CSMCSI2", DIP_ULC_RDMA_DEBUG, 0x16},
+	{"CSMCSI2_N", DIP_ULC_RDMA_DEBUG, 0x1016},
+	{"CSMCSTI1", DIP_ULC_RDMA_DEBUG, 0x17},
+	{"CSMCSTI2", DIP_ULC_RDMA_DEBUG, 0x18},
+	{"CSMCI", DIP_ULC_RDMA_DEBUG, 0x19},
+	{"CSMCBI", DIP_ULC_RDMA_DEBUG, 0x1A},
+	{"CSMCCI", DIP_ULC_RDMA_DEBUG, 0x1B},
+	{"CSMCDI", DIP_ULC_RDMA_DEBUG, 0x1C},
+	{"BOKMI", DIP_ULC_RDMA_DEBUG, 0x20},
+	{"BOKMI_N", DIP_ULC_RDMA_DEBUG, 0x1020},
+	{"BOKPYI", DIP_ULC_RDMA_DEBUG, 0x21},
+	{"BOKPCI", DIP_ULC_RDMA_DEBUG, 0x22},
+	{"DMGI", DIP_ULC_RDMA_DEBUG, 0x23},
+	{"DMGI_N", DIP_ULC_RDMA_DEBUG, 0x1023},
+	{"TNCCSI1", DIP_ULC_RDMA_DEBUG, 0x24},
+	{"TNCCSI2", DIP_ULC_RDMA_DEBUG, 0x25},
+	{"RACWI", DIP_ULC_RDMA_DEBUG, 0x26},
+	{"RACCSI", DIP_ULC_RDMA_DEBUG, 0x27},
+	{"RACWSI", DIP_ULC_RDMA_DEBUG, 0x28},
+	{"LMEI", DIP_ULC_RDMA_DEBUG, 0x29},
+	{"VDCECSI", DIP_ULC_RDMA_DEBUG, 0x2A},
+	{"VDCELFI", DIP_ULC_RDMA_DEBUG, 0x2B},
+	{"VDCELFI_N", DIP_ULC_RDMA_DEBUG, 0x102B},
+	{"FPNRCSI", DIP_ULC_RDMA_DEBUG, 0x2C},
+	{"YUFETI1", DIP_ULC_RDMA_DEBUG, 0x2D},
+	{"YUFETCI1", DIP_ULC_RDMA_DEBUG, 0x2E},
+	{"IMG4O", DIP_ORI_WDMA_DEBUG, 0x2F},
+	{"IMG4O_N", DIP_ORI_WDMA_DEBUG, 0x102F},
+	{"IMG4BO", DIP_ORI_WDMA_DEBUG, 0x30},
+	{"IMG4CO", DIP_ORI_WDMA_DEBUG, 0x31},
+	{"IMG4CO_N", DIP_ORI_WDMA_DEBUG, 0x1031},
+	{"IMG4DO", DIP_ORI_WDMA_DEBUG, 0x32},
+	{"IMG5O", DIP_ORI_WDMA_DEBUG, 0x33},
+	{"IMG5BO", DIP_ORI_WDMA_DEBUG, 0x34},
+	{"IMG6O", DIP_ORI_WDMA_DEBUG, 0x35},
+	{"IMG6BO", DIP_ORI_WDMA_DEBUG, 0x36},
+	{"SMTO4", DIP_ULC_WDMA_DEBUG, 0x37},
+	{"SMTCO4", DIP_ULC_WDMA_DEBUG, 0x38},
+	{"SMTO5", DIP_ULC_WDMA_DEBUG, 0x39},
+	{"SMTCO5", DIP_ULC_WDMA_DEBUG, 0x3A},
+	{"SMTO6", DIP_ULC_WDMA_DEBUG, 0x3B},
+	{"SMTCO6", DIP_ULC_WDMA_DEBUG, 0x3C},
+	{"SMTO8", DIP_ULC_WDMA_DEBUG, 0x3D},
+	{"SMTCO8", DIP_ULC_WDMA_DEBUG, 0x3E},
+	{"SMTO9", DIP_ULC_WDMA_DEBUG, 0x3F},
+	{"SMTCO9", DIP_ULC_WDMA_DEBUG, 0x40},
+	{"SMTO12", DIP_ULC_WDMA_DEBUG, 0x41},
+	{"SMTCO12", DIP_ULC_WDMA_DEBUG, 0x42},
+	{"SNRACTO", DIP_ULC_WDMA_DEBUG, 0x43},
+	{"SNRACTO_N", DIP_ULC_WDMA_DEBUG, 0x1043},
+	{"CSMCSO1", DIP_ULC_WDMA_DEBUG, 0x46},
+	{"CSMCSO2", DIP_ULC_WDMA_DEBUG, 0x47},
+	{"BOKMO", DIP_ULC_WDMA_DEBUG, 0x48},
+	{"BOKMO_N", DIP_ULC_WDMA_DEBUG, 0x1048},
+	{"FEO", DIP_ULC_WDMA_DEBUG, 0x49},
+	{"RACWO", DIP_ULC_WDMA_DEBUG, 0x4A},
+	{"RACWO_N", DIP_ULC_WDMA_DEBUG, 0x104A},
+	{"RACWSO", DIP_ULC_WDMA_DEBUG, 0x4B},
+	{"RACWSO_N", DIP_ULC_WDMA_DEBUG, 0x104B},
+	{"LMEO", DIP_ULC_WDMA_DEBUG, 0x4C},
+	{"LMEO_N", DIP_ULC_WDMA_DEBUG, 0x104C},
+	{"YUFETO1", DIP_ULC_WDMA_DEBUG, 0x4D},
+	{"YUFETCO1", DIP_ULC_WDMA_DEBUG, 0x4E},
+	{"FHO1", DIP_ULC_WDMA_DEBUG, 0x4F},
+	{"CNRO", DIP_ULC_WDMA_DEBUG, 0x3A},//
+	{"CNRO_N", DIP_ULC_WDMA_DEBUG, 0x103A},//
+	{"CNRBO", DIP_ULC_WDMA_DEBUG, 0x3B},//
 };
 
 struct mtk_imgsys_dip_dtable {
@@ -193,7 +262,7 @@ static unsigned int g_RegBaseAddrNr1 = DIP_NR1_ADDR;
 static unsigned int g_RegBaseAddrNr2 = DIP_NR2_ADDR;
 static unsigned int g_RegBaseAddrCine = DIP_CINE_ADDR;
 
-int imgsys_dip_tfault_callback(int port,
+int imgsys_dip_tfault_callback(int port, //YWTBD tf
 	dma_addr_t mva, void *data)
 {
 	void __iomem *dipRegBA = 0L;
@@ -596,6 +665,137 @@ static void imgsys_dip_dump_dma(struct mtk_imgsys_dev *a_pDev,
 	}
 }
 
+static void imgsys_dip_dump_dl(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int DbgLineCnt = 0, DbgRdy = 0, DbgReq = 0;
+	unsigned int DbgLineCntReg = 0;
+
+	pr_info("dump dl debug\n");
+
+	/* wpe_wif_d1_debug */
+	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
+	DbgCmd = 0x00000005;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
+	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
+	pr_info("[wpe_wif_d1_debug]checksum(0x%X),rdy(%d) req(%d)\n",
+		DbgData & 0xFFFF, DbgRdy, DbgReq);
+	/* line_cnt[15:0],  pix_cnt[15:0] */
+	DbgCmd = 0x00000006;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgLineCnt = (DbgData & 0xFFFF0000) >> 16;
+	pr_info("[wpe_wif_d1_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
+		DbgData & 0xFFFF, DbgLineCnt);
+	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
+	DbgCmd = 0x00000007;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgLineCntReg = (DbgData & 0xFFFF0000) >> 16;
+	pr_info("[wpe_wif_d1_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
+		DbgData & 0xFFFF, DbgLineCntReg);
+	/* tif_cid_debug */
+	DbgCmd = 0x00000008;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	pr_info("[wpe_wif_d1_debug]tif_cid_debug(0x%X)\n", DbgData);
+
+	/* omc_wif_d2_debug */
+	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
+	DbgCmd = 0x00000105;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
+	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
+	pr_info("[omc_wif_d2_debug]checksum(0x%X),rdy(%d) req(%d)\n",
+		DbgData & 0xFFFF, DbgRdy, DbgReq);
+	/* line_cnt[15:0],  pix_cnt[15:0] */
+	DbgCmd = 0x00000106;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgLineCnt = (DbgData & 0xFFFF0000) >> 16;
+	pr_info("[omc_wif_d2_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
+		DbgData & 0xFFFF, DbgLineCnt);
+	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
+	DbgCmd = 0x00000107;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgLineCntReg = (DbgData & 0xFFFF0000) >> 16;
+	pr_info("[omc_wif_d2_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
+		DbgData & 0xFFFF, DbgLineCntReg);
+	/* tif_cid_debug */
+	DbgCmd = 0x00000108;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	pr_info("[omc_wif_d2_debug]tif_cid_debug(0x%X)\n", DbgData);
+
+	/* traw_wif_d3_debug */
+	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
+	DbgCmd = 0x00000205;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
+	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
+	pr_info("[traw_wif_d3_debug]checksum(0x%X),rdy(%d) req(%d)\n",
+		DbgData & 0xFFFF, DbgRdy, DbgReq);
+	/* line_cnt[15:0],  pix_cnt[15:0] */
+	DbgCmd = 0x00000206;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgLineCnt = (DbgData & 0xFFFF0000) >> 16;
+	pr_info("[traw_wif_d3_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
+		DbgData & 0xFFFF, DbgLineCnt);
+	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
+	DbgCmd = 0x00000207;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgLineCntReg = (DbgData & 0xFFFF0000) >> 16;
+	pr_info("[traw_wif_d3_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
+		DbgData & 0xFFFF, DbgLineCntReg);
+	/* tif_cid_debug */
+	DbgCmd = 0x00000208;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	pr_info("[traw_wif_d3_debug]tif_cid_debug(0x%X)\n", DbgData);
+
+	/* mcrp_d1_debug */
+	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
+	DbgCmd = 0x00000305;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
+	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
+	pr_info("[mcrp_d1_debug]checksum(0x%X),rdy(%d) req(%d)\n",
+		DbgData & 0xFFFF, DbgRdy, DbgReq);
+	/* line_cnt[15:0],  pix_cnt[15:0] */
+	DbgCmd = 0x00000306;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgLineCnt = (DbgData & 0xFFFF0000) >> 16;
+	pr_info("[mcrp_d1_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
+		DbgData & 0xFFFF, DbgLineCnt);
+	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
+	DbgCmd = 0x00000307;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgLineCntReg = (DbgData & 0xFFFF0000) >> 16;
+	pr_info("[mcrp_d1_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
+		DbgData & 0xFFFF, DbgLineCntReg);
+
+	/* mcrp_d2_debug */
+	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
+	DbgCmd = 0x00000405;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
+	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
+	pr_info("[mcrp_d2_debug]checksum(0x%X),rdy(%d) req(%d)\n",
+		DbgData & 0xFFFF, DbgRdy, DbgReq);
+	/* line_cnt[15:0],  pix_cnt[15:0] */
+	DbgCmd = 0x00000406;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgLineCnt = (DbgData & 0xFFFF0000) >> 16;
+	pr_info("[mcrp_d2_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
+		DbgData & 0xFFFF, DbgLineCnt);
+	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
+	DbgCmd = 0x00000407;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgLineCntReg = (DbgData & 0xFFFF0000) >> 16;
+	pr_info("[mcrp_d2_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
+		DbgData & 0xFFFF, DbgLineCntReg);
+
+}
+
 static void imgsys_dip_dump_nr3d(struct mtk_imgsys_dev *a_pDev,
 				 void __iomem *a_pRegBA)
 {
@@ -612,105 +812,7 @@ static void imgsys_dip_dump_nr3d(struct mtk_imgsys_dev *a_pDev,
 
 }
 
-static void imgsys_dip_dump_dl(struct mtk_imgsys_dev *a_pDev,//YWTBD dbg
-				void __iomem *a_pRegBA,
-				unsigned int a_DdbSel,
-				unsigned int a_DbgOut)
-{
-	unsigned int DbgCmd = 0;
-	unsigned int DbgData = 0;
-	unsigned int DbgLineCnt = 0, DbgRdy = 0, DbgReq = 0;
-	unsigned int DbgLineCntReg = 0;
-
-	pr_info("dump dl debug\n");
-
-	/* wpe_wif_d1_debug */
-	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
-	DbgCmd = 0x00000007;
-	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
-	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
-	pr_info("[wpe_wif_d1_debug]checksum(0x%X),rdy(%d) req(%d)\n",
-		DbgData & 0xFFFF, DbgRdy, DbgReq);
-	/* line_cnt[15:0],  pix_cnt[15:0] */
-	DbgCmd = 0x00000008;
-	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-	DbgLineCnt = (DbgData & 0xFFFF0000) >> 16;
-	pr_info("[wpe_wif_d1_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
-		DbgData & 0xFFFF, DbgLineCnt);
-	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
-	DbgCmd = 0x00000009;
-	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-	DbgLineCntReg = (DbgData & 0xFFFF0000) >> 16;
-	pr_info("[wpe_wif_d1_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
-		DbgData & 0xFFFF, DbgLineCntReg);
-
-	/* wpe_wif_d2_debug */
-	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
-	DbgCmd = 0x00000107;
-	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
-	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
-	pr_info("[wpe_wif_d2_debug]checksum(0x%X),rdy(%d) req(%d)\n",
-		DbgData & 0xFFFF, DbgRdy, DbgReq);
-	/* line_cnt[15:0],  pix_cnt[15:0] */
-	DbgCmd = 0x00000108;
-	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-	DbgLineCnt = (DbgData & 0xFFFF0000) >> 16;
-	pr_info("[wpe_wif_d2_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
-		DbgData & 0xFFFF, DbgLineCnt);
-	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
-	DbgCmd = 0x00000109;
-	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-	DbgLineCntReg = (DbgData & 0xFFFF0000) >> 16;
-	pr_info("[wpe_wif_d2_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
-		DbgData & 0xFFFF, DbgLineCntReg);
-
-	/* wpe_wif_d3_debug */
-	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
-	DbgCmd = 0x00000207;
-	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
-	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
-	pr_info("[wpe_wif_d3_debug]checksum(0x%X),rdy(%d) req(%d)\n",
-		DbgData & 0xFFFF, DbgRdy, DbgReq);
-	/* line_cnt[15:0],  pix_cnt[15:0] */
-	DbgCmd = 0x00000208;
-	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-	DbgLineCnt = (DbgData & 0xFFFF0000) >> 16;
-	pr_info("[wpe_wif_d3_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
-		DbgData & 0xFFFF, DbgLineCnt);
-	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
-	DbgCmd = 0x00000209;
-	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-	DbgLineCntReg = (DbgData & 0xFFFF0000) >> 16;
-	pr_info("[wpe_wif_d3_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
-		DbgData & 0xFFFF, DbgLineCntReg);
-
-	/* mcrp_d1_debug */
-	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
-	DbgCmd = 0x00000307;
-	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
-	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
-	pr_info("[mcrp_d1_debug]checksum(0x%X),rdy(%d) req(%d)\n",
-		DbgData & 0xFFFF, DbgRdy, DbgReq);
-	/* line_cnt[15:0],  pix_cnt[15:0] */
-	DbgCmd = 0x00000308;
-	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-	DbgLineCnt = (DbgData & 0xFFFF0000) >> 16;
-	pr_info("[mcrp_d1_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
-		DbgData & 0xFFFF, DbgLineCnt);
-	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
-	DbgCmd = 0x00000309;
-	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-	DbgLineCntReg = (DbgData & 0xFFFF0000) >> 16;
-	pr_info("[mcrp_d1_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
-		DbgData & 0xFFFF, DbgLineCntReg);
-
-}
-
-static void imgsys_dip_dump_snr(struct mtk_imgsys_dev *a_pDev,//YWTBD dbg
+static void imgsys_dip_dump_snrsd1(struct mtk_imgsys_dev *a_pDev,
 				void __iomem *a_pRegBA,
 				unsigned int a_DdbSel,
 				unsigned int a_DbgOut)
@@ -718,25 +820,20 @@ static void imgsys_dip_dump_snr(struct mtk_imgsys_dev *a_pDev,//YWTBD dbg
 	unsigned int DbgCmd = 0;
 	unsigned int DbgData = 0;
 	unsigned int Idx = 0;
-	unsigned int CmdOft = 0x10000;
 
-	pr_info("dump snr debug\n");
+	pr_info("dump snrs_d1 debug\n");
 
-	/* snr_d1 debug */
-	DbgCmd = 0x8501;
-	for (Idx = 0; Idx < 0x10; Idx++) {
+	/* snrs_d1_dbg_sel debug */
+	a_DdbSel = DIP_SNRS_DBG_SEL;
+	a_DbgOut = DIP_SNRS_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 0; Idx <= 11; Idx++) {
+		DbgCmd = Idx;
 		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-		DbgCmd += CmdOft;
 	}
-	DbgCmd = 0x8601;
-	for (Idx = 0; Idx < 0x10; Idx++) {
-		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-		DbgCmd += CmdOft;
-	}
-
 }
 
-static void imgsys_dip_dump_eecnr(struct mtk_imgsys_dev *a_pDev,//YWTBD dbg
+static void imgsys_dip_dump_yufdd1(struct mtk_imgsys_dev *a_pDev,
 				void __iomem *a_pRegBA,
 				unsigned int a_DdbSel,
 				unsigned int a_DbgOut)
@@ -744,94 +841,359 @@ static void imgsys_dip_dump_eecnr(struct mtk_imgsys_dev *a_pDev,//YWTBD dbg
 	unsigned int DbgCmd = 0;
 	unsigned int DbgData = 0;
 	unsigned int Idx = 0;
-	unsigned int CmdOft = 0x10000;
-
-	pr_info("dump eecnr debug\n");
-
-	/* eecnr debug */
-	DbgCmd = 0xC201;
-	for (Idx = 0; Idx < 0x10; Idx++) {
-		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-		DbgCmd += CmdOft;
-	}
-
-}
-
-static void imgsys_dip_dump_ans(struct mtk_imgsys_dev *a_pDev,//YWTBD dbg
-				void __iomem *a_pRegBA,
-				unsigned int a_DdbSel,
-				unsigned int a_DbgOut)
-{
-	unsigned int DbgCmd = 0;
-	unsigned int DbgData = 0;
-	unsigned int Idx = 0;
-	unsigned int CmdOft = 0x10000;
-
-	pr_info("dump ans debug\n");
-
-	/* ans debug */
-	DbgCmd = 0xC801;
-	for (Idx = 0; Idx < 0x10; Idx++) {
-		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-		DbgCmd += CmdOft;
-	}
-
-}
-
-static void imgsys_dip_dump_bok(struct mtk_imgsys_dev *a_pDev,//YWTBD dbg
-				void __iomem *a_pRegBA,
-				unsigned int a_DdbSel,
-				unsigned int a_DbgOut)
-{
-	unsigned int DbgCmd = 0;
-	unsigned int DbgData = 0;
-	unsigned int Idx = 0;
-	unsigned int CmdOft = 0x10000;
-
-	pr_info("dump bok debug\n");
-
-	/* snr_d1 debug */
-	DbgCmd = 0xF301;
-	for (Idx = 0; Idx < 0x10; Idx++) {
-		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-		DbgCmd += CmdOft;
-	}
-	DbgCmd = 0xF401;
-	for (Idx = 0; Idx < 0x10; Idx++) {
-		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-		DbgCmd += CmdOft;
-	}
-
-}
-
-static void imgsys_dip_dump_yufdd1(struct mtk_imgsys_dev *a_pDev,//YWTBD dbg
-				void __iomem *a_pRegBA,
-				unsigned int a_DdbSel,
-				unsigned int a_DbgOut)
-{
-	unsigned int DbgCmd = 0;
-	unsigned int DbgData = 0;
-	unsigned int Idx = 0;
-	unsigned int CmdOft = 0x10000;
-	unsigned int yufdCmdOft = 0x1;
 
 	pr_info("dump yufd_d1 debug\n");
 
-	/* yufd_d1 debug */
-	DbgCmd = 0x0401;
-	for (Idx = 0; Idx < 0x10; Idx++) {
-		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-		DbgCmd += CmdOft;
-	}
 	/* yufd_d1_dbg_sel debug */
 	a_DdbSel = DIP_YUFD_DBG_SEL;
+	a_DbgOut = DIP_YUFD_DBG_OUT;
 	DbgCmd = 0x0;
-	for (Idx = 0; Idx < 0x20; Idx++) {
+	for (Idx = 1; Idx <= 41; Idx++) {
+		DbgCmd = Idx;
 		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-		DbgCmd += yufdCmdOft;
 	}
-
 }
+
+static void imgsys_dip_dump_yufed2(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump yufe_d2 debug\n");
+
+	/* yufe_d2_dbg_sel debug */
+	a_DdbSel = DIP_YUFE2_DBG_SEL;
+	a_DbgOut = DIP_YUFE2_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 1; Idx <= 31; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
+static void imgsys_dip_dump_yufed3(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump yufe_d3 debug\n");
+
+	/* yufe_d3_dbg_sel debug */
+	a_DdbSel = DIP_YUFE3_DBG_SEL;
+	a_DbgOut = DIP_YUFE3_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 1; Idx <= 31; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
+static void imgsys_dip_dump_urz6t4t1d1(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump urz6t4t1_d1 debug\n");
+
+	/* urz6t4t1_d1_dbg_sel debug */
+	a_DdbSel = DIP1_URZ6T4T1_DBG_SEL;
+	a_DbgOut = DIP1_URZ6T4T1_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 0; Idx <= 15; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
+static void imgsys_dip_dump_eecnr(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump eecnr_d1 debug\n");
+
+	/* eecnr_d1_dbg_sel debug */
+	a_DdbSel = DIP1_EECNR_DBG_SEL;
+	a_DbgOut = DIP1_EECNR_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 0; Idx <= 12; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
+static void imgsys_dip_dump_ans(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump ans_d1 debug\n");
+
+	/* ans_d1_dbg_sel debug */
+	a_DdbSel = DIP1_ANS_DBG_SEL;
+	a_DbgOut = DIP1_ANS_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 0; Idx <= 9; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
+static void imgsys_dip_dump_csmc(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump csmc_d1 debug\n");
+
+	/* csmc_d1_dbg_sel debug */
+	a_DdbSel = DIP1_CSMC_DBG_SEL;
+	a_DbgOut = DIP1_CSMC_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 0; Idx <= 17; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
+static void imgsys_dip_dump_dwg(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump dwg_d1 debug\n");
+
+	/* dwg_d1_dbg_sel debug */
+	a_DdbSel = DIP1_DWG_DBG_SEL;
+	a_DbgOut = DIP1_DWG_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 0; Idx <= 4; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
+static void imgsys_dip_dump_rac(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump rac_d1 debug\n");
+
+	/* rac_d1_dbg_sel debug */
+	a_DdbSel = DIP1_RAC_DBG_SEL;
+	a_DbgOut = DIP1_RAC_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 0; Idx <= 7; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
+static void imgsys_dip_dump_csmcsd2(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump csmcs_d2 debug\n");
+
+	/* csmcs_d2_dbg_sel debug */
+	a_DdbSel = DIP1_CSMCS2_DBG_SEL;
+	a_DbgOut = DIP1_CSMCS2_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 0; Idx <= 10; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
+static void imgsys_dip_dump_tnc(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump tnc_d1 debug\n");
+
+	/* tnc_d1_dbg_sel debug */
+	a_DdbSel = DIP1_TNC_DBG_SEL;
+	a_DbgOut = DIP1_TNC_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 0; Idx <= 15; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
+static void imgsys_dip_dump_snr(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump snr_d1 debug\n");
+
+	/* snr_d1_dbg_sel debug */
+	a_DdbSel = DIP2_SNR_DBG_SEL;
+	a_DbgOut = DIP2_SNR_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 0; Idx <= 30; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
+static void imgsys_dip_dump_csmcsd1(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump csmcs_d1 debug\n");
+
+	/* csmcs_d1_dbg_sel debug */
+	a_DdbSel = DIP2_CSMCS1_DBG_SEL;
+	a_DbgOut = DIP2_CSMCS1_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 0; Idx <= 10; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
+static void imgsys_dip_dump_yufed1(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump yufe_d1 debug\n");
+
+	/* yufe_d1_dbg_sel debug */
+	a_DdbSel = DIP2_YUFE1_DBG_SEL;
+	a_DbgOut = DIP2_YUFE1_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 1; Idx <= 31; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
+static void imgsys_dip_dump_vdce(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump vdce_d1 debug\n");
+
+	/* vdce_d1_dbg_sel debug */
+	a_DdbSel = DIP2_VDCE_DBG_SEL;
+	a_DbgOut = DIP2_VDCE_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 0; Idx <= 13; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
+static void imgsys_dip_dump_bok(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump bok_d1 debug\n");
+
+	/* bok_d1_dbg_sel debug */
+	a_DdbSel = DIP3_BOK_DBG_SEL;
+	a_DbgOut = DIP3_BOK_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 1; Idx <= 11; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
+static void imgsys_dip_dump_fpnr(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+	unsigned int DbgData = 0;
+	unsigned int Idx = 0;
+
+	pr_info("dump fpnr_d1 debug\n");
+
+	/* fpnr_d1_dbg_sel debug */
+	a_DdbSel = DIP3_FPNR_DBG_SEL;
+	a_DbgOut = DIP3_FPNR_DBG_OUT;
+	DbgCmd = 0x0;
+	for (Idx = 0; Idx <= 11; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+	for (Idx = 16; Idx <= 24; Idx++) {
+		DbgCmd = Idx;
+		DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	}
+}
+
 
 void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 							unsigned int engine)
@@ -932,16 +1294,50 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	g_RegBaseAddr = g_RegBaseAddrTop;
 	/* NR3D debug data */
 	imgsys_dip_dump_nr3d(imgsys_dev, dipRegBA);
-	/* SNR debug data */
-	imgsys_dip_dump_snr(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+	/* SNRS_D1 debug data */
+	imgsys_dip_dump_snrsd1(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+	/* YUFD_D1 debug data */
+	imgsys_dip_dump_yufdd1(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+	/* YUFE_D2 debug data */
+	imgsys_dip_dump_yufed2(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+	/* YUFE_D3 debug data */
+	imgsys_dip_dump_yufed3(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+	/* YUFE_D3 debug data */
+	imgsys_dip_dump_yufed3(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+
+	dipRegBA = gdipRegBA[1];
+	/* URZ6T4T_D1 debug data */
+	imgsys_dip_dump_urz6t4t1d1(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
 	/* EECNR debug data */
 	imgsys_dip_dump_eecnr(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
 	/* ANS debug data */
 	imgsys_dip_dump_ans(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
-	/* BOK debug data */
+	/* CSMC debug data */
+	imgsys_dip_dump_csmc(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+	/* DWG debug data */
+	imgsys_dip_dump_dwg(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+	/* RAC debug data */
+	imgsys_dip_dump_rac(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+	/* CSMCS_D2 debug data */
+	imgsys_dip_dump_csmcsd2(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+	/* TNC debug data */
+	imgsys_dip_dump_tnc(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+
+	dipRegBA = gdipRegBA[2];
+	/* SNR debug data */
+	imgsys_dip_dump_snr(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+	/* CSMCS_D1 debug data */
+	imgsys_dip_dump_csmcsd1(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+	/* YUFE_D1 debug data */
+	imgsys_dip_dump_yufed1(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+	/* VDCE_D1 debug data */
+	imgsys_dip_dump_vdce(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+
+	dipRegBA = gdipRegBA[3];
+	/* BOK_D1 debug data */
 	imgsys_dip_dump_bok(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
-	/* YUFD_D1 debug data */
-	imgsys_dip_dump_yufdd1(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+	/* FPNR_D1 debug data */
+	imgsys_dip_dump_fpnr(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
 
 	pr_info("%s: -\n", __func__);
 

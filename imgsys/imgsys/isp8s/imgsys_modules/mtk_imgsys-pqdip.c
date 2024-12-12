@@ -74,14 +74,24 @@ struct mtk_imgsys_pqdip_dtable {
 #define PQDIP_TCC_REG_CNT		0x450
 #define PQDIP_TCY_REG_CNT		0xA0
 
-#define PQDIPCTL_DBG_SEL_OFST	0xF4 //YWTBD dbg
-#define PQDIPCTL_DBG_OUT_OFST	0xF8 //YWTBD dbg
-#define PQDIPCTL_DMA_DBG_SEL_OFST	0x1028
-#define PQDIPCTL_DMA_DBG_OUT_OFST	0x1064
+#define PQ_CTL_DBG_SEL_OFST	0xF4
+#define PQ_CTL_DBG_OUT_OFST	0xF8
+#define PQ_CQ_DBG_SEL_OFST	0x268
+#define PQ_CQ_DBG_OUT_OFST	0x26C
+#define PQ_DMA_DBG_SEL_OFST	0x1028
+#define PQ_DMA_DBG_OUT_OFST	0x1064
 #define PQ_WROT_DBG_SEL_OFST	0x2140
 #define PQ_WROT_DBG_OUT_OFST	0x2144
+#define PQ_NDG_DBG_SEL_OFST	0x2F98
+#define PQ_NDG_DBG_OUT_OFST	0x2F9C
 #define PQ_RZH4N6T_DBG_SEL_OFST	0x3044
 #define PQ_RZH4N6T_DBG_OUT_OFST	0x3048
+#define PQ_HFG_DBG_SEL_OFST	0x407C
+#define PQ_HFG_DBG_OUT_OFST	0x4080
+#define PQ_MCRP_DBG_SEL_OFST	0x5188
+#define PQ_MCRP_DBG_OUT_OFST	0x518C
+#define PQ_TCC_DBG_SEL_OFST	0x5608
+#define PQ_TCC_DBG_OUT_OFST	0x560C
 
 /********************************************************************
  * Global Variable
@@ -184,7 +194,7 @@ void imgsys_pqdip_cmdq_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev,
 	dev_dbg(imgsys_dev->dev, "%s: -\n", __func__);
 }
 
-void imgsys_pqdip_debug_dump(struct mtk_imgsys_dev *imgsys_dev, //YWTBD dbg
+void imgsys_pqdip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 							unsigned int engine)
 {
 	void __iomem *pqdipRegBA = 0L;
@@ -375,321 +385,188 @@ void imgsys_pqdip_debug_dump(struct mtk_imgsys_dev *imgsys_dev, //YWTBD dbg
 			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TCY_OFST + i + 0x0c)));
 		}
 #endif
-
-#ifdef PQ_MARK //YWTBD dbg
 		//DMA_DBG
 		dev_info(imgsys_dev->dev, "%s: dma debug\n", __func__);
 		for (i = 0; i <= 4; i += 1) {
-			iowrite32((0x00000 + i), (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
+			iowrite32((0x00000 + i), (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
 			dev_info(imgsys_dev->dev, "%s: sel(0x%08x): %08X", __func__,
 			(unsigned int)(0x00000 + i),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-			iowrite32((0x00100 + i), (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+			iowrite32((0x00100 + i), (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
 			dev_info(imgsys_dev->dev, "%s: sel(0x%08x): %08X", __func__,
 			(unsigned int)(0x00100 + i),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-			iowrite32((0x00200 + i), (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+			iowrite32((0x00200 + i), (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
 			dev_info(imgsys_dev->dev, "%s: sel(0x%08x): %08X", __func__,
 			(unsigned int)(0x00200 + i),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-			iowrite32((0x00300 + i), (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+			iowrite32((0x00300 + i), (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
 			dev_info(imgsys_dev->dev, "%s: sel(0x%08x): %08X", __func__,
 			(unsigned int)(0x00300 + i),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-			iowrite32((0x00500 + i), (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+			iowrite32((0x00500 + i), (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
 			dev_info(imgsys_dev->dev, "%s: sel(0x%08x): %08X", __func__,
 			(unsigned int)(0x00500 + i),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-			iowrite32((0x10600 + i), (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+			iowrite32((0x10600 + i), (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
 			dev_info(imgsys_dev->dev, "%s: sel(0x%08x): %08X", __func__,
 			(unsigned int)(0x10600 + i),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-			iowrite32((0x30600 + i), (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+			iowrite32((0x30600 + i), (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
 			dev_info(imgsys_dev->dev, "%s: sel(0x%08x): %08X", __func__,
 			(unsigned int)(0x30600 + i),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-			iowrite32((0x00A00 + i), (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+			iowrite32((0x00A00 + i), (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
 			dev_info(imgsys_dev->dev, "%s: sel(0x%08x): %08X", __func__,
 			(unsigned int)(0x00A00 + i),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-			iowrite32((0x00B00 + i), (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+			iowrite32((0x00B00 + i), (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
 			dev_info(imgsys_dev->dev, "%s: sel(0x%08x): %08X", __func__,
 			(unsigned int)(0x00B00 + i),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-			iowrite32((0x00C00 + i), (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+			iowrite32((0x00C00 + i), (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
 			dev_info(imgsys_dev->dev, "%s: sel(0x%08x): %08X", __func__,
 			(unsigned int)(0x00C00 + i),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
 		}
 
 		dev_info(imgsys_dev->dev, "%s: smi port debug\n", __func__);
-		iowrite32(0x1000046, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x1000046): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x1000047, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x1000047): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x1000048, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x1000048): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x1000049, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x1000049): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x100004A, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x100004A): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x100004B, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x100004B): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
+		iowrite32(0x26800046, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x26800046): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+		iowrite32(0x26800146, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x26800146): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+		iowrite32(0x26800446, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x26800446): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+		iowrite32(0x26800546, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x26800546): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+		iowrite32(0x26800047, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x26800047): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
 
 		dev_info(imgsys_dev->dev, "%s: smi latency debug\n", __func__);
-		iowrite32(0x0080, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x0080): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x0081, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x0081): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x0082, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x0082): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-
-		dev_info(imgsys_dev->dev, "%s: smi arbiter debug\n", __func__);
-		iowrite32(0x00A0, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x00A0): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x00A1, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x00A1): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x00A2, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x00A2): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x00A3, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x00A3): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x00A4, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x00A4): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x00A5, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x00A5): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
+		iowrite32(0x008C, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x008C): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+		iowrite32(0x008D, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x008D): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+		iowrite32(0x008E, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x008E): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
 
 		dev_info(imgsys_dev->dev, "%s: dma addr debug\n", __func__);
-		iowrite32(0x00C0, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x00C0): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x00C1, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x00C1): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x01C0, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x01C0): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x01C1, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x01C1): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x02C0, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x02C0): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x02C1, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x02C1): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x03C0, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x03C0): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x03C1, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x03C1): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x04C0, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x04C0): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
-		iowrite32(0x04C1, (void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: sel(0x04C1): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DMA_DBG_OUT_OFST)));
+		iowrite32(0x00E0, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x00E0): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+		iowrite32(0x01E0, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x01E0): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+		iowrite32(0x02E0, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x02E0): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+		iowrite32(0x03E0, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x03E0): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+		iowrite32(0x04E0, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x04E0): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+		iowrite32(0x00E1, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x00E1): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+		iowrite32(0x01E1, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x01E1): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+		iowrite32(0x02E1, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x02E1): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+		iowrite32(0x03E1, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x03E1): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
+		iowrite32(0x04E1, (void *)(pqdipRegBA + PQ_DMA_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: sel(0x04E1): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_DMA_DBG_OUT_OFST)));
 
 		//CTL_DBG
-		dev_info(imgsys_dev->dev, "%s: tdr debug\n", __func__);
-		iowrite32(0x00004, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tdr   sel(0x00004): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x10004, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tdr   sel(0x10004): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x20004, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tdr   sel(0x20004): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x30004, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tdr   sel(0x30004): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x40004, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tdr   sel(0x40004): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x50004, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tdr   sel(0x50004): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x60004, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tdr   sel(0x60004): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x70004, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tdr   sel(0x70004): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x80004, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tdr   sel(0x80004): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x90004, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tdr   sel(0x90004): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0xa0004, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tdr   sel(0xa0004): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0xb0004, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tdr   sel(0xb0004): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-
-		dev_info(imgsys_dev->dev, "%s: module debug\n", __func__);
-		iowrite32(0x00001, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: rzh4n6t sel(0x00001): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x00101, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tdshp sel(0x00101): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x10201, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tcc   sel(0x10201): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x20201, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tcc   sel(0x20201): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x30201, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tcc   sel(0x30201): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x40201, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tcc   sel(0x40201): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x00301, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: wrot  sel(0x00301): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x10401, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp1  sel(0x10401): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x20401, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp1  sel(0x20401): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x30401, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp1  sel(0x30401): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x40401, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp1  sel(0x40401): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x50401, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp1  sel(0x50401): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x60401, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp1  sel(0x60401): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x10501, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp2  sel(0x10501): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x20501, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp2  sel(0x20501): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x30501, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp2  sel(0x30501): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x40501, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp2  sel(0x40501): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x50501, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp2  sel(0x50501): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x60501, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp2  sel(0x60501): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x10601, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp3  sel(0x10601): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x20601, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp3  sel(0x20601): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x30601, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp3  sel(0x30601): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x40601, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp3  sel(0x40601): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x50601, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp3  sel(0x50601): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x60601, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: unp3  sel(0x60601): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x00701, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: plnr  sel(0x00701): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x00801, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: c02   sel(0x00801): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x10801, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: c02   sel(0x10801): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x20801, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: c02   sel(0x20801): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x30801, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: c02   sel(0x30801): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x10901, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: c24   sel(0x10901): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x10a01, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: mcrp  sel(0x10a01): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x20a01, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: mcrp  sel(0x20a01): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x30a01, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: mcrp  sel(0x30a01): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x40a01, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: mcrp  sel(0x40a01): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x50a01, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: mcrp  sel(0x50a01): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x00b01, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tcy   sel(0x00b01): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x10b01, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tcy   sel(0x10b01): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x20b01, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: tcy   sel(0x20b01): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-
-		iowrite32(0x00106, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: wif   sel(0x00106): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x00107, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: wif   sel(0x00107): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-		iowrite32(0x00108, (void *)(pqdipRegBA + PQDIPCTL_DBG_SEL_OFST));
-		dev_info(imgsys_dev->dev, "%s: wif   sel(0x00108): %08X", __func__,
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIPCTL_DBG_OUT_OFST)));
-
-		//WROT_DBG
+		dev_info(imgsys_dev->dev, "%s: cq debug\n", __func__);
+		for (i = 0; i <= 12; i += 1) {
+			iowrite32(i, (void *)(pqdipRegBA + PQ_CQ_DBG_SEL_OFST));
+			dev_info(imgsys_dev->dev, "%s: cq  sel(0x%08x): %08X", __func__,
+			(unsigned int)(i),
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_CQ_DBG_OUT_OFST)));
+		}
+		iowrite32(0x006, (void *)(pqdipRegBA + PQ_CTL_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: mcrp  sel(0x006): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_CTL_DBG_OUT_OFST)));
+		iowrite32(0x007, (void *)(pqdipRegBA + PQ_CTL_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: mcrp  sel(0x007): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_CTL_DBG_OUT_OFST)));
+		iowrite32(0x008, (void *)(pqdipRegBA + PQ_CTL_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: mcrp  sel(0x008): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_CTL_DBG_OUT_OFST)));
+		iowrite32(0x106, (void *)(pqdipRegBA + PQ_CTL_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: wif_d1  sel(0x106): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_CTL_DBG_OUT_OFST)));
+		iowrite32(0x107, (void *)(pqdipRegBA + PQ_CTL_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: wif_d1  sel(0x107): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_CTL_DBG_OUT_OFST)));
+		iowrite32(0x108, (void *)(pqdipRegBA + PQ_CTL_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: wif_d1  sel(0x108): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_CTL_DBG_OUT_OFST)));
+		iowrite32(0x206, (void *)(pqdipRegBA + PQ_CTL_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: wif_p1  sel(0x206): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_CTL_DBG_OUT_OFST)));
+		iowrite32(0x207, (void *)(pqdipRegBA + PQ_CTL_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: wif_p1  sel(0x207): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_CTL_DBG_OUT_OFST)));
+		iowrite32(0x208, (void *)(pqdipRegBA + PQ_CTL_DBG_SEL_OFST));
+		dev_info(imgsys_dev->dev, "%s: wif_p1  sel(0x208): %08X", __func__,
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQ_CTL_DBG_OUT_OFST)));
 		dev_info(imgsys_dev->dev, "%s: wrot debug\n", __func__);
-		for (i = 1; i <= 32; i += 1) {
-			iowrite32(i << 8, (void *)(pqdipRegBA + PQ_WROT_DBG_SEL_OFST));
-			dev_info(imgsys_dev->dev, "%s: sel(0x%04x): %08X", __func__, i << 8,
+		for (i = 0; i <= 3; i += 1) {
+			iowrite32(i, (void *)(pqdipRegBA + PQ_WROT_DBG_SEL_OFST));
+			dev_info(imgsys_dev->dev, "%s: wrot  sel(0x%08x): %08X", __func__,
+			(unsigned int)(i),
 			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_WROT_DBG_OUT_OFST)));
 		}
-
-		//URZ6T_DBG
+		dev_info(imgsys_dev->dev, "%s: ndg debug\n", __func__);
+		for (i = 0; i <= 4; i += 1) {
+			iowrite32(i, (void *)(pqdipRegBA + PQ_NDG_DBG_SEL_OFST));
+			dev_info(imgsys_dev->dev, "%s: ndg  sel(0x%08x): %08X", __func__,
+			(unsigned int)(i),
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_NDG_DBG_OUT_OFST)));
+		}
 		dev_info(imgsys_dev->dev, "%s: rzh4n6t debug\n", __func__);
-		for (i = 0; i < 16; i += 1) {
+		for (i = 0; i <= 15; i += 1) {
 			iowrite32(i, (void *)(pqdipRegBA + PQ_RZH4N6T_DBG_SEL_OFST));
-			dev_info(imgsys_dev->dev, "%s: sel(0x%02x): %08X", __func__, i,
+			dev_info(imgsys_dev->dev, "%s: rzh4n6t  sel(0x%08x): %08X", __func__,
+			(unsigned int)(i),
 			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_RZH4N6T_DBG_OUT_OFST)));
 		}
-#endif
-
+		dev_info(imgsys_dev->dev, "%s: hfg debug\n", __func__);
+		for (i = 0; i <= 5; i += 1) {
+			iowrite32(i, (void *)(pqdipRegBA + PQ_HFG_DBG_SEL_OFST));
+			dev_info(imgsys_dev->dev, "%s: hfg  sel(0x%08x): %08X", __func__,
+			(unsigned int)(i),
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_HFG_DBG_OUT_OFST)));
+		}
+		dev_info(imgsys_dev->dev, "%s: mcrp debug\n", __func__);//YWTBD
+		for (i = 0; i <= 3; i += 1) {
+			iowrite32(i, (void *)(pqdipRegBA + PQ_MCRP_DBG_SEL_OFST));
+			dev_info(imgsys_dev->dev, "%s: mcrp  sel(0x%08x): %08X", __func__,
+			(unsigned int)(i),
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_MCRP_DBG_OUT_OFST)));
+		}
+		dev_info(imgsys_dev->dev, "%s: tcc debug\n", __func__);
+		for (i = 0; i <= 7; i += 1) {
+			iowrite32(i, (void *)(pqdipRegBA + PQ_TCC_DBG_SEL_OFST));
+			dev_info(imgsys_dev->dev, "%s: tcc  sel(0x%08x): %08X", __func__,
+			(unsigned int)(i),
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_TCC_DBG_OUT_OFST)));
+		}
 	}
 	dev_info(imgsys_dev->dev, "%s: -\n", __func__);
 }
@@ -786,7 +663,7 @@ void imgsys_pqdip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 	}
 }
 
-int imgsys_pqdip_tfault_callback(int port, //YWTBD dbg
+int imgsys_pqdip_tfault_callback(int port, //YWTBD tf
 			dma_addr_t mva, void *data)
 {
 	void __iomem *pqdipRegBA = 0L;
