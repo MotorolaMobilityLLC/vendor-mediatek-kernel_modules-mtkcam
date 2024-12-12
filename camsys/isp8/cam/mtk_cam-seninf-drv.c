@@ -1941,15 +1941,16 @@ static int get_buffered_pixel_rate(struct seninf_ctx *ctx,
 
 	memset(&fi, 0, sizeof(fi));
 	fi.pad = sd_pad_idx;
-	fi.reserved[0] = V4L2_SUBDEV_FORMAT_ACTIVE;
 #if (KERNEL_VERSION(6, 7, 0) < LINUX_VERSION_CODE)
+	fi.which = V4L2_SUBDEV_FORMAT_ACTIVE;
 	ret = v4l2_subdev_call_state_active(sd, pad, get_frame_interval, &fi);
 #else
+	fi.reserved[0] = V4L2_SUBDEV_FORMAT_ACTIVE;
 	ret = v4l2_subdev_call(sd, video, g_frame_interval, &fi);
 #endif
 	if (ret) {
-		dev_info(ctx->dev, "no g_frame_interval in %s\n", sd->name);
-		// return ret;
+		dev_info(ctx->dev, "no g_frame_interval in %s ret(%d)\n", sd->name, ret);
+		return ret;
 	}
 
 	ctrl = v4l2_ctrl_find(sd->ctrl_handler, V4L2_CID_HBLANK);
