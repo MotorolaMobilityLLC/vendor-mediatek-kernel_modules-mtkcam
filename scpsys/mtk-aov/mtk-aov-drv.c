@@ -445,11 +445,11 @@ static struct smi_user_pwr_ctrl uisp_pwr_ctrl = {
 
 static int mtk_aov_probe(struct platform_device *pdev)
 {
-	struct platform_device *larb_pdev;
-	struct device_node *larb_node;
+	struct platform_device *dep_pdev;
+	struct device_node *dep_node;
 	struct device_link *link;
 	struct mtk_aov *aov_dev;
-	int ret = 0, num_larbs = 0, i = 0;
+	int ret = 0, num_node = 0, i = 0;
 
 	dev_info(&pdev->dev, "%s probe aov driver+\n", __func__);
 
@@ -480,33 +480,63 @@ static int mtk_aov_probe(struct platform_device *pdev)
 		dev_info(&pdev->dev, "%s aov mode(%d)\n", __func__, aov_dev->op_mode);
 
 		// larb parsing
-		num_larbs = of_count_phandle_with_args(
+		num_node = of_count_phandle_with_args(
 						pdev->dev.of_node, "mediatek,larbs-uisp", NULL);
-		num_larbs = (num_larbs < 0) ? 0 : num_larbs;
-		dev_info(&pdev->dev, "aov uisp larb_num:%d\n", num_larbs);
+		num_node = (num_node < 0) ? 0 : num_node;
+		dev_info(&pdev->dev, "aov uisp larb_num:%d\n", num_node);
 
-		for (i = 0; i < num_larbs; i++) {
-			larb_node = of_parse_phandle(
+		for (i = 0; i < num_node; i++) {
+			dep_node = of_parse_phandle(
 						pdev->dev.of_node, "mediatek,larbs-uisp", i);
-			if (!larb_node) {
+			if (!dep_node) {
 				dev_info(&pdev->dev, "failed to get aov uisp larb node\n");
 				continue;
 			}
 
-			larb_pdev = of_find_device_by_node(larb_node);
-			if (WARN_ON(!larb_pdev)) {
-				of_node_put(larb_node);
+			dep_pdev = of_find_device_by_node(dep_node);
+			if (WARN_ON(!dep_pdev)) {
+				of_node_put(dep_node);
 				dev_info(&pdev->dev, "failed to get aov uisp larb pdev\n");
 				continue;
 			}
-			of_node_put(larb_node);
+			of_node_put(dep_node);
 
-			link = device_link_add(&pdev->dev, &larb_pdev->dev,
+			link = device_link_add(&pdev->dev, &dep_pdev->dev,
 							DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
 			if (!link)
 				dev_info(&pdev->dev, "unable to link aov uisp smi larb%d\n", i);
 			else
-				uisp_larb_dev = &larb_pdev->dev;
+				uisp_larb_dev = &dep_pdev->dev;
+		}
+
+		// seninf device link
+		num_node = of_count_phandle_with_args(
+						pdev->dev.of_node, "depend-on", NULL);
+		num_node = (num_node < 0) ? 0 : num_node;
+		dev_info(&pdev->dev, "aov dependency nodes num:%d\n", num_node);
+
+		for (i = 0; i < num_node; i++) {
+			dep_node = of_parse_phandle(
+						pdev->dev.of_node, "depend-on", i);
+			if (!dep_node) {
+				dev_info(&pdev->dev, "failed to get aov dependency nodes %d\n", i);
+				continue;
+			}
+
+			dep_pdev = of_find_device_by_node(dep_node);
+			if (WARN_ON(!dep_pdev)) {
+				of_node_put(dep_node);
+				dev_info(&pdev->dev, "failed to get aov dependency pdev %d\n", i);
+				continue;
+			}
+			of_node_put(dep_node);
+
+			link = device_link_add(&pdev->dev, &dep_pdev->dev,
+							DL_FLAG_AUTOREMOVE_CONSUMER);
+			if (!link)
+				dev_info(&pdev->dev, "unable to link aov dependency %d\n", i);
+			else
+				uisp_larb_dev = &dep_pdev->dev;
 		}
 	} else {
 		aov_dev->op_mode = 0;
