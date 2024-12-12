@@ -2462,6 +2462,32 @@ static struct mtk_mbus_frame_desc_entry frame_desc_custom53[] = {
 #endif
 };
 
+//custom54_frame_desc
+static struct mtk_mbus_frame_desc_entry frame_desc_custom54[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2b,
+			.hsize = 0x400,
+			.vsize = 0x300,
+			.user_data_desc = VC_STAGGER_NE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
+		},
+	},
+#if IMX06C_EMBEDDED_DATA_EN
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x12,
+			.hsize = 0x400,
+			.vsize = 0x2,
+			.user_data_desc = VC_GENERAL_EMBEDDED,
+			.ebd_parsing_type = MTK_EBD_PARSING_TYPE_MIPI_RAW10,
+		},
+	},
+#endif
+};
+
 static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_preview,
@@ -5835,6 +5861,61 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pdaf_cap = FALSE,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
 		.imgsensor_pd_info= PARAM_UNDEFINED,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {
+			.cphy_lrte_support = 0,
+		},
+		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
+		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
+		.dpc_enabled = true,
+	},
+	{
+		.frame_desc = frame_desc_custom54,
+		.num_entries = ARRAY_SIZE(frame_desc_custom54),
+		.mode_setting_table = imx06c_custom54_setting,
+		.mode_setting_len = ARRAY_SIZE(imx06c_custom54_setting),
+		.seamless_switch_group = 1,
+		.seamless_switch_mode_setting_table = imx06c_seamless_custom54,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx06c_seamless_custom54),
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 2928000000,
+		.linelength = 6160,
+		.framelength = 3920,
+		.max_framerate = 1200,
+		.mipi_pixel_rate = 3077490000,
+		.readout_length = 0,
+		.read_margin = 4,
+		.framelength_step = 4,
+		.coarse_integ_step = 4,
+		.min_exposure_line = 8,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 8,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 1536,
+			.w0_size = 8192,
+			.h0_size = 3072,
+			.scale_w = 2048,
+			.scale_h = 768,
+			.x1_offset = 512,
+			.y1_offset = 0,
+			.w1_size = 1024,
+			.h1_size = 768,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 1024,
+			.h2_tg_size = 768,
+		},
+		.pdaf_cap = TRUE,
+		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
+		.imgsensor_pd_info  = &imgsensor_pd_info_2bin,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
