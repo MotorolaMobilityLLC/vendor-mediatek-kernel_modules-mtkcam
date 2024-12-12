@@ -36,10 +36,10 @@ struct mtk_imgsys_pqdip_dtable {
 
 #define PQDIP_HW_SET		2
 
-#define PQDIP_BASE_ADDR		0x34210000
-#define PQDIP_BASE_ADDR_P	0x15210000
-#define PQDIP_OFST			0x300000
-#define PQDIP_ALL_REG_CNT	0x6000
+#define PQDIP_BASE_ADDR		0x34250000
+#define PQDIP_BASE_ADDR_P	0x15210000 //YWTBD
+#define PQDIP_OFST			0x2F0000
+#define PQDIP_ALL_REG_CNT	0x6200
 //#define DUMP_PQ_ALL
 
 #define PQDIP_CTL_OFST		0x0
@@ -47,10 +47,9 @@ struct mtk_imgsys_pqdip_dtable {
 #define PQDIP_DMA_OFST		0x1200
 #define PQDIP_WROT1_OFST	0x2000
 #define PQDIP_WROT2_OFST	0x2F00
+#define PQDIP_NDG_OFST		0x2F80
 #define PQDIP_RZH4N6T_OFST	0x3000
-#define PQDIP_TDSHP1OFST	0x40F0
-#define PQDIP_TDSHP2OFST	0x4330
-#define PQDIP_TDSHP3OFST	0x4500
+#define PQDIP_HFG_OFST		0x4000
 #define PQDIP_UNP1_OFST		0x5000
 #define PQDIP_UNP2_OFST		0x5040
 #define PQDIP_UNP3_OFST		0x5080
@@ -65,10 +64,9 @@ struct mtk_imgsys_pqdip_dtable {
 #define PQDIP_DMA_REG_CNT		0x200
 #define PQDIP_WROT1_REG_CNT		0x140
 #define PQDIP_WROT2_REG_CNT		0x40
-#define PQDIP_RZH4N6T_REG_CNT		0x270
-#define PQDIP_TDSHP1REG_CNT		0x60
-#define PQDIP_TDSHP2REG_CNT		0x60
-#define PQDIP_TDSHP3REG_CNT		0x110
+#define PQDIP_NDG_REG_CNT		0x10
+#define PQDIP_RZH4N6T_REG_CNT		0x280
+#define PQDIP_HFG_REG_CNT		0x90
 #define PQDIP_UNP_REG_CNT		0x10
 #define PQDIP_C02_REG_CNT		0x20
 #define PQDIP_C24_REG_CNT		0x10
@@ -76,12 +74,12 @@ struct mtk_imgsys_pqdip_dtable {
 #define PQDIP_TCC_REG_CNT		0x450
 #define PQDIP_TCY_REG_CNT		0xA0
 
-#define PQDIPCTL_DBG_SEL_OFST	0xF4
-#define PQDIPCTL_DBG_OUT_OFST	0xF8
-#define PQDIPCTL_DMA_DBG_SEL_OFST	0x1088
-#define PQDIPCTL_DMA_DBG_OUT_OFST	0x108C
-#define PQ_WROT_DBG_SEL_OFST	0x2018
-#define PQ_WROT_DBG_OUT_OFST	0x20D0
+#define PQDIPCTL_DBG_SEL_OFST	0xF4 //YWTBD dbg
+#define PQDIPCTL_DBG_OUT_OFST	0xF8 //YWTBD dbg
+#define PQDIPCTL_DMA_DBG_SEL_OFST	0x1028
+#define PQDIPCTL_DMA_DBG_OUT_OFST	0x1064
+#define PQ_WROT_DBG_SEL_OFST	0x2140
+#define PQ_WROT_DBG_OUT_OFST	0x2144
 #define PQ_RZH4N6T_DBG_SEL_OFST	0x3044
 #define PQ_RZH4N6T_DBG_OUT_OFST	0x3048
 
@@ -102,13 +100,14 @@ const struct mtk_imgsys_init_array
 	{0x0238, 0x11},		/* DIPCQ_P1A_REG_DIPCQ_CQ_THR3_CTL */
 	{0x0248, 0x11},		/* DIPCQ_P1A_REG_DIPCQ_CQ_THR4_CTL */
 	{0x0258, 0x11},		/* DIPCQ_P1A_REG_DIPCQ_CQ_THR5_CTL */
+	{0x0020, 0x1},		/* PQDIPCTL_P1A_REG_PQDIPCTL_MUX_SEL */
 };
 
 
 #define PQDIP_INIT_ARRAY_COUNT	ARRAY_SIZE(mtk_imgsys_pqdip_init_ary)
 
 void __iomem *gpqdipRegBA[PQDIP_HW_SET] = {0L};
-unsigned int gPQDIPRegBase[PQDIP_HW_SET] = {0x34210000 , 0x34510000};
+unsigned int gPQDIPRegBase[PQDIP_HW_SET] = {0x34250000 , 0x34540000};
 static unsigned int g_RegBaseAddrPQ = PQDIP_BASE_ADDR;
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Public Functions
@@ -185,7 +184,7 @@ void imgsys_pqdip_cmdq_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev,
 	dev_dbg(imgsys_dev->dev, "%s: -\n", __func__);
 }
 
-void imgsys_pqdip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
+void imgsys_pqdip_debug_dump(struct mtk_imgsys_dev *imgsys_dev, //YWTBD dbg
 							unsigned int engine)
 {
 	void __iomem *pqdipRegBA = 0L;
@@ -260,7 +259,17 @@ void imgsys_pqdip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_WROT2_OFST + i + 0x0c)));
 		}
 
-		dev_info(imgsys_dev->dev, "%s:  urz6t_reg", __func__);
+		for (i = 0; i < PQDIP_NDG_REG_CNT; i += 0x10) {
+			dev_info(imgsys_dev->dev, "%s:  [0x%08x] 0x%08x 0x%08x 0x%08x 0x%08x",
+			__func__, (unsigned int)(g_RegBaseAddrPQ + (PQDIP_OFST * hw_idx)
+				+ PQDIP_NDG_OFST + i),
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_NDG_OFST + i + 0x00)),
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_NDG_OFST + i + 0x04)),
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_NDG_OFST + i + 0x08)),
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_NDG_OFST + i + 0x0c)));
+		}
+
+		dev_info(imgsys_dev->dev, "%s:  rzh4n6t_reg", __func__);
 		for (i = 0; i < PQDIP_RZH4N6T_REG_CNT; i += 0x10) {
 			dev_info(imgsys_dev->dev, "%s:  [0x%08x] 0x%08x 0x%08x 0x%08x 0x%08x",
 			__func__, (unsigned int)(g_RegBaseAddrPQ + (PQDIP_OFST * hw_idx)
@@ -271,33 +280,15 @@ void imgsys_pqdip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_RZH4N6T_OFST + i + 0x0c)));
 		}
 
-		dev_info(imgsys_dev->dev, "%s:  tdshp_reg", __func__);
-		for (i = 0; i < PQDIP_TDSHP1REG_CNT; i += 0x10) {
+		dev_info(imgsys_dev->dev, "%s:  hfg_reg", __func__);
+		for (i = 0; i < PQDIP_HFG_REG_CNT; i += 0x10) {
 			dev_info(imgsys_dev->dev, "%s:  [0x%08x] 0x%08x 0x%08x 0x%08x 0x%08x",
 			__func__, (unsigned int)(g_RegBaseAddrPQ + (PQDIP_OFST * hw_idx)
-				+ PQDIP_TDSHP1OFST + i),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP1OFST + i + 0x00)),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP1OFST + i + 0x04)),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP1OFST + i + 0x08)),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP1OFST + i + 0x0c)));
-		}
-		for (i = 0; i < PQDIP_TDSHP2REG_CNT; i += 0x10) {
-			dev_info(imgsys_dev->dev, "%s:  [0x%08x] 0x%08x 0x%08x 0x%08x 0x%08x",
-			__func__, (unsigned int)(g_RegBaseAddrPQ + (PQDIP_OFST * hw_idx)
-				+ PQDIP_TDSHP2OFST + i),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP2OFST + i + 0x00)),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP2OFST + i + 0x04)),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP2OFST + i + 0x08)),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP2OFST + i + 0x0c)));
-		}
-		for (i = 0; i < PQDIP_TDSHP3REG_CNT; i += 0x10) {
-			dev_info(imgsys_dev->dev, "%s:  [0x%08x] 0x%08x 0x%08x 0x%08x 0x%08x",
-			__func__, (unsigned int)(g_RegBaseAddrPQ + (PQDIP_OFST * hw_idx)
-				+ PQDIP_TDSHP3OFST + i),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP3OFST + i + 0x00)),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP3OFST + i + 0x04)),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP3OFST + i + 0x08)),
-			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP3OFST + i + 0x0c)));
+				+ PQDIP_HFG_OFST + i),
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_HFG_OFST + i + 0x00)),
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_HFG_OFST + i + 0x04)),
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_HFG_OFST + i + 0x08)),
+			(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_HFG_OFST + i + 0x0c)));
 		}
 
 		dev_info(imgsys_dev->dev, "%s:  unp_reg", __func__);
@@ -385,6 +376,7 @@ void imgsys_pqdip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 		}
 #endif
 
+#ifdef PQ_MARK //YWTBD dbg
 		//DMA_DBG
 		dev_info(imgsys_dev->dev, "%s: dma debug\n", __func__);
 		for (i = 0; i <= 4; i += 1) {
@@ -696,6 +688,7 @@ void imgsys_pqdip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			dev_info(imgsys_dev->dev, "%s: sel(0x%02x): %08X", __func__, i,
 			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_RZH4N6T_DBG_OUT_OFST)));
 		}
+#endif
 
 	}
 	dev_info(imgsys_dev->dev, "%s: -\n", __func__);
@@ -738,7 +731,7 @@ void imgsys_pqdip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 				if ((dtable->addr_msb & PSEUDO_DESC_TUNING) == PSEUDO_DESC_TUNING) {
 					tun_ofst = dtable->addr;
 					dtable->addr = (tun_ofst + iova_addr) & 0xFFFFFFFF;
-					dtable->addr_msb = ((tun_ofst + iova_addr) >> 32) & 0xF;
+					dtable->addr_msb |= ((tun_ofst + iova_addr) >> 32) & 0xF;
 					if (imgsys_pqdip_8s_dbg_enable())
 						pr_debug("%s: pq%d tuning_buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
 							__func__, pq_hw, iova_addr,
@@ -793,7 +786,7 @@ void imgsys_pqdip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 	}
 }
 
-int imgsys_pqdip_tfault_callback(int port,
+int imgsys_pqdip_tfault_callback(int port, //YWTBD dbg
 			dma_addr_t mva, void *data)
 {
 	void __iomem *pqdipRegBA = 0L;
@@ -908,6 +901,21 @@ int imgsys_pqdip_tfault_callback(int port,
 		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_WROT2_OFST + i + 0x1c)));
 	}
 
+	pr_info("%s:  ndg_reg", __func__);
+	for (i = 0; i < PQDIP_NDG_REG_CNT; i += 0x20) {
+		pr_info("%s:  [0x%08x] 0x%08x 0x%08x 0x%08x 0x%08x | 0x%08x 0x%08x 0x%08x 0x%08x",
+		__func__, (unsigned int)(g_RegBaseAddrPQ + (PQDIP_OFST * hw_idx)
+			+ PQDIP_NDG_OFST + i),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_NDG_OFST + i + 0x00)),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_NDG_OFST + i + 0x04)),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_NDG_OFST + i + 0x08)),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_NDG_OFST + i + 0x0c)),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_NDG_OFST + i + 0x10)),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_NDG_OFST + i + 0x14)),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_NDG_OFST + i + 0x18)),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_NDG_OFST + i + 0x1c)));
+	}
+
 	pr_info("%s:  rzh4n6t_reg", __func__);
 	for (i = 0; i < PQDIP_RZH4N6T_REG_CNT; i += 0x20) {
 		pr_info("%s:  [0x%08x] 0x%08x 0x%08x 0x%08x 0x%08x | 0x%08x 0x%08x 0x%08x 0x%08x",
@@ -923,45 +931,19 @@ int imgsys_pqdip_tfault_callback(int port,
 		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_RZH4N6T_OFST + i + 0x1c)));
 	}
 
-	pr_info("%s:  tdshp_reg", __func__);
-	for (i = 0; i < PQDIP_TDSHP1REG_CNT; i += 0x20) {
+	pr_info("%s:  hfg_reg", __func__);
+	for (i = 0; i < PQDIP_HFG_REG_CNT; i += 0x20) {
 		pr_info("%s:  [0x%08x] 0x%08x 0x%08x 0x%08x 0x%08x | 0x%08x 0x%08x 0x%08x 0x%08x",
 		__func__, (unsigned int)(g_RegBaseAddrPQ + (PQDIP_OFST * hw_idx)
-			+ PQDIP_TDSHP1OFST + i),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP1OFST + i + 0x00)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP1OFST + i + 0x04)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP1OFST + i + 0x08)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP1OFST + i + 0x0c)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP1OFST + i + 0x10)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP1OFST + i + 0x14)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP1OFST + i + 0x18)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP1OFST + i + 0x1c)));
-	}
-	for (i = 0; i < PQDIP_TDSHP2REG_CNT; i += 0x20) {
-		pr_info("%s:  [0x%08x] 0x%08x 0x%08x 0x%08x 0x%08x | 0x%08x 0x%08x 0x%08x 0x%08x",
-		__func__, (unsigned int)(g_RegBaseAddrPQ + (PQDIP_OFST * hw_idx)
-			+ PQDIP_TDSHP2OFST + i),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP2OFST + i + 0x00)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP2OFST + i + 0x04)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP2OFST + i + 0x08)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP2OFST + i + 0x0c)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP2OFST + i + 0x10)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP2OFST + i + 0x14)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP2OFST + i + 0x18)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP2OFST + i + 0x1c)));
-	}
-	for (i = 0; i < PQDIP_TDSHP3REG_CNT; i += 0x20) {
-		pr_info("%s:  [0x%08x] 0x%08x 0x%08x 0x%08x 0x%08x | 0x%08x 0x%08x 0x%08x 0x%08x",
-		__func__, (unsigned int)(g_RegBaseAddrPQ + (PQDIP_OFST * hw_idx)
-			+ PQDIP_TDSHP3OFST + i),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP3OFST + i + 0x00)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP3OFST + i + 0x04)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP3OFST + i + 0x08)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP3OFST + i + 0x0c)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP3OFST + i + 0x10)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP3OFST + i + 0x14)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP3OFST + i + 0x18)),
-		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_TDSHP3OFST + i + 0x1c)));
+			+ PQDIP_HFG_OFST + i),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_HFG_OFST + i + 0x00)),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_HFG_OFST + i + 0x04)),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_HFG_OFST + i + 0x08)),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_HFG_OFST + i + 0x0c)),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_HFG_OFST + i + 0x10)),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_HFG_OFST + i + 0x14)),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_HFG_OFST + i + 0x18)),
+		(unsigned int)ioread32((void *)(pqdipRegBA + PQDIP_HFG_OFST + i + 0x1c)));
 	}
 
 	pr_info("%s:  unp_reg", __func__);

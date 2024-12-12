@@ -25,9 +25,9 @@
 /********************************************************************
  * Global Define
  ********************************************************************/
-#define PQDIP_CQ_DESC_NUM	32 // align with userspace
-#define PQDIP_REG_SIZE  (0x6000) // align with userspace
-#define PQDIP_TDR_BUF_MAXSZ 40960 // align with userspace
+#define PQDIP_CQ_DESC_NUM	41 // align with userspace
+#define PQDIP_REG_SIZE  (0x7000) // align with userspace
+#define PQDIP_TDR_BUF_MAXSZ 40960 // align with userspace //YWTBD
 
 /********************************************************************
  * Enum Define
