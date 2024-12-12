@@ -23,7 +23,7 @@
 #include "fakemipiraw_Sensor.h"
 
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
-static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt);
+static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt, u64 sof_ts);
 static int get_id(struct subdrv_ctx *ctx, u32 *sensor_id);
 static int open(struct subdrv_ctx *ctx);
 static int control(struct subdrv_ctx *ctx,
@@ -997,7 +997,7 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 	return 0;
 }
 
-static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt)
+static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt, u64 sof_ts)
 {
 	DRV_LOG(ctx, "sof_cnt(%u) ctx->ref_sof_cnt(%u) ctx->fast_mode_on(%d)",
 		sof_cnt, ctx->ref_sof_cnt, ctx->fast_mode_on);

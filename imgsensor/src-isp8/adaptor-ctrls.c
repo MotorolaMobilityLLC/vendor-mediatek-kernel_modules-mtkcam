@@ -1431,8 +1431,12 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 		update_framelength_for_timeout(ctx);
 		break;
 	case V4L2_CID_VSYNC_NOTIFY:
-		subdrv_call(ctx, vsync_notify, (u64)ctrl->val);
+	{
+		struct mtk_sof_info *sof_info = ctrl->p_new.p;
+
+		subdrv_call(ctx, vsync_notify, (u32)sof_info->cnt, (u64)sof_info->ts);
 		notify_fsync_mgr_vsync(ctx);
+	}
 		break;
 	case V4L2_CID_ANALOGUE_GAIN:
 		para.u64[0] = ctrl->val;
@@ -2123,10 +2127,11 @@ static const struct v4l2_ctrl_config cfg_vsync_notify = {
 	.ops = &ctrl_ops,
 	.id = V4L2_CID_VSYNC_NOTIFY,
 	.name = "vsync_notify",
-	.type = V4L2_CTRL_TYPE_INTEGER,
+	.type = V4L2_CTRL_TYPE_U32,
 	.flags = V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
-	.max = 0x7fffffff,
+	.max = 0xffffffff,
 	.step = 1,
+	.dims = {sizeof_u32(struct mtk_sof_info)},
 };
 
 static const struct v4l2_ctrl_config cfg_update_sof_cnt = {

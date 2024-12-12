@@ -161,14 +161,14 @@ static int wrapper_get_temp(struct subdrv_ctx *ctx, int *temp)
 	return ret;
 }
 
-static int wrapper_vsync_notify(struct subdrv_ctx *ctx, unsigned int sof_cnt)
+static int wrapper_vsync_notify(struct subdrv_ctx *ctx, unsigned int sof_cnt, u64 sof_ts)
 {
 	int ret = 0;
 
 	dev_info(ctx_to_adaptor(ctx)->dev,
 		"[%s] %s", __func__, ctx_to_target(ctx)->name);
 
-	ret = call_target_ops(ctx, vsync_notify, sof_cnt);
+	ret = call_target_ops(ctx, vsync_notify, sof_cnt, sof_ts);
 
 	return ret;
 }

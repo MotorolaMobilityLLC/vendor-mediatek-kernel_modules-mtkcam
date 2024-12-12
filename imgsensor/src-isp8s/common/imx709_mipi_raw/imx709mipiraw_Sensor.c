@@ -45,7 +45,7 @@ static int init_ctx(
 	struct subdrv_ctx *ctx, struct i2c_client *i2c_client, u8 i2c_write_id);
 static int imx709_open(struct subdrv_ctx *ctx);
 static int imx709_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
-static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt);
+static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt, u64 sof_ts);
 static int get_csi_param(
 	struct subdrv_ctx *ctx,
 	enum SENSOR_SCENARIO_ID_ENUM scenario_id,
@@ -1438,7 +1438,7 @@ static int imx709_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 	return ERROR_NONE;
 }
 
-static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt)
+static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt, u64 sof_ts)
 {
 	DRV_LOG(ctx, "sof_cnt(%u) ctx->ref_sof_cnt(%u) ctx->fast_mode_on(%d)",
 		sof_cnt, ctx->ref_sof_cnt, ctx->fast_mode_on);

@@ -31,7 +31,7 @@ static int imx06a_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int imx06a_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int imx06a_set_test_pattern_data(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
-static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt);
+static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt, u64 sof_ts);
 
 static int imx06a_mcss_update_subdrv_para(void *arg, int scenario_id);
 static int imx06a_mcss_init(void *arg);
@@ -946,7 +946,7 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 	return 0;
 }
 
-static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt)
+static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt, u64 sof_ts)
 {
 	DRV_LOG(ctx, "sof_cnt(%u) ctx->ref_sof_cnt(%u) ctx->fast_mode_on(%d)",
 		sof_cnt, ctx->ref_sof_cnt, ctx->fast_mode_on);

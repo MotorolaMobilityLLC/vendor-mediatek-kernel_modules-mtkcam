@@ -657,6 +657,11 @@ struct mtk_fake_sensor_info {
 	enum IMGSENSOR_HDR_MODE_ENUM hdr_mode;
 };
 
+struct mtk_sof_info {
+	__u64 cnt;
+	__u64 ts;
+};
+
 
 /* GET */
 

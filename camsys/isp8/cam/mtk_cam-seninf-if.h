@@ -203,6 +203,7 @@ mtk_cam_seninf_streaming_mux_change(struct mtk_cam_seninf_mux_param *param, bool
 struct mtk_seninf_sof_notify_param {
 	struct v4l2_subdev *sd;
 	unsigned int sof_cnt;
+	u64 sof_ts;
 };
 
 void
