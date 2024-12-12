@@ -43,10 +43,10 @@ struct tuning_meta_info {
 static struct gce_timeout_work imgsys_timeout_winfo[VIDEO_MAX_FRAME];
 static int imgsys_timeout_idx;
 #if IS_ENABLED(CONFIG_MTK_SLBC) && !defined(CONFIG_FPGA_EARLY_PORTING)
-#define SLC_USER_NUM	(2)
+#define SLC_USER_NUM	(3)
 static int gid[SLC_USER_NUM];
 static struct slbc_gid_data *img_slbc_gid_data[SLC_USER_NUM];
-static enum slc_ach_uid uid[SLC_USER_NUM] = {ID_IMG, ID_MAE};
+static enum slc_ach_uid uid[SLC_USER_NUM] = {ID_IMG, ID_MAE, ID_NPU_ADL_DC};
 static int slc_user;
 #endif
 static struct info_list_t frm_info_list = {
