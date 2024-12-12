@@ -767,9 +767,15 @@ static int mtk_cam_vb2_fop_release(struct file *file)
 	struct mtk_cam_video_device *node = file_to_mtk_cam_node(file);
 	struct mtk_cam_device *cam = vb2_get_drv_priv(&node->vb2_q);
 	struct mtk_cam_ctx *ctx;
+	int open_cnt;
 #ifdef MTK_CAM_KTHREAD_PRE_ALLOC
 	int i;
 #endif
+	open_cnt = atomic_dec_return(&node->open_cnt);
+	if (open_cnt != 0) {
+		dev_info(cam->dev, "%s %s %d", __func__, node->desc.name, open_cnt);
+		return 0;
+	}
 
 	if (lock)
 		mutex_lock(lock);
@@ -805,11 +811,20 @@ static int mtk_cam_vb2_fop_release(struct file *file)
 
 static int mtk_cam_v4l2_fh_open(struct file *file)
 {
-#ifdef MTK_CAM_KTHREAD_PRE_ALLOC
 	struct mtk_cam_video_device *node = file_to_mtk_cam_node(file);
+#ifdef MTK_CAM_KTHREAD_PRE_ALLOC
 	struct mtk_cam_device *cam = vb2_get_drv_priv(&node->vb2_q);
 	int i;
+#endif
+	int open_cnt;
 
+	open_cnt = atomic_inc_return(&node->open_cnt);
+	if (open_cnt != 1) {
+		dev_info(cam->dev, "%s %s %d", __func__, node->desc.name, open_cnt);
+		return 0;
+	}
+
+#ifdef MTK_CAM_KTHREAD_PRE_ALLOC
 	if (cam->ctxs && node->uid.pipe_id == 0 && /* one node only */
 	    node->desc.id == MTK_RAW_MAIN_STREAM_OUT) {
 		dev_info(cam->dev, "%s, pre-create kthread", __func__);
@@ -1090,6 +1105,7 @@ int mtk_cam_video_register(struct mtk_cam_video_device *video,
 		video->enabled = false;
 
 	mutex_init(&video->q_lock);
+	atomic_set(&video->open_cnt, 0);
 	atomic_set(&video->queued_cnt, 0);
 	/* initialize vb2_queue */
 	q->type = video->desc.buf_type;
