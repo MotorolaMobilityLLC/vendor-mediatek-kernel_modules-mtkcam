@@ -17,49 +17,6 @@
 #include "iommu_debug.h"
 
 #define CCD_DEV_NAME	"mtk_ccd"
-#define MAX_CODE_SIZE 0x500000
-
-char ccd_firmware[100] = {0};
-
-//DECLARE_BUILTIN_FIRMWARE("remoteproc_scp", ccd_firmware);
-
-struct platform_device *ccd_get_pdev(struct platform_device *pdev)
-{
-	struct device *dev = &pdev->dev;
-	struct device_node *ccd_node;
-	struct platform_device *ccd_pdev;
-
-	ccd_node = of_parse_phandle(dev->of_node, "mediatek,scp", 0);
-	if (!ccd_node) {
-		dev_info(dev, "can't get ccd node\n");
-		return NULL;
-	}
-
-	ccd_pdev = of_find_device_by_node(ccd_node);
-	if (WARN_ON(!ccd_pdev)) {
-		dev_info(dev, "ccd pdev failed\n");
-		of_node_put(ccd_node);
-		return NULL;
-	}
-
-	return ccd_pdev;
-}
-EXPORT_SYMBOL_GPL(ccd_get_pdev);
-
-void ccd_wdt_handler(struct mtk_ccd *ccd)
-{
-	rproc_report_crash(ccd->rproc, RPROC_WATCHDOG);
-}
-
-void ccd_init_ipi_handler(void *data, unsigned int len, void *priv)
-{
-	//struct mtk_ccd *ccd = (struct mtk_ccd *)priv;
-}
-
-int ccd_ipi_init(struct mtk_ccd *ccd)
-{
-	return 0;
-}
 
 static int ccd_load(struct rproc *rproc, const struct firmware *fw)
 {
@@ -82,15 +39,6 @@ static int ccd_start(struct rproc *rproc)
 	return ret;
 }
 
-static void *ccd_da_to_va(struct rproc *rproc, u64 da, int len)
-{
-	struct mtk_ccd *ccd = (struct mtk_ccd *)rproc->priv;
-
-	dev_info(ccd->dev, "%s: %p\n", __func__, ccd->dev);
-
-	return NULL;
-}
-
 static int ccd_stop(struct rproc *rproc)
 {
 	struct mtk_ccd *ccd = (struct mtk_ccd *)rproc->priv;
@@ -108,18 +56,6 @@ static const struct rproc_ops ccd_ops = {
 	.load		= ccd_load,
 };
 
-void *ccd_mapping_dm_addr(struct platform_device *pdev, u32 mem_addr)
-{
-	struct mtk_ccd *ccd = platform_get_drvdata(pdev);
-	void *ptr = ccd_da_to_va(ccd->rproc, mem_addr, 0);
-
-	if (!ptr)
-		return ERR_PTR(-EINVAL);
-
-	return ptr;
-}
-EXPORT_SYMBOL_GPL(ccd_mapping_dm_addr);
-
 static struct mtk_ccd_rpmsg_ops ccd_rpmsg_ops = {
 	.ccd_send = rpmsg_ccd_ipi_send,
 };
@@ -129,15 +65,20 @@ static void ccd_add_rpmsg_subdev(struct mtk_ccd *ccd)
 	ccd->rpmsg_subdev =
 		mtk_rpmsg_create_rproc_subdev(to_platform_device(ccd->dev),
 					      &ccd_rpmsg_ops);
-	if (ccd->rpmsg_subdev)
+	if (ccd->rpmsg_subdev) {
 		rproc_add_subdev(ccd->rproc, ccd->rpmsg_subdev);
+		mtk_create_client_msgdevice(ccd->rpmsg_subdev);
+	}
 }
 
 static void ccd_remove_rpmsg_subdev(struct mtk_ccd *ccd)
 {
 	if (ccd->rpmsg_subdev) {
-		mtk_rpmsg_destroy_rpmsgdev(ccd->rpmsg_subdev);
+		/* TODO: fix unbalanced locking function definition */
+		/* mtk_create_client_msgdevice/mtk_destroy_client_msgdevice */
+		/* mtk_rpmsg_create_rpmsgdev/mtk_rpmsg_destroy_rpmsgdev */
 
+		mtk_rpmsg_destroy_rpmsgdev(ccd->rpmsg_subdev);
 		rproc_remove_subdev(ccd->rproc, ccd->rpmsg_subdev);
 		mtk_rpmsg_destroy_rproc_subdev(ccd->rpmsg_subdev);
 		ccd->rpmsg_subdev = NULL;
@@ -377,11 +318,9 @@ static int ccd_probe(struct platform_device *pdev)
 	struct device *alloc_dev;
 	struct device_node *np = dev->of_node;
 	struct mtk_ccd *ccd;
-	struct resource *res;
 	struct rproc *rproc;
 	char *fw_name = "remoteproc_scp";
 	int ret;
-	u32 i;
 
 	rproc = rproc_alloc(dev,
 			    np->name,
@@ -426,30 +365,8 @@ static int ccd_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, ccd);
 	ccd_regcdev(ccd);
-	dev_info(ccd->dev, "ccd is created: %p\n", ccd);
 
-	for (i = 0; i < CCD_MAP_HW_REG_NUM; i++) {
-		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
-		if (res == NULL) {
-			dev_info(dev, "No memory resource got\n");
-			continue;
-		}
-		ccd->map_base[i].base = res->start;
-		ccd->map_base[i].len = resource_size(res);
-		dev_info(dev, "Reg baseaddr [%d]: 0x%lx 0x%lx", i,
-			 ccd->map_base[i].base,
-			 ccd->map_base[i].len);
-	}
-
-	/* register SCP initialization IPI */
-	ret = ccd_ipi_register(pdev,
-			       CCD_IPI_INIT,
-			       ccd_init_ipi_handler,
-			       ccd);
-	if (ret) {
-		dev_info(dev, "Failed to register IPI_SCP_INIT\n");
-		goto free_rproc;
-	}
+	/* If ccd is moved to real micro processor, map to physical address here */
 
 	ccd_add_rpmsg_subdev(ccd);
 
@@ -459,13 +376,12 @@ static int ccd_probe(struct platform_device *pdev)
 	if (ret)
 		goto remove_subdev;
 
-	mtk_create_client_msgdevice(ccd->rpmsg_subdev);
+	dev_info(ccd->dev, "%s: ccd is created: %p\n", __func__, ccd);
 
 	return 0;
 
 remove_subdev:
 	ccd_remove_rpmsg_subdev(ccd);
-free_rproc:
 	rproc_free(rproc);
 
 	return ret;

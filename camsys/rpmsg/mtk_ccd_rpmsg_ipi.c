@@ -16,35 +16,6 @@
 
 #define CCD_DEBUG 0
 
-int ccd_ipi_register(struct platform_device *pdev,
-		     enum ccd_ipi_id id,
-		     ccd_ipi_handler_t handler,
-		     void *priv)
-{
-	struct mtk_ccd *ccd = platform_get_drvdata(pdev);
-
-	if (!ccd) {
-		dev_info(&pdev->dev, "ccd device is not ready\n");
-		return -EPROBE_DEFER;
-	}
-
-	dev_info(ccd->dev, "ipi id: %d\n", id);
-	return 0;
-}
-EXPORT_SYMBOL_GPL(ccd_ipi_register);
-
-void ccd_ipi_unregister(struct platform_device *pdev, enum ccd_ipi_id id)
-{
-	struct mtk_ccd *ccd = platform_get_drvdata(pdev);
-
-	if (!ccd)
-		return;
-
-	if (WARN_ON(id < 0) || WARN_ON(id >= CCD_IPI_MAX))
-		return;
-}
-EXPORT_SYMBOL_GPL(ccd_ipi_unregister);
-
 int rpmsg_ccd_ipi_send(struct mtk_rpmsg_rproc_subdev *mtk_subdev,
 		       struct mtk_ccd_rpmsg_endpoint *mept,
 		       void *buf, unsigned int len, unsigned int wait)
@@ -101,8 +72,9 @@ void ccd_master_destroy(struct mtk_ccd *ccd,
 
 	/* use the src addr to fetch the callback of the appropriate user */
 	mutex_lock(&mtk_subdev->endpoints_lock);
-	idr_for_each_entry(&mtk_subdev->endpoints, srcmdev, id) {
-		if (id == MTK_CCD_MSGDEV_ADDR)
+	for (id = 0; id < CCD_IPI_MAX; id++) {
+		srcmdev = mtk_subdev->channels[id];
+		if (mtk_subdev->channels[id] == NULL)
 			continue;
 
 		ept = srcmdev->rpdev.ept;
@@ -196,7 +168,7 @@ int ccd_worker_read(struct mtk_ccd *ccd,
 
 	/* use the src addr to fetch the callback of the appropriate user */
 	mutex_lock(&mtk_subdev->endpoints_lock);
-	srcmdev = idr_find(&mtk_subdev->endpoints, read_obj->src);
+	srcmdev = mtk_subdev->channels[read_obj->src];
 	if (!srcmdev) {
 		dev_dbg(ccd->dev, "src ept is not exist\n");
 		mutex_unlock(&mtk_subdev->endpoints_lock);
@@ -278,12 +250,7 @@ void ccd_worker_write(struct mtk_ccd *ccd,
 	struct mtk_ccd_rpmsg_endpoint *mept;
 
 	mutex_lock(&mtk_subdev->endpoints_lock);
-
-	if (CCD_DEBUG)
-		dev_dbg(ccd->dev, "%s: idr_find write_obj->src: %d\n", __func__,
-			write_obj->src);
-
-	srcmdev = idr_find(&mtk_subdev->endpoints, write_obj->src);
+	srcmdev = mtk_subdev->channels[write_obj->src];
 	if (!srcmdev) {
 		dev_info(ccd->dev, "src ept is not exist\n");
 		mutex_unlock(&mtk_subdev->endpoints_lock);
