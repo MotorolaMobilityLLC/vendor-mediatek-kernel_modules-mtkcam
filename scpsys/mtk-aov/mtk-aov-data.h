@@ -17,7 +17,7 @@
 #define AOV_DEV_SENSOR_ON         _IOW('H', 1, struct sensor_notify)
 #define AOV_DEV_SENSOR_OFF        _IOW('H', 2, struct sensor_notify)
 #define AOV_DEV_DQEVENT           _IOR('H', 3, struct aov_dqevent)
-#define AOV_DEV_STOP              _IO('H', 4)
+#define AOV_DEV_STOP              _IOW('H', 4, struct close_param)
 #define AOV_DEV_QEA               _IO('H', 5)
 #define AOV_DEV_PWR_UT            _IO('H', 6)
 #define AOV_DEV_DISP_ON_UT        _IO('H', 7)
@@ -25,13 +25,15 @@
 #define AOV_DEV_TURN_ON_ULPOSC    _IO('H', 9)
 #define AOV_DEV_TURN_OFF_ULPOSC   _IO('H', 10)
 #define AOV_DEV_MODULE_UT         _IOWR('H', 11, struct aov_ut_info)
+#define AOV_DEV_SET_APU_REQ       _IOW('H', 12, struct start_param)
+#define AOV_DEV_CLEAR_APU_REQ     _IOW('H', 13, struct stop_param)
 
 #if IS_ENABLED(CONFIG_COMPAT)
 #define COMPAT_AOV_DEV_START        _IOW('H', 0, struct aov_user)
 #define COMPAT_AOV_DEV_DQEVENT      _IOR('H', 1, struct aov_dqevent)
 #define COMPAT_AOV_DEV_SENSOR_ON    _IOW('H', 2, struct sensor_notify)
 #define COMPAT_AOV_DEV_SENSOR_OFF   _IOW('H', 3, struct sensor_notify)
-#define COMPAT_AOV_DEV_STOP         _IO('H', 4)
+#define COMPAT_AOV_DEV_STOP         _IOW('H', 4, struct close_param)
 #define COMPAT_AOV_DEV_QEA          _IO('H', 5)
 #define COMPAT_AOV_DEV_PWR_UT       _IO('H', 6)
 #define COMPAT_AOV_DEV_DISP_ON_UT   _IO('H', 7)
@@ -39,6 +41,8 @@
 #define COMPAT_AOV_DEV_TURN_ON_ULPOSC _IO('H', 9)
 #define COMPAT_AOV_DEV_TURN_OFF_ULPOSC _IO('H', 10)
 #define COMPAT_AOV_DEV_MODULE_UT       _IOWR('H', 11, struct aov_ut_info)
+#define COMPAT_AOV_DEV_SET_APU_REQ  _IOW('H', 12, struct start_param)
+#define COMPAT_AOV_DEV_CLEAR_APU_REQ _IOW('H', 13, struct stop_param)
 #endif
 
 /*
@@ -62,7 +66,9 @@
 #define AOV_SCP_CMD_TURN_ON_ULPOSC   (15)
 #define AOV_SCP_CMD_TURN_OFF_ULPOSC  (16)
 #define AOV_SCP_CMD_DRV_UT           (17)
-#define AOV_SCP_CMD_MAX              (18)
+#define AOV_SCP_CMD_SET_APU          (18)
+#define AOV_SCP_CMD_CLEAR_APU        (19)
+#define AOV_SCP_CMD_MAX              (20)
 #define AOV_SCP_CMD_ACK              (0x8000)
 
 #define AOV_DEBUG_MODE_DUMP       (1)  // General debug
@@ -74,19 +80,15 @@
 #define AOV_MAX_BASE_EVENT        (2)
 #define AOV_MAX_NDD_EVENT         (1)
 
+#define AOV_MAX_USER_CNT          (2)
+
 #define AOV_MAX_USER_SIZE         (offsetof(struct aov_user, aaa_size))
 #define AOV_MAX_SENIF_SIZE        (2 * 1024)
 #define AOV_MAX_AAA_SIZE          (60 * 1024)
 #define AOV_MAX_TUNING_SIZE       (2 * 1024)
-#define AOV_MAX_AIE_SIZE          (162 * 1024)
-#define AOV_MAX_FLD_SIZE          (3 * 1024 * 1024)	// 3MB
-#define AOV_MAX_AIE_SIZE_V2       (280 * 1024)
-#define AOV_MAX_FLD_SIZE_V2       (1 * 1024 * 1024)	// 1MB
 
-#define AOV_MAX_YUVO1_OUTPUT      (737280 + 32)  // 640 x 480, nv12 12-bit
-#define AOV_MAX_YUVO2_OUTPUT      (184320 + 32)  // 320 x 240, nv12 12-bit
-#define AOV_MAX_AIE_OUTPUT        (32 * 1024)
-#define AOV_MAX_FLD_OUTPUT        (2 * 1024)
+#define AOV_MAX_YUVO1_OUTPUT      (648000 + 32)  // 640 x 480, nv12 10-bit (640*540*1.5*10/8)
+#define AOV_MAX_YUVO2_OUTPUT      (153600 + 32)  // 320 x 240, nv12 10-bit (320*256*1.5*10/8)
 #define AOV_MAX_APU_OUTPUT        (256 * 1024)
 #define AOV_MAX_FR_RECORD         (5)
 #define AOV_MAX_IMGO_OUTPUT       (921600 + 32)  // 640 x 480, bayer12
@@ -96,9 +98,6 @@
 #define AOV_MAX_AWB_OUTPUT        (1 * 1024)
 
 #define AOV_MAX_SENSOR_COUNT      (64)
-
-extern void mtk_aie_aov_memcpy(char *buffer);
-extern void mtk_fld_aov_memcpy(char *buffer);
 
 /**
  * Detection objects.
@@ -150,6 +149,7 @@ struct sensor_notify {
 
 struct aov_dqevent {
 	uint32_t session;
+	uint32_t sensor_id;
 	uint32_t frame_id;
 	uint32_t frame_width;
 	uint32_t frame_height;
@@ -157,12 +157,6 @@ struct aov_dqevent {
 	uint32_t detect_mode;
 
 	// for object detection
-	uint32_t aie_size;
-	void *aie_output;
-
-	uint32_t fld_size;
-	void *fld_output;
-
 	uint32_t apu_size;
 	void *apu_output;
 
@@ -209,6 +203,7 @@ struct base_event {
 	uint32_t event_id;
 
 	uint32_t session;
+	uint32_t sensor_id;
 	uint32_t frame_id;
 	uint32_t frame_width;
 	uint32_t frame_height;
@@ -216,12 +211,6 @@ struct base_event {
 	uint32_t detect_mode;
 
 	// for object detection
-	uint32_t aie_size;
-	uint8_t aie_output[AOV_MAX_AIE_OUTPUT];
-
-	uint32_t fld_size;
-	uint8_t fld_output[AOV_MAX_FLD_OUTPUT];
-
 	uint32_t apu_size;
 	uint8_t apu_output[AOV_MAX_APU_OUTPUT];
 
@@ -330,14 +319,6 @@ struct tuning {
 	uint8_t data[AOV_MAX_TUNING_SIZE];
 } __aligned(8);
 
-struct aie_start {
-	uint8_t data[AOV_MAX_AIE_SIZE];
-} __aligned(8);
-
-struct fld_start {
-	uint8_t data[AOV_MAX_FLD_SIZE];
-} __aligned(8);
-
 struct aov_start {
 	// user parameter
 	uint32_t session;
@@ -371,9 +352,6 @@ struct aov_start {
 	// display on/off
 	uint32_t disp_mode;
 
-	// aie available
-	uint32_t aie_avail;
-
 	// seninf/sensor
 	struct senif_start senif_info;
 
@@ -382,78 +360,6 @@ struct aov_start {
 
 	// tuning data
 	struct tuning tuning_info;
-
-	///aie info
-	struct aie_start aie_info;
-
-	///fld info
-	struct fld_start fld_info;
-
-	// aov event
-	union {
-		struct base_event base_event[AOV_MAX_BASE_EVENT];
-		struct ndd_event ndd_event[AOV_MAX_NDD_EVENT];
-	};
-};
-
-struct aie_start_v2 {
-	uint8_t data[AOV_MAX_AIE_SIZE_V2];
-} __aligned(8);
-
-struct fld_start_v2 {
-	uint8_t data[AOV_MAX_FLD_SIZE_V2];
-} __aligned(8);
-
-struct aov_start_v2 {
-	// user parameter
-	uint32_t session;
-	uint32_t sensor_id;
-	uint32_t sensor_scene;
-	int32_t  sensor_orient;
-	uint32_t sensor_face;
-	uint32_t sensor_type;
-	uint32_t sensor_bit;
-	uint32_t sensor_ae;
-	uint32_t format_order;
-	uint32_t main_width;
-	uint32_t main_height;
-	uint32_t main_format;
-	uint32_t sub_width;
-	uint32_t sub_height;
-	uint32_t sub_format;
-	uint32_t frame_rate;
-	uint32_t frame_mode;
-	uint32_t power_mode;
-	uint32_t debug_mode;
-	uint32_t debug_level[AOV_LOG_ID_MAX];
-	uint32_t trace_perf;
-	uint32_t disable_fusion;
-	uint32_t debug_drv_clk;
-	uint32_t debug_drv_spm;
-	uint32_t debug_drv_time;
-	uint32_t debug_drv_bypass;
-	uint32_t reserved[5];
-
-	// display on/off
-	uint32_t disp_mode;
-
-	// aie available
-	uint32_t aie_avail;
-
-	// seninf/sensor
-	struct senif_start senif_info;
-
-	// aaa info
-	struct aaa_start aaa_info;
-
-	// tuning data
-	struct tuning tuning_info;
-
-	///aie info
-	struct aie_start_v2 aie_info;
-
-	///fld info
-	struct fld_start_v2 fld_info;
 
 	// aov event
 	union {
@@ -478,6 +384,24 @@ struct packet {
 	uint32_t buffer;
 	uint32_t length;
 } __packed;
+
+struct start_param {
+	uint32_t sensor_id;
+	int32_t reqId;
+	int32_t frameMode;
+	int32_t priority;
+	int32_t timeout;
+	int32_t customParam;
+};
+
+struct stop_param {
+	uint32_t sensor_id;
+	int32_t reqId;
+};
+
+struct close_param {
+	uint32_t sensor_id;
+};
 
 #define AOV_MAX_UT_SIZE  (10 * 1024)
 

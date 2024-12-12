@@ -19,7 +19,7 @@
 
 #include "./alloc/tlsf/tlsf_alloc.h"
 
-#define AOV_TIMEOUT_MS  1000U
+#define AOV_TIMEOUT_MS  100U
 
 // Forward declaration
 struct mtk_aov;
@@ -35,7 +35,6 @@ struct aov_core {
 	atomic_t frame_mode;
 	atomic_t debug_mode;
 	atomic_t disp_mode;
-	atomic_t aie_avail;
 	atomic_t power_mode;
 
 	wait_queue_head_t scp_queue;
@@ -46,14 +45,16 @@ struct aov_core {
 	atomic_t cmd_seq;
 	atomic_t qea_ready;
 
-	uint32_t sensor_id;
+	atomic_t aov_start_in_used[AOV_MAX_USER_CNT];
+	int32_t sensor_idx[AOV_MAX_USER_CNT];
+	int32_t sensor_id[AOV_MAX_USER_CNT];
+	void *aov_start[AOV_MAX_USER_CNT];
 
 	phys_addr_t buf_pa;
 	uint8_t *buf_va;
 	size_t buf_size;
 	struct tlsf_info alloc;
 	spinlock_t buf_lock;
-	void *aov_start;
 
 	struct dma_buf *dma_buf;
 	struct iosys_map dma_map;

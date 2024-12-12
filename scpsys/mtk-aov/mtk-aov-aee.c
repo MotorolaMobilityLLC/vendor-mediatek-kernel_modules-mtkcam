@@ -152,7 +152,7 @@ int aov_aee_flush(struct mtk_aov *aov_dev)
 	int remain;
 	int length;
 
-	dev_info(aov_dev->dev, "%s+\n", __func__);
+	AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag), "%s+\n", __func__);
 
 	spin_lock_irqsave(&record->lock, flag);
 	index = record->head;
@@ -161,8 +161,8 @@ int aov_aee_flush(struct mtk_aov *aov_dev)
 		count += AOV_AEE_MAX_RECORD_COUNT;
 	spin_unlock_irqrestore(&record->lock, flag);
 
-	dev_info(aov_dev->dev, "%s: flush index(%d), count(%d)\n",
-		__func__, index, count);
+	AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
+		"%s: flush index(%d), count(%d)\n", __func__, index, count);
 
 	// flush to node buffer
 	node = &aee_info->buffer;
@@ -203,7 +203,7 @@ int aov_aee_flush(struct mtk_aov *aov_dev)
 	node->count = ((offset > AOV_AEE_MAX_BUFFER_SIZE) ?
 		AOV_AEE_MAX_BUFFER_SIZE : offset);
 
-	dev_info(aov_dev->dev, "%s-\n", __func__);
+	AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag), "%s-\n", __func__);
 
 	return 0;
 }

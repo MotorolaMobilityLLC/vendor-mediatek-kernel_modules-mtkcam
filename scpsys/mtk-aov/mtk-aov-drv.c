@@ -242,7 +242,7 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 
 		g_aov_start = false;
 		AOV_TRACE_FORCE_BEGIN("AOV stop");
-		ret = aov_core_send_cmd(aov_dev, AOV_SCP_CMD_STOP, NULL, 0, true);
+		ret = aov_core_send_cmd(aov_dev, AOV_SCP_CMD_STOP, (void *)arg, sizeof(struct close_param), true);
 		AOV_TRACE_FORCE_END();
 		if (ret >= 0) {
 			dev_info(aov_dev->dev, "AOV disable vmm+\n");
@@ -312,6 +312,26 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 		ret = aov_ut_for_module_test(aov_dev, (struct aov_ut_info *)arg);
 		dev_info(aov_dev->dev, "AOV stop-(%d)\n", ret);
 		break;
+	case AOV_DEV_SET_APU_REQ:
+		if (down_interruptible(&core_info->start_stop_sema)) {
+			dev_info(aov_dev->dev, "%s: failed to acquire semaphore\n", __func__);
+			return -EFAULT;
+		}
+		dev_info(aov_dev->dev, "SET APU REQUEST+\n");
+		ret = aov_core_send_cmd(aov_dev, AOV_SCP_CMD_SET_APU, (void *)arg, sizeof(struct start_param), true);
+		dev_info(aov_dev->dev, "SET APU REQUEST-\n");
+		up(&core_info->start_stop_sema);
+		break;
+	case AOV_DEV_CLEAR_APU_REQ:
+		if (down_interruptible(&core_info->start_stop_sema)) {
+			dev_info(aov_dev->dev, "%s: failed to acquire semaphore\n", __func__);
+			return -EFAULT;
+		}
+		dev_info(aov_dev->dev, "CLEAR APU REQUEST+\n");
+		ret = aov_core_send_cmd(aov_dev, AOV_SCP_CMD_CLEAR_APU, (void *)arg, sizeof(struct stop_param), true);
+		dev_info(aov_dev->dev, "CLEAR APU REQUEST-\n");
+		up(&core_info->start_stop_sema);
+		break;
 	default:
 		dev_info(aov_dev->dev, "unknown AOV control code(%d)\n", cmd);
 		return -EINVAL;
@@ -363,9 +383,12 @@ static unsigned int mtk_aov_poll(struct file *file, poll_table *wait)
 static int mtk_aov_release(struct inode *inode, struct file *file)
 {
 	struct mtk_aov *aov_dev = (struct mtk_aov *)file->private_data;
+	struct aov_core *core_info = &aov_dev->core_info;
 	int ret;
 
 	pr_info("%s release aov driver+\n", __func__);
+	atomic_set(&(core_info->aov_start_in_used[0]), 0);
+	atomic_set(&(core_info->aov_start_in_used[1]), 0);
 
 	ret = aov_core_reset(aov_dev);
 	if (ret > 0) {
@@ -454,7 +477,7 @@ static int mtk_aov_probe(struct platform_device *pdev)
 	struct device_node *larb_node;
 	struct device_link *link;
 	struct mtk_aov *aov_dev;
-	int ret = 0, num_mae = 0, num_larbs = 0, i = 0;
+	int ret = 0, num_larbs = 0, i = 0;
 
 	dev_info(&pdev->dev, "%s probe aov driver+\n", __func__);
 
@@ -478,21 +501,12 @@ static int mtk_aov_probe(struct platform_device *pdev)
 	aov_dev->bypass_aov_kernel_flag = &bypass_aov_kernel_flag;
 	aov_dev->bypass_aov_scp_flag = &bypass_aov_scp_flag;
 	aov_dev->enable_aov_log_flag = &enable_aov_log_flag;
-	aov_dev->fd_version = 1;
 
 	aov_dev->dev = &pdev->dev;
 
 	if (pdev->dev.of_node) {
 		of_property_read_u32(pdev->dev.of_node, "op-mode", &(aov_dev->op_mode));
 		dev_info(&pdev->dev, "%s aov mode(%d)\n", __func__, aov_dev->op_mode);
-
-		// MTK FD Version
-		num_mae = of_count_phandle_with_args(
-						pdev->dev.of_node, "mae", NULL);
-		num_mae = (num_mae < 0) ? 0 : num_mae;
-		if (num_mae > 0)
-			aov_dev->fd_version = 2;
-		dev_info(&pdev->dev, "MTK FD MAE Version:%d\n", aov_dev->fd_version);
 
 		// larb parsing
 		num_larbs = of_count_phandle_with_args(
@@ -554,7 +568,6 @@ static int mtk_aov_probe(struct platform_device *pdev)
 		}
 	} else {
 		aov_dev->op_mode = 0;
-		aov_dev->fd_version = 0;
 		dev_info(&pdev->dev, "%s null of node\n", __func__);
 	}
 	aov_ulposc_dts_init(aov_dev);
