@@ -1260,7 +1260,8 @@ static int seninf_core_probe(struct platform_device *pdev)
 	memset(core->fmeter, 0, sizeof(core->fmeter));
 	for (i = 0; i < CLK_FMETER_MAX; i++) {
 		str = NULL;
-		tmp_node = of_find_node_by_name(dev->of_node, clk_fmeter_names[i]);
+		/* search from root, due to of find node API will put node */
+		tmp_node = of_find_node_by_name(NULL, clk_fmeter_names[i]);
 		if (tmp_node) {
 			of_property_read_u32(tmp_node,
 				"fmeter-no", &tmp_no);
