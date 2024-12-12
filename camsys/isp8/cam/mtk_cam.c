@@ -91,6 +91,12 @@ struct device *mtk_cam_root_dev(void)
 	return camsys_root_dev;
 }
 
+static int g_hwccf_apply;
+bool is_hwccf_apply(void)
+{
+	return g_hwccf_apply;
+}
+
 static int mtk_cam_req_try_update_used_ctx(struct media_request *req);
 
 #define LTMSGO_BUF_SZ		(130 * 8)
@@ -4995,6 +5001,10 @@ static int mtk_cam_vcore_probe(struct platform_device *pdev)
 
 	drvdata->dev = &pdev->dev;
 	dev_set_drvdata(dev, drvdata);
+
+	/* hwccf */
+	g_hwccf_apply =
+		of_property_read_bool(pdev->dev.of_node, "ccf-apply");
 
 	pm_runtime_enable(dev);
 

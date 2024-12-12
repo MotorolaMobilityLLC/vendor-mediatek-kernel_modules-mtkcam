@@ -357,6 +357,7 @@ static inline struct mtk_cam_device *subdev_to_cam_device(struct v4l2_subdev *sd
 }
 
 struct device *mtk_cam_root_dev(void);
+bool is_hwccf_apply(void);
 
 int mtk_cam_set_dev_raw(struct device *dev, int idx,
 			struct device *raw, struct device *yuv,

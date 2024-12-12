@@ -152,6 +152,7 @@ struct mtk_mraw_device {
 	atomic_t is_sw_clr;
 
 	/* mmqos */
+	struct platform_device *larb_pdev;
 	struct mtk_camsys_qos qos;
 
 	/* for BWR */

@@ -1588,8 +1588,6 @@ static irqreturn_t mtk_thread_irq_mraw(int irq, void *data)
 
 static int mtk_mraw_pm_suspend(struct device *dev)
 {
-	struct mtk_mraw_device *mraw_dev = dev_get_drvdata(dev);
-	u32 val;
 	int ret;
 
 	dev_info_ratelimited(dev, "- %s\n", __func__);
@@ -1597,32 +1595,13 @@ static int mtk_mraw_pm_suspend(struct device *dev)
 	if (pm_runtime_suspended(dev))
 		return 0;
 
-	/* Disable ISP's view finder and wait for TG idle */
-	dev_info_ratelimited(dev, "mraw suspend, disable VF\n");
-	val = readl(mraw_dev->base + REG_MRAW_TG_VF_CON);
-	writel(val & (~MRAWTG_VFDATA_EN),
-		mraw_dev->base + REG_MRAW_TG_VF_CON);
-	ret = readl_poll_timeout_atomic(
-					mraw_dev->base + REG_MRAW_TG_INTER_ST, val,
-					(val & MRAWTG_CS_MASK) == MRAWTG_IDLE_ST,
-					USEC_PER_MSEC, MTK_MRAW_STOP_HW_TIMEOUT);
-	if (ret)
-		dev_dbg(dev, "can't stop HW:%d:0x%x\n", ret, val);
-
-	/* Disable CMOS */
-	val = readl(mraw_dev->base + REG_MRAW_TG_SEN_MODE);
-	writel(val & (~MRAWTG_CMOS_EN),
-		mraw_dev->base + REG_MRAW_TG_SEN_MODE);
-
 	/* Force ISP HW to idle */
-	ret = pm_runtime_put_sync(dev);
+	ret = pm_runtime_force_suspend(dev);
 	return ret;
 }
 
 static int mtk_mraw_pm_resume(struct device *dev)
 {
-	struct mtk_mraw_device *mraw_dev = dev_get_drvdata(dev);
-	u32 val;
 	int ret;
 
 	dev_info_ratelimited(dev, "- %s\n", __func__);
@@ -1631,21 +1610,9 @@ static int mtk_mraw_pm_resume(struct device *dev)
 		return 0;
 
 	/* Force ISP HW to resume */
-	ret = pm_runtime_get_sync(dev);
+	ret = pm_runtime_force_resume(dev);
 	if (ret)
 		return ret;
-
-	/* Enable CMOS */
-	dev_info_ratelimited(dev, "mraw resume, enable CMOS/VF\n");
-	val = readl(mraw_dev->base + REG_MRAW_TG_SEN_MODE);
-	writel(val | MRAWTG_CMOS_EN,
-		mraw_dev->base + REG_MRAW_TG_SEN_MODE);
-
-	/* Enable VF */
-	val = readl(mraw_dev->base + REG_MRAW_TG_VF_CON);
-	writel(val | MRAWTG_VFDATA_EN,
-		mraw_dev->base + REG_MRAW_TG_VF_CON);
-
 	return 0;
 }
 
@@ -1787,10 +1754,13 @@ static int mtk_mraw_of_probe(struct platform_device *pdev,
 		}
 		of_node_put(larb_node);
 
-		link = device_link_add(&pdev->dev, &larb_pdev->dev,
-						DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
-		if (!link)
-			dev_info(dev, "unable to link smi larb%d\n", i);
+		if (!is_hwccf_apply()) {
+			link = device_link_add(&pdev->dev, &larb_pdev->dev,
+							DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
+			if (!link)
+				dev_info(dev, "unable to link smi larb%d\n", i);
+		}
+		mraw_dev->larb_pdev = larb_pdev;
 	}
 
 	num_ports = of_count_phandle_with_args(
@@ -1909,6 +1879,7 @@ static void mtk_mraw_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_SLEEP
 	unregister_pm_notifier(&mraw_dev->notifier_blk);
 #endif
+
 	pm_runtime_disable(dev);
 
 	mtk_cam_qos_remove(&mraw_dev->qos);
@@ -1939,6 +1910,9 @@ int mtk_mraw_runtime_suspend(struct device *dev)
 	for (i = mraw_dev->num_clks - 1; i >= 0; i--)
 		clk_disable_unprepare(mraw_dev->clks[i]);
 
+	if (is_hwccf_apply())
+		mtk_smi_larb_disable(&mraw_dev->larb_pdev->dev);
+
 	return 0;
 }
 
@@ -1946,6 +1920,9 @@ int mtk_mraw_runtime_resume(struct device *dev)
 {
 	struct mtk_mraw_device *mraw_dev = dev_get_drvdata(dev);
 	int i, ret;
+
+	if (is_hwccf_apply())
+		mtk_smi_larb_enable(&mraw_dev->larb_pdev->dev);
 
 	/* reset_msgfifo before enable_irq */
 	ret = mtk_cam_mraw_reset_msgfifo(mraw_dev);
