@@ -1874,18 +1874,23 @@ int reset_sensor_flow(void *arg)
 			continue;
 		}
 
-		dev_info(aov_dev->dev, "%s: reset sensor(%u)+", __func__, core_info->reset_sensor_id);
-		ret = mtk_cam_seninf_aov_reset_sensor(core_info->reset_sensor_id);
-		if (ret < 0)
-			dev_info(aov_dev->dev,
-				"mtk_cam_seninf_aov_reset_sensor(%d) fail, ret: %d\n",
-				core_info->reset_sensor_id, ret);
-		dev_info(aov_dev->dev, "%s: reset sensor(%u)-", __func__, core_info->reset_sensor_id);
+		if (atomic_read(&(core_info->aov_ready))) {
+			dev_info(aov_dev->dev, "%s: reset sensor(%u)+", __func__, core_info->reset_sensor_id);
+			ret = mtk_cam_seninf_aov_reset_sensor(core_info->reset_sensor_id);
+			if (ret < 0)
+				dev_info(aov_dev->dev,
+					"mtk_cam_seninf_aov_reset_sensor(%d) fail, ret: %d\n",
+					core_info->reset_sensor_id, ret);
+			dev_info(aov_dev->dev, "%s: reset sensor(%u)-", __func__, core_info->reset_sensor_id);
 
-		ret = send_cmd_internal(core_info, AOV_SCP_CMD_RESET_SENSOR_END, 0, 0, false, false);
-		if (ret < 0)
-			dev_info(aov_dev->dev, "%s: failed to do aov reset sensor end: %d\n",
-				__func__, ret);
+			ret = send_cmd_internal(core_info, AOV_SCP_CMD_RESET_SENSOR_END, 0, 0, false, false);
+			if (ret < 0)
+				dev_info(aov_dev->dev, "%s: failed to do aov reset sensor end: %d\n",
+					__func__, ret);
+		} else {
+			dev_info(aov_dev->dev, "%s: skip reset sensor(%u) since all aov stop",
+				__func__, core_info->reset_sensor_id);
+		}
 	}
 	dev_info(aov_dev->dev, "%s: leave while loop for kthread stop", __func__);
 	return 0;
