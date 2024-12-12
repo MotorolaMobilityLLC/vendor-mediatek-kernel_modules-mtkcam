@@ -720,13 +720,19 @@ mtk_cam_job_initialize_engines(struct mtk_cam_ctx *ctx,
 
 		if (job->enable_hsf_raw)
 			mtk_cam_hsf_init(ctx);
+
+		/* TODO: refactor */
+		if (job->raw_change) {
 #ifdef SUPPORT_SLB_DC
-		if (is_dc_mode(job) && ctx->slb_addr)
-			mtk_cam_hsf_aid(ctx, 1, AID_CAM_DC, engines);
+			if (is_dc_mode(job) && ctx->slb_addr)
+				mtk_cam_hsf_aid(ctx, 1, AID_CAM_DC, engines);
 #else
-		if (is_dc_mode(job) && ctx->slc_data_valid)
-			mtk_cam_hsf_aid(ctx, 1, AID_CAM_DC, engines);
+			if (is_dc_mode(job) && ctx->slc_data_valid)
+				mtk_cam_hsf_aid(ctx, 1, AID_CAM_DC, engines);
 #endif
+		} else {
+			job->do_pending_aid_config = true;
+		}
 	}
 
 	/* camsv */
@@ -2210,6 +2216,7 @@ static void check_avoid_cq_race_aewa(struct mtk_cam_job *job)
 		job->job_state.bypass_by_aewa = 0;
 
 	if (job->job_state.bypass_by_aewa &&
+		(ctx->cam_ctrl.r_info.sof_l_ts_ns != 0) &&
 		(ts_diff > ts_diff_check)) {
 		/* wait timeout */
 		if (!wait_for_completion_timeout(&job->compose_completion, timeout)) {
@@ -4911,6 +4918,7 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 	job->raw_change_uninit_engine = 0;
 	job->first_frm_switch = false;
 	job->scq_period = SCQ_DEADLINE_US(get_sensor_interval_us(job)) / 1000;
+	job->do_pending_aid_config = false;
 
 	init_completion(&job->compose_completion);
 	init_completion(&job->cq_exe_completion);
