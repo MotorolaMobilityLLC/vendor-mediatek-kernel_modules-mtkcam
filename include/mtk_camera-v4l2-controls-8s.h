@@ -161,6 +161,7 @@ enum mtk_cam_hw_mode {
 enum mtk_cam_data_pattern {
 	MTK_CAM_PATTERN_BAYER,
 	MTK_CAM_PATTERN_4CELL,
+	MTK_CAM_PATTERN_16CELL,
 };
 enum mtk_cam_slc_mode {
 	NO_SLC,
