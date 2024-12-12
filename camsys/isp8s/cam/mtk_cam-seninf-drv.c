@@ -57,7 +57,7 @@
 #define V4L2_CID_MTK_SENINF_BASE	(V4L2_CID_USER_BASE | 0xf000)
 #define V4L2_CID_MTK_TEST_STREAMON	(V4L2_CID_MTK_SENINF_BASE + 1)
 
-//#define REDUCE_KO_DEPENDENCY_FOR_SMT
+#define REDUCE_KO_DEPENDENCY_FOR_SMT
 
 #define sd_to_ctx(__sd) container_of(__sd, struct seninf_ctx, subdev)
 #define notifier_to_ctx(__n) container_of(__n, struct seninf_ctx, notifier)
