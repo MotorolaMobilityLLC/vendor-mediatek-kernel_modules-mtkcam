@@ -1949,7 +1949,7 @@ static int get_buffered_pixel_rate(struct seninf_ctx *ctx,
 #endif
 	if (ret) {
 		dev_info(ctx->dev, "no g_frame_interval in %s\n", sd->name);
-		return ret;
+		// return ret;
 	}
 
 	ctrl = v4l2_ctrl_find(sd->ctrl_handler, V4L2_CID_HBLANK);

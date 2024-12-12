@@ -27,6 +27,7 @@ static void set_group_hold(void *arg, u8 en);
 static void ov50d_set_dummy(struct subdrv_ctx *ctx);
 static int ov50d_set_max_framerate_by_scenario(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static u16 get_gain2reg(u32 gain);
+static int set_streaming_control(void *arg, bool enable);
 static int ov50d_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
 /* STRUCT */
@@ -761,7 +762,8 @@ static struct subdrv_static_ctx static_ctx = {
 	.checksum_value = 0x388C7147,
 	.aov_sensor_support = TRUE,
 	.init_in_open = TRUE,
-	.streaming_ctrl_imp = FALSE,
+	.streaming_ctrl_imp = TRUE,
+	.s_streaming_control = set_streaming_control,
 };
 static struct subdrv_ops ops = {
 	.get_id = common_get_imgsensor_id,
@@ -911,6 +913,37 @@ static u16 get_gain2reg(u32 gain)
 {
 	return gain * 256 / BASEGAIN;
 }
+
+static int set_streaming_control(void *arg, bool enable)
+{
+	struct subdrv_ctx *ctx = (struct subdrv_ctx *)arg;
+	int ret = 0;
+
+	DRV_LOG(ctx, "E!\n");
+
+	DRV_LOG_MUST(ctx,
+		"streaming_enable(0=Sw Standby,1=streaming):(%d)\n", enable);
+
+	if (ctx->s_ctx.mode[ctx->current_scenario_id].aov_mode) {
+		DRV_LOG_MUST(ctx,
+			"AOV mode(%d) streaming control on apmcu side\n",
+			ctx->sensor_mode);
+	}
+
+	if (enable) {
+		subdrv_i2c_wr_u8(ctx, 0x0100, 0X01);
+		DRV_LOG_MUST(ctx,
+			"MODE_SEL(%08x)\n", subdrv_i2c_rd_u8(ctx, 0x0100));
+		ctx->test_pattern = 0;
+	} else {
+		subdrv_i2c_wr_u8(ctx, 0x0100, 0x00);
+		DRV_LOG_MUST(ctx,
+			"MODE_SEL(%08x)\n", subdrv_i2c_rd_u8(ctx, 0x0100));
+	}
+
+	return ret;
+}
+
 static int ov50d_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	u32 mode = *((u32 *)para);
