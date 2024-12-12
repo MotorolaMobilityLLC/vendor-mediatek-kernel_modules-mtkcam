@@ -19,9 +19,9 @@
  ********************************************************************/
 
 #define OMC_UFOD_P2_DESC_OFST 20 // align with userspace
-#define OMC_CQ_DESC_NUM	30 // align with userspace
+#define OMC_CQ_DESC_NUM	31 // align with userspace, TODO: need to check this
 #define OMC_REG_SIZE 4096  // align with userspace
-#define OMC_TDR_BUF_MAXSZ 9216 // align with userspace
+#define OMC_TDR_BUF_MAXSZ 9216 // align with userspace, TODO: need to check this
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Public Functions
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

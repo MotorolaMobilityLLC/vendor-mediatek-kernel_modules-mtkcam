@@ -14,8 +14,8 @@
 // GCE header
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
 
-#define M4U_PORT_DUMMY_TNR  (0)
-#define M4U_PORT_DUMMY_LITE  (1)
+// #define M4U_PORT_DUMMY_TNR  (0)
+// #define M4U_PORT_DUMMY_LITE  (1)
 
 #include "mtk_imgsys-omc.h"
 #include "mtk-hcp.h"
@@ -24,31 +24,33 @@
 
 #define OMC_HW_NUM        (2)
 void __iomem *gOmcRegBA[OMC_HW_NUM] = {0L}; //mapped physical addr
-unsigned int gOmcRegBase[OMC_HW_NUM] = {0x34540000, 0x34640000};
-unsigned int gOmcRegBase_P[OMC_HW_NUM] = {0x15540000, 0x15640000};
+unsigned int gOmcRegBase[OMC_HW_NUM] = {0x34530000, 0x34650000};
+// unsigned int gOmcRegBase_P[OMC_HW_NUM] = {0x15540000, 0x15640000};
+const unsigned int mtk_imgsys_omc_reg_size[] = {0x1000, 0x1000};
 
-//CTL_MOD_EN //TODO:
-#define DIP_DL    0x80000
-#define TRAW_DL   0x100000
+// CTL_MOD_EN
+#define DIP_DL    0x80000  // OMC_TOP_CTL_MOD_EN.OMC_TOP_DIP_DL_EN [19,19]
+#define TRAW_DL   0x100000 // OMC_TOP_CTL_MOD_EN.OMC_TOP_TILERAW_DL_EN [20,20]
+#define DECOMP_EN (0x400)
 
-// for CQ_THR*_CTL
+// for CQ_THR*_CTL, jayer doesn't have 0xC08??? TODO
 #define CQ_THRX_CTL_EN (1L << 0)
 #define CQ_THRX_CTL_MODE (1L << 4)//immediately mode
-#define CQ_THRX_CTL	(CQ_THRX_CTL_EN | CQ_THRX_CTL_MODE)
+#define CQ_THRX_CTL	(CQ_THRX_CTL_EN | CQ_THRX_CTL_MODE) // for DIPCQ_CQ_THRX_CTL
 
 // register ofst //TODO:
 #define OMC_REG_DBG_SET     (0x3C)
 #define OMC_REG_DBG_PORT    (0x40)
 #define OMC_REG_DMA_DBG_SET     (0xE68)
 #define OMC_REG_DMA_DBG_PORT    (0xE70)
-#define OMC_REG_CQ_THR0_CTL (0xC08)
-#define OMC_REG_CQ_THR1_CTL (0xC18)
+#define OMC_REG_CQ_THR0_CTL (0xC48)  // It was (0xC08) in liber but I think it's a bug
+#define OMC_REG_CQ_THR1_CTL (0xC58)  // It was (0xC18) in liber but I think it's a bug
 #define OMC_REG_DEC_CTL1    (0xFC0)
 #define SW_RST              (0x000C)
 
 const struct mtk_imgsys_init_array
 			mtk_imgsys_omc_init_ary[] = {
-	// TODO:
+	// TODO: I haven't check one-by-one for jayer
 	{0x0014, 0x80000000}, /* OMC_TOP_CTL_INT_EN, en w-clr */
 	{0x001C, 0xFFFFFFFF}, /* OMC_TOP_CTL_INT_STATUSX, w-clr */
 	{0x00C8, 0x80000000}, /* OMC_TOP_CQ_IRQ_EN, en w-clr */
@@ -81,28 +83,30 @@ const struct mtk_imgsys_init_array
 	{0x0968, 0x00400040}, /* MSKO_CON3, disable ultra */
 	{0x0A80, 0x00000000}, /* OMC_STG_EN_CTRL */
 	{0x0E60, 0x80000000}, /* OMC_DMA_DMA_ERR_CTRL */
-	{0x0C08, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR0_CTL */
-	{0x0C18, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR1_CTL */
-	{0x0C28, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR2_CTL */
-	{0x0C38, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR3_CTL */
-	{0x0C48, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR4_CTL */
-	{0x0C58, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR5_CTL */
-	{0x0C68, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR6_CTL */
-	{0x0C78, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR7_CTL */
-	{0x0C88, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR8_CTL */
-	{0x0C98, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR9_CTL */
-	{0x0CA8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR10_CTL */
-	{0x0CB8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR11_CTL */
-	{0x0CC8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR12_CTL */
-	{0x0CD8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR13_CTL */
-	{0x0CE8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR14_CTL */
+	// {0x0C08, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR0_CTL */
+	// {0x0C18, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR1_CTL */
+	// {0x0C28, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR2_CTL */
+	// {0x0C38, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR3_CTL */
+	{0x0C48, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR0_CTL */
+	{0x0C58, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR1_CTL */
+	{0x0C68, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR2_CTL */
+	{0x0C78, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR3_CTL */
+	{0x0C88, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR4_CTL */
+	{0x0C98, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR5_CTL */
+	// {0x0CA8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR10_CTL */
+	// {0x0CB8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR11_CTL */
+	// {0x0CC8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR12_CTL */
+	// {0x0CD8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR13_CTL */
+	// {0x0CE8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR14_CTL */
 };
 #define OMC_INIT_ARRAY_COUNT  ARRAY_SIZE(mtk_imgsys_omc_init_ary)
 
-
+// For OMC_LITE
+// This is identical to mtk_imgsys_omc_init_ary
+// THEY ARE THE SAME!
 const struct mtk_imgsys_init_array
 			mtk_imgsys_omc_init_ary_2p[] = {
-	// TODO:
+	// TODO: I haven't check one-by-one for jayer
 	{0x0014, 0x80000000}, /* OMC_TOP_CTL_INT_EN, en w-clr */
 	{0x001C, 0xFFFFFFFF}, /* OMC_TOP_CTL_INT_STATUSX, w-clr */
 	{0x00C8, 0x80000000}, /* OMC_TOP_CQ_IRQ_EN, en w-clr */
@@ -135,21 +139,21 @@ const struct mtk_imgsys_init_array
 	{0x0968, 0x00400040}, /* MSKO_CON3, disable ultra */
 	{0x0A80, 0x00000000}, /* OMC_STG_EN_CTRL */
 	{0x0E60, 0x80000000}, /* OMC_DMA_DMA_ERR_CTRL */
-	{0x0C08, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR0_CTL */
-	{0x0C18, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR1_CTL */
-	{0x0C28, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR2_CTL */
-	{0x0C38, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR3_CTL */
-	{0x0C48, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR4_CTL */
-	{0x0C58, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR5_CTL */
-	{0x0C68, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR6_CTL */
-	{0x0C78, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR7_CTL */
-	{0x0C88, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR8_CTL */
-	{0x0C98, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR9_CTL */
-	{0x0CA8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR10_CTL */
-	{0x0CB8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR11_CTL */
-	{0x0CC8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR12_CTL */
-	{0x0CD8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR13_CTL */
-	{0x0CE8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR14_CTL */
+	// {0x0C08, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR0_CTL */
+	// {0x0C18, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR1_CTL */
+	// {0x0C28, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR2_CTL */
+	// {0x0C38, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR3_CTL */
+	{0x0C48, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR0_CTL */
+	{0x0C58, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR1_CTL */
+	{0x0C68, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR2_CTL */
+	{0x0C78, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR3_CTL */
+	{0x0C88, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR4_CTL */
+	{0x0C98, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR5_CTL */
+	// {0x0CA8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR10_CTL */
+	// {0x0CB8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR11_CTL */
+	// {0x0CC8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR12_CTL */
+	// {0x0CD8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR13_CTL */
+	// {0x0CE8, CQ_THRX_CTL}, /*DIPCQ_W1A_DIPCQ_CQ_THR14_CTL */
 };
 #define OMC_INIT_ARRAY_COUNT_2P  ARRAY_SIZE(mtk_imgsys_omc_init_ary_2p)
 
@@ -157,26 +161,25 @@ struct imgsys_reg_range {
 	uint32_t str;
 	uint32_t end;
 };
-const struct imgsys_reg_range omc_regs[] = {
-	{0x0000, 0x04E4}, /* TOP,VECI,VEC2I,SVECI,SVEC2I */
-	{0x0500, 0x053C}, /* OMCO */
-	{0x05C0, 0x05FC}, /* OMCO2 */
-	{0x0680, 0x06BC}, /* MSKO */
-	{0x0A00, 0x0ABC}, /* STG */
-	{0x0B40, 0x0BA0}, /* CACHE, ROI */
-	{0x0BC0, 0x0BCC}, /* PAK */
-	{0x0C00, 0x0C0C}, /* PAK2 */
-	{0x0C40, 0x0C64}, /* CQ */
-	{0x0E60, 0x0ED8}, /* DMA */
-	{0x0F00, 0x0FC4}, /* DEC */
-};
 
-#define OMC_REG_ARRAY_COUNT	ARRAY_SIZE(omc_regs)
+// Need to align with userspace's wpe_hw.h
+union omc_cq_cmd_desc_t {
+	struct {
+		// 1st word
+		uint32_t reg_offset_address : 24;  // apb initial address
+		uint32_t dummy_0 : 6;  // all zeros
+		uint32_t code : 2;  // descriptor code, 0x0: pab, 0x1: null, 0x3: end_marker
 
-struct mtk_imgsys_omc_dtable {
-	uint32_t empty;
-	uint32_t addr;
-	uint32_t addr_msb;
+		// 2nd word
+		uint32_t dram_addr_lsb : 32;  // dram lsb address
+
+		// 3rd word
+		uint32_t dram_addr_msb : 4;  // dram msb address
+		uint32_t dummy_1 : 12;  // all zeros
+		uint32_t reg_count : 14;  // register count
+		uint32_t dummy_2 : 2;  // all zeros
+	};
+	uint32_t raw[3];
 };
 
 int imgsys_omc_tfault_callback(int port,
@@ -184,9 +187,9 @@ int imgsys_omc_tfault_callback(int port,
 {
 	void __iomem *omcRegBA = 0L;
 	unsigned int larb = 0;
-	unsigned int i =0, j = 0;
-	unsigned int omcBase = 0;
+	unsigned int i = 0;
 	unsigned int engine = 0;
+	unsigned int ofst_idx;
 	int ret = 0;
 	bool is_qof = false;
 
@@ -200,7 +203,8 @@ int imgsys_omc_tfault_callback(int port,
 
 	/* iomap registers */
 	engine = (larb == 22) ? REG_MAP_E_OMC_TNR : REG_MAP_E_OMC_LITE;
-	omcRegBA = gOmcRegBA[engine - REG_MAP_E_OMC_TNR];
+	ofst_idx = engine - REG_MAP_E_OMC_TNR;
+	omcRegBA = gOmcRegBA[ofst_idx];
 	if (!omcRegBA) {
 		pr_info("%s: OMC_%d, RegBA=0", __func__, port);
 		return 1;
@@ -213,19 +217,16 @@ int imgsys_omc_tfault_callback(int port,
 	}
 
 	pr_info("%s: ==== Dump OMC_%d, TF port: 0x%x =====",
-		__func__, (engine - REG_MAP_E_OMC_TNR), port);
+		__func__, (ofst_idx), port);
 
-	//
-	omcBase = gOmcRegBase[(engine - REG_MAP_E_OMC_TNR)];
-	for (j = 0; j < (unsigned int) OMC_REG_ARRAY_COUNT; j++) {
-		for (i = omc_regs[j].str; i <= omc_regs[j].end; i += 0x10) {
-			pr_info("%s: [0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X", __func__,
-				(unsigned int)(omcBase + i),
-				(unsigned int)ioread32((void *)(omcRegBA + i)),
-				(unsigned int)ioread32((void *)(omcRegBA + i + 0x4)),
-				(unsigned int)ioread32((void *)(omcRegBA + i + 0x8)),
-				(unsigned int)ioread32((void *)(omcRegBA + i + 0xC)));
-		}
+	// Dump all omc register
+	for (i = 0; i < mtk_imgsys_omc_reg_size[ofst_idx]; i += 0x10) {
+		pr_info("%s: [0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X", __func__,
+			(unsigned int)(gOmcRegBase[ofst_idx] + i),
+			(unsigned int)ioread32((void *)(omcRegBA + i)),
+			(unsigned int)ioread32((void *)(omcRegBA + i + 0x4)),
+			(unsigned int)ioread32((void *)(omcRegBA + i + 0x8)),
+			(unsigned int)ioread32((void *)(omcRegBA + i + 0xC)));
 	}
 
 	smi_isp_wpe3_lite_put((void *)&is_qof);
@@ -306,10 +307,9 @@ bool imgsys_omc_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine)
 		return false;
 	}
 
-	if (imgsys_dev->dev_ver == 1)
-		omcBase = gOmcRegBase_P[ofst_idx];
-	else
-		omcBase = gOmcRegBase[ofst_idx];
+	// if (imgsys_dev->dev_ver == 1)
+	// omcBase = gOmcRegBase_P[ofst_idx];
+	omcBase = gOmcRegBase[ofst_idx];
 
 	omcRegBA = gOmcRegBA[ofst_idx];
 	if (!omcRegBA) {
@@ -319,6 +319,7 @@ bool imgsys_omc_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine)
 
 	value = (uint32_t)ioread32((void *)(omcRegBA + reg_ofst));
 
+	// if OMC_TOP_WPE_DONE_STATUSX = 0x1
 	if (!(value & 0x1)) {
 		ret = false;
 		pr_info(
@@ -342,7 +343,7 @@ void imgsys_omc_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 	struct mtk_imgsys_request *req = NULL;
 	struct mtk_imgsys_dev_buffer *dev_b = 0;
 	u64 *u_cq_desc = NULL;
-	struct mtk_imgsys_omc_dtable *dtable = NULL;
+	union omc_cq_cmd_desc_t *cq_desc = NULL;
 	unsigned int tun_ofst = 0;
 	struct flush_buf_info omc_buf_info;
 	void *cq_base = NULL;
@@ -364,39 +365,44 @@ void imgsys_omc_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 					imgsys_dev, dev_b) + user_info->priv[i].buf_offset;
 			u_cq_desc = (u64 *)((void *)(cq_base +
 				user_info->priv[i].desc_offset +
-				(OMC_UFOD_P2_DESC_OFST * (sizeof(struct mtk_imgsys_omc_dtable)))));
+				(OMC_UFOD_P2_DESC_OFST * (sizeof(union omc_cq_cmd_desc_t)))));
 
-			dtable = (struct mtk_imgsys_omc_dtable *)u_cq_desc;
-			dtable->addr = u_iova_addr & 0xFFFFFFFF;
-			dtable->addr_msb = (u_iova_addr >> 32) & 0xF;
-			if (imgsys_omc_8s_dbg_enable())
+			cq_desc = (union omc_cq_cmd_desc_t *)u_cq_desc;
+			cq_desc->dram_addr_lsb = u_iova_addr & 0xFFFFFFFF;
+			cq_desc->dram_addr_msb = (u_iova_addr >> 32) & 0xF;
+			if (imgsys_omc_8s_dbg_enable()) {
 				pr_debug(
-					"%s: buf_fd(0x%08x) buf_ofst(0x%08x) buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
+					"%s: buf_fd(0x%08x) buf_ofst(0x%08x) buf_iova(0x%llx)\n",
 					__func__, user_info->priv[i].buf_fd,
-					user_info->priv[i].buf_offset,
-					u_iova_addr, user_info->priv[i].desc_offset,
-					u_cq_desc, dtable->empty,
-					dtable->addr, dtable->addr_msb);
+					user_info->priv[i].buf_offset, u_iova_addr);
+				pr_debug(
+					"%s: des_ofst(0x%08x) cq_kva(0x%p) cq_desc(0x%x/0x%x/0x%x)\n",
+					__func__, user_info->priv[i].desc_offset,
+					u_cq_desc, cq_desc->raw[0], cq_desc->raw[1], cq_desc->raw[2]);
+			}
 		}
 
 		if (tuning_iova) {
 			u_cq_desc = (u64 *)((void *)(cq_base +
 					user_info->priv[i].desc_offset));
 
-			dtable = (struct mtk_imgsys_omc_dtable *)u_cq_desc;
+			cq_desc = (union omc_cq_cmd_desc_t *)u_cq_desc;
 			for (j = 0; j < OMC_CQ_DESC_NUM; j++) {
-				if ((dtable->addr_msb & PSEUDO_DESC_TUNING) == PSEUDO_DESC_TUNING) {
-					tun_ofst = dtable->addr;
-					dtable->addr = (tun_ofst + tuning_iova) & 0xFFFFFFFF;
-					dtable->addr_msb = ((tun_ofst + tuning_iova) >> 32) & 0xF;
-					if (imgsys_omc_8s_dbg_enable())
-						pr_debug("%s: tuning_buf_iova(0x%llx) tun_ofst(0x%08x) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
-							__func__, tuning_iova, tun_ofst,
-							user_info->priv[i].desc_offset,
-							u_cq_desc, dtable->empty,
-							dtable->addr, dtable->addr_msb);
+				if (cq_desc->dummy_1 == PSEUDO_DESC_TUNING) {
+					tun_ofst = cq_desc->dram_addr_lsb;
+					cq_desc->dram_addr_lsb = (tun_ofst + tuning_iova) & 0xFFFFFFFF;
+					cq_desc->dram_addr_msb = ((tun_ofst + tuning_iova) >> 32) & 0xF;
+					cq_desc->dummy_1 = 0x0; // set dummy_1 back to all zeros
+
+					if (imgsys_omc_8s_dbg_enable()) {
+						pr_debug("%s: tuning_buf_iova(0x%llx) tun_ofst(0x%08x)\n",
+							__func__, tuning_iova, tun_ofst);
+						pr_debug("%s: des_ofst(0x%08x) cq_kva(0x%p) cq_desc(0x%x/0x%x/0x%x)\n",
+							__func__, user_info->priv[i].desc_offset,
+							u_cq_desc, cq_desc->raw[0], cq_desc->raw[1], cq_desc->raw[2]);
+					}
 				}
-				dtable++;
+				cq_desc++;
 			}
 		}
 		//
@@ -404,7 +410,7 @@ void imgsys_omc_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			omc_buf_info.fd = hcp_ops->fetch_omc_cq_mb_fd(imgsys_dev->scp_pdev, mode);
 		omc_buf_info.offset = user_info->priv[i].desc_offset;
 		omc_buf_info.len =
-			((sizeof(struct mtk_imgsys_omc_dtable) * OMC_CQ_DESC_NUM) + OMC_REG_SIZE);
+			((sizeof(union omc_cq_cmd_desc_t) * OMC_CQ_DESC_NUM) + OMC_REG_SIZE);
 		omc_buf_info.mode = mode;
 		omc_buf_info.is_tuning = false;
 		if (imgsys_omc_8s_dbg_enable())
@@ -463,10 +469,9 @@ void imgsys_omc_cmdq_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev,
 	dev_dbg(imgsys_dev->dev, "%s: +\n", __func__);
 
 	ary_idx = hw_idx - REG_MAP_E_OMC_TNR;
-	if (imgsys_dev->dev_ver == 1)
-		omcBase = gOmcRegBase_P[ary_idx];
-	else
-		omcBase = gOmcRegBase[ary_idx];
+	// if (imgsys_dev->dev_ver == 1)
+	// omcBase = gOmcRegBase_P[ary_idx];
+	omcBase = gOmcRegBase[ary_idx];
 
 	if (hw_idx < REG_MAP_E_OMC_LITE) {
 		for (i = 0 ; i < OMC_INIT_ARRAY_COUNT ; i++) {
@@ -484,6 +489,7 @@ void imgsys_omc_cmdq_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev,
 	dev_dbg(imgsys_dev->dev, "%s: -\n", __func__);
 }
 
+// TODO, this function haven't immgrate to jayer
 void imgsys_omc_debug_ufo_dump(struct mtk_imgsys_dev *imgsys_dev,
 							void __iomem *omcRegBA)
 {
@@ -510,6 +516,7 @@ void imgsys_omc_debug_ufo_dump(struct mtk_imgsys_dev *imgsys_dev,
 
 }
 
+// TODO: hvaen't check jayer settings
 void imgsys_omc_debug_dl_dump(struct mtk_imgsys_dev *imgsys_dev,
 							void __iomem *omcRegBA)
 {
@@ -909,7 +916,7 @@ void imgsys_omc_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 							unsigned int engine)
 {
 	void __iomem *omcRegBA = 0L;
-	unsigned int i, j, ctl_en;
+	unsigned int i, ctl_en;
 	unsigned int hw_idx = REG_MAP_E_OMC_TNR, ofst_idx;
 	unsigned int omcBase = 0;
 
@@ -929,10 +936,9 @@ void imgsys_omc_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 		return;
 	}
 
-	if (imgsys_dev->dev_ver == 1)
-		omcBase = gOmcRegBase_P[ofst_idx];
-	else
-		omcBase = gOmcRegBase[ofst_idx];
+	// if (imgsys_dev->dev_ver == 1)
+	// omcBase = gOmcRegBase_P[ofst_idx];
+	omcBase = gOmcRegBase[ofst_idx];
 
 	omcRegBA = gOmcRegBA[ofst_idx];
 	if (!omcRegBA) {
@@ -956,20 +962,17 @@ void imgsys_omc_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	imgsys_omc_debug_cq_dump(imgsys_dev, omcRegBA);
 	imgsys_omc_debug_module_dump(imgsys_dev, omcRegBA, 0);
 
-	//
-	for (j = 0; j < OMC_REG_ARRAY_COUNT; j++) {
-		for (i = omc_regs[j].str; i <= omc_regs[j].end; i += 0x10) {
-			pr_info("[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X",
+	for (i = 0; i < mtk_imgsys_omc_reg_size[ofst_idx]; i += 0x10) {
+		pr_info("%s: [0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X", __func__,
 			(unsigned int)(omcBase + i),
 			(unsigned int)ioread32((void *)(omcRegBA + i)),
 			(unsigned int)ioread32((void *)(omcRegBA + i + 0x4)),
 			(unsigned int)ioread32((void *)(omcRegBA + i + 0x8)),
 			(unsigned int)ioread32((void *)(omcRegBA + i + 0xC)));
-		}
 	}
 
 	//UFO
-	if (ctl_en & 0x400) {
+	if (ctl_en & DECOMP_EN) {
 		imgsys_omc_debug_ufo_dump(imgsys_dev, omcRegBA);
 		imgsys_omc_debug_ufo_dump(imgsys_dev, omcRegBA);
 	}
