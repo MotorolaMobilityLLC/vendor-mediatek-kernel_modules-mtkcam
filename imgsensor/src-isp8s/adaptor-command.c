@@ -573,6 +573,16 @@ static int s_cmd_sensor_fl_prolong(struct adaptor_ctx *ctx, void *arg)
 	return ret;
 }
 
+static int s_cmd_sensor_aov_dualsync(struct adaptor_ctx *ctx, void *arg)
+{
+	u32 role = *((u32 *)arg);
+
+	adaptor_logi(ctx, "[%s] role:%u", __func__, role);
+	/* role: 1-master, 2-slave */
+	subdrv_call(ctx, aov_dualsync, role);
+	return 0;
+}
+
 /*---------------------------------------------------------------------------*/
 // adaptor command framework/entry
 /*---------------------------------------------------------------------------*/
@@ -604,7 +614,8 @@ static const struct command_entry command_list[] = {
 	{V4L2_CMD_TSREC_SEND_TIMESTAMP_INFO, s_cmd_tsrec_send_timestamp_info},
 	{V4L2_CMD_SENSOR_PARSE_EBD, s_cmd_sensor_parse_ebd},
 	{V4L2_CMD_TSREC_SETUP_CB_FUNC_OF_SENSOR, s_cmd_tsrec_setup_cb_info},
-	{V4L2_CMD_SET_SENSOR_FL_PROLONG, s_cmd_sensor_fl_prolong}
+	{V4L2_CMD_SET_SENSOR_FL_PROLONG, s_cmd_sensor_fl_prolong},
+	{V4L2_CMD_SET_SENSOR_AOV_DUALSYNC, s_cmd_sensor_aov_dualsync}
 };
 
 long adaptor_command(struct v4l2_subdev *sd, unsigned int cmd, void *arg)

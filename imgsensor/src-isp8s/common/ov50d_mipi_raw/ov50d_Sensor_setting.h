@@ -1670,6 +1670,10 @@ u16 addr_data_pair_init_ov50d2q[] = {
 	0x4511, 0x02,
 	0x484f, 0x20,
 	0x0100, 0x00,//stream off
+
+	/* disable HW framesync */
+	0x3002, 0x00,
+	0x3865, 0x00,
 };
 /*mode 00 - 4000x3000@30fps 1902Mbps (AG64x,no PD)*/
 u16 addr_data_pair_preview_ov50d2q[] = {

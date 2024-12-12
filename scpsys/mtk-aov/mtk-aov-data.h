@@ -68,7 +68,8 @@
 #define AOV_SCP_CMD_DRV_UT           (17)
 #define AOV_SCP_CMD_SET_APU          (18)
 #define AOV_SCP_CMD_CLEAR_APU        (19)
-#define AOV_SCP_CMD_MAX              (20)
+#define AOV_SCP_CMD_DAULSYNC         (20)
+#define AOV_SCP_CMD_MAX              (21)
 #define AOV_SCP_CMD_ACK              (0x8000)
 
 #define AOV_DEBUG_MODE_DUMP       (1)  // General debug

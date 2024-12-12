@@ -478,6 +478,12 @@ static int ipi_receive(unsigned int id, void *unused,
 		core_info->reset_sensor_id = packet->buffer;
 		atomic_set(&(core_info->do_reset_sensor), 1);
 		wake_up_interruptible(&core_info->reset_sensor_wq);
+	} else if (packet->command == AOV_SCP_CMD_DAULSYNC) {
+		dev_info(aov_dev->dev, "%s: receive AOV_SCP_CMD_DAULSYNC (%u)\n",
+					__func__, packet->buffer);
+		core_info->dualsync_cmd = packet->buffer;
+		atomic_set(&(core_info->do_dualsync_cmd), 1);
+		wake_up_interruptible(&core_info->dualsync_cmd_wq);
 	} else {
 		event = (struct base_event *)(core_info->buf_va +
 			(packet->buffer - core_info->buf_pa));
@@ -1237,6 +1243,18 @@ int aov_core_init(struct mtk_aov *aov_dev)
 	}
 	wake_up_process(core_info->reset_sensor_thread);
 
+	/* create a thread to handle dualsync command */
+	atomic_set(&(core_info->do_dualsync_cmd), 0);
+	init_waitqueue_head(&core_info->dualsync_cmd_wq);
+	core_info->dualsync_cmd_thread = kthread_create(aov_dualsync, NULL,
+		"aov_dualsync");
+	if (IS_ERR(core_info->dualsync_cmd_thread)) {
+		AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
+			"%s kthread_create error ret:%ld\n", __func__,
+			PTR_ERR(core_info->dualsync_cmd_thread));
+	}
+	wake_up_process(core_info->dualsync_cmd_thread);
+
 	return 0;
 }
 
@@ -1869,6 +1887,45 @@ int reset_sensor_flow(void *arg)
 				__func__, ret);
 	}
 	dev_info(aov_dev->dev, "%s: leave while loop for kthread stop", __func__);
+	return 0;
+}
+
+
+int aov_dualsync(void *arg)
+{
+	struct mtk_aov *aov_dev = aov_core_get_device();
+	struct aov_core *core_info = &aov_dev->core_info;
+	int ret = 0;
+	long wait_ret = 0;
+
+	dev_info(aov_dev->dev, "%s: Enter while loop to wait event", __func__);
+
+	while (!kthread_should_stop()) {
+		wait_ret = wait_event_interruptible(core_info->dualsync_cmd_wq,
+			atomic_cmpxchg(&(core_info->do_dualsync_cmd), 1, 0));
+		if (wait_ret) {
+			dev_info(aov_dev->dev, "%s: wake up by signal(%ld)", __func__, wait_ret);
+			continue;
+		}
+
+		dev_info(aov_dev->dev, "%s: do dualsync_cmd +", __func__);
+		for (int user_idx = 0; user_idx < AOV_MAX_USER_CNT; user_idx++) {
+			if (atomic_read(&(core_info->aov_start_in_used[user_idx])) == 1)
+				mtk_cam_seninf_aov_set_dualsync(
+					core_info->sensor_id[user_idx],
+					core_info->dualsync_cmd);
+				/* If two AOV sensors streaming at the same time, */
+				/* Both of them would enter here. */
+				/* Distinguish which sensor by using sd->name in the func. */
+		}
+		dev_info(aov_dev->dev, "%s: do dualsync_cmd -", __func__);
+
+		ret = send_cmd_internal(core_info, AOV_SCP_CMD_DAULSYNC, 0, 0, false, false);
+		if (ret < 0)
+			dev_info(aov_dev->dev, "%s: failed to do aov reset sensor end: %d\n",
+				__func__, ret);
+	}
+
 	return 0;
 }
 

@@ -1066,3 +1066,4 @@ int get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 	}
 	return ERROR_NONE;
 }
+

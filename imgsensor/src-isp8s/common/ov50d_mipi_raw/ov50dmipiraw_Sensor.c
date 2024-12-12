@@ -30,6 +30,8 @@ static u16 get_gain2reg(u32 gain);
 static int set_streaming_control(void *arg, bool enable);
 static int ov50d_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
+static int ov50d_aov_dualsync(struct subdrv_ctx *ctx, u32 role);
+
 /* STRUCT */
 static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, ov50d_set_test_pattern},
@@ -778,6 +780,7 @@ static struct subdrv_ops ops = {
 	.get_temp = common_get_temp,
 	.get_csi_param = common_get_csi_param,
 	.update_sof_cnt = common_update_sof_cnt,
+	.aov_dualsync = ov50d_aov_dualsync,
 };
 static struct subdrv_pw_seq_entry pw_seq[] = {
 	{HW_ID_RST, {0}, 0},
@@ -931,9 +934,12 @@ static int set_streaming_control(void *arg, bool enable)
 	}
 
 	if (enable) {
+		/* do streamon after config HW framesync */
+		/*
 		subdrv_i2c_wr_u8(ctx, 0x0100, 0X01);
 		DRV_LOG_MUST(ctx,
 			"MODE_SEL(%08x)\n", subdrv_i2c_rd_u8(ctx, 0x0100));
+		*/
 		ctx->test_pattern = 0;
 	} else {
 		subdrv_i2c_wr_u8(ctx, 0x0100, 0x00);
@@ -983,5 +989,58 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 	subdrv_ctx_init(ctx);
 	ctx->i2c_client = i2c_client;
 	ctx->i2c_write_id = i2c_write_id;
+	return 0;
+}
+
+static int ov50d_aov_dualsync(struct subdrv_ctx *ctx, u32 role)
+{
+	u32 fl = ctx->s_ctx.mode[ctx->current_scenario_id].framelength;
+
+	if (role == 1) {
+		fl = fl + 20;
+		DRV_LOG_MUST(ctx, "with master role:%u fl=%u\n", role, fl);
+
+		/* FL */
+		subdrv_i2c_wr_u8(ctx,	ctx->s_ctx.reg_addr_frame_length.addr[0], (fl >> 16) & 0xFF);
+		subdrv_i2c_wr_u8(ctx,	ctx->s_ctx.reg_addr_frame_length.addr[1], (fl >> 8) & 0xFF);
+		subdrv_i2c_wr_u8(ctx,	ctx->s_ctx.reg_addr_frame_length.addr[2],  fl & 0xFF);
+
+		/* VSYNC output via VSYNC pad Master Sensor */
+		subdrv_i2c_wr_u8(ctx, 0x3002, 0x80);
+		subdrv_i2c_wr_u8(ctx, 0x3008, 0x00);
+		subdrv_i2c_wr_u8(ctx, 0x3841, 0x00);
+		subdrv_i2c_wr_u8(ctx, 0x381a, 0x00);
+		subdrv_i2c_wr_u8(ctx, 0x381b, 0x08);
+		subdrv_i2c_wr_u8(ctx, 0x381c, 0x00);
+		subdrv_i2c_wr_u8(ctx, 0x381d, 0x08);
+		subdrv_i2c_wr_u8(ctx, 0x381e, 0x00); /*0x381e 0x381f: width*/
+		subdrv_i2c_wr_u8(ctx, 0x381f, 0xff);
+		subdrv_i2c_wr_u8(ctx, 0x382e, 0x00);
+	} else if (role == 2) {
+		DRV_LOG_MUST(ctx, "with slave role:%u fl=%u\n", role, fl);
+
+		/* FL */
+		subdrv_i2c_wr_u8(ctx,	ctx->s_ctx.reg_addr_frame_length.addr[0], (fl >> 16) & 0xFF);
+		subdrv_i2c_wr_u8(ctx,	ctx->s_ctx.reg_addr_frame_length.addr[1], (fl >> 8) & 0xFF);
+		subdrv_i2c_wr_u8(ctx,	ctx->s_ctx.reg_addr_frame_length.addr[2],  fl & 0xFF);
+		/* FSIN input via VSYNC pad Slave Sensor */
+		subdrv_i2c_wr_u8(ctx, 0x3690, 0x08);
+		subdrv_i2c_wr_u8(ctx, 0x3865, 0x40);
+		subdrv_i2c_wr_u8(ctx, 0x382a, 0xbb);
+		subdrv_i2c_wr_u8(ctx, 0x3834, 0x10);
+		subdrv_i2c_wr_u8(ctx, 0x3843, 0x00);
+		subdrv_i2c_wr_u8(ctx, 0x3824, 0x00);
+		subdrv_i2c_wr_u8(ctx, 0x3825, 0x56);
+		subdrv_i2c_wr_u8(ctx, 0x3835, 0x06);
+		subdrv_i2c_wr_u8(ctx, 0x3836, 0x1F); /* 0x3835,0x3836: offset */
+		subdrv_i2c_wr_u8(ctx, 0x382e, 0x00);
+	} else {
+		DRV_LOG_MUST(ctx, "unknown role:%u\n", role);
+	}
+
+	/* streamon */
+	DRV_LOG_MUST(ctx, "SW workaround re-streamon ov50d\n");
+	subdrv_i2c_wr_u8(ctx, 0x0100, 0x01);
+
 	return 0;
 }

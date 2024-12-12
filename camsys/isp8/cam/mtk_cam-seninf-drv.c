@@ -5109,6 +5109,42 @@ int mtk_cam_seninf_aov_reset_sensor(unsigned int sensor_id)
 }
 EXPORT_SYMBOL(mtk_cam_seninf_aov_reset_sensor);
 
+int mtk_cam_seninf_aov_set_dualsync(unsigned int sensor_id, unsigned int cmd)
+{
+	struct seninf_ctx *ctx = NULL;
+	int aov_csi_port = -1;
+	unsigned int role;
+
+	seninf_logi(ctx, "[%s] sensor_id(%d) cmd:%u\n", __func__, sensor_id, cmd);
+
+	aov_csi_port = mtk_cam_seninf_aov_get_csi_port_from_sensor_id(sensor_id);
+
+	if (aov_csi_port == -1) {
+		seninf_logi(ctx, "[%s] No match sensor_id(%d) in g_aov_ctrl\n", __func__, sensor_id);
+		return -ENODEV;
+	}
+
+	if (g_aov_ctrl[aov_csi_port].aov_ctx != NULL) {
+		seninf_logi(ctx, "[%s] aov_csi_port(%u)\n", __func__, aov_csi_port);
+		ctx = g_aov_ctrl[aov_csi_port].aov_ctx;
+	} else {
+		seninf_logi(ctx, "[%s] Can't find ctx from input sensor id!\n", __func__);
+		return -ENODEV;
+	}
+
+	if (! ctx->sensor_sd) {
+		seninf_logi(ctx, "v4l2 subdev ops core command not exist\n");
+		return -EINVAL;
+	}
+
+	role = cmd; /* 1: master, 2: slave */
+	ctx->sensor_sd->ops->core->command(ctx->sensor_sd,
+				V4L2_CMD_SET_SENSOR_AOV_DUALSYNC,
+				&role);
+	return 0;
+}
+EXPORT_SYMBOL(mtk_cam_seninf_aov_set_dualsync);
+
 int mtk_cam_seninf_aov_sensor_set_mclk(unsigned int sensor_id, bool enable)
 {
 	struct seninf_ctx *ctx = NULL;

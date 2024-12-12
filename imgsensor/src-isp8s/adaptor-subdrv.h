@@ -592,6 +592,8 @@ struct subdrv_ops {
 	int (*mcss_init)(struct subdrv_ctx *ctx);
 	int (*mcss_update_subdrv_para)(struct subdrv_ctx *ctx, int scenario_id);
 	int (*mcss_set_mask_frame)(struct subdrv_ctx *ctx, u32 num, u32 is_critical);
+
+	int (*aov_dualsync)(struct subdrv_ctx *ctx, u32 role);
 };
 
 struct subdrv_entry {

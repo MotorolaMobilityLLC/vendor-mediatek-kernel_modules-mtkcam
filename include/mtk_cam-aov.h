@@ -27,5 +27,5 @@ extern int mtk_cam_seninf_aov_runtime_resume(unsigned int sensor_id,
 
 extern int mtk_cam_seninf_aov_reset_sensor(unsigned int sensor_id);
 extern int mtk_cam_seninf_aov_sensor_set_mclk(unsigned int sensor_id, bool enable);
-
+extern int mtk_cam_seninf_aov_set_dualsync(unsigned int sensor_id, unsigned int dualsync_role);
 #endif /* __MTK_CAM_AOV_H */

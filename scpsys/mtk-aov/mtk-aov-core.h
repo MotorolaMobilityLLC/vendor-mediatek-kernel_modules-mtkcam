@@ -79,6 +79,12 @@ struct aov_core {
 	wait_queue_head_t reset_sensor_wq;
 	struct task_struct *reset_sensor_thread;
 
+	/* add for AOV dualsync */
+	uint32_t dualsync_cmd;
+	atomic_t do_dualsync_cmd;
+	wait_queue_head_t dualsync_cmd_wq;
+	struct task_struct *dualsync_cmd_thread;
+
 	struct mutex sned_ipi_mutex;
 	struct semaphore start_stop_sema;
 };
@@ -109,5 +115,7 @@ int aov_core_uninit(struct mtk_aov *aov_dev);
 int aov_smi_kernel_dump(void *arg);
 
 int reset_sensor_flow(void *arg);
+
+int aov_dualsync(void *arg);
 
 #endif  // MTK_AOV_CORE_H
