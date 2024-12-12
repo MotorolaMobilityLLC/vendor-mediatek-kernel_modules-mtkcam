@@ -67,14 +67,18 @@ static void ccd_add_rpmsg_subdev(struct mtk_ccd *ccd)
 					      &ccd_rpmsg_ops);
 	if (ccd->rpmsg_subdev) {
 		rproc_add_subdev(ccd->rproc, ccd->rpmsg_subdev);
-		mtk_ccd_center_create_channels(ccd->rpmsg_subdev);
+		mtk_create_client_msgdevice(ccd->rpmsg_subdev);
 	}
 }
 
 static void ccd_remove_rpmsg_subdev(struct mtk_ccd *ccd)
 {
 	if (ccd->rpmsg_subdev) {
-		mtk_ccd_center_destroy_channels(ccd->rpmsg_subdev);
+		/* TODO: fix unbalanced locking function definition */
+		/* mtk_create_client_msgdevice/mtk_destroy_client_msgdevice */
+		/* mtk_rpmsg_create_rpmsgdev/mtk_rpmsg_destroy_rpmsgdev */
+
+		mtk_rpmsg_destroy_rpmsgdev(ccd->rpmsg_subdev);
 		rproc_remove_subdev(ccd->rproc, ccd->rpmsg_subdev);
 		mtk_rpmsg_destroy_rproc_subdev(ccd->rpmsg_subdev);
 		ccd->rpmsg_subdev = NULL;
@@ -118,7 +122,7 @@ static int ccd_open(struct inode *inode,
 					   struct mtk_ccd,
 					   ccd_cdev);
 	filp->private_data = ccd;
-	dev_info(ccd->dev, "%s: %p\n", __func__, ccd);
+	dev_dbg(ccd->dev, "%s: %p\n", __func__, ccd);
 	return ret;
 }
 
@@ -130,7 +134,7 @@ static int ccd_release(struct inode *inode,
 	struct mtk_ccd *ccd = (struct mtk_ccd *)filp->private_data;
 
 	master_obj.state = CCD_MASTER_EXIT;
-	ccd_master_destroy(ccd, &master_obj);  /* TODO: do not destroy ept here */
+	ccd_master_destroy(ccd, &master_obj);
 	dev_info(ccd->dev, "%s: %p\n", __func__, ccd);
 	return ret;
 }
@@ -337,8 +341,7 @@ static int ccd_probe(struct platform_device *pdev)
 		ccd->smmu_dev = mtk_smmu_get_shared_device(&pdev->dev);
 		if (!ccd->smmu_dev) {
 			dev_info(dev, "failed to get smmu device\n");
-			ret = -ENODEV;
-			goto free_rproc;
+			return -ENODEV;
 		}
 	}
 
@@ -350,10 +353,8 @@ static int ccd_probe(struct platform_device *pdev)
 		alloc_dev->dma_parms =
 			devm_kzalloc(alloc_dev,
 				sizeof(*alloc_dev->dma_parms), GFP_KERNEL);
-		if (!alloc_dev->dma_parms) {
-			ret = -ENODEV;
-			goto free_rproc;
-		}
+		if (!alloc_dev->dma_parms)
+			return -ENOMEM;
 	}
 
 	if (alloc_dev->dma_parms) {
@@ -363,12 +364,7 @@ static int ccd_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, ccd);
-
-	if (ccd_regcdev(ccd)) {
-		dev_info(dev, "Register cdev failed\n");
-		ret = -ENODEV;
-		goto free_rproc;
-	}
+	ccd_regcdev(ccd);
 
 	/* If ccd is moved to real micro processor, map to physical address here */
 
@@ -377,20 +373,15 @@ static int ccd_probe(struct platform_device *pdev)
 	ccd->ccd_memory = mtk_ccd_mem_init(ccd->dev);
 
 	ret = rproc_add(rproc);
-	if (ret) {
-		dev_info(dev, "rproc_add failed\n");
+	if (ret)
 		goto remove_subdev;
-	}
 
 	dev_info(ccd->dev, "%s: ccd is created: %p\n", __func__, ccd);
 
 	return 0;
 
 remove_subdev:
-	mtk_ccd_mem_release(ccd);
 	ccd_remove_rpmsg_subdev(ccd);
-	ccd_unregcdev(ccd);
-free_rproc:
 	rproc_free(rproc);
 
 	return ret;

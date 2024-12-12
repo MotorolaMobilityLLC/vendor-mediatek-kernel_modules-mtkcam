@@ -29,7 +29,8 @@ struct mtk_ccd_params {
 };
 
 struct mtk_ccd_rpmsg_endpoint {
-	struct rpmsg_endpoint ept;  /* ept->addr is the channel id */
+	struct rpmsg_endpoint ept;
+	struct mtk_ccd_channel_info mchinfo;
 	struct mtk_rpmsg_rproc_subdev *mtk_subdev;
 	wait_queue_head_t worker_readwq;
 	struct mtk_ccd_queue pending_sendq;
