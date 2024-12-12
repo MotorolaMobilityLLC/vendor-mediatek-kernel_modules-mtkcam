@@ -243,10 +243,11 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 			dev_info(aov_dev->dev, "%s: SCP rebooting stop case\n", __func__);
 			stop_w_scp_reboot_flow = true;
 		}
-		if (!stop_w_scp_reboot_flow &&
-			(down_interruptible(&core_info->start_stop_sema))) {
-			dev_info(aov_dev->dev, "%s: failed to acquire semaphore\n", __func__);
-			return -EFAULT;
+		if (!stop_w_scp_reboot_flow) {
+			if (down_interruptible(&core_info->start_stop_sema)) {
+				dev_info(aov_dev->dev, "%s: failed to acquire semaphore\n", __func__);
+				return -EFAULT;
+			}
 		}
 		dev_info(aov_dev->dev, "AOV stop+\n");
 
@@ -302,7 +303,11 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 		}
 		AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
 			"turn on ulposc\n");
-		aov_ulposc_check_cali_result(aov_dev);
+		if (aov_ulposc_check_cali_result(aov_dev) != 1) {
+			dev_info(aov_dev->dev, "%s: ulposc3 check fail!\n", __func__);
+			up(&core_info->start_stop_sema);
+			return -EFAULT;
+		}
 		AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
 			"turn on ulposc done, ret(%d)\n", ret);
 		up(&core_info->start_stop_sema);
