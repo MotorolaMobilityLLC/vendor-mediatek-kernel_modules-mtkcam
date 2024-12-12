@@ -13,8 +13,6 @@
 #include "mtk_camera-videodev2.h"
 #include "mtk_cam-ufbc-def.h"
 
-#define UFBC_TABLE_STRIDE_ALIGNMENT		16 // camsv hw constraint
-
 void fill_ext_mtkcam_fmtdesc(struct v4l2_fmtdesc *f)
 {
 	const char *descr = NULL;
@@ -895,6 +893,7 @@ unsigned int mtk_format_calc_stride(const struct mtk_format_info *info,
 	unsigned int stride;
 
 	stride = DIV_ROUND_UP(DIV_ROUND_UP(w, hdiv) * bit, 8);
+	stride = ALIGN(stride, MIN_BUF_STRIDE_ALIGNMENT);
 
 	if (info->bus_align)
 		stride = ALIGN(stride, info->bus_align);
@@ -933,14 +932,16 @@ unsigned int v4l2_format_calc_stride(const struct v4l2_format_info *info,
 	if (v4l2_is_format_yuv(info))
 		stride = ALIGN(stride, 4);
 
-	stride = ALIGN(stride, bus_align);
+//	stride = ALIGN(stride, bus_align);
+	stride = ALIGN(stride, MIN_BUF_STRIDE_ALIGNMENT);
 
 	if (i == 0)
 		return max(stride, stride0);
 
 	return max(stride,
 		   /* infer stride from plane 0's stride */
-		   DIV_ROUND_UP(stride0 * bpp / info->bpp[0], hdiv));
+		   ALIGN(DIV_ROUND_UP(stride0 * bpp / info->bpp[0], hdiv),
+			MIN_BUF_STRIDE_ALIGNMENT));
 }
 
 unsigned int v4l2_format_calc_planesize(const struct v4l2_format_info *info,
@@ -1151,11 +1152,11 @@ int get_bayer_ufbc_stride_and_size(u32 w, u32 h,
 
 	/* UFO format width should align 64 pixel */
 	aligned_width = ALIGN(w, 64);
-	*stride = ALIGN((aligned_width * info->bitpp[0] / 8), 32);
+	*stride = ALIGN((aligned_width * info->bitpp[0] / 8),
+					MIN_BUF_STRIDE_ALIGNMENT);
 
 	*bufsize = (*stride) * h;
-	aligned_len_w = UFBC_TABLE_STRIDE_ALIGNMENT +
-		ALIGN((aligned_width / 64), UFBC_TABLE_STRIDE_ALIGNMENT);
+	aligned_len_w = ALIGN((aligned_width / 64), MIN_BUF_STRIDE_ALIGNMENT);
 	/* NOTE: size of P2/WPE len table to be aligned to 64 */
 	*bufsize += ALIGN(aligned_len_w * h, 64);
 	*bufsize += sizeof(struct UfbcBufferHeader);

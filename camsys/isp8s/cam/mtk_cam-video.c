@@ -807,14 +807,16 @@ static int mtk_cam_fill_mtk_pixfmt_mp(const struct mtk_format_info *info,
 
 		/* UFO format width should align 64 pixel */
 		aligned_width = ALIGN(width, 64);
-		stride = ALIGN(aligned_width * info->bitpp[0] / 8, 16);
+		stride = ALIGN(aligned_width * info->bitpp[0] / 8,
+					   MIN_BUF_STRIDE_ALIGNMENT);
 
 		plane->sizeimage = stride * height;
 		plane->sizeimage += stride * height / 2;
-		plane->sizeimage += ALIGN((aligned_width / 64), 8) * height;
+		plane->sizeimage +=
+			ALIGN((aligned_width / 64), MIN_BUF_STRIDE_ALIGNMENT) * height;
 		/* NOTE: size of P2/WPE UV plane len table to be aligned to 64 */
 		plane->sizeimage +=
-			ALIGN(ALIGN((aligned_width / 64), 8) * height / 2, 64);
+			ALIGN(ALIGN((aligned_width / 64), MIN_BUF_STRIDE_ALIGNMENT) * height / 2, 64);
 		plane->sizeimage += sizeof(struct UfbcBufferHeader);
 
 		plane->bytesperline = max(plane->bytesperline, stride);
@@ -947,7 +949,7 @@ static int mtk_video_init_format(struct mtk_cam_video_device *video)
 				       default_fmt->fmt.pix_mp.height,
 				       2,
 				       is_raw_subdev(video->uid.pipe_id) ? 2 : 1,
-				       is_camsv_subdev(video->uid.pipe_id) ? 16 : 1);
+				       MIN_BUF_STRIDE_ALIGNMENT);
 
 	/**
 	 * TODO: to support multi-plane: for example, yuv or do it as
@@ -1015,12 +1017,10 @@ int mtk_cam_video_register(struct mtk_cam_video_device *video,
 			case MTK_RAW_YUVO_2_OUT:
 			case MTK_RAW_YUVO_3_OUT:
 			case MTK_RAW_YUVO_4_OUT:
-			case MTK_RAW_YUVO_5_OUT:
 			case MTK_RAW_DRZH2NO_1_OUT:
 			case MTK_RAW_DRZS4NO_3_OUT:
 			case MTK_RAW_DRZH1NO_1_OUT:
 			case MTK_RAW_RZH1N2TO_2_OUT:
-			case MTK_RAW_DRZH1NO_3_OUT:
 				/* should have a better implementation here */
 				q->dev = cam->engines.yuv_devs[0];
 				break;
@@ -1233,7 +1233,7 @@ int mtk_cam_video_set_fmt(struct mtk_cam_video_device *node,
 				       f->fmt.pix_mp.height,
 				       2,
 				       is_raw_subdev(node->uid.pipe_id) ? 2 : 1,
-				       is_camsv_subdev(node->uid.pipe_id) ? 16 : 1);
+				       MIN_BUF_STRIDE_ALIGNMENT);
 
 	/* Constant format fields */
 	try_fmt.fmt.pix_mp.field = V4L2_FIELD_NONE;

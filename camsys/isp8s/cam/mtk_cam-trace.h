@@ -96,18 +96,15 @@ TRACE_EVENT_CONDITION(raw_irq,
 TRACE_EVENT_CONDITION(yuv_irq,
 	TP_PROTO(struct device *dev,
 		 unsigned int irq,
-		 unsigned int dmao_done,
-		 unsigned int tsm_mismatch),
+		 unsigned int dmao_done),
 	TP_ARGS(dev,
 		irq,
-		dmao_done,
-		tsm_mismatch),
-	TP_CONDITION(irq || dmao_done || tsm_mismatch),
+		dmao_done),
+	TP_CONDITION(irq || dmao_done),
 	TP_STRUCT__entry(
 		__string(device, dev_name(dev))
 		__field(unsigned int, irq)
 		__field(unsigned int, dmao_done)
-		__field(unsigned int, tsm_mismatch)
 	),
 	TP_fast_assign(
 #if (KERNEL_VERSION(6, 10, 0) > LINUX_VERSION_CODE)
@@ -117,13 +114,11 @@ TRACE_EVENT_CONDITION(yuv_irq,
 #endif
 		__entry->irq = irq;
 		__entry->dmao_done = dmao_done;
-		__entry->tsm_mismatch = tsm_mismatch;
 	),
-	TP_printk("%s irq=0x%08x dmao=0x%08x tfm_mismatch=0x%08x %s",
+	TP_printk("%s irq=0x%08x dmao=0x%08x %s",
 		  __get_str(device),
 		  __entry->irq,
 		  __entry->dmao_done,
-		  __entry->tsm_mismatch,
 		  __print_flags(__entry->irq & 0x4, "|",
 				{ BIT(2),	"DMA_ERR" })
 	)
@@ -132,19 +127,16 @@ TRACE_EVENT_CONDITION(yuv_irq,
 TRACE_EVENT_CONDITION(raw_dma_status,
 	TP_PROTO(struct device *dev,
 		 unsigned int frame,
-		 unsigned int overflow,
-		 unsigned int underflow
+		 unsigned int overflow
 		),
 	TP_ARGS(dev,
 		frame,
-		overflow,
-		underflow),
-	TP_CONDITION(frame || overflow || underflow),
+		overflow),
+	TP_CONDITION(frame || overflow),
 	TP_STRUCT__entry(
 		__string(device, dev_name(dev))
 		__field(unsigned int, frame)
 		__field(unsigned int, overflow)
-		__field(unsigned int, underflow)
 	),
 	TP_fast_assign(
 #if (KERNEL_VERSION(6, 10, 0) > LINUX_VERSION_CODE)
@@ -154,13 +146,11 @@ TRACE_EVENT_CONDITION(raw_dma_status,
 #endif
 		__entry->frame = frame;
 		__entry->overflow = overflow;
-		__entry->underflow = underflow;
 	),
-	TP_printk("%s frame=0x%08x overflow=0x%08x (raw)underflow(yuv)tfm_mismatch=0x%08x",
+	TP_printk("%s frame=0x%08x overflow=0x%08x (raw)",
 		  __get_str(device),
 		  __entry->frame,
-		  __entry->overflow,
-		  __entry->underflow
+		  __entry->overflow
 	)
 );
 

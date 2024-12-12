@@ -609,11 +609,6 @@ static struct mtkcam_qos_desc mmqos_img_table[MTKCAM_IPI_RAW_NUM] = {
 		.dma_desc = yuvo_4_dmas,
 		.desc_size = ARRAY_SIZE(yuvo_4_dmas),
 	},
-	{// TODO: remove
-		.id = MTKCAM_IPI_RAW_YUVO_5,
-		.dma_desc = yuvo_4_dmas,
-		.desc_size = ARRAY_SIZE(yuvo_4_dmas),
-	},
 	{
 		.id = MTKCAM_IPI_RAW_RZH1N2TO_2,
 		.dma_desc = rzh1n2to_2_dmas,
@@ -628,11 +623,6 @@ static struct mtkcam_qos_desc mmqos_img_table[MTKCAM_IPI_RAW_NUM] = {
 		.id = MTKCAM_IPI_RAW_DRZS4NO_3,
 		.dma_desc = drzs4no_3_dmas,
 		.desc_size = ARRAY_SIZE(drzs4no_3_dmas),
-	},
-	{// TODO: remove
-		.id = MTKCAM_IPI_RAW_DRZH1NO_3,
-		.dma_desc = drzh1no_3_dmas,
-		.desc_size = ARRAY_SIZE(drzh1no_3_dmas),
 	},
 	{
 		.id = MTKCAM_IPI_RAW_DRZH1NO_1,

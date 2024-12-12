@@ -8,6 +8,8 @@
 
 #include <linux/types.h>
 
+#define MIN_BUF_STRIDE_ALIGNMENT		32
+
 #define FMT_FOURCC		"%u(%c%c%c%c)"
 
 #define FOURCC_S(pfmt)				((pfmt)),

@@ -45,7 +45,7 @@
 //module_param(debug_dump_fbc, int, 0644);
 //MODULE_PARM_DESC(debug_dump_fbc, "debug: dump fbc");
 
-static int debug_ddren_sw_mode;
+static int debug_ddren_sw_mode = 1;
 module_param(debug_ddren_sw_mode, int, 0644);
 MODULE_PARM_DESC(debug_ddren_sw_mode, "debug: 1 : active sw mode");
 
@@ -1726,13 +1726,13 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 	unsigned int frame_idx, frame_idx_inner;
 	unsigned int frame_status, tg1_status, cq_status, dcif_status, lock_done_sel;
 	unsigned int frame_e_status, tg1_e_status, cq_e_status;
-	unsigned int dma_ofl_status, dmao_done_status, dmai_done_status;
-	unsigned int dma_ufl_status, dma_ring_ufl_status, tfm_mismatch_status;
+	unsigned int dma_ofl_status, dmao_done_status, dmai_done_status, afo_done_status;
+	unsigned int dma_ufl_status;
 	unsigned int tg_cnt, err_status;
 	bool wake_thread = 0;
 	/* yuv part */
 	unsigned int frame_status_y, err_status_y, wdma_done_status_y;
-	unsigned int dma_ofl_status_y, tfm_mismatch_status_y;
+	unsigned int dma_ofl_status_y;
 
 	/* yuv part */
 	frame_status_y =
@@ -1741,32 +1741,29 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 		raw_readl_relaxed(raw, yuv->base, REG_CAMCTL2_INT2_STATUS);
 	dma_ofl_status_y =
 		raw_readl_relaxed(raw, yuv->base, REG_CAMCTL2_INT5_STATUS);
-	tfm_mismatch_status_y =
-		raw_readl_relaxed(raw, yuv->base, REG_CAMCTL2_INT8_STATUS);
+
 	err_status_y = frame_status_y & 0x4; // bit2: DMA_ERR
 
 	//if (unlikely(debug_raw))
 	if (CAM_DEBUG_ENABLED(RAW_INT))
-		dev_info(yuv->dev, "YUV-INT: 17/2/5/8:0x%x(err:0x%x)/0x%x/0x%x/0x%x\n",
+		dev_info(yuv->dev, "YUV-INT: 17/2/5:0x%x(err:0x%x)/0x%x/0x%x\n",
 			frame_status_y, err_status_y,
-			wdma_done_status_y, dma_ofl_status_y, tfm_mismatch_status_y);
+			wdma_done_status_y, dma_ofl_status_y);
 
 	if (CAM_DEBUG_ENABLED(RAW_INT))
 		if (err_status_y)
 			dump_yuv_dma_err_st(yuv);
 
 	/* trace */
-	trace_yuv_irq(yuv->dev, frame_status_y, wdma_done_status_y,
-				tfm_mismatch_status_y);
-	trace_raw_dma_status(yuv->dev, frame_status_y,
-				dma_ofl_status_y, tfm_mismatch_status_y);
+	trace_yuv_irq(yuv->dev, frame_status_y, wdma_done_status_y);
+	trace_raw_dma_status(yuv->dev, frame_status_y, dma_ofl_status_y);
 	/* raw part */
 	dmao_done_status = raw_readl_relaxed(raw, raw->base, REG_CAMCTL_INT2_STATUS);
 	dmai_done_status = raw_readl_relaxed(raw, raw->base, REG_CAMCTL_INT3_STATUS);
 	dma_ofl_status	 = raw_readl_relaxed(raw, raw->base, REG_CAMCTL_INT5_STATUS);
 	dma_ufl_status	 = raw_readl_relaxed(raw, raw->base, REG_CAMCTL_INT6_STATUS);
-	dma_ring_ufl_status	 = raw_readl_relaxed(raw, raw->base, REG_CAMCTL_INT7_STATUS);
-	tfm_mismatch_status	 = raw_readl_relaxed(raw, raw->base, REG_CAMCTL_INT8_STATUS);
+	afo_done_status	 = raw_readl_relaxed(raw, raw->base, REG_CAMCTL_INT13_STATUS);
+
 	frame_status	 = raw_readl_relaxed(raw, raw->base, REG_CAMCTL_INT17_STATUS);
 	tg1_status		 = raw_readl_relaxed(raw, raw->base, REG_CAMCTL_INT18_STATUS);
 	dcif_status		 = raw_readl_relaxed(raw, raw->base, REG_CAMCTL_INT20_STATUS);
@@ -1785,10 +1782,10 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 
 	if (CAM_DEBUG_ENABLED(RAW_INT))
 		dev_info(dev,
-			"RAW-INT: 17/18/19/20/21/2/3/8 0x%x(err:0x%x)/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x lock:0x%x, in:0x%x\n",
+			"RAW-INT: 17/18/20/21/2/3/5/6/13 0x%x(err:0x%x)/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x lock:0x%x, in:0x%x\n",
 			frame_status, err_status, tg1_status, dcif_status, cq_status,
-			dmao_done_status, dmai_done_status, tfm_mismatch_status, lock_done_sel,
-			frame_idx_inner);
+			dmao_done_status, dmai_done_status, dma_ofl_status, dma_ufl_status,
+			afo_done_status, lock_done_sel, frame_idx_inner);
 
 	irq_info.irq_type = 0;
 	irq_info.frame_idx = frame_idx;
@@ -1812,7 +1809,7 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 	}
 
 	/* DMAO done, only for AFO */
-	if (dmao_done_status & FBIT(CAMCTL_AFO_R1_DONE_ST)) {
+	if (afo_done_status & FBIT(CAMCTL_AFO_R1_DONE_ST)) {
 		irq_info.irq_type |= 1 << CAMSYS_IRQ_AFO_DONE;
 		/* enable AFO_DONE_EN at backend manually */
 	}
@@ -1923,7 +1920,7 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 	trace_raw_irq(dev, frame_idx_inner,
 		      frame_status, tg1_status, cq_status,
 		      dmao_done_status, dmai_done_status, dcif_status);
-	trace_raw_dma_status(dev, frame_status, dma_ofl_status, dma_ufl_status);
+	trace_raw_dma_status(dev, frame_status, dma_ofl_status);
 
 #ifdef NOT_READY
 	if (MTK_CAM_TRACE_ENABLED(FBC) && (tg1_status & TG_VS_INT_ORG_ST)) {

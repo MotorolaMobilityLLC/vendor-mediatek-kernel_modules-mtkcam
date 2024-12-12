@@ -1941,6 +1941,13 @@ static int mtk_raw_get_pad_selection(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int mtk_raw_set_frame_interval(struct v4l2_subdev *sd,
+				  struct v4l2_subdev_state *state,
+				  struct v4l2_subdev_frame_interval *interval)
+{
+	return 0;
+}
+
 static int mtk_cam_media_link_setup(struct media_entity *entity,
 				    const struct media_pad *local,
 				    const struct media_pad *remote, u32 flags)
@@ -2004,6 +2011,7 @@ static const struct v4l2_subdev_pad_ops mtk_raw_subdev_pad_ops = {
 	.get_fmt = mtk_raw_get_fmt,
 	.set_selection = mtk_raw_set_pad_selection,
 	.get_selection = mtk_raw_get_pad_selection,
+	.set_frame_interval = mtk_raw_set_frame_interval,
 };
 
 static const struct v4l2_subdev_ops mtk_raw_subdev_ops = {
@@ -3251,7 +3259,7 @@ static const char *output_queue_names[RAW_PIPELINE_NUM][MTK_RAW_TOTAL_OUTPUT_QUE
 };
 
 
-#define MTK_RAW_TOTAL_CAPTURE_QUEUES 19 //todo :check backend node size
+#define MTK_RAW_TOTAL_CAPTURE_QUEUES 17 //todo :check backend node size
 
 static const struct
 mtk_cam_dev_node_desc capture_queues[] = {
@@ -3412,32 +3420,6 @@ mtk_cam_dev_node_desc capture_queues[] = {
 		},
 	},
 	{
-		.id = MTK_RAW_YUVO_5_OUT,
-		.name = "yuvo 5",
-		.cap = V4L2_CAP_VIDEO_CAPTURE_MPLANE,
-		.buf_type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE,
-		.link_flags = MEDIA_LNK_FL_ENABLED |  MEDIA_LNK_FL_IMMUTABLE,
-		.image = true,
-		.smem_alloc = false,
-		.dma_port = MTKCAM_IPI_RAW_YUVO_5,
-		.fmts = yuv_out_group2_fmts,
-		.num_fmts = ARRAY_SIZE(yuv_out_group2_fmts),
-		.default_fmt_idx = 0,
-		.ioctl_ops = &mtk_cam_v4l2_vcap_ioctl_ops,
-		.frmsizes = &(struct v4l2_frmsizeenum) {
-			.index = 0,
-			.type = V4L2_FRMSIZE_TYPE_CONTINUOUS,
-			.stepwise = {
-				.max_width = YUV_GROUP2_MAX_WIDTH,
-				.min_width = IMG_MIN_WIDTH,
-				.max_height = YUV_GROUP2_MAX_HEIGHT,
-				.min_height = IMG_MIN_HEIGHT,
-				.step_height = 1,
-				.step_width = 1,
-			},
-		},
-	},
-	{
 		.id = MTK_RAW_DRZH2NO_1_OUT,
 		.name = "drzh2no 1",
 		.cap = V4L2_CAP_VIDEO_CAPTURE_MPLANE,
@@ -3535,32 +3517,6 @@ mtk_cam_dev_node_desc capture_queues[] = {
 				.max_width = RZH1N2TO2_MAX_WIDTH,
 				.min_width = IMG_MIN_WIDTH,
 				.max_height = RZH1N2TO2_MAX_HEIGHT,
-				.min_height = IMG_MIN_HEIGHT,
-				.step_height = 1,
-				.step_width = 1,
-			},
-		},
-	},
-	{
-		.id = MTK_RAW_DRZH1NO_3_OUT,
-		.name = "drzh1no 3",
-		.cap = V4L2_CAP_VIDEO_CAPTURE_MPLANE,
-		.buf_type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE,
-		.link_flags = MEDIA_LNK_FL_ENABLED |  MEDIA_LNK_FL_IMMUTABLE,
-		.image = true,
-		.smem_alloc = false,
-		.dma_port = MTKCAM_IPI_RAW_DRZH1NO_3,
-		.fmts = rzh1n2to3_out_fmts,
-		.num_fmts = ARRAY_SIZE(rzh1n2to3_out_fmts),
-		.default_fmt_idx = 0,
-		.ioctl_ops = &mtk_cam_v4l2_vcap_ioctl_ops,
-		.frmsizes = &(struct v4l2_frmsizeenum) {
-			.index = 0,
-			.type = V4L2_FRMSIZE_TYPE_CONTINUOUS,
-			.stepwise = {
-				.max_width = RZH1N2TO3_MAX_WIDTH,
-				.min_width = IMG_MIN_WIDTH,
-				.max_height = RZH1N2TO3_MAX_HEIGHT,
 				.min_height = IMG_MIN_HEIGHT,
 				.step_height = 1,
 				.step_width = 1,
@@ -3723,9 +3679,8 @@ static const char *capture_queue_names[RAW_PIPELINE_NUM][MTK_RAW_TOTAL_CAPTURE_Q
 	{"mtk-cam raw-0 main-stream", "mtk-cam raw-0 pure-raw",
 	 "mtk-cam raw-0 yuvo-1", "mtk-cam raw-0 yuvo-2",
 	 "mtk-cam raw-0 yuvo-3", "mtk-cam raw-0 yuvo-4",
-	 "mtk-cam raw-0 yuvo-5",
 	 "mtk-cam raw-0 drzh2no-1", "mtk-cam raw-0 drzs4no-3",
-	 "mtk-cam raw-0 drzh1no-1", "mtk-cam raw-0 rzh1n2to-2", "mtk-cam raw-0 drzh1no-3",
+	 "mtk-cam raw-0 drzh1no-1", "mtk-cam raw-0 rzh1n2to-2",
 	 "mtk-cam raw-0 drzb2no-1",
 	 "mtk-cam raw-0 ipuo",
 	 "mtk-cam raw-0 partial-meta-0", "mtk-cam raw-0 partial-meta-1",
@@ -3735,9 +3690,8 @@ static const char *capture_queue_names[RAW_PIPELINE_NUM][MTK_RAW_TOTAL_CAPTURE_Q
 	{"mtk-cam raw-1 main-stream", "mtk-cam raw-1 pure-raw",
 	 "mtk-cam raw-1 yuvo-1", "mtk-cam raw-1 yuvo-2",
 	 "mtk-cam raw-1 yuvo-3", "mtk-cam raw-1 yuvo-4",
-	 "mtk-cam raw-1 yuvo-5",
 	 "mtk-cam raw-1 drzh2no-1", "mtk-cam raw-1 drzs4no-3",
-	 "mtk-cam raw-1 drzh1no-1", "mtk-cam raw-1 rzh1n2to-2", "mtk-cam raw-1 drzh1no-3",
+	 "mtk-cam raw-1 drzh1no-1", "mtk-cam raw-1 rzh1n2to-2",
 	 "mtk-cam raw-1 drzb2no-1",
 	 "mtk-cam raw-1 ipuo",
 	 "mtk-cam raw-1 partial-meta-0", "mtk-cam raw-1 partial-meta-1",
@@ -3747,9 +3701,8 @@ static const char *capture_queue_names[RAW_PIPELINE_NUM][MTK_RAW_TOTAL_CAPTURE_Q
 	{"mtk-cam raw-2 main-stream", "mtk-cam raw-2 pure-raw",
 	 "mtk-cam raw-2 yuvo-1", "mtk-cam raw-2 yuvo-2",
 	 "mtk-cam raw-2 yuvo-3", "mtk-cam raw-2 yuvo-4",
-	 "mtk-cam raw-2 yuvo-5",
 	 "mtk-cam raw-2 drzh2no-1", "mtk-cam raw-2 drzs4no-3",
-	 "mtk-cam raw-2 drzh1no-1", "mtk-cam raw-2 rzh1n2to-2", "mtk-cam raw-2 drzh1no-3",
+	 "mtk-cam raw-2 drzh1no-1", "mtk-cam raw-2 rzh1n2to-2",
 	 "mtk-cam raw-2 drzb2no-1",
 	 "mtk-cam raw-2 ipuo",
 	 "mtk-cam raw-2 partial-meta-0", "mtk-cam raw-2 partial-meta-1",

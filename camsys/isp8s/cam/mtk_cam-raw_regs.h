@@ -5743,8 +5743,10 @@
 #define REG_FHG_DBG_DEBUG_SEL                      0x424C
 #define REG_FHG_DBG_DEBUG_DATA                     0x4250
 
+/* baseaddr 0x3A710000 */
+
 /* module: CAMRAWDMATOP_R1A */
-#define REG_CAMRAWDMATOP_SPECIAL_FUN_EN           0x10000
+#define REG_CAMRAWDMATOP_SPECIAL_FUN_EN               0x0
 #define F_CAMRAWDMATOP_CQ_ULTRA_CQI_R1_EN_POS                        31
 #define F_CAMRAWDMATOP_CQ_ULTRA_CQI_R1_EN_WIDTH                      1
 #define F_CAMRAWDMATOP_CQ_ULTRA_CQI_R2_EN_POS                        30
@@ -5766,23 +5768,23 @@
 #define F_CAMRAWDMATOP_CQ_ULTRA_CQI_R8_EN_POS                        12
 #define F_CAMRAWDMATOP_CQ_ULTRA_CQI_R8_EN_WIDTH                      1
 
-#define REG_CAMRAWDMATOP_DMA_RSV1                 0x10004
+#define REG_CAMRAWDMATOP_DMA_RSV1                     0x4
 #define F_CAMRAWDMATOP_R_FIFO_WLA2P0_THRH_POS                        16
 #define F_CAMRAWDMATOP_R_FIFO_WLA2P0_THRH_WIDTH                      16
 #define F_CAMRAWDMATOP_R_FIFO_WLA2P0_THRL_POS                        0
 #define F_CAMRAWDMATOP_R_FIFO_WLA2P0_THRL_WIDTH                      16
 
-#define REG_CAMRAWDMATOP_DMA_RSV2                 0x10008
+#define REG_CAMRAWDMATOP_DMA_RSV2                     0x8
 #define F_CAMRAWDMATOP_W_FIFO_WLA2P0_THRH_POS                        16
 #define F_CAMRAWDMATOP_W_FIFO_WLA2P0_THRH_WIDTH                      16
 #define F_CAMRAWDMATOP_W_FIFO_WLA2P0_THRL_POS                        0
 #define F_CAMRAWDMATOP_W_FIFO_WLA2P0_THRL_WIDTH                      16
 
-#define REG_CAMRAWDMATOP_DMA_RSV3                 0x1000C
-#define REG_CAMRAWDMATOP_DMA_RSV4                 0x10010
-#define REG_CAMRAWDMATOP_DMA_RSV5                 0x10014
-#define REG_CAMRAWDMATOP_DMA_RSV6                 0x10018
-#define REG_CAMRAWDMATOP_DMA_EXISTED_ECO          0x1001C
+#define REG_CAMRAWDMATOP_DMA_RSV3                     0xC
+#define REG_CAMRAWDMATOP_DMA_RSV4                    0x10
+#define REG_CAMRAWDMATOP_DMA_RSV5                    0x14
+#define REG_CAMRAWDMATOP_DMA_RSV6                    0x18
+#define REG_CAMRAWDMATOP_DMA_EXISTED_ECO             0x1C
 #define F_CAMRAWDMATOP_ECO_CQ_UFO_DEC_POS                            31
 #define F_CAMRAWDMATOP_ECO_CQ_UFO_DEC_WIDTH                          1
 #define F_CAMRAWDMATOP_ECO_RAWI_MOBILE_DC_LINE_CNT_UNDER_UFO_MODE_POS 30
@@ -5802,7 +5804,7 @@
 #define F_CAMRAWDMATOP_MASK_REQ_EN_POS                               0
 #define F_CAMRAWDMATOP_MASK_REQ_EN_WIDTH                             1
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_0      0x10020
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_0         0x20
 #define F_CAMRAWDMATOP_CQI_R3_SLC_GID_POS                            20
 #define F_CAMRAWDMATOP_CQI_R3_SLC_GID_WIDTH                          7
 #define F_CAMRAWDMATOP_CQI_R3_SLC_BID_POS                            18
@@ -5816,13 +5818,13 @@
 #define F_CAMRAWDMATOP_CQI_R1_SLC_BID_POS                            0
 #define F_CAMRAWDMATOP_CQI_R1_SLC_BID_WIDTH                          2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_1      0x10024
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_1         0x24
 #define F_CAMRAWDMATOP_CQI_R4_SLC_GID_POS                            2
 #define F_CAMRAWDMATOP_CQI_R4_SLC_GID_WIDTH                          7
 #define F_CAMRAWDMATOP_CQI_R4_SLC_BID_POS                            0
 #define F_CAMRAWDMATOP_CQI_R4_SLC_BID_WIDTH                          2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_2      0x10028
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_2         0x28
 #define F_CAMRAWDMATOP_UFDI_R3_SLC_GID_POS                           20
 #define F_CAMRAWDMATOP_UFDI_R3_SLC_GID_WIDTH                         7
 #define F_CAMRAWDMATOP_UFDI_R3_SLC_BID_POS                           18
@@ -5836,7 +5838,7 @@
 #define F_CAMRAWDMATOP_UFDI_R2_SLC_BID_POS                           0
 #define F_CAMRAWDMATOP_UFDI_R2_SLC_BID_WIDTH                         2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_3      0x1002C
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_3         0x2C
 #define F_CAMRAWDMATOP_RAWI_R2_SLC_GID_POS                           20
 #define F_CAMRAWDMATOP_RAWI_R2_SLC_GID_WIDTH                         7
 #define F_CAMRAWDMATOP_RAWI_R2_SLC_BID_POS                           18
@@ -5850,7 +5852,7 @@
 #define F_CAMRAWDMATOP_BPCI_R1_SLC_BID_POS                           0
 #define F_CAMRAWDMATOP_BPCI_R1_SLC_BID_WIDTH                         2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_4      0x10030
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_4         0x30
 #define F_CAMRAWDMATOP_UFDI_R5_SLC_GID_POS                           20
 #define F_CAMRAWDMATOP_UFDI_R5_SLC_GID_WIDTH                         7
 #define F_CAMRAWDMATOP_UFDI_R5_SLC_BID_POS                           18
@@ -5864,7 +5866,7 @@
 #define F_CAMRAWDMATOP_LSCI_R2_SLC_BID_POS                           0
 #define F_CAMRAWDMATOP_LSCI_R2_SLC_BID_WIDTH                         2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_5      0x10034
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_5         0x34
 #define F_CAMRAWDMATOP_LSCI_R1_SLC_GID_POS                           20
 #define F_CAMRAWDMATOP_LSCI_R1_SLC_GID_WIDTH                         7
 #define F_CAMRAWDMATOP_LSCI_R1_SLC_BID_POS                           18
@@ -5878,7 +5880,7 @@
 #define F_CAMRAWDMATOP_BPCI_R3_SLC_BID_POS                           0
 #define F_CAMRAWDMATOP_BPCI_R3_SLC_BID_WIDTH                         2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_6      0x10038
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_6         0x38
 #define F_CAMRAWDMATOP_LTMSCTI_R1_SLC_GID_POS                        20
 #define F_CAMRAWDMATOP_LTMSCTI_R1_SLC_GID_WIDTH                      7
 #define F_CAMRAWDMATOP_LTMSCTI_R1_SLC_BID_POS                        18
@@ -5892,7 +5894,7 @@
 #define F_CAMRAWDMATOP_AEI_R1_SLC_BID_POS                            0
 #define F_CAMRAWDMATOP_AEI_R1_SLC_BID_WIDTH                          2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_7      0x1003C
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_7         0x3C
 #define F_CAMRAWDMATOP_PDI_R1_SLC_GID_POS                            20
 #define F_CAMRAWDMATOP_PDI_R1_SLC_GID_WIDTH                          7
 #define F_CAMRAWDMATOP_PDI_R1_SLC_BID_POS                            18
@@ -5906,7 +5908,7 @@
 #define F_CAMRAWDMATOP_UFEO_R1_SLC_BID_POS                           0
 #define F_CAMRAWDMATOP_UFEO_R1_SLC_BID_WIDTH                         2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_8      0x10040
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_8         0x40
 #define F_CAMRAWDMATOP_IMGO_R1_SLC_GID_POS                           20
 #define F_CAMRAWDMATOP_IMGO_R1_SLC_GID_WIDTH                         7
 #define F_CAMRAWDMATOP_IMGO_R1_SLC_BID_POS                           18
@@ -5920,7 +5922,7 @@
 #define F_CAMRAWDMATOP_AWBO_R1_SLC_BID_POS                           0
 #define F_CAMRAWDMATOP_AWBO_R1_SLC_BID_WIDTH                         2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_9      0x10044
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_9         0x44
 #define F_CAMRAWDMATOP_AEHO_R1_SLC_GID_POS                           20
 #define F_CAMRAWDMATOP_AEHO_R1_SLC_GID_WIDTH                         7
 #define F_CAMRAWDMATOP_AEHO_R1_SLC_BID_POS                           18
@@ -5934,7 +5936,7 @@
 #define F_CAMRAWDMATOP_PDO_R1_SLC_BID_POS                            0
 #define F_CAMRAWDMATOP_PDO_R1_SLC_BID_WIDTH                          2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_10     0x10048
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_10        0x48
 #define F_CAMRAWDMATOP_LTMSGO_R1_SLC_GID_POS                         20
 #define F_CAMRAWDMATOP_LTMSGO_R1_SLC_GID_WIDTH                       7
 #define F_CAMRAWDMATOP_LTMSGO_R1_SLC_BID_POS                         18
@@ -5948,7 +5950,7 @@
 #define F_CAMRAWDMATOP_AFO_R1_SLC_BID_POS                            0
 #define F_CAMRAWDMATOP_AFO_R1_SLC_BID_WIDTH                          2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_11     0x1004C
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_11        0x4C
 #define F_CAMRAWDMATOP_AWBO_R2_SLC_GID_POS                           20
 #define F_CAMRAWDMATOP_AWBO_R2_SLC_GID_WIDTH                         7
 #define F_CAMRAWDMATOP_AWBO_R2_SLC_BID_POS                           18
@@ -5962,7 +5964,7 @@
 #define F_CAMRAWDMATOP_DRZB2NCO_R1_SLC_BID_POS                       0
 #define F_CAMRAWDMATOP_DRZB2NCO_R1_SLC_BID_WIDTH                     2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_12     0x10050
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_12        0x50
 #define F_CAMRAWDMATOP_DRZB2NBO_R1_SLC_GID_POS                       20
 #define F_CAMRAWDMATOP_DRZB2NBO_R1_SLC_GID_WIDTH                     7
 #define F_CAMRAWDMATOP_DRZB2NBO_R1_SLC_BID_POS                       18
@@ -5976,7 +5978,7 @@
 #define F_CAMRAWDMATOP_MLSCI_R1_SLC_BID_POS                          0
 #define F_CAMRAWDMATOP_MLSCI_R1_SLC_BID_WIDTH                        2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_13     0x10054
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_13        0x54
 #define F_CAMRAWDMATOP_FLKO_R1_SLC_GID_POS                           20
 #define F_CAMRAWDMATOP_FLKO_R1_SLC_GID_WIDTH                         7
 #define F_CAMRAWDMATOP_FLKO_R1_SLC_BID_POS                           18
@@ -5990,7 +5992,7 @@
 #define F_CAMRAWDMATOP_GMPO_R1_SLC_BID_POS                           0
 #define F_CAMRAWDMATOP_GMPO_R1_SLC_BID_WIDTH                         2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_14     0x10058
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_14        0x58
 #define F_CAMRAWDMATOP_AEDO_R1_SLC_GID_POS                           20
 #define F_CAMRAWDMATOP_AEDO_R1_SLC_GID_WIDTH                         7
 #define F_CAMRAWDMATOP_AEDO_R1_SLC_BID_POS                           18
@@ -6004,7 +6006,7 @@
 #define F_CAMRAWDMATOP_AEHI_R1_SLC_BID_POS                           0
 #define F_CAMRAWDMATOP_AEHI_R1_SLC_BID_WIDTH                         2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_15     0x1005C
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_15        0x5C
 #define F_CAMRAWDMATOP_TCYSI_R1_SLC_GID_POS                          20
 #define F_CAMRAWDMATOP_TCYSI_R1_SLC_GID_WIDTH                        7
 #define F_CAMRAWDMATOP_TCYSI_R1_SLC_BID_POS                          18
@@ -6018,7 +6020,7 @@
 #define F_CAMRAWDMATOP_LTMSTI_R1_SLC_BID_POS                         0
 #define F_CAMRAWDMATOP_LTMSTI_R1_SLC_BID_WIDTH                       2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_16     0x10060
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_16        0x60
 #define F_CAMRAWDMATOP_LTMSTO_R1_SLC_GID_POS                         20
 #define F_CAMRAWDMATOP_LTMSTO_R1_SLC_GID_WIDTH                       7
 #define F_CAMRAWDMATOP_LTMSTO_R1_SLC_BID_POS                         18
@@ -6032,7 +6034,7 @@
 #define F_CAMRAWDMATOP_DFLKO_R1_SLC_BID_POS                          0
 #define F_CAMRAWDMATOP_DFLKO_R1_SLC_BID_WIDTH                        2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_17     0x10064
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_17        0x64
 #define F_CAMRAWDMATOP_LTMSTO_R2_SLC_GID_POS                         20
 #define F_CAMRAWDMATOP_LTMSTO_R2_SLC_GID_WIDTH                       7
 #define F_CAMRAWDMATOP_LTMSTO_R2_SLC_BID_POS                         18
@@ -6046,7 +6048,7 @@
 #define F_CAMRAWDMATOP_TSFSO_R3_SLC_BID_POS                          0
 #define F_CAMRAWDMATOP_TSFSO_R3_SLC_BID_WIDTH                        2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_18     0x10068
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_18        0x68
 #define F_CAMRAWDMATOP_TSFSO_R2_SLC_GID_POS                          20
 #define F_CAMRAWDMATOP_TSFSO_R2_SLC_GID_WIDTH                        7
 #define F_CAMRAWDMATOP_TSFSO_R2_SLC_BID_POS                          18
@@ -6060,7 +6062,7 @@
 #define F_CAMRAWDMATOP_STATCOLO_R1_SLC_BID_POS                       0
 #define F_CAMRAWDMATOP_STATCOLO_R1_SLC_BID_WIDTH                     2
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_19     0x1006C
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_19        0x6C
 #define F_CAMRAWDMATOP_CQI_R5_SLC_GID_POS                            20
 #define F_CAMRAWDMATOP_CQI_R5_SLC_GID_WIDTH                          7
 #define F_CAMRAWDMATOP_CQI_R5_SLC_BID_POS                            18
@@ -6074,7 +6076,7 @@
 #define F_CAMRAWDMATOP_AEDI_R1_SLC_BID_POS                           0
 #define F_CAMRAWDMATOP_AEDI_R1_SLC_BID_WIDTH                         2
 
-#define REG_CAMRAWDMATOP_DMA_ERR_CTRL             0x10070
+#define REG_CAMRAWDMATOP_DMA_ERR_CTRL                0x70
 #define F_CAMRAWDMATOP_ERR_CLR_MD_POS                                31
 #define F_CAMRAWDMATOP_ERR_CLR_MD_WIDTH                              1
 #define F_CAMRAWDMATOP_AEDI_R1_ERR_POS                               30
@@ -6140,7 +6142,7 @@
 #define F_CAMRAWDMATOP_CQI_R1_ERR_POS                                0
 #define F_CAMRAWDMATOP_CQI_R1_ERR_WIDTH                              1
 
-#define REG_CAMRAWDMATOP_DMA_ERR_CTRL2            0x10074
+#define REG_CAMRAWDMATOP_DMA_ERR_CTRL2               0x74
 #define F_CAMRAWDMATOP_STATCOLO_R1_ERR_POS                           29
 #define F_CAMRAWDMATOP_STATCOLO_R1_ERR_WIDTH                         1
 #define F_CAMRAWDMATOP_STATDISI_R1_ERR_POS                           28
@@ -6202,7 +6204,7 @@
 #define F_CAMRAWDMATOP_IMGO_R1_ERR_POS                               0
 #define F_CAMRAWDMATOP_IMGO_R1_ERR_WIDTH                             1
 
-#define REG_CAMRAWDMATOP_DMA_SOFT_RST_STAT        0x1007C
+#define REG_CAMRAWDMATOP_DMA_SOFT_RST_STAT           0x7C
 #define F_CAMRAWDMATOP_CAMRAW_SMI_LARB0_W7_SOFT_RST_STAT_POS         16
 #define F_CAMRAWDMATOP_CAMRAW_SMI_LARB0_W7_SOFT_RST_STAT_WIDTH       1
 #define F_CAMRAWDMATOP_CAMRAW_SMI_LARB0_W6_SOFT_RST_STAT_POS         15
@@ -6236,7 +6238,7 @@
 #define F_CAMRAWDMATOP_CAMRAW_SMI_LARB0_R0_SOFT_RST_STAT_POS         0
 #define F_CAMRAWDMATOP_CAMRAW_SMI_LARB0_R0_SOFT_RST_STAT_WIDTH       1
 
-#define REG_CAMRAWDMATOP_DMA_DBG_SEL              0x10088
+#define REG_CAMRAWDMATOP_DMA_DBG_SEL                 0x88
 #define F_CAMRAWDMATOP_ARBITER_COM_FULL_POS                          31
 #define F_CAMRAWDMATOP_ARBITER_COM_FULL_WIDTH                        1
 #define F_CAMRAWDMATOP_ARBITER_BVALID_FULL_POS                       30
@@ -6254,8 +6256,8 @@
 #define F_CAMRAWDMATOP_DMA_TOP_SEL_POS                               0
 #define F_CAMRAWDMATOP_DMA_TOP_SEL_WIDTH                             8
 
-#define REG_CAMRAWDMATOP_DMA_DBG_PORT             0x1008C
-#define REG_CAMRAWDMATOP_SMI_LATENCY_MON_RST      0x10090
+#define REG_CAMRAWDMATOP_DMA_DBG_PORT                0x8C
+#define REG_CAMRAWDMATOP_SMI_LATENCY_MON_RST         0x90
 #define F_CAMRAWDMATOP_SMI_LATENCY_MON_RST_CAMRAW_SMI_LARB0_W7_POS   16
 #define F_CAMRAWDMATOP_SMI_LATENCY_MON_RST_CAMRAW_SMI_LARB0_W7_WIDTH 1
 #define F_CAMRAWDMATOP_SMI_LATENCY_MON_RST_CAMRAW_SMI_LARB0_W6_POS   15
@@ -6289,7 +6291,7 @@
 #define F_CAMRAWDMATOP_SMI_LATENCY_MON_RST_CAMRAW_SMI_LARB0_R0_POS   0
 #define F_CAMRAWDMATOP_SMI_LATENCY_MON_RST_CAMRAW_SMI_LARB0_R0_WIDTH 1
 
-#define REG_CAMRAWDMATOP_SMI_LATENCY_MON_EN       0x10094
+#define REG_CAMRAWDMATOP_SMI_LATENCY_MON_EN          0x94
 #define F_CAMRAWDMATOP_SMI_LATENCY_MON_EN_CAMRAW_SMI_LARB0_W7_POS    16
 #define F_CAMRAWDMATOP_SMI_LATENCY_MON_EN_CAMRAW_SMI_LARB0_W7_WIDTH  1
 #define F_CAMRAWDMATOP_SMI_LATENCY_MON_EN_CAMRAW_SMI_LARB0_W6_POS    15
@@ -6323,7 +6325,7 @@
 #define F_CAMRAWDMATOP_SMI_LATENCY_MON_EN_CAMRAW_SMI_LARB0_R0_POS    0
 #define F_CAMRAWDMATOP_SMI_LATENCY_MON_EN_CAMRAW_SMI_LARB0_R0_WIDTH  1
 
-#define REG_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_EN_0  0x10098
+#define REG_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_EN_0     0x98
 #define F_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_EN_STATDISI_R1_POS       31
 #define F_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_EN_STATDISI_R1_WIDTH     1
 #define F_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_EN_AEDI_R1_POS           30
@@ -6389,19 +6391,19 @@
 #define F_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_EN_CQI_R1_POS            0
 #define F_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_EN_CQI_R1_WIDTH          1
 
-#define REG_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_EN_1  0x1009C
+#define REG_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_EN_1     0x9C
 #define F_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_EN_WDMA_POS              0
 #define F_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_EN_WDMA_WIDTH            1
 
-#define REG_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_DLE_DELAY_CNT  0x100A0
-#define REG_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_NRM_ALARM_R0  0x100A4
+#define REG_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_DLE_DELAY_CNT     0xA0
+#define REG_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_NRM_ALARM_R0     0xA4
 #define F_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_NRM_ALARM_R0_EN_POS      16
 #define F_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_NRM_ALARM_R0_EN_WIDTH    1
 #define F_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_NRM_ALARM_R0_THR_POS     0
 #define F_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_NRM_ALARM_R0_THR_WIDTH   16
 
-#define REG_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_RAND_SEED  0x100A8
-#define REG_CAMRAWDMATOP_DC_DBG_CHASING_STATUS    0x100AC
+#define REG_CAMRAWDMATOP_SMI_PORT_PSUEDO_MODE_RAND_SEED     0xA8
+#define REG_CAMRAWDMATOP_DC_DBG_CHASING_STATUS       0xAC
 #define F_CAMRAWDMATOP_DC_DBG_CHASING_STATUS_UFDI_R3_POS             24
 #define F_CAMRAWDMATOP_DC_DBG_CHASING_STATUS_UFDI_R3_WIDTH           8
 #define F_CAMRAWDMATOP_DC_DBG_CHASING_STATUS_RAWI_R3_POS             16
@@ -6411,49 +6413,49 @@
 #define F_CAMRAWDMATOP_DC_DBG_CHASING_STATUS_RAWI_R2_POS             0
 #define F_CAMRAWDMATOP_DC_DBG_CHASING_STATUS_RAWI_R2_WIDTH           8
 
-#define REG_CAMRAWDMATOP_DC_DBG_CHASING_STATUS2   0x100B0
+#define REG_CAMRAWDMATOP_DC_DBG_CHASING_STATUS2      0xB0
 #define F_CAMRAWDMATOP_DC_DBG_CHASING_STATUS_UFDI_R5_POS             24
 #define F_CAMRAWDMATOP_DC_DBG_CHASING_STATUS_UFDI_R5_WIDTH           8
 #define F_CAMRAWDMATOP_DC_DBG_CHASING_STATUS_RAWI_R5_POS             16
 #define F_CAMRAWDMATOP_DC_DBG_CHASING_STATUS_RAWI_R5_WIDTH           8
 
-#define REG_CAMRAWDMATOP_DC_DBG_LINE_CNT_RAWI_R2  0x100B4
+#define REG_CAMRAWDMATOP_DC_DBG_LINE_CNT_RAWI_R2     0xB4
 #define F_CAMRAWDMATOP_DC_DBG_W_LINE_CNT_RAWI_R2_POS                 16
 #define F_CAMRAWDMATOP_DC_DBG_W_LINE_CNT_RAWI_R2_WIDTH               16
 #define F_CAMRAWDMATOP_DC_DBG_R_LINE_CNT_RAWI_R2_POS                 0
 #define F_CAMRAWDMATOP_DC_DBG_R_LINE_CNT_RAWI_R2_WIDTH               16
 
-#define REG_CAMRAWDMATOP_DC_DBG_LINE_CNT_UFDI_R2  0x100B8
+#define REG_CAMRAWDMATOP_DC_DBG_LINE_CNT_UFDI_R2     0xB8
 #define F_CAMRAWDMATOP_DC_DBG_W_LINE_CNT_UFDI_R2_POS                 16
 #define F_CAMRAWDMATOP_DC_DBG_W_LINE_CNT_UFDI_R2_WIDTH               16
 #define F_CAMRAWDMATOP_DC_DBG_R_LINE_CNT_UFDI_R2_POS                 0
 #define F_CAMRAWDMATOP_DC_DBG_R_LINE_CNT_UFDI_R2_WIDTH               16
 
-#define REG_CAMRAWDMATOP_DC_DBG_LINE_CNT_RAWI_R3  0x100BC
+#define REG_CAMRAWDMATOP_DC_DBG_LINE_CNT_RAWI_R3     0xBC
 #define F_CAMRAWDMATOP_DC_DBG_W_LINE_CNT_RAWI_R3_POS                 16
 #define F_CAMRAWDMATOP_DC_DBG_W_LINE_CNT_RAWI_R3_WIDTH               16
 #define F_CAMRAWDMATOP_DC_DBG_R_LINE_CNT_RAWI_R3_POS                 0
 #define F_CAMRAWDMATOP_DC_DBG_R_LINE_CNT_RAWI_R3_WIDTH               16
 
-#define REG_CAMRAWDMATOP_DC_DBG_LINE_CNT_UFDI_R3  0x100C4
+#define REG_CAMRAWDMATOP_DC_DBG_LINE_CNT_UFDI_R3     0xC4
 #define F_CAMRAWDMATOP_DC_DBG_W_LINE_CNT_UFDI_R3_POS                 16
 #define F_CAMRAWDMATOP_DC_DBG_W_LINE_CNT_UFDI_R3_WIDTH               16
 #define F_CAMRAWDMATOP_DC_DBG_R_LINE_CNT_UFDI_R3_POS                 0
 #define F_CAMRAWDMATOP_DC_DBG_R_LINE_CNT_UFDI_R3_WIDTH               16
 
-#define REG_CAMRAWDMATOP_DC_DBG_LINE_CNT_RAWI_R5  0x100C8
+#define REG_CAMRAWDMATOP_DC_DBG_LINE_CNT_RAWI_R5     0xC8
 #define F_CAMRAWDMATOP_DC_DBG_W_LINE_CNT_RAWI_R5_POS                 16
 #define F_CAMRAWDMATOP_DC_DBG_W_LINE_CNT_RAWI_R5_WIDTH               16
 #define F_CAMRAWDMATOP_DC_DBG_R_LINE_CNT_RAWI_R5_POS                 0
 #define F_CAMRAWDMATOP_DC_DBG_R_LINE_CNT_RAWI_R5_WIDTH               16
 
-#define REG_CAMRAWDMATOP_DC_DBG_LINE_CNT_UFDI_R5  0x100CC
+#define REG_CAMRAWDMATOP_DC_DBG_LINE_CNT_UFDI_R5     0xCC
 #define F_CAMRAWDMATOP_DC_DBG_W_LINE_CNT_UFDI_R5_POS                 16
 #define F_CAMRAWDMATOP_DC_DBG_W_LINE_CNT_UFDI_R5_WIDTH               16
 #define F_CAMRAWDMATOP_DC_DBG_R_LINE_CNT_UFDI_R5_POS                 0
 #define F_CAMRAWDMATOP_DC_DBG_R_LINE_CNT_UFDI_R5_WIDTH               16
 
-#define REG_CAMRAWDMATOP_AXSLC_DYNMC_REGISTER_0   0x100D8
+#define REG_CAMRAWDMATOP_AXSLC_DYNMC_REGISTER_0      0xD8
 #define F_CAMRAWDMATOP_RAWI_R5_DYNMC_AXSLC_POS                       24
 #define F_CAMRAWDMATOP_RAWI_R5_DYNMC_AXSLC_WIDTH                     5
 #define F_CAMRAWDMATOP_RAWI_R3_DYNMC_AXSLC_POS                       8
@@ -6461,7 +6463,7 @@
 #define F_CAMRAWDMATOP_RAWI_R2_DYNMC_AXSLC_POS                       0
 #define F_CAMRAWDMATOP_RAWI_R2_DYNMC_AXSLC_WIDTH                     5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_0         0x100E0
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_0            0xE0
 #define F_CAMRAWDMATOP_CQI_R4_AXSLC_POS                              24
 #define F_CAMRAWDMATOP_CQI_R4_AXSLC_WIDTH                            5
 #define F_CAMRAWDMATOP_CQI_R3_AXSLC_POS                              16
@@ -6471,7 +6473,7 @@
 #define F_CAMRAWDMATOP_CQI_R1_AXSLC_POS                              0
 #define F_CAMRAWDMATOP_CQI_R1_AXSLC_WIDTH                            5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_1         0x100E4
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_1            0xE4
 #define F_CAMRAWDMATOP_CQI_R8_AXSLC_POS                              24
 #define F_CAMRAWDMATOP_CQI_R8_AXSLC_WIDTH                            5
 #define F_CAMRAWDMATOP_CQI_R7_AXSLC_POS                              16
@@ -6481,7 +6483,7 @@
 #define F_CAMRAWDMATOP_CQI_R5_AXSLC_POS                              0
 #define F_CAMRAWDMATOP_CQI_R5_AXSLC_WIDTH                            5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_2         0x100E8
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_2            0xE8
 #define F_CAMRAWDMATOP_UFDI_R3_AXSLC_POS                             24
 #define F_CAMRAWDMATOP_UFDI_R3_AXSLC_WIDTH                           5
 #define F_CAMRAWDMATOP_RAWI_R3_AXSLC_POS                             16
@@ -6491,7 +6493,7 @@
 #define F_CAMRAWDMATOP_RAWI_R2_AXSLC_POS                             0
 #define F_CAMRAWDMATOP_RAWI_R2_AXSLC_WIDTH                           5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_3         0x100EC
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_3            0xEC
 #define F_CAMRAWDMATOP_BPCI_R2_AXSLC_POS                             24
 #define F_CAMRAWDMATOP_BPCI_R2_AXSLC_WIDTH                           5
 #define F_CAMRAWDMATOP_BPCI_R1_AXSLC_POS                             16
@@ -6501,7 +6503,7 @@
 #define F_CAMRAWDMATOP_RAWI_R5_AXSLC_POS                             0
 #define F_CAMRAWDMATOP_RAWI_R5_AXSLC_WIDTH                           5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_4         0x100F0
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_4            0xF0
 #define F_CAMRAWDMATOP_LSCI_R2_AXSLC_POS                             24
 #define F_CAMRAWDMATOP_LSCI_R2_AXSLC_WIDTH                           5
 #define F_CAMRAWDMATOP_LSCI_R1_AXSLC_POS                             16
@@ -6511,7 +6513,7 @@
 #define F_CAMRAWDMATOP_BPCI_R3_AXSLC_POS                             0
 #define F_CAMRAWDMATOP_BPCI_R3_AXSLC_WIDTH                           5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_5         0x100F4
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_5            0xF4
 #define F_CAMRAWDMATOP_LTMSCTI_R1_AXSLC_POS                          24
 #define F_CAMRAWDMATOP_LTMSCTI_R1_AXSLC_WIDTH                        5
 #define F_CAMRAWDMATOP_GRMGI_R1_AXSLC_POS                            16
@@ -6521,7 +6523,7 @@
 #define F_CAMRAWDMATOP_PDI_R1_AXSLC_POS                              0
 #define F_CAMRAWDMATOP_PDI_R1_AXSLC_WIDTH                            5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_6         0x100F8
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_6            0xF8
 #define F_CAMRAWDMATOP_FHO_R1_AXSLC_POS                              24
 #define F_CAMRAWDMATOP_FHO_R1_AXSLC_WIDTH                            5
 #define F_CAMRAWDMATOP_UFEO_R1_AXSLC_POS                             16
@@ -6531,7 +6533,7 @@
 #define F_CAMRAWDMATOP_CACI_R1_AXSLC_POS                             0
 #define F_CAMRAWDMATOP_CACI_R1_AXSLC_WIDTH                           5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_7         0x100FC
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_7            0xFC
 #define F_CAMRAWDMATOP_AWBO_R1_AXSLC_POS                             24
 #define F_CAMRAWDMATOP_AWBO_R1_AXSLC_WIDTH                           5
 #define F_CAMRAWDMATOP_AEHO_R1_AXSLC_POS                             16
@@ -6541,7 +6543,7 @@
 #define F_CAMRAWDMATOP_PDO_R1_AXSLC_POS                              0
 #define F_CAMRAWDMATOP_PDO_R1_AXSLC_WIDTH                            5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_8         0x10100
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_8           0x100
 #define F_CAMRAWDMATOP_LTMSGO_R1_AXSLC_POS                           24
 #define F_CAMRAWDMATOP_LTMSGO_R1_AXSLC_WIDTH                         5
 #define F_CAMRAWDMATOP_LTMSBO_R1_AXSLC_POS                           16
@@ -6551,7 +6553,7 @@
 #define F_CAMRAWDMATOP_AWBO_R2_AXSLC_POS                             0
 #define F_CAMRAWDMATOP_AWBO_R2_AXSLC_WIDTH                           5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_9         0x10104
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_9           0x104
 #define F_CAMRAWDMATOP_DRZB2NDO_R1_AXSLC_POS                         24
 #define F_CAMRAWDMATOP_DRZB2NDO_R1_AXSLC_WIDTH                       5
 #define F_CAMRAWDMATOP_DRZB2NCO_R1_AXSLC_POS                         16
@@ -6561,7 +6563,7 @@
 #define F_CAMRAWDMATOP_DRZB2NO_R1_AXSLC_POS                          0
 #define F_CAMRAWDMATOP_DRZB2NO_R1_AXSLC_WIDTH                        5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_10        0x10108
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_10          0x108
 #define F_CAMRAWDMATOP_MLSCI_R1_AXSLC_POS                            24
 #define F_CAMRAWDMATOP_MLSCI_R1_AXSLC_WIDTH                          5
 #define F_CAMRAWDMATOP_FLKO_R1_AXSLC_POS                             16
@@ -6571,13 +6573,13 @@
 #define F_CAMRAWDMATOP_GMPO_R1_AXSLC_POS                             0
 #define F_CAMRAWDMATOP_GMPO_R1_AXSLC_WIDTH                           5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_11        0x1010C
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_11          0x10C
 #define F_CAMRAWDMATOP_AEDO_R1_AXSLC_POS                             8
 #define F_CAMRAWDMATOP_AEDO_R1_AXSLC_WIDTH                           5
 #define F_CAMRAWDMATOP_MGGMO_R1_AXSLC_POS                            0
 #define F_CAMRAWDMATOP_MGGMO_R1_AXSLC_WIDTH                          5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_12        0x10110
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_12          0x110
 #define F_CAMRAWDMATOP_AEHI_R1_AXSLC_POS                             24
 #define F_CAMRAWDMATOP_AEHI_R1_AXSLC_WIDTH                           5
 #define F_CAMRAWDMATOP_TCYSI_R1_AXSLC_POS                            16
@@ -6587,7 +6589,7 @@
 #define F_CAMRAWDMATOP_LTMSTI_R1_AXSLC_POS                           0
 #define F_CAMRAWDMATOP_LTMSTI_R1_AXSLC_WIDTH                         5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_13        0x10114
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_13          0x114
 #define F_CAMRAWDMATOP_LTMSTO_R1_AXSLC_POS                           24
 #define F_CAMRAWDMATOP_LTMSTO_R1_AXSLC_WIDTH                         5
 #define F_CAMRAWDMATOP_DFLKBO_R1_AXSLC_POS                           16
@@ -6597,7 +6599,7 @@
 #define F_CAMRAWDMATOP_LTMSTO_R2_AXSLC_POS                           0
 #define F_CAMRAWDMATOP_LTMSTO_R2_AXSLC_WIDTH                         5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_14        0x10118
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_14          0x118
 #define F_CAMRAWDMATOP_TSFSO_R4_AXSLC_POS                            24
 #define F_CAMRAWDMATOP_TSFSO_R4_AXSLC_WIDTH                          5
 #define F_CAMRAWDMATOP_TSFSO_R3_AXSLC_POS                            16
@@ -6607,7 +6609,7 @@
 #define F_CAMRAWDMATOP_TSFSO_R1_AXSLC_POS                            0
 #define F_CAMRAWDMATOP_TSFSO_R1_AXSLC_WIDTH                          5
 
-#define REG_CAMRAWDMATOP_AXSLC_REGISTER_15        0x1011C
+#define REG_CAMRAWDMATOP_AXSLC_REGISTER_15          0x11C
 #define F_CAMRAWDMATOP_STATCOLO_R1_AXSLC_POS                         16
 #define F_CAMRAWDMATOP_STATCOLO_R1_AXSLC_WIDTH                       5
 #define F_CAMRAWDMATOP_STATDISI_R1_AXSLC_POS                         8
@@ -6615,29 +6617,29 @@
 #define F_CAMRAWDMATOP_AEDI_R1_AXSLC_POS                             0
 #define F_CAMRAWDMATOP_AEDI_R1_AXSLC_WIDTH                           5
 
-#define REG_CAMRAWDMATOP_RAWI_R2_AXSLC_DYNMC_LINE_NUM  0x10120
+#define REG_CAMRAWDMATOP_RAWI_R2_AXSLC_DYNMC_LINE_NUM    0x120
 #define F_CAMRAWDMATOP_RAWI_R2_AXSLC_DYNMC_LINE_NUM_CYC_POS          16
 #define F_CAMRAWDMATOP_RAWI_R2_AXSLC_DYNMC_LINE_NUM_CYC_WIDTH        16
 #define F_CAMRAWDMATOP_RAWI_R2_AXSLC_DYNMC_LINE_NUM_SLC_END_POS      0
 #define F_CAMRAWDMATOP_RAWI_R2_AXSLC_DYNMC_LINE_NUM_SLC_END_WIDTH    16
 
-#define REG_CAMRAWDMATOP_RAWI_R3_AXSLC_DYNMC_LINE_NUM  0x10124
+#define REG_CAMRAWDMATOP_RAWI_R3_AXSLC_DYNMC_LINE_NUM    0x124
 #define F_CAMRAWDMATOP_RAWI_R3_AXSLC_DYNMC_LINE_NUM_CYC_POS          16
 #define F_CAMRAWDMATOP_RAWI_R3_AXSLC_DYNMC_LINE_NUM_CYC_WIDTH        16
 #define F_CAMRAWDMATOP_RAWI_R3_AXSLC_DYNMC_LINE_NUM_SLC_END_POS      0
 #define F_CAMRAWDMATOP_RAWI_R3_AXSLC_DYNMC_LINE_NUM_SLC_END_WIDTH    16
 
-#define REG_CAMRAWDMATOP_RAWI_R5_AXSLC_DYNMC_LINE_NUM  0x1012C
+#define REG_CAMRAWDMATOP_RAWI_R5_AXSLC_DYNMC_LINE_NUM    0x12C
 #define F_CAMRAWDMATOP_RAWI_R5_AXSLC_DYNMC_LINE_NUM_CYC_POS          16
 #define F_CAMRAWDMATOP_RAWI_R5_AXSLC_DYNMC_LINE_NUM_CYC_WIDTH        16
 #define F_CAMRAWDMATOP_RAWI_R5_AXSLC_DYNMC_LINE_NUM_SLC_END_POS      0
 #define F_CAMRAWDMATOP_RAWI_R5_AXSLC_DYNMC_LINE_NUM_SLC_END_WIDTH    16
 
-#define REG_CAMRAWDMATOP_CONTINUOUS_COM_EN        0x10140
+#define REG_CAMRAWDMATOP_CONTINUOUS_COM_EN          0x140
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_EN_POS                         0
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_EN_WIDTH                       1
 
-#define REG_CAMRAWDMATOP_CONTINUOUS_COM_CON_0     0x10144
+#define REG_CAMRAWDMATOP_CONTINUOUS_COM_CON_0       0x144
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_BPCI_R2_POS                30
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_BPCI_R2_WIDTH              2
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_BPCI_R1_POS                28
@@ -6671,7 +6673,7 @@
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_CQI_R1_POS                 0
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_CQI_R1_WIDTH               2
 
-#define REG_CAMRAWDMATOP_CONTINUOUS_COM_CON_1     0x10148
+#define REG_CAMRAWDMATOP_CONTINUOUS_COM_CON_1       0x148
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_AEDI_R1_POS                28
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_AEDI_R1_WIDTH              2
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_AEHI_R1_POS                26
@@ -6703,7 +6705,7 @@
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_BPCI_R3_POS                0
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_BPCI_R3_WIDTH              2
 
-#define REG_CAMRAWDMATOP_CONTINUOUS_COM_CON_2     0x1014C
+#define REG_CAMRAWDMATOP_CONTINUOUS_COM_CON_2       0x14C
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_DRZB2NDO_R1_POS            30
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_DRZB2NDO_R1_WIDTH          2
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_DRZB2NCO_R1_POS            28
@@ -6737,7 +6739,7 @@
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_IMGO_R1_POS                0
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_IMGO_R1_WIDTH              2
 
-#define REG_CAMRAWDMATOP_CONTINUOUS_COM_CON_3     0x10150
+#define REG_CAMRAWDMATOP_CONTINUOUS_COM_CON_3       0x150
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_STATCOLO_R1_POS            26
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_STATCOLO_R1_WIDTH          2
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_STATDISI_R1_POS            24
@@ -6767,7 +6769,7 @@
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_GMPO_R1_POS                0
 #define F_CAMRAWDMATOP_CONTINUOUS_COM_CON_GMPO_R1_WIDTH              2
 
-#define REG_CAMRAWDMATOP_QOS_CON_0                0x10160
+#define REG_CAMRAWDMATOP_QOS_CON_0                  0x160
 #define F_CAMRAWDMATOP_W_LAST_PRE_ULTRA_EN_POS                       28
 #define F_CAMRAWDMATOP_W_LAST_PRE_ULTRA_EN_WIDTH                     1
 #define F_CAMRAWDMATOP_W_FIFO_PRE_PRI_THRH_POS                       16
@@ -6775,7 +6777,7 @@
 #define F_CAMRAWDMATOP_W_FIFO_PRE_PRI_THRL_POS                       0
 #define F_CAMRAWDMATOP_W_FIFO_PRE_PRI_THRL_WIDTH                     12
 
-#define REG_CAMRAWDMATOP_QOS_CON_1                0x10164
+#define REG_CAMRAWDMATOP_QOS_CON_1                  0x164
 #define F_CAMRAWDMATOP_W_LAST_ULTRA_EN_POS                           28
 #define F_CAMRAWDMATOP_W_LAST_ULTRA_EN_WIDTH                         1
 #define F_CAMRAWDMATOP_W_FIFO_PRI_THRH_POS                           16
@@ -6783,7 +6785,7 @@
 #define F_CAMRAWDMATOP_W_FIFO_PRI_THRL_POS                           0
 #define F_CAMRAWDMATOP_W_FIFO_PRI_THRL_WIDTH                         12
 
-#define REG_CAMRAWDMATOP_QOS_CON_2                0x10168
+#define REG_CAMRAWDMATOP_QOS_CON_2                  0x168
 #define F_CAMRAWDMATOP_W_FIFO_URGENT_EN_POS                          28
 #define F_CAMRAWDMATOP_W_FIFO_URGENT_EN_WIDTH                        1
 #define F_CAMRAWDMATOP_W_FIFO_URGENT_THRH_POS                        16
@@ -6791,7 +6793,7 @@
 #define F_CAMRAWDMATOP_W_FIFO_URGENT_THRL_POS                        0
 #define F_CAMRAWDMATOP_W_FIFO_URGENT_THRL_WIDTH                      12
 
-#define REG_CAMRAWDMATOP_QOS_CON_3                0x1016C
+#define REG_CAMRAWDMATOP_QOS_CON_3                  0x16C
 #define F_CAMRAWDMATOP_W_FIFO_DVFS_EN_POS                            28
 #define F_CAMRAWDMATOP_W_FIFO_DVFS_EN_WIDTH                          1
 #define F_CAMRAWDMATOP_W_FIFO_DVFS_THRH_POS                          16
@@ -6799,7 +6801,7 @@
 #define F_CAMRAWDMATOP_W_FIFO_DVFS_THRL_POS                          0
 #define F_CAMRAWDMATOP_W_FIFO_DVFS_THRL_WIDTH                        12
 
-#define REG_CAMRAWDMATOP_QOS_CON_4                0x10170
+#define REG_CAMRAWDMATOP_QOS_CON_4                  0x170
 #define F_CAMRAWDMATOP_R_LAST_PRE_ULTRA_EN_POS                       28
 #define F_CAMRAWDMATOP_R_LAST_PRE_ULTRA_EN_WIDTH                     1
 #define F_CAMRAWDMATOP_R_FIFO_PRE_PRI_THRH_POS                       16
@@ -6807,7 +6809,7 @@
 #define F_CAMRAWDMATOP_R_FIFO_PRE_PRI_THRL_POS                       0
 #define F_CAMRAWDMATOP_R_FIFO_PRE_PRI_THRL_WIDTH                     12
 
-#define REG_CAMRAWDMATOP_QOS_CON_5                0x10174
+#define REG_CAMRAWDMATOP_QOS_CON_5                  0x174
 #define F_CAMRAWDMATOP_R_LAST_ULTRA_EN_POS                           28
 #define F_CAMRAWDMATOP_R_LAST_ULTRA_EN_WIDTH                         1
 #define F_CAMRAWDMATOP_R_FIFO_PRI_THRH_POS                           16
@@ -6815,7 +6817,7 @@
 #define F_CAMRAWDMATOP_R_FIFO_PRI_THRL_POS                           0
 #define F_CAMRAWDMATOP_R_FIFO_PRI_THRL_WIDTH                         12
 
-#define REG_CAMRAWDMATOP_QOS_CON_6                0x10178
+#define REG_CAMRAWDMATOP_QOS_CON_6                  0x178
 #define F_CAMRAWDMATOP_R_FIFO_URGENT_EN_POS                          28
 #define F_CAMRAWDMATOP_R_FIFO_URGENT_EN_WIDTH                        1
 #define F_CAMRAWDMATOP_R_FIFO_URGENT_THRH_POS                        16
@@ -6823,7 +6825,7 @@
 #define F_CAMRAWDMATOP_R_FIFO_URGENT_THRL_POS                        0
 #define F_CAMRAWDMATOP_R_FIFO_URGENT_THRL_WIDTH                      12
 
-#define REG_CAMRAWDMATOP_QOS_CON_7                0x1017C
+#define REG_CAMRAWDMATOP_QOS_CON_7                  0x17C
 #define F_CAMRAWDMATOP_R_FIFO_DVFS_EN_POS                            28
 #define F_CAMRAWDMATOP_R_FIFO_DVFS_EN_WIDTH                          1
 #define F_CAMRAWDMATOP_R_FIFO_DVFS_THRH_POS                          16
@@ -6831,7 +6833,7 @@
 #define F_CAMRAWDMATOP_R_FIFO_DVFS_THRL_POS                          0
 #define F_CAMRAWDMATOP_R_FIFO_DVFS_THRL_WIDTH                        12
 
-#define REG_CAMRAWDMATOP_WLA2P0_CON               0x10180
+#define REG_CAMRAWDMATOP_WLA2P0_CON                 0x180
 #define F_CAMRAWDMATOP_WLA2P0_EN_POS                                 28
 #define F_CAMRAWDMATOP_WLA2P0_EN_WIDTH                               1
 #define F_CAMRAWDMATOP_W_FIFO_WLA2P0_TH_POS                          16
@@ -6839,7 +6841,7 @@
 #define F_CAMRAWDMATOP_R_FIFO_WLA2P0_TH_POS                          0
 #define F_CAMRAWDMATOP_R_FIFO_WLA2P0_TH_WIDTH                        12
 
-#define REG_CAMRAWDMATOP_QOS_WDMA_EOT_EN          0x10184
+#define REG_CAMRAWDMATOP_QOS_WDMA_EOT_EN            0x184
 #define F_CAMRAWDMATOP_STATCOLO_R1_QOS_EOT_EN_POS                    28
 #define F_CAMRAWDMATOP_STATCOLO_R1_QOS_EOT_EN_WIDTH                  1
 #define F_CAMRAWDMATOP_GRMGO_R1_QOS_EOT_EN_POS                       27
@@ -6899,13 +6901,13 @@
 #define F_CAMRAWDMATOP_IMGO_R1_QOS_EOT_EN_POS                        0
 #define F_CAMRAWDMATOP_IMGO_R1_QOS_EOT_EN_WIDTH                      1
 
-#define REG_CAMRAWDMATOP_BW_THROTTLE_0            0x10190
+#define REG_CAMRAWDMATOP_BW_THROTTLE_0              0x190
 #define F_CAMRAWDMATOP_WAIT_TIME_W_POS                               16
 #define F_CAMRAWDMATOP_WAIT_TIME_W_WIDTH                             16
 #define F_CAMRAWDMATOP_NUM_CMD_W_POS                                 0
 #define F_CAMRAWDMATOP_NUM_CMD_W_WIDTH                               16
 
-#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_20     0x10194
+#define REG_CAMRAWDMATOP_ISC_GID9_REGISTER_20       0x194
 #define F_CAMRAWDMATOP_CQI_R8_SLC_GID_POS                            20
 #define F_CAMRAWDMATOP_CQI_R8_SLC_GID_WIDTH                          7
 #define F_CAMRAWDMATOP_CQI_R8_SLC_BID_POS                            18
@@ -6919,21 +6921,22 @@
 #define F_CAMRAWDMATOP_CQI_R6_SLC_BID_POS                            0
 #define F_CAMRAWDMATOP_CQI_R6_SLC_BID_WIDTH                          2
 
-#define REG_CAMRAWDMATOP_MAX_FIFO_STATUS_CLR      0x10198
+#define REG_CAMRAWDMATOP_MAX_FIFO_STATUS_CLR        0x198
 #define F_CAMRAWDMATOP_FFM_W_MAX_FIFO_CNT_CLR_W0_POS                 16
 #define F_CAMRAWDMATOP_FFM_W_MAX_FIFO_CNT_CLR_W0_WIDTH               1
 #define F_CAMRAWDMATOP_FFM_R_MAX_FIFO_CNT_CLR_R0_POS                 0
 #define F_CAMRAWDMATOP_FFM_R_MAX_FIFO_CNT_CLR_R0_WIDTH               1
 
-#define REG_CAMRAWDMATOP_MAX_FIFO_STATUS          0x1019C
+#define REG_CAMRAWDMATOP_MAX_FIFO_STATUS            0x19C
 #define F_CAMRAWDMATOP_FFM_W_MAX_FIFO_CNT_W0_POS                     16
 #define F_CAMRAWDMATOP_FFM_W_MAX_FIFO_CNT_W0_WIDTH                   16
 #define F_CAMRAWDMATOP_FFM_R_MAX_FIFO_CNT_R0_POS                     0
 #define F_CAMRAWDMATOP_FFM_R_MAX_FIFO_CNT_R0_WIDTH                   16
 
+/* baseaddr 0x3A740000 */
 
 /* module: CAMCTL3_R1A */
-#define REG_CAMCTL3_MOD_EN                        0x40000
+#define REG_CAMCTL3_MOD_EN                            0x0
 #define F_CAMCTL3_RGBWRM_R1_EN_POS                                   7
 #define F_CAMCTL3_RGBWRM_R1_EN_WIDTH                                 1
 #define F_CAMCTL3_RGBWBPC_R1_EN_POS                                  6
@@ -6951,7 +6954,7 @@
 #define F_CAMCTL3_CBN_R1_EN_POS                                      0
 #define F_CAMCTL3_CBN_R1_EN_WIDTH                                    1
 
-#define REG_CAMCTL3_MOD2_EN                       0x40004
+#define REG_CAMCTL3_MOD2_EN                           0x4
 #define F_CAMCTL3_QNR_R1_EN_POS                                      8
 #define F_CAMCTL3_QNR_R1_EN_WIDTH                                    1
 #define F_CAMCTL3_NRM_R1_EN_POS                                      7
@@ -6971,7 +6974,7 @@
 #define F_CAMCTL3_QMLS_R1_EN_POS                                     0
 #define F_CAMCTL3_QMLS_R1_EN_WIDTH                                   1
 
-#define REG_CAMCTL3_MOD3_EN                       0x40008
+#define REG_CAMCTL3_MOD3_EN                           0x8
 #define F_CAMCTL3_BPS_R1_EN_POS                                      5
 #define F_CAMCTL3_BPS_R1_EN_WIDTH                                    1
 #define F_CAMCTL3_RMG_R1_EN_POS                                      4
@@ -6985,7 +6988,7 @@
 #define F_CAMCTL3_IBPC_R1_EN_POS                                     0
 #define F_CAMCTL3_IBPC_R1_EN_WIDTH                                   1
 
-#define REG_CAMCTL3_MOD4_EN                       0x4000C
+#define REG_CAMCTL3_MOD4_EN                           0xC
 #define F_CAMCTL3_QNR_R2_EN_POS                                      13
 #define F_CAMCTL3_QNR_R2_EN_WIDTH                                    1
 #define F_CAMCTL3_HDRM_R2_EN_POS                                     12
@@ -7015,7 +7018,7 @@
 #define F_CAMCTL3_SEP_R3_EN_POS                                      0
 #define F_CAMCTL3_SEP_R3_EN_WIDTH                                    1
 
-#define REG_CAMCTL3_MOD5_EN                       0x40010
+#define REG_CAMCTL3_MOD5_EN                          0x10
 #define F_CAMCTL3_TSFS_R4_EN_POS                                     8
 #define F_CAMCTL3_TSFS_R4_EN_WIDTH                                   1
 #define F_CAMCTL3_QBN_R12_EN_POS                                     7
@@ -7035,13 +7038,13 @@
 #define F_CAMCTL3_PMRG_R9_EN_POS                                     0
 #define F_CAMCTL3_PMRG_R9_EN_WIDTH                                   1
 
-#define REG_CAMCTL3_MOD6_EN                       0x40014
+#define REG_CAMCTL3_MOD6_EN                          0x14
 #define F_CAMCTL3_OBC_R6_EN_POS                                      1
 #define F_CAMCTL3_OBC_R6_EN_WIDTH                                    1
 #define F_CAMCTL3_OBC_R5_EN_POS                                      0
 #define F_CAMCTL3_OBC_R5_EN_WIDTH                                    1
 
-#define REG_CAMCTL3_DB_SUB_SEL                    0x40040
+#define REG_CAMCTL3_DB_SUB_SEL                       0x40
 #define F_CAMCTL3_RGBWRM_R1_DB_SUB_SEL_POS                           7
 #define F_CAMCTL3_RGBWRM_R1_DB_SUB_SEL_WIDTH                         1
 #define F_CAMCTL3_RGBWBPC_R1_DB_SUB_SEL_POS                          6
@@ -7059,7 +7062,7 @@
 #define F_CAMCTL3_CBN_R1_DB_SUB_SEL_POS                              0
 #define F_CAMCTL3_CBN_R1_DB_SUB_SEL_WIDTH                            1
 
-#define REG_CAMCTL3_DB2_SUB_SEL                   0x40044
+#define REG_CAMCTL3_DB2_SUB_SEL                      0x44
 #define F_CAMCTL3_QNR_R1_DB_SUB_SEL_POS                              8
 #define F_CAMCTL3_QNR_R1_DB_SUB_SEL_WIDTH                            1
 #define F_CAMCTL3_NRM_R1_DB_SUB_SEL_POS                              7
@@ -7079,7 +7082,7 @@
 #define F_CAMCTL3_QMLS_R1_DB_SUB_SEL_POS                             0
 #define F_CAMCTL3_QMLS_R1_DB_SUB_SEL_WIDTH                           1
 
-#define REG_CAMCTL3_DB3_SUB_SEL                   0x40048
+#define REG_CAMCTL3_DB3_SUB_SEL                      0x48
 #define F_CAMCTL3_BPS_R1_DB_SUB_SEL_POS                              5
 #define F_CAMCTL3_BPS_R1_DB_SUB_SEL_WIDTH                            1
 #define F_CAMCTL3_RMG_R1_DB_SUB_SEL_POS                              4
@@ -7093,7 +7096,7 @@
 #define F_CAMCTL3_IBPC_R1_DB_SUB_SEL_POS                             0
 #define F_CAMCTL3_IBPC_R1_DB_SUB_SEL_WIDTH                           1
 
-#define REG_CAMCTL3_DB4_SUB_SEL                   0x4004C
+#define REG_CAMCTL3_DB4_SUB_SEL                      0x4C
 #define F_CAMCTL3_QNR_R2_DB_SUB_SEL_POS                              13
 #define F_CAMCTL3_QNR_R2_DB_SUB_SEL_WIDTH                            1
 #define F_CAMCTL3_HDRM_R2_DB_SUB_SEL_POS                             12
@@ -7123,7 +7126,7 @@
 #define F_CAMCTL3_SEP_R3_DB_SUB_SEL_POS                              0
 #define F_CAMCTL3_SEP_R3_DB_SUB_SEL_WIDTH                            1
 
-#define REG_CAMCTL3_DB5_SUB_SEL                   0x40050
+#define REG_CAMCTL3_DB5_SUB_SEL                      0x50
 #define F_CAMCTL3_TSFS_R4_DB_SUB_SEL_POS                             8
 #define F_CAMCTL3_TSFS_R4_DB_SUB_SEL_WIDTH                           1
 #define F_CAMCTL3_QBN_R12_DB_SUB_SEL_POS                             7
@@ -7143,13 +7146,13 @@
 #define F_CAMCTL3_PMRG_R9_DB_SUB_SEL_POS                             0
 #define F_CAMCTL3_PMRG_R9_DB_SUB_SEL_WIDTH                           1
 
-#define REG_CAMCTL3_DB6_SUB_SEL                   0x40054
+#define REG_CAMCTL3_DB6_SUB_SEL                      0x54
 #define F_CAMCTL3_OBC_R6_DB_SUB_SEL_POS                              1
 #define F_CAMCTL3_OBC_R6_DB_SUB_SEL_WIDTH                            1
 #define F_CAMCTL3_OBC_R5_DB_SUB_SEL_POS                              0
 #define F_CAMCTL3_OBC_R5_DB_SUB_SEL_WIDTH                            1
 
-#define REG_CAMCTL3_SEL                           0x40080
+#define REG_CAMCTL3_SEL                              0x80
 #define F_CAMCTL3_FUS_SRC_SEL_POS                                    10
 #define F_CAMCTL3_FUS_SRC_SEL_WIDTH                                  2
 #define F_CAMCTL3_RNR_R2_SEL_POS                                     8
@@ -7161,7 +7164,7 @@
 #define F_CAMCTL3_BIN_SEL_POS                                        0
 #define F_CAMCTL3_BIN_SEL_WIDTH                                      2
 
-#define REG_CAMCTL3_SEL2                          0x40084
+#define REG_CAMCTL3_SEL2                             0x84
 #define F_CAMCTL3_PRE_CRP_R3_SEL_POS                                 12
 #define F_CAMCTL3_PRE_CRP_R3_SEL_WIDTH                               2
 #define F_CAMCTL3_FUS_SRC2_SEL_POS                                   8
@@ -7175,7 +7178,7 @@
 #define F_CAMCTL3_SEP_R4_SEL_POS                                     0
 #define F_CAMCTL3_SEP_R4_SEL_WIDTH                                   2
 
-#define REG_CAMCTL3_SEL3                          0x40088
+#define REG_CAMCTL3_SEL3                             0x88
 #define F_CAMCTL3_PRE_FLK_SEL_POS                                    8
 #define F_CAMCTL3_PRE_FLK_SEL_WIDTH                                  2
 #define F_CAMCTL3_ADL_BPC_SEL_POS                                    4
@@ -7183,13 +7186,13 @@
 #define F_CAMCTL3_PRE_PMRG_R7_SEL_POS                                0
 #define F_CAMCTL3_PRE_PMRG_R7_SEL_WIDTH                              2
 
-#define REG_CAMCTL3_FMT_SEL                       0x40090
+#define REG_CAMCTL3_FMT_SEL                          0x90
 #define F_CAMCTL3_SLASH_ID_POS                                       4
 #define F_CAMCTL3_SLASH_ID_WIDTH                                     1
 #define F_CAMCTL3_IR_PIX_ID_POS                                      0
 #define F_CAMCTL3_IR_PIX_ID_WIDTH                                    3
 
-#define REG_CAMCTL3_FMT2_SEL                      0x40094
+#define REG_CAMCTL3_FMT2_SEL                         0x94
 #define F_CAMCTL3_PIX_BUS_PMRG_R9O_POS                               8
 #define F_CAMCTL3_PIX_BUS_PMRG_R9O_WIDTH                             2
 #define F_CAMCTL3_PIX_BUS_SEP_R4O_POS                                4
@@ -7199,7 +7202,7 @@
 #define F_CAMCTL3_PIX_BUS_SEP_R2O_POS                                0
 #define F_CAMCTL3_PIX_BUS_SEP_R2O_WIDTH                              2
 
-#define REG_CAMCTL3_SFT_CTL                       0x400D0
+#define REG_CAMCTL3_SFT_CTL                          0xD0
 #define F_CAMCTL3_BCVL_R2_SFT_BITS_POS                               24
 #define F_CAMCTL3_BCVL_R2_SFT_BITS_WIDTH                             4
 #define F_CAMCTL3_BCVL_R1_SFT_BITS_POS                               20
@@ -7215,13 +7218,13 @@
 #define F_CAMCTL3_BCV_R2_SFT_BITS_POS                                0
 #define F_CAMCTL3_BCV_R2_SFT_BITS_WIDTH                              4
 
-#define REG_CAMCTL3_TIF_DL_EN                     0x401C0
+#define REG_CAMCTL3_TIF_DL_EN                       0x1C0
 #define F_CAMCTL3_PMRG_R9_I_TIF_DL_EN_POS                            1
 #define F_CAMCTL3_PMRG_R9_I_TIF_DL_EN_WIDTH                          1
 #define F_CAMCTL3_FUS_SRC_I_TIF_DL_EN_POS                            0
 #define F_CAMCTL3_FUS_SRC_I_TIF_DL_EN_WIDTH                          1
 
-#define REG_CAMCTL3_SECURE_TIF_MASK_EN            0x401D0
+#define REG_CAMCTL3_SECURE_TIF_MASK_EN              0x1D0
 #define F_CAMCTL3_PMRG_R9_O_SECURE_TIF_MASK_EN_POS                   2
 #define F_CAMCTL3_PMRG_R9_O_SECURE_TIF_MASK_EN_WIDTH                 1
 #define F_CAMCTL3_PMRG_R9_I_SECURE_TIF_MASK_EN_POS                   1
@@ -7229,7 +7232,7 @@
 #define F_CAMCTL3_FUS_SRC_I_SECURE_TIF_MASK_EN_POS                   0
 #define F_CAMCTL3_FUS_SRC_I_SECURE_TIF_MASK_EN_WIDTH                 1
 
-#define REG_CAMCTL3_MISC                          0x401E0
+#define REG_CAMCTL3_MISC                            0x1E0
 #define F_CAMCTL3_APB_CLK_GATE_BYPASS_POS                            31
 #define F_CAMCTL3_APB_CLK_GATE_BYPASS_WIDTH                          1
 #define F_CAMCTL3_INT_WCLR_EN_POS                                    20
@@ -7237,7 +7240,7 @@
 #define F_CAMCTL3_INT_WCLR_CCU_EN_POS                                19
 #define F_CAMCTL3_INT_WCLR_CCU_EN_WIDTH                              1
 
-#define REG_CAMCTL3_BIT_MODE                      0x40420
+#define REG_CAMCTL3_BIT_MODE                        0x420
 #define F_CAMCTL3_BIT_MODE_G7_POS                                    28
 #define F_CAMCTL3_BIT_MODE_G7_WIDTH                                  4
 #define F_CAMCTL3_BIT_MODE_G6_POS                                    24
@@ -7255,7 +7258,7 @@
 #define F_CAMCTL3_BIT_MODE_G0_POS                                    0
 #define F_CAMCTL3_BIT_MODE_G0_WIDTH                                  4
 
-#define REG_CAMCTL3_BIT_MODE2                     0x40424
+#define REG_CAMCTL3_BIT_MODE2                       0x424
 #define F_CAMCTL3_BIT_MODE_G15_POS                                   28
 #define F_CAMCTL3_BIT_MODE_G15_WIDTH                                 4
 #define F_CAMCTL3_BIT_MODE_G14_POS                                   24
@@ -7273,7 +7276,7 @@
 #define F_CAMCTL3_BIT_MODE_G8_POS                                    0
 #define F_CAMCTL3_BIT_MODE_G8_WIDTH                                  4
 
-#define REG_CAMCTL3_BIT_MODE3                     0x40428
+#define REG_CAMCTL3_BIT_MODE3                       0x428
 #define F_CAMCTL3_BIT_MODE_G23_POS                                   28
 #define F_CAMCTL3_BIT_MODE_G23_WIDTH                                 4
 #define F_CAMCTL3_BIT_MODE_G22_POS                                   24
@@ -7291,7 +7294,7 @@
 #define F_CAMCTL3_BIT_MODE_G16_POS                                   0
 #define F_CAMCTL3_BIT_MODE_G16_WIDTH                                 4
 
-#define REG_CAMCTL3_BIT_MODE4                     0x4042C
+#define REG_CAMCTL3_BIT_MODE4                       0x42C
 #define F_CAMCTL3_BIT_MODE_G31_POS                                   28
 #define F_CAMCTL3_BIT_MODE_G31_WIDTH                                 4
 #define F_CAMCTL3_BIT_MODE_G30_POS                                   24
@@ -7309,23 +7312,23 @@
 #define F_CAMCTL3_BIT_MODE_G24_POS                                   0
 #define F_CAMCTL3_BIT_MODE_G24_WIDTH                                 4
 
-#define REG_CAMCTL3_INT_EN                        0x40800
+#define REG_CAMCTL3_INT_EN                          0x800
 #define F_CAMCTL3_RMG_R1_INT_EN_POS                                  27
 #define F_CAMCTL3_RMG_R1_INT_EN_WIDTH                                1
 
-#define REG_CAMCTL3_INT_STATUS                    0x40804
+#define REG_CAMCTL3_INT_STATUS                      0x804
 #define F_CAMCTL3_RMG_R1_INT_ST_POS                                  27
 #define F_CAMCTL3_RMG_R1_INT_ST_WIDTH                                1
 
-#define REG_CAMCTL3_INT_STATUSX                   0x40808
+#define REG_CAMCTL3_INT_STATUSX                     0x808
 #define F_CAMCTL3_RMG_R1_INT_STX_POS                                 27
 #define F_CAMCTL3_RMG_R1_INT_STX_WIDTH                               1
 
-#define REG_CAMCTL3_INT_TRIG                      0x4080C
+#define REG_CAMCTL3_INT_TRIG                        0x80C
 #define F_CAMCTL3_RMG_R1_INT_TRIG_POS                                27
 #define F_CAMCTL3_RMG_R1_INT_TRIG_WIDTH                              1
 
-#define REG_CAMCTL3_INT8_STATUS                   0x40874
+#define REG_CAMCTL3_INT8_STATUS                     0x874
 #define F_CAMCTL3_TFM_DT_SRC_MISMATCH6_INT_ST_POS                    21
 #define F_CAMCTL3_TFM_DT_SRC_MISMATCH6_INT_ST_WIDTH                  1
 #define F_CAMCTL3_TFM_DT_SRC_MISMATCH5_INT_ST_POS                    20
@@ -7351,7 +7354,7 @@
 #define F_CAMCTL3_TFM_APB_SRC_MISMATCH_INT_ST_POS                    0
 #define F_CAMCTL3_TFM_APB_SRC_MISMATCH_INT_ST_WIDTH                  1
 
-#define REG_CAMCTL3_INT8_STATUSX                  0x40878
+#define REG_CAMCTL3_INT8_STATUSX                    0x878
 #define F_CAMCTL3_TFM_DT_SRC_MISMATCH6_INT_STX_POS                   21
 #define F_CAMCTL3_TFM_DT_SRC_MISMATCH6_INT_STX_WIDTH                 1
 #define F_CAMCTL3_TFM_DT_SRC_MISMATCH5_INT_STX_POS                   20
@@ -7377,7 +7380,7 @@
 #define F_CAMCTL3_TFM_APB_SRC_MISMATCH_INT_STX_POS                   0
 #define F_CAMCTL3_TFM_APB_SRC_MISMATCH_INT_STX_WIDTH                 1
 
-#define REG_CAMCTL3_INT8_TRIG                     0x4087C
+#define REG_CAMCTL3_INT8_TRIG                       0x87C
 #define F_CAMCTL3_TFM_DT_SRC_MISMATCH6_INT_TRIG_POS                  21
 #define F_CAMCTL3_TFM_DT_SRC_MISMATCH6_INT_TRIG_WIDTH                1
 #define F_CAMCTL3_TFM_DT_SRC_MISMATCH5_INT_TRIG_POS                  20
@@ -7403,7 +7406,7 @@
 #define F_CAMCTL3_TFM_APB_SRC_MISMATCH_INT_TRIG_POS                  0
 #define F_CAMCTL3_TFM_APB_SRC_MISMATCH_INT_TRIG_WIDTH                1
 
-#define REG_CAMCTL3_INT9_EN                       0x40880
+#define REG_CAMCTL3_INT9_EN                         0x880
 #define F_CAMCTL3_TSFS_R4_STAT_PROT_INT_EN_POS                       2
 #define F_CAMCTL3_TSFS_R4_STAT_PROT_INT_EN_WIDTH                     1
 #define F_CAMCTL3_TSFS_R3_STAT_PROT_INT_EN_POS                       1
@@ -7411,7 +7414,7 @@
 #define F_CAMCTL3_DFLK_R1_STAT_PROT_INT_EN_POS                       0
 #define F_CAMCTL3_DFLK_R1_STAT_PROT_INT_EN_WIDTH                     1
 
-#define REG_CAMCTL3_INT9_STATUS                   0x40884
+#define REG_CAMCTL3_INT9_STATUS                     0x884
 #define F_CAMCTL3_TSFS_R4_STAT_PROT_INT_ST_POS                       2
 #define F_CAMCTL3_TSFS_R4_STAT_PROT_INT_ST_WIDTH                     1
 #define F_CAMCTL3_TSFS_R3_STAT_PROT_INT_ST_POS                       1
@@ -7419,7 +7422,7 @@
 #define F_CAMCTL3_DFLK_R1_STAT_PROT_INT_ST_POS                       0
 #define F_CAMCTL3_DFLK_R1_STAT_PROT_INT_ST_WIDTH                     1
 
-#define REG_CAMCTL3_INT9_STATUSX                  0x40888
+#define REG_CAMCTL3_INT9_STATUSX                    0x888
 #define F_CAMCTL3_TSFS_R4_STAT_PROT_INT_STX_POS                      2
 #define F_CAMCTL3_TSFS_R4_STAT_PROT_INT_STX_WIDTH                    1
 #define F_CAMCTL3_TSFS_R3_STAT_PROT_INT_STX_POS                      1
@@ -7427,7 +7430,7 @@
 #define F_CAMCTL3_DFLK_R1_STAT_PROT_INT_STX_POS                      0
 #define F_CAMCTL3_DFLK_R1_STAT_PROT_INT_STX_WIDTH                    1
 
-#define REG_CAMCTL3_INT9_TRIG                     0x4088C
+#define REG_CAMCTL3_INT9_TRIG                       0x88C
 #define F_CAMCTL3_TSFS_R4_STAT_PROT_INT_TRIG_POS                     2
 #define F_CAMCTL3_TSFS_R4_STAT_PROT_INT_TRIG_WIDTH                   1
 #define F_CAMCTL3_TSFS_R3_STAT_PROT_INT_TRIG_POS                     1
@@ -7435,59 +7438,59 @@
 #define F_CAMCTL3_DFLK_R1_STAT_PROT_INT_TRIG_POS                     0
 #define F_CAMCTL3_DFLK_R1_STAT_PROT_INT_TRIG_WIDTH                   1
 
-#define REG_CAMCTL3_INT10_EN                      0x40890
+#define REG_CAMCTL3_INT10_EN                        0x890
 #define F_CAMCTL3_PMRG_R9_I_TIF_CID_CHK_INT_EN_POS                   1
 #define F_CAMCTL3_PMRG_R9_I_TIF_CID_CHK_INT_EN_WIDTH                 1
 #define F_CAMCTL3_FUS_SRC_I_TIF_CID_CHK_INT_EN_POS                   0
 #define F_CAMCTL3_FUS_SRC_I_TIF_CID_CHK_INT_EN_WIDTH                 1
 
-#define REG_CAMCTL3_INT10_STATUS                  0x40894
+#define REG_CAMCTL3_INT10_STATUS                    0x894
 #define F_CAMCTL3_PMRG_R9_I_TIF_CID_CHK_INT_ST_POS                   1
 #define F_CAMCTL3_PMRG_R9_I_TIF_CID_CHK_INT_ST_WIDTH                 1
 #define F_CAMCTL3_FUS_SRC_I_TIF_CID_CHK_INT_ST_POS                   0
 #define F_CAMCTL3_FUS_SRC_I_TIF_CID_CHK_INT_ST_WIDTH                 1
 
-#define REG_CAMCTL3_INT10_STATUSX                 0x40898
+#define REG_CAMCTL3_INT10_STATUSX                   0x898
 #define F_CAMCTL3_PMRG_R9_I_TIF_CID_CHK_INT_STX_POS                  1
 #define F_CAMCTL3_PMRG_R9_I_TIF_CID_CHK_INT_STX_WIDTH                1
 #define F_CAMCTL3_FUS_SRC_I_TIF_CID_CHK_INT_STX_POS                  0
 #define F_CAMCTL3_FUS_SRC_I_TIF_CID_CHK_INT_STX_WIDTH                1
 
-#define REG_CAMCTL3_INT10_TRIG                    0x4089C
+#define REG_CAMCTL3_INT10_TRIG                      0x89C
 #define F_CAMCTL3_PMRG_R9_I_TIF_CID_CHK_INT_TRIG_POS                 1
 #define F_CAMCTL3_PMRG_R9_I_TIF_CID_CHK_INT_TRIG_WIDTH               1
 #define F_CAMCTL3_FUS_SRC_I_TIF_CID_CHK_INT_TRIG_POS                 0
 #define F_CAMCTL3_FUS_SRC_I_TIF_CID_CHK_INT_TRIG_WIDTH               1
 
-#define REG_CAMCTL3_INT11_EN                      0x408A0
+#define REG_CAMCTL3_INT11_EN                        0x8A0
 #define F_CAMCTL3_INNER_APB_CID_CHK_INT_EN_POS                       1
 #define F_CAMCTL3_INNER_APB_CID_CHK_INT_EN_WIDTH                     1
 #define F_CAMCTL3_OUTER_APB_CID_CHK_INT_EN_POS                       0
 #define F_CAMCTL3_OUTER_APB_CID_CHK_INT_EN_WIDTH                     1
 
-#define REG_CAMCTL3_INT11_STATUS                  0x408A4
+#define REG_CAMCTL3_INT11_STATUS                    0x8A4
 #define F_CAMCTL3_INNER_APB_CID_CHK_INT_ST_POS                       1
 #define F_CAMCTL3_INNER_APB_CID_CHK_INT_ST_WIDTH                     1
 #define F_CAMCTL3_OUTER_APB_CID_CHK_INT_ST_POS                       0
 #define F_CAMCTL3_OUTER_APB_CID_CHK_INT_ST_WIDTH                     1
 
-#define REG_CAMCTL3_INT11_STATUSX                 0x408A8
+#define REG_CAMCTL3_INT11_STATUSX                   0x8A8
 #define F_CAMCTL3_INNER_APB_CID_CHK_INT_STX_POS                      1
 #define F_CAMCTL3_INNER_APB_CID_CHK_INT_STX_WIDTH                    1
 #define F_CAMCTL3_OUTER_APB_CID_CHK_INT_STX_POS                      0
 #define F_CAMCTL3_OUTER_APB_CID_CHK_INT_STX_WIDTH                    1
 
-#define REG_CAMCTL3_INT11_TRIG                    0x408AC
+#define REG_CAMCTL3_INT11_TRIG                      0x8AC
 #define F_CAMCTL3_INNER_APB_CID_CHK_INT_TRIG_POS                     1
 #define F_CAMCTL3_INNER_APB_CID_CHK_INT_TRIG_WIDTH                   1
 #define F_CAMCTL3_OUTER_APB_CID_CHK_INT_TRIG_POS                     0
 #define F_CAMCTL3_OUTER_APB_CID_CHK_INT_TRIG_WIDTH                   1
 
-#define REG_CAMCTL3_TFMR_INT_STATUS               0x40A04
+#define REG_CAMCTL3_TFMR_INT_STATUS                 0xA04
 #define F_CAMCTL3_TFMR_RMG_R1_INT_ST_POS                             27
 #define F_CAMCTL3_TFMR_RMG_R1_INT_ST_WIDTH                           1
 
-#define REG_CAMCTL3_TFMR_INT8_STATUS              0x40A74
+#define REG_CAMCTL3_TFMR_INT8_STATUS                0xA74
 #define F_CAMCTL3_TFMR_TFM_DT_SRC_MISMATCH6_INT_ST_POS               21
 #define F_CAMCTL3_TFMR_TFM_DT_SRC_MISMATCH6_INT_ST_WIDTH             1
 #define F_CAMCTL3_TFMR_TFM_DT_SRC_MISMATCH5_INT_ST_POS               20
@@ -7513,15 +7516,15 @@
 #define F_CAMCTL3_TFMR_TFM_APB_SRC_MISMATCH_INT_ST_POS               0
 #define F_CAMCTL3_TFMR_TFM_APB_SRC_MISMATCH_INT_ST_WIDTH             1
 
-#define REG_CAMCTL3_CCU_INT_EN                    0x40B00
+#define REG_CAMCTL3_CCU_INT_EN                      0xB00
 #define F_CAMCTL3_RMG_R1_INT_CCU_EN_POS                              27
 #define F_CAMCTL3_RMG_R1_INT_CCU_EN_WIDTH                            1
 
-#define REG_CAMCTL3_CCU_INT_STATUS                0x40B04
+#define REG_CAMCTL3_CCU_INT_STATUS                  0xB04
 #define F_CAMCTL3_RMG_R1_INT_CCU_ST_POS                              27
 #define F_CAMCTL3_RMG_R1_INT_CCU_ST_WIDTH                            1
 
-#define REG_CAMCTL3_CCU_INT8_STATUS               0x40B3C
+#define REG_CAMCTL3_CCU_INT8_STATUS                 0xB3C
 #define F_CAMCTL3_TFM_DT_SRC_MISMATCH6_INT_CCU_ST_POS                21
 #define F_CAMCTL3_TFM_DT_SRC_MISMATCH6_INT_CCU_ST_WIDTH              1
 #define F_CAMCTL3_TFM_DT_SRC_MISMATCH5_INT_CCU_ST_POS                20
@@ -7547,46 +7550,48 @@
 #define F_CAMCTL3_TFM_APB_SRC_MISMATCH_INT_CCU_ST_POS                0
 #define F_CAMCTL3_TFM_APB_SRC_MISMATCH_INT_CCU_ST_WIDTH              1
 
-#define REG_CAMCTL3_MOD_DCM_DIS                   0x40D00
-#define REG_CAMCTL3_MOD2_DCM_DIS                  0x40D04
-#define REG_CAMCTL3_MOD3_DCM_DIS                  0x40D08
-#define REG_CAMCTL3_MOD4_DCM_DIS                  0x40D0C
-#define REG_CAMCTL3_MOD5_DCM_DIS                  0x40D10
-#define REG_CAMCTL3_MOD6_DCM_DIS                  0x40D14
-#define REG_CAMCTL3_MOD_DCM_STATUS                0x40D40
-#define REG_CAMCTL3_MOD2_DCM_STATUS               0x40D44
-#define REG_CAMCTL3_MOD3_DCM_STATUS               0x40D48
-#define REG_CAMCTL3_MOD4_DCM_STATUS               0x40D4C
-#define REG_CAMCTL3_MOD5_DCM_STATUS               0x40D50
-#define REG_CAMCTL3_MOD6_DCM_STATUS               0x40D54
-#define REG_CAMCTL3_MOD_REQ_STATUS                0x40D80
-#define REG_CAMCTL3_MOD2_REQ_STATUS               0x40D84
-#define REG_CAMCTL3_MOD3_REQ_STATUS               0x40D88
-#define REG_CAMCTL3_MOD4_REQ_STATUS               0x40D8C
-#define REG_CAMCTL3_MOD5_REQ_STATUS               0x40D90
-#define REG_CAMCTL3_MOD6_REQ_STATUS               0x40D94
-#define REG_CAMCTL3_MOD_RDY_STATUS                0x40DC0
-#define REG_CAMCTL3_MOD2_RDY_STATUS               0x40DC4
-#define REG_CAMCTL3_MOD3_RDY_STATUS               0x40DC8
-#define REG_CAMCTL3_MOD4_RDY_STATUS               0x40DCC
-#define REG_CAMCTL3_MOD5_RDY_STATUS               0x40DD0
-#define REG_CAMCTL3_MOD6_RDY_STATUS               0x40DD4
-#define REG_CAMCTL3_DBG_SET                       0x40F00
+#define REG_CAMCTL3_MOD_DCM_DIS                     0xD00
+#define REG_CAMCTL3_MOD2_DCM_DIS                    0xD04
+#define REG_CAMCTL3_MOD3_DCM_DIS                    0xD08
+#define REG_CAMCTL3_MOD4_DCM_DIS                    0xD0C
+#define REG_CAMCTL3_MOD5_DCM_DIS                    0xD10
+#define REG_CAMCTL3_MOD6_DCM_DIS                    0xD14
+#define REG_CAMCTL3_MOD_DCM_STATUS                  0xD40
+#define REG_CAMCTL3_MOD2_DCM_STATUS                 0xD44
+#define REG_CAMCTL3_MOD3_DCM_STATUS                 0xD48
+#define REG_CAMCTL3_MOD4_DCM_STATUS                 0xD4C
+#define REG_CAMCTL3_MOD5_DCM_STATUS                 0xD50
+#define REG_CAMCTL3_MOD6_DCM_STATUS                 0xD54
+#define REG_CAMCTL3_MOD_REQ_STATUS                  0xD80
+#define REG_CAMCTL3_MOD2_REQ_STATUS                 0xD84
+#define REG_CAMCTL3_MOD3_REQ_STATUS                 0xD88
+#define REG_CAMCTL3_MOD4_REQ_STATUS                 0xD8C
+#define REG_CAMCTL3_MOD5_REQ_STATUS                 0xD90
+#define REG_CAMCTL3_MOD6_REQ_STATUS                 0xD94
+#define REG_CAMCTL3_MOD_RDY_STATUS                  0xDC0
+#define REG_CAMCTL3_MOD2_RDY_STATUS                 0xDC4
+#define REG_CAMCTL3_MOD3_RDY_STATUS                 0xDC8
+#define REG_CAMCTL3_MOD4_RDY_STATUS                 0xDCC
+#define REG_CAMCTL3_MOD5_RDY_STATUS                 0xDD0
+#define REG_CAMCTL3_MOD6_RDY_STATUS                 0xDD4
+#define REG_CAMCTL3_DBG_SET                         0xF00
 #define F_CAMCTL3_DEBUG_TOP_SEL_POS                                  16
 #define F_CAMCTL3_DEBUG_TOP_SEL_WIDTH                                8
 #define F_CAMCTL3_DEBUG_MOD_SEL_POS                                  0
 #define F_CAMCTL3_DEBUG_MOD_SEL_WIDTH                                8
 
-#define REG_CAMCTL3_DBG_SET2                      0x40F04
+#define REG_CAMCTL3_DBG_SET2                        0xF04
 #define F_CAMCTL3_DEBUG_SEL_POS                                      0
 #define F_CAMCTL3_DEBUG_SEL_WIDTH                                    4
 
-#define REG_CAMCTL3_DBG_PORT                      0x40F0C
-#define REG_CAMCTL3_SPARE                         0x40FE0
-#define REG_CAMCTL3_SPARE1                        0x40FE4
+#define REG_CAMCTL3_DBG_PORT                        0xF0C
+#define REG_CAMCTL3_SPARE                           0xFE0
+#define REG_CAMCTL3_SPARE1                          0xFE4
+
+/* baseaddr 0x3A780000 */
 
 /* module: CAMCTL2_R1A */
-#define REG_CAMCTL2_MOD_EN                        0x80000
+#define REG_CAMCTL2_MOD_EN                            0x0
 #define F_CAMCTL2_PLNW_R2_EN_POS                                     6
 #define F_CAMCTL2_PLNW_R2_EN_WIDTH                                   1
 #define F_CAMCTL2_C40_R1_EN_POS                                      5
@@ -7602,7 +7607,7 @@
 #define F_CAMCTL2_DM_R1_EN_POS                                       0
 #define F_CAMCTL2_DM_R1_EN_WIDTH                                     1
 
-#define REG_CAMCTL2_MOD2_EN                       0x80004
+#define REG_CAMCTL2_MOD2_EN                           0x4
 #define F_CAMCTL2_RZH1N2T_R3_EN_POS                                  4
 #define F_CAMCTL2_RZH1N2T_R3_EN_WIDTH                                1
 #define F_CAMCTL2_C42_R1_EN_POS                                      3
@@ -7614,7 +7619,7 @@
 #define F_CAMCTL2_CCM_R3_EN_POS                                      0
 #define F_CAMCTL2_CCM_R3_EN_WIDTH                                    1
 
-#define REG_CAMCTL2_MOD3_EN                       0x80008
+#define REG_CAMCTL2_MOD3_EN                           0x8
 #define F_CAMCTL2_DRZH2N_R8_EN_POS                                   6
 #define F_CAMCTL2_DRZH2N_R8_EN_WIDTH                                 1
 #define F_CAMCTL2_DRZH2N_R9_EN_POS                                   5
@@ -7630,7 +7635,7 @@
 #define F_CAMCTL2_CCM_R2_EN_POS                                      0
 #define F_CAMCTL2_CCM_R2_EN_WIDTH                                    1
 
-#define REG_CAMCTL2_MOD4_EN                       0x8000C
+#define REG_CAMCTL2_MOD4_EN                           0xC
 #define F_CAMCTL2_PMRG_R4_EN_POS                                     12
 #define F_CAMCTL2_PMRG_R4_EN_WIDTH                                   1
 #define F_CAMCTL2_PMRG_R3_EN_POS                                     11
@@ -7658,7 +7663,7 @@
 #define F_CAMCTL2_DRZS8T_R1_EN_POS                                   0
 #define F_CAMCTL2_DRZS8T_R1_EN_WIDTH                                 1
 
-#define REG_CAMCTL2_MOD5_EN                       0x80010
+#define REG_CAMCTL2_MOD5_EN                          0x10
 #define F_CAMCTL2_PAK_R7_EN_POS                                      15
 #define F_CAMCTL2_PAK_R7_EN_WIDTH                                    1
 #define F_CAMCTL2_PAK_R6_EN_POS                                      14
@@ -7692,13 +7697,13 @@
 #define F_CAMCTL2_DRZS4N_R3_EN_POS                                   0
 #define F_CAMCTL2_DRZS4N_R3_EN_WIDTH                                 1
 
-#define REG_CAMCTL2_MOD6_EN                       0x80014
+#define REG_CAMCTL2_MOD6_EN                          0x14
 #define F_CAMCTL2_FHG_R3_EN_POS                                      1
 #define F_CAMCTL2_FHG_R3_EN_WIDTH                                    1
 #define F_CAMCTL2_TCYS_R1_EN_POS                                     0
 #define F_CAMCTL2_TCYS_R1_EN_WIDTH                                   1
 
-#define REG_CAMCTL2_MOD11_EN                      0x80028
+#define REG_CAMCTL2_MOD11_EN                         0x28
 #define F_CAMCTL2_FHO_R3_EN_POS                                      19
 #define F_CAMCTL2_FHO_R3_EN_WIDTH                                    1
 #define F_CAMCTL2_DRZH1NBO_R1_EN_POS                                 18
@@ -7740,7 +7745,7 @@
 #define F_CAMCTL2_YUVO_R1_EN_POS                                     0
 #define F_CAMCTL2_YUVO_R1_EN_WIDTH                                   1
 
-#define REG_CAMCTL2_DB_SUB_SEL                    0x80040
+#define REG_CAMCTL2_DB_SUB_SEL                       0x40
 #define F_CAMCTL2_PLNW_R2_DB_SUB_SEL_POS                             6
 #define F_CAMCTL2_PLNW_R2_DB_SUB_SEL_WIDTH                           1
 #define F_CAMCTL2_C40_R1_DB_SUB_SEL_POS                              5
@@ -7756,7 +7761,7 @@
 #define F_CAMCTL2_DM_R1_DB_SUB_SEL_POS                               0
 #define F_CAMCTL2_DM_R1_DB_SUB_SEL_WIDTH                             1
 
-#define REG_CAMCTL2_DB2_SUB_SEL                   0x80044
+#define REG_CAMCTL2_DB2_SUB_SEL                      0x44
 #define F_CAMCTL2_RZH1N2T_R3_DB_SUB_SEL_POS                          4
 #define F_CAMCTL2_RZH1N2T_R3_DB_SUB_SEL_WIDTH                        1
 #define F_CAMCTL2_C42_R1_DB_SUB_SEL_POS                              3
@@ -7768,7 +7773,7 @@
 #define F_CAMCTL2_CCM_R3_DB_SUB_SEL_POS                              0
 #define F_CAMCTL2_CCM_R3_DB_SUB_SEL_WIDTH                            1
 
-#define REG_CAMCTL2_DB3_SUB_SEL                   0x80048
+#define REG_CAMCTL2_DB3_SUB_SEL                      0x48
 #define F_CAMCTL2_DRZH2N_R8_DB_SUB_SEL_POS                           6
 #define F_CAMCTL2_DRZH2N_R8_DB_SUB_SEL_WIDTH                         1
 #define F_CAMCTL2_DRZH2N_R9_DB_SUB_SEL_POS                           5
@@ -7784,7 +7789,7 @@
 #define F_CAMCTL2_CCM_R2_DB_SUB_SEL_POS                              0
 #define F_CAMCTL2_CCM_R2_DB_SUB_SEL_WIDTH                            1
 
-#define REG_CAMCTL2_DB4_SUB_SEL                   0x8004C
+#define REG_CAMCTL2_DB4_SUB_SEL                      0x4C
 #define F_CAMCTL2_PMRG_R4_DB_SUB_SEL_POS                             12
 #define F_CAMCTL2_PMRG_R4_DB_SUB_SEL_WIDTH                           1
 #define F_CAMCTL2_PMRG_R3_DB_SUB_SEL_POS                             11
@@ -7812,7 +7817,7 @@
 #define F_CAMCTL2_DRZS8T_R1_DB_SUB_SEL_POS                           0
 #define F_CAMCTL2_DRZS8T_R1_DB_SUB_SEL_WIDTH                         1
 
-#define REG_CAMCTL2_DB5_SUB_SEL                   0x80050
+#define REG_CAMCTL2_DB5_SUB_SEL                      0x50
 #define F_CAMCTL2_PAK_R7_DB_SUB_SEL_POS                              15
 #define F_CAMCTL2_PAK_R7_DB_SUB_SEL_WIDTH                            1
 #define F_CAMCTL2_PAK_R6_DB_SUB_SEL_POS                              14
@@ -7846,13 +7851,13 @@
 #define F_CAMCTL2_DRZS4N_R3_DB_SUB_SEL_POS                           0
 #define F_CAMCTL2_DRZS4N_R3_DB_SUB_SEL_WIDTH                         1
 
-#define REG_CAMCTL2_DB6_SUB_SEL                   0x80054
+#define REG_CAMCTL2_DB6_SUB_SEL                      0x54
 #define F_CAMCTL2_FHG_R3_DB_SUB_SEL_POS                              1
 #define F_CAMCTL2_FHG_R3_DB_SUB_SEL_WIDTH                            1
 #define F_CAMCTL2_TCYS_R1_DB_SUB_SEL_POS                             0
 #define F_CAMCTL2_TCYS_R1_DB_SUB_SEL_WIDTH                           1
 
-#define REG_CAMCTL2_DB11_SUB_SEL                  0x80068
+#define REG_CAMCTL2_DB11_SUB_SEL                     0x68
 #define F_CAMCTL2_FHO_R3_DB_SUB_SEL_POS                              19
 #define F_CAMCTL2_FHO_R3_DB_SUB_SEL_WIDTH                            1
 #define F_CAMCTL2_DRZH1NBO_R1_DB_SUB_SEL_POS                         18
@@ -7894,7 +7899,7 @@
 #define F_CAMCTL2_YUVO_R1_DB_SUB_SEL_POS                             0
 #define F_CAMCTL2_YUVO_R1_DB_SUB_SEL_WIDTH                           1
 
-#define REG_CAMCTL2_SEL                           0x80080
+#define REG_CAMCTL2_SEL                              0x80
 #define F_CAMCTL2_ADL_YUV_SEL_POS                                    27
 #define F_CAMCTL2_ADL_YUV_SEL_WIDTH                                  1
 #define F_CAMCTL2_ADL_RGB_SEL_POS                                    26
@@ -7920,7 +7925,7 @@
 #define F_CAMCTL2_CCM_R2_SEL_POS                                     0
 #define F_CAMCTL2_CCM_R2_SEL_WIDTH                                   1
 
-#define REG_CAMCTL2_FMT2_SEL                      0x80094
+#define REG_CAMCTL2_FMT2_SEL                         0x94
 #define F_CAMCTL2_PIX_BUS_VPUO_POS                                   18
 #define F_CAMCTL2_PIX_BUS_VPUO_WIDTH                                 2
 #define F_CAMCTL2_PIX_BUS_DM_R1I_POS                                 14
@@ -7936,7 +7941,7 @@
 #define F_CAMCTL2_PIX_BUS_PMRG_R1O_POS                               0
 #define F_CAMCTL2_PIX_BUS_PMRG_R1O_WIDTH                             2
 
-#define REG_CAMCTL2_FMT3_SEL                      0x80098
+#define REG_CAMCTL2_FMT3_SEL                         0x98
 #define F_CAMCTL2_YUVO_R4_FMT_POS                                    24
 #define F_CAMCTL2_YUVO_R4_FMT_WIDTH                                  8
 #define F_CAMCTL2_YUVO_R3_FMT_POS                                    16
@@ -7946,17 +7951,17 @@
 #define F_CAMCTL2_YUVO_R1_FMT_POS                                    0
 #define F_CAMCTL2_YUVO_R1_FMT_WIDTH                                  8
 
-#define REG_CAMCTL2_FMT4_SEL                      0x8009C
+#define REG_CAMCTL2_FMT4_SEL                         0x9C
 #define F_CAMCTL2_DRZH2NO_R8_FMT_POS                                 8
 #define F_CAMCTL2_DRZH2NO_R8_FMT_WIDTH                               8
 #define F_CAMCTL2_DRZH2NO_R1_FMT_POS                                 0
 #define F_CAMCTL2_DRZH2NO_R1_FMT_WIDTH                               8
 
-#define REG_CAMCTL2_FMT5_SEL                      0x800A0
+#define REG_CAMCTL2_FMT5_SEL                         0xA0
 #define F_CAMCTL2_DRZH1N_R2_PCRP_FMT_POS                             31
 #define F_CAMCTL2_DRZH1N_R2_PCRP_FMT_WIDTH                           1
 
-#define REG_CAMCTL2_DONE2_SEL                     0x800B4
+#define REG_CAMCTL2_DONE2_SEL                        0xB4
 #define F_CAMCTL2_FHO_R3_DONE_SEL_POS                                19
 #define F_CAMCTL2_FHO_R3_DONE_SEL_WIDTH                              1
 #define F_CAMCTL2_DRZH1NBO_R1_DONE_SEL_POS                           18
@@ -7998,13 +8003,13 @@
 #define F_CAMCTL2_YUVO_R1_DONE_SEL_POS                               0
 #define F_CAMCTL2_YUVO_R1_DONE_SEL_WIDTH                             1
 
-#define REG_CAMCTL2_DONE3_SEL                     0x800B8
+#define REG_CAMCTL2_DONE3_SEL                        0xB8
 #define F_CAMCTL2_TFMR_DONE_SEL_EN_POS                               31
 #define F_CAMCTL2_TFMR_DONE_SEL_EN_WIDTH                             1
 #define F_CAMCTL2_DONE_SEL_EN_POS                                    30
 #define F_CAMCTL2_DONE_SEL_EN_WIDTH                                  1
 
-#define REG_CAMCTL2_WFBC_EN                       0x80128
+#define REG_CAMCTL2_WFBC_EN                         0x128
 #define F_CAMCTL2_FHO_R3_WFBC_EN_POS                                 19
 #define F_CAMCTL2_FHO_R3_WFBC_EN_WIDTH                               1
 #define F_CAMCTL2_DRZH1NBO_R1_WFBC_EN_POS                            18
@@ -8046,7 +8051,7 @@
 #define F_CAMCTL2_YUVO_R1_WFBC_EN_POS                                0
 #define F_CAMCTL2_YUVO_R1_WFBC_EN_WIDTH                              1
 
-#define REG_CAMCTL2_WFBC_INC                      0x80138
+#define REG_CAMCTL2_WFBC_INC                        0x138
 #define F_CAMCTL2_FHO_R3_WFBC_INC_POS                                19
 #define F_CAMCTL2_FHO_R3_WFBC_INC_WIDTH                              1
 #define F_CAMCTL2_DRZH1NBO_R1_WFBC_INC_POS                           18
@@ -8088,7 +8093,7 @@
 #define F_CAMCTL2_YUVO_R1_WFBC_INC_POS                               0
 #define F_CAMCTL2_YUVO_R1_WFBC_INC_WIDTH                             1
 
-#define REG_CAMCTL2_FBC_SEL                       0x80140
+#define REG_CAMCTL2_FBC_SEL                         0x140
 #define F_CAMCTL2_FHO_R3_FBC_SEL_POS                                 19
 #define F_CAMCTL2_FHO_R3_FBC_SEL_WIDTH                               1
 #define F_CAMCTL2_DRZH1NBO_R1_FBC_SEL_POS                            18
@@ -8130,7 +8135,7 @@
 #define F_CAMCTL2_YUVO_R1_FBC_SEL_POS                                0
 #define F_CAMCTL2_YUVO_R1_FBC_SEL_WIDTH                              1
 
-#define REG_CAMCTL2_TIF_DL_EN                     0x801C0
+#define REG_CAMCTL2_TIF_DL_EN                       0x1C0
 #define F_CAMCTL2_PMRG_R5_I_TIF_DL_EN_POS                            5
 #define F_CAMCTL2_PMRG_R5_I_TIF_DL_EN_WIDTH                          1
 #define F_CAMCTL2_PMRG_R4_I_TIF_DL_EN_POS                            4
@@ -8144,7 +8149,7 @@
 #define F_CAMCTL2_MRG_R5_I_TIF_DL_EN_POS                             0
 #define F_CAMCTL2_MRG_R5_I_TIF_DL_EN_WIDTH                           1
 
-#define REG_CAMCTL2_SECURE_TIF_MASK_EN            0x801D0
+#define REG_CAMCTL2_SECURE_TIF_MASK_EN              0x1D0
 #define F_CAMCTL2_PMRG_R5_O_SECURE_TIF_MASK_EN_POS                   11
 #define F_CAMCTL2_PMRG_R5_O_SECURE_TIF_MASK_EN_WIDTH                 1
 #define F_CAMCTL2_PMRG_R5_I_SECURE_TIF_MASK_EN_POS                   10
@@ -8170,7 +8175,7 @@
 #define F_CAMCTL2_MRG_R5_I_SECURE_TIF_MASK_EN_POS                    0
 #define F_CAMCTL2_MRG_R5_I_SECURE_TIF_MASK_EN_WIDTH                  1
 
-#define REG_CAMCTL2_MISC                          0x801E0
+#define REG_CAMCTL2_MISC                            0x1E0
 #define F_CAMCTL2_APB_CLK_GATE_BYPASS_POS                            31
 #define F_CAMCTL2_APB_CLK_GATE_BYPASS_WIDTH                          1
 #define F_CAMCTL2_INT_WCLR_EN_POS                                    20
@@ -8178,7 +8183,7 @@
 #define F_CAMCTL2_INT_WCLR_CCU_EN_POS                                19
 #define F_CAMCTL2_INT_WCLR_CCU_EN_WIDTH                              1
 
-#define REG_CAMCTL2_PIX2TO1_CTL                   0x801E4
+#define REG_CAMCTL2_PIX2TO1_CTL                     0x1E4
 #define F_CAMCTL2_PIX2TO1_R2_EN_POS                                  17
 #define F_CAMCTL2_PIX2TO1_R2_EN_WIDTH                                1
 #define F_CAMCTL2_PIX2TO1_R1_EN_POS                                  16
@@ -8188,31 +8193,31 @@
 #define F_CAMCTL2_PIX2TO1_R1_MANUAL_EN_POS                           0
 #define F_CAMCTL2_PIX2TO1_R1_MANUAL_EN_WIDTH                         1
 
-#define REG_CAMCTL2_INT_EN                        0x80800
+#define REG_CAMCTL2_INT_EN                          0x800
 #define F_CAMCTL2_YUFE_R2_INT_EN_POS                                 1
 #define F_CAMCTL2_YUFE_R2_INT_EN_WIDTH                               1
 #define F_CAMCTL2_YUFE_R1_INT_EN_POS                                 0
 #define F_CAMCTL2_YUFE_R1_INT_EN_WIDTH                               1
 
-#define REG_CAMCTL2_INT_STATUS                    0x80804
+#define REG_CAMCTL2_INT_STATUS                      0x804
 #define F_CAMCTL2_YUFE_R2_INT_ST_POS                                 1
 #define F_CAMCTL2_YUFE_R2_INT_ST_WIDTH                               1
 #define F_CAMCTL2_YUFE_R1_INT_ST_POS                                 0
 #define F_CAMCTL2_YUFE_R1_INT_ST_WIDTH                               1
 
-#define REG_CAMCTL2_INT_STATUSX                   0x80808
+#define REG_CAMCTL2_INT_STATUSX                     0x808
 #define F_CAMCTL2_YUFE_R2_INT_STX_POS                                1
 #define F_CAMCTL2_YUFE_R2_INT_STX_WIDTH                              1
 #define F_CAMCTL2_YUFE_R1_INT_STX_POS                                0
 #define F_CAMCTL2_YUFE_R1_INT_STX_WIDTH                              1
 
-#define REG_CAMCTL2_INT_TRIG                      0x8080C
+#define REG_CAMCTL2_INT_TRIG                        0x80C
 #define F_CAMCTL2_YUFE_R2_INT_TRIG_POS                               1
 #define F_CAMCTL2_YUFE_R2_INT_TRIG_WIDTH                             1
 #define F_CAMCTL2_YUFE_R1_INT_TRIG_POS                               0
 #define F_CAMCTL2_YUFE_R1_INT_TRIG_WIDTH                             1
 
-#define REG_CAMCTL2_INT2_EN                       0x80810
+#define REG_CAMCTL2_INT2_EN                         0x810
 #define F_CAMCTL2_FHO_R3_DONE_EN_POS                                 19
 #define F_CAMCTL2_FHO_R3_DONE_EN_WIDTH                               1
 #define F_CAMCTL2_DRZH1NBO_R1_DONE_EN_POS                            18
@@ -8254,7 +8259,7 @@
 #define F_CAMCTL2_YUVO_R1_DONE_EN_POS                                0
 #define F_CAMCTL2_YUVO_R1_DONE_EN_WIDTH                              1
 
-#define REG_CAMCTL2_INT2_STATUS                   0x80814
+#define REG_CAMCTL2_INT2_STATUS                     0x814
 #define F_CAMCTL2_FHO_R3_DONE_ST_POS                                 19
 #define F_CAMCTL2_FHO_R3_DONE_ST_WIDTH                               1
 #define F_CAMCTL2_DRZH1NBO_R1_DONE_ST_POS                            18
@@ -8296,7 +8301,7 @@
 #define F_CAMCTL2_YUVO_R1_DONE_ST_POS                                0
 #define F_CAMCTL2_YUVO_R1_DONE_ST_WIDTH                              1
 
-#define REG_CAMCTL2_INT2_STATUSX                  0x80818
+#define REG_CAMCTL2_INT2_STATUSX                    0x818
 #define F_CAMCTL2_FHO_R3_DONE_STX_POS                                19
 #define F_CAMCTL2_FHO_R3_DONE_STX_WIDTH                              1
 #define F_CAMCTL2_DRZH1NBO_R1_DONE_STX_POS                           18
@@ -8338,7 +8343,7 @@
 #define F_CAMCTL2_YUVO_R1_DONE_STX_POS                               0
 #define F_CAMCTL2_YUVO_R1_DONE_STX_WIDTH                             1
 
-#define REG_CAMCTL2_INT2_TRIG                     0x8081C
+#define REG_CAMCTL2_INT2_TRIG                       0x81C
 #define F_CAMCTL2_FHO_R3_DONE_TRIG_POS                               19
 #define F_CAMCTL2_FHO_R3_DONE_TRIG_WIDTH                             1
 #define F_CAMCTL2_DRZH1NBO_R1_DONE_TRIG_POS                          18
@@ -8380,7 +8385,7 @@
 #define F_CAMCTL2_YUVO_R1_DONE_TRIG_POS                              0
 #define F_CAMCTL2_YUVO_R1_DONE_TRIG_WIDTH                            1
 
-#define REG_CAMCTL2_INT5_EN                       0x80840
+#define REG_CAMCTL2_INT5_EN                         0x840
 #define F_CAMCTL2_FHO_R3_OTF_OVERFLOW_EN_POS                         19
 #define F_CAMCTL2_FHO_R3_OTF_OVERFLOW_EN_WIDTH                       1
 #define F_CAMCTL2_DRZH1NBO_R1_OTF_OVERFLOW_EN_POS                    18
@@ -8422,7 +8427,7 @@
 #define F_CAMCTL2_YUVO_R1_OTF_OVERFLOW_EN_POS                        0
 #define F_CAMCTL2_YUVO_R1_OTF_OVERFLOW_EN_WIDTH                      1
 
-#define REG_CAMCTL2_INT5_STATUS                   0x80844
+#define REG_CAMCTL2_INT5_STATUS                     0x844
 #define F_CAMCTL2_FHO_R3_OTF_OVERFLOW_ST_POS                         19
 #define F_CAMCTL2_FHO_R3_OTF_OVERFLOW_ST_WIDTH                       1
 #define F_CAMCTL2_DRZH1NBO_R1_OTF_OVERFLOW_ST_POS                    18
@@ -8464,7 +8469,7 @@
 #define F_CAMCTL2_YUVO_R1_OTF_OVERFLOW_ST_POS                        0
 #define F_CAMCTL2_YUVO_R1_OTF_OVERFLOW_ST_WIDTH                      1
 
-#define REG_CAMCTL2_INT5_STATUSX                  0x80848
+#define REG_CAMCTL2_INT5_STATUSX                    0x848
 #define F_CAMCTL2_FHO_R3_OTF_OVERFLOW_STX_POS                        19
 #define F_CAMCTL2_FHO_R3_OTF_OVERFLOW_STX_WIDTH                      1
 #define F_CAMCTL2_DRZH1NBO_R1_OTF_OVERFLOW_STX_POS                   18
@@ -8506,7 +8511,7 @@
 #define F_CAMCTL2_YUVO_R1_OTF_OVERFLOW_STX_POS                       0
 #define F_CAMCTL2_YUVO_R1_OTF_OVERFLOW_STX_WIDTH                     1
 
-#define REG_CAMCTL2_INT5_TRIG                     0x8084C
+#define REG_CAMCTL2_INT5_TRIG                       0x84C
 #define F_CAMCTL2_FHO_R3_OTF_OVERFLOW_TRIG_POS                       19
 #define F_CAMCTL2_FHO_R3_OTF_OVERFLOW_TRIG_WIDTH                     1
 #define F_CAMCTL2_DRZH1NBO_R1_OTF_OVERFLOW_TRIG_POS                  18
@@ -8548,7 +8553,7 @@
 #define F_CAMCTL2_YUVO_R1_OTF_OVERFLOW_TRIG_POS                      0
 #define F_CAMCTL2_YUVO_R1_OTF_OVERFLOW_TRIG_WIDTH                    1
 
-#define REG_CAMCTL2_INT8_STATUS                   0x80874
+#define REG_CAMCTL2_INT8_STATUS                     0x874
 #define F_CAMCTL2_TFM_DT_SRC_MISMATCH11_INT_ST_POS                   24
 #define F_CAMCTL2_TFM_DT_SRC_MISMATCH11_INT_ST_WIDTH                 1
 #define F_CAMCTL2_TFM_DT_SRC_MISMATCH10_INT_ST_POS                   23
@@ -8582,7 +8587,7 @@
 #define F_CAMCTL2_TFM_APB_SRC_MISMATCH_INT_ST_POS                    0
 #define F_CAMCTL2_TFM_APB_SRC_MISMATCH_INT_ST_WIDTH                  1
 
-#define REG_CAMCTL2_INT8_STATUSX                  0x80878
+#define REG_CAMCTL2_INT8_STATUSX                    0x878
 #define F_CAMCTL2_TFM_DT_SRC_MISMATCH11_INT_STX_POS                  24
 #define F_CAMCTL2_TFM_DT_SRC_MISMATCH11_INT_STX_WIDTH                1
 #define F_CAMCTL2_TFM_DT_SRC_MISMATCH10_INT_STX_POS                  23
@@ -8616,7 +8621,7 @@
 #define F_CAMCTL2_TFM_APB_SRC_MISMATCH_INT_STX_POS                   0
 #define F_CAMCTL2_TFM_APB_SRC_MISMATCH_INT_STX_WIDTH                 1
 
-#define REG_CAMCTL2_INT8_TRIG                     0x8087C
+#define REG_CAMCTL2_INT8_TRIG                       0x87C
 #define F_CAMCTL2_TFM_DT_SRC_MISMATCH11_INT_TRIG_POS                 24
 #define F_CAMCTL2_TFM_DT_SRC_MISMATCH11_INT_TRIG_WIDTH               1
 #define F_CAMCTL2_TFM_DT_SRC_MISMATCH10_INT_TRIG_POS                 23
@@ -8650,23 +8655,23 @@
 #define F_CAMCTL2_TFM_APB_SRC_MISMATCH_INT_TRIG_POS                  0
 #define F_CAMCTL2_TFM_APB_SRC_MISMATCH_INT_TRIG_WIDTH                1
 
-#define REG_CAMCTL2_INT9_EN                       0x80880
+#define REG_CAMCTL2_INT9_EN                         0x880
 #define F_CAMCTL2_TCYS_R1_STAT_PROT_INT_EN_POS                       0
 #define F_CAMCTL2_TCYS_R1_STAT_PROT_INT_EN_WIDTH                     1
 
-#define REG_CAMCTL2_INT9_STATUS                   0x80884
+#define REG_CAMCTL2_INT9_STATUS                     0x884
 #define F_CAMCTL2_TCYS_R1_STAT_PROT_INT_ST_POS                       0
 #define F_CAMCTL2_TCYS_R1_STAT_PROT_INT_ST_WIDTH                     1
 
-#define REG_CAMCTL2_INT9_STATUSX                  0x80888
+#define REG_CAMCTL2_INT9_STATUSX                    0x888
 #define F_CAMCTL2_TCYS_R1_STAT_PROT_INT_STX_POS                      0
 #define F_CAMCTL2_TCYS_R1_STAT_PROT_INT_STX_WIDTH                    1
 
-#define REG_CAMCTL2_INT9_TRIG                     0x8088C
+#define REG_CAMCTL2_INT9_TRIG                       0x88C
 #define F_CAMCTL2_TCYS_R1_STAT_PROT_INT_TRIG_POS                     0
 #define F_CAMCTL2_TCYS_R1_STAT_PROT_INT_TRIG_WIDTH                   1
 
-#define REG_CAMCTL2_INT10_EN                      0x80890
+#define REG_CAMCTL2_INT10_EN                        0x890
 #define F_CAMCTL2_PMRG_R5_I_TIF_CID_CHK_INT_EN_POS                   5
 #define F_CAMCTL2_PMRG_R5_I_TIF_CID_CHK_INT_EN_WIDTH                 1
 #define F_CAMCTL2_PMRG_R4_I_TIF_CID_CHK_INT_EN_POS                   4
@@ -8680,7 +8685,7 @@
 #define F_CAMCTL2_MRG_R5_I_TIF_CID_CHK_INT_EN_POS                    0
 #define F_CAMCTL2_MRG_R5_I_TIF_CID_CHK_INT_EN_WIDTH                  1
 
-#define REG_CAMCTL2_INT10_STATUS                  0x80894
+#define REG_CAMCTL2_INT10_STATUS                    0x894
 #define F_CAMCTL2_PMRG_R5_I_TIF_CID_CHK_INT_ST_POS                   5
 #define F_CAMCTL2_PMRG_R5_I_TIF_CID_CHK_INT_ST_WIDTH                 1
 #define F_CAMCTL2_PMRG_R4_I_TIF_CID_CHK_INT_ST_POS                   4
@@ -8694,7 +8699,7 @@
 #define F_CAMCTL2_MRG_R5_I_TIF_CID_CHK_INT_ST_POS                    0
 #define F_CAMCTL2_MRG_R5_I_TIF_CID_CHK_INT_ST_WIDTH                  1
 
-#define REG_CAMCTL2_INT10_STATUSX                 0x80898
+#define REG_CAMCTL2_INT10_STATUSX                   0x898
 #define F_CAMCTL2_PMRG_R5_I_TIF_CID_CHK_INT_STX_POS                  5
 #define F_CAMCTL2_PMRG_R5_I_TIF_CID_CHK_INT_STX_WIDTH                1
 #define F_CAMCTL2_PMRG_R4_I_TIF_CID_CHK_INT_STX_POS                  4
@@ -8708,7 +8713,7 @@
 #define F_CAMCTL2_MRG_R5_I_TIF_CID_CHK_INT_STX_POS                   0
 #define F_CAMCTL2_MRG_R5_I_TIF_CID_CHK_INT_STX_WIDTH                 1
 
-#define REG_CAMCTL2_INT10_TRIG                    0x8089C
+#define REG_CAMCTL2_INT10_TRIG                      0x89C
 #define F_CAMCTL2_PMRG_R5_I_TIF_CID_CHK_INT_TRIG_POS                 5
 #define F_CAMCTL2_PMRG_R5_I_TIF_CID_CHK_INT_TRIG_WIDTH               1
 #define F_CAMCTL2_PMRG_R4_I_TIF_CID_CHK_INT_TRIG_POS                 4
@@ -8722,31 +8727,31 @@
 #define F_CAMCTL2_MRG_R5_I_TIF_CID_CHK_INT_TRIG_POS                  0
 #define F_CAMCTL2_MRG_R5_I_TIF_CID_CHK_INT_TRIG_WIDTH                1
 
-#define REG_CAMCTL2_INT11_EN                      0x808A0
+#define REG_CAMCTL2_INT11_EN                        0x8A0
 #define F_CAMCTL2_INNER_APB_CID_CHK_INT_EN_POS                       1
 #define F_CAMCTL2_INNER_APB_CID_CHK_INT_EN_WIDTH                     1
 #define F_CAMCTL2_OUTER_APB_CID_CHK_INT_EN_POS                       0
 #define F_CAMCTL2_OUTER_APB_CID_CHK_INT_EN_WIDTH                     1
 
-#define REG_CAMCTL2_INT11_STATUS                  0x808A4
+#define REG_CAMCTL2_INT11_STATUS                    0x8A4
 #define F_CAMCTL2_INNER_APB_CID_CHK_INT_ST_POS                       1
 #define F_CAMCTL2_INNER_APB_CID_CHK_INT_ST_WIDTH                     1
 #define F_CAMCTL2_OUTER_APB_CID_CHK_INT_ST_POS                       0
 #define F_CAMCTL2_OUTER_APB_CID_CHK_INT_ST_WIDTH                     1
 
-#define REG_CAMCTL2_INT11_STATUSX                 0x808A8
+#define REG_CAMCTL2_INT11_STATUSX                   0x8A8
 #define F_CAMCTL2_INNER_APB_CID_CHK_INT_STX_POS                      1
 #define F_CAMCTL2_INNER_APB_CID_CHK_INT_STX_WIDTH                    1
 #define F_CAMCTL2_OUTER_APB_CID_CHK_INT_STX_POS                      0
 #define F_CAMCTL2_OUTER_APB_CID_CHK_INT_STX_WIDTH                    1
 
-#define REG_CAMCTL2_INT11_TRIG                    0x808AC
+#define REG_CAMCTL2_INT11_TRIG                      0x8AC
 #define F_CAMCTL2_INNER_APB_CID_CHK_INT_TRIG_POS                     1
 #define F_CAMCTL2_INNER_APB_CID_CHK_INT_TRIG_WIDTH                   1
 #define F_CAMCTL2_OUTER_APB_CID_CHK_INT_TRIG_POS                     0
 #define F_CAMCTL2_OUTER_APB_CID_CHK_INT_TRIG_WIDTH                   1
 
-#define REG_CAMCTL2_INT17_EN                      0x80900
+#define REG_CAMCTL2_INT17_EN                        0x900
 #define F_CAMCTL2_SW_ENQUE_ERR_EN_POS                                3
 #define F_CAMCTL2_SW_ENQUE_ERR_EN_WIDTH                              1
 #define F_CAMCTL2_DMA_ERR_EN_POS                                     2
@@ -8756,7 +8761,7 @@
 #define F_CAMCTL2_PASS1_DONE_EN_POS                                  0
 #define F_CAMCTL2_PASS1_DONE_EN_WIDTH                                1
 
-#define REG_CAMCTL2_INT17_STATUS                  0x80904
+#define REG_CAMCTL2_INT17_STATUS                    0x904
 #define F_CAMCTL2_SW_ENQUE_ERR_ST_POS                                3
 #define F_CAMCTL2_SW_ENQUE_ERR_ST_WIDTH                              1
 #define F_CAMCTL2_DMA_ERR_ST_POS                                     2
@@ -8766,7 +8771,7 @@
 #define F_CAMCTL2_PASS1_DONE_ST_POS                                  0
 #define F_CAMCTL2_PASS1_DONE_ST_WIDTH                                1
 
-#define REG_CAMCTL2_INT17_STATUSX                 0x80908
+#define REG_CAMCTL2_INT17_STATUSX                   0x908
 #define F_CAMCTL2_SW_ENQUE_ERR_STX_POS                               3
 #define F_CAMCTL2_SW_ENQUE_ERR_STX_WIDTH                             1
 #define F_CAMCTL2_DMA_ERR_STX_POS                                    2
@@ -8776,7 +8781,7 @@
 #define F_CAMCTL2_PASS1_DONE_STX_POS                                 0
 #define F_CAMCTL2_PASS1_DONE_STX_WIDTH                               1
 
-#define REG_CAMCTL2_INT17_TRIG                    0x8090C
+#define REG_CAMCTL2_INT17_TRIG                      0x90C
 #define F_CAMCTL2_SW_ENQUE_ERR_TRIG_POS                              3
 #define F_CAMCTL2_SW_ENQUE_ERR_TRIG_WIDTH                            1
 #define F_CAMCTL2_DMA_ERR_TRIG_POS                                   2
@@ -8786,7 +8791,7 @@
 #define F_CAMCTL2_PASS1_DONE_TRIG_POS                                0
 #define F_CAMCTL2_PASS1_DONE_TRIG_WIDTH                              1
 
-#define REG_CAMCTL2_INT25_STATUS                  0x80984
+#define REG_CAMCTL2_INT25_STATUS                    0x984
 #define F_CAMCTL2_TFMR_DMA_ERR_ST_POS                                2
 #define F_CAMCTL2_TFMR_DMA_ERR_ST_WIDTH                              1
 #define F_CAMCTL2_TFMR_YUV_PASS1_DONE_ST_POS                         1
@@ -8794,7 +8799,7 @@
 #define F_CAMCTL2_TFMR_PASS1_DONE_ST_POS                             0
 #define F_CAMCTL2_TFMR_PASS1_DONE_ST_WIDTH                           1
 
-#define REG_CAMCTL2_INT25_STATUSX                 0x80988
+#define REG_CAMCTL2_INT25_STATUSX                   0x988
 #define F_CAMCTL2_TFMR_DMA_ERR_STX_POS                               2
 #define F_CAMCTL2_TFMR_DMA_ERR_STX_WIDTH                             1
 #define F_CAMCTL2_TFMR_YUV_PASS1_DONE_STX_POS                        1
@@ -8802,7 +8807,7 @@
 #define F_CAMCTL2_TFMR_PASS1_DONE_STX_POS                            0
 #define F_CAMCTL2_TFMR_PASS1_DONE_STX_WIDTH                          1
 
-#define REG_CAMCTL2_INT25_TRIG                    0x8098C
+#define REG_CAMCTL2_INT25_TRIG                      0x98C
 #define F_CAMCTL2_TFMR_DMA_ERR_TRIG_POS                              2
 #define F_CAMCTL2_TFMR_DMA_ERR_TRIG_WIDTH                            1
 #define F_CAMCTL2_TFMR_YUV_PASS1_DONE_TRIG_POS                       1
@@ -8810,13 +8815,13 @@
 #define F_CAMCTL2_TFMR_PASS1_DONE_TRIG_POS                           0
 #define F_CAMCTL2_TFMR_PASS1_DONE_TRIG_WIDTH                         1
 
-#define REG_CAMCTL2_TFMR_INT_STATUS               0x80A04
+#define REG_CAMCTL2_TFMR_INT_STATUS                 0xA04
 #define F_CAMCTL2_TFMR_YUFE_R2_INT_ST_POS                            1
 #define F_CAMCTL2_TFMR_YUFE_R2_INT_ST_WIDTH                          1
 #define F_CAMCTL2_TFMR_YUFE_R1_INT_ST_POS                            0
 #define F_CAMCTL2_TFMR_YUFE_R1_INT_ST_WIDTH                          1
 
-#define REG_CAMCTL2_TFMR_INT2_STATUS              0x80A14
+#define REG_CAMCTL2_TFMR_INT2_STATUS                0xA14
 #define F_CAMCTL2_TFMR_FHO_R3_DONE_ST_POS                            19
 #define F_CAMCTL2_TFMR_FHO_R3_DONE_ST_WIDTH                          1
 #define F_CAMCTL2_TFMR_DRZH1NBO_R1_DONE_ST_POS                       18
@@ -8858,7 +8863,7 @@
 #define F_CAMCTL2_TFMR_YUVO_R1_DONE_ST_POS                           0
 #define F_CAMCTL2_TFMR_YUVO_R1_DONE_ST_WIDTH                         1
 
-#define REG_CAMCTL2_TFMR_INT5_STATUS              0x80A44
+#define REG_CAMCTL2_TFMR_INT5_STATUS                0xA44
 #define F_CAMCTL2_TFMR_FHO_R3_OTF_OVERFLOW_ST_POS                    19
 #define F_CAMCTL2_TFMR_FHO_R3_OTF_OVERFLOW_ST_WIDTH                  1
 #define F_CAMCTL2_TFMR_DRZH1NBO_R1_OTF_OVERFLOW_ST_POS               18
@@ -8900,7 +8905,7 @@
 #define F_CAMCTL2_TFMR_YUVO_R1_OTF_OVERFLOW_ST_POS                   0
 #define F_CAMCTL2_TFMR_YUVO_R1_OTF_OVERFLOW_ST_WIDTH                 1
 
-#define REG_CAMCTL2_TFMR_INT8_STATUS              0x80A74
+#define REG_CAMCTL2_TFMR_INT8_STATUS                0xA74
 #define F_CAMCTL2_TFMR_TFM_DT_SRC_MISMATCH11_INT_ST_POS              24
 #define F_CAMCTL2_TFMR_TFM_DT_SRC_MISMATCH11_INT_ST_WIDTH            1
 #define F_CAMCTL2_TFMR_TFM_DT_SRC_MISMATCH10_INT_ST_POS              23
@@ -8934,19 +8939,19 @@
 #define F_CAMCTL2_TFMR_TFM_APB_SRC_MISMATCH_INT_ST_POS               0
 #define F_CAMCTL2_TFMR_TFM_APB_SRC_MISMATCH_INT_ST_WIDTH             1
 
-#define REG_CAMCTL2_CCU_INT_EN                    0x80B00
+#define REG_CAMCTL2_CCU_INT_EN                      0xB00
 #define F_CAMCTL2_YUFE_R2_INT_CCU_EN_POS                             1
 #define F_CAMCTL2_YUFE_R2_INT_CCU_EN_WIDTH                           1
 #define F_CAMCTL2_YUFE_R1_INT_CCU_EN_POS                             0
 #define F_CAMCTL2_YUFE_R1_INT_CCU_EN_WIDTH                           1
 
-#define REG_CAMCTL2_CCU_INT_STATUS                0x80B04
+#define REG_CAMCTL2_CCU_INT_STATUS                  0xB04
 #define F_CAMCTL2_YUFE_R2_INT_CCU_ST_POS                             1
 #define F_CAMCTL2_YUFE_R2_INT_CCU_ST_WIDTH                           1
 #define F_CAMCTL2_YUFE_R1_INT_CCU_ST_POS                             0
 #define F_CAMCTL2_YUFE_R1_INT_CCU_ST_WIDTH                           1
 
-#define REG_CAMCTL2_CCU_INT2_EN                   0x80B08
+#define REG_CAMCTL2_CCU_INT2_EN                     0xB08
 #define F_CAMCTL2_FHO_R3_DONE_CCU_EN_POS                             19
 #define F_CAMCTL2_FHO_R3_DONE_CCU_EN_WIDTH                           1
 #define F_CAMCTL2_DRZH1NBO_R1_DONE_CCU_EN_POS                        18
@@ -8988,7 +8993,7 @@
 #define F_CAMCTL2_YUVO_R1_DONE_CCU_EN_POS                            0
 #define F_CAMCTL2_YUVO_R1_DONE_CCU_EN_WIDTH                          1
 
-#define REG_CAMCTL2_CCU_INT2_STATUS               0x80B0C
+#define REG_CAMCTL2_CCU_INT2_STATUS                 0xB0C
 #define F_CAMCTL2_FHO_R3_DONE_CCU_ST_POS                             19
 #define F_CAMCTL2_FHO_R3_DONE_CCU_ST_WIDTH                           1
 #define F_CAMCTL2_DRZH1NBO_R1_DONE_CCU_ST_POS                        18
@@ -9030,7 +9035,7 @@
 #define F_CAMCTL2_YUVO_R1_DONE_CCU_ST_POS                            0
 #define F_CAMCTL2_YUVO_R1_DONE_CCU_ST_WIDTH                          1
 
-#define REG_CAMCTL2_CCU_INT5_EN                   0x80B20
+#define REG_CAMCTL2_CCU_INT5_EN                     0xB20
 #define F_CAMCTL2_FHO_R3_OTF_OVERFLOW_CCU_EN_POS                     19
 #define F_CAMCTL2_FHO_R3_OTF_OVERFLOW_CCU_EN_WIDTH                   1
 #define F_CAMCTL2_DRZH1NBO_R1_OTF_OVERFLOW_CCU_EN_POS                18
@@ -9072,7 +9077,7 @@
 #define F_CAMCTL2_YUVO_R1_OTF_OVERFLOW_CCU_EN_POS                    0
 #define F_CAMCTL2_YUVO_R1_OTF_OVERFLOW_CCU_EN_WIDTH                  1
 
-#define REG_CAMCTL2_CCU_INT5_STATUS               0x80B24
+#define REG_CAMCTL2_CCU_INT5_STATUS                 0xB24
 #define F_CAMCTL2_FHO_R3_OTF_OVERFLOW_CCU_ST_POS                     19
 #define F_CAMCTL2_FHO_R3_OTF_OVERFLOW_CCU_ST_WIDTH                   1
 #define F_CAMCTL2_DRZH1NBO_R1_OTF_OVERFLOW_CCU_ST_POS                18
@@ -9114,7 +9119,7 @@
 #define F_CAMCTL2_YUVO_R1_OTF_OVERFLOW_CCU_ST_POS                    0
 #define F_CAMCTL2_YUVO_R1_OTF_OVERFLOW_CCU_ST_WIDTH                  1
 
-#define REG_CAMCTL2_CCU_INT8_STATUS               0x80B3C
+#define REG_CAMCTL2_CCU_INT8_STATUS                 0xB3C
 #define F_CAMCTL2_TFM_DT_SRC_MISMATCH11_INT_CCU_ST_POS               24
 #define F_CAMCTL2_TFM_DT_SRC_MISMATCH11_INT_CCU_ST_WIDTH             1
 #define F_CAMCTL2_TFM_DT_SRC_MISMATCH10_INT_CCU_ST_POS               23
@@ -9148,15 +9153,15 @@
 #define F_CAMCTL2_TFM_APB_SRC_MISMATCH_INT_CCU_ST_POS                0
 #define F_CAMCTL2_TFM_APB_SRC_MISMATCH_INT_CCU_ST_WIDTH              1
 
-#define REG_CAMCTL2_CCU_INT9_EN                   0x80B40
+#define REG_CAMCTL2_CCU_INT9_EN                     0xB40
 #define F_CAMCTL2_TCYS_R1_STAT_PROT_INT_CCU_EN_POS                   0
 #define F_CAMCTL2_TCYS_R1_STAT_PROT_INT_CCU_EN_WIDTH                 1
 
-#define REG_CAMCTL2_CCU_INT9_STATUS               0x80B44
+#define REG_CAMCTL2_CCU_INT9_STATUS                 0xB44
 #define F_CAMCTL2_TCYS_R1_STAT_PROT_INT_CCU_ST_POS                   0
 #define F_CAMCTL2_TCYS_R1_STAT_PROT_INT_CCU_ST_WIDTH                 1
 
-#define REG_CAMCTL2_CCU_INT10_EN                  0x80B48
+#define REG_CAMCTL2_CCU_INT10_EN                    0xB48
 #define F_CAMCTL2_PMRG_R5_I_TIF_CID_CHK_INT_CCU_EN_POS               5
 #define F_CAMCTL2_PMRG_R5_I_TIF_CID_CHK_INT_CCU_EN_WIDTH             1
 #define F_CAMCTL2_PMRG_R4_I_TIF_CID_CHK_INT_CCU_EN_POS               4
@@ -9170,7 +9175,7 @@
 #define F_CAMCTL2_MRG_R5_I_TIF_CID_CHK_INT_CCU_EN_POS                0
 #define F_CAMCTL2_MRG_R5_I_TIF_CID_CHK_INT_CCU_EN_WIDTH              1
 
-#define REG_CAMCTL2_CCU_INT10_STATUS              0x80B4C
+#define REG_CAMCTL2_CCU_INT10_STATUS                0xB4C
 #define F_CAMCTL2_PMRG_R5_I_TIF_CID_CHK_INT_CCU_ST_POS               5
 #define F_CAMCTL2_PMRG_R5_I_TIF_CID_CHK_INT_CCU_ST_WIDTH             1
 #define F_CAMCTL2_PMRG_R4_I_TIF_CID_CHK_INT_CCU_ST_POS               4
@@ -9184,19 +9189,19 @@
 #define F_CAMCTL2_MRG_R5_I_TIF_CID_CHK_INT_CCU_ST_POS                0
 #define F_CAMCTL2_MRG_R5_I_TIF_CID_CHK_INT_CCU_ST_WIDTH              1
 
-#define REG_CAMCTL2_CCU_INT11_EN                  0x80B50
+#define REG_CAMCTL2_CCU_INT11_EN                    0xB50
 #define F_CAMCTL2_INNER_APB_CID_CHK_INT_CCU_EN_POS                   1
 #define F_CAMCTL2_INNER_APB_CID_CHK_INT_CCU_EN_WIDTH                 1
 #define F_CAMCTL2_OUTER_APB_CID_CHK_INT_CCU_EN_POS                   0
 #define F_CAMCTL2_OUTER_APB_CID_CHK_INT_CCU_EN_WIDTH                 1
 
-#define REG_CAMCTL2_CCU_INT11_STATUS              0x80B54
+#define REG_CAMCTL2_CCU_INT11_STATUS                0xB54
 #define F_CAMCTL2_INNER_APB_CID_CHK_INT_CCU_ST_POS                   1
 #define F_CAMCTL2_INNER_APB_CID_CHK_INT_CCU_ST_WIDTH                 1
 #define F_CAMCTL2_OUTER_APB_CID_CHK_INT_CCU_ST_POS                   0
 #define F_CAMCTL2_OUTER_APB_CID_CHK_INT_CCU_ST_WIDTH                 1
 
-#define REG_CAMCTL2_CCU_INT17_EN                  0x80B80
+#define REG_CAMCTL2_CCU_INT17_EN                    0xB80
 #define F_CAMCTL2_SW_ENQUE_ERR_CCU_EN_POS                            3
 #define F_CAMCTL2_SW_ENQUE_ERR_CCU_EN_WIDTH                          1
 #define F_CAMCTL2_DMA_ERR_CCU_EN_POS                                 2
@@ -9206,7 +9211,7 @@
 #define F_CAMCTL2_PASS1_DONE_CCU_EN_POS                              0
 #define F_CAMCTL2_PASS1_DONE_CCU_EN_WIDTH                            1
 
-#define REG_CAMCTL2_CCU_INT17_STATUS              0x80B84
+#define REG_CAMCTL2_CCU_INT17_STATUS                0xB84
 #define F_CAMCTL2_SW_ENQUE_ERR_CCU_ST_POS                            3
 #define F_CAMCTL2_SW_ENQUE_ERR_CCU_ST_WIDTH                          1
 #define F_CAMCTL2_DMA_ERR_CCU_ST_POS                                 2
@@ -9216,77 +9221,79 @@
 #define F_CAMCTL2_PASS1_DONE_CCU_ST_POS                              0
 #define F_CAMCTL2_PASS1_DONE_CCU_ST_WIDTH                            1
 
-#define REG_CAMCTL2_MOD_DCM_DIS                   0x80D00
-#define REG_CAMCTL2_MOD2_DCM_DIS                  0x80D04
-#define REG_CAMCTL2_MOD3_DCM_DIS                  0x80D08
-#define REG_CAMCTL2_MOD4_DCM_DIS                  0x80D0C
-#define REG_CAMCTL2_MOD5_DCM_DIS                  0x80D10
-#define REG_CAMCTL2_MOD6_DCM_DIS                  0x80D14
-#define REG_CAMCTL2_MOD10_DCM_DIS                 0x80D24
-#define REG_CAMCTL2_MOD11_DCM_DIS                 0x80D28
-#define REG_CAMCTL2_MOD15_DCM_DIS                 0x80D38
-#define REG_CAMCTL2_MOD_DCM_STATUS                0x80D40
-#define REG_CAMCTL2_MOD2_DCM_STATUS               0x80D44
-#define REG_CAMCTL2_MOD3_DCM_STATUS               0x80D48
-#define REG_CAMCTL2_MOD4_DCM_STATUS               0x80D4C
-#define REG_CAMCTL2_MOD5_DCM_STATUS               0x80D50
-#define REG_CAMCTL2_MOD6_DCM_STATUS               0x80D54
-#define REG_CAMCTL2_MOD10_DCM_STATUS              0x80D64
-#define REG_CAMCTL2_MOD11_DCM_STATUS              0x80D68
-#define REG_CAMCTL2_MOD15_DCM_STATUS              0x80D78
-#define REG_CAMCTL2_MOD_REQ_STATUS                0x80D80
-#define REG_CAMCTL2_MOD2_REQ_STATUS               0x80D84
-#define REG_CAMCTL2_MOD3_REQ_STATUS               0x80D88
-#define REG_CAMCTL2_MOD4_REQ_STATUS               0x80D8C
-#define REG_CAMCTL2_MOD5_REQ_STATUS               0x80D90
-#define REG_CAMCTL2_MOD6_REQ_STATUS               0x80D94
-#define REG_CAMCTL2_MOD10_REQ_STATUS              0x80DA4
-#define REG_CAMCTL2_MOD11_REQ_STATUS              0x80DA8
-#define REG_CAMCTL2_MOD_RDY_STATUS                0x80DC0
-#define REG_CAMCTL2_MOD2_RDY_STATUS               0x80DC4
-#define REG_CAMCTL2_MOD3_RDY_STATUS               0x80DC8
-#define REG_CAMCTL2_MOD4_RDY_STATUS               0x80DCC
-#define REG_CAMCTL2_MOD5_RDY_STATUS               0x80DD0
-#define REG_CAMCTL2_MOD6_RDY_STATUS               0x80DD4
-#define REG_CAMCTL2_MOD10_RDY_STATUS              0x80DE4
-#define REG_CAMCTL2_MOD11_RDY_STATUS              0x80DE8
-#define REG_CAMCTL2_DBG_SET                       0x80F00
+#define REG_CAMCTL2_MOD_DCM_DIS                     0xD00
+#define REG_CAMCTL2_MOD2_DCM_DIS                    0xD04
+#define REG_CAMCTL2_MOD3_DCM_DIS                    0xD08
+#define REG_CAMCTL2_MOD4_DCM_DIS                    0xD0C
+#define REG_CAMCTL2_MOD5_DCM_DIS                    0xD10
+#define REG_CAMCTL2_MOD6_DCM_DIS                    0xD14
+#define REG_CAMCTL2_MOD10_DCM_DIS                   0xD24
+#define REG_CAMCTL2_MOD11_DCM_DIS                   0xD28
+#define REG_CAMCTL2_MOD15_DCM_DIS                   0xD38
+#define REG_CAMCTL2_MOD_DCM_STATUS                  0xD40
+#define REG_CAMCTL2_MOD2_DCM_STATUS                 0xD44
+#define REG_CAMCTL2_MOD3_DCM_STATUS                 0xD48
+#define REG_CAMCTL2_MOD4_DCM_STATUS                 0xD4C
+#define REG_CAMCTL2_MOD5_DCM_STATUS                 0xD50
+#define REG_CAMCTL2_MOD6_DCM_STATUS                 0xD54
+#define REG_CAMCTL2_MOD10_DCM_STATUS                0xD64
+#define REG_CAMCTL2_MOD11_DCM_STATUS                0xD68
+#define REG_CAMCTL2_MOD15_DCM_STATUS                0xD78
+#define REG_CAMCTL2_MOD_REQ_STATUS                  0xD80
+#define REG_CAMCTL2_MOD2_REQ_STATUS                 0xD84
+#define REG_CAMCTL2_MOD3_REQ_STATUS                 0xD88
+#define REG_CAMCTL2_MOD4_REQ_STATUS                 0xD8C
+#define REG_CAMCTL2_MOD5_REQ_STATUS                 0xD90
+#define REG_CAMCTL2_MOD6_REQ_STATUS                 0xD94
+#define REG_CAMCTL2_MOD10_REQ_STATUS                0xDA4
+#define REG_CAMCTL2_MOD11_REQ_STATUS                0xDA8
+#define REG_CAMCTL2_MOD_RDY_STATUS                  0xDC0
+#define REG_CAMCTL2_MOD2_RDY_STATUS                 0xDC4
+#define REG_CAMCTL2_MOD3_RDY_STATUS                 0xDC8
+#define REG_CAMCTL2_MOD4_RDY_STATUS                 0xDCC
+#define REG_CAMCTL2_MOD5_RDY_STATUS                 0xDD0
+#define REG_CAMCTL2_MOD6_RDY_STATUS                 0xDD4
+#define REG_CAMCTL2_MOD10_RDY_STATUS                0xDE4
+#define REG_CAMCTL2_MOD11_RDY_STATUS                0xDE8
+#define REG_CAMCTL2_DBG_SET                         0xF00
 #define F_CAMCTL2_DEBUG_TOP_SEL_POS                                  16
 #define F_CAMCTL2_DEBUG_TOP_SEL_WIDTH                                8
 #define F_CAMCTL2_DEBUG_MOD_SEL_POS                                  0
 #define F_CAMCTL2_DEBUG_MOD_SEL_WIDTH                                8
 
-#define REG_CAMCTL2_DBG_SET2                      0x80F04
+#define REG_CAMCTL2_DBG_SET2                        0xF04
 #define F_CAMCTL2_DEBUG_SEL_POS                                      0
 #define F_CAMCTL2_DEBUG_SEL_WIDTH                                    4
 
-#define REG_CAMCTL2_DBG_SET3                      0x80F08
+#define REG_CAMCTL2_DBG_SET3                        0xF08
 #define F_CAMCTL2_SNAPSHOT_SEL_POS                                   0
 #define F_CAMCTL2_SNAPSHOT_SEL_WIDTH                                 8
 
-#define REG_CAMCTL2_DBG_PORT                      0x80F0C
-#define REG_CAMCTL2_DBG_DP_EN                     0x80F20
+#define REG_CAMCTL2_DBG_PORT                        0xF0C
+#define REG_CAMCTL2_DBG_DP_EN                       0xF20
 #define F_CAMCTL2_PIX2TO1_R2_EN_ST_POS                               1
 #define F_CAMCTL2_PIX2TO1_R2_EN_ST_WIDTH                             1
 #define F_CAMCTL2_PIX2TO1_R1_EN_ST_POS                               0
 #define F_CAMCTL2_PIX2TO1_R1_EN_ST_WIDTH                             1
 
-#define REG_CAMCTL2_SPARE                         0x80FE0
+#define REG_CAMCTL2_SPARE                           0xFE0
+
+/* baseaddr 0x3A790000 */
 
 /* module: CAMYUVDMATOP_R1A */
-#define REG_CAMYUVDMATOP_SPECIAL_FUN_EN           0x90000
+#define REG_CAMYUVDMATOP_SPECIAL_FUN_EN               0x0
 #define F_CAMYUVDMATOP_DCM_MODE_POS                                  26
 #define F_CAMYUVDMATOP_DCM_MODE_WIDTH                                1
 #define F_CAMYUVDMATOP_GCLAST_EN_POS                                 25
 #define F_CAMYUVDMATOP_GCLAST_EN_WIDTH                               1
 
-#define REG_CAMYUVDMATOP_DMA_RSV1                 0x90004
-#define REG_CAMYUVDMATOP_DMA_RSV2                 0x90008
-#define REG_CAMYUVDMATOP_DMA_RSV3                 0x9000C
-#define REG_CAMYUVDMATOP_DMA_RSV4                 0x90010
-#define REG_CAMYUVDMATOP_DMA_RSV5                 0x90014
-#define REG_CAMYUVDMATOP_DMA_RSV6                 0x90018
-#define REG_CAMYUVDMATOP_DMA_EXISTED_ECO          0x9001C
+#define REG_CAMYUVDMATOP_DMA_RSV1                     0x4
+#define REG_CAMYUVDMATOP_DMA_RSV2                     0x8
+#define REG_CAMYUVDMATOP_DMA_RSV3                     0xC
+#define REG_CAMYUVDMATOP_DMA_RSV4                    0x10
+#define REG_CAMYUVDMATOP_DMA_RSV5                    0x14
+#define REG_CAMYUVDMATOP_DMA_RSV6                    0x18
+#define REG_CAMYUVDMATOP_DMA_EXISTED_ECO             0x1C
 #define F_CAMYUVDMATOP_ECO_CQ_UFO_DEC_POS                            31
 #define F_CAMYUVDMATOP_ECO_CQ_UFO_DEC_WIDTH                          1
 #define F_CAMYUVDMATOP_ECO_RAWI_MOBILE_DC_LINE_CNT_UNDER_UFO_MODE_POS 30
@@ -9306,7 +9313,7 @@
 #define F_CAMYUVDMATOP_MASK_REQ_EN_POS                               0
 #define F_CAMYUVDMATOP_MASK_REQ_EN_WIDTH                             1
 
-#define REG_CAMYUVDMATOP_ISC_GID9_REGISTER_0      0x90020
+#define REG_CAMYUVDMATOP_ISC_GID9_REGISTER_0         0x20
 #define F_CAMYUVDMATOP_YUVDO_R1_SLC_GID_POS                          20
 #define F_CAMYUVDMATOP_YUVDO_R1_SLC_GID_WIDTH                        7
 #define F_CAMYUVDMATOP_YUVDO_R1_SLC_BID_POS                          18
@@ -9320,7 +9327,7 @@
 #define F_CAMYUVDMATOP_YUVBO_R1_SLC_BID_POS                          0
 #define F_CAMYUVDMATOP_YUVBO_R1_SLC_BID_WIDTH                        2
 
-#define REG_CAMYUVDMATOP_ISC_GID9_REGISTER_1      0x90024
+#define REG_CAMYUVDMATOP_ISC_GID9_REGISTER_1         0x24
 #define F_CAMYUVDMATOP_YUVO_R1_SLC_GID_POS                           20
 #define F_CAMYUVDMATOP_YUVO_R1_SLC_GID_WIDTH                         7
 #define F_CAMYUVDMATOP_YUVO_R1_SLC_BID_POS                           18
@@ -9334,7 +9341,7 @@
 #define F_CAMYUVDMATOP_YUVCO_R3_SLC_BID_POS                          0
 #define F_CAMYUVDMATOP_YUVCO_R3_SLC_BID_WIDTH                        2
 
-#define REG_CAMYUVDMATOP_ISC_GID9_REGISTER_2      0x90028
+#define REG_CAMYUVDMATOP_ISC_GID9_REGISTER_2         0x28
 #define F_CAMYUVDMATOP_YUVBO_R3_SLC_GID_POS                          20
 #define F_CAMYUVDMATOP_YUVBO_R3_SLC_GID_WIDTH                        7
 #define F_CAMYUVDMATOP_YUVBO_R3_SLC_BID_POS                          18
@@ -9348,7 +9355,7 @@
 #define F_CAMYUVDMATOP_YUVBO_R4_SLC_BID_POS                          0
 #define F_CAMYUVDMATOP_YUVBO_R4_SLC_BID_WIDTH                        2
 
-#define REG_CAMYUVDMATOP_ISC_GID9_REGISTER_3      0x9002C
+#define REG_CAMYUVDMATOP_ISC_GID9_REGISTER_3         0x2C
 #define F_CAMYUVDMATOP_YUVO_R4_SLC_GID_POS                           20
 #define F_CAMYUVDMATOP_YUVO_R4_SLC_GID_WIDTH                         7
 #define F_CAMYUVDMATOP_YUVO_R4_SLC_BID_POS                           18
@@ -9362,7 +9369,7 @@
 #define F_CAMYUVDMATOP_YUVO_R2_SLC_BID_POS                           0
 #define F_CAMYUVDMATOP_YUVO_R2_SLC_BID_WIDTH                         2
 
-#define REG_CAMYUVDMATOP_ISC_GID9_REGISTER_4      0x90030
+#define REG_CAMYUVDMATOP_ISC_GID9_REGISTER_4         0x30
 #define F_CAMYUVDMATOP_RZH1N2TO_R2_SLC_GID_POS                       20
 #define F_CAMYUVDMATOP_RZH1N2TO_R2_SLC_GID_WIDTH                     7
 #define F_CAMYUVDMATOP_RZH1N2TO_R2_SLC_BID_POS                       18
@@ -9376,7 +9383,7 @@
 #define F_CAMYUVDMATOP_DRZH2NO_R8_SLC_BID_POS                        0
 #define F_CAMYUVDMATOP_DRZH2NO_R8_SLC_BID_WIDTH                      2
 
-#define REG_CAMYUVDMATOP_ISC_GID9_REGISTER_5      0x90034
+#define REG_CAMYUVDMATOP_ISC_GID9_REGISTER_5         0x34
 #define F_CAMYUVDMATOP_DRZH2NO_R1_SLC_GID_POS                        20
 #define F_CAMYUVDMATOP_DRZH2NO_R1_SLC_GID_WIDTH                      7
 #define F_CAMYUVDMATOP_DRZH2NO_R1_SLC_BID_POS                        18
@@ -9390,7 +9397,7 @@
 #define F_CAMYUVDMATOP_DRZH1NO_R1_SLC_BID_POS                        0
 #define F_CAMYUVDMATOP_DRZH1NO_R1_SLC_BID_WIDTH                      2
 
-#define REG_CAMYUVDMATOP_ISC_GID9_REGISTER_6      0x90038
+#define REG_CAMYUVDMATOP_ISC_GID9_REGISTER_6         0x38
 #define F_CAMYUVDMATOP_FHO_R3_SLC_GID_POS                            11
 #define F_CAMYUVDMATOP_FHO_R3_SLC_GID_WIDTH                          7
 #define F_CAMYUVDMATOP_FHO_R3_SLC_BID_POS                            9
@@ -9400,7 +9407,7 @@
 #define F_CAMYUVDMATOP_TCYSO_R1_SLC_BID_POS                          0
 #define F_CAMYUVDMATOP_TCYSO_R1_SLC_BID_WIDTH                        2
 
-#define REG_CAMYUVDMATOP_DMA_ERR_CTRL             0x90060
+#define REG_CAMYUVDMATOP_DMA_ERR_CTRL                0x60
 #define F_CAMYUVDMATOP_ERR_CLR_MD_POS                                31
 #define F_CAMYUVDMATOP_ERR_CLR_MD_WIDTH                              1
 #define F_CAMYUVDMATOP_FHO_R3_ERR_POS                                23
@@ -9444,7 +9451,7 @@
 #define F_CAMYUVDMATOP_YUVO_R1_ERR_POS                               0
 #define F_CAMYUVDMATOP_YUVO_R1_ERR_WIDTH                             1
 
-#define REG_CAMYUVDMATOP_DMA_SOFT_RST_STAT        0x90068
+#define REG_CAMYUVDMATOP_DMA_SOFT_RST_STAT           0x68
 #define F_CAMYUVDMATOP_CAM_YUV_SMI_LARB0_W7_SOFT_RST_STAT_POS        7
 #define F_CAMYUVDMATOP_CAM_YUV_SMI_LARB0_W7_SOFT_RST_STAT_WIDTH      1
 #define F_CAMYUVDMATOP_CAM_YUV_SMI_LARB0_W6_SOFT_RST_STAT_POS        6
@@ -9462,7 +9469,7 @@
 #define F_CAMYUVDMATOP_CAM_YUV_SMI_LARB0_W0_SOFT_RST_STAT_POS        0
 #define F_CAMYUVDMATOP_CAM_YUV_SMI_LARB0_W0_SOFT_RST_STAT_WIDTH      1
 
-#define REG_CAMYUVDMATOP_DMA_DBG_SEL              0x90070
+#define REG_CAMYUVDMATOP_DMA_DBG_SEL                 0x70
 #define F_CAMYUVDMATOP_ARBITER_COM_FULL_POS                          31
 #define F_CAMYUVDMATOP_ARBITER_COM_FULL_WIDTH                        1
 #define F_CAMYUVDMATOP_ARBITER_BVALID_FULL_POS                       30
@@ -9480,8 +9487,8 @@
 #define F_CAMYUVDMATOP_DMA_TOP_SEL_POS                               0
 #define F_CAMYUVDMATOP_DMA_TOP_SEL_WIDTH                             8
 
-#define REG_CAMYUVDMATOP_DMA_DBG_PORT             0x90074
-#define REG_CAMYUVDMATOP_SMI_LATENCY_MON_RST      0x90078
+#define REG_CAMYUVDMATOP_DMA_DBG_PORT                0x74
+#define REG_CAMYUVDMATOP_SMI_LATENCY_MON_RST         0x78
 #define F_CAMYUVDMATOP_SMI_LATENCY_MON_RST_CAMYUV_SMI_LARB0_W7_POS   7
 #define F_CAMYUVDMATOP_SMI_LATENCY_MON_RST_CAMYUV_SMI_LARB0_W7_WIDTH 1
 #define F_CAMYUVDMATOP_SMI_LATENCY_MON_RST_CAMYUV_SMI_LARB0_W6_POS   6
@@ -9499,7 +9506,7 @@
 #define F_CAMYUVDMATOP_SMI_LATENCY_MON_RST_CAMYUV_SMI_LARB0_W0_POS   0
 #define F_CAMYUVDMATOP_SMI_LATENCY_MON_RST_CAMYUV_SMI_LARB0_W0_WIDTH 1
 
-#define REG_CAMYUVDMATOP_SMI_LATENCY_MON_EN       0x9007C
+#define REG_CAMYUVDMATOP_SMI_LATENCY_MON_EN          0x7C
 #define F_CAMYUVDMATOP_SMI_LATENCY_MON_EN_CAMYUV_SMI_LARB0_W7_POS    7
 #define F_CAMYUVDMATOP_SMI_LATENCY_MON_EN_CAMYUV_SMI_LARB0_W7_WIDTH  1
 #define F_CAMYUVDMATOP_SMI_LATENCY_MON_EN_CAMYUV_SMI_LARB0_W6_POS    6
@@ -9517,13 +9524,13 @@
 #define F_CAMYUVDMATOP_SMI_LATENCY_MON_EN_CAMYUV_SMI_LARB0_W0_POS    0
 #define F_CAMYUVDMATOP_SMI_LATENCY_MON_EN_CAMYUV_SMI_LARB0_W0_WIDTH  1
 
-#define REG_CAMYUVDMATOP_SMI_PORT_PSUEDO_MODE_EN  0x90080
+#define REG_CAMYUVDMATOP_SMI_PORT_PSUEDO_MODE_EN     0x80
 #define F_CAMYUVDMATOP_SMI_PORT_PSUEDO_MODE_EN_WDMA_POS              0
 #define F_CAMYUVDMATOP_SMI_PORT_PSUEDO_MODE_EN_WDMA_WIDTH            1
 
-#define REG_CAMYUVDMATOP_SMI_PORT_PSUEDO_MODE_DLE_DELAY_CNT  0x90084
-#define REG_CAMYUVDMATOP_SMI_PORT_PSUEDO_MODE_RAND_SEED  0x9008C
-#define REG_CAMYUVDMATOP_AXSLC_REGISTER_0         0x900A0
+#define REG_CAMYUVDMATOP_SMI_PORT_PSUEDO_MODE_DLE_DELAY_CNT     0x84
+#define REG_CAMYUVDMATOP_SMI_PORT_PSUEDO_MODE_RAND_SEED     0x8C
+#define REG_CAMYUVDMATOP_AXSLC_REGISTER_0            0xA0
 #define F_CAMYUVDMATOP_YUVDO_R1_AXSLC_POS                            24
 #define F_CAMYUVDMATOP_YUVDO_R1_AXSLC_WIDTH                          5
 #define F_CAMYUVDMATOP_YUVCO_R1_AXSLC_POS                            16
@@ -9533,7 +9540,7 @@
 #define F_CAMYUVDMATOP_YUVO_R1_AXSLC_POS                             0
 #define F_CAMYUVDMATOP_YUVO_R1_AXSLC_WIDTH                           5
 
-#define REG_CAMYUVDMATOP_AXSLC_REGISTER_1         0x900A4
+#define REG_CAMYUVDMATOP_AXSLC_REGISTER_1            0xA4
 #define F_CAMYUVDMATOP_YUVDO_R3_AXSLC_POS                            24
 #define F_CAMYUVDMATOP_YUVDO_R3_AXSLC_WIDTH                          5
 #define F_CAMYUVDMATOP_YUVCO_R3_AXSLC_POS                            16
@@ -9543,7 +9550,7 @@
 #define F_CAMYUVDMATOP_YUVO_R3_AXSLC_POS                             0
 #define F_CAMYUVDMATOP_YUVO_R3_AXSLC_WIDTH                           5
 
-#define REG_CAMYUVDMATOP_AXSLC_REGISTER_2         0x900A8
+#define REG_CAMYUVDMATOP_AXSLC_REGISTER_2            0xA8
 #define F_CAMYUVDMATOP_YUVBO_R4_AXSLC_POS                            24
 #define F_CAMYUVDMATOP_YUVBO_R4_AXSLC_WIDTH                          5
 #define F_CAMYUVDMATOP_YUVO_R4_AXSLC_POS                             16
@@ -9553,7 +9560,7 @@
 #define F_CAMYUVDMATOP_YUVO_R2_AXSLC_POS                             0
 #define F_CAMYUVDMATOP_YUVO_R2_AXSLC_WIDTH                           5
 
-#define REG_CAMYUVDMATOP_AXSLC_REGISTER_3         0x900AC
+#define REG_CAMYUVDMATOP_AXSLC_REGISTER_3            0xAC
 #define F_CAMYUVDMATOP_RZH1N2TO_R2_AXSLC_POS                         24
 #define F_CAMYUVDMATOP_RZH1N2TO_R2_AXSLC_WIDTH                       5
 #define F_CAMYUVDMATOP_DRZS4NO_R3_AXSLC_POS                          16
@@ -9563,7 +9570,7 @@
 #define F_CAMYUVDMATOP_DRZH2NO_R1_AXSLC_POS                          0
 #define F_CAMYUVDMATOP_DRZH2NO_R1_AXSLC_WIDTH                        5
 
-#define REG_CAMYUVDMATOP_AXSLC_REGISTER_4         0x900B0
+#define REG_CAMYUVDMATOP_AXSLC_REGISTER_4            0xB0
 #define F_CAMYUVDMATOP_DRZH1NBO_R1_AXSLC_POS                         24
 #define F_CAMYUVDMATOP_DRZH1NBO_R1_AXSLC_WIDTH                       5
 #define F_CAMYUVDMATOP_DRZH1NO_R1_AXSLC_POS                          16
@@ -9573,11 +9580,11 @@
 #define F_CAMYUVDMATOP_TCYSO_R1_AXSLC_POS                            0
 #define F_CAMYUVDMATOP_TCYSO_R1_AXSLC_WIDTH                          5
 
-#define REG_CAMYUVDMATOP_CONTINUOUS_COM_EN        0x900BC
+#define REG_CAMYUVDMATOP_CONTINUOUS_COM_EN           0xBC
 #define F_CAMYUVDMATOP_CONTINUOUS_COM_EN_POS                         0
 #define F_CAMYUVDMATOP_CONTINUOUS_COM_EN_WIDTH                       1
 
-#define REG_CAMYUVDMATOP_CONTINUOUS_COM_CON_0     0x900C0
+#define REG_CAMYUVDMATOP_CONTINUOUS_COM_CON_0        0xC0
 #define F_CAMYUVDMATOP_CONTINUOUS_COM_CON_YUVBO_R4_POS               22
 #define F_CAMYUVDMATOP_CONTINUOUS_COM_CON_YUVBO_R4_WIDTH             2
 #define F_CAMYUVDMATOP_CONTINUOUS_COM_CON_YUVO_R4_POS                20
@@ -9603,7 +9610,7 @@
 #define F_CAMYUVDMATOP_CONTINUOUS_COM_CON_YUVO_R1_POS                0
 #define F_CAMYUVDMATOP_CONTINUOUS_COM_CON_YUVO_R1_WIDTH              2
 
-#define REG_CAMYUVDMATOP_CONTINUOUS_COM_CON_1     0x900C4
+#define REG_CAMYUVDMATOP_CONTINUOUS_COM_CON_1        0xC4
 #define F_CAMYUVDMATOP_CONTINUOUS_COM_CON_FHO_R3_POS                 14
 #define F_CAMYUVDMATOP_CONTINUOUS_COM_CON_FHO_R3_WIDTH               2
 #define F_CAMYUVDMATOP_CONTINUOUS_COM_CON_TCYSO_R1_POS               12
@@ -9621,7 +9628,7 @@
 #define F_CAMYUVDMATOP_CONTINUOUS_COM_CON_DRZH2NO_R1_POS             0
 #define F_CAMYUVDMATOP_CONTINUOUS_COM_CON_DRZH2NO_R1_WIDTH           2
 
-#define REG_CAMYUVDMATOP_QOS_CON_0                0x900C8
+#define REG_CAMYUVDMATOP_QOS_CON_0                   0xC8
 #define F_CAMYUVDMATOP_W_LAST_PRE_ULTRA_EN_POS                       28
 #define F_CAMYUVDMATOP_W_LAST_PRE_ULTRA_EN_WIDTH                     1
 #define F_CAMYUVDMATOP_W_FIFO_PRE_PRI_THRH_POS                       16
@@ -9629,7 +9636,7 @@
 #define F_CAMYUVDMATOP_W_FIFO_PRE_PRI_THRL_POS                       0
 #define F_CAMYUVDMATOP_W_FIFO_PRE_PRI_THRL_WIDTH                     12
 
-#define REG_CAMYUVDMATOP_QOS_CON_1                0x900CC
+#define REG_CAMYUVDMATOP_QOS_CON_1                   0xCC
 #define F_CAMYUVDMATOP_W_LAST_ULTRA_EN_POS                           28
 #define F_CAMYUVDMATOP_W_LAST_ULTRA_EN_WIDTH                         1
 #define F_CAMYUVDMATOP_W_FIFO_PRI_THRH_POS                           16
@@ -9637,7 +9644,7 @@
 #define F_CAMYUVDMATOP_W_FIFO_PRI_THRL_POS                           0
 #define F_CAMYUVDMATOP_W_FIFO_PRI_THRL_WIDTH                         12
 
-#define REG_CAMYUVDMATOP_QOS_CON_2                0x900D0
+#define REG_CAMYUVDMATOP_QOS_CON_2                   0xD0
 #define F_CAMYUVDMATOP_W_FIFO_URGENT_EN_POS                          28
 #define F_CAMYUVDMATOP_W_FIFO_URGENT_EN_WIDTH                        1
 #define F_CAMYUVDMATOP_W_FIFO_URGENT_THRH_POS                        16
@@ -9645,7 +9652,7 @@
 #define F_CAMYUVDMATOP_W_FIFO_URGENT_THRL_POS                        0
 #define F_CAMYUVDMATOP_W_FIFO_URGENT_THRL_WIDTH                      12
 
-#define REG_CAMYUVDMATOP_QOS_CON_3                0x900D4
+#define REG_CAMYUVDMATOP_QOS_CON_3                   0xD4
 #define F_CAMYUVDMATOP_W_FIFO_DVFS_EN_POS                            28
 #define F_CAMYUVDMATOP_W_FIFO_DVFS_EN_WIDTH                          1
 #define F_CAMYUVDMATOP_W_FIFO_DVFS_THRH_POS                          16
@@ -9653,7 +9660,7 @@
 #define F_CAMYUVDMATOP_W_FIFO_DVFS_THRL_POS                          0
 #define F_CAMYUVDMATOP_W_FIFO_DVFS_THRL_WIDTH                        12
 
-#define REG_CAMYUVDMATOP_WLA2P0_CON               0x900D8
+#define REG_CAMYUVDMATOP_WLA2P0_CON                  0xD8
 #define F_CAMYUVDMATOP_WLA2P0_EN_POS                                 28
 #define F_CAMYUVDMATOP_WLA2P0_EN_WIDTH                               1
 #define F_CAMYUVDMATOP_W_FIFO_WLA2P0_TH_POS                          16
@@ -9661,13 +9668,13 @@
 #define F_CAMYUVDMATOP_R_FIFO_WLA2P0_TH_POS                          0
 #define F_CAMYUVDMATOP_R_FIFO_WLA2P0_TH_WIDTH                        12
 
-#define REG_CAMYUVDMATOP_BW_THROTTLE_0            0x900E0
+#define REG_CAMYUVDMATOP_BW_THROTTLE_0               0xE0
 #define F_CAMYUVDMATOP_WAIT_TIME_W_POS                               16
 #define F_CAMYUVDMATOP_WAIT_TIME_W_WIDTH                             16
 #define F_CAMYUVDMATOP_NUM_CMD_W_POS                                 0
 #define F_CAMYUVDMATOP_NUM_CMD_W_WIDTH                               16
 
-#define REG_CAMYUVDMATOP_QOS_WDMA_EOT_EN          0x900E4
+#define REG_CAMYUVDMATOP_QOS_WDMA_EOT_EN             0xE4
 #define F_CAMYUVDMATOP_FHO_R3_QOS_EOT_EN_POS                         19
 #define F_CAMYUVDMATOP_FHO_R3_QOS_EOT_EN_WIDTH                       1
 #define F_CAMYUVDMATOP_DRZH1NBO_R1_QOS_EOT_EN_POS                    18
@@ -9709,7 +9716,7 @@
 #define F_CAMYUVDMATOP_YUVO_R1_QOS_EOT_EN_POS                        0
 #define F_CAMYUVDMATOP_YUVO_R1_QOS_EOT_EN_WIDTH                      1
 
-#define REG_CAMYUVDMATOP_AXSLC_DYNMC_REGISTER_0   0x90100
+#define REG_CAMYUVDMATOP_AXSLC_DYNMC_REGISTER_0     0x100
 #define F_CAMYUVDMATOP_YUVCO_R1_DYNMC_AXSLC_POS                      16
 #define F_CAMYUVDMATOP_YUVCO_R1_DYNMC_AXSLC_WIDTH                    5
 #define F_CAMYUVDMATOP_YUVBO_R1_DYNMC_AXSLC_POS                      8
@@ -9717,7 +9724,7 @@
 #define F_CAMYUVDMATOP_YUVO_R1_DYNMC_AXSLC_POS                       0
 #define F_CAMYUVDMATOP_YUVO_R1_DYNMC_AXSLC_WIDTH                     5
 
-#define REG_CAMYUVDMATOP_AXSLC_DYNMC_REGISTER_1   0x90104
+#define REG_CAMYUVDMATOP_AXSLC_DYNMC_REGISTER_1     0x104
 #define F_CAMYUVDMATOP_YUVCO_R3_DYNMC_AXSLC_POS                      16
 #define F_CAMYUVDMATOP_YUVCO_R3_DYNMC_AXSLC_WIDTH                    5
 #define F_CAMYUVDMATOP_YUVBO_R3_DYNMC_AXSLC_POS                      8
@@ -9725,47 +9732,47 @@
 #define F_CAMYUVDMATOP_YUVO_R3_DYNMC_AXSLC_POS                       0
 #define F_CAMYUVDMATOP_YUVO_R3_DYNMC_AXSLC_WIDTH                     5
 
-#define REG_CAMYUVDMATOP_YUVO_R1_AXSLC_DYNMC_LINE_NUM  0x90110
+#define REG_CAMYUVDMATOP_YUVO_R1_AXSLC_DYNMC_LINE_NUM    0x110
 #define F_CAMYUVDMATOP_YUVO_R1_AXSLC_DYNMC_LINE_NUM_CYC_POS          16
 #define F_CAMYUVDMATOP_YUVO_R1_AXSLC_DYNMC_LINE_NUM_CYC_WIDTH        16
 #define F_CAMYUVDMATOP_YUVO_R1_AXSLC_DYNMC_LINE_NUM_SLC_END_POS      0
 #define F_CAMYUVDMATOP_YUVO_R1_AXSLC_DYNMC_LINE_NUM_SLC_END_WIDTH    16
 
-#define REG_CAMYUVDMATOP_YUVBO_R1_AXSLC_DYNMC_LINE_NUM  0x90114
+#define REG_CAMYUVDMATOP_YUVBO_R1_AXSLC_DYNMC_LINE_NUM    0x114
 #define F_CAMYUVDMATOP_YUVBO_R1_AXSLC_DYNMC_LINE_NUM_CYC_POS         16
 #define F_CAMYUVDMATOP_YUVBO_R1_AXSLC_DYNMC_LINE_NUM_CYC_WIDTH       16
 #define F_CAMYUVDMATOP_YUVBO_R1_AXSLC_DYNMC_LINE_NUM_SLC_END_POS     0
 #define F_CAMYUVDMATOP_YUVBO_R1_AXSLC_DYNMC_LINE_NUM_SLC_END_WIDTH   16
 
-#define REG_CAMYUVDMATOP_YUVCO_R1_AXSLC_DYNMC_LINE_NUM  0x90118
+#define REG_CAMYUVDMATOP_YUVCO_R1_AXSLC_DYNMC_LINE_NUM    0x118
 #define F_CAMYUVDMATOP_YUVCO_R1_AXSLC_DYNMC_LINE_NUM_CYC_POS         16
 #define F_CAMYUVDMATOP_YUVCO_R1_AXSLC_DYNMC_LINE_NUM_CYC_WIDTH       16
 #define F_CAMYUVDMATOP_YUVCO_R1_AXSLC_DYNMC_LINE_NUM_SLC_END_POS     0
 #define F_CAMYUVDMATOP_YUVCO_R1_AXSLC_DYNMC_LINE_NUM_SLC_END_WIDTH   16
 
-#define REG_CAMYUVDMATOP_YUVO_R3_AXSLC_DYNMC_LINE_NUM  0x90120
+#define REG_CAMYUVDMATOP_YUVO_R3_AXSLC_DYNMC_LINE_NUM    0x120
 #define F_CAMYUVDMATOP_YUVO_R3_AXSLC_DYNMC_LINE_NUM_CYC_POS          16
 #define F_CAMYUVDMATOP_YUVO_R3_AXSLC_DYNMC_LINE_NUM_CYC_WIDTH        16
 #define F_CAMYUVDMATOP_YUVO_R3_AXSLC_DYNMC_LINE_NUM_SLC_END_POS      0
 #define F_CAMYUVDMATOP_YUVO_R3_AXSLC_DYNMC_LINE_NUM_SLC_END_WIDTH    16
 
-#define REG_CAMYUVDMATOP_YUVBO_R3_AXSLC_DYNMC_LINE_NUM  0x90124
+#define REG_CAMYUVDMATOP_YUVBO_R3_AXSLC_DYNMC_LINE_NUM    0x124
 #define F_CAMYUVDMATOP_YUVBO_R3_AXSLC_DYNMC_LINE_NUM_CYC_POS         16
 #define F_CAMYUVDMATOP_YUVBO_R3_AXSLC_DYNMC_LINE_NUM_CYC_WIDTH       16
 #define F_CAMYUVDMATOP_YUVBO_R3_AXSLC_DYNMC_LINE_NUM_SLC_END_POS     0
 #define F_CAMYUVDMATOP_YUVBO_R3_AXSLC_DYNMC_LINE_NUM_SLC_END_WIDTH   16
 
-#define REG_CAMYUVDMATOP_YUVCO_R3_AXSLC_DYNMC_LINE_NUM  0x90128
+#define REG_CAMYUVDMATOP_YUVCO_R3_AXSLC_DYNMC_LINE_NUM    0x128
 #define F_CAMYUVDMATOP_YUVCO_R3_AXSLC_DYNMC_LINE_NUM_CYC_POS         16
 #define F_CAMYUVDMATOP_YUVCO_R3_AXSLC_DYNMC_LINE_NUM_CYC_WIDTH       16
 #define F_CAMYUVDMATOP_YUVCO_R3_AXSLC_DYNMC_LINE_NUM_SLC_END_POS     0
 #define F_CAMYUVDMATOP_YUVCO_R3_AXSLC_DYNMC_LINE_NUM_SLC_END_WIDTH   16
 
-#define REG_CAMYUVDMATOP_MAX_FIFO_STATUS_CLR      0x90130
+#define REG_CAMYUVDMATOP_MAX_FIFO_STATUS_CLR        0x130
 #define F_CAMYUVDMATOP_FFM_W_MAX_FIFO_CNT_CLR_W0_POS                 16
 #define F_CAMYUVDMATOP_FFM_W_MAX_FIFO_CNT_CLR_W0_WIDTH               1
 
-#define REG_CAMYUVDMATOP_MAX_FIFO_STATUS          0x90134
+#define REG_CAMYUVDMATOP_MAX_FIFO_STATUS            0x134
 #define F_CAMYUVDMATOP_FFM_W_MAX_FIFO_CNT_W0_POS                     16
 #define F_CAMYUVDMATOP_FFM_W_MAX_FIFO_CNT_W0_WIDTH                   16
 
@@ -9830,58 +9837,60 @@
 #define HALT13_EN					0xF0
 
 /* CAMSYS_RAW */
-#define REG_RAWI_R2_BASE       0x580
-#define REG_UFDI_R2_BASE       0x5f0
-#define REG_RAWI_R3_BASE       0x660
-#define REG_UFDI_R3_BASE       0x6d0
-#define REG_RAWI_R4_BASE       0x740
-#define REG_UFDI_R4_BASE       0x7b0
-#define REG_RAWI_R5_BASE       0x820
-#define REG_UFDI_R5_BASE       0x890
+#define REG_RAWI_R2_BASE       0x3C0
+#define REG_UFDI_R2_BASE       0x430
+#define REG_RAWI_R3_BASE       0x4a0
+#define REG_UFDI_R3_BASE       0x510
+#define REG_RAWI_R5_BASE       0x580
+#define REG_UFDI_R5_BASE       0x5f0
 
-#define REG_BPCI_R1_BASE       0x900
-#define REG_BPCI_R2_BASE       0x940
-#define REG_BPCI_R3_BASE       0x980
-#define REG_BPCI_R4_BASE       0x9c0
-#define REG_FPRI_R1_BASE       0xa00
+#define REG_BPCI_R1_BASE       0x660
+#define REG_BPCI_R2_BASE       0x6a0
+#define REG_BPCI_R3_BASE       0x6e0
+#define REG_FPRI_R1_BASE       0x720
 
-#define REG_LSCI_R1_BASE       0xa40
-#define REG_LSCI_R2_BASE       0xa80
+#define REG_LSCI_R1_BASE       0x760
 
-#define REG_PDI_R1_BASE        0xac0
-#define REG_AEI_R1_BASE        0xb00
-#define REG_GRMGI_R1_BASE      0xb40
-#define REG_LTMSCTI_R1_BASE    0xb80
-#define REG_CACI_R1_BASE       0xbc0
-#define REG_MLSCI_R1_BASE      0xc00
+#define REG_PDI_R1_BASE        0x7e0
+#define REG_AEI_R1_BASE        0x820
+#define REG_AEHI_R1_BASE       0x860
+#define REG_AEDI_R1_BASE       0x8a0
+#define REG_GRMGI_R1_BASE      0x8e0
+#define REG_LTMSCTI_R1_BASE    0x920
+#define REG_LTMSTI_R1_BASE     0x960
+#define REG_LTMSTI_R2_BASE     0x9a0
+#define REG_CACI_R1_BASE       0x9e0
+
+#define REG_TCYSI_R1_BASE      0xa60
+#define REG_STATDIST_R1_BASE   0xaa0
 
 #define REG_IMGO_R1_BASE       0x1000
 #define REG_UFEO_R1_BASE       0x10b0
-#define REG_IMGO_R2_BASE       0x1160
-#define REG_UFEO_R2_BASE       0x1210
-#define REG_MGGMO_R1_BASE      0x12c0
 
-#define REG_FHO_R1_BASE        0x1370
-#define REG_FHO_R2_BASE        0x13c0
+#define REG_FHO_R1_BASE        0x1210
 
-#define REG_FLKO_R1_BASE       0x1410
-#define REG_PDO_R1_BASE        0x1460
-#define REG_AEO_R1_BASE        0x14b0
-#define REG_AEHO_R1_BASE       0x1500
-#define REG_AWBO_R1_BASE       0x1550
-#define REG_AWBO_R2_BASE       0x15a0
-#define REG_AFO_R1_BASE        0x15f0
-#define REG_TSFSO_R1_BASE      0x1640
-#define REG_LTMSBO_R1_BASE     0x1690
-#define REG_LTMSGO_R1_BASE     0x16e0
+#define REG_FLKO_R1_BASE       0x1260
+#define REG_DFLKO_R1_BASE      0x12b0
+#define REG_DFLKBO_R1_BASE     0x1300
+#define REG_PDO_R1_BASE        0x1350
+#define REG_AEO_R1_BASE        0x1400
+#define REG_AEDO_R1_BASE       0x1450
+#define REG_AEHO_R1_BASE       0x14a0
+#define REG_AWBO_R1_BASE       0x14f0
+#define REG_AWBO_R2_BASE       0x1540
+#define REG_AFO_R1_BASE        0x1590
+#define REG_TSFSO_R1_BASE      0x15e0
+#define REG_TSFSO_R2_BASE      0x1630
+#define REG_TSFSO_R3_BASE      0x1680
+#define REG_TSFSO_R4_BASE      0x16d0
+#define REG_LTMSBO_R1_BASE     0x1720
+#define REG_LTMSGO_R1_BASE     0x1770
+#define REG_LTMSTO_R1_BASE     0x17c0
+#define REG_LTMSTO_R2_BASE     0x1810
 #define REG_DRZB2NO_R1_BASE    0x1730
-#define REG_DRZB2NBO_R1_BASE   0x1780
-#define REG_DRZB2NCO_R1_BASE   0x17d0
-#define REG_DRZB2NDO_R1_BASE   0x1820
-#define REG_GMPO_R1_BASE       0x1870
-#define REG_GRMGO_R1_BASE      0x18c0
-#define REG_STG_R1_BASE        0x1910
-#define REG_STG_R2_BASE        0x19d0
+#define REG_GMPO_R1_BASE       0x19a0
+#define REG_GRMGO_R1_BASE      0x19f0
+#define REG_STATCOLO_R1_BASE   0x1a40
 
 /* CAMSYS_YUV */
 #define REG_YUVO_R1_BASE       0x1000
@@ -9896,23 +9905,16 @@
 #define REG_YUVBO_R2_BASE      0x15d0
 #define REG_YUVO_R4_BASE       0x1620
 #define REG_YUVBO_R4_BASE      0x1670
-#define REG_YUVO_R5_BASE       0x16c0
-#define REG_YUVBO_R5_BASE      0x1710
-#define REG_TCYSO_R1_BASE      0x1760
-#define REG_RZH1N2TO_R2_BASE   0x17b0
 
+#define REG_TCYSO_R1_BASE      0x16c0
+#define REG_RZH1N2TO_R2_BASE   0x1710
 
-#define REG_DRZH2NO_R1_BASE    0x1800
-#define REG_DRZH2NO_R8_BASE    0x1850
-#define REG_DRZS4NO_R3_BASE    0x18a0
-#define REG_DRZH1NO_R1_BASE    0x18f0
-#define REG_DRZH1NO_R3_BASE    0x1940
+#define REG_DRZH2NO_R1_BASE    0x1760
+#define REG_DRZH2NO_R8_BASE    0x17b0
+#define REG_DRZS4NO_R3_BASE    0x1800
+#define REG_DRZH1NO_R1_BASE    0x1850
+#define REG_DRZH1NBO_R1_BASE   0x18a0
 
-#define REG_DRZH1NBO_R1_BASE   0x1990
-#define REG_DRZH1NBO_R3_BASE   0x19e0
-#define REG_FHO_R3_BASE        0x1a30
-#define REG_STG_R3_BASE        0x1a80
-/* aa debug info */
 #define REG_OBC_R1A                    0x2000
 #define OFFSET_OBC_R1_R_SUM_L          (REG_OBC_R1A + 0x4)
 #define OFFSET_OBC_R1_R_SUM_H          (REG_OBC_R1A + 0x8)

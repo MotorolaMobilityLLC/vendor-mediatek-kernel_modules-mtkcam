@@ -4832,6 +4832,13 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	cam_main_rmsa_base, cam_main_rmsb_base, cam_main_rmsc_base,
 	cam_main_yuva_base, cam_main_yuvb_base, cam_main_yuvc_base;
 
+	(void) irq;
+	(void) vcore_pdev;
+	(void) cam_vcore_dev;
+	(void) link;
+	(void) clks;
+	(void) node;
+
 	platform_data = of_device_get_match_data(dev);
 	if (!platform_data) {
 		dev_err(dev, "%s: of_device_get_match_data failed\n", __func__);
@@ -5030,13 +5037,13 @@ static int mtk_cam_probe(struct platform_device *pdev)
 #endif
 
 	// qof
+#ifdef SKIP_IN_FPGA_EP
 	irq = platform_get_irq_byname(pdev, "qoftop");
 	if (irq < 0) {
 		dev_err(dev, "%s: failed to get qoftop irq\n", __func__);
 		goto SKIP_ADLRD_IRQ;
 	}
 
-#ifdef SKIP_IN_FPGA_EP
 	cam_dev->qoftop_irq = irq;
 	ret = devm_request_irq(dev, cam_dev->qoftop_irq, mtk_irq_qof, IRQF_NO_AUTOEN,
 			       dev_name(dev), cam_dev);
@@ -5054,6 +5061,7 @@ static int mtk_cam_probe(struct platform_device *pdev)
 		pr_err("probe cmdq_mbox_create fail\n");
 #endif
 
+#ifdef SKIP_IN_FPGA_EP
 	clks = of_count_phandle_with_args(
 					pdev->dev.of_node, "clocks", "#clock-cells");
 	cam_dev->num_clks = (clks == -ENOENT) ? 0 : clks;
@@ -5102,6 +5110,7 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	}
 
 SKIP_ADLRD_IRQ:
+#endif
 	cam_dev->dev = dev;
 	dev_set_drvdata(dev, cam_dev);
 
