@@ -39,5 +39,7 @@ define_mgk_ko(
         "src-isp8/imgsensor_isp8.ko",
         "src_spm-isp8/imgsensor-glue/imgsensor-glue_spm_isp8.ko",
         "src_spm-isp8/imgsensor_spm_isp8.ko",
+        "src-isp8s/imgsensor-glue/imgsensor-glue_isp8s.ko",
+        "src-isp8s/imgsensor_isp8s.ko",
     ],
 )

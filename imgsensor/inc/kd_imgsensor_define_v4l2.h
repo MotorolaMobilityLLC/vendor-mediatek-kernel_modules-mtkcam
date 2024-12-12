@@ -753,6 +753,7 @@ struct ACDK_SENSOR_INFO_STRUCT {
 	MINT32 fine_integ_line[SENSOR_SCENARIO_ID_MAX];
 	MUINT8 aov_mode[SENSOR_SCENARIO_ID_MAX];
 	MUINT8 support_mcss[SENSOR_SCENARIO_ID_MAX];
+	MUINT8 SensorAwbEnabled[SENSOR_SCENARIO_ID_MAX];
 	enum IMGSENSOR_LBMF_EXPOSURE_ORDER exposure_order_in_lbmf[SENSOR_SCENARIO_ID_MAX];
 	/* 1,2,4,8-line interleaving for DCG AP merge mode output type, default is 2 */
 	MUINT8 SensorLineInterleaveNum;
