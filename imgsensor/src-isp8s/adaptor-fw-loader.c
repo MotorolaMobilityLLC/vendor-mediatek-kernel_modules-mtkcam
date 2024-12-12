@@ -2213,6 +2213,7 @@ static bool compare_static_ctx(struct adaptor_ctx *ctx,
 {
 	int i, j;
 	int ret = 0;
+	u8 target_mipi_type, legacy_mipi_type;
 
 	if (target == NULL)
 		return false;
@@ -2282,7 +2283,20 @@ static bool compare_static_ctx(struct adaptor_ctx *ctx,
 	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, i2c_addr_table, "global info");
 
 	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, sensor_interface_type, "global info");
-	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, mipi_sensor_type, "global info");
+
+	/* both MIPI_OPHY_NCSI2 and MIPI_OPHY_CSI2 are DPHY, so it's equal */
+	target_mipi_type = target->mipi_sensor_type;
+	legacy_mipi_type = legacy->mipi_sensor_type;
+	if (target_mipi_type == MIPI_OPHY_CSI2)
+		target_mipi_type = MIPI_OPHY_NCSI2;
+	if (legacy_mipi_type == MIPI_OPHY_CSI2)
+		legacy_mipi_type = MIPI_OPHY_NCSI2;
+	if (target_mipi_type != legacy_mipi_type) {
+		adaptor_loge(ctx,
+			"compare failed with field 'target->mipi_sensor_type' for global info");
+		ret |= -EINVAL;
+	}
+
 	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, mipi_lane_num, "global info");
 	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, ob_pedestal, "global info");
 	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, line_interleave_num, "global info");
