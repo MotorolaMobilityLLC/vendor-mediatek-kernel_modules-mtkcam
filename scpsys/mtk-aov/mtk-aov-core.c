@@ -955,7 +955,10 @@ static int scp_state_notify(struct notifier_block *this,
 	int ret;
 
 	if (event == SCP_EVENT_STOP) {
-		mutex_lock(&core_info->start_stop_mutex);
+		if (down_interruptible(&core_info->start_stop_sema)) {
+			dev_info(aov_dev->dev, "%s: failed to acquire semaphore\n", __func__);
+			return -EFAULT;
+		}
 		(void)aov_aee_record(aov_dev, 0, SCP_STOP);
 		(void)aov_aee_flush(aov_dev);
 
@@ -990,7 +993,7 @@ static int scp_state_notify(struct notifier_block *this,
 			dev_info(aov_dev->dev,
 				"%s: failed to init scp session(%d): %d\n",
 				__func__, session, ret);
-				mutex_unlock(&core_info->start_stop_mutex);
+				up(&core_info->start_stop_sema);
 			return NOTIFY_DONE;
 		}
 
@@ -1015,7 +1018,7 @@ static int scp_state_notify(struct notifier_block *this,
 
 		atomic_set(&(core_info->scp_ready), 2);
 		aov_ulposc_cali(aov_dev);
-		mutex_unlock(&core_info->start_stop_mutex);
+		up(&core_info->start_stop_sema);
 	}
 
 	return NOTIFY_DONE;
@@ -1042,8 +1045,11 @@ int aov_core_init(struct mtk_aov *aov_dev)
 	atomic_set(&(core_info->cmd_seq), 0);
 	atomic_set(&(core_info->qea_ready), 0);
 	mutex_init(&core_info->sned_ipi_mutex);
-	mutex_init(&core_info->start_stop_mutex);
-	mutex_lock(&core_info->start_stop_mutex);
+	sema_init(&core_info->start_stop_sema, 1);
+	if (down_interruptible(&core_info->start_stop_sema)) {
+		dev_info(aov_dev->dev, "%s: failed to acquire semaphore\n", __func__);
+		return -EFAULT;
+	}
 
 	if (curr_dev->op_mode == 0) {
 		dev_info(aov_dev->dev, "%s: bypass init operation", __func__);
@@ -1601,7 +1607,10 @@ int aov_core_reset(struct mtk_aov *aov_dev)
 	}
 
 	if (atomic_read(&(core_info->aov_ready))) {
-		mutex_lock(&core_info->start_stop_mutex);
+		if (down_interruptible(&core_info->start_stop_sema)) {
+			dev_info(aov_dev->dev, "%s: failed to acquire semaphore\n", __func__);
+			return -EFAULT;
+		}
 #if AOV_SLB_ALLOC_FREE
 		struct slbc_data slb;
 #endif  // AOV_SLB_ALLOC_FREE
@@ -1671,7 +1680,7 @@ int aov_core_reset(struct mtk_aov *aov_dev)
 		atomic_set(&(core_info->aov_ready), 0);
 
 		ret = 1;
-		mutex_unlock(&core_info->start_stop_mutex);
+		up(&core_info->start_stop_sema);
 	}
 
 	return ret;
@@ -1682,7 +1691,6 @@ int aov_core_uninit(struct mtk_aov *aov_dev)
 	struct aov_core *core_info = &aov_dev->core_info;
 
 	//devm_kfree(aov_dev->dev, core_info->event_data);
-	mutex_destroy(&core_info->start_stop_mutex);
 	mutex_destroy(&core_info->sned_ipi_mutex);
 
 	if (aov_dev->op_mode == 0) {
