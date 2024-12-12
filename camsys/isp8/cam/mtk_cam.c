@@ -1395,9 +1395,8 @@ int mtk_cam_power_ctrl_ccu(struct device *dev, int on_off)
 
 		++cam->ccu_use_cnt;
 	} else {
-
-		if (WARN_ON(!cam->ccu_use_cnt)) {
-			ret = -1;
+		if (!cam->ccu_use_cnt) {
+			dev_info(dev, "%s: ccu_use_cnt already 0\n", __func__);
 			goto EXIT;
 		}
 
