@@ -41,6 +41,9 @@
 #define UT_ERR(format, args...) \
 	printf(LIGHT_RED PFX "[%s] " format NONE, __func__, ##args)
 
+#define UT_DBG(COLOR, format, args...) \
+	printf(YELLOW "[" PFX "] >>> " NONE COLOR format NONE, ##args)
+
 
 #define UT_FUNC_START() \
 do { \

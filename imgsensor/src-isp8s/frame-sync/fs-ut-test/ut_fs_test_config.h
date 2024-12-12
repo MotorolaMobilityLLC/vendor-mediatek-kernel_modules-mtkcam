@@ -10,6 +10,10 @@
 #include "ut_fs_perframe_ctrl_info.h"
 
 
+/* UT test case flag */
+#define UT_NOT_RUN_CASE
+
+
 /* CCU timer tick to us factor (for UT testing, set to 1) */
 #define TICK_FACTOR 1
 
@@ -49,6 +53,7 @@ struct ut_fs_test_ext_ctrl_cfg {
 struct ut_fs_test_env_cfg {
 	unsigned int run_times;
 	unsigned int sync_th;
+	unsigned int en_sim_broadcast_flow;
 	unsigned int passed_vsync;
 	unsigned int passed_vsync_ratio;
 	unsigned int passed_vsync_max_cnt;
@@ -254,6 +259,7 @@ struct ut_fs_test_sensor_cfg sensor_cfg_04[] = {
 
 
 /* FL_act_delay : STG-3-exp(N+2) with Normal(N+1) */
+/* => add diff to non STG for preventing wrong frame pair due to sync to SE */
 struct ut_fs_test_sensor_cfg sensor_cfg_05[] = {
 	{
 		.sensor_name = "imx766",
@@ -262,8 +268,8 @@ struct ut_fs_test_sensor_cfg sensor_cfg_05[] = {
 		.sensor = &imx766,
 		.mode = imx766_sensor_mode,
 		.mode_idx = 0, // 3-exp
-		//.first_vts_value = 100000,
-		.first_vts_value = 105000,
+		.first_vts_value = 100000,
+		/* .first_vts_value = 105000, */
 	},
 
 	{
@@ -273,8 +279,8 @@ struct ut_fs_test_sensor_cfg sensor_cfg_05[] = {
 		.sensor = &s5k3m5sx,
 		.mode = s5k3m5sx_sensor_mode,
 		.mode_idx = 0,
-		//.first_vts_value = 110000,
-		.first_vts_value = 100000,
+		.first_vts_value = 110000,
+		/* .first_vts_value = 100000, */
 	},
 
 	/* End */
@@ -288,6 +294,7 @@ struct ut_fs_test_sensor_cfg sensor_cfg_05[] = {
 
 
 /* FL_act_delay : STG-2-exp(N+2) with Normal(N+1) */
+/* => add diff to non STG for preventing wrong frame pair due to sync to SE */
 struct ut_fs_test_sensor_cfg sensor_cfg_06[] = {
 	{
 		.sensor_name = "imx766",
@@ -296,8 +303,8 @@ struct ut_fs_test_sensor_cfg sensor_cfg_06[] = {
 		.sensor = &imx766,
 		.mode = imx766_sensor_mode,
 		.mode_idx = 1, // 2-exp
-		//.first_vts_value = 100000,
-		.first_vts_value = 110000,
+		.first_vts_value = 100000,
+		/* .first_vts_value = 110000, */
 	},
 
 	{
@@ -307,8 +314,8 @@ struct ut_fs_test_sensor_cfg sensor_cfg_06[] = {
 		.sensor = &s5k3m5sx,
 		.mode = s5k3m5sx_sensor_mode,
 		.mode_idx = 0,
-		//.first_vts_value = 110000,
-		.first_vts_value = 100000,
+		.first_vts_value = 110000,
+		/* .first_vts_value = 100000, */
 	},
 
 	/* End */
@@ -322,6 +329,7 @@ struct ut_fs_test_sensor_cfg sensor_cfg_06[] = {
 
 
 /* FL_act_delay : Normal(N+2) with STG-3-exp(N+2) */
+/* => add diff to non STG for preventing wrong frame pair due to sync to SE */
 struct ut_fs_test_sensor_cfg sensor_cfg_07[] = {
 	{
 		.sensor_name = "imx586",
@@ -356,6 +364,7 @@ struct ut_fs_test_sensor_cfg sensor_cfg_07[] = {
 
 
 /* FL_act_delay : Normal(N+2) with STG-2-exp(N+2) */
+/* => add diff to non STG for preventing wrong frame pair due to sync to SE */
 struct ut_fs_test_sensor_cfg sensor_cfg_08[] = {
 	{
 		.sensor_name = "imx586",
@@ -629,8 +638,8 @@ struct ut_fs_test_sensor_cfg sensor_cfg_14[] = {
 };
 
 
-/* FL_act_delay : Normal(N+2) with Normal(N+2) */
-/* LBMF 3-exp-SE */
+/* FL_act_delay : LBMF 3-exp-SE(N+2) with Normal(N+1) */
+/* => add diff to non LBMF for preventing wrong frame pair due to sync to non 1st-exp */
 struct ut_fs_test_sensor_cfg sensor_cfg_15[] = {
 	{
 		.sensor_name = "imx766",
@@ -639,19 +648,19 @@ struct ut_fs_test_sensor_cfg sensor_cfg_15[] = {
 		.sensor = &imx766,
 		.mode = imx766_sensor_mode,
 		.mode_idx = 3,
-		//.first_vts_value = 100000,
-		.first_vts_value = 110000,
+		.first_vts_value = 100000,
+		/* .first_vts_value = 110000, */
 	},
 
 	{
-		.sensor_name = "imx586",
+		.sensor_name = "s5k3m5sx",
 		.sensor_idx = 2,
 		.tg = 1,
-		.sensor = &imx586,
-		.mode = imx586_sensor_mode,
+		.sensor = &s5k3m5sx,
+		.mode = s5k3m5sx_sensor_mode,
 		.mode_idx = 0,
-		//.first_vts_value = 110000,
-		.first_vts_value = 100000,
+		.first_vts_value = 110000,
+		/* .first_vts_value = 100000, */
 	},
 
 	/* End */
@@ -664,8 +673,8 @@ struct ut_fs_test_sensor_cfg sensor_cfg_15[] = {
 };
 
 
-/* FL_act_delay : Normal(N+2) with Normal(N+2) */
-/* LBMF 2-exp-SE */
+/* FL_act_delay : LBMF 2-exp-SE(N+2) with Normal(N+1) */
+/* => add diff to non LBMF for preventing wrong frame pair due to sync to non 1st-exp */
 struct ut_fs_test_sensor_cfg sensor_cfg_16[] = {
 	{
 		.sensor_name = "imx766",
@@ -674,19 +683,19 @@ struct ut_fs_test_sensor_cfg sensor_cfg_16[] = {
 		.sensor = &imx766,
 		.mode = imx766_sensor_mode,
 		.mode_idx = 4,
-		//.first_vts_value = 100000,
-		.first_vts_value = 110000,
+		.first_vts_value = 100000,
+		/* .first_vts_value = 110000, */
 	},
 
 	{
-		.sensor_name = "imx586",
+		.sensor_name = "s5k3m5sx",
 		.sensor_idx = 2,
 		.tg = 1,
-		.sensor = &imx586,
-		.mode = imx586_sensor_mode,
+		.sensor = &s5k3m5sx,
+		.mode = s5k3m5sx_sensor_mode,
 		.mode_idx = 0,
-		//.first_vts_value = 110000,
-		.first_vts_value = 100000,
+		.first_vts_value = 110000,
+		/* .first_vts_value = 100000, */
 	},
 
 	/* End */
@@ -700,6 +709,7 @@ struct ut_fs_test_sensor_cfg sensor_cfg_16[] = {
 
 
 /* FL_act_delay : STG-3-exp(N+1) with Normal(N+1) */
+/* => add diff to non STG for preventing wrong frame pair due to sync to SE */
 struct ut_fs_test_sensor_cfg sensor_cfg_17[] = {
 	{
 		.sensor_name = "ov64b",
@@ -708,8 +718,8 @@ struct ut_fs_test_sensor_cfg sensor_cfg_17[] = {
 		.sensor = &ov64b,
 		.mode = ov64b_sensor_mode,
 		.mode_idx = 0, // 3-exp
-		//.first_vts_value = 100000,
-		.first_vts_value = 105000,
+		.first_vts_value = 100000,
+		/* .first_vts_value = 105000, */
 	},
 
 	{
@@ -719,8 +729,8 @@ struct ut_fs_test_sensor_cfg sensor_cfg_17[] = {
 		.sensor = &s5k3m5sx,
 		.mode = s5k3m5sx_sensor_mode,
 		.mode_idx = 0,
-		//.first_vts_value = 110000,
-		.first_vts_value = 100000,
+		.first_vts_value = 110000,
+		/* .first_vts_value = 100000, */
 	},
 
 	/* End */
@@ -734,6 +744,7 @@ struct ut_fs_test_sensor_cfg sensor_cfg_17[] = {
 
 
 /* FL_act_delay : STG-2-exp(N+1) with Normal(N+1) */
+/* => add diff to non STG for preventing wrong frame pair due to sync to SE */
 struct ut_fs_test_sensor_cfg sensor_cfg_18[] = {
 	{
 		.sensor_name = "ov64b",
@@ -742,8 +753,8 @@ struct ut_fs_test_sensor_cfg sensor_cfg_18[] = {
 		.sensor = &ov64b,
 		.mode = ov64b_sensor_mode,
 		.mode_idx = 1, // 2-exp
-		//.first_vts_value = 100000,
-		.first_vts_value = 105000,
+		.first_vts_value = 100000,
+		/* .first_vts_value = 105000, */
 	},
 
 	{
@@ -753,8 +764,77 @@ struct ut_fs_test_sensor_cfg sensor_cfg_18[] = {
 		.sensor = &s5k3m5sx,
 		.mode = s5k3m5sx_sensor_mode,
 		.mode_idx = 0,
-		//.first_vts_value = 110000,
+		.first_vts_value = 110000,
+		/* .first_vts_value = 100000, */
+	},
+
+	/* End */
+	{
+		.sensor_idx = 255,
+		.tg = 255,
+		.sensor = NULL,
+		.mode = NULL,
+	}
+};
+
+/* FL_act_delay : AEB 3-exp-SE(N+1) with Normal(N+1) */
+/* => add diff to non AEB for preventing wrong frame pair due to sync to non 1st-exp */
+struct ut_fs_test_sensor_cfg sensor_cfg_19[] = {
+	{
+		.sensor_name = "o64b",
+		.sensor_idx = 0,
+		.tg = 2,
+		.sensor = &ov64b,
+		.mode = ov64b_sensor_mode,
+		.mode_idx = 2,
 		.first_vts_value = 100000,
+		/* .first_vts_value = 110000, */
+	},
+
+	{
+		.sensor_name = "s5k3m5sx",
+		.sensor_idx = 2,
+		.tg = 1,
+		.sensor = &s5k3m5sx,
+		.mode = s5k3m5sx_sensor_mode,
+		.mode_idx = 0,
+		.first_vts_value = 110000,
+		/* .first_vts_value = 100000, */
+	},
+
+	/* End */
+	{
+		.sensor_idx = 255,
+		.tg = 255,
+		.sensor = NULL,
+		.mode = NULL,
+	}
+};
+
+
+/* FL_act_delay : AEB 2-exp-SE(N+1) with Normal(N+1) */
+/* => add diff to non AEB for preventing wrong frame pair due to sync to non 1st-exp */
+struct ut_fs_test_sensor_cfg sensor_cfg_20[] = {
+	{
+		.sensor_name = "o64b",
+		.sensor_idx = 0,
+		.tg = 2,
+		.sensor = &ov64b,
+		.mode = ov64b_sensor_mode,
+		.mode_idx = 3,
+		.first_vts_value = 100000,
+		/* .first_vts_value = 110000, */
+	},
+
+	{
+		.sensor_name = "s5k3m5sx",
+		.sensor_idx = 2,
+		.tg = 1,
+		.sensor = &s5k3m5sx,
+		.mode = s5k3m5sx_sensor_mode,
+		.mode_idx = 0,
+		.first_vts_value = 110000,
+		/* .first_vts_value = 100000, */
 	},
 
 	/* End */
@@ -843,7 +923,7 @@ struct ut_fs_test_ext_ctrl_cfg ext_ctrl_cfg_01[] = {
 		.sensor_idx = 0,
 		.do_ext_fl_at_n_run = 0,
 		.ext_fl_us = 5000,
-		.do_seamless_switch_at_n_run = 6,
+		.do_seamless_switch_at_n_run =  7 /* 6 */,
 	},
 
 	/* End */
@@ -868,6 +948,7 @@ struct ut_fs_test_ext_ctrl_cfg ext_ctrl_cfg_01[] = {
 struct ut_fs_test_env_cfg env_cfg_01 = {
 	.run_times = 10000,
 	.sync_th = 1000, // 550,
+	.en_sim_broadcast_flow = 1,
 	.passed_vsync = 0,
 	.passed_vsync_ratio = 0,
 	.passed_vsync_max_cnt = 0,
@@ -1037,10 +1118,11 @@ struct ut_fs_test_env_cfg env_ext_ctrl_cfg_02 = {
 /******************************************************************************/
 
 struct ut_fs_test_list test_list[] = {
+	/* ===> NO lock exp / NO lock flk <=== */
 	{
 		/* 01 */
 		.test_name =
-			"Normal N+1 / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk)",
+			"Normal N+1 / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC)",
 		.auto_test_must_run = 1,
 		.sync_type = {1, 1},
 		.sensor_cfg = sensor_cfg_01,
@@ -1050,7 +1132,7 @@ struct ut_fs_test_list test_list[] = {
 	{
 		/* 02 */
 		.test_name =
-			"Normal N+2 / Normal N+2, per-frame CTRL (NO lock exp / NO lock flk) (same margin)",
+			"Normal N+2 / Normal N+2, per-frame CTRL (NO lock exp / NO lock flk / sim. BC) (same margin)",
 		.auto_test_must_run = 1,
 		.sync_type = {1, 1},
 		.sensor_cfg = sensor_cfg_02,
@@ -1060,7 +1142,7 @@ struct ut_fs_test_list test_list[] = {
 	{
 		/* 03 */
 		.test_name =
-			"Normal N+2 / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk)",
+			"Normal N+2 / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC)",
 		.auto_test_must_run = 1,
 		.sync_type = {1, 1},
 		.sensor_cfg = sensor_cfg_03,
@@ -1070,7 +1152,7 @@ struct ut_fs_test_list test_list[] = {
 	{
 		/* 04 */
 		.test_name =
-			"STG 3-exp-LE N+2 / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk)",
+			"STG LE N+2 3-exp / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC)",
 		.auto_test_must_run = 1,
 		.sync_type = {FS_SYNC_TYPE_LE|FS_SYNC_TYPE_VSYNC, 1},
 		.sensor_cfg = sensor_cfg_05,
@@ -1080,25 +1162,7 @@ struct ut_fs_test_list test_list[] = {
 	{
 		/* 05 */
 		.test_name =
-#if !defined(FORCE_ADJUST_SMALLER_DIFF)
-			"STG 3-exp-SE N+2 / Normal N+1, per-frame CTRL (LOCK exp-40005us / NO lock flk)",
-#else
-			"STG 3-exp-SE N+2 / Normal N+1, per-frame CTRL (LOCK exp-10002us / NO lock flk)",
-#endif // FORCE_ADJUST_SMALLER_DIFF
-		.auto_test_must_run = 1,
-		.sync_type = {FS_SYNC_TYPE_SE|FS_SYNC_TYPE_VSYNC, 1},
-		.sensor_cfg = sensor_cfg_05,
-#if !defined(FORCE_ADJUST_SMALLER_DIFF)
-		.env_cfg = &env_cfg_04,
-#else
-		.env_cfg = &env_cfg_05,
-#endif // FORCE_ADJUST_SMALLER_DIFF
-	},
-
-	{
-		/* 06 */
-		.test_name =
-			"STG 2-exp-LE N+2 / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk)",
+			"STG LE N+2 2-exp / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC)",
 		.auto_test_must_run = 1,
 		.sync_type = {FS_SYNC_TYPE_LE|FS_SYNC_TYPE_VSYNC, 1},
 		.sensor_cfg = sensor_cfg_06,
@@ -1106,9 +1170,137 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
+		/* 06 */
+		.test_name =
+			"STG LE N+1 3-exp / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC)",
+		.auto_test_must_run = 1,
+		.sync_type = {FS_SYNC_TYPE_LE|FS_SYNC_TYPE_VSYNC, 1},
+		.sensor_cfg = sensor_cfg_17,
+		.env_cfg = &env_cfg_01,
+	},
+
+	{
 		/* 07 */
 		.test_name =
-			"STG 2-exp-SE N+2 / Normal N+1, per-frame CTRL (LOCK exp-40005us / NO lock flk)",
+			"STG LE N+1 2-exp / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC)",
+		.auto_test_must_run = 1,
+		.sync_type = {FS_SYNC_TYPE_LE|FS_SYNC_TYPE_VSYNC, 1},
+		.sensor_cfg = sensor_cfg_18,
+		.env_cfg = &env_cfg_01,
+	},
+
+	{
+		/* 08 */
+		.test_name =
+			"STG SE N+1 3-exp / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC)",
+		.auto_test_must_run = 1,
+		.sync_type = {FS_SYNC_TYPE_SE|FS_SYNC_TYPE_VSYNC, 1},
+		.sensor_cfg = sensor_cfg_17,
+		.env_cfg = &env_cfg_01,
+	},
+
+	{
+		/* 09 */
+		.test_name =
+			"STG SE N+1 2-exp / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC)",
+		.auto_test_must_run = 1,
+		.sync_type = {FS_SYNC_TYPE_SE|FS_SYNC_TYPE_VSYNC, 1},
+		.sensor_cfg = sensor_cfg_18,
+		.env_cfg = &env_cfg_01,
+	},
+
+	{
+		/* 10 */
+		.test_name =
+			"LBMF SE(1st) N+2 3-exp / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC), SA",
+		.auto_test_must_run = 1,
+		.alg_method = 2,
+		.sync_type = {1, 1},
+		.sensor_cfg = sensor_cfg_15,
+		.env_cfg = &env_cfg_01,
+	},
+
+	{
+		/* 11 */
+		.test_name =
+			"LBMF SE(1st) N+2 2-exp / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC), SA",
+		.auto_test_must_run = 1,
+		.alg_method = 2,
+		.sync_type = {1, 1},
+		.sensor_cfg = sensor_cfg_16,
+		.env_cfg = &env_cfg_01,
+	},
+
+	{
+		/* 12 */
+		.test_name =
+			"AEB SE(1st) N+1 3-exp / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC), SA",
+		.auto_test_must_run = 1,
+		.alg_method = 2,
+		.sync_type = {1, 1},
+		.sensor_cfg = sensor_cfg_19,
+		.env_cfg = &env_cfg_01,
+	},
+
+	{
+		/* 13 */
+		.test_name =
+			"AEB SE(1st) N+1 2-exp / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC), SA",
+		.auto_test_must_run = 1,
+		.alg_method = 2,
+		.sync_type = {1, 1},
+		.sensor_cfg = sensor_cfg_20,
+		.env_cfg = &env_cfg_01,
+	},
+
+#ifndef UT_NOT_RUN_CASE
+	/* below case, sync to LE and LE is 2nd-exp => may trap in worng frame pair issue */
+	{
+		/* 14 */
+		.test_name =
+			"AEB LE(2nd) N+1 3-exp / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC), SA",
+		.auto_test_must_run = 1,
+		.alg_method = 2,
+		.sync_type = {FS_SYNC_TYPE_LE|FS_SYNC_TYPE_VSYNC, 1},
+		.sensor_cfg = sensor_cfg_19,
+		.env_cfg = &env_cfg_01,
+	},
+
+	{
+		/* 15 */
+		.test_name =
+			"AEB LE(2nd) N+1 2-exp / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC), SA",
+		.auto_test_must_run = 1,
+		.alg_method = 2,
+		.sync_type = {FS_SYNC_TYPE_LE|FS_SYNC_TYPE_VSYNC, 1},
+		.sensor_cfg = sensor_cfg_20,
+		.env_cfg = &env_cfg_01,
+	},
+#endif
+
+	/* ===> LOCK exp / NO lock flk <=== */
+	{
+		/* 14 */
+		.test_name =
+#if !defined(FORCE_ADJUST_SMALLER_DIFF)
+			"STG SE N+2 3-exp / Normal N+1, per-frame CTRL (LOCK exp-40005us / NO lock flk)",
+#else
+			"STG SE N+2 3-exp / Normal N+1, per-frame CTRL (LOCK exp-10002us / NO lock flk)",
+#endif
+		.auto_test_must_run = 1,
+		.sync_type = {FS_SYNC_TYPE_SE|FS_SYNC_TYPE_VSYNC, 1},
+		.sensor_cfg = sensor_cfg_05,
+#if !defined(FORCE_ADJUST_SMALLER_DIFF)
+		.env_cfg = &env_cfg_04,
+#else
+		.env_cfg = &env_cfg_05,
+#endif
+	},
+
+	{
+		/* 15 */
+		.test_name =
+			"STG SE N+2 2-exp / Normal N+1, per-frame CTRL (LOCK exp-40005us / NO lock flk)",
 		.auto_test_must_run = 1,
 		.sync_type = {FS_SYNC_TYPE_SE|FS_SYNC_TYPE_VSYNC, 1},
 		.sensor_cfg = sensor_cfg_06,
@@ -1116,7 +1308,57 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 08 */
+		/* 16 */
+		.test_name =
+#if !defined(FORCE_ADJUST_SMALLER_DIFF)
+			"STG SE N+1 3-exp / Normal N+1, per-frame CTRL (LOCK exp-40005us / NO lock flk)",
+#else
+			"STG SE N+1 3-exp / Normal N+1, per-frame CTRL (LOCK exp-10002us / NO lock flk)",
+#endif
+		.auto_test_must_run = 1,
+		.sync_type = {FS_SYNC_TYPE_SE|FS_SYNC_TYPE_VSYNC, 1},
+		.sensor_cfg = sensor_cfg_17,
+#if !defined(FORCE_ADJUST_SMALLER_DIFF)
+		.env_cfg = &env_cfg_04,
+#else
+		.env_cfg = &env_cfg_05,
+#endif
+	},
+
+	{
+		/* 17 */
+		.test_name =
+			"STG SE N+1 2-exp / Normal N+1, per-frame CTRL (LOCK exp-40005us / NO lock flk)",
+		.auto_test_must_run = 1,
+		.sync_type = {FS_SYNC_TYPE_SE|FS_SYNC_TYPE_VSYNC, 1},
+		.sensor_cfg = sensor_cfg_18,
+		.env_cfg = &env_cfg_04,
+	},
+
+	{
+		/* 18 */
+		.test_name =
+			"LBMF SE(1st) N+2 3-exp / Normal N+1, per-frame CTRL (LOCK exp-10002us / NO lock flk), SA",
+		.auto_test_must_run = 1,
+		.alg_method = 2,
+		.sync_type = {1, 1},
+		.sensor_cfg = sensor_cfg_15,
+		.env_cfg = &env_cfg_05,
+	},
+
+	{
+		/* 19 */
+		.test_name =
+			"LBMF SE(1st) N+2 2-exp / Normal N+1, per-frame CTRL (LOCK exp-10002us / NO lock flk), SA",
+		.auto_test_must_run = 1,
+		.alg_method = 2,
+		.sync_type = {1, 1},
+		.sensor_cfg = sensor_cfg_16,
+		.env_cfg = &env_cfg_05,
+	},
+
+	{
+		/* 20 */
 		.test_name =
 			"60:30 Normal N+1 / Normal N+1, per-frame CTRL (LOCK exp-10002us / NO lock flk), SA",
 		.auto_test_must_run = 1,
@@ -1128,7 +1370,7 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 09 */
+		/* 21 */
 		.test_name =
 			"60:30 Normal N+2 / Normal N+2, per-frame CTRL (LOCK exp-19997us / NO lock flk), SA (same margin)",
 		.auto_test_must_run = 1,
@@ -1140,7 +1382,7 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 10 */
+		/* 22 */
 		.test_name =
 			"60:30 Normal N+2 / Normal N+1, per-frame CTRL (LOCK exp-10002us / NO lock flk), SA",
 		.auto_test_must_run = 1,
@@ -1152,13 +1394,13 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 11 */
+		/* 23 */
 		.test_name =
 #if !defined(FORCE_ADJUST_SMALLER_DIFF)
 			"60:30 Normal N+1 / Normal N+2, per-frame CTRL (LOCK exp-10002us / NO lock flk), SA",
 #else
 			"60:30 Normal N+1 / Normal N+2, per-frame CTRL (LOCK exp-29996us / NO lock flk), SA",
-#endif // FORCE_ADJUST_SMALLER_DIFF
+#endif
 		.auto_test_must_run = 1,
 		.alg_method = 2,
 		.sync_type = {1, 1},
@@ -1167,12 +1409,12 @@ struct ut_fs_test_list test_list[] = {
 		.env_cfg = &env_cfg_07,
 #else
 		.env_cfg = &env_cfg_06_2,
-#endif // FORCE_ADJUST_SMALLER_DIFF
+#endif
 		.n_1_cfg = n_1_cfg_2_1_60_main_0,
 	},
 
 	{
-		/* 12 */
+		/* 24 */
 		.test_name =
 			"60:60 Normal N+1 / Normal N+1, per-frame CTRL (LOCK exp-10002us / NO lock flk), SA",
 		.auto_test_must_run = 1,
@@ -1184,7 +1426,7 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 13 */
+		/* 25 */
 		.test_name =
 			"60:60 Normal N+2 / Normal N+2, per-frame CTRL (LOCK exp-19997us / NO lock flk), SA (same margin)",
 		.auto_test_must_run = 1,
@@ -1196,13 +1438,13 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 14 */
+		/* 26 */
 		.test_name =
 #if !defined(FORCE_ADJUST_SMALLER_DIFF)
 			"60:60 Normal N+2 / Normal N+1, per-frame CTRL (LOCK exp-19997us / NO lock flk), SA",
 #else
 			"60:60 Normal N+2 / Normal N+1, per-frame CTRL (LOCK exp-10002us / NO lock flk), SA",
-#endif // FORCE_ADJUST_SMALLER_DIFF
+#endif
 		.auto_test_must_run = 1,
 		.alg_method = 2,
 		.sync_type = {1, 1},
@@ -1211,18 +1453,18 @@ struct ut_fs_test_list test_list[] = {
 		.env_cfg = &env_cfg_08,
 #else
 		.env_cfg = &env_cfg_04,
-#endif // FORCE_ADJUST_SMALLER_DIFF
+#endif
 		.n_1_cfg = n_1_cfg_2_2_60_main_0_1,
 	},
 
 	{
-		/* 15 */
+		/* 27 */
 		.test_name =
 #if !defined(FORCE_ADJUST_SMALLER_DIFF)
 			"60:60 Normal N+1 / Normal N+2, per-frame CTRL (LOCK exp-10002us / NO lock flk), SA",
 #else
 			"60:60 Normal N+1 / Normal N+2, per-frame CTRL (LOCK exp-29996us / NO lock flk), SA",
-#endif // FORCE_ADJUST_SMALLER_DIFF
+#endif
 		.auto_test_must_run = 1,
 		.alg_method = 2,
 		.sync_type = {1, 1},
@@ -1231,12 +1473,12 @@ struct ut_fs_test_list test_list[] = {
 		.env_cfg = &env_cfg_07,
 #else
 		.env_cfg = &env_cfg_06_2,
-#endif // FORCE_ADJUST_SMALLER_DIFF
+#endif
 		.n_1_cfg = n_1_cfg_2_2_60_main_0_1,
 	},
 
 	{
-		/* 16 */
+		/* 28 */
 		.test_name =
 			"60 Normal N+2 / STG 3-exp-LE N+2, per-frame CTRL (LOCK exp-10002us / NO lock flk), SA",
 		.auto_test_must_run = 1,
@@ -1248,7 +1490,7 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 17 */
+		/* 29 */
 		.test_name =
 			"60 Normal N+2 / STG 3-exp-SE N+2, per-frame CTRL (LOCK exp-10002us / NO lock flk), SA",
 		.auto_test_must_run = 1,
@@ -1260,7 +1502,7 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 18 */
+		/* 30 */
 		.test_name =
 			"60 Normal N+2 / STG 2-exp-LE N+2, per-frame CTRL (LOCK exp-10002us / NO lock flk), SA",
 		.auto_test_must_run = 1,
@@ -1272,7 +1514,7 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 19 */
+		/* 31 */
 		.test_name =
 			"60 Normal N+2 / STG 2-exp-SE N+2, per-frame CTRL (LOCK exp-10002us / NO lock flk), SA",
 		.auto_test_must_run = 1,
@@ -1284,7 +1526,7 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 20 */
+		/* 32 */
 		.test_name =
 			"30:5 Normal N+1 / Normal N+1, per-frame CTRL (LOCK exp-10002us / LOCK flk), Async-SA",
 		.auto_test_must_run = 1,
@@ -1296,7 +1538,7 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 21 */
+		/* 33 */
 		.test_name =
 			"30:5 Normal N+1 / Normal N+2, per-frame CTRL (LOCK exp-10002us / LOCK flk), Async-SA",
 		.auto_test_must_run = 1,
@@ -1308,7 +1550,7 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 22 */
+		/* 34 */
 		.test_name =
 			"30:5 Normal N+2 / Normal N+1, per-frame CTRL (LOCK exp-10002us / LOCK flk), Async-SA",
 		.auto_test_must_run = 1,
@@ -1320,7 +1562,7 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 23 */
+		/* 35 */
 		.test_name =
 			"30:5 Normal N+2 / Normal N+2, per-frame CTRL (LOCK exp-10002us / LOCK flk), Async-SA",
 		.auto_test_must_run = 1,
@@ -1332,7 +1574,7 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 24 */
+		/* 36 */
 		.test_name =
 			"Multi-Sensors(4, N+2/N+1/3-STG/2-STG), per-frame CTRL (LOCK exp-10002us / NO lock flk), SA",
 		.auto_test_must_run = 1,
@@ -1343,7 +1585,7 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 25 */
+		/* 37 */
 		.test_name =
 			"Multi-Sensors(4, N+2/N+1/3-STG/2-STG), per-frame CTRL (LOCK exp-10002us / NO lock flk), Async-SA",
 		.auto_test_must_run = 1,
@@ -1360,7 +1602,7 @@ struct ut_fs_test_list test_list[] = {
 	},
 
 	{
-		/* 26 */
+		/* 38 */
 		.test_name =
 			"Normal 2SA + Normal 1Async-SA, per-frame CTRL (LOCK exp-10002us / NO lock flk), SA + Async-SA",
 		.auto_test_must_run = 1,
@@ -1373,78 +1615,6 @@ struct ut_fs_test_list test_list[] = {
 		.async_master_sidx = 1, // from 1
 		.sensor_cfg = sensor_cfg_14,
 		.env_cfg = &env_cfg_05,
-		// .env_cfg = &env_cfg_01, // (NO lock exp / No lock flk)
-	},
-
-	{
-		/* 27 */
-		.test_name =
-			"LBMF 3-exp-SE N+2 / Normal N+2, per-frame CTRL (LOCK exp-10002us / NO lock flk), SA",
-		.auto_test_must_run = 1,
-		.alg_method = 2,
-		.sync_type = {1, 1},
-		.sensor_cfg = sensor_cfg_15,
-		// .env_cfg = &env_cfg_01,
-		.env_cfg = &env_cfg_05,
-	},
-
-	{
-		/* 28 */
-		.test_name =
-			"LBMF 2-exp-SE N+2 / Normal N+2, per-frame CTRL (LOCK exp-10002us / NO lock flk), SA",
-		.auto_test_must_run = 1,
-		.alg_method = 2,
-		.sync_type = {1, 1},
-		.sensor_cfg = sensor_cfg_16,
-		.env_cfg = &env_cfg_05,
-	},
-
-	{
-		/* 29 */
-		.test_name =
-			"STG 3-exp-LE N+1 / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk)",
-		.auto_test_must_run = 1,
-		.sync_type = {FS_SYNC_TYPE_LE|FS_SYNC_TYPE_VSYNC, 1},
-		.sensor_cfg = sensor_cfg_17,
-		.env_cfg = &env_cfg_01,
-	},
-
-	{
-		/* 30 */
-		.test_name =
-#if !defined(FORCE_ADJUST_SMALLER_DIFF)
-			"STG 3-exp-SE N+1 / Normal N+1, per-frame CTRL (LOCK exp-40005us / NO lock flk)",
-#else
-			"STG 3-exp-SE N+1 / Normal N+1, per-frame CTRL (LOCK exp-10002us / NO lock flk)",
-#endif // FORCE_ADJUST_SMALLER_DIFF
-		.auto_test_must_run = 1,
-		.sync_type = {FS_SYNC_TYPE_SE|FS_SYNC_TYPE_VSYNC, 1},
-		.sensor_cfg = sensor_cfg_17,
-#if !defined(FORCE_ADJUST_SMALLER_DIFF)
-		.env_cfg = &env_cfg_04,
-#else
-		.env_cfg = &env_cfg_05,
-#endif // FORCE_ADJUST_SMALLER_DIFF
-	},
-
-	{
-		/* 31 */
-		.test_name =
-			"STG 2-exp-LE N+1 / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk)",
-		.auto_test_must_run = 1,
-		.sync_type = {FS_SYNC_TYPE_LE|FS_SYNC_TYPE_VSYNC, 1},
-		.sensor_cfg = sensor_cfg_18,
-		.env_cfg = &env_cfg_01,
-	},
-
-	{
-		/* 32 */
-		.test_name =
-			"STG 2-exp-SE N+1 / Normal N+1, per-frame CTRL (LOCK exp-40005us / NO lock flk)",
-		.auto_test_must_run = 1,
-		.sync_type = {FS_SYNC_TYPE_SE|FS_SYNC_TYPE_VSYNC, 1},
-		.sensor_cfg = sensor_cfg_18,
-		.env_cfg = &env_cfg_04,
 	},
 
 	/* NOT per-frame CTRL case (auto test not must run) */
@@ -1475,7 +1645,7 @@ struct ut_fs_test_list test_list[] = {
 	/* 60:30 NO lock exp case (auto test not must run) */
 	{
 		.test_name =
-			"(Option) 60:30 Normal N+1 / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk), SA",
+			"(Option) 60:30 Normal N+1 / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC), SA",
 		.alg_method = 2,
 		.sync_type = {1, 1},
 		.sensor_cfg = sensor_cfg_01,
@@ -1485,7 +1655,7 @@ struct ut_fs_test_list test_list[] = {
 
 	{
 		.test_name =
-			"(Option) 60:30 Normal N+2 / Normal N+2, per-frame CTRL (NO lock exp / NO lock flk) (same margin), SA",
+			"(Option) 60:30 Normal N+2 / Normal N+2, per-frame CTRL (NO lock exp / NO lock flk / sim. BC) (same margin), SA",
 		.alg_method = 2,
 		.sync_type = {1, 1},
 		.sensor_cfg = sensor_cfg_02,
@@ -1495,7 +1665,7 @@ struct ut_fs_test_list test_list[] = {
 
 	{
 		.test_name =
-			"(Option) 60:30 Normal N+2 / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk), SA",
+			"(Option) 60:30 Normal N+2 / Normal N+1, per-frame CTRL (NO lock exp / NO lock flk / sim. BC), SA",
 		.alg_method = 2,
 		.sync_type = {1, 1},
 		.sensor_cfg = sensor_cfg_03,
@@ -1505,7 +1675,7 @@ struct ut_fs_test_list test_list[] = {
 
 	{
 		.test_name =
-			"(Option) 60 Normal N+2 / STG 3-exp-LE N+2, per-frame CTRL (NO lock exp / NO lock flk), SA",
+			"(Option) 60 Normal N+2 / STG 3-exp-LE N+2, per-frame CTRL (NO lock exp / NO lock flk / sim. BC), SA",
 		.alg_method = 2,
 		.sync_type = {1, 1},
 		.sensor_cfg = sensor_cfg_07,

@@ -49,10 +49,12 @@ enum fs_log_ctrl_category {
 	LOG_FRM,
 	LOG_SEN_REC,
 	LOG_FS_UTIL,
+	LOG_FS_EVENT_EXE,
 
 	/* custom category */
 	LOG_FS_ALGO_FPS_INFO,
 	LOG_SEN_REC_SEAMLESS_DUMP,
+	LOG_SEN_REC_CALC_LBMF_VALID_MIN_FL_DUMP,
 
 	/* extra category */
 	LOG_FS_USER_QUERY_INFO = 25,

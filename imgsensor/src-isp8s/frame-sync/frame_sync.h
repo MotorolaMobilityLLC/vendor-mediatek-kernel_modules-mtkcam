@@ -7,6 +7,7 @@
 #define _FRAME_SYNC_H
 
 #include "frame_sync_def.h"
+#include "frame_sync_event_exe_def.h"
 
 
 /*******************************************************************************
@@ -38,6 +39,15 @@ struct SensorInfo {
 /*******************************************************************************
  * Frame-Sync basic define / enum
  ******************************************************************************/
+struct fs_extra_event_notify {
+	unsigned int is_valid; /* 0: NOT in any event flow */
+
+	/* if is in broadcasting ctrl flow (see frame_sync_event_exe_def) */
+	/* ==> recv. from sender <-- broadcaster sent it */
+	enum fsync_ctrl_event_bcast_id bcast_event_type;
+};
+
+
 /* The Method for FrameSync standalone (SA) algorithm */
 enum FS_SA_METHOD {
 	FS_SA_ADAPTIVE_MASTER = 0,
@@ -53,6 +63,8 @@ struct fs_sa_cfg {
 	int async_m_idx;
 	int async_s_bits;
 	int rout_center_en_bits;
+
+	struct fs_extra_event_notify extra_event;
 };
 /*----------------------------------------------------------------------------*/
 
@@ -220,6 +232,7 @@ struct fs_streaming_st {
 
 	/* callback function */
 	callback_func_set_fl_info func_ptr;
+	cb_func_event_execute_bcast event_exe_bcast_func_ptr;
 	void *p_ctx;
 };
 
@@ -244,11 +257,15 @@ struct fs_perframe_st {
 	unsigned int lineTimeInNs;
 	unsigned int readout_time_us;    // current mode read out time.
 
+	/* scenario/situation when this structure be used */
+	struct fs_extra_event_notify extra_event;
+
 	/* callback function using */
 	unsigned int cmd_id;
 
-	/* debug variables */
-	int req_id;                      // from mtk hdr ae structure
+	/* debug variables --- from mtk hdr ae structure */
+	unsigned int frame_id;           /* MW pipeline frame id */
+	int req_id;                      /* MW job id or ae id */
 };
 
 
@@ -280,6 +297,7 @@ struct fs_seamless_st {
 struct fs_fl_restore_info_st {
 	/* debug variables */
 	unsigned int magic_num;
+	unsigned int frame_id;
 	int req_id;
 
 	/* restore FL info */
@@ -418,6 +436,9 @@ struct FrameSync {
 
 	void (*fs_clear_fl_restore_status_if_needed)(const unsigned int ident);
 
+	unsigned int (*fs_chk_bcast_for_re_ctrl_fl)(const unsigned int ident,
+		const unsigned int magic_key);
+
 
 	unsigned int (*fs_is_ts_src_type_tsrec)(void);
 };
@@ -426,6 +447,10 @@ struct FrameSync {
 /******************************************************************************/
 #if defined(SUPPORT_FS_NEW_METHOD)
 void fs_sa_request_switch_master(unsigned int idx);
+
+void fs_request_bcast_for_re_ctrl_fl(const unsigned int idx,
+	const unsigned int magic_key,
+	const struct fs_event_exe_bcast_req_info *p_info);
 #endif
 
 

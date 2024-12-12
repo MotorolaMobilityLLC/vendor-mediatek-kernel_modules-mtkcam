@@ -25,6 +25,9 @@
 #include "../frame_monitor.h"
 
 
+#define PFX "FS_UT"
+
+
 #define REDUCE_UT_DEBUG_PRINTF
 #define USING_PRIVATE_CTRL_ORDER
 
@@ -64,6 +67,9 @@ static struct ut_fs_perframe_sensor_mode_list
 	g_streaming_sensors_modes_list[SENSOR_MAX_NUM] = {0};
 
 static unsigned int g_sensor_mode[SENSOR_MAX_NUM] = {0};
+
+/* using sensor_idx for index array location */
+static struct fs_perframe_st pf_ctrls_info[SENSOR_MAX_NUM] = {0};
 
 
 /* EXT CTRL config */
@@ -120,6 +126,11 @@ static unsigned int g_broke_at_counter;
 // static unsigned int g_trigger_seamless_switch;
 
 
+/* for simulation broadcast re-trigger ae ctrl flow */
+static unsigned int g_en_broadcast_re_trigger_ae_ctrl;
+static unsigned int g_force_disable_broadcast_re_trigger_ae_ctrl;
+
+
 /* auto-run shutter */
 static unsigned int g_shutter;
 static unsigned int g_hdr_shutter[FS_HDR_MAX] = {0};
@@ -172,7 +183,8 @@ static unsigned int g_n_1_f_cell_size[SENSOR_MAX_NUM] = {0};
 
 
 /******************************************************************************/
-// about FrameSync Algorithm stability test
+/* about FrameSync Algorithm stability test                                   */
+/* (!!! => below variables MUST be clear after using <= !!!)                  */
 /******************************************************************************/
 static unsigned int g_fs_alg_stability_test_flag;
 
@@ -199,6 +211,33 @@ static inline void ut_select_frame_sync_algorithm(void)
 		">>> (Input 1 integer) \"select a algorithm\" : "
 		NONE);
 	scanf("%u", &g_user_alg_method);
+}
+
+
+static inline void ut_decide_whether_to_ovw_test_case_cfg(void)
+{
+	printf("\n\n\n");
+
+	printf(LIGHT_RED
+		"!!! Decide whether to OVERWRITE test case cfg or not... !!!\n"
+		NONE);
+
+	printf(GREEN
+		">>> Please decide whether to force LOCK exp! (1: Yes / 0: No) <<<\n"
+		NONE);
+	printf(LIGHT_PURPLE
+		">>> (Input 1 integer) \"force LOCK exposure\" : "
+		NONE);
+	scanf("%u", &force_lock_exp);
+
+
+	printf(GREEN
+		">>> Please decide whether to force DISABLE re-trigger ae ctrl flow (sim. broadcast)! (1: Yes / 0: No) <<<\n"
+		NONE);
+	printf(LIGHT_PURPLE
+		">>> (Input 1 integer) \"force DISABLE re-trigger ae ctrl flow\" : "
+		NONE);
+	scanf("%u", &g_force_disable_broadcast_re_trigger_ae_ctrl);
 }
 
 
@@ -333,6 +372,19 @@ int cb_func_ut_fsync_mgr_set_fl_lc(void *p_ctx, const unsigned int cmd_id,
 
 	/* call for update info */
 	frameSync->fs_update_shutter(&pf_ctrl);
+
+	return 0;
+}
+
+
+/* currently this function only for testing call flow */
+int cb_func_ut_fsync_mgr_event_execute_broadcast(void *p_ctx, void *p_data,
+	const unsigned int event_tag)
+{
+	printf(GREEN
+		"[%s] p_ctx:%p, p_data:%p, event_tag:%u\n"
+		NONE,
+		__func__, p_ctx, p_data, event_tag);
 
 	return 0;
 }
@@ -844,6 +896,8 @@ static void *ut_set_fs_streaming_and_synced(void *ut_fs_test_sensor_cfg)
 	s_sensor.cammux_id = sensor_cfg->tg;
 	s_sensor.target_tg = CAMMUX_ID_INVALID;
 	s_sensor.func_ptr = &cb_func_ut_fsync_mgr_set_fl_lc;
+	s_sensor.event_exe_bcast_func_ptr =
+		&cb_func_ut_fsync_mgr_event_execute_broadcast;
 
 	/* call fs register sensor */
 	fs_setup_sensor_info_st_by_fs_streaming_st(&s_sensor, &reg_info);
@@ -1336,18 +1390,14 @@ static inline void reset_ut_test_variables(void)
 {
 	unsigned int i = 0, j = 0;
 
-	struct ut_fs_streaming_sensor_list s_sensor_clear_st = {0};
-	struct ut_fs_perframe_sensor_mode_list s_sensor_mode_clear_st = {0};
-	struct ut_fs_test_n_1_mode_cfg n_1_cfg_clear_st = {0};
-	struct UT_Timestamp ut_vts_clear_st = {0};
-
-
 	for (i = 0; i < SENSOR_MAX_NUM; ++i) {
+		memset(&g_streaming_sensors[i],
+			0, sizeof(g_streaming_sensors[i]));
+		memset(&g_streaming_sensors_modes_list[i],
+			0, sizeof(g_streaming_sensors_modes_list[i]));
+		memset(&pf_ctrls_info[i], 0, sizeof(pf_ctrls_info[i]));
+
 		g_set_synced_sensors[i] = 0;
-
-		g_streaming_sensors[i] = s_sensor_clear_st;
-		g_streaming_sensors_modes_list[i] = s_sensor_mode_clear_st;
-
 		g_sensor_mode[i] = 0;
 
 
@@ -1360,7 +1410,7 @@ static inline void reset_ut_test_variables(void)
 		g_ut_vts[i].next_bias = 0;
 
 
-		n_1_cfg[i] = n_1_cfg_clear_st;
+		memset(&n_1_cfg[i], 0, sizeof(n_1_cfg[i]));
 		g_n_1_status[i] = 0;
 		g_n_1_min_fl_us[i] = 0;
 		g_n_1_f_cell_size[i] = 0;
@@ -1370,7 +1420,7 @@ static inline void reset_ut_test_variables(void)
 		g_sensor_request_new_exp[i] = 0;
 
 
-		g_ut_vts[i] = ut_vts_clear_st;
+		memset(&g_ut_vts[i], 0, sizeof(g_ut_vts[i]));
 	}
 
 
@@ -2884,6 +2934,127 @@ static void ut_trigger_ext_ctrl(struct fs_perframe_st *p_pf_ctrl)
 }
 
 
+/* almost the same logic as ut_try_gen_new_shutter_data() function */
+static unsigned int ut_fs_chk_trigger_broadcast_flow_timing_valid(
+	const char *caller)
+{
+	unsigned int valid_sync_bits = 0, request_gen_new_exp_bits = 0;
+	unsigned int valid_to_trigger_bits;
+	unsigned int i, sidx = -1;
+	int ret = 0;
+
+	for (i = 0; i < SENSOR_MAX_NUM; ++i) {
+		ret = ut_get_sidx_by_sensor_idx(i, &sidx);
+
+		if (ret < 0)
+			continue;
+
+		if (g_set_synced_sensors[i])
+			valid_sync_bits |= 1U << i;
+
+		if (g_n_1_f_cell_size[sidx] == 0) {
+			if (g_sensor_request_new_exp[i])
+				request_gen_new_exp_bits |= 1U << i;
+		} else {
+			if (g_sensor_request_new_exp[i] == g_n_1_f_cell_size[sidx])
+				request_gen_new_exp_bits |= 1U << i;
+		}
+	}
+
+	valid_to_trigger_bits = (valid_sync_bits & request_gen_new_exp_bits);
+
+	printf(BROWN
+		"[%s][chk_trigger_broadcast_flow_timing] valid_to_trigger_bits:%#x, (set_sync(%u/%u/%u/%u/%u) bits:%#x, req_new_exp(%u/%u/%u/%u/%u) bits:%#x, f_cell(%u/%u/%u/%u/%u), exp_triggered_cnt(%u/%u/%u/%u/%u))\n"
+		NONE,
+		caller,
+		valid_to_trigger_bits,
+		g_set_synced_sensors[0],
+		g_set_synced_sensors[1],
+		g_set_synced_sensors[2],
+		g_set_synced_sensors[3],
+		g_set_synced_sensors[4],
+		valid_sync_bits,
+		g_sensor_request_new_exp[0],
+		g_sensor_request_new_exp[1],
+		g_sensor_request_new_exp[2],
+		g_sensor_request_new_exp[3],
+		g_sensor_request_new_exp[4],
+		request_gen_new_exp_bits,
+		g_n_1_f_cell_size[0],
+		g_n_1_f_cell_size[1],
+		g_n_1_f_cell_size[2],
+		g_n_1_f_cell_size[3],
+		g_n_1_f_cell_size[4],
+		g_sensor_exp_triggered_cnt[0],
+		g_sensor_exp_triggered_cnt[1],
+		g_sensor_exp_triggered_cnt[2],
+		g_sensor_exp_triggered_cnt[3],
+		g_sensor_exp_triggered_cnt[4]);
+
+	return valid_to_trigger_bits;
+}
+
+
+static void ut_trigger_broadcast_flow(void)
+{
+	unsigned int valid_to_trigger_bits;
+	unsigned int i, ret;
+
+	printf(BROWN
+		"\n\n[UT trigger_broadcast_flow] ...\n"NONE);
+
+	valid_to_trigger_bits =
+		ut_fs_chk_trigger_broadcast_flow_timing_valid(__func__);
+
+	for (i = 0; ; ++i) {
+		struct fs_perframe_st *p_pf_ctrl = NULL;
+
+		if (g_auto_run && g_streaming_sensors[i].sensor == NULL)
+			break;
+
+		p_pf_ctrl = &pf_ctrls_info[i];
+		/* check the data is valid or not (assume sensor ID cannot be 0) */
+		if (pf_ctrls_info->sensor_id == 0)
+			continue;
+
+		/* check this sensor idx is valid for calling broadcast flow */
+		if (((valid_to_trigger_bits >> p_pf_ctrl->sensor_idx) & 1UL) == 0)
+			continue;
+
+		/* setup extra event info */
+		p_pf_ctrl->extra_event.is_valid = 1;
+		p_pf_ctrl->extra_event.bcast_event_type =
+			FSYNC_CTRL_EVENT_BCAST_RE_CTRL_FL;
+
+		/* check if valid for triggering broadcast flow */
+		ret = frameSync->fs_chk_bcast_for_re_ctrl_fl(
+			p_pf_ctrl->sensor_idx, p_pf_ctrl->frame_id);
+		if (ret != 0) {
+			/* !!! NOT valid for re-trigger set shutter flow !!! */
+			printf(BROWN
+				"[UT] g_counter:%u => i:%u/sensor_id:%#x/sensor_idx:%u, ret:%u...\n"
+				NONE,
+				g_counter, i,
+				p_pf_ctrl->sensor_id, p_pf_ctrl->sensor_idx, ret);
+			/* continue; */
+		}
+
+		/* !!! valid for re-trigger set shutter flow !!! */
+		printf(BROWN
+			"[UT] g_counter:%u => i:%u/sensor_id:%#x/sensor_idx:%u, ret:%u... => call fs_set_shutter()...\n"
+			NONE,
+			g_counter, i,
+			p_pf_ctrl->sensor_id, p_pf_ctrl->sensor_idx, ret);
+
+		/* re trigger ae ctrl */
+		frameSync->fs_set_shutter(p_pf_ctrl);
+
+		printf("\n");
+	}
+	printf("\n");
+}
+
+
 static void ut_ctrl_request_setup(void)
 {
 	int user_select_idx = 2147483647, /*input = 0,*/ ret = 0;
@@ -2912,14 +3083,11 @@ static void ut_ctrl_request_setup(void)
 			break;
 
 
-#if defined(REDUCE_UT_DEBUG_PRINTF)
 		printf("\n\n\n");
 		printf(GREEN
-			"[UT ctrl_request_setup] i:%u, sensor_id:%#x, sensor_idx:%u\n"
+			"[UT ctrl_request_setup] g_counter:%u => i:%u, sensor_id:%#x, sensor_idx:%u\n"
 			NONE,
-			i, pf_ctrl.sensor_id, pf_ctrl.sensor_idx
-		);
-#endif // REDUCE_UT_DEBUG_PRINTF
+			g_counter, i, pf_ctrl.sensor_id, pf_ctrl.sensor_idx);
 
 
 		ut_fs_set_debug_info_sof_cnt(&pf_ctrl);
@@ -2954,6 +3122,7 @@ static void ut_ctrl_request_setup(void)
 		if (!g_auto_run)
 			printf("\n\n");
 
+		pf_ctrls_info[i] = pf_ctrl;
 		frameSync->fs_set_shutter(&pf_ctrl);
 
 
@@ -2977,11 +3146,10 @@ static void ut_ctrl_request_setup(void)
 				NONE);
 			break;
 		}
-		printf("\n");
 		printf(GREEN
-			"[UT ctrl_request_setup] i:%u, sensor_id:%#x, sensor_idx:%u, target_min_fl_us:%u, out_fl_us:%u\n"
+			"[UT ctrl_request_setup] g_counter:%u => i:%u, sensor_id:%#x, sensor_idx:%u, target_min_fl_us:%u, out_fl_us:%u\n"
 			NONE,
-			i, pf_ctrl.sensor_id, pf_ctrl.sensor_idx,
+			g_counter, i, pf_ctrl.sensor_id, pf_ctrl.sensor_idx,
 			target_min_fl_us,
 			out_fl_us);
 
@@ -3151,6 +3319,12 @@ RUN_PF_CTRL_AUTO_NORMAL:
 		/* 3. end => end this request ID settings */
 		frameSync->fs_sync_frame(0);
 		frameSync->fs_sync_frame(0);
+
+
+		/* 3.x ut trigger broadcast flow */
+		if (!g_force_disable_broadcast_re_trigger_ae_ctrl
+				&& g_en_broadcast_re_trigger_ae_ctrl)
+			ut_trigger_broadcast_flow();
 
 
 #if (WAITING_FOR_REMOVE_CODE)
@@ -3412,15 +3586,21 @@ static void ut_setup_ext_ctrl_cfg(
 
 static void ut_setup_fs_alg_stability_test_env_cfg(const unsigned int test_id)
 {
-	/* Env cfg */
-	g_run_times = test_list[test_id].env_cfg->run_times;
-	// g_run_times = 20;
-	g_vdiff_sync_success_th = test_list[test_id].env_cfg->sync_th;
-	simulation_passed_vsyncs = test_list[test_id].env_cfg->passed_vsync;
-	passed_vsyncs_ratio = test_list[test_id].env_cfg->passed_vsync_ratio;
-	max_pass_cnt = test_list[test_id].env_cfg->passed_vsync_max_cnt;
+	/* === for Env cfg === */
+	g_run_times =
+		test_list[test_id].env_cfg->run_times;
+	g_vdiff_sync_success_th =
+		test_list[test_id].env_cfg->sync_th;
+	g_en_broadcast_re_trigger_ae_ctrl =
+		test_list[test_id].env_cfg->en_sim_broadcast_flow;
+	simulation_passed_vsyncs =
+		test_list[test_id].env_cfg->passed_vsync;
+	passed_vsyncs_ratio =
+		test_list[test_id].env_cfg->passed_vsync_ratio;
+	max_pass_cnt =
+		test_list[test_id].env_cfg->passed_vsync_max_cnt;
 
-	/* test case per-frame cfg */
+	/* === for test case per-frame cfg === */
 	lock_exp = (force_lock_exp)
 		? 1
 		: test_list[test_id].env_cfg->lock_exp;
@@ -3434,7 +3614,7 @@ static void ut_setup_fs_alg_stability_test_env_cfg(const unsigned int test_id)
 	ut_gen_shutter_data();
 
 
-	/* Others env cfg */
+	/* === for Others env cfg === */
 	/* EXT CTRL */
 	ut_setup_ext_ctrl_cfg(test_list[test_id].env_cfg->ext_ctrls);
 
@@ -3575,23 +3755,16 @@ static void exe_fs_alg_stability_test(void)
 	g_fs_alg_stability_test_flag = 1;
 	g_auto_run = 1;
 
-
 	ut_select_frame_sync_algorithm();
-
-	printf(GREEN
-		"\n\n\n>>> Please decide whether to force lock exp! (1: Yes / 0: No) <<<\n"
-		NONE);
-	printf(LIGHT_PURPLE
-		">>> (Input 1 integer) \"force lock exposure\" : "
-		NONE);
-	scanf("%u", &force_lock_exp);
+	ut_decide_whether_to_ovw_test_case_cfg();
 
 	while (true) {
+		printf("\n\n\n");
 		printf(GREEN
-				"\n\n\n>>> Please choose FrameSync algorithm stability test case bellow! <<<\n"
-				NONE);
+			">>> Please choose FrameSync algorithm stability test case bellow! <<<\n"
+			NONE);
 		printf(GREEN
-			"[ 0] Run all case (all must run case, i.e per-frame ctrl case, except EXT CTRL)\n"
+			"[ 0] END FrameSync algorithm stability test\n"
 			NONE);
 
 		for (i = 0; test_list[i].sensor_cfg != NULL; ++i) {
@@ -3599,47 +3772,42 @@ static void exe_fs_alg_stability_test(void)
 				i + 1,
 				test_list[i].test_name);
 		}
-		printf(GREEN "[-1] End FrameSync algorithm stability test\n" NONE);
+
+		printf(GREEN
+			"[99] Run all case (all must run case, i.e per-frame ctrl case, except EXT CTRL)\n"
+			NONE);
 
 		printf(LIGHT_PURPLE
 			">>> (Input 1 integer) \"select a case\" : "
 			NONE);
 		scanf("%d", &select);
 
-		if (select <= 0)
+		/* flow control: check situation user choose */
+		if (select == 0)
+			goto end_exe_fs_alg_stability_test;
+		else if (select == 99)
 			break;
 
-
 		reset_ut_test_variables();
-
 		exe_fs_alg_stability_test_item(select-1);
 	}
 
-	if (select < 0) {
-		printf("\n\n\n");
-
-		g_fs_alg_stability_test_flag = 0;
-		g_auto_run = 0;
-
-		return;
-	}
-
-
+	/* auto run all test cases that are valid */
 	for (i = 0; test_list[i].sensor_cfg != NULL; ++i) {
 		if (test_list[i].exe_all_skip_ext_ctrl_test == 1)
 			continue;
-
 		if (test_list[i].auto_test_must_run != 1)
 			continue;
 
 		reset_ut_test_variables();
-
 		exe_fs_alg_stability_test_item(i);
 	}
 
+end_exe_fs_alg_stability_test:
 	printf("\n\n\n");
 
-
+	reset_ut_test_variables();
+	g_force_disable_broadcast_re_trigger_ae_ctrl = 0;
 	g_fs_alg_stability_test_flag = 0;
 	g_auto_run = 0;
 }

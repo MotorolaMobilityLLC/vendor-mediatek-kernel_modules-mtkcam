@@ -33,7 +33,13 @@
 // #define FS_FL_AUTO_RESTORE_DISABLE
 #define FS_FL_AUTO_RESTORE_TH 1000
 
-#define ALGO_AUTO_LISTEN_VSYNC 0
+#ifdef FS_UT
+#define FS_BCAST_RE_CTRL_FL_DIFF_TH 0
+#else
+#define FS_BCAST_RE_CTRL_FL_DIFF_TH 650
+#endif
+
+#define FS_VSYNC_DIFF_SOLVER_V2
 
 
 /******************************************************************************/
@@ -132,6 +138,7 @@ enum fs_timestamp_src_type {
 #define fs_spin_init(p)
 #define fs_spin_lock(p)
 #define fs_spin_unlock(p)
+#define fs_mutex_init(p)
 #define fs_mutex_lock(p)
 #define fs_mutex_unlock(p)
 #define FS_CALLOC(LEN, T)  (calloc((LEN), (T)))
@@ -154,9 +161,10 @@ enum fs_timestamp_src_type {
 #else
 
 #define FS_POPCOUNT(n)     (hweight32(n))
-#define fs_spin_init(p)    (spin_lock_init(p))
+#define fs_spin_init(p)    spin_lock_init(p)
 #define fs_spin_lock(p)    (spin_lock(p))
 #define fs_spin_unlock(p)  (spin_unlock(p))
+#define fs_mutex_init(p)   mutex_init(p)
 #define fs_mutex_lock(p)   (mutex_lock(p))
 #define fs_mutex_unlock(p) (mutex_unlock(p))
 #define FS_CALLOC(LEN, T)  (kcalloc((LEN), (T), (GFP_ATOMIC)))

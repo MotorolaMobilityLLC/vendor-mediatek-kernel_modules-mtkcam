@@ -14,6 +14,7 @@
 #include "frame_sync.h"
 #include "frame_sync_camsys.h"
 #include "frame_sync_algo.h"
+#include "frame_sync_event_exe.h"
 #include "frame_monitor.h"
 #include "sensor_recorder.h"
 
@@ -177,6 +178,7 @@ struct FrameSyncMgr {
 
 #ifndef FS_UT
 	/* Lock */
+	struct mutex solving_fl_mutex;
 	spinlock_t fl_restore_info_update_spinlock[SENSOR_MAX_NUM];
 #endif
 };
@@ -858,10 +860,10 @@ static void fs_init_members(void)
 	FS_ATOMIC_INIT(MASTER_IDX_NONE, &fs_mgr.async_master_idx);
 
 
-#ifndef FS_UT
+	/* Lock */
+	fs_mutex_init(&fs_mgr.solving_fl_mutex);
 	for (i = 0; i < SENSOR_MAX_NUM; ++i)
-		spin_lock_init(&fs_mgr.fl_restore_info_update_spinlock[i]);
-#endif
+		fs_spin_init(&fs_mgr.fl_restore_info_update_spinlock[i]);
 }
 #endif // SUPPORT_FS_NEW_METHOD
 
@@ -885,6 +887,93 @@ static void fs_init(void)
 
 	// else if () => for re-init.
 }
+
+
+/*============================================================================*/
+/* functions --- prepare for calling to fs event exe */
+/*============================================================================*/
+
+/*----------------------------------------------------------------------------*/
+/* for event-execute: re-CTRL FL */
+/*----------------------------------------------------------------------------*/
+static inline unsigned int chk_status_for_doing_bcast(const unsigned int idx)
+{
+	if (unlikely(FS_CHECK_BIT(idx, &fs_mgr.validSync_bits) == 0))
+		return 1; /* FIXME */
+	/* feature mode that do NOT support broadcasting ctrl (N:1 / M-Stream) */
+	if (fs_mgr.hdr_ft_mode[idx] >= FS_HDR_FT_MODE_FRAME_TAG)
+		return 2; /* FIXME */
+	return 0;
+}
+
+
+void fs_request_bcast_for_re_ctrl_fl(const unsigned int idx,
+	const unsigned int magic_key,
+	const struct fs_event_exe_bcast_req_info *p_info)
+{
+	unsigned int ret = 0;
+
+	/* check for NOT to send broadcasting ctrl for re-ctrl FL */
+	ret = chk_status_for_doing_bcast(idx);
+	if (unlikely(ret != 0))
+		return;
+
+	/* !!! call to event exe !!! */
+	ret = fs_event_exe_bcast_request_re_ctrl_fl(idx, magic_key, p_info);
+	if (unlikely(ret != 0)) {
+		LOG_MUST(
+			"WARNING: [%u]sidx:%u, call request re-CTRL FL, ret:%u   [info(idx:%u/recv_en:%#x/#%u/req:%d/f:%u)]\n",
+			idx,
+			fs_get_reg_sensor_idx(idx),
+			ret,
+			p_info->idx,
+			p_info->recv_en_bits,
+			p_info->magic_num,
+			p_info->req_id,
+			p_info->frame_id);
+	}
+}
+
+
+unsigned int fs_chk_bcast_for_re_ctrl_fl(const unsigned int ident,
+	const unsigned int magic_key)
+{
+	struct fs_event_exe_bcast_req_info info = {0};
+	unsigned int idx, ret = 0;
+
+	/* get registered idx and check if it is valid */
+	if (unlikely(fs_g_registered_idx_by_ident(ident, &idx, __func__)))
+		return 98; /* FIXME */
+	/* check for NOT to receive broadcasting ctrl for re-ctrl FL */
+	ret = chk_status_for_doing_bcast(idx);
+	if (unlikely(ret != 0))
+		return ret;
+	if (unlikely(FS_CHECK_BIT(idx, &fs_mgr.seamless_bits)))
+		return 99; /* FIXME */
+
+	/* !!! call to event exe !!! */
+	ret = fs_event_exe_bcast_chk_for_re_ctrl_fl(idx, magic_key, &info);
+	if (unlikely((ret != 0) && (idx != info.idx))) {
+		LOG_MUST(
+			"NOTICE: [%u]sidx:%u, call chk for re-CTRL FL, ret:%u (magic_key:%u)   [curr(recv_en:%#x/sent:%#x), info(idx:%u/recv_en:%#x/#%u/req:%d/f:%u)]\n",
+			idx,
+			fs_get_reg_sensor_idx(idx),
+			ret,
+			magic_key,
+			info.curr_recv_en_bits,
+			info.curr_sent_bits,
+			info.idx,
+			info.recv_en_bits,
+			info.magic_num,
+			info.req_id,
+			info.frame_id);
+	}
+
+	return ret;
+}
+/*============================================================================*/
+
+
 
 
 /*----------------------------------------------------------------------------*/
@@ -920,13 +1009,14 @@ static void fs_setup_fl_restore_info(const unsigned int idx,
 	/* check case */
 	if (unlikely(ptr != NULL)) {
 		LOG_MUST(
-			"WARNING: [%u] ID:%#x(sidx:%u), detect previous FL restore info before overwrite it (setup FL restore info(%#x, #%u, req_id:%d, %u, %u/%u/%u/%u/%u))\n",
+			"WARNING: [%u] ID:%#x(sidx:%u), detect previous FL restore info before overwrite it (setup FL restore info(%#x, #%u, (req:%d/f:%u), %u, %u/%u/%u/%u/%u))\n",
 			idx,
 			fs_get_reg_sensor_id(idx),
 			fs_get_reg_sensor_idx(idx),
 			FS_ATOMIC_READ(&fs_mgr.fl_restore_ctrl_bits),
 			ptr->magic_num,
 			ptr->req_id,
+			ptr->frame_id,
 			ptr->restored_fl_lc,
 			ptr->restored_fl_lc_arr[0],
 			ptr->restored_fl_lc_arr[1],
@@ -1007,13 +1097,14 @@ void fs_setup_fl_restore_status(const unsigned int idx,
 	write_bit_atomic(idx, 1, &fs_mgr.fl_restore_ctrl_bits);
 
 	LOG_INF(
-		"[%u] ID:%#x(sidx:%u), setup FL restore info(%#x, #%u, req_id:%d, %u, %u/%u/%u/%u/%u)\n",
+		"[%u] ID:%#x(sidx:%u), setup FL restore info(%#x, #%u, (req:%d/f:%u), %u, %u/%u/%u/%u/%u)\n",
 		idx,
 		fs_get_reg_sensor_id(idx),
 		fs_get_reg_sensor_idx(idx),
 		FS_ATOMIC_READ(&fs_mgr.fl_restore_ctrl_bits),
 		fs_mgr.fl_restore_info[idx]->magic_num,
 		fs_mgr.fl_restore_info[idx]->req_id,
+		fs_mgr.fl_restore_info[idx]->frame_id,
 		fs_mgr.fl_restore_info[idx]->restored_fl_lc,
 		fs_mgr.fl_restore_info[idx]->restored_fl_lc_arr[0],
 		fs_mgr.fl_restore_info[idx]->restored_fl_lc_arr[1],
@@ -1034,12 +1125,13 @@ static void fs_chk_fl_info_updated_from_drv(const unsigned int idx,
 
 	if (unlikely(output_ctrl->out_fl_lc == 0)) {
 		LOG_PF_INF(
-			"[%s] NOTICE: [%u] ID:%#x(sidx:%u), (%d/%u), out_fl_lc(FS:%u/drv:%u), skip check since out_fl_lc:0\n",
+			"[%s] NOTICE: [%u] ID:%#x(sidx:%u), (req:%d/f:%u/%u), out_fl_lc(FS:%u/drv:%u), skip check since out_fl_lc:0\n",
 			caller,
 			idx,
 			output_ctrl->sensor_id,
 			output_ctrl->sensor_idx,
 			output_ctrl->req_id,
+			output_ctrl->frame_id,
 			fs_mgr.sof_cnt_arr[idx],
 			output_ctrl->out_fl_lc,
 			update_ctrl->out_fl_lc);
@@ -1051,12 +1143,13 @@ static void fs_chk_fl_info_updated_from_drv(const unsigned int idx,
 		: (output_ctrl->out_fl_lc - update_ctrl->out_fl_lc);
 	if (unlikely(chk_diff >= chk_diff_th)) {
 		LOG_MUST(
-			"[%s] ERROR: [%u] ID:%#x(sidx:%u), (%d/%u), out_fl_lc(FS:%u/drv:%u), diff(%u/th:%u), FL value set by sensor drv seems to not match the value output by Frame-Sync\n",
+			"[%s] ERROR: [%u] ID:%#x(sidx:%u), (req:%d/f:%u/%u), out_fl_lc(FS:%u/drv:%u), diff(%u/th:%u), FL value set by sensor drv seems to not match the value output by Frame-Sync\n",
 			caller,
 			idx,
 			output_ctrl->sensor_id,
 			output_ctrl->sensor_idx,
 			output_ctrl->req_id,
+			output_ctrl->frame_id,
 			fs_mgr.sof_cnt_arr[idx],
 			output_ctrl->out_fl_lc,
 			update_ctrl->out_fl_lc,
@@ -1069,12 +1162,13 @@ static void fs_chk_fl_info_updated_from_drv(const unsigned int idx,
 			: (output_ctrl->hdr_exp.fl_lc[i] - update_ctrl->hdr_exp.fl_lc[i]);
 		if (unlikely(chk_diff >= chk_diff_th)) {
 			LOG_MUST(
-				"[%s] ERROR: [%u] ID:%#x(sidx:%u), (%d/%u), hdr_exp.fl_lc[%u](FS:%u/drv:%u), diff(%u/th:%u), FL value set by sensor drv seems to not match the value output by Frame-Sync\n",
+				"[%s] ERROR: [%u] ID:%#x(sidx:%u), (req:%d/f:%u/%u), hdr_exp.fl_lc[%u](FS:%u/drv:%u), diff(%u/th:%u), FL value set by sensor drv seems to not match the value output by Frame-Sync\n",
 				caller,
 				idx,
 				output_ctrl->sensor_id,
 				output_ctrl->sensor_idx,
 				output_ctrl->req_id,
+				output_ctrl->frame_id,
 				fs_mgr.sof_cnt_arr[idx],
 				i,
 				output_ctrl->hdr_exp.fl_lc[i],
@@ -2110,8 +2204,12 @@ static void fs_try_trigger_frame_sync_sa(const unsigned int idx)
 
 	/* trigger FS-SA for calculating frame length, */
 	/*    but only set FL to sensor driver if return with no error */
+	fs_mutex_lock(&fs_mgr.solving_fl_mutex);
+
 	fs_sa_setup_perframe_cfg_info(idx, &sa_cfg);
 	ret = fs_alg_solve_frame_length_sa(&sa_cfg, &fl_lc);
+
+	fs_mutex_unlock(&fs_mgr.solving_fl_mutex);
 
 	/* set framelength (all FL operation must use this API) */
 	fs_set_framelength_lc(idx, fl_lc);
@@ -2595,6 +2693,10 @@ unsigned int fs_streaming(const unsigned int flag,
 
 		/* set/init callback data */
 		fs_init_cb_info(idx, sensor_info->p_ctx, sensor_info->func_ptr);
+		fs_event_exe_cb_info_init(idx, sensor_info->p_ctx,
+			sensor_info->event_exe_bcast_func_ptr);
+
+		fs_event_exe_bcast_ctrls_init_idx(idx);
 
 		/* init/setup frame monitor info */
 		/* --- get tg value by check cammux_id and target_tg value */
@@ -2628,6 +2730,11 @@ unsigned int fs_streaming(const unsigned int flag,
 		/* reset/clear set sync sidx table value */
 		fs_update_set_sync_idx_table(idx, 0);
 		fs_reset_preset_perframe_data(idx);
+
+		fs_event_exe_bcast_ctrls_clear_idx(idx);
+
+		/* reset/clear cb info */
+		fs_event_exe_cb_info_clear(idx);
 	}
 
 	LOG_INF(
@@ -3136,6 +3243,22 @@ static void fs_check_frame_sync_ctrl(
 }
 
 
+static inline void fs_init_pf_ctrl_out_fl_info(const unsigned int idx,
+	struct fs_perframe_st *pf_ctrl, struct FrameRecord *frame_rec)
+{
+	/* init this value for FL N+1 act sensor to get correct new based FL */
+	pf_ctrl->out_fl_lc = pf_ctrl->min_fl_lc;
+
+	if (pf_ctrl->hdr_exp.multi_exp_type == MULTI_EXP_TYPE_LBMF) {
+		frec_setup_frame_rec_by_fs_perframe_st(frame_rec, pf_ctrl);
+
+		frec_g_valid_min_fl_arr_val_for_lut(idx,
+			frame_rec, pf_ctrl->min_fl_lc,
+			pf_ctrl->hdr_exp.fl_lc, FS_HDR_MAX);
+	}
+}
+
+
 /*
  * description:
  *     call by sensor driver,
@@ -3158,11 +3281,12 @@ void fs_set_shutter(struct fs_perframe_st (*pf_ctrl))
 		return;
 	if (unlikely(fs_chk_seamless_switch_status(idx))) {
 		LOG_MUST(
-			"NOTICE: [%u] ID:%#x(sidx:%u), (%d/%u), in seamless frame, seamless(%#x, sof_cnt:%u), skip/return\n",
+			"NOTICE: [%u] ID:%#x(sidx:%u), (req:%d/f:%u/%u), in seamless frame, seamless(%#x, sof_cnt:%u), skip/return\n",
 			idx,
 			pf_ctrl->sensor_id,
 			pf_ctrl->sensor_idx,
 			pf_ctrl->req_id,
+			pf_ctrl->frame_id,
 			fs_mgr.sof_cnt_arr[idx],
 			FS_ATOMIC_READ(&fs_mgr.seamless_bits),
 			fs_mgr.seamless_ctrl[idx].seamless_sof_cnt);
@@ -3172,6 +3296,7 @@ void fs_set_shutter(struct fs_perframe_st (*pf_ctrl))
 
 	fs_reset_fl_restore_status(idx);
 
+	fs_init_pf_ctrl_out_fl_info(idx, pf_ctrl, &frame_rec);
 	fs_mgr.pf_ctrl[idx] = *pf_ctrl;
 
 
@@ -3231,11 +3356,12 @@ void fs_update_shutter(struct fs_perframe_st (*pf_ctrl))
 		return;
 	if (unlikely(fs_chk_seamless_switch_status(idx))) {
 		LOG_MUST(
-			"NOTICE: [%u] ID:%#x(sidx:%u), (%d/%u), in seamless frame, seamless(%#x, sof_cnt:%u), skip/return\n",
+			"NOTICE: [%u] ID:%#x(sidx:%u), (req:%d/f:%u/%u), in seamless frame, seamless(%#x, sof_cnt:%u), skip/return\n",
 			idx,
 			pf_ctrl->sensor_id,
 			pf_ctrl->sensor_idx,
 			pf_ctrl->req_id,
+			pf_ctrl->frame_id,
 			fs_mgr.sof_cnt_arr[idx],
 			FS_ATOMIC_READ(&fs_mgr.seamless_bits),
 			fs_mgr.seamless_ctrl[idx].seamless_sof_cnt);
@@ -3327,7 +3453,7 @@ static void fs_do_fl_restore_proc_if_needed(const unsigned int idx)
 #endif
 
 	LOG_MUST(
-		"NOTICE: [%u] ID:%#x(sidx:%u), do FL restore, cmd_id:%u(NONE:%u/shutter_with_FL:%u/FL:%u), (%#x, #%u, req_id:%d, %u, %u/%u/%u/%u/%u), curr_sys_ts:%llu\n",
+		"NOTICE: [%u] ID:%#x(sidx:%u), do FL restore, cmd_id:%u(NONE:%u/shutter_with_FL:%u/FL:%u), (%#x, #%u, (req:%d/f:%u), %u, %u/%u/%u/%u/%u), curr_sys_ts:%llu\n",
 		idx,
 		fs_get_reg_sensor_id(idx),
 		fs_get_reg_sensor_idx(idx),
@@ -3338,6 +3464,7 @@ static void fs_do_fl_restore_proc_if_needed(const unsigned int idx)
 		FS_ATOMIC_READ(&fs_mgr.fl_restore_ctrl_bits),
 		fl_restore_info.magic_num,
 		fl_restore_info.req_id,
+		fl_restore_info.frame_id,
 		fl_restore_info.restored_fl_lc,
 		fl_restore_info.restored_fl_lc_arr[0],
 		fl_restore_info.restored_fl_lc_arr[1],
@@ -3358,14 +3485,12 @@ static void fs_do_fl_restore_proc_if_needed(const unsigned int idx)
 static void fs_debug_hw_sync(unsigned int idx)
 {
 #if !defined(FS_UT) && defined(SUPPORT_USING_CCU)
-	unsigned int arr[1] = {idx};
-
 	if (frm_get_ts_src_type() != FS_TS_SRC_CCU)
 		return;
 
 	fs_alg_setup_frame_monitor_fmeas_data(idx);
 	frec_notify_vsync(idx);
-	fs_alg_get_vsync_data(arr, 1);
+	fs_alg_sa_notify_get_ts_info(idx);
 	hw_fs_dump_dynamic_para(idx);
 #endif
 }
@@ -3425,6 +3550,8 @@ void fs_notify_vsync(const unsigned int ident)
 	fs_alg_sa_notify_setup_all_frame_info(idx);
 	frec_notify_vsync(idx);
 	fs_alg_sa_notify_vsync(idx);
+	fs_event_exe_bcast_ctrls_notify_vsync_idx(idx);
+	fs_alg_sa_notify_get_ts_info(idx);
 	frec_chk_fl_pr_match_act(idx);
 
 	if (unlikely(_FS_LOG_ENABLED(LOG_FS_PF)))
@@ -3483,6 +3610,8 @@ void fs_notify_sensor_hw_pre_latch_by_tsrec(const unsigned int ident)
 	/* below function using sensor recorder for replacement */
 	// fs_alg_sa_notify_setup_all_frame_info(idx);
 	frec_notify_vsync(idx); // sensor recorder hw pre-latch
+	fs_alg_sa_notify_vsync(idx);
+	fs_event_exe_bcast_ctrls_notify_vsync_idx(idx);
 
 	fs_do_fl_restore_proc_if_needed(idx);
 }
@@ -3512,7 +3641,7 @@ void fs_receive_tsrec_timestamp_info(const unsigned int ident,
 
 	/* !!! start here !!! */
 	/* call this function after receive TSREC timestamp info */
-	fs_alg_sa_notify_vsync(idx);
+	fs_alg_sa_notify_get_ts_info(idx);
 	frec_chk_fl_pr_match_act(idx);
 
 	if (unlikely(_FS_LOG_ENABLED(LOG_FS_PF)))
@@ -3650,6 +3779,7 @@ static struct FrameSync frameSync = {
 	fs_is_hw_sync,
 	fs_get_fl_record_info,
 	fs_clear_fl_restore_status_if_needed,
+	fs_chk_bcast_for_re_ctrl_fl,
 	fs_is_ts_src_type_tsrec,
 };
 
@@ -3678,6 +3808,7 @@ unsigned int FrameSyncInit(struct FrameSync **pframeSync)
 
 	fs_init();
 	frm_init();
+	fs_event_exe_init();
 
 	*pframeSync = &frameSync;
 

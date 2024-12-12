@@ -10,6 +10,7 @@ imgsensor_isp8s-objs += \
 	$(FRAME_SYNC)/frame_sync_algo.o \
 	$(FRAME_SYNC)/frame_monitor.o \
 	$(FRAME_SYNC)/frame_sync_util.o \
+	$(FRAME_SYNC)/frame_sync_event_exe.o \
 	$(FRAME_SYNC)/frame_sync_console.o \
 	$(FRAME_SYNC)/sensor_recorder.o \
 	$(FRAME_SYNC)/hw_sensor_sync_algo.o \

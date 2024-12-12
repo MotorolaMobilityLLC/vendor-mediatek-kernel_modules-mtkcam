@@ -125,6 +125,7 @@ struct FrameRecord {
 
 	unsigned long long pclk;
 	unsigned int line_length;
+	unsigned int lineTimeInNs;      /* using it (some sensor has cust line time) */
 
 	/* info for debug */
 	unsigned int mw_req_id;

@@ -11,13 +11,16 @@
 #include "sensor_recorder.h"
 
 
-/* utility functions */
+/*******************************************************************************
+ * utility functions
+ ******************************************************************************/
 void fs_alg_get_out_fl_info(const unsigned int idx,
 	unsigned int *p_out_fl_lc,
 	unsigned int p_out_fl_lc_arr[], const unsigned int arr_len);
 
-unsigned int fs_alg_get_vsync_data(unsigned int solveIdxs[], unsigned int len);
-
+#ifdef FS_UT
+unsigned int fs_alg_write_shutter(unsigned int idx);
+#endif
 
 /*
  * be careful:
@@ -28,13 +31,27 @@ unsigned int fs_alg_get_vsync_data(unsigned int solveIdxs[], unsigned int len);
  */
 void fs_alg_setup_frame_monitor_fmeas_data(unsigned int idx);
 
+/**
+ * receive frame record data from sensor recorder.
+ *
+ * fs algo will use these information to predict current and
+ *     next framelength when calculating vsync diff.
+ */
+void fs_alg_set_frame_record_st_data(const unsigned int idx,
+	struct FrameRecord *recs_ordered[],
+	const struct predicted_fl_info_st *fl_info);
 
-#ifdef FS_UT
-unsigned int fs_alg_write_shutter(unsigned int idx);
-#endif
+
+/*******************************************************************************
+ * basic instance operation functions
+ ******************************************************************************/
+void fs_alg_reset_fs_inst(const unsigned int idx);
+void fs_alg_reset_vsync_data(const unsigned int idx);
 
 
-/* Dump & Debug function */
+/*******************************************************************************
+ * Dump & Debug function
+ ******************************************************************************/
 void fs_alg_get_cur_frec_data(unsigned int idx,
 	unsigned int *p_fl_lc, unsigned int *p_shut_lc);
 
@@ -51,6 +68,10 @@ void fs_alg_sa_ts_info_dynamic_msg_connector(const unsigned int idx,
 	const unsigned int log_str_len, char *log_buf, int len,
 	const char *caller);
 
+
+/*******************************************************************************
+ * frame length record structure's functions
+ ******************************************************************************/
 void fs_alg_get_fl_rec_st_info(const unsigned int idx,
 	unsigned int *p_target_min_fl_us, unsigned int *p_out_fl_us);
 
@@ -58,57 +79,42 @@ void fs_alg_get_fl_rec_st_info(const unsigned int idx,
 /*******************************************************************************
  * fs algo operation functions (set information data)
  ******************************************************************************/
+void fs_alg_set_n_1_on_off_flag(const unsigned int idx, const unsigned int flag);
+void fs_alg_set_frame_cell_size(const unsigned int idx, const unsigned int size);
+void fs_alg_set_frame_tag(const unsigned int idx, const unsigned int count);
+
+void fs_alg_update_tg(const unsigned int idx, const unsigned int tg);
+
 void fs_alg_set_sync_type(const unsigned int idx, const unsigned int type);
 
-void fs_alg_set_anti_flicker(unsigned int idx, unsigned int flag);
+void fs_alg_set_anti_flicker(const unsigned int idx, const unsigned int flag);
+void fs_alg_update_min_fl_lc(const unsigned int idx,
+	const unsigned int min_fl_lc);
 
-void fs_alg_set_extend_framelength(unsigned int idx,
-	unsigned int ext_fl_lc, unsigned int ext_fl_us);
+void fs_alg_set_debug_info_sof_cnt(const unsigned int idx,
+	const unsigned int sof_cnt);
+void fs_alg_set_streaming_st_data(const unsigned int idx,
+	struct fs_streaming_st *pData);
+void fs_alg_set_perframe_st_data(const unsigned int idx,
+	struct fs_perframe_st *pData);
+void fs_alg_set_preset_perframe_streaming_st_data(const unsigned int idx,
+	struct fs_streaming_st *p_stream_data,
+	struct fs_perframe_st *p_pf_ctrl_data);
+
+void fs_alg_set_extend_framelength(const unsigned int idx,
+	const unsigned int ext_fl_lc, const unsigned int ext_fl_us);
 
 void fs_alg_seamless_switch(const unsigned int idx,
 	struct fs_seamless_st *p_seamless_info,
 	const struct fs_sa_cfg *p_sa_cfg);
 
-void fs_alg_update_tg(unsigned int idx, unsigned int tg);
+void fs_alg_sa_notify_setup_all_frame_info(const unsigned int idx);
+void fs_alg_sa_notify_vsync(const unsigned int idx);
+void fs_alg_sa_notify_get_ts_info(const unsigned int idx);
 
-void fs_alg_update_min_fl_lc(unsigned int idx, unsigned int min_fl_lc);
-
-void fs_alg_set_sync_with_diff(unsigned int idx, unsigned int diff_us);
-
-void fs_alg_set_streaming_st_data(
-	unsigned int idx, struct fs_streaming_st *pData);
-
-void fs_alg_set_perframe_st_data(
-	unsigned int idx, struct fs_perframe_st *pData);
-
-void fs_alg_set_preset_perframe_streaming_st_data(const unsigned int idx,
-	struct fs_streaming_st *p_stream_data,
-	struct fs_perframe_st *p_pf_ctrl_data);
 
 void fs_alg_sa_update_dynamic_infos(const unsigned int idx,
 	const unsigned int is_pf_ctrl);
-
-void fs_alg_set_debug_info_sof_cnt(const unsigned int idx,
-	const unsigned int sof_cnt);
-
-void fs_alg_reset_vsync_data(const unsigned int idx);
-
-void fs_alg_reset_fs_inst(unsigned int idx);
-
-void fs_alg_set_frame_record_st_data(
-	unsigned int idx, struct FrameRecord *recs_ordered[],
-	const struct predicted_fl_info_st *fl_info);
-
-void fs_alg_set_frame_cell_size(unsigned int idx, unsigned int size);
-
-void fs_alg_set_frame_tag(unsigned int idx, unsigned int count);
-
-void fs_alg_set_n_1_on_off_flag(unsigned int idx, unsigned int flag);
-
-
-void fs_alg_sa_notify_setup_all_frame_info(unsigned int idx);
-
-void fs_alg_sa_notify_vsync(unsigned int idx);
 
 
 /*******************************************************************************

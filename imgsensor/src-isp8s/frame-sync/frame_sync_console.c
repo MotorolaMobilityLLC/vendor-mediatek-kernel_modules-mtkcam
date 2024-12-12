@@ -99,12 +99,6 @@ struct fs_console_mgr {
 	/* default enable frame-sync set sync (at streaming on) */
 	unsigned int default_en_set_sync;
 
-	/* disable algo auto listen ext vsync */
-	unsigned int auto_listen_ext_vsync;
-
-	/* listen ext vsync (control by user) */
-	unsigned int listen_ext_vsync;
-
 
 	/* for overwrite set sync value */
 	struct fs_con_usr_cfg set_sync[SENSOR_MAX_NUM];
@@ -114,11 +108,6 @@ struct fs_console_mgr {
 
 	/* for overwrite user async master sidx */
 	int usr_async_m_sidx;
-
-
-	/* --- frame sync internal control variables --- */
-	/* listen ext vsync (control by algorithm) */
-	unsigned int listen_vsync_alg;
 };
 static struct fs_console_mgr fs_con_mgr;
 /******************************************************************************/
@@ -138,14 +127,8 @@ static inline void fs_console_init_def_value(void)
 
 	fs_con_mgr.force_to_ignore_set_sync = 0;
 	fs_con_mgr.default_en_set_sync = 0;
-	fs_con_mgr.auto_listen_ext_vsync = ALGO_AUTO_LISTEN_VSYNC;
 
 	fs_con_mgr.usr_async_m_sidx = MASTER_IDX_NONE;
-
-	// two stage frame-sync:
-	// => use seninf-worker to trigger frame length calculation
-	fs_con_mgr.listen_ext_vsync = 1;
-	fs_con_mgr.listen_vsync_alg = 0;
 }
 
 
@@ -261,31 +244,6 @@ int fs_con_chk_usr_async_m_sidx(void)
 {
 	return fs_con_mgr.usr_async_m_sidx;
 }
-
-
-unsigned int fs_con_get_usr_listen_ext_vsync(void)
-{
-	return fs_con_mgr.listen_ext_vsync;
-}
-
-
-unsigned int fs_con_get_usr_auto_listen_ext_vsync(void)
-{
-	return fs_con_mgr.auto_listen_ext_vsync;
-}
-
-
-unsigned int fs_con_get_listen_vsync_alg_cfg(void)
-{
-	return (fs_con_mgr.auto_listen_ext_vsync)
-		? fs_con_mgr.listen_vsync_alg : 0;
-}
-
-
-void fs_con_set_listen_vsync_alg_cfg(unsigned int flag)
-{
-	fs_con_mgr.listen_vsync_alg = flag;
-}
 /******************************************************************************/
 
 
@@ -344,18 +302,6 @@ static ssize_t fsync_console_show(
 		"\t\t[ %2u : USR_ASYNC_MASTER_SIDX ] usr_async_m_sidx : %d\n",
 		(unsigned int)FS_CON_USR_ASYNC_MASTER_SIDX,
 		fs_con_mgr.usr_async_m_sidx);
-
-
-	SHOW(buf, len,
-		"\t\t[ %2u : AUTO_LISTEN_EXT_VSYNC ] auto_listen_ext_vsync : %u\n",
-		(unsigned int)FS_CON_AUTO_LISTEN_EXT_VSYNC,
-		fs_con_mgr.auto_listen_ext_vsync);
-
-
-	SHOW(buf, len,
-		"\t\t[ %2u : FORCE_LISTEN_EXT_VSYNC ] listen_ext_vsync : %u\n",
-		(unsigned int)FS_CON_FORCE_LISTEN_EXT_VSYNC,
-		fs_con_mgr.listen_ext_vsync);
 
 
 	SHOW(buf, len,
@@ -422,16 +368,6 @@ static ssize_t fsync_console_store(
 	case FS_CON_USR_ASYNC_MASTER_SIDX:
 		fs_console_setup_cmd_value(cmd,
 			&fs_con_mgr.usr_async_m_sidx);
-		break;
-
-	case FS_CON_AUTO_LISTEN_EXT_VSYNC:
-		fs_console_setup_cmd_value(cmd,
-			&fs_con_mgr.auto_listen_ext_vsync);
-		break;
-
-	case FS_CON_FORCE_LISTEN_EXT_VSYNC:
-		fs_console_setup_cmd_value(cmd,
-			&fs_con_mgr.listen_ext_vsync);
 		break;
 
 	case FS_CON_TRACE_TAGS:

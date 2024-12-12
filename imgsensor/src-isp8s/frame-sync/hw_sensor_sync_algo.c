@@ -18,6 +18,7 @@
 #include "frame_sync_util.h"
 #include "frame_sync_algo.h"
 #include "frame_monitor.h"
+#include "frame_sync_flk.h"
 #include "custom/custom_hw_sync.h"
 
 #if !defined(FS_UT)
@@ -33,90 +34,6 @@
 static DEFINE_SPINLOCK(fs_hw_sync_sensor_info_lock);
 #endif
 
-/* copy from frame_sync_algo.c */
-#define FLK_TABLE_CNT 4
-#define FLK_TABLE_SIZE 8
-static unsigned int fs_flk_table[FLK_TABLE_CNT][FLK_TABLE_SIZE][2] = {
-	{ /* [0] => flicker_en == 1 */
-		/* 14.6 ~ 15.3 */
-		{68493, 65359},
-
-		/* 23.6 ~ 24.3 */
-		{42372, 41152},
-
-		/* 24.6 ~ 25.3 */
-		{40650, 39525},
-
-		/* 29.6 ~ 30.5 */
-		{33783, 32786},
-
-		/* 59.2 ~ 60.7 */
-		{16891, 16474},
-
-		/* END */
-		{0, 0}
-	},
-
-	{ /* [1] => flicker_en == 2 */
-		/* 14.6 ~ 15.3 */
-		{68493, 65359},
-
-		/* 23.6 ~ 24.3 */
-		{42372, 41152},
-
-		/* 24.6 ~ 25.3 */
-		{40650, 39525},
-
-		/* 29.9 ~ 30.5 */
-		{33445, 32786},
-
-		/* 59.2 ~ 60.7 */
-		{16891, 16474},
-
-		/* END */
-		{0, 0}
-	},
-
-	{ /* [2] => flicker_en == 3 */
-		/* 14.6 ~ 15.3 */
-		{68493, 65359},
-
-		/* 23.6 ~ 24.3 */
-		{42372, 41152},
-
-		/* 24.6 ~ 25.3 */
-		{40650, 39525},
-
-		/* 29.99 ~ 30.5 */
-		{33345, 32786},
-
-		/* 59.2 ~ 60.7 */
-		{16891, 16474},
-
-		/* END */
-		{0, 0}
-	},
-
-	{ /* [3] => flicker_en == 4 */
-		/* 14.6 ~ 15.3 */
-		{68493, 65359},
-
-		/* 23.6 ~ 24.3 */
-		{42372, 41152},
-
-		/* 24.6 ~ 25.3 */
-		{40650, 39525},
-
-		/* 30.0 ~ 30.5 */
-		{33333, 32786},
-
-		/* 59.2 ~ 60.7 */
-		{16891, 16474},
-
-		/* END */
-		{0, 0}
-	}
-};
 /******************************************************************************/
 
 struct HwSyncSensorInfo {
@@ -260,48 +177,6 @@ static unsigned int hw_sync_calc_valid_min_fl_lc_for_shutters(int idx)
 	}
 
 	return min_fl_lc;
-}
-
-static inline unsigned int chk_get_flk_en_type(const unsigned int flk_en_type,
-	const char *caller)
-{
-	/* flk_en_type: 0/1/2 */
-	unsigned int flk_en = flk_en_type;
-
-	/* error hanndling, for checking flk table boundary */
-	if (unlikely(flk_en_type > FLK_TABLE_CNT)) {
-		flk_en = 1;
-		LOG_MUST("[%s] get invalid flk_en:%u => assign to %u\n",
-			caller, flk_en_type, flk_en);
-	}
-
-	return flk_en;
-}
-
-static unsigned int hw_sync_get_anti_flicker_fl(const unsigned int flk_en_type,
-	unsigned int fl_us)
-{
-	unsigned int table_idx, flk_en;
-	unsigned int i;
-
-	/* unexpected case, call this function ONLY when FLK enable */
-	if (unlikely(flk_en_type == 0))
-		return fl_us;
-
-	flk_en = chk_get_flk_en_type(flk_en_type, __func__);
-	table_idx = flk_en - 1;
-
-	for (i = 0; i < FLK_TABLE_SIZE; ++i) {
-		if (fs_flk_table[table_idx][i][0] == 0)
-			break;
-		if ((fs_flk_table[table_idx][i][0] > fl_us)
-				&& (fl_us >= fs_flk_table[table_idx][i][1])) {
-			fl_us = fs_flk_table[table_idx][i][0];
-			break;
-		}
-	}
-
-	return fl_us;
 }
 
 void
@@ -553,6 +428,8 @@ hw_fs_alg_solve_frame_length(
 	fs_spin_lock(&fs_hw_sync_sensor_info_lock);
 	/* Handle by hw sensor sync */
 	for (i = 0; i < len; ++i) {
+		unsigned int fl_us_flk;
+
 		idx = solveIdxs[i];
 		para[i].sensor_idx = sensor_infos[idx].sensor_idx;
 
@@ -592,7 +469,17 @@ hw_fs_alg_solve_frame_length(
 		para[i].cal_min_fl_us = convert2TotalTime(para[i].line_time_in_ns, para[i].cal_min_fl_lc);
 
 		if (para[i].flicker_en) {
-			para[i].cal_min_fl_us = hw_sync_get_anti_flicker_fl(para[i].flicker_en, para[i].cal_min_fl_us);
+			/* initial value set to cal_min_fl_us */
+			fl_us_flk = para[i].cal_min_fl_us;
+			ret = fs_flk_get_anti_flicker_fl(para[i].flicker_en,
+				para[i].cal_min_fl_us, &fl_us_flk);
+			if (unlikely(ret != FLK_ERR_NONE)) {
+				LOG_MUST(
+					"ERROR: call fs flk get anti flk fl, ret:%u   [flk_en:%u/fl:(%u->%u)]\n",
+					ret, para[i].flicker_en,
+					para[i].cal_min_fl_us, fl_us_flk);
+			}
+			para[i].cal_min_fl_us = fl_us_flk;
 			para[i].cal_min_fl_lc = convert2LineCount(para[i].line_time_in_ns, para[i].cal_min_fl_us);
 		}
 

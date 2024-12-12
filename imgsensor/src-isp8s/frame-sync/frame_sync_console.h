@@ -27,11 +27,6 @@ unsigned int fs_con_chk_en_overwrite_max_fps(const unsigned int sidx,
 
 int fs_con_chk_usr_async_m_sidx(void);
 
-unsigned int fs_con_get_usr_listen_ext_vsync(void);
-unsigned int fs_con_get_usr_auto_listen_ext_vsync(void);
-unsigned int fs_con_get_listen_vsync_alg_cfg(void);
-void fs_con_set_listen_vsync_alg_cfg(unsigned int flag);
-
 
 
 
