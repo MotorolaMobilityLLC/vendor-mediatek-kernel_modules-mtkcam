@@ -6,8 +6,11 @@
 #ifndef _CAMSV_REGS_H
 #define _CAMSV_REGS_H
 
+/* cam mraw */
+#define REG_CAM_MAIN_SW_RST_1					0x00A4
+#define REG_CAMSYS_MRAW						0x3a680000
+
 /* cam main */
-#define REG_CAM_MAIN_SW_RST_1					0x0058
 #define REG_CAM_MAIN_LARB13_VC_SEL				0x0590
 #define REG_CAM_MAIN_LARB14_VC_SEL				0x0594
 #define REG_CAM_MAIN_LARB29_VC_SEL				0x059C
@@ -96,7 +99,9 @@ union CAMSVCENTRAL_DDR_CFG {
 		unsigned int DDR_CLEAR					:  1;
 		unsigned int rsv_6						: 10;
 		unsigned int DDR_SW_R					:  1;
-		unsigned int rsv_17						: 15;
+		unsigned int rsv_17						:  3;
+		unsigned int WLA2P0_EN					:  1;
+		unsigned int rsv_21						: 11;
 	} Bits;
 	unsigned int Raw;
 };
@@ -131,7 +136,9 @@ union CAMSVCENTRAL_BW_QOS_CFG {
 #define REG_CAMSVCENTRAL_MODULE_DB				0x01B4
 union CAMSVCENTRAL_MODULE_DB {
 	struct {
-		unsigned int rsv_0						: 26;
+		unsigned int rsv_0						: 16;
+		unsigned int SWITCH_FORCE_NEW_SETTING	 : 1;
+		unsigned int rsv_17						: 19;
 		unsigned int CAM_DB_LOAD_FORCE			:  1;
 		unsigned int rsv_27						:  3;
 		unsigned int CAM_DB_EN					:  1;
@@ -167,7 +174,11 @@ union CAMSVCENTRAL_DONE_STATUS_EN {
 		unsigned int SW_PASS1_DONE_1_ST_EN		:  1;
 		unsigned int SW_PASS1_DONE_2_ST_EN		:  1;
 		unsigned int SW_PASS1_DONE_3_ST_EN		:  1;
-		unsigned int rsv_20						: 12;
+		unsigned int SLICE_DONE_0_ST_EN			:  1;
+		unsigned int SLICE_DONE_1_ST_EN			:  1;
+		unsigned int SLICE_DONE_2_ST_EN			:  1;
+		unsigned int SLICE_DONE_3_ST_EN			:  1;
+		unsigned int rsv_24						:  8;
 	} Bits;
 	unsigned int Raw;
 };
@@ -311,14 +322,24 @@ union CAMSVCENTRAL_FBC1_TAG1 {
 #define REG_CAMSVDMATOP_CON3_LEN2				0x00F8
 #define REG_CAMSVDMATOP_CON4_LEN2				0x00FC
 
-#define REG_CAMSVDMATOP_WDMA_BASE_ADDR_IMG1		0x0200
+#define REG_CAMSVDMATOP_WDMA_BASE_ADDR_IMG1_A	0x0200
 #define CAMSVDMATOP_WDMA_BASE_ADDR_IMG_SHIFT	0x40
 
-#define REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG1	0x0204
+#define REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG1_A	0x0204
 #define CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG_SHIFT	0x40
 
-#define REG_CAMSVDMATOP_WDMA_BASIC_IMG1			0x0210
+#define REG_CAMSVDMATOP_WDMA_BASIC_IMG1_A		0x0210
 #define CAMSVDMATOP_WDMA_BASIC_IMG_SHIFT		0x40
+
+#define REG_CAMSVDMATOP_WDMA_BASE_ADDR_IMG1_B		0x0600
+#define REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG1_B	0x0604
+#define REG_CAMSVDMATOP_WDMA_BASIC_IMG1_B		0x0610
+#define REG_CAMSVDMATOP_WDMA_BASE_ADDR_LEN1_A		0x0900
+#define REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_LEN1_A	0x0904
+#define REG_CAMSVDMATOP_WDMA_BASIC_LEN1_A		0x0910
+#define REG_CAMSVDMATOP_WDMA_BASE_ADDR_LEN1_B		0x0B00
+#define REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_LEN1_B	0x0B04
+#define REG_CAMSVDMATOP_WDMA_BASIC_LEN1_B		0x0B10
 
 union CAMSVDMATOP_WDMA_BASIC_IMG1 {
 	struct {
@@ -335,18 +356,6 @@ union CAMSVDMATOP_WDMA_BASIC_IMG1 {
 
 #define REG_CAMSVDMATOP_WDMA_AXSLC_SIZE_IMG1	0x0234
 #define CAMSVDMATOP_WDMA__AXSLC_IMG_SHIFT		0x40
-
-/* stg */
-#define REG_CAMSVSTG1_EN_CTRL					0x0C00
-#define REG_CAMSVSTG1_INIT_MODE_CTRL			0x0C04
-#define REG_CAMSVSTG1_SW_CTRL					0x0C10
-#define REG_CAMSVSTG1_NONE_SAME_PG_SEND_EN_CTRL	0x0C20
-#define REG_CAMSVSTG1_LEADING_CNT_SRC			0x0C2C
-#define REG_CAMSVSTG2_EN_CTRL					0x0CC0
-#define REG_CAMSVSTG2_INIT_MODE_CTRL			0x0CC4
-#define REG_CAMSVSTG2_SW_CTRL					0x0CD0
-#define REG_CAMSVSTG2_NONE_SAME_PG_SEND_EN_CTRL	0x0CE0
-#define REG_CAMSVSTG2_LEADING_CNT_SRC			0x0CEC
 
 /* cq */
 #define REG_CAMSVCQTOP_DEBUG					0x0
@@ -374,14 +383,17 @@ union CAMSVCQTOP_INT_0_EN {
 		unsigned int CAMSVCQTOP_CSR_SCQ_SUB_CODE_ERR_INT_EN			:  1;
 		unsigned int CAMSVCQTOP_CSR_SCQ_SUB_VB_ERR_INT_EN			:  1;
 		unsigned int CAMSVCQTOP_CSR_SCQ_TRIG_DLY_INT_EN				:  1;
-		unsigned int CAMSVCQTOP_CSR_DMA_ERR_INT_EN		:  1;
+		unsigned int CAMSVCQTOP_CSR_DMA_ERR_INT_EN					:  1;
 		unsigned int CAMSVCQTOP_CSR_CQI_E1_DONE_INT_EN				:  1;
 		unsigned int CAMSVCQTOP_CSR_CQI_E2_DONE_INT_EN				:  1;
 		unsigned int CAMSVCQTOP_CSR_SCQ_MAX_START_DLY_SMALL_INT_EN	:  1;
 		unsigned int CAMSVCQTOP_CSR_CQI_E1_OTF_UNDERFLOW_INT_EN		:  1;
 		unsigned int CAMSVCQTOP_CSR_CQI_E2_OTF_UNDERFLOW_INT_EN		:  1;
-		unsigned int rsv_11								: 20;
-		unsigned int CAMSVCQTOP_CSR_INT_0_WCLR_EN		:  1;
+		unsigned int CAMSVCQTOP_CSR_THR1_QUEUE_FAIL_EN				:  1;
+		unsigned int CAMSVCQTOP_CSR_THR1_THREAD_CONFLICT_EN			:  1;
+		unsigned int CAMSVCQTOP_CSR_THR1_REPEAT_TRIGGER_ERR_EN		:  1;
+		unsigned int rsv_14						: 17;
+		unsigned int CAMSVCQTOP_CSR_INT_0_WCLR_EN					:  1;
 	} Bits;
 	unsigned int Raw;
 };
@@ -413,8 +425,7 @@ union CAMSVCQ_CQ_EN {
 		unsigned int CAMSVCQ_SCQ_LAST_FRAME_TRIG_EN		:  1;
 		unsigned int CAMSVCQ_CQ_RESET			:  1;
 		unsigned int CAMSVCQ_SCQ_INVLD_CLR_CHK	:  1;
-		unsigned int CAMSVCQ_VHDR_LAST_FRAME_TRIG_EN	:  1;
-		unsigned int rsv_19						:  2;
+		unsigned int rsv_18						:  3;
 		unsigned int CAMSVCQ_SCQ_SUBSAMPLE_EN	:  1;
 		unsigned int CAMSVCQ_CQ_DB_LOAD_SEL		:  1;
 		unsigned int rsv_23						:  5;
@@ -424,6 +435,7 @@ union CAMSVCQ_CQ_EN {
 	} Bits;
 	unsigned int Raw;
 };
+
 
 #define REG_CAMSVCQ_SCQ_START_PERIOD			0x0108
 
@@ -481,8 +493,14 @@ union CAMSVCQ_CQ_SUB_THR0_CTL {
 #define REG_CAMSVCQDMATOP_DMA_DBG_SEL			0x470
 #define REG_CAMSVCQDMATOP_DMA_DBG_PORT			0x474
 
-/*debug use*/
-#define REG_MRAW_FHG_SPARE3						0x1188
+/* pdp */
+#define REG_CAMSVPDP_PDP_MODE					0x0000
+#define REG_CAMSVPDP_PDP_FUNC					0x0100
+#define REG_CAMSVPDP_MBN1						0x0128
+#define REG_CAMSVPDP_MBN2						0x012C
+#define REG_CAMSVPDP_MBN_CTRL					0x0130
+#define REG_CAMSVPDP_CPI1						0x0140
+#define PDP_OFFSET								0x0300
 
 /* error mask */
 #define ERR_ST_MASK_TAG1_ERR (\

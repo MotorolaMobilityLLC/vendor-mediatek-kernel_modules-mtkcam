@@ -628,8 +628,6 @@ static unsigned long mtk_cam_select_hw(struct mtk_cam_job *job)
 		}
 		dev = cam->engines.sv_devs[raw_idx];
 		sv_dev = dev_get_drvdata(dev);
-		sv_dev->debug_use_mraw_out_base = NULL;
-		sv_dev->debug_use_mraw_in_base = NULL;
 		selected |= bit_map_bit(MAP_HW_CAMSV, raw_idx);
 		dev_info(cam->dev,
 			 "select sv hw end (raw_idx:%d/sv_available:0x%lx/selected:0x%lx)\n",
@@ -648,8 +646,6 @@ static unsigned long mtk_cam_select_hw(struct mtk_cam_job *job)
 		}
 		dev = cam->engines.sv_devs[rsv_id];
 		sv_dev = dev_get_drvdata(dev);
-		sv_dev->debug_use_mraw_out_base = NULL;
-		sv_dev->debug_use_mraw_in_base = NULL;
 		selected |= bit_map_bit(MAP_HW_CAMSV, rsv_id);
 	}
 
@@ -672,8 +668,6 @@ static unsigned long mtk_cam_select_hw(struct mtk_cam_job *job)
 			dev = cam->engines.sv_devs[sv_idx];
 			sv_dev = dev_get_drvdata(dev);
 			mraw_dev->pipeline = &cam->pipelines.mraw[mraw_idx];
-			sv_dev->debug_use_mraw_out_base = mraw_dev->base;
-			sv_dev->debug_use_mraw_in_base = mraw_dev->base_inner;
 		}
 	}
 	if (ctx->has_raw_subdev && is_offline_timeshare(job)) {
@@ -3779,10 +3773,14 @@ static int fill_sv_img_buffer_to_ipi_frame_display_ic(
 			((((buf->daddr + buf_offset) + 15) >> 4) << 4);
 
 		/* override fmt */
-		if (node->active_fmt.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV21)
+		if (node->active_fmt.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV12 ||
+			node->active_fmt.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV21)
 			out->fmt.format = MTKCAM_IPI_IMG_FMT_BAYER8;
-		else
-			out->fmt.format = MTKCAM_IPI_IMG_FMT_BAYER10;
+		else if (node->active_fmt.fmt.pix_mp.pixelformat ==
+				V4L2_PIX_FMT_NV12_10 ||
+			node->active_fmt.fmt.pix_mp.pixelformat ==
+				V4L2_PIX_FMT_NV21_10)
+			out->fmt.format = MTKCAM_IPI_IMG_FMT_BAYER10_UNPACKED;
 
 		if (tag_idx == SVTAG_1)
 			out->fmt.s.h = out->fmt.s.h / 2;
@@ -5662,6 +5660,7 @@ static int mtk_cam_job_fill_ipi_config_only_sv(struct mtk_cam_job *job,
 			sv_input->tag_id = i;
 			sv_input->tag_order = job->tag_info[i].tag_order;
 			sv_input->is_first_frame = (job->first_job) ? 1 : 0;
+			sv_input->is_unpack_msb = job->ipi_config.sv_input[0][i].is_unpack_msb;
 			sv_input->input = job->ipi_config.sv_input[0][i].input;
 		}
 	}

@@ -2316,7 +2316,7 @@ int handle_sv_tag(struct mtk_cam_job *job)
 			max_pixel_mode,
 			job->sub_ratio,
 			raw_sink->width, raw_sink->height,
-			raw_sink->mbus_code, NULL);
+			raw_sink->mbus_code, 0, NULL);
 
 		job->used_tag_cnt++;
 		job->enabled_tags |= (1 << img_tag_param[i].tag_idx);
@@ -2354,7 +2354,7 @@ int handle_sv_tag(struct mtk_cam_job *job)
 			max_pixel_mode,
 			job->sub_ratio,
 			sv_sink->width, sv_sink->height,
-			sv_sink->mbus_code, sv_pipe);
+			sv_sink->mbus_code, 0, sv_pipe);
 
 		job->used_tag_cnt++;
 		job->enabled_tags |= (1 << tag_idx);
@@ -2395,6 +2395,7 @@ int handle_sv_tag(struct mtk_cam_job *job)
 			pad_data_info.exp_hsize,
 			pad_data_info.exp_vsize,
 			pad_data_info.mbus_code,
+			0,
 			NULL);
 
 		job->used_tag_cnt++;
@@ -2439,7 +2440,7 @@ int handle_sv_tag_display_ic(struct mtk_cam_job *job)
 	struct mtk_camsv_pipeline *sv_pipe;
 	struct mtk_camsv_tag_param tag_param[SVTAG_IMG_END] = {};
 	struct v4l2_format *img_fmt;
-	unsigned int width, height, mbus_code;
+	unsigned int width, height, mbus_code, is_unpack_msb;
 	unsigned int hw_scen, max_pixel_mode = 3;
 	unsigned int req_amount;
 	int ret = 0, i, sv_pipe_idx;
@@ -2468,25 +2469,46 @@ int handle_sv_tag_display_ic(struct mtk_cam_job *job)
 				MTK_CAMSV_MAIN_STREAM_OUT - MTK_CAMSV_SINK_NUM].active_fmt;
 			width = img_fmt->fmt.pix_mp.width;
 			height = img_fmt->fmt.pix_mp.height;
-			if (img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV21)
+			if (img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV12 ||
+				img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV21) {
 				mbus_code = MEDIA_BUS_FMT_SBGGR8_1X8;
-			else
+				is_unpack_msb = 0;
+			} else if (img_fmt->fmt.pix_mp.pixelformat ==
+					V4L2_PIX_FMT_NV12_10 ||
+				img_fmt->fmt.pix_mp.pixelformat ==
+					V4L2_PIX_FMT_NV21_10) {
 				mbus_code = MEDIA_BUS_FMT_SBGGR10_1X10;
+				is_unpack_msb = 1;
+			} else {
+				mbus_code = MEDIA_BUS_FMT_SBGGR10_1X10;
+				is_unpack_msb = 0;
+			}
 		} else if (tag_param[i].tag_idx == SVTAG_1) {
 			img_fmt = &sv_pipe->vdev_nodes[
 				MTK_CAMSV_MAIN_STREAM_OUT - MTK_CAMSV_SINK_NUM].active_fmt;
 			width = img_fmt->fmt.pix_mp.width;
 			height = img_fmt->fmt.pix_mp.height / 2;
-			if (img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV21)
+			if (img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV12 ||
+				img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV21) {
 				mbus_code = MEDIA_BUS_FMT_SBGGR8_1X8;
-			else
+				is_unpack_msb = 0;
+			} else if (img_fmt->fmt.pix_mp.pixelformat ==
+					V4L2_PIX_FMT_NV12_10 ||
+				img_fmt->fmt.pix_mp.pixelformat ==
+					V4L2_PIX_FMT_NV21_10) {
 				mbus_code = MEDIA_BUS_FMT_SBGGR10_1X10;
+				is_unpack_msb = 1;
+			} else {
+				mbus_code = MEDIA_BUS_FMT_SBGGR10_1X10;
+				is_unpack_msb = 0;
+			}
 		} else {
 			img_fmt = &sv_pipe->vdev_nodes[
 				MTK_CAMSV_EXT_STREAM_OUT - MTK_CAMSV_SINK_NUM].active_fmt;
 			width = img_fmt->fmt.pix_mp.width;
 			height = img_fmt->fmt.pix_mp.height;
 			mbus_code = MEDIA_BUS_FMT_SBGGR8_1X8;
+			is_unpack_msb = 0;
 		}
 		mtk_cam_sv_fill_tag_info(job->tag_info,
 			&job->ipi_config,
@@ -2494,7 +2516,9 @@ int handle_sv_tag_display_ic(struct mtk_cam_job *job)
 			max_pixel_mode,
 			job->sub_ratio,
 			width, height,
-			mbus_code, sv_pipe);
+			mbus_code,
+			is_unpack_msb,
+			sv_pipe);
 
 		job->used_tag_cnt++;
 		job->enabled_tags |= (1 << tag_param[i].tag_idx);
@@ -2566,7 +2590,7 @@ int handle_sv_tag_non_comb_ic(struct mtk_cam_job *job)
 			max_pixel_mode,
 			job->sub_ratio,
 			width, height,
-			mbus_code, sv_pipe);
+			mbus_code, 0, sv_pipe);
 
 		job->used_tag_cnt++;
 		job->enabled_tags |= (1 << tag_param[i].tag_idx);
@@ -2629,7 +2653,7 @@ int handle_sv_tag_only_sv(struct mtk_cam_job *job)
 			max_pixel_mode,
 			job->sub_ratio,
 			sv_sink->width, sv_sink->height,
-			sv_sink->mbus_code, sv_pipe);
+			sv_sink->mbus_code, 0, sv_pipe);
 
 		job->used_tag_cnt++;
 		job->enabled_tags |= (1 << tag_idx);
@@ -2669,6 +2693,7 @@ int handle_sv_tag_only_sv(struct mtk_cam_job *job)
 			pad_data_info.exp_hsize,
 			pad_data_info.exp_vsize,
 			pad_data_info.mbus_code,
+			0,
 			NULL);
 
 		job->used_tag_cnt++;

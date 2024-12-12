@@ -57,7 +57,7 @@ int handle_sv_tag_extisp(struct mtk_cam_job *job)
 			max_pixel_mode,
 			job->sub_ratio,
 			raw_sink->width, raw_sink->height,
-			raw_sink->mbus_code, NULL);
+			raw_sink->mbus_code, 0, NULL);
 
 		job->used_tag_cnt++;
 		job->enabled_tags |= (1 << img_tag_param[i].tag_idx);
@@ -93,7 +93,7 @@ int handle_sv_tag_extisp(struct mtk_cam_job *job)
 			&meta_tag_param, 1,
 			max_pixel_mode, job->sub_ratio,
 			sv_sink->width, sv_sink->height,
-			sv_sink->mbus_code, sv_pipe);
+			sv_sink->mbus_code, 0, sv_pipe);
 
 		job->used_tag_cnt++;
 		job->enabled_tags |= (1 << tag_idx);

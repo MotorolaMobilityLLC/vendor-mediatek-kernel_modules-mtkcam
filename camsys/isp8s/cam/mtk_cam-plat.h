@@ -92,6 +92,11 @@ struct sv_dma_th_setting {
 	u32 pultra_th2;
 	u32 dvfs_th2;
 
+	u32 urgent_th3;
+	u32 ultra_th3;
+	u32 pultra_th3;
+	u32 dvfs_th3;
+
 	u32 urgent_len1_th;
 	u32 ultra_len1_th;
 	u32 pultra_len1_th;
@@ -101,6 +106,11 @@ struct sv_dma_th_setting {
 	u32 ultra_len2_th;
 	u32 pultra_len2_th;
 	u32 dvfs_len2_th;
+
+	u32 urgent_len3_th;
+	u32 ultra_len3_th;
+	u32 pultra_len3_th;
+	u32 dvfs_len3_th;
 
 	u32 cq1_fifo_size;
 	u32 cq1_urgent_th;
@@ -208,7 +218,8 @@ struct plat_v4l2_data {
 	int (*get_meta_stats_port_size)(int ipi_id, void *addr, int dma_port, int *size);
 	int (*set_sv_meta_stats_info)(int ipi_id, void *addr, struct dma_info *info);
 	int (*get_sv_dma_th_setting)(unsigned int dev_id, unsigned int fifo_img_p1,
-		unsigned int fifo_img_p2, unsigned int fifo_len_p1, unsigned int fifo_len_p2,
+		unsigned int fifo_img_p2, unsigned int fifo_img_p3,unsigned int fifo_len_p1,
+		unsigned int fifo_len_p2, unsigned int fifo_len_p3,
 		struct sv_dma_th_setting *th_setting, struct sv_dma_bw_setting *bw_setting);
 	int (*get_sv_max_pixel_mode)(unsigned int dev_id, unsigned int *max_pixel_mode);
 	int (*get_is_smmu_enabled)(bool *is_smmu_enabled);

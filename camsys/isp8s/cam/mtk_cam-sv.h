@@ -163,6 +163,9 @@ struct mtk_camsv_device {
 	void __iomem *base_dma_inner;
 	void __iomem *base_scq;
 	void __iomem *base_scq_inner;
+	void __iomem *base_pdp;
+	void __iomem *base_pdp_inner;
+	void __iomem *top;
 	unsigned int num_clks;
 	struct clk **clks;
 	unsigned int cammux_id;
@@ -215,10 +218,6 @@ struct mtk_camsv_device {
 	atomic_t is_fifo_full;
 	atomic_t is_sub_en;
 
-	void __iomem *debug_use_mraw_out_base;
-	void __iomem *debug_use_mraw_in_base;
-
-	bool enable_stash_eco_fun;
 	unsigned int camsv_error_count;
 
 	/* ois compensation */
@@ -242,8 +241,8 @@ int mtk_cam_sv_dev_stream_on(struct mtk_camsv_device *sv_dev, bool on,
 	unsigned int enabled_tags, unsigned int used_tag_cnt);
 int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 	unsigned int fifo_img_p1, unsigned int fifo_img_p2,
-	unsigned int fifo_len_p1, unsigned int fifo_len_p2, unsigned int leading_line_cnt,
-	bool enable_stash_eco_fun);
+	unsigned int fifo_img_p3, unsigned int fifo_len_p1,
+	unsigned int fifo_len_p2, unsigned int fifo_len_p3, unsigned int leading_line_cnt);
 int mtk_cam_sv_smi_path_sel(struct mtk_camsv_device *sv_dev, bool is_two_smi_comm);
 int mtk_cam_sv_toggle_tg_db(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_toggle_db(struct mtk_camsv_device *sv_dev);
@@ -266,7 +265,8 @@ void mtk_cam_sv_fill_tag_info(struct mtk_camsv_tag_info *arr_tag,
 	struct mtk_camsv_tag_param *tag_param, unsigned int hw_scen,
 	unsigned int pixelmode, unsigned int sub_ratio,
 	unsigned int mbus_width, unsigned int mbus_height,
-	unsigned int mbus_code,	struct mtk_camsv_pipeline *pipeline);
+	unsigned int mbus_code, unsigned int is_unpack_msb,
+	struct mtk_camsv_pipeline *pipeline);
 int mtk_cam_sv_get_tag_param(struct mtk_camsv_tag_param *arr_tag_param,
 	unsigned int hw_scen, unsigned int exp_no, unsigned int req_amount);
 void apply_camsv_cq(struct mtk_camsv_device *sv_dev,
