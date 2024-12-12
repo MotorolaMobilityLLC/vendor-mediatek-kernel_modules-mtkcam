@@ -42,9 +42,9 @@ enum ISP8_IMG_PWR {
 	ISP8_PWR_NUM
 };
 #ifdef MAE_DPE_READY
-#define IMGSYS_NOR_THD			(15)
+#define IMGSYS_NOR_THD			(18)
 #else
-#define IMGSYS_NOR_THD			(13)
+#define IMGSYS_NOR_THD			(16)
 #endif
 #define IMGSYS_PWR_THD			(5)
 #define IMGSYS_QOS_THD			(1)
