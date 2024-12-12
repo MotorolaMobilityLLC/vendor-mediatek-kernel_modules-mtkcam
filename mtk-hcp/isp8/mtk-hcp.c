@@ -1254,12 +1254,20 @@ static unsigned int mtk_hcp_poll(struct file *file, poll_table *wait)
 static int mtk_hcp_release(struct inode *inode, struct file *file)
 {
 	struct mtk_hcp *hcp_dev = (struct mtk_hcp *)file->private_data;
+	int i = 0;
 
-	HCP_PRINT_DBG("-s\n");
+	HCP_PRINT_INF("-s\n");
+
+	/* clear waiting msg while hcp will be closed */
+	for (i = 0; i < HCP_MAX_ID; i++)
+		atomic_set(&hcp_dev->hcp_id_ack[i], 1);
+
+	for (i = 0; i < MODULE_MAX_ID; i++)
+		wake_up(&hcp_dev->ack_wq[i]);
 
 	hcp_dev->is_open = false;
 
-	HCP_PRINT_DBG("-e\n");
+	HCP_PRINT_INF("-e\n");
 
 	return 0;
 }

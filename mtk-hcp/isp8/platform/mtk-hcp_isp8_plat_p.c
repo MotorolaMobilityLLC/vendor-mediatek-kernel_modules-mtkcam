@@ -1293,6 +1293,55 @@ static struct mtk_hcp_rsv_mb gce_clr_token_rsv_mb = {
 		GET_GCE_CLR_TOKEN_MB_ID())
 };
 
+static int free_mb(struct mtk_hcp_rsv_mb *mb)
+{
+	int ret = 0;
+
+	if (IS_ERR_OR_NULL(mb->d_buf) ||
+		     IS_ERR_OR_NULL(mb->sgt) ||
+		     (-1 == mb->fd)) {
+		if (mb->cfg.size != 0) {
+			HCP_PRINT_WRN(" %s mb->d_buf or mb->sgt is NULL\n", mb->cfg.name);
+			ret = -EINVAL;
+		}
+	} else {
+#ifdef HCP_NEW_DMA_BUF_API
+		dma_buf_vunmap_unlocked(mb->d_buf	, &mb->map);
+		dma_buf_unmap_attachment_unlocked(
+			mb->attach,
+			mb->sgt,
+			DMA_BIDIRECTIONAL);
+#else
+		dma_buf_vunmap(mb->d_buf, &mb->map);
+		dma_buf_unmap_attachment(mb->attach, mb->sgt, DMA_BIDIRECTIONAL);
+#endif
+		dma_buf_detach(mb->d_buf, mb->attach);
+		if (mb->cfg.cache_mode == HCP_MB_CACHE_ON)
+			dma_buf_end_cpu_access(mb->d_buf, DMA_BIDIRECTIONAL);
+		dma_buf_put(mb->d_buf);
+	}
+
+	if (mb->cfg.size != 0) {
+		HCP_PRINT_INF("dma_buf(%s) fd(%d) sz(%llu)\n",
+				mb->cfg.name, mb->fd, mb->cfg.size);
+		/* virt and dma only can print at debug lvl */
+		HCP_PRINT_DBG("dma_buf(%s) (%p) virt(%p) dma(0x%llX)\n",
+			mb->cfg.name, mb->d_buf, mb->start_virt, mb->start_dma);
+	}
+
+	/* clear mb */
+	mb->d_buf = NULL;
+	mb->attach = NULL;
+	mb->sgt = NULL;
+	mb->fd = -1;
+	mb->start_dma = 0;
+	mb->start_phys = 0;
+	mb->start_virt = NULL;
+	mb->mem_priv = NULL;
+
+	return ret;
+}
+
 static int impl_alloc(struct mtk_hcp_rsv_mb *mb)
 {
 	int ret = 0;
@@ -1317,9 +1366,13 @@ static int impl_alloc(struct mtk_hcp_rsv_mb *mb)
 	}
 
 	if (unlikely(-1 != mb->fd)) {
-		HCP_PRINT_WRN("fd(%d) mb(%u/%s) already allocated!\n",
+		HCP_PRINT_WRN("fd(%d) mb(%u/%s) already allocated! free it at first\n",
 			mb->fd, mb->cfg.id, mb->cfg.name);
-		return 0;
+		if (mb->get_ref || mb->put_ref)
+			HCP_PRINT_INF("mb(%u/%s) ref count:%d\n", mb->cfg.id, mb->cfg.name, kref_read(&mb->kref));
+
+		free_mb(mb);
+		/* return 0; */
 	}
 
 	/* all supported heap name you can find with cmd */
@@ -1470,55 +1523,6 @@ error:
 	return ret;
 }
 
-static int free_mb(struct mtk_hcp_rsv_mb *mb)
-{
-	int ret = 0;
-
-	if (IS_ERR_OR_NULL(mb->d_buf) ||
-		     IS_ERR_OR_NULL(mb->sgt) ||
-		     (-1 == mb->fd)) {
-		if (mb->cfg.size != 0) {
-			HCP_PRINT_WRN(" %s mb->d_buf or mb->sgt is NULL\n", mb->cfg.name);
-			ret = -EINVAL;
-		}
-	} else {
-#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
-		dma_buf_vunmap_unlocked(mb->d_buf	, &mb->map);
-		dma_buf_unmap_attachment_unlocked(
-			mb->attach,
-			mb->sgt,
-			DMA_BIDIRECTIONAL);
-#else
-		dma_buf_vunmap(mb->d_buf, &mb->map);
-		dma_buf_unmap_attachment(mb->attach, mb->sgt, DMA_BIDIRECTIONAL);
-#endif
-		dma_buf_detach(mb->d_buf, mb->attach);
-		if (mb->cfg.cache_mode == HCP_MB_CACHE_ON)
-			dma_buf_end_cpu_access(mb->d_buf, DMA_BIDIRECTIONAL);
-		dma_buf_put(mb->d_buf);
-	}
-
-	if (mb->cfg.size != 0) {
-		HCP_PRINT_INF("dma_buf(%s) fd(%d) sz(%llu)\n",
-				mb->cfg.name, mb->fd, mb->cfg.size);
-		/* virt and dma only can print at debug lvl */
-		HCP_PRINT_DBG("dma_buf(%s) (%p) virt(%p) dma(0x%llX)\n",
-			mb->cfg.name, mb->d_buf, mb->start_virt, mb->start_dma);
-	}
-
-	/* clear mb */
-	mb->d_buf = NULL;
-	mb->attach = NULL;
-	mb->sgt = NULL;
-	mb->fd = -1;
-	mb->start_dma = 0;
-	mb->start_phys = 0;
-	mb->start_virt = NULL;
-	mb->mem_priv = NULL;
-
-	return ret;
-}
-
 static void release_mb(struct kref *ref)
 {
 	struct mtk_hcp_rsv_mb *mb =
@@ -1544,7 +1548,10 @@ static int impl_get_ref(struct mtk_hcp_rsv_mb *mb)
 
 	kref_get(&mb->kref);
 
-	HCP_PRINT_DBG("%s ref:%d\n", mb->cfg.name, kref_read(&mb->kref));
+	if (GET_MEM_MODE(mb->cfg.id) == IMGSYS_MEMORY_MODE_SMVR)
+		HCP_PRINT_DBG("%s ref:%d\n", mb->cfg.name, kref_read(&mb->kref));
+	else
+		HCP_PRINT_DBG("%s ref:%d\n", mb->cfg.name, kref_read(&mb->kref));
 
 	return ret;
 }
@@ -1557,9 +1564,10 @@ static int impl_put_ref(struct mtk_hcp_rsv_mb *mb)
 		return -EFAULT;
 
 	/* determine whether is a kref_mb */
-	kref_put(&mb->kref, release_mb);
-
-	HCP_PRINT_DBG("%s ref:%d\n", mb->cfg.name, kref_read(&mb->kref));
+	if (likely(kref_put(&mb->kref, release_mb) == 0)) {
+		if (GET_MEM_MODE(mb->cfg.id) == IMGSYS_MEMORY_MODE_SMVR)
+			HCP_PRINT_INF("%s ref:%d\n", mb->cfg.name, kref_read(&mb->kref));
+	}
 
 	return ret;
 }
