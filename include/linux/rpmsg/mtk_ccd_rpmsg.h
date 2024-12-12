@@ -32,6 +32,7 @@ struct mtk_rpmsg_rproc_subdev {
 	struct rpmsg_device *rpdev;
 	struct idr endpoints;
 	struct mutex endpoints_lock;
+	u32    ccd_msgdev_addr;
 
 	struct mutex master_listen_lock;
 	struct mtk_ccd_listen_item listen_obj;
@@ -77,5 +78,8 @@ mtk_rpmsg_create_rproc_subdev(struct platform_device *pdev,
 void mtk_rpmsg_destroy_rproc_subdev(struct rproc_subdev *subdev);
 
 void mtk_rpmsg_destroy_rpmsgdev(struct rproc_subdev *mtk_subdev);
+
+int mtk_rpmsg_subdev_probe(struct rproc_subdev *subdev);
+void mtk_rpmsg_subdev_remove(struct rproc_subdev *subdev);
 
 #endif

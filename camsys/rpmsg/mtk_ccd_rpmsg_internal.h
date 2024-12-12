@@ -42,6 +42,11 @@ struct mtk_ccd_rpmsg_endpoint {
 	atomic_t ccd_mep_state;	/* enum ccd_mept_state */
 };
 
+struct mtk_ccd_mchinfo_entry {
+	struct list_head list_entry;
+	struct mtk_ccd_channel_info *mchinfo;
+};
+
 #define to_mtk_rpmsg_endpoint(r) \
 	container_of(r, struct mtk_ccd_rpmsg_endpoint, ept)
 
