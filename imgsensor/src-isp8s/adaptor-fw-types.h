@@ -31,6 +31,7 @@ struct fw_header {
 	u32 major_version;
 	u32 revision;
 	u64 last_modified_ts;
+	char generator_version[NAME_LENGTH_MAX];
 	char sensor_name[NAME_LENGTH_MAX];
 	u32 sensor_id;
 } __packed;
@@ -53,6 +54,53 @@ struct fw_pw_seq {
 	struct fw_subdrv_pw_seq_entry *pw_seq;
 	int aov_pw_seq_cnt;
 	struct fw_subdrv_pw_seq_entry *aov_pw_seq;
+} __packed;
+
+/* --- eeprom info section --- */
+
+struct fw_eeprom_info_dynamic_size {
+	u8 *qsc_table;
+	u8 *pdc_table;
+	u8 *lrc_table;
+	u8 *xtalk_table;
+} __packed;
+
+struct fw_eeprom_info_struct {
+	u32 header_id;
+	u32 addr_header_id;
+	u8 i2c_write_id;
+
+	u8 qsc_support;
+	u16 qsc_size;
+	u16 addr_qsc;
+	u16 sensor_reg_addr_qsc;
+	u16 qsc_table_size;
+
+	u8 pdc_support;
+	u16 pdc_size;
+	u16 addr_pdc;
+	u16 sensor_reg_addr_pdc;
+	u16 pdc_table_size;
+
+	u8 lrc_support;
+	u16 lrc_size;
+	u16 addr_lrc;
+	u16 sensor_reg_addr_lrc;
+	u16 lrc_table_size;
+
+	u8 xtalk_support; /* [1]sw-remo; [0]hw-remo; 0, not support */
+	u16 xtalk_size;
+	u16 addr_xtalk;
+	u16 sensor_reg_addr_xtalk;
+	u16 xtalk_table_size;
+
+	/* the struct contains dynamic size parts */
+	struct fw_eeprom_info_dynamic_size dynamic;
+} __packed;
+
+struct fw_eeprom_infos {
+	u32 eeprom_info_num;
+	struct fw_eeprom_info_struct *eeprom_info_list;
 } __packed;
 
 /* --- sensor global info section --- */
@@ -201,6 +249,58 @@ struct fw_sensor_global_info {
 
 /* --- mode section --- */
 
+struct fw_pd_u32_pair {
+	u32 para1;
+	u32 para2;
+} __packed;
+
+struct fw_pd_map_info_t {
+	u32 i4VCFeature;
+	u32 i4PDPattern;
+	u32 i4BinFacX;
+	u32 i4BinFacY;
+	u32 i4PDRepetition;
+
+	u32 i4PDOrder_cnt;
+	u32 *i4PDOrder;
+} __packed;
+
+struct fw_set_pd_block_info_t_dynamic_size {
+	struct fw_pd_u32_pair *i4PosL;
+	struct fw_pd_u32_pair *i4PosR;
+	struct fw_pd_u32_pair *i4Crop;
+	struct fw_pd_map_info_t *sPDMapInfo;
+} __packed;
+
+struct fw_set_pd_block_info_t {
+	u32 i4OffsetX;
+	u32 i4OffsetY;
+	u32 i4PitchX;
+	u32 i4PitchY;
+	u32 i4PairNum;
+	u32 i4SubBlkW;
+	u32 i4SubBlkH;
+	u32 iMirrorFlip;
+	u32 i4BlockNumX;
+	u32 i4BlockNumY;
+	u32 i4LeFirst;
+	u32 i4VolumeX;
+	u32 i4VolumeY;
+	u32 i4FullRawW;
+	u32 i4FullRawH;
+	u32 i4VCPackNum;
+	u32 i4ModeIndex;
+	u32 i4NoTrs;
+	u32 PDAF_Support;
+
+	u32 i4PosL_cnt;
+	u32 i4PosR_cnt;
+	u32 i4Crop_cnt;
+	u32 sPDMapInfo_cnt;
+
+	struct fw_set_pd_block_info_t_dynamic_size dynamic;
+} __packed;
+
 struct fw_winsize_info {
 	u16 full_w;
 	u16 full_h;
@@ -274,6 +374,7 @@ struct fw_dcg_info_struct {
 } __packed;
 
 struct fw_mode_info_dynamic_size {
+	struct fw_set_pd_block_info_t *imgsensor_pd_info;
 	struct fw_mtk_sensor_saturation_info *saturation_info;
 	struct fw_dcg_info_struct *dcg_info;
 	struct fw_mtk_mbus_frame_desc_entry_csi2 *frame_desc;
@@ -324,6 +425,7 @@ struct fw_mode_info {
 	u8 dpc_enabled;
 	u8 pdc_enabled;
 	u8 awb_enabled;
+	u8 has_imgsensor_pd_info;
 	u8 has_saturation_info;
 	u8 has_dcg_info;
 	struct fw_u32_min_max multi_exposure_ana_gain_range[MAX_EXPOSURE_CNT];
@@ -346,6 +448,29 @@ struct fw_mode_info {
 struct fw_modes {
 	u32 mode_num;
 	struct fw_mode_info *mode_list;
+} __packed;
+
+/* --- ebd section --- */
+
+struct fw_ebd_loc {
+	u16 loc_line;
+	u16 loc_pix[MAX_EBD_PIXEL_OFFSET_NUM];
+} __packed;
+
+struct fw_ebd_info_struct {
+	struct fw_ebd_loc frm_cnt_loc;
+	struct fw_ebd_loc coarse_integ_loc[MAX_EXPOSURE_CNT];
+	struct fw_ebd_loc ana_gain_loc[MAX_EXPOSURE_CNT];
+	struct fw_ebd_loc dig_gain_loc[MAX_EXPOSURE_CNT];
+	struct fw_ebd_loc coarse_integ_shift_loc;
+	struct fw_ebd_loc dol_loc;
+	struct fw_ebd_loc framelength_loc;
+	struct fw_ebd_loc temperature_loc;
+} __packed;
+
+struct fw_ebd {
+	u8 has_ebd_info;
+	struct fw_ebd_info_struct *ebd_info;
 } __packed;
 
 #endif

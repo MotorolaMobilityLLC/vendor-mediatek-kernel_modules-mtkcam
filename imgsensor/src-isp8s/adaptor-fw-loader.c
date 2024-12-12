@@ -258,6 +258,16 @@ static int update_subdrv_entry_header(struct adaptor_ctx *ctx,
 		ctx->subdrv->fw_major_ver = fw_struct->major_version;
 		ctx->subdrv->fw_revision = fw_struct->revision;
 		ctx->subdrv->fw_modified_ts = fw_struct->last_modified_ts;
+
+		/* Check generator version */
+		if (strncmp(fw_struct->generator_version, SUPPORT_GENERATOR_VERSION, NAME_LENGTH_MAX)) {
+			/* Check fail, stop loading */
+			fw_struct->generator_version[NAME_LENGTH_MAX - 1] = '\0';
+			pr_err("support generator version is '%s', but loaded version '%s'\n",
+			       SUPPORT_GENERATOR_VERSION,
+			       fw_struct->generator_version);
+			return -EINVAL;
+		}
 	}
 
 	return ret;
@@ -371,6 +381,206 @@ static int update_subdrv_entry_pw_seq(struct adaptor_ctx *ctx,
 			ctx->subdrv->aov_pw_seq_cnt = fw_struct->aov_pw_seq_cnt,
 			ctx->subdrv->aov_pw_seq = aov_pw_seq;
 		}
+	}
+
+	return ret;
+}
+
+static int init_eeprom_info_section(struct adaptor_ctx *ctx,
+			const u8 *data, const size_t size,
+			void *dest, size_t dest_sz)
+{
+	int ret = 0;
+	int i;
+	struct fw_eeprom_infos *pdata;
+	struct fw_eeprom_info_struct *p;
+	u32 offset = 0;
+	u32 sz = 0;
+
+	if (unlikely(data == NULL || dest == NULL))
+		return -EINVAL;
+
+	if (unlikely(size < dest_sz))
+		return -EINVAL;
+
+	if (sizeof(struct fw_eeprom_infos) != dest_sz)
+		return -EINVAL;
+
+	pdata = (struct fw_eeprom_infos *)dest;
+
+	sz = sizeof(struct fw_eeprom_infos) - sizeof(struct fw_eeprom_info_struct *);
+	memcpy(pdata, data, sz);
+
+	offset += sz;
+
+	pdata->eeprom_info_list = kcalloc(pdata->eeprom_info_num, sizeof(struct fw_eeprom_info_struct), GFP_KERNEL);
+
+	if (!pdata->eeprom_info_list)
+		return -ENOMEM;
+
+	for (i = 0; i < pdata->eeprom_info_num; i++) {
+		sz = sizeof(struct fw_eeprom_info_struct) - sizeof(struct fw_eeprom_info_dynamic_size);
+		memcpy(pdata->eeprom_info_list + i, data + offset, sz);
+		offset += sz;
+
+		p = pdata->eeprom_info_list + i;
+
+		if (p->qsc_table_size) {
+			sz = sizeof(u8) * p->qsc_table_size;
+			p->dynamic.qsc_table = kzalloc(sz, GFP_KERNEL);
+			if (!p->dynamic.qsc_table)
+				return -ENOMEM;
+
+			memcpy(p->dynamic.qsc_table, data + offset, sz);
+			offset += sz;
+		}
+		if (p->pdc_table_size) {
+			sz = sizeof(u8) * p->pdc_table_size;
+			p->dynamic.pdc_table = kzalloc(sz, GFP_KERNEL);
+			if (!p->dynamic.pdc_table)
+				return -ENOMEM;
+
+			memcpy(p->dynamic.pdc_table, data + offset, sz);
+			offset += sz;
+		}
+		if (p->lrc_table_size) {
+			sz = sizeof(u8) * p->lrc_table_size;
+			p->dynamic.lrc_table = kzalloc(sz, GFP_KERNEL);
+			if (!p->dynamic.lrc_table)
+				return -ENOMEM;
+
+			memcpy(p->dynamic.lrc_table, data + offset, sz);
+			offset += sz;
+		}
+		if (p->xtalk_table_size) {
+			sz = sizeof(u8) * p->xtalk_table_size;
+			p->dynamic.xtalk_table = kzalloc(sz, GFP_KERNEL);
+			if (!p->dynamic.xtalk_table)
+				return -ENOMEM;
+
+			memcpy(p->dynamic.xtalk_table, data + offset, sz);
+			offset += sz;
+		}
+	}
+
+	return ret;
+}
+
+static int update_s_ctx_eeprom_info(struct eeprom_info_struct *pinfo, struct fw_eeprom_info_struct *fw_struct)
+{
+	size_t sz;
+
+	COPY_COMMON_MEMBER(pinfo, fw_struct, header_id);
+	COPY_COMMON_MEMBER(pinfo, fw_struct, addr_header_id);
+	COPY_COMMON_MEMBER(pinfo, fw_struct, i2c_write_id);
+
+	COPY_COMMON_MEMBER(pinfo, fw_struct, qsc_support);
+	COPY_COMMON_MEMBER(pinfo, fw_struct, qsc_size);
+	COPY_COMMON_MEMBER(pinfo, fw_struct, addr_qsc);
+	COPY_COMMON_MEMBER(pinfo, fw_struct, sensor_reg_addr_qsc);
+
+	COPY_COMMON_MEMBER(pinfo, fw_struct, pdc_support);
+	COPY_COMMON_MEMBER(pinfo, fw_struct, pdc_size);
+	COPY_COMMON_MEMBER(pinfo, fw_struct, addr_pdc);
+	COPY_COMMON_MEMBER(pinfo, fw_struct, sensor_reg_addr_pdc);
+
+	COPY_COMMON_MEMBER(pinfo, fw_struct, lrc_support);
+	COPY_COMMON_MEMBER(pinfo, fw_struct, lrc_size);
+	COPY_COMMON_MEMBER(pinfo, fw_struct, addr_lrc);
+	COPY_COMMON_MEMBER(pinfo, fw_struct, sensor_reg_addr_lrc);
+
+	COPY_COMMON_MEMBER(pinfo, fw_struct, xtalk_support);
+	COPY_COMMON_MEMBER(pinfo, fw_struct, xtalk_size);
+	COPY_COMMON_MEMBER(pinfo, fw_struct, addr_xtalk);
+	COPY_COMMON_MEMBER(pinfo, fw_struct, sensor_reg_addr_xtalk);
+
+	if (fw_struct->qsc_table_size) {
+		sz = fw_struct->qsc_table_size * sizeof(u8);
+		pinfo->qsc_table = kzalloc(sz, GFP_KERNEL);
+		if (!pinfo->qsc_table)
+			return -ENOMEM;
+		memcpy(pinfo->qsc_table,
+		       fw_struct->dynamic.qsc_table,
+		       sz);
+
+		/* override size with table size */
+		COPY_SPECIFIC_MEMBER(pinfo, fw_struct,
+			     qsc_size, qsc_table_size);
+	}
+
+	if (fw_struct->pdc_table_size) {
+		sz = fw_struct->pdc_table_size * sizeof(u8);
+		pinfo->pdc_table = kzalloc(sz, GFP_KERNEL);
+		if (!pinfo->pdc_table)
+			return -ENOMEM;
+		memcpy(pinfo->pdc_table,
+		       fw_struct->dynamic.pdc_table,
+		       sz);
+
+		/* override size with table size */
+		COPY_SPECIFIC_MEMBER(pinfo, fw_struct,
+			     pdc_size, pdc_table_size);
+	}
+
+	if (fw_struct->lrc_table_size) {
+		sz = fw_struct->lrc_table_size * sizeof(u8);
+		pinfo->lrc_table = kzalloc(sz, GFP_KERNEL);
+		if (!pinfo->lrc_table)
+			return -ENOMEM;
+		memcpy(pinfo->lrc_table,
+		       fw_struct->dynamic.lrc_table,
+		       sz);
+
+		/* override size with table size */
+		COPY_SPECIFIC_MEMBER(pinfo, fw_struct,
+			     lrc_size, lrc_table_size);
+	}
+
+	if (fw_struct->xtalk_table_size) {
+		sz = fw_struct->xtalk_table_size * sizeof(u8);
+		pinfo->xtalk_table = kzalloc(sz, GFP_KERNEL);
+		if (!pinfo->xtalk_table)
+			return -ENOMEM;
+		memcpy(pinfo->xtalk_table,
+		       fw_struct->dynamic.xtalk_table,
+		       sz);
+
+		/* override size with table size */
+		COPY_SPECIFIC_MEMBER(pinfo, fw_struct,
+			     xtalk_size, xtalk_table_size);
+	}
+
+	return 0;
+}
+
+static int update_subdrv_entry_eeprom_info(struct adaptor_ctx *ctx,
+			void *dest, size_t dest_sz)
+{
+	int i, ret = 0;
+	struct fw_eeprom_infos *fw_struct;
+	size_t sz_eeproms;
+	struct eeprom_info_struct *ptr;
+
+	if (unlikely(dest == NULL))
+		return -EINVAL;
+	if (sizeof(struct fw_eeprom_infos) != dest_sz)
+		return -EINVAL;
+
+	fw_struct = (struct fw_eeprom_infos *)dest;
+
+	COPY_SPECIFIC_MEMBER(&ctx->subctx.s_ctx, fw_struct,
+			     eeprom_num, eeprom_info_num);
+
+	if (fw_struct->eeprom_info_num) {
+		sz_eeproms = fw_struct->eeprom_info_num * sizeof(struct eeprom_info_struct);
+		ctx->subctx.s_ctx.eeprom_info = kzalloc(sz_eeproms, GFP_KERNEL);
+		if (!ctx->subctx.s_ctx.eeprom_info)
+			return -ENOMEM;
+	}
+
+	for (i = 0; i < fw_struct->eeprom_info_num; i++) {
+		ptr = ctx->subctx.s_ctx.eeprom_info + i;
+		update_s_ctx_eeprom_info(ptr, fw_struct->eeprom_info_list + i);
 	}
 
 	return ret;
@@ -733,6 +943,85 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 
 		p = pdata->mode_list + i;
 
+		if (p->has_imgsensor_pd_info) {
+			u32 sz2;
+
+			sz = sizeof(struct fw_set_pd_block_info_t);
+			p->dynamic.imgsensor_pd_info = kzalloc(sz, GFP_KERNEL);
+			if (!p->dynamic.imgsensor_pd_info)
+				return -ENOMEM;
+
+			sz2 = sz - sizeof(struct fw_set_pd_block_info_t_dynamic_size);
+
+			memcpy(p->dynamic.imgsensor_pd_info, data + offset, sz2);
+			offset += sz2;
+
+			if (p->dynamic.imgsensor_pd_info->i4PosL_cnt) {
+				sz = (p->dynamic.imgsensor_pd_info->i4PosL_cnt) *
+					sizeof(struct fw_pd_u32_pair);
+
+				p->dynamic.imgsensor_pd_info->dynamic.i4PosL = kzalloc(sz, GFP_KERNEL);
+				if (!p->dynamic.imgsensor_pd_info->dynamic.i4PosL)
+					return -ENOMEM;
+
+				memcpy(p->dynamic.imgsensor_pd_info->dynamic.i4PosL, data + offset, sz);
+				offset += sz;
+			}
+			if (p->dynamic.imgsensor_pd_info->i4PosR_cnt) {
+				sz = (p->dynamic.imgsensor_pd_info->i4PosR_cnt) *
+					sizeof(struct fw_pd_u32_pair);
+
+				p->dynamic.imgsensor_pd_info->dynamic.i4PosR = kzalloc(sz, GFP_KERNEL);
+				if (!p->dynamic.imgsensor_pd_info->dynamic.i4PosR)
+					return -ENOMEM;
+
+				memcpy(p->dynamic.imgsensor_pd_info->dynamic.i4PosR, data + offset, sz);
+				offset += sz;
+			}
+			if (p->dynamic.imgsensor_pd_info->i4Crop_cnt) {
+				sz = (p->dynamic.imgsensor_pd_info->i4Crop_cnt) *
+					sizeof(struct fw_pd_u32_pair);
+
+				p->dynamic.imgsensor_pd_info->dynamic.i4Crop = kzalloc(sz, GFP_KERNEL);
+				if (!p->dynamic.imgsensor_pd_info->dynamic.i4Crop)
+					return -ENOMEM;
+
+				memcpy(p->dynamic.imgsensor_pd_info->dynamic.i4Crop, data + offset, sz);
+				offset += sz;
+			}
+			if (p->dynamic.imgsensor_pd_info->sPDMapInfo_cnt) {
+				int j;
+
+				sz = (p->dynamic.imgsensor_pd_info->sPDMapInfo_cnt) *
+					sizeof(struct fw_pd_map_info_t);
+
+				p->dynamic.imgsensor_pd_info->dynamic.sPDMapInfo = kzalloc(sz, GFP_KERNEL);
+				if (!p->dynamic.imgsensor_pd_info->dynamic.sPDMapInfo)
+					return -ENOMEM;
+
+				for (j = 0; j < p->dynamic.imgsensor_pd_info->sPDMapInfo_cnt; j++) {
+					struct fw_pd_map_info_t *map_info =
+						p->dynamic.imgsensor_pd_info->dynamic.sPDMapInfo + j;
+
+					sz = sizeof(struct fw_pd_map_info_t) - sizeof(u32 *);
+					memcpy(map_info, data + offset, sz);
+					offset += sz;
+
+					if (!map_info->i4PDOrder_cnt) {
+						/* no pd order, skip to next pd map info */
+						continue;
+					}
+
+					sz = (map_info->i4PDOrder_cnt) * sizeof(u32);
+					map_info->i4PDOrder = kzalloc(sz, GFP_KERNEL);
+					if (!map_info->i4PDOrder)
+						return -ENOMEM;
+
+					memcpy(map_info->i4PDOrder, data + offset, sz);
+					offset += sz;
+				}
+			}
+		}
 		if (p->has_saturation_info) {
 			sz = sizeof(struct fw_mtk_sensor_saturation_info);
 			p->dynamic.saturation_info = kzalloc(sz, GFP_KERNEL);
@@ -817,7 +1106,7 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 
 static int update_s_ctx_mode(struct subdrv_mode_struct *pmode, struct fw_mode_info *fw_struct)
 {
-	int i;
+	int i, j;
 	size_t sz;
 	struct mtk_mbus_frame_desc_entry *p_fd;
 
@@ -916,6 +1205,116 @@ static int update_s_ctx_mode(struct subdrv_mode_struct *pmode, struct fw_mode_in
 	COPY_COMMON_MEMBER(pmode, fw_struct, sw_fl_delay);
 	COPY_COMMON_MEMBER(pmode, fw_struct, support_mcss);
 
+	/* imgsensor_pd_info */
+	if (fw_struct->has_imgsensor_pd_info) {
+		sz = sizeof(struct SET_PD_BLOCK_INFO_T);
+		pmode->imgsensor_pd_info = kzalloc(sz, GFP_KERNEL);
+		if (!pmode->imgsensor_pd_info)
+			return -ENOMEM;
+
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4OffsetX);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4OffsetY);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4PitchX);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4PitchY);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4PairNum);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4SubBlkW);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4SubBlkH);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   iMirrorFlip);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4BlockNumX);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4BlockNumY);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4LeFirst);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4VolumeX);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4VolumeY);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4FullRawW);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4FullRawH);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4VCPackNum);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4ModeIndex);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   i4NoTrs);
+		COPY_COMMON_MEMBER(pmode->imgsensor_pd_info,
+				   fw_struct->dynamic.imgsensor_pd_info,
+				   PDAF_Support);
+
+		for (i = 0; (fw_struct->dynamic.imgsensor_pd_info->dynamic.i4PosL) &&
+		     (i < PD_POS_MAX) && (i < fw_struct->dynamic.imgsensor_pd_info->i4PosL_cnt);
+		     i++) {
+			pmode->imgsensor_pd_info->i4PosL[i][0] =
+				fw_struct->dynamic.imgsensor_pd_info->dynamic.i4PosL[i].para1;
+			pmode->imgsensor_pd_info->i4PosL[i][1] =
+				fw_struct->dynamic.imgsensor_pd_info->dynamic.i4PosL[i].para2;
+		}
+		for (i = 0; (fw_struct->dynamic.imgsensor_pd_info->dynamic.i4PosR) &&
+		     (i < PD_POS_MAX) && (i < fw_struct->dynamic.imgsensor_pd_info->i4PosR_cnt);
+		     i++) {
+			pmode->imgsensor_pd_info->i4PosR[i][0] =
+				fw_struct->dynamic.imgsensor_pd_info->dynamic.i4PosR[i].para1;
+			pmode->imgsensor_pd_info->i4PosR[i][1] =
+				fw_struct->dynamic.imgsensor_pd_info->dynamic.i4PosR[i].para2;
+		}
+		for (i = 0; (fw_struct->dynamic.imgsensor_pd_info->dynamic.i4Crop) &&
+		     (i < SENSOR_SCENARIO_ID_MAX) && (i < fw_struct->dynamic.imgsensor_pd_info->i4Crop_cnt);
+		     i++) {
+			pmode->imgsensor_pd_info->i4Crop[i][0] =
+				fw_struct->dynamic.imgsensor_pd_info->dynamic.i4Crop[i].para1;
+			pmode->imgsensor_pd_info->i4Crop[i][1] =
+				fw_struct->dynamic.imgsensor_pd_info->dynamic.i4Crop[i].para2;
+		}
+		for (i = 0; (fw_struct->dynamic.imgsensor_pd_info->dynamic.sPDMapInfo) &&
+		     (i < PD_MAP_INFO_MAX) && (i < fw_struct->dynamic.imgsensor_pd_info->sPDMapInfo_cnt);
+		     i++) {
+			struct PD_MAP_INFO_T *pd_map_info = (pmode->imgsensor_pd_info->sPDMapInfo + i);
+			struct fw_pd_map_info_t *fw_pd_map_info =
+				fw_struct->dynamic.imgsensor_pd_info->dynamic.sPDMapInfo + i;
+
+			COPY_COMMON_MEMBER(pd_map_info, fw_pd_map_info, i4VCFeature);
+			COPY_COMMON_MEMBER(pd_map_info, fw_pd_map_info, i4PDPattern);
+			COPY_COMMON_MEMBER(pd_map_info, fw_pd_map_info, i4BinFacX);
+			COPY_COMMON_MEMBER(pd_map_info, fw_pd_map_info, i4BinFacY);
+			COPY_COMMON_MEMBER(pd_map_info, fw_pd_map_info, i4PDRepetition);
+
+			for (j = 0; (fw_pd_map_info->i4PDOrder) &&
+			     (j < PD_ORDER_MAX) && (j < fw_pd_map_info->i4PDOrder_cnt);
+			     j++) {
+				pd_map_info->i4PDOrder[j] = fw_pd_map_info->i4PDOrder[j];
+			}
+		}
+	}
+
 	/* saturation_info */
 	if (fw_struct->has_saturation_info) {
 		sz = sizeof(struct mtk_sensor_saturation_info);
@@ -952,8 +1351,8 @@ static int update_s_ctx_mode(struct subdrv_mode_struct *pmode, struct fw_mode_in
 		COPY_COMMON_MEMBER(dcg_info, fw_struct->dynamic.dcg_info, dcg_gain_ratio_step);
 		COPY_COMMON_MEMBER(dcg_info, fw_struct->dynamic.dcg_info, dcg_gain_table_size);
 
-		//for (i = 0; i < MAX_EXPOSURE_CNT; i++)
-		//	dcg_info->dcg_ratio_group[i] = fw_struct->dynamic.dcg_info->dcg_ratio_group[i];
+		for (i = 0; i < MAX_EXPOSURE_CNT; i++)
+			dcg_info->dcg_ratio_group[i] = fw_struct->dynamic.dcg_info->dcg_ratio_group[i];
 
 		if (dcg_info->dcg_gain_table_size) {
 			sz = sizeof(u32) * dcg_info->dcg_gain_table_size;
@@ -977,43 +1376,43 @@ static int update_s_ctx_mode(struct subdrv_mode_struct *pmode, struct fw_mode_in
 			p_fd = pmode->frame_desc + i;
 
 			COPY_COMMON_MEMBER(&p_fd->bus.csi2,
-					   fw_struct->dynamic.frame_desc,
+					   fw_struct->dynamic.frame_desc + i,
 					   channel);
 			COPY_COMMON_MEMBER(&p_fd->bus.csi2,
-					   fw_struct->dynamic.frame_desc,
+					   fw_struct->dynamic.frame_desc + i,
 					   data_type);
 			COPY_COMMON_MEMBER(&p_fd->bus.csi2,
-					   fw_struct->dynamic.frame_desc,
+					   fw_struct->dynamic.frame_desc + i,
 					   enable);
 			COPY_COMMON_MEMBER(&p_fd->bus.csi2,
-					   fw_struct->dynamic.frame_desc,
+					   fw_struct->dynamic.frame_desc + i,
 					   dt_remap_to_type);
 			COPY_COMMON_MEMBER(&p_fd->bus.csi2,
-					   fw_struct->dynamic.frame_desc,
+					   fw_struct->dynamic.frame_desc + i,
 					   hsize);
 			COPY_COMMON_MEMBER(&p_fd->bus.csi2,
-					   fw_struct->dynamic.frame_desc,
+					   fw_struct->dynamic.frame_desc + i,
 					   vsize);
 			COPY_COMMON_MEMBER(&p_fd->bus.csi2,
-					   fw_struct->dynamic.frame_desc,
+					   fw_struct->dynamic.frame_desc + i,
 					   user_data_desc);
 			COPY_COMMON_MEMBER(&p_fd->bus.csi2,
-					   fw_struct->dynamic.frame_desc,
+					   fw_struct->dynamic.frame_desc + i,
 					   is_sensor_hw_pre_latch_exp);
 			COPY_COMMON_MEMBER(&p_fd->bus.csi2,
-					   fw_struct->dynamic.frame_desc,
+					   fw_struct->dynamic.frame_desc + i,
 					   cust_assign_to_tsrec_exp_id);
 			COPY_COMMON_MEMBER(&p_fd->bus.csi2,
-					   fw_struct->dynamic.frame_desc,
+					   fw_struct->dynamic.frame_desc + i,
 					   valid_bit);
 			COPY_COMMON_MEMBER(&p_fd->bus.csi2,
-					   fw_struct->dynamic.frame_desc,
+					   fw_struct->dynamic.frame_desc + i,
 					   is_active_line);
 			COPY_COMMON_MEMBER(&p_fd->bus.csi2,
-					   fw_struct->dynamic.frame_desc,
+					   fw_struct->dynamic.frame_desc + i,
 					   ebd_parsing_type);
 			COPY_COMMON_MEMBER(&p_fd->bus.csi2,
-					   fw_struct->dynamic.frame_desc,
+					   fw_struct->dynamic.frame_desc + i,
 					   fs_seq);
 		}
 	}
@@ -1095,17 +1494,105 @@ static int update_subdrv_entry_mode_info(struct adaptor_ctx *ctx,
 	return ret;
 }
 
+static int init_embedded_info_section(struct adaptor_ctx *ctx,
+			const u8 *data, const size_t size,
+			void *dest, size_t dest_sz)
+{
+	int ret = 0;
+	struct fw_ebd *pdata;
+	u32 offset = 0;
+	u32 sz = 0;
+
+	if (unlikely(data == NULL || dest == NULL))
+		return -EINVAL;
+
+	if (unlikely(size < dest_sz))
+		return -EINVAL;
+
+	if (sizeof(struct fw_ebd) != dest_sz)
+		return -EINVAL;
+
+	pdata = (struct fw_ebd *)dest;
+
+	sz = sizeof(struct fw_ebd) - sizeof(struct fw_ebd_info_struct *);
+	memcpy(pdata, data, sz);
+	offset += sz;
+
+	if (pdata->has_ebd_info) {
+		sz = sizeof(struct fw_ebd_info_struct);
+		pdata->ebd_info = kzalloc(sz, GFP_KERNEL);
+		if (!pdata->ebd_info)
+			return -ENOMEM;
+
+		memcpy(pdata->ebd_info, data + offset, sz);
+		offset += sz;
+	}
+
+	return ret;
+}
+
+static int _update_ebd_loc(struct ebd_loc *target, struct fw_ebd_loc *src)
+{
+	int i;
+
+	target->loc_line = src->loc_line;
+	for (i = 0; i < MAX_EBD_PIXEL_OFFSET_NUM; i++)
+		target->loc_pix[i] = src->loc_pix[i];
+
+	return 0;
+}
+
+static int update_subdrv_entry_embedded_info(struct adaptor_ctx *ctx,
+			void *dest, size_t dest_sz)
+{
+	int i, ret = 0;
+	struct fw_ebd *fw_struct;
+	struct ebd_info_struct *ptr;
+
+	if (unlikely(dest == NULL))
+		return -EINVAL;
+	if (sizeof(struct fw_ebd) != dest_sz)
+		return -EINVAL;
+
+	fw_struct = (struct fw_ebd *)dest;
+
+	if (fw_struct->has_ebd_info && fw_struct->ebd_info) {
+		ptr = &ctx->subctx.s_ctx.ebd_info;
+
+		_update_ebd_loc(&ptr->frm_cnt_loc, &fw_struct->ebd_info->frm_cnt_loc);
+		_update_ebd_loc(&ptr->coarse_integ_shift_loc, &fw_struct->ebd_info->coarse_integ_shift_loc);
+		_update_ebd_loc(&ptr->dol_loc, &fw_struct->ebd_info->dol_loc);
+		_update_ebd_loc(&ptr->framelength_loc, &fw_struct->ebd_info->framelength_loc);
+		_update_ebd_loc(&ptr->temperature_loc, &fw_struct->ebd_info->temperature_loc);
+
+		for (i = 0; i < MAX_EXPOSURE_CNT; i++) {
+			_update_ebd_loc(&ptr->coarse_integ_loc[i],
+					&fw_struct->ebd_info->coarse_integ_loc[i]);
+			_update_ebd_loc(&ptr->ana_gain_loc[i],
+					&fw_struct->ebd_info->ana_gain_loc[i]);
+			_update_ebd_loc(&ptr->dig_gain_loc[i],
+					&fw_struct->ebd_info->dig_gain_loc[i]);
+		}
+	}
+
+	return ret;
+}
+
 static init_section section_fp[SECTION_MAX_NUM] = {
 	[SECTION_HEADER] = init_header_section,
 	[SECTION_PW_SEQ] = init_pw_seq_section,
+	[SECTION_EEPROM_INFO] = init_eeprom_info_section,
 	[SECTION_SENSOR_GLOBAL_INFO] = init_sensor_global_info_section,
 	[SECTION_MODE_INFO] = init_mode_info_section,
+	[SECTION_EMBEDDED_INFO] = init_embedded_info_section,
 };
 static update_subdrv_entry update_ctx_fp[SECTION_MAX_NUM] = {
 	[SECTION_HEADER] = update_subdrv_entry_header,
 	[SECTION_PW_SEQ] = update_subdrv_entry_pw_seq,
+	[SECTION_EEPROM_INFO] = update_subdrv_entry_eeprom_info,
 	[SECTION_SENSOR_GLOBAL_INFO] = update_subdrv_entry_sensor_global,
 	[SECTION_MODE_INFO] = update_subdrv_entry_mode_info,
+	[SECTION_EMBEDDED_INFO] = update_subdrv_entry_embedded_info,
 };
 
 struct section {
@@ -1155,8 +1642,10 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 	int i;
 	struct fw_header header;
 	struct fw_pw_seq pw_seq;
+	struct fw_eeprom_infos eeprom_infos;
 	struct fw_sensor_global_info global_info;
 	struct fw_modes modes;
+	struct fw_ebd ebd;
 	struct section sect[SECTION_MAX_NUM];
 #ifdef FW_LOAD_LOG
 	int j, k;
@@ -1175,10 +1664,14 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 	sect[SECTION_HEADER].data_sz = sizeof(header);
 	sect[SECTION_PW_SEQ].data = &pw_seq;
 	sect[SECTION_PW_SEQ].data_sz = sizeof(pw_seq);
+	sect[SECTION_EEPROM_INFO].data = &eeprom_infos;
+	sect[SECTION_EEPROM_INFO].data_sz = sizeof(eeprom_infos);
 	sect[SECTION_SENSOR_GLOBAL_INFO].data = &global_info;
 	sect[SECTION_SENSOR_GLOBAL_INFO].data_sz = sizeof(global_info);
 	sect[SECTION_MODE_INFO].data = &modes;
 	sect[SECTION_MODE_INFO].data_sz = sizeof(modes);
+	sect[SECTION_EMBEDDED_INFO].data = &ebd;
+	sect[SECTION_EMBEDDED_INFO].data_sz = sizeof(ebd);
 
 	parse_section(ctx, data, size, sect, ARRAY_SIZE(sect));
 
@@ -1190,6 +1683,10 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 			if (sect[i].update_fp &&
 			    sect[i].update_fp(ctx, sect[i].data, sect[i].data_sz) == 0) {
 				adaptor_logi(ctx, "parsing %d success\n", i);
+			} else if (sect[i].update_fp) {
+				/* update fp failed */
+				adaptor_loge(ctx, "update fp[%d] failed\n", i);
+				return -EINVAL;
 			}
 
 #ifdef FW_LOAD_LOG
@@ -1221,6 +1718,54 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 						     pw_seq.aov_pw_seq[j].val.para1,
 						     pw_seq.aov_pw_seq[j].val.para2,
 						     pw_seq.aov_pw_seq[j].delay);
+				}
+				break;
+			case SECTION_EEPROM_INFO:
+				adaptor_logi(ctx, "autosun size of packed = %zu, eeprom info num = %u\n",
+					     sizeof(struct fw_eeprom_infos), eeprom_infos.eeprom_info_num);
+				for (j = 0; j < eeprom_infos.eeprom_info_num; j++) {
+					adaptor_logi(ctx,
+						"eeprom info [%d] headerId=0x%x, addrHeaderId=0x%x, i2cWid=0x%x\n",
+						j,
+						eeprom_infos.eeprom_info_list[j].header_id,
+						eeprom_infos.eeprom_info_list[j].addr_header_id,
+						eeprom_infos.eeprom_info_list[j].i2c_write_id);
+
+					adaptor_logi(ctx,
+						"eeprom info [%d] qsc supp=%d, size=%u, addr=0x%x, reg_addr=0x%x, tlb_sz=%u\n",
+						j,
+						eeprom_infos.eeprom_info_list[j].qsc_support,
+						eeprom_infos.eeprom_info_list[j].qsc_size,
+						eeprom_infos.eeprom_info_list[j].addr_qsc,
+						eeprom_infos.eeprom_info_list[j].sensor_reg_addr_qsc,
+						eeprom_infos.eeprom_info_list[j].qsc_table_size);
+
+					adaptor_logi(ctx,
+						"eeprom info [%d] pdc supp=%d, size=%u, addr=0x%x, reg_addr=0x%x, tlb_sz=%u\n",
+						j,
+						eeprom_infos.eeprom_info_list[j].pdc_support,
+						eeprom_infos.eeprom_info_list[j].pdc_size,
+						eeprom_infos.eeprom_info_list[j].addr_pdc,
+						eeprom_infos.eeprom_info_list[j].sensor_reg_addr_pdc,
+						eeprom_infos.eeprom_info_list[j].pdc_table_size);
+
+					adaptor_logi(ctx,
+						"eeprom info [%d] lrc supp=%d, size=%u, addr=0x%x, reg_addr=0x%x, tlb_sz=%u\n",
+						j,
+						eeprom_infos.eeprom_info_list[j].lrc_support,
+						eeprom_infos.eeprom_info_list[j].lrc_size,
+						eeprom_infos.eeprom_info_list[j].addr_lrc,
+						eeprom_infos.eeprom_info_list[j].sensor_reg_addr_lrc,
+						eeprom_infos.eeprom_info_list[j].lrc_table_size);
+
+					adaptor_logi(ctx,
+						"eeprom info [%d] xtalk supp=%d, size=%u, addr=0x%x, reg_addr=0x%x, tlb_sz=%u\n",
+						j,
+						eeprom_infos.eeprom_info_list[j].xtalk_support,
+						eeprom_infos.eeprom_info_list[j].xtalk_size,
+						eeprom_infos.eeprom_info_list[j].addr_xtalk,
+						eeprom_infos.eeprom_info_list[j].sensor_reg_addr_xtalk,
+						eeprom_infos.eeprom_info_list[j].xtalk_table_size);
 				}
 				break;
 			case SECTION_SENSOR_GLOBAL_INFO:
@@ -1633,6 +2178,10 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 				break;
 			}
 #endif
+		} else if (sect[i].init_fp && sect[i].has_data) {
+			/* init fp failed */
+			adaptor_loge(ctx, "init fp[%d] failed\n", i);
+			return -EINVAL;
 		}
 	}
 
@@ -1657,6 +2206,278 @@ static void update_default_i2c_addr_table(struct adaptor_ctx *ctx)
 			     ctx->subctx.s_ctx.i2c_addr_table[0],
 			     ctx->subctx.s_ctx.i2c_addr_table[1]);
 	}
+}
+
+static bool compare_static_ctx(struct adaptor_ctx *ctx,
+			       struct subdrv_static_ctx *target, struct subdrv_static_ctx *legacy)
+{
+	int i, j;
+	int ret = 0;
+
+	if (target == NULL)
+		return false;
+	else if (legacy == NULL) /* ignore compare */
+		return true;
+
+	adaptor_logi(ctx, "Checking static ctx...\n");
+
+	/* validate the s ctx */
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, sensor_id, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_sensor_id, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, i2c_addr_table, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, i2c_burst_write_support, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, i2c_transfer_data_type, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, eeprom_num, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, mirror, "global info");
+
+	ret |= RET_IF_CHK_PTR_NULL(ctx, target, legacy, eeprom_info, "global info");
+	for (i = 0; i < target->eeprom_num; i++) {
+		struct eeprom_info_struct *eeprom_target = target->eeprom_info + i;
+		struct eeprom_info_struct *eeprom_legacy = legacy->eeprom_info + i;
+
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy, header_id, "eeprom info");
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy, addr_header_id, "eeprom info");
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy, i2c_write_id, "eeprom info");
+
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy, qsc_support, "eeprom info");
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy, qsc_size, "eeprom info");
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy, addr_qsc, "eeprom info");
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy,
+					sensor_reg_addr_qsc, "eeprom info");
+		ret |= RET_IF_CHK_PTR_FAIL(ctx, eeprom_target, eeprom_legacy, qsc_table,
+				    sizeof(u8) * (eeprom_target->qsc_size), "eeprom info");
+
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy, pdc_support, "eeprom info");
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy, pdc_size, "eeprom info");
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy, addr_pdc, "eeprom info");
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy,
+					sensor_reg_addr_pdc, "eeprom info");
+		ret |= RET_IF_CHK_PTR_FAIL(ctx, eeprom_target, eeprom_legacy, pdc_table,
+				    sizeof(u8) * (eeprom_target->pdc_size), "eeprom info");
+
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy,
+					lrc_support, "eeprom info");
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy,
+					lrc_size, "eeprom info");
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy,
+					addr_lrc, "eeprom info");
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy,
+					sensor_reg_addr_lrc, "eeprom info");
+		ret |= RET_IF_CHK_PTR_FAIL(ctx, eeprom_target, eeprom_legacy, lrc_table,
+				    sizeof(u8) * (eeprom_target->lrc_size), "eeprom info");
+
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy,
+					xtalk_support, "eeprom info");
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy,
+					xtalk_size, "eeprom info");
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy,
+					addr_xtalk, "eeprom info");
+		ret |= RET_IF_CHK_FAIL(ctx, eeprom_target, eeprom_legacy,
+					sensor_reg_addr_xtalk, "eeprom info");
+		ret |= RET_IF_CHK_PTR_FAIL(ctx, eeprom_target, eeprom_legacy, xtalk_table,
+				    sizeof(u8) * (eeprom_target->xtalk_size), "eeprom info");
+	}
+
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_sensor_id, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, i2c_addr_table, "global info");
+
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, sensor_interface_type, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, mipi_sensor_type, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, mipi_lane_num, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, ob_pedestal, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, line_interleave_num, "global info");
+
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, sensor_output_dataformat, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, ana_gain_def, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, ana_gain_min, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, ana_gain_max, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, ana_gain_type, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, ana_gain_step, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, ana_gain_table_size, "global info");
+	ret |= RET_IF_CHK_PTR_FAIL(ctx, target, legacy, ana_gain_table,
+			target->ana_gain_table_size, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, tuning_iso_base, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, exposure_def, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, exposure_min, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, exposure_max, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, exposure_step, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, exposure_margin, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, dig_gain_min, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, dig_gain_max, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, dig_gain_step, "global info");
+	ret |= RET_IF_CHK_PTR_FAIL(ctx, target, legacy, saturation_info,
+			sizeof(struct mtk_sensor_saturation_info), "global info");
+
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, frame_length_max, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, ae_effective_frame, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, frame_time_delay_frame, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, start_exposure_offset, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, start_exposure_offset_custom, "global info");
+
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, pdaf_type, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, hdr_type, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, rgbw_support, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, seamless_switch_support, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, seamless_switch_type, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy,
+				seamless_switch_hw_re_init_time_ns, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy,
+				seamless_switch_prsh_hw_fixed_value, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, seamless_switch_prsh_length_lc, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_prsh_length_lines, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_prsh_mode, "global info");
+
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, temperature_support, "global info");
+
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_stream, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_mirror_flip, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_exposure, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_exposure_in_lut, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, long_exposure_support, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_exposure_lshift, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_ana_gain, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_ana_gain_in_lut, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_dig_gain, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_dig_gain_in_lut, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_frame_length, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_frame_length_in_lut, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_temp_en, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_temp_read, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_auto_extend, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_frame_count, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_fast_mode, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_dcg_ratio, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_fast_mode_in_lbmf, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_stream_in_lbmf, "global info");
+
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, sensor_mode_num, "global info");
+
+	ret |= RET_IF_CHK_PTR_NULL(ctx, target, legacy, mode, "global info");
+	for (i = 0; i < target->sensor_mode_num; i++) {
+		struct subdrv_mode_struct *mode_target = target->mode + i;
+		struct subdrv_mode_struct *mode_legacy = legacy->mode + i;
+
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, mode_setting_len, "mode %d", i);
+		ret |= RET_IF_CHK_PTR_FAIL(ctx, mode_target, mode_legacy, mode_setting_table,
+				    sizeof(u16) * (mode_target->mode_setting_len), "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, mode_setting_len_for_md, "mode %d", i);
+		ret |= RET_IF_CHK_PTR_FAIL(ctx, mode_target, mode_legacy, mode_setting_table_for_md,
+				    sizeof(u16) * (mode_target->mode_setting_len_for_md), "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, seamless_switch_group, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy,
+					seamless_switch_mode_setting_len, "mode %d", i);
+		ret |= RET_IF_CHK_PTR_FAIL(ctx, mode_target, mode_legacy, seamless_switch_mode_setting_table,
+				    sizeof(u16) * (mode_target->seamless_switch_mode_setting_len), "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, hdr_mode, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, raw_cnt, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, exp_cnt, "mode %d", i);
+
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, pclk, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, linelength, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, framelength, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, max_framerate, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, mipi_pixel_rate, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, readout_length, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, read_margin, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, framelength_step, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, coarse_integ_step, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, min_exposure_line, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, min_vblanking_line, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, exposure_margin, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, imgsensor_winsize_info, "mode %d", i);
+
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, rgbw_output_mode, "mode %d", i);
+
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, aov_mode, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, rosc_mode, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, s_dummy_support, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, ae_ctrl_support, "mode %d", i);
+
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, pdaf_cap, "mode %d", i);
+		ret |= RET_IF_CHK_PTR_FAIL(ctx, mode_target, mode_legacy, imgsensor_pd_info,
+				    sizeof(struct SET_PD_BLOCK_INFO_T), "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, ae_binning_ratio, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, fine_integ_line, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, delay_frame, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, csi_param, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, num_entries, "mode %d", i);
+
+		ret |= RET_IF_CHK_PTR_NULL(ctx, mode_target, mode_legacy, frame_desc, "mode %d", i);
+		for (j = 0; j < mode_target->num_entries; j++) {
+			struct mtk_mbus_frame_desc_entry *fd_target = mode_target->frame_desc + j;
+			struct mtk_mbus_frame_desc_entry *fd_legacy = mode_legacy->frame_desc + j;
+
+			ret |= RET_IF_CHK_FAIL(ctx, fd_target, fd_legacy, bus, "mode %d", i);
+		}
+
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy,
+					sensor_output_dataformat, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy,
+					sensor_output_dataformat_cell_type, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, ana_gain_min, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, ana_gain_max, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, dig_gain_min, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, dig_gain_max, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, dig_gain_step, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy,
+					multi_exposure_ana_gain_range, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy,
+					multi_exposure_shutter_range, "mode %d", i);
+
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, dpc_enabled, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, pdc_enabled, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, awb_enabled, "mode %d", i);
+		ret |= RET_IF_CHK_PTR_FAIL(ctx, mode_target, mode_legacy, saturation_info,
+				    sizeof(struct mtk_sensor_saturation_info), "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, dcg_info, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, exposure_order_in_lbmf, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, mode_type_in_lbmf, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, sw_fl_delay, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, support_mcss, "mode %d", i);
+	}
+
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, list_len, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, chk_s_off_sta, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, chk_s_off_end, "global info");
+
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, checksum_value, "global info");
+
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, aov_sensor_support, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, aov_csi_clk, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, sensor_mode_ops, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, sensor_debug_sensing_ut_on_scp, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy,
+				sensor_debug_dphy_global_timing_continuous_clk, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_aov_mode_mirror_flip, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, init_in_open, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, streaming_ctrl_imp, "global info");
+
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, custom_stream_ctrl_delay, "global info");
+
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, ebd_info, "global info");
+
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, glp_dt, "global info");
+
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, use_mcss_gph_sync, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_mcss_slave_add_en_2nd, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_mcss_slave_add_acken_2nd, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_mcss_controller_target_sel, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_mcss_xvs_io_ctrl, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_mcss_extout_en, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_mcss_sgmsync_sel, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_mcss_swdio_io_ctrl, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_mcss_gph_sync_mode, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_mcss_complete_sleep_en, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_mcss_mc_frm_lp_en, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_mcss_frm_length_reflect_timing, "global info");
+	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, reg_addr_mcss_mc_frm_mask_num, "global info");
+
+	if (ret)  /* contains error */
+		return false;
+
+	adaptor_logi(ctx, "static ctx check pass\n");
+
+	return true;
 }
 
 static int register_ext_ops(struct adaptor_ctx *ctx)
@@ -1689,7 +2510,7 @@ static int register_ext_ops(struct adaptor_ctx *ctx)
 				continue;
 			}
 
-			target->mode[t].imgsensor_pd_info = fw_ext_ops->mode_ext_ops_list[i].imgsensor_pd_info;
+			/* Add mode ext ops here */
 		}
 
 		/* Copy customed i2c addr table */
@@ -1706,6 +2527,10 @@ static int register_ext_ops(struct adaptor_ctx *ctx)
 				     ctx->subctx.s_ctx.i2c_addr_table[3],
 				     ctx->subctx.s_ctx.i2c_addr_table[4]);
 		}
+
+		/* check debug operation */
+		if (!compare_static_ctx(ctx, target, fw_ext_ops->debug_check_with_exist_s_ctx))
+			return -EFAULT;
 	}
 
 	return 0;

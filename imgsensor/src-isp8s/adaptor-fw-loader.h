@@ -6,6 +6,8 @@
 
 #include "adaptor.h"
 
+#define SUPPORT_GENERATOR_VERSION "V01_2024-11-12_11:02"
+
 #define firmware_support(__x__) \
 	((__x__) && (__x__)->is_fw_support)
 
@@ -23,6 +25,54 @@
 { \
 	(dest_struct)->dest_member = (src_struct)->src_member; \
 }
+
+/* Macro to check two struct's member */
+#define RET_IF_CHK_FAIL(ctx, __struct_a__, __struct_b__, __field__, format, args...) \
+({ \
+	struct adaptor_ctx *__ctx = (ctx); \
+	int __ret = 0; \
+	if (memcmp(&(__struct_a__)->__field__, &(__struct_b__)->__field__, \
+		   sizeof((__struct_a__)->__field__)) != 0) { \
+		adaptor_loge(__ctx, "compare failed with field '%s->%s' for " \
+			format "\n", \
+			#__struct_a__, #__field__, ##args); \
+		__ret = -EINVAL; \
+	} \
+	__ret; \
+})
+
+/* Macro to check two struct's pointer member nullity */
+#define RET_IF_CHK_PTR_NULL(ctx, __struct_a__, __struct_b__, __field__, format, args...) \
+({ \
+	struct adaptor_ctx *__ctx = (ctx); \
+	int __ret = 0; \
+	if (((__struct_a__)->__field__ == NULL && (__struct_b__)->__field__ != NULL) || \
+	    ((__struct_a__)->__field__ != NULL && (__struct_b__)->__field__ == NULL)) { \
+		adaptor_loge(__ctx, "compare failed with ptr field '%s->%s' left:%p, right:%p for " \
+			format "\n", \
+			#__struct_a__, #__field__, \
+			(__struct_a__)->__field__, (__struct_b__)->__field__, ##args); \
+		__ret = -EINVAL; \
+	} \
+	__ret; \
+})
+
+/* Macro to check two struct's pointer member */
+#define RET_IF_CHK_PTR_FAIL(ctx, __struct_a__, __struct_b__, __field__, __size__, format, args...) \
+({ \
+	struct adaptor_ctx *__ctx = (ctx); \
+	int __ret = 0; \
+	__ret = RET_IF_CHK_PTR_NULL(ctx, __struct_a__, __struct_b__, __field__, format, ##args); \
+	if (!__ret && (__struct_a__)->__field__ != NULL && (__struct_b__)->__field__ != NULL && \
+	    memcmp((__struct_a__)->__field__, (__struct_b__)->__field__, __size__) != 0) { \
+		adaptor_loge(__ctx, "compare failed with ptr field '%s->%s' for " \
+			format "\n", \
+			#__struct_a__, #__field__, ##args); \
+		__ret = -EINVAL; \
+	} \
+	__ret; \
+})
+
 
 /**
  * Look up firmware list

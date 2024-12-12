@@ -1101,15 +1101,18 @@ struct SET_SENSOR_ISO {
 	MUINT32 ISO;
 };
 
+#define PD_ORDER_MAX 16
 struct PD_MAP_INFO_T {
 	MUINT32 i4VCFeature;
 	MUINT32 i4PDPattern;
 	MUINT32 i4BinFacX;
 	MUINT32 i4BinFacY;
 	MUINT32 i4PDRepetition;
-	MUINT32 i4PDOrder[16];
+	MUINT32 i4PDOrder[PD_ORDER_MAX];
 };
 
+#define PD_POS_MAX 16
+#define PD_MAP_INFO_MAX 4
 struct SET_PD_BLOCK_INFO_T {
 	/* start offset of first PD block */
 	MUINT32 i4OffsetX;
@@ -1123,8 +1126,8 @@ struct SET_PD_BLOCK_INFO_T {
 	MUINT32 i4SubBlkW;
 	/* sub block height */
 	MUINT32 i4SubBlkH;
-	MUINT32 i4PosL[16][2];	/* left pd pixel position in one block*/
-	MUINT32 i4PosR[16][2];	/* right pd pixel position in one block*/
+	MUINT32 i4PosL[PD_POS_MAX][2];	/* left pd pixel position in one block*/
+	MUINT32 i4PosR[PD_POS_MAX][2];	/* right pd pixel position in one block*/
 	/* 0:IMAGE_NORMAL,1:IMAGE_H_MIRROR,2:IMAGE_V_MIRROR,3:IMAGE_HV_MIRROR*/
 	MUINT32 iMirrorFlip;
 	MUINT32 i4BlockNumX;
@@ -1140,7 +1143,7 @@ struct SET_PD_BLOCK_INFO_T {
 	MUINT32 i4ModeIndex;
 	MUINT32 i4NoTrs;
 	MUINT32 PDAF_Support;
-	struct PD_MAP_INFO_T sPDMapInfo[4];
+	struct PD_MAP_INFO_T sPDMapInfo[PD_MAP_INFO_MAX];
 };
 
 enum IMGSENSOR_PDAF_SUPPORT_TYPE_ENUM {

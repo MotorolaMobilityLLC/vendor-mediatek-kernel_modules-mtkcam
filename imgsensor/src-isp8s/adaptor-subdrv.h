@@ -483,9 +483,6 @@ struct subdrv_static_ctx {
 struct subdrv_static_ctx_mode_ext_ops {
 	u32 mode_id;
 
-	/* pd info by sensor mode */
-	struct SET_PD_BLOCK_INFO_T *imgsensor_pd_info;
-
 	/* customed function pointer by sensor mode */
 	/* Add function pointer here */
 };
@@ -517,6 +514,9 @@ struct subdrv_static_ctx_ext_ops {
 	/* customed function pointer by sensor mode */
 	struct subdrv_static_ctx_mode_ext_ops *mode_ext_ops_list;
 	u32 mode_ext_ops_list_len;
+
+	/* debug ops */
+	struct subdrv_static_ctx *debug_check_with_exist_s_ctx;
 };
 
 #define HDR_CAP_IHDR 0x1
