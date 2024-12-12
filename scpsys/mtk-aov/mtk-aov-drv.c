@@ -384,8 +384,6 @@ static int mtk_aov_release(struct inode *inode, struct file *file)
 	int ret;
 
 	pr_info("%s release aov driver+\n", __func__);
-	atomic_set(&(core_info->aov_start_in_used[0]), 0);
-	atomic_set(&(core_info->aov_start_in_used[1]), 0);
 
 	ret = aov_core_reset(aov_dev);
 	if (ret > 0) {
@@ -394,6 +392,8 @@ static int mtk_aov_release(struct inode *inode, struct file *file)
 		mtk_mmdvfs_aov_enable(0);
 		dev_info(aov_dev->dev, "AOV force disable vmm-\n");
 	}
+	atomic_set(&(core_info->aov_start_in_used[0]), 0);
+	atomic_set(&(core_info->aov_start_in_used[1]), 0);
 
 	aov_dev->user_cnt--;
 	if (aov_dev->user_cnt == 0) {
