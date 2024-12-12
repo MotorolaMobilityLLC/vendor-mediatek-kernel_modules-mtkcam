@@ -687,7 +687,7 @@ static int imgsensor_set_power(struct v4l2_subdev *sd, int on)
 
 static int imgsensor_streaming_delay(struct adaptor_ctx *ctx)
 {
-	u64 sys_ts, ae_memento_le_ns, streaming_sensor_vsync_ts,
+	u64 sys_ts, mono_ts, ae_memento_le_ns, streaming_sensor_vsync_ts,
 		streaming_sensor_fl_ns, hw_reinit_time_ns, target_timing_ns;
 	u32 ae_ctrl_cit;
 	long long streamon_delay_ns = 0;
@@ -699,6 +699,7 @@ static int imgsensor_streaming_delay(struct adaptor_ctx *ctx)
 	if (ctx->streamon_1sof_vsync_ts_info.vsync_ts_ns) {
 		systrace_log = kzalloc(1024 + 1, GFP_KERNEL);
 		sys_ts = ktime_get_boottime_ns();
+		mono_ts = ktime_get_ns();
 		streaming_sensor_vsync_ts = ctx->streamon_1sof_vsync_ts_info.vsync_ts_ns;
 		streaming_sensor_fl_ns = (ctx->streamon_1sof_vsync_ts_info.fps)
 				? (10000000000/(ctx->streamon_1sof_vsync_ts_info.fps)) : 0;
@@ -754,7 +755,7 @@ static int imgsensor_streaming_delay(struct adaptor_ctx *ctx)
 		streamon_delay_ns = ((streaming_sensor_vsync_ts
 				+ streaming_sensor_fl_ns
 				- target_timing_ns)
-				- sys_ts - hw_reinit_time_ns - ae_memento_le_ns) ;
+				- mono_ts - hw_reinit_time_ns - ae_memento_le_ns) ;
 
 		tmp = 0;
 		while ((streamon_delay_ns < 0) && (streaming_sensor_fl_ns)) {
@@ -772,11 +773,12 @@ static int imgsensor_streaming_delay(struct adaptor_ctx *ctx)
 								streamon_delay_ns);
 		systrace_log_len += snprintf(systrace_log + systrace_log_len,
 								1024 - systrace_log_len,
-								",from streaming sensor (%llu/%llu/%llu) sys_ts:%llu hw_reinit:%llu ae_memento_le_ns:%llu(%u*%llu)",
+								",from streaming sensor (%llu/%llu/%llu) sys_ts:%llu mono_ts:%llu hw_reinit:%llu ae_memento_le_ns:%llu(%u*%llu)",
 								streaming_sensor_vsync_ts,
 								streaming_sensor_fl_ns,
 								target_timing_ns,
 								sys_ts,
+								mono_ts,
 								hw_reinit_time_ns,
 								ae_memento_le_ns,
 								ae_ctrl_cit,
@@ -790,12 +792,13 @@ static int imgsensor_streaming_delay(struct adaptor_ctx *ctx)
 		ADAPTOR_SYSTRACE_END();
 
 		adaptor_logi(ctx,
-					"cur_mode_id:%u (%llu/%llu/%llu) sys_ts:%llu hw_reinit:%llu ae_memento_le_ns:%llu(%u*%llu) streamon_delay_ns:%lld(%u) [SYSTRACE: %s]\n",
+					"cur_mode_id:%u (%llu/%llu/%llu) sys_ts:%llu mono_ts:%llu hw_reinit:%llu ae_memento_le_ns:%llu(%u*%llu) streamon_delay_ns:%lld(%u) [SYSTRACE: %s]\n",
 					ctx->cur_mode->id,
 					streaming_sensor_vsync_ts,
 					streaming_sensor_fl_ns,
 					target_timing_ns,
 					sys_ts,
+					mono_ts,
 					hw_reinit_time_ns,
 					ae_memento_le_ns,
 					ae_ctrl_cit,

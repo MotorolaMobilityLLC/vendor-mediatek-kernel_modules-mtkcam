@@ -529,6 +529,7 @@ struct subdrv_ctx {
 	/* for custom stream control delay timing */
 	u64 stream_ctrl_start_time;
 	u64 stream_ctrl_end_time;
+	u64 stream_ctrl_start_time_mono;
 	struct hw_init_time_struct hw_time_info[SENSOR_SCENARIO_ID_MAX];
 
 	/* for MCSS */
