@@ -1238,7 +1238,8 @@ void imgsys_cmdq_task_cb_plat8(struct cmdq_cb_data data)
 
 		if (isGPRtimeout) {
 			if (cb_param->hw_comb &
-				(IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_WPE_TNR|IMGSYS_HW_FLAG_WPE_LITE)) {
+				(IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_WPE_TNR|IMGSYS_HW_FLAG_WPE_LITE|
+				IMGSYS_HW_FLAG_WPE_DEPTH)) {
 				idx = IMGSYS_MOD_WPE;
 				if (imgsys_dev->modules[idx].done_chk) {
 					isHwDone = imgsys_dev->modules[idx].done_chk(imgsys_dev,
@@ -1298,6 +1299,56 @@ void imgsys_cmdq_task_cb_plat8(struct cmdq_cb_data data)
 					}
 				}
 			}
+			if (isHwDone && (cb_param->hw_comb & IMGSYS_HW_FLAG_MAE)) {
+				idx = IMGSYS_MOD_MAE;
+				if (imgsys_dev->modules[idx].done_chk) {
+					isHwDone = imgsys_dev->modules[idx].done_chk(imgsys_dev,
+						cb_param->hw_comb);
+					if(!isHwDone) {
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_MAE",
+							"DISPATCH:IMGSYS_MAE poll done fail, hwcomb:0x%x",
+							cb_param->hw_comb);
+					}
+				}
+			}
+			if (isHwDone && (cb_param->hw_comb & IMGSYS_HW_FLAG_DPE)) {
+				idx = IMGSYS_MOD_DPE;
+				if (imgsys_dev->modules[idx].done_chk) {
+					isHwDone = imgsys_dev->modules[idx].done_chk(imgsys_dev,
+						cb_param->hw_comb);
+					if(!isHwDone) {
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_DPE",
+							"DISPATCH:IMGSYS_DPE poll done fail, hwcomb:0x%x",
+							cb_param->hw_comb);
+					}
+				}
+			}
+			if (isHwDone && (cb_param->hw_comb & IMGSYS_HW_FLAG_DFP)) {
+				idx = IMGSYS_MOD_DFP;
+				if (imgsys_dev->modules[idx].done_chk) {
+					isHwDone = imgsys_dev->modules[idx].done_chk(imgsys_dev,
+						cb_param->hw_comb);
+					if(!isHwDone) {
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_DFP",
+							"DISPATCH:IMGSYS_DFP poll done fail, hwcomb:0x%x",
+							cb_param->hw_comb);
+					}
+				}
+			}
+
+			if (cb_param->hw_comb & (IMGSYS_HW_FLAG_ADL_A|IMGSYS_HW_FLAG_ADL_B)) {
+				idx = IMGSYS_MOD_ADL;
+				if (imgsys_dev->modules[idx].done_chk) {
+					isHwDone = imgsys_dev->modules[idx].done_chk(imgsys_dev,
+						cb_param->hw_comb);
+					if(!isHwDone) {
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_ADL",
+						"DISPATCH:IMGSYS_ADL poll done fail, hwcomb:0x%x",
+						cb_param->hw_comb);
+					}
+				}
+			}
+
 			/* Polling timeout but all modules are done */
 			if (isHwDone) {
 				aee_kernel_exception("CRDISPATCH_KEY:IMGSYS",
@@ -1305,7 +1356,6 @@ void imgsys_cmdq_task_cb_plat8(struct cmdq_cb_data data)
 					cb_param->hw_comb);
 			}
 		}
-
 		if (isHWhang | isQOFhang) {
 			MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
 				mtk_imgsys_cmdq_qof_dump(cb_param->hw_comb, true);
@@ -2499,6 +2549,11 @@ int imgsys_cmdq_parser_plat8(struct mtk_imgsys_dev *imgsys_dev,
 							"DISPATCH:IMGSYS_OMC_LITE map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
+					case 0xdddd:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_WPE_DEPTH",
+							"DISPATCH:IMGSYS_WPE_DEPTH map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
 					case 0x3421:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_PQDIP_A",
 							"DISPATCH:IMGSYS_PQDIP_A map iova fail, addr:0x%08llx",
@@ -2512,6 +2567,27 @@ int imgsys_cmdq_parser_plat8(struct mtk_imgsys_dev *imgsys_dev,
 					case 0x3407:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_ME",
 							"DISPATCH:IMGSYS_ME map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3431:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_MAE",
+							"DISPATCH:IMGSYS_MAE map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3a77:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_DFP",
+							"DISPATCH:IMGSYS_DFP map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3a00:
+					case 0x3a7a:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_DPE",
+							"DISPATCH:IMGSYS_DPE map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3401:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_ADL",
+							"DISPATCH:IMGSYS_ADL map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
 					case 0x3408:
