@@ -95,10 +95,13 @@ struct mtk_cam_driver_buf_desc {
 
 struct mtk_camsv_tag_info {
 	struct mtk_camsv_pipeline *sv_pipe;
+	struct mtk_mraw_pipeline *mraw_pipe;
 	unsigned int seninf_padidx;
 	unsigned int hw_scen;
 	unsigned int tag_order;
 	unsigned int pixel_mode;
+	bool is_meta_tag;
+	bool is_pdp_enable;
 };
 
 static inline bool isp_in_done_state(int state)
@@ -434,7 +437,6 @@ struct mtk_cam_job {
 	struct mmqos_bw raw_w_mmqos[SMI_PORT_RAW_NUM];
 	struct mmqos_bw yuv_mmqos[SMI_PORT_YUV_NUM];
 	struct mmqos_bw sv_mmqos[SMI_PORT_SV_NUM];
-	struct mmqos_bw mraw_mmqos[MAX_MRAW_PIPES_PER_STREAM][SMI_PORT_MRAW_NUM];
 
 	/* sensor meta dump */
 	bool is_sensor_meta_dump;

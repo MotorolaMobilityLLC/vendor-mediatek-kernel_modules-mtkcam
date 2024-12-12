@@ -854,103 +854,6 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 	return 0;
 }
 
-static int fill_mraw_qos(struct mtk_cam_job *job,
-						struct mtkcam_ipi_frame_param *fp,
-						u32 sensor_h, u32 sensor_vb, u64 linet,
-						u32 sensor_fps)
-{
-	struct mtk_cam_ctx *ctx = job->src_ctx;
-	struct mtkcam_ipi_mraw_frame_param *mraw_param;
-	struct mtkcam_ipi_img_output *in;
-	struct mtk_mraw_device *mraw_dev;
-	unsigned int i, j, k, port_id, x_size, img_h;
-	u64 avg_bw, peak_bw;
-	u64 stash_avg_bw, stash_peak_bw, strideLCM;
-	bool is_smmu_enabled = true;
-
-	CALL_PLAT_V4L2(get_is_smmu_enabled, &is_smmu_enabled);
-
-	for (i = 0 ; i < MRAW_MAX_PIPE_USED; i++) {
-		mraw_param = &fp->mraw_param[i];
-
-		if (!is_mraw_subdev(mraw_param->pipe_id))
-			continue;
-
-		for (j = 0; j < MAX_MRAW_PIPES_PER_STREAM; j++) {
-			if (ctx->hw_mraw[j] == NULL)
-				continue;
-
-			mraw_dev = dev_get_drvdata(ctx->hw_mraw[j]);
-			if (mraw_dev->pipeline->id == mraw_param->pipe_id) {
-				/* wdma */
-				for (k = 0; k < MRAW_MAX_IMAGE_OUTPUT; k++) {
-
-					port_id = SMI_PORT_MRAW_IMGO;
-					stash_peak_bw = stash_avg_bw = 0;
-
-					in = &mraw_param->mraw_img_outputs[k];
-					x_size = in->fmt.stride[0];
-					img_h = in->fmt.s.h;
-					avg_bw =
-						calc_bw(x_size * img_h, linet,
-							sensor_h + sensor_vb);
-					peak_bw =
-						calc_bw(x_size * img_h, linet, sensor_h);
-
-					job->mraw_mmqos[j][port_id].avg_bw += avg_bw;
-					job->mraw_mmqos[j][port_id].peak_bw += peak_bw;
-
-					/* stash */
-					if (is_smmu_enabled && x_size != 0) {
-						strideLCM = LCM(x_size, 4096);
-						stash_peak_bw = stash_avg_bw =
-							to_qos_icc(img_h / (strideLCM/x_size) * 16 * sensor_fps);
-					}
-					if (is_smmu_enabled) {
-						job->mraw_mmqos[j][SMI_PORT_MRAW_STG].avg_bw += stash_avg_bw;
-						job->mraw_mmqos[j][SMI_PORT_MRAW_STG].peak_bw += stash_peak_bw;
-					}
-					if (CAM_DEBUG_ENABLED(MMQOS) && is_smmu_enabled)
-						pr_info("%s: id:%d port_id:%d xsize:%u/height:%u sensor_h:%u/vb:%u/linet:%llu avg_bw:%llu_%u_%u/peak_bw:%llu_%u_%u\n",
-							__func__, k, port_id, x_size, img_h,
-							sensor_h, sensor_vb, linet,
-							avg_bw,
-							job->mraw_mmqos[j][port_id].avg_bw,
-							job->mraw_mmqos[j][SMI_PORT_MRAW_STG].avg_bw,
-							peak_bw,
-							job->mraw_mmqos[j][port_id].peak_bw,
-							job->mraw_mmqos[j][SMI_PORT_MRAW_STG].peak_bw);
-					if (CAM_DEBUG_ENABLED(MMQOS) && !is_smmu_enabled)
-						pr_info("%s: id:%d port_id:%d xsize:%u/height:%u sensor_h:%u/vb:%u/linet:%llu avg_bw:%llu_%u/peak_bw:%llu_%u\n",
-							__func__, k, port_id, x_size, img_h,
-							sensor_h, sensor_vb, linet,
-							avg_bw,
-							job->mraw_mmqos[j][port_id].avg_bw,
-							peak_bw,
-							job->mraw_mmqos[j][port_id].peak_bw);
-
-				}
-
-				/* cqi */
-				avg_bw = peak_bw = to_qos_icc(CQ_BUF_SIZE * sensor_fps);
-				job->mraw_mmqos[j][SMI_PORT_MRAW_CQI].avg_bw += avg_bw;
-				job->mraw_mmqos[j][SMI_PORT_MRAW_CQI].peak_bw += peak_bw;
-				if (CAM_DEBUG_ENABLED(MMQOS))
-					pr_info("%s: sensor_h:%u/vb:%u/linet:%llu/fps:%u avg_bw:%llu_%u/peak_bw:%llu_%u\n",
-						__func__,
-						sensor_h, sensor_vb, linet, sensor_fps,
-						avg_bw,
-						job->mraw_mmqos[j][SMI_PORT_MRAW_CQI].avg_bw,
-						peak_bw,
-						job->mraw_mmqos[j][SMI_PORT_MRAW_CQI].peak_bw);
-				break;
-			}
-		}
-	}
-
-	return 0;
-}
-
 static void update_sensor_active_info(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -990,7 +893,6 @@ void mtk_cam_fill_qos(struct req_buffer_helper *helper)
 	memset(job->raw_w_mmqos, 0, sizeof(job->raw_w_mmqos));
 	memset(job->yuv_mmqos, 0, sizeof(job->yuv_mmqos));
 	memset(job->sv_mmqos, 0, sizeof(job->sv_mmqos));
-	memset(job->mraw_mmqos, 0, sizeof(job->mraw_mmqos));
 
 	update_sensor_active_info(job);
 	avg_linet =  ctx->act_line_info.avg_linetime_in_ns ? : get_line_time(job);
@@ -1027,9 +929,6 @@ void mtk_cam_fill_qos(struct req_buffer_helper *helper)
 
 	/* camsv */
 	fill_sv_qos(job, fp, sensor_h, senser_vb, avg_linet, sensor_fps);
-
-	/* mraw */
-	fill_mraw_qos(job, fp, sensor_h, senser_vb, avg_linet, sensor_fps);
 }
 
 static bool apply_qos_chk(
@@ -1339,65 +1238,6 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 			mtk_cam_sv_golden_set(sv_dev, is_dc_mode(job) ? true : false);
 		}
 	}
-
-}
-
-static void apply_mraw_qos(struct mtk_cam_job *job)
-{
-	struct mtk_cam_ctx *ctx = job->src_ctx;
-	struct mtk_cam_device *cam = ctx->cam;
-	struct mtk_mraw_device *mraw_dev;
-	u32 a_bw, p_bw;
-	int mraw_avg_bw_w = 0, mraw_peak_bw_w = 0;
-	int mraw_avg_diff_bw_w = 0, mraw_peak_diff_bw_w = 0;
-	int i, j;
-	bool apply, apply_bwr = false;
-
-	for (i = 0; i < MAX_MRAW_PIPES_PER_STREAM; i++) {
-		if (ctx->hw_mraw[i]) {
-			mraw_dev = dev_get_drvdata(ctx->hw_mraw[i]);
-			for (j = 0; j < mraw_dev->qos.n_path; j++) {
-				a_bw = job->mraw_mmqos[i][j].avg_bw;
-				p_bw = job->mraw_mmqos[i][j].peak_bw;
-				mraw_peak_bw_w += p_bw;
-				mraw_avg_bw_w += a_bw;
-
-				apply = apply_qos_chk(a_bw, p_bw,
-						&mraw_dev->qos.cam_path[j].applied_bw,
-						&mraw_dev->qos.cam_path[j].pending_bw);
-				if (apply) {
-#ifdef SKIP_IN_FPGA_EP
-					mtk_icc_set_bw(mraw_dev->qos.cam_path[j].path, a_bw, p_bw);
-#endif
-					apply_bwr = true;
-				}
-
-				if (CAM_DEBUG_ENABLED(MMQOS))
-					pr_info("%s: req_seq:%d %s mraw-%d icc_path:%s avg/peak:%u/%u applied/pending:%lld/%lld\n",
-							__func__, job->req_seq,
-							apply ? "APPLY" : "BYPASS", mraw_dev->id,
-							mraw_dev->qos.cam_path[j].name, a_bw, p_bw,
-							mraw_dev->qos.cam_path[j].applied_bw,
-							mraw_dev->qos.cam_path[j].pending_bw);
-			}
-			if (apply_bwr) {
-				int a_bw_w_KB = KBps_to_bwr(mraw_avg_bw_w);
-				int p_bw_w_KB = KBps_to_bwr(mraw_peak_bw_w);
-
-				mraw_avg_diff_bw_w = a_bw_w_KB - mraw_dev->mraw_avg_applied_bw_w;
-				mraw_peak_diff_bw_w = p_bw_w_KB - mraw_dev->mraw_peak_applied_bw_w;
-				mraw_dev->mraw_avg_applied_bw_w = a_bw_w_KB;
-				mraw_dev->mraw_peak_applied_bw_w = p_bw_w_KB;
-
-				mtk_cam_bwr_set_chn_bw(cam->bwr,
-					ENGINE_MRAW, get_mraw_axi_port(mraw_dev->id),
-					0, mraw_avg_diff_bw_w, 0, mraw_peak_diff_bw_w, false);
-
-				mtk_cam_bwr_set_ttl_bw(cam->bwr, ENGINE_MRAW,
-					mraw_avg_diff_bw_w, mraw_peak_diff_bw_w, false);
-			}
-		}
-	}
 }
 
 /* threaded irq context */
@@ -1412,7 +1252,6 @@ int mtk_cam_apply_qos(struct mtk_cam_job *job)
 	qof_mtcmos_voter(&cam->engines, job->used_engine, false);
 
 	apply_sv_qos(job);
-	apply_mraw_qos(job);
 
 	if (CAM_DEBUG_ENABLED(MMQOS))
 		mtk_cam_bwr_dbg_dump(cam->bwr);

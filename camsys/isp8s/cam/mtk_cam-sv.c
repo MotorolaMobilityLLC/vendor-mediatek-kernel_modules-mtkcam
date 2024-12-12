@@ -1331,7 +1331,7 @@ int mtk_cam_sv_golden_set(struct mtk_camsv_device *sv_dev, bool is_golden_set)
 	return ret;
 }
 
-unsigned int mtk_cam_get_sv_tag_index(struct mtk_camsv_tag_info *arr_tag,
+int mtk_cam_get_sv_tag_index(struct mtk_camsv_tag_info *arr_tag,
 	unsigned int pipe_id)
 {
 	int i;
@@ -1341,10 +1341,12 @@ unsigned int mtk_cam_get_sv_tag_index(struct mtk_camsv_tag_info *arr_tag,
 
 		if (tag_info->sv_pipe && (tag_info->sv_pipe->id == pipe_id))
 			return i;
+		if (tag_info->mraw_pipe && (tag_info->mraw_pipe->id == pipe_id))
+			return i;
 	}
 
 	pr_info("[%s] tag is not found by pipe_id(%d)", __func__, pipe_id);
-	return 0;
+	return -1;
 }
 
 unsigned int mtk_cam_get_seninf_pad_index(struct mtk_camsv_tag_info *arr_tag,
@@ -1357,6 +1359,9 @@ unsigned int mtk_cam_get_seninf_pad_index(struct mtk_camsv_tag_info *arr_tag,
 
 		if (tag_info->sv_pipe && (tag_info->sv_pipe->id == pipe_id))
 			return tag_info->sv_pipe->seninf_padidx;
+
+		if (tag_info->mraw_pipe && (tag_info->mraw_pipe->id == pipe_id))
+			return tag_info->mraw_pipe->seninf_padidx;
 	}
 
 	pr_info("[%s] seninf pad is not found by pipe_id(%d)", __func__, pipe_id);
@@ -1395,6 +1400,36 @@ int mtk_cam_sv_dev_config(struct mtk_camsv_device *sv_dev,
 	return 0;
 }
 
+void mtk_cam_sv_fill_pdp_tag_info(struct mtk_camsv_tag_info *arr_tag,
+	struct mtkcam_ipi_config_param *ipi_config,
+	struct mtk_camsv_tag_param *tag_param, unsigned int hw_scen,
+	unsigned int pixelmode, unsigned int sub_ratio,
+	unsigned int mbus_width, unsigned int mbus_height,
+	unsigned int mbus_code, unsigned int is_unpack_msb,
+	struct mtk_mraw_pipeline *pipeline)
+{
+	struct mtk_camsv_tag_info *tag_info = &arr_tag[tag_param->tag_idx];
+	struct mtkcam_ipi_input_param *cfg_in_param =
+		&ipi_config->sv_input[0][tag_param->tag_idx].input;
+
+	tag_info->mraw_pipe = pipeline;
+	tag_info->seninf_padidx = tag_param->seninf_padidx;
+	tag_info->hw_scen = hw_scen;
+	tag_info->tag_order = tag_param->tag_order;
+	tag_info->pixel_mode = pixelmode;
+	tag_info->is_meta_tag  = true;
+
+	cfg_in_param->pixel_mode = pixelmode;
+	cfg_in_param->data_pattern = 0x0;
+	cfg_in_param->in_crop.p.x = 0x0;
+	cfg_in_param->in_crop.p.y = 0x0;
+	cfg_in_param->in_crop.s.w = mbus_width;
+	cfg_in_param->in_crop.s.h = mbus_height;
+	cfg_in_param->fmt = sensor_mbus_to_ipi_fmt(mbus_code);
+	cfg_in_param->raw_pixel_id = sensor_mbus_to_ipi_pixel_id(mbus_code);
+	cfg_in_param->subsample = sub_ratio;
+}
+
 void mtk_cam_sv_fill_tag_info(struct mtk_camsv_tag_info *arr_tag,
 	struct mtkcam_ipi_config_param *ipi_config,
 	struct mtk_camsv_tag_param *tag_param, unsigned int hw_scen,
@@ -1412,6 +1447,7 @@ void mtk_cam_sv_fill_tag_info(struct mtk_camsv_tag_info *arr_tag,
 	tag_info->hw_scen = hw_scen;
 	tag_info->tag_order = tag_param->tag_order;
 	tag_info->pixel_mode = pixelmode;
+	tag_info->is_meta_tag = false;
 
 	/* msb swap(nv21_10) */
 	ipi_config->sv_input[0][tag_param->tag_idx].is_unpack_msb =
@@ -1665,6 +1701,487 @@ int mtk_cam_sv_dev_stream_on(struct mtk_camsv_device *sv_dev, bool on,
 	}
 
 	return ret;
+}
+
+static unsigned int mtk_cam_sv_pdp_powi(unsigned int x, unsigned int n)
+{
+	unsigned int rst = 1;
+	unsigned int m = n;
+
+	while (m--)
+		rst *= x;
+
+	return rst;
+}
+
+static unsigned int mtk_cam_sv_pdp_xsize_cal(unsigned int length)
+{
+	return length * 16 / 8;
+}
+
+static unsigned int mtk_cam_sv_pdp_dbg_xsize_cal(unsigned int length, unsigned int imgo_fmt)
+{
+	switch (imgo_fmt) {
+	case MTKCAM_IPI_IMG_FMT_BAYER8:
+		return length * 8 / 8;
+	case MTKCAM_IPI_IMG_FMT_BAYER10:
+		return length * 10 / 8;
+	case MTKCAM_IPI_IMG_FMT_BAYER12:
+		return length * 12 / 8;
+	case MTKCAM_IPI_IMG_FMT_BAYER14:
+		return length * 14 / 8;
+	default:
+		break;
+	}
+
+	return length * 16 / 8;
+}
+
+static unsigned int mtk_cam_sv_pdp_xsize_cal_cpio(unsigned int length)
+{
+	return (length + 7) / 8;
+}
+
+static void mtk_cam_sv_set_pdp_dense_fmt(
+	struct mtk_cam_device *cam, unsigned int *tg_width_temp,
+	unsigned int *tg_height_temp,
+	struct mraw_stats_cfg_param *param, unsigned int dmao_id)
+{
+	if (dmao_id == imgo_m1) {
+		if (param->mbn_pow < 2 || param->mbn_pow > 6) {
+			dev_info(cam->dev, "%s:Invalid mbn_pow: %d",
+				__func__, param->mbn_pow);
+			return;
+		}
+		switch (param->mbn_dir) {
+		case MBN_POW_VERTICAL:
+			*tg_height_temp /= mtk_cam_sv_pdp_powi(2, param->mbn_pow);
+			break;
+		case MBN_POW_HORIZONTAL:
+			*tg_width_temp /= mtk_cam_sv_pdp_powi(2, param->mbn_pow);
+			break;
+		default:
+			dev_info(cam->dev, "%s:MBN's dir %d %s fail",
+				__func__, param->mbn_dir, "unknown idx");
+			return;
+		}
+		// divided for 2 path from MBN
+		*tg_width_temp /= 2;
+	} else if (dmao_id == cpio_m1) {
+		if (param->cpi_pow < 2 || param->cpi_pow > 6) {
+			dev_info(cam->dev, "Invalid cpi_pow: %d", param->cpi_pow);
+			return;
+		}
+		switch (param->cpi_dir) {
+		case CPI_POW_VERTICAL:
+			*tg_height_temp /= mtk_cam_sv_pdp_powi(2, param->cpi_pow);
+			break;
+		case CPI_POW_HORIZONTAL:
+			*tg_width_temp /= mtk_cam_sv_pdp_powi(2, param->cpi_pow);
+			break;
+		default:
+			dev_info(cam->dev, "%s:CPI's dir %d %s fail",
+				__func__, param->cpi_dir, "unknown idx");
+			return;
+		}
+	}
+}
+
+static void mtk_cam_sv_set_pdp_concatenation_fmt(
+	struct mtk_cam_device *cam, unsigned int *tg_width_temp,
+	unsigned int *tg_height_temp,
+	struct mraw_stats_cfg_param *param, unsigned int dmao_id)
+{
+	if (dmao_id == imgo_m1) {
+		if (param->mbn_spar_pow < 1 || param->mbn_spar_pow > 6) {
+			dev_info(cam->dev, "%s:Invalid mbn_spar_pow: %d",
+				__func__, param->mbn_spar_pow);
+			return;
+		}
+		// concatenated
+		*tg_width_temp *= param->mbn_spar_fac;
+		*tg_height_temp /= param->mbn_spar_fac;
+
+		// vertical binning
+		*tg_height_temp /= mtk_cam_sv_pdp_powi(2, param->mbn_spar_pow);
+
+		// divided for 2 path from MBN
+		*tg_width_temp /= 2;
+	} else if (dmao_id == cpio_m1) {
+		if (param->cpi_spar_pow < 1 || param->cpi_spar_pow > 6) {
+			dev_info(cam->dev, "%s:Invalid cpi_spar_pow: %d",
+				__func__, param->cpi_spar_pow);
+			return;
+		}
+		// concatenated
+		*tg_width_temp *= param->cpi_spar_fac;
+		*tg_height_temp /= param->cpi_spar_fac;
+
+		// vertical binning
+		*tg_height_temp /= mtk_cam_sv_pdp_powi(2, param->cpi_spar_pow);
+	}
+}
+
+static void mtk_cam_sv_set_pdp_interleving_fmt(
+	unsigned int *tg_width_temp,
+	unsigned int *tg_height_temp, unsigned int dmao_id)
+{
+	if (dmao_id == imgo_m1) {
+		// divided for 2 path from MBN
+		*tg_height_temp /= 2;
+	} else if (dmao_id == cpio_m1) {
+		// concatenated
+		*tg_width_temp *= 2;
+		*tg_height_temp /= 2;
+	}
+}
+
+void mtk_cam_sv_get_pdp_mqe_size(struct mtk_cam_device *cam, unsigned int pipe_id,
+	unsigned int *width, unsigned int *height)
+{
+	struct mtk_mraw_pipeline *pipe =
+		&cam->pipelines.mraw[pipe_id - MTKCAM_SUBDEV_MRAW_START];
+	struct mraw_stats_cfg_param *param = &pipe->res_config.stats_cfg_param;
+
+	*width = param->crop_width;
+	*height = param->crop_height;
+
+	if (param->lm_en && param->lm_mode_ctrl) {
+		*width = param->crop_width * (2 * param->lm_mode_ctrl);
+		*height = param->crop_height / (2 * param->lm_mode_ctrl);
+	}
+
+	if (param->mqe_en) {
+		switch (param->mqe_mode) {
+		case UL_MODE:
+		case UR_MODE:
+		case DL_MODE:
+		case DR_MODE:
+			*width /= 2;
+			*height /= 2;
+			break;
+		case PD_L_MODE:
+		case PD_R_MODE:
+		case PD_M_MODE:
+		case PD_B01_MODE:
+			*width /= 2;
+			break;
+		case PD_B02_MODE:
+			*height /= 2;
+			break;
+		default:
+			dev_info(cam->dev, "%s:MQE-Mode %d %s fail\n",
+				__func__, param->mqe_mode, "unknown idx");
+			return;
+		}
+	}
+}
+
+void mtk_cam_sv_get_pdp_mbn_size(struct mtk_cam_device *cam, unsigned int pipe_id,
+	unsigned int *width, unsigned int *height)
+{
+	struct mtk_mraw_pipeline *pipe =
+		&cam->pipelines.mraw[pipe_id - MTKCAM_SUBDEV_MRAW_START];
+	struct mraw_stats_cfg_param *param = &pipe->res_config.stats_cfg_param;
+
+	mtk_cam_sv_get_pdp_mqe_size(cam, pipe_id, width, height);
+
+	switch (param->mbn_dir) {
+	case MBN_POW_VERTICAL:
+	case MBN_POW_HORIZONTAL:
+		mtk_cam_sv_set_pdp_dense_fmt(
+			cam, width, height, param, imgo_m1);
+		break;
+	case MBN_POW_SPARSE_CONCATENATION:
+		mtk_cam_sv_set_pdp_concatenation_fmt(
+			cam, width, height, param, imgo_m1);
+		break;
+	case MBN_POW_SPARSE_INTERLEVING:
+		mtk_cam_sv_set_pdp_interleving_fmt(width, height, imgo_m1);
+		break;
+	default:
+		dev_info(cam->dev, "%s:MBN's dir %d %s fail", __func__, param->mbn_dir, "unknown idx");
+		return;
+	}
+}
+
+void mtk_cam_sv_get_pdp_cpi_size(struct mtk_cam_device *cam, unsigned int pipe_id,
+	unsigned int *width, unsigned int *height)
+{
+	struct mtk_mraw_pipeline *pipe =
+		&cam->pipelines.mraw[pipe_id - MTKCAM_SUBDEV_MRAW_START];
+	struct mraw_stats_cfg_param *param = &pipe->res_config.stats_cfg_param;
+
+	mtk_cam_sv_get_pdp_mqe_size(cam, pipe_id, width, height);
+
+	switch (param->cpi_dir) {
+	case CPI_POW_VERTICAL:
+	case CPI_POW_HORIZONTAL:
+		mtk_cam_sv_set_pdp_dense_fmt(
+			cam, width, height, param, cpio_m1);
+		break;
+	case CPI_POW_SPARSE_CONCATENATION:
+		mtk_cam_sv_set_pdp_concatenation_fmt(
+			cam, width, height, param, cpio_m1);
+		break;
+	case CPI_POW_SPARSE_INTERLEVING:
+		mtk_cam_sv_set_pdp_interleving_fmt(width, height, cpio_m1);
+		break;
+	default:
+		dev_info(cam->dev, "%s:CPI's dir %d %s fail", __func__, param->cpi_dir, "unknown idx");
+		return;
+	}
+}
+
+void mtk_cam_sv_get_pdp_dbg_size(struct mtk_cam_device *cam, unsigned int pipe_id,
+	unsigned int *width, unsigned int *height)
+{
+	struct mtk_mraw_pipeline *pipe =
+		&cam->pipelines.mraw[pipe_id - MTKCAM_SUBDEV_MRAW_START];
+	struct mraw_stats_cfg_param *param = &pipe->res_config.stats_cfg_param;
+
+	switch (param->img_sel) {
+	case 0:  // CRP output
+		*width = param->crop_width;
+		*height = param->crop_height;
+		break;
+	case 1:  // MQE output
+	case 2:  // PLSC output
+	case 3:  // SGG output
+		mtk_cam_sv_get_pdp_mqe_size(cam, pipe_id, width, height);
+		break;
+	default:
+		dev_info(cam->dev, "%s:DBG's img_sel %d %s fail",
+			__func__, param->img_sel, "unknown idx");
+		return;
+	}
+}
+
+static void mtk_cam_sv_set_pdp_dmao_info(
+	struct mtk_cam_device *cam, struct mtk_cam_buffer *buf, unsigned int pipe_id,
+	struct dma_info *info, unsigned int imgo_fmt, bool pdp_en)
+{
+	unsigned int width_mbn = 0, height_mbn = 0, height_dbg = 0, width_dbg = 0;
+	unsigned int width_cpi = 0, height_cpi = 0;
+	int i;
+	struct mtk_mraw_pipeline *pipe =
+		&cam->pipelines.mraw[pipe_id - MTKCAM_SUBDEV_MRAW_START];
+
+	struct mraw_stats_cfg_param *param = &pipe->res_config.stats_cfg_param;
+
+	if (!pdp_en) {
+		info[imgo_m1].width = buf->image_info.width;
+		info[imgo_m1].height = buf->image_info.height;
+		info[imgo_m1].stride = buf->image_info.bytesperline[0];
+	} else {
+		if (param->dbg_en) {
+			mtk_cam_sv_get_pdp_dbg_size(cam, pipe_id, &width_dbg, &height_dbg);
+			mtk_cam_sv_get_pdp_cpi_size(cam, pipe_id, &width_cpi, &height_cpi);
+			mtk_cam_sv_get_pdp_mbn_size(cam, pipe_id, &width_mbn, &height_mbn);
+		} else {
+			mtk_cam_sv_get_pdp_mbn_size(cam, pipe_id, &width_mbn, &height_mbn);
+			mtk_cam_sv_get_pdp_cpi_size(cam, pipe_id, &width_cpi, &height_cpi);
+		}
+
+		/* IMGO */
+		if (param->dbg_en) {
+			info[imgo_m1].width = mtk_cam_sv_pdp_dbg_xsize_cal(width_dbg, imgo_fmt);
+			info[imgo_m1].height = height_dbg;
+			info[imgo_m1].xsize = mtk_cam_sv_pdp_dbg_xsize_cal(width_dbg, imgo_fmt);
+			info[imgo_m1].stride = info[imgo_m1].xsize;
+		} else {
+			info[imgo_m1].width = mtk_cam_sv_pdp_xsize_cal(width_mbn);
+			info[imgo_m1].height = height_mbn;
+			info[imgo_m1].xsize = mtk_cam_sv_pdp_xsize_cal(width_mbn);
+			info[imgo_m1].stride = info[imgo_m1].xsize;
+		}
+
+		/* IMGBO */
+		info[imgbo_m1].width = mtk_cam_sv_pdp_xsize_cal(width_mbn);
+		info[imgbo_m1].height = height_mbn;
+		info[imgbo_m1].xsize = mtk_cam_sv_pdp_xsize_cal(width_mbn);
+		info[imgbo_m1].stride = info[imgbo_m1].xsize;
+
+		/* CPIO_1 */
+		info[cpio_m1].width = ALIGN(mtk_cam_sv_pdp_xsize_cal_cpio(width_cpi)/2, 16);
+		info[cpio_m1].height = height_cpi;
+		info[cpio_m1].xsize = ALIGN(mtk_cam_sv_pdp_xsize_cal_cpio(width_cpi)/2, 16);
+		info[cpio_m1].stride = info[cpio_m1].xsize;
+
+		/* CPIO_2 */
+		info[cpio_m2].width = ALIGN(mtk_cam_sv_pdp_xsize_cal_cpio(width_cpi)/2, 16);
+		info[cpio_m2].height = height_cpi;
+		info[cpio_m2].xsize = ALIGN(mtk_cam_sv_pdp_xsize_cal_cpio(width_cpi)/2, 16);
+		info[cpio_m2].stride = info[cpio_m1].xsize;
+
+	}
+	if (atomic_read(&pipe->res_config.is_fmt_change) == 1) {
+		for (i = 0; i < pdp_support_dmao_num; i++)
+			pipe->res_config.mraw_dma_size[i] = info[i].stride * info[i].height;
+
+		dev_info(cam->dev, "%s imgo_size:%d imgbo_size:%d cpio1_size:%d cpio2_size:%d\n", __func__,
+			pipe->res_config.mraw_dma_size[imgo_m1],
+			pipe->res_config.mraw_dma_size[imgbo_m1],
+			pipe->res_config.mraw_dma_size[cpio_m1],
+			pipe->res_config.mraw_dma_size[cpio_m2]);
+			atomic_set(&pipe->res_config.is_fmt_change, 0);
+	}
+
+	for (i = 0; i < pdp_support_dmao_num; i++) {
+		dev_dbg(cam->dev, "pdp_en %d dma_id:%d, w:%d s:%d xsize:%d stride:%d\n",
+			pdp_en, i, info[i].width, info[i].height, info[i].xsize, info[i].stride);
+	}
+}
+static void mtk_cam_sv_set_pdp_frame_param_dmao(
+	struct mtk_cam_ctx *ctx,
+	struct mtk_cam_job *job,
+	struct mtkcam_ipi_frame_param *fp,
+	struct dma_info *info, int pipe_id,
+	dma_addr_t buf_daddr,
+	bool pdp_en)
+{
+	struct mtkcam_ipi_img_output *out;
+	struct mtk_camsv_device *sv_dev;
+	struct mtk_mraw_pipeline *pipe =
+		&ctx->cam->pipelines.mraw[pipe_id - MTKCAM_SUBDEV_MRAW_START];
+	unsigned int tag_idx, dmao_num;
+	unsigned long offset;
+	int i;
+
+	sv_dev = dev_get_drvdata(ctx->hw_sv);
+	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, pipe_id);
+
+	fp->camsv_param[0][tag_idx].dev_id = pipe_id;
+	fp->camsv_param[0][tag_idx].tag_id = tag_idx;
+	fp->camsv_param[0][tag_idx].pdp_enable = pdp_en;
+
+	offset =
+		(((buf_daddr + GET_PLAT_V4L2(meta_mraw_ext_size) + 15) >> 4) << 4) -
+		buf_daddr;
+
+	dmao_num = pdp_en ? pdp_support_dmao_num : pdp_not_support_dmao_num;
+
+	for (i = 0; i < dmao_num; i++) {
+		out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[i];
+
+		out->uid.id = MTKCAM_IPI_MRAW_META_STATS_0;
+		out->uid.pipe_id = pipe_id;
+
+		out->fmt.stride[0] = info[i].stride;
+		out->fmt.s.w = info[i].width;
+		out->fmt.s.h = info[i].height;
+
+		out->crop.p.x = 0;
+		out->crop.p.y = 0;
+		out->crop.s.w = info[i].width;
+		out->crop.s.h = info[i].height;
+
+		out->buf[0][0].iova = buf_daddr + offset;
+		out->buf[0][0].size =
+			out->fmt.stride[0] * out->fmt.s.h;
+
+		offset = offset + (((pipe->res_config.mraw_dma_size[i] + 15) >> 4) << 4);
+
+
+		dev_dbg(ctx->cam->dev, "%s:dmao_id:%d iova:0x%llx stride:0x%x height:0x%x size:%d offset:%lu\n",
+			__func__, i, out->buf[0][0].iova,
+			out->fmt.stride[0], out->fmt.s.h,
+			pipe->res_config.mraw_dma_size[i], offset);
+	}
+}
+
+
+static void mtk_cam_sv_set_meta_stats_info(
+	void *vaddr, struct dma_info *info, bool pdp_fun_support)
+{
+	CALL_PLAT_V4L2(
+		set_mraw_meta_stats_info, MTKCAM_IPI_MRAW_META_STATS_0, vaddr, info,
+		pdp_fun_support);
+}
+
+int mtk_cam_sv_cal_cfg_info(struct mtk_cam_ctx *ctx, struct mtk_cam_buffer *buf,
+	struct mtk_cam_job *job, unsigned int pipe_id, struct mtkcam_ipi_frame_param *fp,
+	unsigned int imgo_fmt)
+{
+	struct dma_info info[pdp_support_dmao_num];
+	struct mtk_mraw_pipeline *pipe =
+		&ctx->cam->pipelines.mraw[pipe_id - MTKCAM_SUBDEV_MRAW_START];
+	bool pdp_fun_support;
+	int tag_idx;
+
+	if (ctx->hw_sv == NULL)
+		return 0;
+
+	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, pipe_id);
+	if (job->tag_info[tag_idx].is_pdp_enable)
+		pdp_fun_support = false;
+	else
+		pdp_fun_support = true;
+
+	mtk_cam_sv_set_pdp_dmao_info(ctx->cam, buf, pipe_id, info, imgo_fmt,
+		pdp_fun_support);
+	mtk_cam_sv_set_pdp_frame_param_dmao(ctx, job, fp,
+		info, pipe_id,
+		pipe->res_config.daddr[MTKCAM_IPI_MRAW_META_STATS_0
+			- MTKCAM_IPI_MRAW_ID_START], pdp_fun_support);
+	mtk_cam_sv_set_meta_stats_info(
+		pipe->res_config.vaddr[MTKCAM_IPI_MRAW_META_STATS_0
+			- MTKCAM_IPI_MRAW_ID_START], info, pdp_fun_support);
+	return 0;
+}
+
+void mtk_cam_sv_copy_user_input_param(struct mtk_cam_ctx *ctx, struct mtk_cam_job *job,
+	void *vaddr, struct mtk_mraw_pipeline *mraw_pipe)
+{
+	struct mraw_stats_cfg_param *param =
+		&mraw_pipe->res_config.stats_cfg_param;
+	unsigned int tag_idx;
+
+	CALL_PLAT_V4L2(
+		get_mraw_stats_cfg_param, vaddr, param);
+
+	if (mraw_pipe->res_config.tg_crop.s.w < param->crop_width ||
+		mraw_pipe->res_config.tg_crop.s.h < param->crop_height)
+		dev_info(ctx->cam->dev, "%s tg size smaller than crop size", __func__);
+	dev_dbg(ctx->cam->dev, "%s:enable:(%d,%d,%d,%d,%d,%d,%d) crop:(%d,%d) mqe:%d mbn:0x%x_%x_%x_%x_%x_%x_%x_%x cpi:0x%x_%x_%x_%x_%x_%x_%x_%x sel:0x%x_%x lm_ctl:%d\n",
+		__func__,
+		param->dc_en,
+		param->pdp_en,
+		param->mqe_en,
+		param->mobc_en,
+		param->plsc_en,
+		param->lm_en,
+		param->dbg_en,
+		param->crop_width,
+		param->crop_height,
+		param->mqe_mode,
+		param->mbn_hei,
+		param->mbn_pow,
+		param->mbn_dir,
+		param->mbn_spar_hei,
+		param->mbn_spar_pow,
+		param->mbn_spar_fac,
+		param->mbn_spar_con1,
+		param->mbn_spar_con0,
+		param->cpi_th,
+		param->cpi_pow,
+		param->cpi_dir,
+		param->cpi_spar_hei,
+		param->cpi_spar_pow,
+		param->cpi_spar_fac,
+		param->cpi_spar_con1,
+		param->cpi_spar_con0,
+		param->img_sel,
+		param->imgo_sel,
+		param->lm_mode_ctrl);
+
+	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, mraw_pipe->id);
+
+	if (param->pdp_en)
+		job->tag_info[tag_idx].is_pdp_enable = true;
+	else
+		job->tag_info[tag_idx].is_pdp_enable = false;
+
 }
 
 void camsv_dump_dma_debug_data(struct mtk_camsv_device *sv_dev)

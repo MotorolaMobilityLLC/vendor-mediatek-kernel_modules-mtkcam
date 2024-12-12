@@ -28,7 +28,6 @@
 
 #include "mtk_cam-dvfs_qos.h"
 #include "mtk_cam-larb.h"
-#include "mtk_cam-mraw.h"
 #include "mtk_cam-raw.h"
 #include "mtk_cam-seninf-drv.h"
 #include "mtk_cam-seninf-if.h"

@@ -10,7 +10,7 @@
 #include "mtk_cam-video.h"
 #include "mtk_cam-plat.h"
 
-#define MRAW_PIPELINE_NUM 4
+#define MRAW_PIPELINE_NUM 8
 
 /* enum for pads of mraw pipeline */
 enum {
@@ -36,7 +36,7 @@ struct mtk_cam_mraw_resource_config {
 	struct mtkcam_ipi_crop tg_crop;
 	__u32 tg_fmt;
 	__u32 pixel_mode;
-	__u32 mraw_dma_size[mraw_dmao_num];
+	__u32 mraw_dma_size[pdp_support_dmao_num];
 	atomic_t enque_node_num;
 	atomic_t is_fmt_change;
 	struct mraw_stats_cfg_param stats_cfg_param;

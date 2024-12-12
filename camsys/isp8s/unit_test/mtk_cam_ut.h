@@ -42,7 +42,7 @@ enum isp_hardware_enum { //sync with TestPlan.h
 	WITH_NONE		= 0x0,
 	WITH_RAW		= 0x1,
 	SINGLE_SV		= 0x2,
-	SINGLE_MRAW		= 0x4,
+	SINGLE_SV_PDP	= 0x4,
 };
 
 struct mtk_cam_ut_mem_obj {

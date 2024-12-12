@@ -684,9 +684,8 @@ static int fill_sv_img_fp_working_buffer(struct req_buffer_helper *helper,
 	uid.pipe_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
 	uid.id = MTKCAM_IPI_CAMSV_MAIN_OUT;
 
-	fp->camsv_param[0][tag_idx].pipe_id = uid.pipe_id;
+	fp->camsv_param[0][tag_idx].dev_id = uid.pipe_id;
 	fp->camsv_param[0][tag_idx].tag_id = tag_idx;
-	fp->camsv_param[0][tag_idx].hardware_scenario = get_hw_scenario(job);
 
 	out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[0];
 	ret = fill_img_out_driver_buf(out, uid, fmt_desc, buf);
@@ -1019,9 +1018,8 @@ int update_sensor_meta_buffer_to_ipi_frame(struct mtk_cam_job *job,
 	uid.pipe_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
 	uid.id = MTKCAM_IPI_CAMSV_MAIN_OUT;
 
-	fp->camsv_param[0][tag_idx].pipe_id = uid.pipe_id;
+	fp->camsv_param[0][tag_idx].dev_id = uid.pipe_id;
 	fp->camsv_param[0][tag_idx].tag_id = tag_idx;
-	fp->camsv_param[0][tag_idx].hardware_scenario = 0;
 
 	out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[0];
 	ret = fill_img_out_driver_buf(out, uid,
@@ -1771,9 +1769,9 @@ static int fill_sv_mp_fp(
 			MTKCAM_IPI_CAMSV_MAIN_OUT, valid_plane, buf_offset);
 	out->uid.pipe_id = pipe_id;
 
-	fp->camsv_param[0][tag_idx].pipe_id = pipe_id;
+	fp->camsv_param[0][tag_idx].dev_id = pipe_id;
 	fp->camsv_param[0][tag_idx].tag_id = tag_idx;
-	fp->camsv_param[0][tag_idx].hardware_scenario = 0;
+
 
 	buf_printk("%s: tag_idx %d, iova %llx, size %u, fmt fmt/w/h/stride:%d/%d/%d/%d",
 		   __func__, tag_idx, out->buf[0][0].iova, out->buf[0][0].size,
@@ -2210,6 +2208,7 @@ void mtk_cam_sv_reset_tag_info(struct mtk_cam_job *job)
 	for (i = SVTAG_START; i < SVTAG_END; i++) {
 		tag_info = &job->tag_info[i];
 		tag_info->sv_pipe = NULL;
+		tag_info->mraw_pipe = NULL;
 		tag_info->seninf_padidx = 0;
 		tag_info->hw_scen = 0;
 		tag_info->tag_order = MTKCAM_IPI_ORDER_FIRST_TAG;
@@ -2252,12 +2251,14 @@ int handle_sv_tag(struct mtk_cam_job *job)
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_raw_sink_data *raw_sink;
 	struct mtk_camsv_device *sv_dev;
+	struct mtk_mraw_pipeline *mraw_pipe;
+	struct mtk_mraw_sink_data *mraw_sink;
 	struct mtk_camsv_pipeline *sv_pipe;
 	struct mtk_camsv_sink_data *sv_sink;
 	struct mtk_camsv_tag_param img_tag_param[SVTAG_IMG_END] = {};
 	struct mtk_camsv_tag_param meta_tag_param;
 	struct mtk_seninf_pad_data_info pad_data_info;
-	unsigned int tag_idx, sv_pipe_idx, hw_scen;
+	unsigned int tag_idx, hw_scen, sv_pipe_idx, mraw_pipe_idx;
 	unsigned int exp_no, req_amount, max_pixel_mode = 3;
 	unsigned int cfg_exp_no = scen_max_exp_num(&job->job_scen);
 	int ret = 0, i;
@@ -2335,6 +2336,42 @@ int handle_sv_tag(struct mtk_cam_job *job)
 
 	/* meta tag(s) */
 	tag_idx = SVTAG_META_START;
+	for (i = 0; i < ctx->num_mraw_subdevs; i++) {
+		if (tag_idx >= SVTAG_END)
+			return 1;
+		mraw_pipe_idx = ctx->mraw_subdev_idx[i];
+		if (mraw_pipe_idx >= ctx->cam->pipelines.num_mraw)
+			return 1;
+		mraw_pipe = &ctx->cam->pipelines.mraw[mraw_pipe_idx];
+		mraw_sink = &job->req->mraw_data[mraw_pipe_idx].sink;
+		meta_tag_param.tag_idx = tag_idx;
+		meta_tag_param.seninf_padidx = mraw_pipe->seninf_padidx;
+		meta_tag_param.tag_order = mtk_cam_seninf_get_tag_order(
+			job->seninf, mraw_sink->mbus_code, mraw_pipe->seninf_padidx);
+		mtk_cam_sv_fill_pdp_tag_info(job->tag_info,
+			&job->ipi_config,
+			&meta_tag_param, 1,
+			max_pixel_mode,
+			job->sub_ratio,
+			mraw_sink->width, mraw_sink->height,
+			mraw_sink->mbus_code, 0, mraw_pipe);
+
+		job->used_tag_cnt++;
+		job->enabled_tags |= (1 << tag_idx);
+		tag_idx++;
+
+		pr_info("[%s] tag_idx:%d seninf_padidx:%d tag_order:%d pixel_mode:%d sub_ratio:%d width/height/mbus_code:0x%x_0x%x_0x%x\n",
+			__func__,
+			meta_tag_param.tag_idx,
+			meta_tag_param.seninf_padidx,
+			meta_tag_param.tag_order,
+			max_pixel_mode,
+			job->sub_ratio,
+			mraw_sink->width,
+			mraw_sink->height,
+			mraw_sink->mbus_code);
+	}
+
 	for (i = 0; i < ctx->num_sv_subdevs; i++) {
 		if (tag_idx >= SVTAG_END)
 			return 1;

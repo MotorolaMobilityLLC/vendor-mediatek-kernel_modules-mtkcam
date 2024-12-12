@@ -33,8 +33,6 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_cam_device *cam = ctx->cam;
 	struct mtk_camsv_device *sv_dev = NULL;
-	struct mtk_mraw_device *mraw_dev;
-	struct mtk_mraw_pipeline *mraw_pipe;
 	struct mtk_cam_seninf_mux_param param;
 	struct mtk_cam_seninf_mux_setting settings[9];
 	int prev_exp = job_prev_exp_num_seamless(job);
@@ -130,6 +128,18 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 				settings[i++].enable = 1;
 			}
 
+			for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
+				mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
+				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+					ctx->mraw_subdev_idx[mraw_dev_idx] + MTKCAM_SUBDEV_MRAW_START);
+				settings[i].seninf = ctx->seninf;
+				settings[i].source = job->tag_info[tag_idx].seninf_padidx;
+				settings[i].camtg  = sv_dev->cammux_id;
+				settings[i].tag_id = tag_idx;
+				settings[i].pixelmode = max_pixel_mode;
+				settings[i++].enable = 1;
+			}
+
 			for (sv_idx = 0; sv_idx < ctx->num_sv_subdevs; sv_idx++) {
 				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 					ctx->sv_subdev_idx[sv_idx] + MTKCAM_SUBDEV_CAMSV_START);
@@ -139,23 +149,6 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 				settings[i].tag_id = tag_idx;
 				settings[i].pixelmode = max_pixel_mode;
 				settings[i++].enable = 1;
-			}
-
-			for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
-				mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
-				if (cam->engines.mraw_devs[mraw_dev_idx]) {
-					mraw_dev =
-						dev_get_drvdata(cam->engines.mraw_devs[mraw_dev_idx]);
-					mraw_pipe =
-						&ctx->cam->pipelines.mraw[ctx->mraw_subdev_idx[mraw_idx]];
-					settings[i].seninf = ctx->seninf;
-					settings[i].source = mraw_pipe->seninf_padidx;
-					settings[i].camtg  = mraw_dev->cammux_id;
-					settings[i].tag_id = 0;
-					settings[i].pixelmode =
-						mraw_pipe->res_config.pixel_mode;
-					settings[i++].enable = 1;
-				}
 			}
 		} else if (cur_exp == 1) {
 			first_tag_idx =
@@ -205,6 +198,19 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 				settings[i++].enable = 1;
 			}
 
+			for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
+				mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
+				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+					ctx->mraw_subdev_idx[mraw_dev_idx] + MTKCAM_SUBDEV_MRAW_START);
+
+				settings[i].seninf = ctx->seninf;
+				settings[i].source = job->tag_info[tag_idx].seninf_padidx;
+				settings[i].camtg  = sv_dev->cammux_id;
+				settings[i].tag_id = tag_idx;
+				settings[i].pixelmode = max_pixel_mode;
+				settings[i++].enable = 1;
+			}
+
 			for (sv_idx = 0; sv_idx < ctx->num_sv_subdevs; sv_idx++) {
 				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 					ctx->sv_subdev_idx[sv_idx] + MTKCAM_SUBDEV_CAMSV_START);
@@ -214,23 +220,6 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 				settings[i].tag_id = tag_idx;
 				settings[i].pixelmode = max_pixel_mode;
 				settings[i++].enable = 1;
-			}
-
-			for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
-				mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
-				if (cam->engines.mraw_devs[mraw_dev_idx]) {
-					mraw_dev =
-						dev_get_drvdata(cam->engines.mraw_devs[mraw_dev_idx]);
-					mraw_pipe =
-						&ctx->cam->pipelines.mraw[ctx->mraw_subdev_idx[mraw_idx]];
-					settings[i].seninf = ctx->seninf;
-					settings[i].source = mraw_pipe->seninf_padidx;
-					settings[i].camtg  = mraw_dev->cammux_id;
-					settings[i].tag_id = 0;
-					settings[i].pixelmode =
-						mraw_pipe->res_config.pixel_mode;
-					settings[i++].enable = 1;
-				}
 			}
 		} else if (cur_exp == 3) {
 			first_tag_idx =
@@ -284,6 +273,19 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 				settings[i++].enable = 1;
 			}
 
+			for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
+				mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
+				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+					ctx->mraw_subdev_idx[mraw_dev_idx] + MTKCAM_SUBDEV_MRAW_START);
+
+				settings[i].seninf = ctx->seninf;
+				settings[i].source = job->tag_info[tag_idx].seninf_padidx;
+				settings[i].camtg  = sv_dev->cammux_id;
+				settings[i].tag_id = tag_idx;
+				settings[i].pixelmode = max_pixel_mode;
+				settings[i++].enable = 1;
+			}
+
 			for (sv_idx = 0; sv_idx < ctx->num_sv_subdevs; sv_idx++) {
 				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 					ctx->sv_subdev_idx[sv_idx] + MTKCAM_SUBDEV_CAMSV_START);
@@ -293,23 +295,6 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 				settings[i].tag_id = tag_idx;
 				settings[i].pixelmode = max_pixel_mode;
 				settings[i++].enable = 1;
-			}
-
-			for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
-				mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
-				if (cam->engines.mraw_devs[mraw_dev_idx]) {
-					mraw_dev =
-						dev_get_drvdata(cam->engines.mraw_devs[mraw_dev_idx]);
-					mraw_pipe =
-						&ctx->cam->pipelines.mraw[ctx->mraw_subdev_idx[mraw_idx]];
-					settings[i].seninf = ctx->seninf;
-					settings[i].source = mraw_pipe->seninf_padidx;
-					settings[i].camtg  = mraw_dev->cammux_id;
-					settings[i].tag_id = 0;
-					settings[i].pixelmode =
-						mraw_pipe->res_config.pixel_mode;
-					settings[i++].enable = 1;
-				}
 			}
 		}
 
@@ -397,6 +382,19 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 				settings[i++].enable = 1;
 			}
 
+			for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
+				mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
+				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+					ctx->mraw_subdev_idx[mraw_dev_idx] + MTKCAM_SUBDEV_MRAW_START);
+
+				settings[i].seninf = ctx->seninf;
+				settings[i].source = job->tag_info[tag_idx].seninf_padidx;
+				settings[i].camtg  = sv_dev->cammux_id;
+				settings[i].tag_id = tag_idx;
+				settings[i].pixelmode = max_pixel_mode;
+				settings[i++].enable = 1;
+			}
+
 			for (sv_idx = 0; sv_idx < ctx->num_sv_subdevs; sv_idx++) {
 				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 					ctx->sv_subdev_idx[sv_idx] + MTKCAM_SUBDEV_CAMSV_START);
@@ -406,23 +404,6 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 				settings[i].tag_id = tag_idx;
 				settings[i].pixelmode = max_pixel_mode;
 				settings[i++].enable = 1;
-			}
-
-			for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
-				mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
-				if (cam->engines.mraw_devs[mraw_dev_idx]) {
-					mraw_dev =
-						dev_get_drvdata(cam->engines.mraw_devs[mraw_dev_idx]);
-					mraw_pipe =
-						&ctx->cam->pipelines.mraw[ctx->mraw_subdev_idx[mraw_idx]];
-					settings[i].seninf = ctx->seninf;
-					settings[i].source = mraw_pipe->seninf_padidx;
-					settings[i].camtg  = mraw_dev->cammux_id;
-					settings[i].tag_id = 0;
-					settings[i].pixelmode =
-						mraw_pipe->res_config.pixel_mode;
-					settings[i++].enable = 1;
-				}
 			}
 		} else if (cur_exp == 2) {
 			first_tag_idx =
@@ -498,6 +479,19 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 				settings[i++].enable = 1;
 			}
 
+			for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
+				mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
+				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+					ctx->mraw_subdev_idx[mraw_dev_idx] + MTKCAM_SUBDEV_MRAW_START);
+
+				settings[i].seninf = ctx->seninf;
+				settings[i].source = job->tag_info[tag_idx].seninf_padidx;
+				settings[i].camtg  = sv_dev->cammux_id;
+				settings[i].tag_id = tag_idx;
+				settings[i].pixelmode = max_pixel_mode;
+				settings[i++].enable = 1;
+			}
+
 			for (sv_idx = 0; sv_idx < ctx->num_sv_subdevs; sv_idx++) {
 				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 					ctx->sv_subdev_idx[sv_idx] + MTKCAM_SUBDEV_CAMSV_START);
@@ -507,23 +501,6 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 				settings[i].tag_id = tag_idx;
 				settings[i].pixelmode = max_pixel_mode;
 				settings[i++].enable = 1;
-			}
-
-			for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
-				mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
-				if (cam->engines.mraw_devs[mraw_dev_idx]) {
-					mraw_dev =
-						dev_get_drvdata(cam->engines.mraw_devs[mraw_dev_idx]);
-					mraw_pipe =
-						&ctx->cam->pipelines.mraw[ctx->mraw_subdev_idx[mraw_idx]];
-					settings[i].seninf = ctx->seninf;
-					settings[i].source = mraw_pipe->seninf_padidx;
-					settings[i].camtg  = mraw_dev->cammux_id;
-					settings[i].tag_id = 0;
-					settings[i].pixelmode =
-						mraw_pipe->res_config.pixel_mode;
-					settings[i++].enable = 1;
-				}
 			}
 		}
 
@@ -595,6 +572,19 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 			settings[i++].enable = 1;
 		}
 
+		for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
+			mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
+			unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+				ctx->mraw_subdev_idx[mraw_dev_idx] + MTKCAM_SUBDEV_MRAW_START);
+
+			settings[i].seninf = ctx->seninf;
+			settings[i].source = job->tag_info[tag_idx].seninf_padidx;
+			settings[i].camtg  = sv_dev->cammux_id;
+			settings[i].tag_id = tag_idx;
+			settings[i].pixelmode = max_pixel_mode;
+			settings[i++].enable = 1;
+		}
+
 		for (sv_idx = 0; sv_idx < ctx->num_sv_subdevs; sv_idx++) {
 			unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 				ctx->sv_subdev_idx[sv_idx] + MTKCAM_SUBDEV_CAMSV_START);
@@ -604,23 +594,6 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 			settings[i].tag_id = tag_idx;
 			settings[i].pixelmode = max_pixel_mode;
 			settings[i++].enable = 1;
-		}
-
-		for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
-			mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
-			if (cam->engines.mraw_devs[mraw_dev_idx]) {
-				mraw_dev =
-					dev_get_drvdata(cam->engines.mraw_devs[mraw_dev_idx]);
-				mraw_pipe =
-					&ctx->cam->pipelines.mraw[ctx->mraw_subdev_idx[mraw_idx]];
-				settings[i].seninf = ctx->seninf;
-				settings[i].source = mraw_pipe->seninf_padidx;
-				settings[i].camtg  = mraw_dev->cammux_id;
-				settings[i].tag_id = 0;
-				settings[i].pixelmode =
-					mraw_pipe->res_config.pixel_mode;
-				settings[i++].enable = 1;
-			}
 		}
 
 		if (i > ARRAY_SIZE(settings)) {
@@ -653,17 +626,6 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 	/* camsv */
 	if (sv_dev)
 		mtk_cam_seninf_set_cfg_rdy(ctx->seninf, sv_dev->cammux_id);
-	/* mraw */
-	for (int mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
-		unsigned int mraw_dev_idx;
-
-		mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
-		if (cam->engines.mraw_devs[mraw_dev_idx]) {
-			mraw_dev =
-				dev_get_drvdata(cam->engines.mraw_devs[mraw_dev_idx]);
-			mtk_cam_seninf_set_cfg_rdy(ctx->seninf, mraw_dev->cammux_id);
-		}
-	}
 
 	return 0;
 }

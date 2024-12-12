@@ -225,7 +225,44 @@ struct mtk_camsv_device {
 	unsigned int ois_updated_seq;
 	void __iomem *raw_lock_done_sel;
 };
+enum mqe_mode {
+	UL_MODE = 0,
+	UR_MODE,
+	DL_MODE,
+	DR_MODE,
+	PD_L_MODE,
+	PD_R_MODE,
+	PD_M_MODE,
+	PD_B01_MODE,
+	PD_B02_MODE,
+};
 
+enum mbn_dir {
+	MBN_POW_VERTICAL = 0,
+	MBN_POW_HORIZONTAL,
+	MBN_POW_SPARSE_CONCATENATION,
+	MBN_POW_SPARSE_INTERLEVING,
+};
+
+enum cpi_dir {
+	CPI_POW_VERTICAL = 0,
+	CPI_POW_HORIZONTAL,
+	CPI_POW_SPARSE_CONCATENATION,
+	CPI_POW_SPARSE_INTERLEVING,
+};
+int mtk_cam_sv_cal_cfg_info(struct mtk_cam_ctx *ctx, struct mtk_cam_buffer *buf,
+	struct mtk_cam_job *job, unsigned int pipe_id, struct mtkcam_ipi_frame_param *fp,
+	unsigned int imgo_fmt);
+void mtk_cam_sv_get_pdp_mqe_size(struct mtk_cam_device *cam, unsigned int pipe_id,
+	unsigned int *width, unsigned int *height);
+void mtk_cam_sv_get_pdp_mbn_size(struct mtk_cam_device *cam, unsigned int pipe_id,
+	unsigned int *width, unsigned int *height);
+void mtk_cam_sv_get_pdp_cpi_size(struct mtk_cam_device *cam, unsigned int pipe_id,
+	unsigned int *width, unsigned int *height);
+void mtk_cam_sv_get_pdp_dbg_size(struct mtk_cam_device *cam, unsigned int pipe_id,
+	unsigned int *width, unsigned int *height);
+void mtk_cam_sv_copy_user_input_param(struct mtk_cam_ctx *ctx,	struct mtk_cam_job *job,
+	void *vaddr, struct mtk_mraw_pipeline *mraw_pipe);
 void sv_reset(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_reset_msgfifo(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tags);
@@ -249,7 +286,7 @@ int mtk_cam_sv_toggle_db(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_central_common_enable(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_central_common_disable(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_fbc_disable(struct mtk_camsv_device *sv_dev, unsigned int tag_idx);
-unsigned int mtk_cam_get_sv_tag_index(struct mtk_camsv_tag_info *arr_tag,
+int mtk_cam_get_sv_tag_index(struct mtk_camsv_tag_info *arr_tag,
 	unsigned int pipe_id);
 unsigned int mtk_cam_get_seninf_pad_index(struct mtk_camsv_tag_info *arr_tag,
 	unsigned int pipe_id);
@@ -260,6 +297,13 @@ int mtk_cam_sv_is_zero_fbc_cnt(
 	struct mtk_camsv_device *sv_dev, unsigned int enable_tags);
 void mtk_cam_sv_check_fbc_cnt(
 	struct mtk_camsv_device *sv_dev, unsigned int tag_idx);
+void mtk_cam_sv_fill_pdp_tag_info(struct mtk_camsv_tag_info *arr_tag,
+	struct mtkcam_ipi_config_param *ipi_config,
+	struct mtk_camsv_tag_param *tag_param, unsigned int hw_scen,
+	unsigned int pixelmode, unsigned int sub_ratio,
+	unsigned int mbus_width, unsigned int mbus_height,
+	unsigned int mbus_code, unsigned int is_unpack_msb,
+	struct mtk_mraw_pipeline *pipeline);
 void mtk_cam_sv_fill_tag_info(struct mtk_camsv_tag_info *arr_tag,
 	struct mtkcam_ipi_config_param *ipi_config,
 	struct mtk_camsv_tag_param *tag_param, unsigned int hw_scen,

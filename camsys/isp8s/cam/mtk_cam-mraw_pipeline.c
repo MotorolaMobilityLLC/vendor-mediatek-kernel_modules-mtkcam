@@ -347,7 +347,11 @@ static const char *mraw_output_queue_names[MRAW_PIPELINE_NUM]
 	{"mtk-cam mraw-0 meta-input"},
 	{"mtk-cam mraw-1 meta-input"},
 	{"mtk-cam mraw-2 meta-input"},
-	{"mtk-cam mraw-3 meta-input"}
+	{"mtk-cam mraw-3 meta-input"},
+	{"mtk-cam mraw-4 meta-input"},
+	{"mtk-cam mraw-5 meta-input"},
+	{"mtk-cam mraw-6 meta-input"},
+	{"mtk-cam mraw-7 meta-input"}
 };
 
 static const struct
@@ -373,7 +377,11 @@ static const char *mraw_capture_queue_names[MRAW_PIPELINE_NUM]
 	{"mtk-cam mraw-0 partial-meta-0"},
 	{"mtk-cam mraw-1 partial-meta-0"},
 	{"mtk-cam mraw-2 partial-meta-0"},
-	{"mtk-cam mraw-3 partial-meta-0"}
+	{"mtk-cam mraw-3 partial-meta-0"},
+	{"mtk-cam mraw-4 partial-meta-0"},
+	{"mtk-cam mraw-5 partial-meta-0"},
+	{"mtk-cam mraw-6 partial-meta-0"},
+	{"mtk-cam mraw-7 partial-meta-0"}
 };
 
 static void mtk_mraw_pipeline_queue_setup(

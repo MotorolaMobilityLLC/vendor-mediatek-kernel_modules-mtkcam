@@ -150,10 +150,9 @@ int fill_sv_ext_img_buffer_to_ipi_frame_extisp(
 	buf->image_info.crop.height = node->active_fmt.fmt.pix_mp.height;
 	ret = fill_img_out(helper, out, buf, node);
 
-	fp->camsv_param[0][tag_idx].pipe_id =
+	fp->camsv_param[0][tag_idx].dev_id =
 		sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
 	fp->camsv_param[0][tag_idx].tag_id = tag_idx;
-	fp->camsv_param[0][tag_idx].hardware_scenario = 0;
 	out->uid.id = MTKCAM_IPI_CAMSV_MAIN_OUT;
 	out->uid.pipe_id =
 		sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;

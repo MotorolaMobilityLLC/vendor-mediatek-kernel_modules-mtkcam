@@ -37,6 +37,8 @@
 
 #define CAM_DEV_NAME "mtk_cam_ut"
 #define CAMSV_HW_ID 0
+#define CAMSV_HW_ID_UT 3
+#define PDP_TAG 4
 #ifdef dev_dbg
 #undef dev_dbg
 #define dev_dbg dev_info
@@ -46,7 +48,7 @@ static int debug_testmdl_pixmode = -1;
 module_param(debug_testmdl_pixmode, int, 0644);
 MODULE_PARM_DESC(debug_testmdl_pixmode, "fixed pixel mode for testmdl");
 
-static int apply_mraw_next_req(struct mtk_cam_ut *ut)
+static int apply_sv_pdp_next_req(struct mtk_cam_ut *ut)
 {
 	struct mtk_cam_ut_buf_entry *buf_entry;
 	unsigned long flags;
@@ -70,13 +72,12 @@ static int apply_mraw_next_req(struct mtk_cam_ut *ut)
 	ut->enque_list.cnt--;
 	spin_unlock_irqrestore(&ut->enque_list.lock, flags);
 
-
-	CALL_MRAW_OPS(ut->mraw[0], apply_cq,
-		     buf_entry->cq_buf.iova,
-		     buf_entry->cq_buf.size,
-		     buf_entry->cq_offset,
-		     buf_entry->sub_cq_size,
-		     buf_entry->sub_cq_offset);
+	CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID], apply_cq,
+			     buf_entry->cq_buf.iova,
+			     buf_entry->cq_buf.size,
+			     buf_entry->cq_offset,
+			     buf_entry->sub_cq_size,
+			     buf_entry->sub_cq_offset);
 
 	spin_lock_irqsave(&ut->processing_list.lock, flags);
 	list_add_tail(&buf_entry->list_entry, &ut->processing_list.list);
@@ -85,6 +86,7 @@ static int apply_mraw_next_req(struct mtk_cam_ut *ut)
 
 	return 0;
 }
+
 static int apply_sv_next_req(struct mtk_cam_ut *ut)
 {
 	struct mtk_cam_ut_buf_entry *buf_entry;
@@ -109,7 +111,7 @@ static int apply_sv_next_req(struct mtk_cam_ut *ut)
 	ut->enque_list.cnt--;
 	spin_unlock_irqrestore(&ut->enque_list.lock, flags);
 
-	CALL_CAMSV_OPS(ut->camsv[3], apply_cq,
+	CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID_UT], apply_cq,
 			     buf_entry->cq_buf.iova,
 			     buf_entry->cq_buf.size,
 			     buf_entry->cq_offset,
@@ -230,9 +232,23 @@ static int on_ipi_composed(struct mtk_cam_ut *ut)
 	return  0;
 }
 
+static int apply_sv_pdp_req_on_composed_once(struct mtk_cam_ut *ut)
+{
+	struct mtk_ut_mraw_initial_params sv_pdp_params;
+
+	sv_pdp_params.subsample = ut->subsample;
+
+	CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID], initialize, &sv_pdp_params);
+
+	ut->hdl.on_ipi_composed = on_ipi_composed;
+
+	return apply_sv_pdp_next_req(ut);
+
+}
+
 static int apply_sv_req_on_composed_once(struct mtk_cam_ut *ut)
 {
-	CALL_CAMSV_OPS(ut->camsv[3], initialize, NULL);
+	CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID_UT], initialize, NULL);
 
 	ut->hdl.on_ipi_composed = on_ipi_composed;
 	return apply_sv_next_req(ut);
@@ -304,6 +320,11 @@ static int apply_req_on_composed_m2m_once(struct mtk_cam_ut *ut)
 	return apply_next_req(ut);
 }
 
+static int single_sv_pdp_case(enum isp_hardware_enum isp_hardware)
+{
+	return (isp_hardware & SINGLE_SV_PDP) ? 1 : 0;
+}
+
 static int single_sv_case(enum isp_hardware_enum isp_hardware)
 {
 	return (isp_hardware & SINGLE_SV) ? 1 : 0;
@@ -343,7 +364,16 @@ static int streamon_on_cqdone_once(struct mtk_cam_ut *ut)
 static int streamon_sv_on_cqdone_once(struct mtk_cam_ut *ut)
 {
 
-	CALL_CAMSV_OPS(ut->camsv[3], s_stream, streaming_vf);
+	CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID_UT], s_stream, streaming_vf);
+
+	ut->hdl.on_isr_cq_done = NULL;
+	return 0;
+}
+
+static int streamon_sv_pdp_on_cqdone_once(struct mtk_cam_ut *ut)
+{
+
+	CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID], s_stream, streaming_vf);
 
 	ut->hdl.on_isr_cq_done = NULL;
 	return 0;
@@ -386,11 +416,11 @@ static void setup_hanlder(struct mtk_cam_ut *ut)
 			ut->hdl.on_isr_sv_sof = apply_sv_next_req;
 			ut->hdl.on_isr_cq_done = streamon_sv_on_cqdone_once;
 			ut->hdl.on_isr_frame_done = handle_req_done;
-		} else if (single_mraw_case(ut->isp_hardware)) {
-			ut->hdl.on_ipi_composed = apply_mraw_req_on_composed_once;
+		} else if (single_sv_pdp_case(ut->isp_hardware)) {
+			ut->hdl.on_ipi_composed = apply_sv_pdp_req_on_composed_once;
 			ut->hdl.on_isr_sof = NULL;
-			ut->hdl.on_isr_mraw_sof = apply_mraw_next_req;
-			ut->hdl.on_isr_cq_done = streamon_mraw_on_cqdone_once;
+			ut->hdl.on_isr_sv_sof = apply_sv_pdp_next_req;
+			ut->hdl.on_isr_cq_done = streamon_sv_pdp_on_cqdone_once;
 			ut->hdl.on_isr_frame_done = handle_req_done;
 		} else {
 			ut->hdl.on_ipi_composed = apply_req_on_composed_once;
@@ -476,15 +506,14 @@ static int cam_composer_handler(struct rpmsg_device *rpdev, void *data,
 				buf_entry->cq_buf.size, buf_entry->cq_offset);
 		}
 
-		if (single_mraw_case(ut->isp_hardware)) {
+		if (single_sv_pdp_case(ut->isp_hardware)) {
 			buf_entry->cq_buf.size =
-				ipi_msg->ack_data.frame_result.mraw[0].size;
+				ipi_msg->ack_data.frame_result.camsv[0].size;
 			buf_entry->cq_offset =
-				ipi_msg->ack_data.frame_result.mraw[0].offset;
-			dev_info(dev, "%s, mraw size/offset(%d/%d)\n", __func__,
+				ipi_msg->ack_data.frame_result.camsv[0].offset;
+			dev_info(dev, "%s, camsv size/offset(%d/%d)\n", __func__,
 				buf_entry->cq_buf.size, buf_entry->cq_offset);
 		}
-
 
 		if (ut->hdl.on_ipi_composed)
 			ut->hdl.on_ipi_composed(ut);
@@ -852,12 +881,12 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 						pattern, 1,
 						para, ARRAY_SIZE(para));
 			}
-			if (ut->isp_hardware & SINGLE_MRAW) {
+			if (ut->isp_hardware & SINGLE_SV_PDP) {
 				struct mtk_cam_ut_tm_para para[1];
 
-				para[0].tg_idx = pdp_tg_0;
+				para[0].tg_idx = camsv_tg_0;
 				para[0].exp_no = testmdl_exp1;
-				para[0].tag = tag_0;
+				para[0].tag = tag_4;
 				para[0].pixmode = pixel_mode;
 
 				CALL_SENINF_OPS(seninf, set_size,
@@ -1024,6 +1053,10 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				(ut->num_camsv > CAMSV_HW_ID)) {
 				CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID], s_stream, streaming_off);
 			}
+
+			if (ut->isp_hardware & SINGLE_SV_PDP)
+				CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID], s_stream, streaming_off);
+
 			if (!is_direct_couple(ut->hardware_scenario)) {
 				CALL_RAW_OPS(ut->raw[0], s_stream, streaming_off);
 				/* stream off rawb for bc case(or any case)
@@ -1163,8 +1196,8 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		/* TODO: camsv subsample */
 		if (ut->isp_hardware & WITH_RAW)
 			ut->subsample = config.config_param.input.subsample;
-		else if (ut->isp_hardware & SINGLE_MRAW)
-			ut->subsample = config.config_param.mraw_input[0].input.subsample;
+		else if (ut->isp_hardware & SINGLE_SV_PDP)
+			ut->subsample = config.config_param.sv_input[0][PDP_TAG].input.subsample;
 
 		if ((config.config_param.n_maps > 0) &&
 			(config.config_param.n_maps < MAX_N_MAPS)) {

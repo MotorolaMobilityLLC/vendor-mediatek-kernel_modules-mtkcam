@@ -44,8 +44,6 @@ unsigned long engine_idx_to_bit(int engine_type, int idx)
 
 	if (engine_type == CAMSYS_ENGINE_RAW)
 		map_hw = MAP_HW_RAW;
-	else if (engine_type == CAMSYS_ENGINE_MRAW)
-		map_hw = MAP_HW_MRAW;
 	else if (engine_type == CAMSYS_ENGINE_CAMSV)
 		map_hw = MAP_HW_CAMSV;
 
