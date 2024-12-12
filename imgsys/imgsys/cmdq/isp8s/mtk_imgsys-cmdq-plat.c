@@ -2933,6 +2933,14 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 						__func__, cmd->u.fd, pre_fd, iova_addr);
 				}
 			}
+
+			if (imgsys_iova_dbg_enable_plat8s() || iova_dbg) {
+				pr_info(
+					"%s: WRITE_FD_HW with req_fd/no(%d/%d) frame_no(%d) addr(0x%08lx) fd(0x%08x) iova(0x%08llx)\n",
+					__func__, req_fd, req_no, frm_no,
+					(unsigned long)cmd->u.dma_addr, cmd->u.fd, iova_addr);
+			}
+
 			cur_iova_addr = iova_addr + cmd->u.ofst;
 			//
 			/* call module api to get mask and shifted iova */
