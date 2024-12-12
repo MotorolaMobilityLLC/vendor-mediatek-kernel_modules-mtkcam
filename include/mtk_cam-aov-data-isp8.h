@@ -73,4 +73,12 @@ struct mtk_seninf_aov_param {
 	u8 not_fixed_dphy_settle;
 };
 
+struct mtk_seninf_aov_ctrl {
+	u32 aov_sensor_idx;
+	u32 aov_csi_port;
+	u32 aov_scp_alive;
+	struct seninf_ctx *aov_ctx;
+	struct mtk_seninf_aov_param aov_param;
+};
+
 #endif /* __MTK_CAM_AOV_DATA_ISP8_H */

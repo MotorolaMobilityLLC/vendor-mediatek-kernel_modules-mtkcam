@@ -52,8 +52,7 @@ struct seninf_ctx;
 
 /* aov sensor use */
 #define AOV_SENINF_NUM 6
-extern struct mtk_seninf_aov_param g_aov_param;
-extern struct seninf_ctx *aov_ctx[AOV_SENINF_NUM];
+extern struct mtk_seninf_aov_ctrl g_aov_ctrl[AOV_SENINF_NUM];
 
 struct seninf_struct_pair {
 	u32 first;

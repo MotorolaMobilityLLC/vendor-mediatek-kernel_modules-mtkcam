@@ -43,6 +43,8 @@
 #include "mtk_cam-seninf_control-8.h"
 #include "mtk_cam-seninf-sentest-ioctrl.h"
 #include "mtk_cam-seninf-sentest-ctrl.h"
+#include "mtk_cam-seninf-aov-sentest-ioctrl.h"
+#include "mtk_cam-seninf-aov-sentest-ctrl.h"
 #if KERNEL_VERSION(6, 6, 0) == LINUX_VERSION_CODE
 #define CSI_POWER_STATE
 #ifdef CSI_POWER_STATE
@@ -71,8 +73,7 @@ static unsigned int outmux_st_dump[OUTMUX_DBG_DUMP_MAX_CNT];
 struct mtk_cam_seninf_ops *g_seninf_ops;
 
 /* aov sensor use */
-struct mtk_seninf_aov_param g_aov_param;
-struct seninf_ctx *aov_ctx[AOV_SENINF_NUM];
+struct mtk_seninf_aov_ctrl g_aov_ctrl[AOV_SENINF_NUM];
 
 #if KERNEL_VERSION(6, 6, 0) == LINUX_VERSION_CODE
 static void gather_csi_ps_info(struct seninf_ctx *ctx);
@@ -1683,19 +1684,20 @@ static int set_aov_test_model_param(struct seninf_ctx *ctx, char enable)
 	int ret = 0;
 	struct seninf_vcinfo *vcinfo = &ctx->vcinfo;
 	struct seninf_vc *vc;
+	int aov_csi_port = ctx->port;
 
-	pr_info("[%s]+\n", __func__);
+	pr_info("[%s] aov_csi_port(%d)+\n", __func__, aov_csi_port);
 
 	if (enable) {
-		g_aov_param.sensor_idx = 5; // 5: test model
-		aov_ctx[g_aov_param.sensor_idx] = ctx;
-		g_aov_param.port = ctx->port;
-		g_aov_param.portA = ctx->portA;
-		g_aov_param.portB = ctx->portB;
-		g_aov_param.is_4d1c = ctx->is_4d1c;
-		g_aov_param.seninfAsyncIdx = ctx->seninfAsyncIdx;
-		g_aov_param.cnt = vcinfo->cnt;
-		g_aov_param.is_test_model = ctx->is_aov_test_model;
+		g_aov_ctrl[aov_csi_port].aov_param.sensor_idx = 5; // 5: test model
+		g_aov_ctrl[aov_csi_port].aov_ctx = ctx;
+		g_aov_ctrl[aov_csi_port].aov_param.port = ctx->port;
+		g_aov_ctrl[aov_csi_port].aov_param.portA = ctx->portA;
+		g_aov_ctrl[aov_csi_port].aov_param.portB = ctx->portB;
+		g_aov_ctrl[aov_csi_port].aov_param.is_4d1c = ctx->is_4d1c;
+		g_aov_ctrl[aov_csi_port].aov_param.seninfAsyncIdx = ctx->seninfAsyncIdx;
+		g_aov_ctrl[aov_csi_port].aov_param.cnt = vcinfo->cnt;
+		g_aov_ctrl[aov_csi_port].aov_param.is_test_model = ctx->is_aov_test_model;
 
 		/* must enable mux(clk) before clk_set_parent
 		 * pm_runtime_get_sync will call runtime_resume.
@@ -1709,25 +1711,19 @@ static int set_aov_test_model_param(struct seninf_ctx *ctx, char enable)
 #endif
 		}
 
-		g_aov_param.isp_freq = ISP_CLK_LOW;
+		g_aov_ctrl[aov_csi_port].aov_param.isp_freq = ISP_CLK_LOW;
 
 		for (i = 0; i < vcinfo->cnt; ++i) {
 			vc = &vcinfo->vc[i];
 
 			vc->enable = 1;
 			vc->dest[0].pix_mode = 2;
-
 			vc->dest_cnt = 1;
 			vc->dest[0].outmux = 13;
 
-			//dev_info(ctx->dev,
-			//	"test mode mux %d, cam %d, pixel mode %d, vc = %d, dt = 0x%x\n",
-			//	vc->dest[0].mux, vc->dest[0].cam, vc->dest[0].pix_mode,
-			//	vc->vc, vc->dt);
-
-			g_aov_param.height = 480;
-			g_aov_param.width = 640;
-			g_aov_param.camtg = 33;
+			g_aov_ctrl[aov_csi_port].aov_param.height = 480;
+			g_aov_ctrl[aov_csi_port].aov_param.width = 640;
+			g_aov_ctrl[aov_csi_port].aov_param.camtg = 33;
 
 			udelay(40);
 		}
@@ -1736,9 +1732,9 @@ static int set_aov_test_model_param(struct seninf_ctx *ctx, char enable)
 		/* array size of aov_ctx[] is
 		 * AOV_SENINF_NUM: most number of sensors support
 		 */
-		if (g_aov_param.sensor_idx < AOV_SENINF_NUM) {
-			aov_ctx[g_aov_param.sensor_idx] = NULL;
-			memset(&g_aov_param, 0, sizeof(struct mtk_seninf_aov_param));
+		if (g_aov_ctrl[aov_csi_port].aov_param.sensor_idx < AOV_SENINF_NUM) {
+			g_aov_ctrl[aov_csi_port].aov_ctx = NULL;
+			memset(&g_aov_ctrl[aov_csi_port].aov_param, 0, sizeof(struct mtk_seninf_aov_param));
 		}
 	}
 
@@ -1831,6 +1827,7 @@ static int config_hw_csi(struct seninf_ctx *ctx)
 	struct seninf_core *core = ctx->core;
 #endif
 	int ret = 0;
+	int aov_csi_port = ctx->port;
 
 	memset(&glpinfo, 0, sizeof(struct seninf_glp_dt));
 
@@ -1842,18 +1839,18 @@ static int config_hw_csi(struct seninf_ctx *ctx)
 	if (!(core->aov_sensor_id < 0) &&
 		!(ctx->current_sensor_id < 0) &&
 		(ctx->current_sensor_id == core->aov_sensor_id)) {
-		g_aov_param.port = ctx->port;
-		g_aov_param.portA = ctx->portA;
-		g_aov_param.portB = ctx->portB;
-		g_aov_param.is_4d1c = ctx->is_4d1c;
-		g_aov_param.seninfAsyncIdx = intf;
-		g_aov_param.cnt = vcinfo->cnt;
-		g_aov_param.seninf_dphy_settle_delay_dt =
+		g_aov_ctrl[aov_csi_port].aov_param.port = ctx->port;
+		g_aov_ctrl[aov_csi_port].aov_param.portA = ctx->portA;
+		g_aov_ctrl[aov_csi_port].aov_param.portB = ctx->portB;
+		g_aov_ctrl[aov_csi_port].aov_param.is_4d1c = ctx->is_4d1c;
+		g_aov_ctrl[aov_csi_port].aov_param.seninfAsyncIdx = intf;
+		g_aov_ctrl[aov_csi_port].aov_param.cnt = vcinfo->cnt;
+		g_aov_ctrl[aov_csi_port].aov_param.seninf_dphy_settle_delay_dt =
 			ctx->seninf_dphy_settle_delay_dt;
-		g_aov_param.cphy_settle_delay_dt = ctx->cphy_settle_delay_dt;
-		g_aov_param.dphy_settle_delay_dt = ctx->dphy_settle_delay_dt;
-		g_aov_param.settle_delay_ck = ctx->settle_delay_ck;
-		g_aov_param.hs_trail_parameter = ctx->hs_trail_parameter;
+		g_aov_ctrl[aov_csi_port].aov_param.cphy_settle_delay_dt = ctx->cphy_settle_delay_dt;
+		g_aov_ctrl[aov_csi_port].aov_param.dphy_settle_delay_dt = ctx->dphy_settle_delay_dt;
+		g_aov_ctrl[aov_csi_port].aov_param.settle_delay_ck = ctx->settle_delay_ck;
+		g_aov_ctrl[aov_csi_port].aov_param.hs_trail_parameter = ctx->hs_trail_parameter;
 	}
 #endif
 
@@ -1929,6 +1926,7 @@ static int get_buffered_pixel_rate(struct seninf_ctx *ctx,
 #if AOV_GET_PARAM
 	struct seninf_core *core = ctx->core;
 #endif
+	int aov_csi_port = ctx->port;
 
 	fmt.pad = sd_pad_idx;
 	fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
@@ -1978,12 +1976,12 @@ static int get_buffered_pixel_rate(struct seninf_ctx *ctx,
 	if (!(core->aov_sensor_id < 0) &&
 		!(ctx->current_sensor_id < 0) &&
 		(ctx->current_sensor_id == core->aov_sensor_id)) {
-		g_aov_param.width = width;
-		g_aov_param.height = height;
-		g_aov_param.hblank = hblank;
-		g_aov_param.vblank = vblank;
-		g_aov_param.fps_n = ctx->fps_n;
-		g_aov_param.fps_d = ctx->fps_d;
+		g_aov_ctrl[aov_csi_port].aov_param.width = width;
+		g_aov_ctrl[aov_csi_port].aov_param.height = height;
+		g_aov_ctrl[aov_csi_port].aov_param.hblank = hblank;
+		g_aov_ctrl[aov_csi_port].aov_param.vblank = vblank;
+		g_aov_ctrl[aov_csi_port].aov_param.fps_n = ctx->fps_n;
+		g_aov_ctrl[aov_csi_port].aov_param.fps_d = ctx->fps_d;
 	}
 #endif
 
@@ -1998,6 +1996,7 @@ static int get_customized_pixel_rate(struct seninf_ctx *ctx, struct v4l2_subdev 
 #if AOV_GET_PARAM
 	struct seninf_core *core = ctx->core;
 #endif
+	int aov_csi_port = ctx->port;
 
 	ctrl = v4l2_ctrl_find(sd->ctrl_handler, V4L2_CID_MTK_CUST_SENSOR_PIXEL_RATE);
 	if (!ctrl) {
@@ -2009,9 +2008,9 @@ static int get_customized_pixel_rate(struct seninf_ctx *ctx, struct v4l2_subdev 
 
 #if AOV_GET_PARAM
 	if (!(core->aov_sensor_id < 0) &&
-		!(ctx->current_sensor_id < 0) &&
-		(ctx->current_sensor_id == core->aov_sensor_id))
-		g_aov_param.customized_pixel_rate = *result;
+	    !(ctx->current_sensor_id < 0) &&
+	     (ctx->current_sensor_id == core->aov_sensor_id))
+		g_aov_ctrl[aov_csi_port].aov_param.customized_pixel_rate = *result;
 #endif
 
 	return 0;
@@ -2024,6 +2023,7 @@ static int get_pixel_rate(struct seninf_ctx *ctx, struct v4l2_subdev *sd,
 #if AOV_GET_PARAM
 	struct seninf_core *core = ctx->core;
 #endif
+	int aov_csi_port = ctx->port;
 
 	ctrl = v4l2_ctrl_find(sd->ctrl_handler, V4L2_CID_PIXEL_RATE);
 	if (!ctrl) {
@@ -2035,9 +2035,9 @@ static int get_pixel_rate(struct seninf_ctx *ctx, struct v4l2_subdev *sd,
 
 #if AOV_GET_PARAM
 	if (!(core->aov_sensor_id < 0) &&
-		!(ctx->current_sensor_id < 0) &&
-		(ctx->current_sensor_id == core->aov_sensor_id))
-		g_aov_param.mipi_pixel_rate = *result;
+	    !(ctx->current_sensor_id < 0) &&
+	     (ctx->current_sensor_id == core->aov_sensor_id))
+		g_aov_ctrl[aov_csi_port].aov_param.mipi_pixel_rate = *result;
 #endif
 
 	return 0;
@@ -2050,6 +2050,7 @@ static int get_mbus_config(struct seninf_ctx *ctx, struct v4l2_subdev *sd)
 #if AOV_GET_PARAM
 	struct seninf_core *core = ctx->core;
 #endif
+	int aov_csi_port = ctx->port;
 
 	ret = v4l2_subdev_call(sd, pad, get_mbus_config, ctx->sensor_pad_idx, &cfg);
 	if (ret) {
@@ -2065,8 +2066,8 @@ static int get_mbus_config(struct seninf_ctx *ctx, struct v4l2_subdev *sd)
 	if (!(core->aov_sensor_id < 0) &&
 		!(ctx->current_sensor_id < 0) &&
 		(ctx->current_sensor_id == core->aov_sensor_id)) {
-		g_aov_param.is_cphy = ctx->is_cphy;
-		g_aov_param.num_data_lanes = ctx->num_data_lanes;
+		g_aov_ctrl[aov_csi_port].aov_param.is_cphy = ctx->is_cphy;
+		g_aov_ctrl[aov_csi_port].aov_param.num_data_lanes = ctx->num_data_lanes;
 	}
 #endif
 
@@ -2410,6 +2411,7 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 #if AOV_GET_PARAM
 	struct seninf_core *core = ctx->core;
 #endif
+	int aov_csi_port = ctx->port;
 
 	if (ctx->csi_streaming == enable) {
 		dev_info(ctx->dev,
@@ -2429,7 +2431,7 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 	dev_info(ctx->dev, "[%s] enable(%d)\n", __func__, enable);
 
 	if (ctx->is_aov_real_sensor && !enable) {
-		if (!core->pwr_refcnt_for_aov)
+		if (!g_aov_ctrl[aov_csi_port].aov_scp_alive)
 			dev_info(ctx->dev,
 				"[%s] aov real sensor streaming off by aov MW on apmcu side\n",
 				__func__);
@@ -2467,9 +2469,8 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 		if (!(core->aov_sensor_id < 0) &&
 			!(ctx->current_sensor_id < 0) &&
 			(ctx->current_sensor_id == core->aov_sensor_id))
-			g_aov_param.isp_freq = ISP_CLK_LOW;
+			g_aov_ctrl[aov_csi_port].aov_param.isp_freq = ISP_CLK_LOW;
 #endif
-
 		if (likely(ctx->is_test_model == 0)) {
 			/* notify tsrec seninf_csi relationship & start tsrec */
 			mtk_cam_seninf_tsrec_n_start(ctx->tsrec_idx, ctx->tsrec_idx);
@@ -2551,6 +2552,8 @@ static int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 	int deskew_dump_idx;
 #endif /*INIT_DESKEW_DEBUG*/
 
+	int aov_csi_port = ctx->port;
+
 	/* get current sensor idx by get_sensor_idx */
 	if (!ctx->is_test_model) {
 		ctx->current_sensor_id = get_sensor_idx(ctx);
@@ -2609,7 +2612,7 @@ static int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 	}
 
 	if (ctx->is_aov_real_sensor && !enable) {
-		if (!core->pwr_refcnt_for_aov)
+		if (!g_aov_ctrl[aov_csi_port].aov_scp_alive)
 			dev_info(ctx->dev,
 				"[%s] aov real sensor streaming off by aov MW on apmcu side\n",
 				__func__);
@@ -2654,17 +2657,19 @@ static int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 
 	if (core->aov_abnormal_deinit_flag) {
 		ctx->is_aov_real_sensor = 0;
-		if (!core->pwr_refcnt_for_aov &&
+		if (!g_aov_ctrl[aov_csi_port].aov_scp_alive &&
 			core->aov_abnormal_deinit_usr_fd_kill_flag) {
 			dev_info(ctx->dev,
 				"[%s] set aov real sensor off\n", __func__);
 			/* array size of aov_ctx[] is
 			 * AOV_SENINF_NUM: most number of sensors support
 			 */
-			if (g_aov_param.sensor_idx < AOV_SENINF_NUM) {
-				aov_ctx[g_aov_param.sensor_idx] = NULL;
-				memset(&g_aov_param, 0,
-					sizeof(struct mtk_seninf_aov_param));
+			if (g_aov_ctrl[aov_csi_port].aov_param.sensor_idx < AOV_SENINF_NUM) {
+				g_aov_ctrl[aov_csi_port].aov_ctx = NULL;
+				memset(&g_aov_ctrl[aov_csi_port].aov_param,
+					0, sizeof(struct mtk_seninf_aov_param));
+				seninf_logi(ctx, "[%s] ERROR: aov_csi_port(%d)\n",
+					__func__, aov_csi_port);
 			}
 			spin_lock_irqsave(&core->spinlock_aov, flags);
 			core->aov_abnormal_deinit_usr_fd_kill_flag = 0;
@@ -2698,6 +2703,9 @@ long mtk_cam_seninf_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	switch (cmd) {
 	case VIDIOC_MTK_S_SENINF_SENTEST_CTRL:
 		ret = seninf_sentest_ioctl_entry(ctx, arg);
+		break;
+	case VIDIOC_MTK_S_SENINF_AOV_SENTEST_CTRL:
+		ret = seninf_aov_sentest_ioctl_entry(ctx, arg);
 		break;
 	default:
 		dev_info(ctx->dev, "ioctl cmd(%d) is invalid\n", cmd);
@@ -2854,6 +2862,7 @@ static int seninf_real_sensor_for_aov_param(struct seninf_ctx *ctx, u32 enable)
 	struct seninf_core *core = ctx->core;
 	unsigned long flags;
 	int tmp;
+	int aov_csi_port = ctx->port;
 
 	switch (enable) {
 	case 0:
@@ -2865,9 +2874,11 @@ static int seninf_real_sensor_for_aov_param(struct seninf_ctx *ctx, u32 enable)
 			/* because array size of aov_ctx[] is
 			 * AOV_SENINF_NUM: most number of sensors support
 			 */
-			if (g_aov_param.sensor_idx < AOV_SENINF_NUM) {
-				aov_ctx[g_aov_param.sensor_idx] = NULL;
-				memset(&g_aov_param, 0, sizeof(struct mtk_seninf_aov_param));
+			if (g_aov_ctrl[aov_csi_port].aov_param.sensor_idx < AOV_SENINF_NUM) {
+				g_aov_ctrl[aov_csi_port].aov_ctx = NULL;
+				memset(&g_aov_ctrl[aov_csi_port].aov_param, 0,sizeof(struct mtk_seninf_aov_param));
+				seninf_logi(ctx, "[%s] ERROR: aov_csi_port(%d)\n",
+					__func__, aov_csi_port);
 			}
 		}
 		break;
@@ -2887,9 +2898,10 @@ static int seninf_real_sensor_for_aov_param(struct seninf_ctx *ctx, u32 enable)
 			 */
 			if (core->aov_sensor_id >= 0 &&
 				core->aov_sensor_id < AOV_SENINF_NUM) {
-				g_aov_param.sensor_idx = core->aov_sensor_id;
-				aov_ctx[g_aov_param.sensor_idx] = ctx;
-				g_aov_param.is_test_model = 0;
+				g_aov_ctrl[aov_csi_port].aov_param.sensor_idx = core->aov_sensor_id;
+				g_aov_ctrl[aov_csi_port].aov_sensor_idx = core->aov_sensor_id;
+				g_aov_ctrl[aov_csi_port].aov_ctx = ctx;
+				g_aov_ctrl[aov_csi_port].aov_param.is_test_model = 0;
 			} else {
 				dev_info(ctx->dev,
 					"[%s] get_sensor_idx[%d] fail\n",
@@ -2986,6 +2998,7 @@ static int mtk_cam_seninf_set_ctrl(struct v4l2_ctrl *ctrl)
 	struct seninf_core *core = ctx->core;
 	unsigned long flags;
 	int tmp;
+	int aov_csi_port = ctx->port;
 
 	switch (ctrl->id) {
 	case V4L2_CID_TEST_PATTERN:
@@ -3015,6 +3028,10 @@ static int mtk_cam_seninf_set_ctrl(struct v4l2_ctrl *ctrl)
 				}
 				ctx->is_test_model = 1;
 				ctx->is_aov_test_model = 1;
+
+				g_aov_ctrl[aov_csi_port].aov_param.sensor_idx = core->aov_sensor_id;
+				g_aov_ctrl[aov_csi_port].aov_sensor_idx = core->aov_sensor_id;
+				g_aov_ctrl[aov_csi_port].aov_ctx = ctx;
 				dev_info(ctx->dev, "set aov test pattern on\n");
 				ret = seninf_s_stream(&ctx->subdev, s_stream_ctrl->enable);
 			} else {
@@ -3037,7 +3054,7 @@ static int mtk_cam_seninf_set_ctrl(struct v4l2_ctrl *ctrl)
 					return -EBUSY;
 				}
 				ctx->is_aov_real_sensor = 1;
-				if (!core->pwr_refcnt_for_aov) {
+				if (!g_aov_ctrl[aov_csi_port].aov_scp_alive) {
 					seninf_logd(ctx,
 						"[%s] set aov real sensor on\n", __func__);
 					/* get aov sensor idx by get_sensor_idx */
@@ -3050,9 +3067,10 @@ static int mtk_cam_seninf_set_ctrl(struct v4l2_ctrl *ctrl)
 					 */
 					if (core->aov_sensor_id >= 0 &&
 						core->aov_sensor_id < AOV_SENINF_NUM) {
-						g_aov_param.sensor_idx = core->aov_sensor_id;
-						aov_ctx[g_aov_param.sensor_idx] = ctx;
-						g_aov_param.is_test_model = 0;
+						g_aov_ctrl[aov_csi_port].aov_param.sensor_idx = core->aov_sensor_id;
+						g_aov_ctrl[aov_csi_port].aov_sensor_idx = core->aov_sensor_id;
+						g_aov_ctrl[aov_csi_port].aov_ctx = ctx;
+						g_aov_ctrl[aov_csi_port].aov_param.is_test_model = 0;
 					} else {
 						dev_info(ctx->dev,
 							"[%s] get_sensor_idx[%d] fail\n",
@@ -3066,6 +3084,11 @@ static int mtk_cam_seninf_set_ctrl(struct v4l2_ctrl *ctrl)
 					dev_info(ctx->dev,
 						"[%s] aov user input wrong sensor id!\n", __func__);
 			} else {
+				/* support dual-cam */
+				tmp = get_sensor_idx(ctx);
+				spin_lock_irqsave(&core->spinlock_aov, flags);
+				core->aov_sensor_id = tmp;
+				spin_unlock_irqrestore(&core->spinlock_aov, flags);
 				if (ctx->current_sensor_id == core->aov_sensor_id)
 					ret = seninf_s_stream(&ctx->subdev, s_stream_ctrl->enable);
 				else
@@ -3077,16 +3100,18 @@ static int mtk_cam_seninf_set_ctrl(struct v4l2_ctrl *ctrl)
 					return -EBUSY;
 				}
 				ctx->is_aov_real_sensor = 0;
-				if (!core->pwr_refcnt_for_aov) {
+				if (!g_aov_ctrl[aov_csi_port].aov_scp_alive) {
 					dev_info(ctx->dev,
 						"[%s] set aov real sensor off\n", __func__);
 					/* array size of aov_ctx[] is
 					 * AOV_SENINF_NUM: most number of sensors support
 					 */
-					if (g_aov_param.sensor_idx < AOV_SENINF_NUM) {
-						aov_ctx[g_aov_param.sensor_idx] = NULL;
-						memset(&g_aov_param, 0,
+					if (g_aov_ctrl[aov_csi_port].aov_param.sensor_idx < AOV_SENINF_NUM) {
+						g_aov_ctrl[aov_csi_port].aov_ctx = NULL;
+						memset(&g_aov_ctrl[aov_csi_port].aov_param, 0,
 							sizeof(struct mtk_seninf_aov_param));
+						seninf_logi(ctx, "[%s] ERROR: aov_csi_port(%d)\n",
+							__func__, aov_csi_port);
 					}
 				}
 			}
@@ -3167,6 +3192,7 @@ static int seninf_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct seninf_ctx *ctx = sd_to_ctx(sd);
 	unsigned int i;
+	int aov_csi_port = ctx->port;
 
 	mutex_lock(&ctx->mutex);
 	ctx->open_refcnt--;
@@ -3177,8 +3203,8 @@ static int seninf_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 
 		/* clear aov_ctx */
 		for (i = 0; i < AOV_SENINF_NUM; i++) {
-			if (aov_ctx[i] == ctx) {
-				aov_ctx[i] = NULL;
+			if (g_aov_ctrl[aov_csi_port].aov_ctx == ctx) {
+				g_aov_ctrl[aov_csi_port].aov_ctx = NULL;
 				dev_info(ctx->dev, "%s clear aov_ctx[%u]\n", __func__, i);
 			}
 		}
@@ -3594,12 +3620,17 @@ static int seninf_probe(struct platform_device *pdev)
 	pm_runtime_enable(dev);
 	device_enable_async_suspend(dev);
 
-	memset(&g_aov_param, 0, sizeof(struct mtk_seninf_aov_param));
+	memset(&g_aov_ctrl, 0, sizeof(struct mtk_seninf_aov_ctrl));
+
 	/* array size of aov_ctx[] is
 	 * AOV_SENINF_NUM: most number of sensors support
 	 */
-	for (i = 0; i < AOV_SENINF_NUM; i++)
-		aov_ctx[i] = NULL;
+	for (i = 0; i < AOV_SENINF_NUM; i++) {
+		g_aov_ctrl[i].aov_ctx = NULL;
+		g_aov_ctrl[i].aov_sensor_idx = -1;
+		g_aov_ctrl[i].aov_csi_port = -1;
+		g_aov_ctrl[i].aov_scp_alive = 0;
+	}
 
 	dev_info(dev, "%s: port=%d, AsyncIdx=%d, SelSensor=%d, tsrec_idx=%u\n",
 		__func__, ctx->port, ctx->seninfAsyncIdx, ctx->seninfSelSensor, ctx->tsrec_idx);
@@ -4584,6 +4615,18 @@ void mtk_cam_seninf_set_secure(struct v4l2_subdev *sd, int enable, u64 SecInfo_a
 	ctx->is_secure = enable ? 1 : 0;
 }
 
+int mtk_cam_seninf_aov_get_csi_port_from_sensor_id(unsigned int sensor_id)
+{
+	int aov_csi_port;
+
+	for (aov_csi_port = 0; aov_csi_port < AOV_SENINF_NUM; aov_csi_port++) {
+		if (g_aov_ctrl[aov_csi_port].aov_sensor_idx == sensor_id)
+			return aov_csi_port;
+	}
+
+	return -1;
+}
+
 int mtk_cam_seninf_aov_runtime_suspend(unsigned int sensor_id)
 {
 	struct seninf_ctx *ctx = NULL;
@@ -4591,12 +4634,23 @@ int mtk_cam_seninf_aov_runtime_suspend(unsigned int sensor_id)
 	struct seninf_core *core = NULL;
 	int ret = 0;
 	int i = 0;
+	int aov_csi_port = -1;
+	struct mtk_seninf_aov_param aov_param;
 
-	if (g_aov_param.is_test_model) {
+	aov_csi_port = mtk_cam_seninf_aov_get_csi_port_from_sensor_id(sensor_id);
+
+	if (aov_csi_port == -1) {
+		pr_info("[%s] No match sensor_id(%d) in g_aov_ctrl\n", __func__, sensor_id);
+		return -ENODEV;
+	}
+
+	aov_param = g_aov_ctrl[aov_csi_port].aov_param;
+
+	if (aov_param.is_test_model) {
 		real_sensor_id = 5;
 	} else {
-		if (sensor_id == g_aov_param.sensor_idx) {
-			real_sensor_id = g_aov_param.sensor_idx;
+		if (sensor_id == aov_param.sensor_idx) {
+			real_sensor_id = aov_param.sensor_idx;
 			pr_info("[%s] input sensor id(%u)(success)\n",
 				__func__, real_sensor_id);
 		} else {
@@ -4613,9 +4667,9 @@ int mtk_cam_seninf_aov_runtime_suspend(unsigned int sensor_id)
 	 *	pr_info("g_aov_param.sensor_idx %d\n",
 	 *		g_aov_param.sensor_idx);
 	 */
-	if (aov_ctx[real_sensor_id] != NULL) {
-		pr_info("[%s] sensor idx(%u)\n", __func__, real_sensor_id);
-		ctx = aov_ctx[real_sensor_id];
+	if (g_aov_ctrl[aov_csi_port].aov_ctx != NULL) {
+		pr_info("[%s] aov_csi_port(%u)\n", __func__, aov_csi_port);
+		ctx = g_aov_ctrl[aov_csi_port].aov_ctx;
 	} else {
 		pr_info("[%s] Can't find ctx from input sensor id!\n", __func__);
 		return -ENODEV;
@@ -4625,6 +4679,7 @@ int mtk_cam_seninf_aov_runtime_suspend(unsigned int sensor_id)
 	mutex_lock(&core->mutex);
 
 	core->pwr_refcnt_for_aov++;
+	g_aov_ctrl[aov_csi_port].aov_scp_alive = 1;
 	if (core->pwr_refcnt_for_aov < 0) {
 		dev_info(ctx->dev,
 			"[%s] please check aov_deinit times?(%d)\n",
@@ -4740,15 +4795,26 @@ int mtk_cam_seninf_aov_runtime_resume(unsigned int sensor_id,
 	int ret = 0;
 #endif
 	int i = 0;
+	int aov_csi_port = -1;
+	struct mtk_seninf_aov_param aov_param;
+
+	aov_csi_port = mtk_cam_seninf_aov_get_csi_port_from_sensor_id(sensor_id);
+
+	if (aov_csi_port == -1) {
+		pr_info("[%s] No match sensor_id(%d) in g_aov_ctrl\n", __func__, sensor_id);
+		return -ENODEV;
+	}
+
+	aov_param = g_aov_ctrl[aov_csi_port].aov_param;
 
 	pr_info("[%s] sensor_id(%d),aov_seninf_deinit_type(%u)\n",
 		__func__, sensor_id, aov_seninf_deinit_type);
 
-	if (g_aov_param.is_test_model) {
+	if (aov_param.is_test_model) {
 		real_sensor_id = 5;
 	} else {
-		if (sensor_id == g_aov_param.sensor_idx) {
-			real_sensor_id = g_aov_param.sensor_idx;
+		if (sensor_id == aov_param.sensor_idx) {
+			real_sensor_id = aov_param.sensor_idx;
 		} else {
 			real_sensor_id = sensor_id;
 			pr_info("input sensor id(%u)(fail)\n", real_sensor_id);
@@ -4763,11 +4829,11 @@ int mtk_cam_seninf_aov_runtime_resume(unsigned int sensor_id,
 	 *	pr_info("g_aov_param.sensor_idx %d\n",
 	 *		g_aov_param.sensor_idx);
 	 */
-	if (aov_ctx[real_sensor_id] != NULL) {
-		pr_info("[%s] sensor idx(%u)\n", __func__, real_sensor_id);
-		ctx = aov_ctx[real_sensor_id];
+	if (g_aov_ctrl[aov_csi_port].aov_ctx != NULL) {
+		pr_info("[%s] aov_csi_port(%u)\n", __func__, aov_csi_port);
+		ctx = g_aov_ctrl[aov_csi_port].aov_ctx;
 #ifdef SENSING_MODE_READY
-		if (!g_aov_param.is_test_model) {
+		if (!aov_param.is_test_model ) {
 			/* switch i2c bus scl from scp to apmcu */
 			aov_switch_i2c_bus_scl_aux(ctx, SCL13);
 			/* switch i2c bus sda from scp to apmcu */
@@ -4785,6 +4851,7 @@ int mtk_cam_seninf_aov_runtime_resume(unsigned int sensor_id,
 	mutex_lock(&core->mutex);
 
 	core->pwr_refcnt_for_aov--;
+	g_aov_ctrl[aov_csi_port].aov_scp_alive = 0;
 	if (core->pwr_refcnt_for_aov < 0) {
 		dev_info(ctx->dev,
 			"[%s] please check aov_deinit times?(%d), reset to zero\n",
@@ -4962,14 +5029,25 @@ int mtk_cam_seninf_aov_reset_sensor(unsigned int sensor_id)
 	unsigned int real_sensor_id = 0;
 	struct seninf_core *core = NULL;
 	int reset_by_user = 0;
+	int aov_csi_port = -1;
+	struct mtk_seninf_aov_param aov_param;
 
 	pr_info("[%s] sensor_id(%d)\n", __func__, sensor_id);
 
-	if (g_aov_param.is_test_model) {
+	aov_csi_port = mtk_cam_seninf_aov_get_csi_port_from_sensor_id(sensor_id);
+
+	if (aov_csi_port == -1) {
+		pr_info("[%s] No match sensor_id(%d) in g_aov_ctrl\n", __func__, sensor_id);
+		return -ENODEV;
+	}
+
+	aov_param = g_aov_ctrl[aov_csi_port].aov_param;
+
+	if (aov_param.is_test_model) {
 		real_sensor_id = 5;
 	} else {
-		if (sensor_id == g_aov_param.sensor_idx) {
-			real_sensor_id = g_aov_param.sensor_idx;
+		if (sensor_id == aov_param.sensor_idx) {
+			real_sensor_id = aov_param.sensor_idx;
 			pr_info("input sensor id(%u)(success)\n", real_sensor_id);
 		} else {
 			real_sensor_id = sensor_id;
@@ -4985,9 +5063,9 @@ int mtk_cam_seninf_aov_reset_sensor(unsigned int sensor_id)
 	 *	pr_info("g_aov_param.sensor_idx %d\n",
 	 *		g_aov_param.sensor_idx);
 	 */
-	if (aov_ctx[real_sensor_id] != NULL) {
-		pr_info("[%s] sensor idx(%u)\n", __func__, real_sensor_id);
-		ctx = aov_ctx[real_sensor_id];
+	if (g_aov_ctrl[aov_csi_port].aov_ctx != NULL) {
+		pr_info("[%s] aov_csi_port(%u)\n", __func__, aov_csi_port);
+		ctx = g_aov_ctrl[aov_csi_port].aov_ctx;
 	} else {
 		pr_info("[%s] Can't find ctx from input sensor id!\n", __func__);
 		return -ENODEV;
@@ -4997,7 +5075,7 @@ int mtk_cam_seninf_aov_reset_sensor(unsigned int sensor_id)
 	mutex_lock(&core->mutex);
 
 	reset_by_user = is_reset_by_user(ctx);
-	if (!reset_by_user && !g_aov_param.is_test_model) {
+	if (!reset_by_user && !aov_param.is_test_model) {
 		/* switch i2c bus scl from scp to apmcu */
 		aov_switch_i2c_bus_scl_aux(ctx, SCL13);
 		/* switch i2c bus sda from scp to apmcu */
@@ -5025,14 +5103,25 @@ int mtk_cam_seninf_aov_sensor_set_mclk(unsigned int sensor_id, bool enable)
 	unsigned int real_sensor_id = 0;
 	struct v4l2_subdev *sensor_sd = NULL;
 	struct v4l2_ctrl *ctrl = NULL;
+	int aov_csi_port = -1;
+	struct mtk_seninf_aov_param aov_param;
 
 	pr_info("[%s] sensor_id(%d)\n", __func__, sensor_id);
 
-	if (g_aov_param.is_test_model) {
+	aov_csi_port = mtk_cam_seninf_aov_get_csi_port_from_sensor_id(sensor_id);
+
+	if (aov_csi_port == -1) {
+		pr_info("[%s] No match sensor_id(%d) in g_aov_ctrl\n", __func__, sensor_id);
+		return -ENODEV;
+	}
+
+	aov_param = g_aov_ctrl[aov_csi_port].aov_param;
+
+	if (aov_param.is_test_model) {
 		real_sensor_id = 5;
 	} else {
-		if (sensor_id == g_aov_param.sensor_idx) {
-			real_sensor_id = g_aov_param.sensor_idx;
+		if (sensor_id == aov_param.sensor_idx) {
+			real_sensor_id = aov_param.sensor_idx;
 			pr_info("input sensor id(%u)(success)\n", real_sensor_id);
 		} else {
 			real_sensor_id = sensor_id;
@@ -5048,9 +5137,9 @@ int mtk_cam_seninf_aov_sensor_set_mclk(unsigned int sensor_id, bool enable)
 	 *	pr_info("g_aov_param.sensor_idx %d\n",
 	 *		g_aov_param.sensor_idx);
 	 */
-	if (aov_ctx[real_sensor_id] != NULL) {
-		pr_info("[%s] sensor idx(%u)\n", __func__, real_sensor_id);
-		ctx = aov_ctx[real_sensor_id];
+	if (g_aov_ctrl[aov_csi_port].aov_ctx != NULL) {
+		pr_info("[%s] aov_csi_port(%u)\n", __func__, aov_csi_port);
+		ctx = g_aov_ctrl[aov_csi_port].aov_ctx;
 	} else {
 		pr_info("[%s] Can't find ctx from input sensor id!\n", __func__);
 		return -ENODEV;
