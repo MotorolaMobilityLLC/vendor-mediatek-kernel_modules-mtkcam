@@ -44,6 +44,36 @@ enum {
 	I2C_DT_MAXCNT,
 };
 
+/*
+ * I2C_TABLE_DT_ADDR_16_DATA_8:
+ *   write with a list of 16-bit address and 8-bit data
+ *   (addr1_16 + data1_8) + (addr2_16 + data2_8)
+ * I2C_TABLE_DT_ADDR_16_DATA_16:
+ *   write with a list of 16-bit address and 16-bit data
+ *   (addr1_16 + data1_16) + (addr2_16 + data2_16)
+ * I2C_TABLE_DT_ADDR_16_DATA_8_BURST:
+ *   write with a 16-bit address and a list of 8-bit data
+ *   (addr1_16 + data1_8 + data2_8)
+ *   it's equal to (addr1_16 + data1_8) + (addr1_16 + data2_8)
+ * I2C_TABLE_DT_ADDR_16_DATA_16_BURST:
+ *   write with a 16-bit address and a list of 16-bit data
+ *   (addr1_16 + data1_16 + data2_16)
+ *   it's equal to (addr1_16 + data1_16) + (addr1_16 + data2_16)
+ * I2C_TABLE_DT_ADDR_16_DATA_8_SEQ:
+ *   write with a 16-bit address and a list of 8-bit data that will be written
+ *   to sequential addresses
+ *   (addr1_16 + data1_8 + data2_8 + data3_8)
+ *   it's equal to (addr1_16 + data1_8) + ({next_addr_of_addr1_16} + data2_8)
+ */
+enum {
+	I2C_TABLE_DT_ADDR_16_DATA_8 = 0,
+	I2C_TABLE_DT_ADDR_16_DATA_16,
+	I2C_TABLE_DT_ADDR_16_DATA_8_BURST,
+	I2C_TABLE_DT_ADDR_16_DATA_16_BURST,
+	I2C_TABLE_DT_ADDR_16_DATA_8_SEQ,
+	I2C_TABLE_DT_MAXCNT,
+};
+
 enum {
 	HW_ID_AVDD = 0,
 	HW_ID_DVDD,
@@ -283,6 +313,17 @@ struct subdrv_mode_struct {
 	u32 mode_type_in_lbmf;
 	u32 sw_fl_delay;
 	u8 support_mcss;
+
+	/* custom reserved field for mode */
+	u32 cust_sensor_mode_data_len;
+	char *cust_sensor_mode_data;
+};
+
+struct reg_setting_entry {
+	u32 i2c_transfer_tlb_data_type;
+	u32 setting_table_len;
+	int delay;
+	u16 *setting_table;
 };
 
 #define REG_ADDR_MAXCNT 4
@@ -382,6 +423,8 @@ struct subdrv_static_ctx {
 
 	u16 *init_setting_table;
 	u32 init_setting_len;
+	struct reg_setting_entry *init_setting_table_v2;
+	u32 init_setting_table_v2_cnt;
 	struct subdrv_mode_struct *mode;
 	u32 sensor_mode_num;
 	struct subdrv_feature_control *list;
@@ -430,6 +473,46 @@ struct subdrv_static_ctx {
 	int (*cust_get_linetime_in_us)(void *arg, u32 scenario_id,
 		u32 *linetime_in_ns, enum GET_LINETIME_ENUM linetime_type);
 	u32 cycle_base_ratio;
+
+	/* custom reserved field */
+	u32 cust_global_data_len;
+	char *cust_global_data;
+};
+
+struct subdrv_static_ctx_mode_ext_ops {
+	u32 mode_id;
+
+	/* pd info by sensor mode */
+	struct SET_PD_BLOCK_INFO_T *imgsensor_pd_info;
+
+	/* customed function pointer by sensor mode */
+	/* Add function pointer here */
+};
+
+/**
+ * This struct is used for register ISF function extension ops.
+ * It's the same as the function pointer in subdrv_static_ctx
+ */
+struct subdrv_static_ctx_ext_ops {
+	/* customed feature control */
+	struct subdrv_feature_control *list;
+	u32 list_len;
+
+	/* customed sensor function with common subdrv ctrl */
+	int (*g_temp)(void *arg);
+	u16 (*g_gain2reg)(u32 arg);
+	void (*g_cali)(void *arg);
+	void (*s_gph)(void *arg, u8 en);
+	void (*s_cali)(void *arg);
+	int (*s_streaming_control)(void *arg, bool enable);
+	void (*s_data_rate_global_timing_phy_ctrl)(void *arg);
+	int (*s_pwr_seq_reset_view_to_sensing)(void *arg);
+	int (*mcss_init)(void *arg);
+	int (*mcss_update_subdrv_para)(void *arg, int scenario_id);
+
+	/* customed function pointer by sensor mode */
+	struct subdrv_static_ctx_mode_ext_ops *mode_ext_ops_list;
+	u32 mode_ext_ops_list_len;
 };
 
 #define HDR_CAP_IHDR 0x1
@@ -596,6 +679,17 @@ struct subdrv_ops {
 	int (*aov_dualsync)(struct subdrv_ctx *ctx, u32 role);
 };
 
+struct sensor_firmware {
+	char name[64];
+	struct list_head list;
+};
+
+struct sensor_firmware_loader {
+	bool fw_list_inited;
+	struct list_head fw_list;
+	//TODO: add ext ops here
+};
+
 struct subdrv_entry {
 	const char *name;
 	unsigned int id;
@@ -604,6 +698,12 @@ struct subdrv_entry {
 	int pw_seq_cnt;
 	const struct subdrv_pw_seq_entry *aov_pw_seq;
 	int aov_pw_seq_cnt;
+	unsigned int fw_major_ver;
+	unsigned int fw_revision;
+	unsigned long long fw_modified_ts;
+	bool is_fw_support;
+	struct sensor_firmware_loader *fw_loader;
+	const struct subdrv_static_ctx_ext_ops *fw_ext_ops;
 };
 
 #define subdrv_call(ctx, o, args...) \

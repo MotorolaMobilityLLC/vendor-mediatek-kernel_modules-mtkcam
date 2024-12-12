@@ -30,6 +30,7 @@
 #include "adaptor-sentest-ctrl.h"
 #include "imgsensor-glue/imgsensor-glue.h"
 #include "virt-sensor/virt-sensor-entry.h"
+#include "adaptor-fw-loader.h"
 
 #undef E
 #define E(__x__) (__x__##_entry)
@@ -1401,14 +1402,67 @@ void mtk_v4l2_ixc_subdev_init(struct v4l2_subdev *sd,
 	dev_set_drvdata(dev, sd);
 }
 
+static int try_probe_subdrv_entry(struct adaptor_ctx *ctx)
+{
+	int ret;
+	u32 sensor_id = 0xffffffff;
+
+	ctx->subctx.i2c_client = ctx->i2c_client;
+	ctx->subctx.ixc_client = ctx->ixc_client;
+	adaptor_cam_pmic_on(ctx);
+	adaptor_hw_power_on(ctx);
+	ret = adaptor_ixc_do_daa(&ctx->ixc_client);
+	if (ret)
+		adaptor_logi(ctx, "ixc_do_daa(ret=%d), prot= %d\n",
+			ret, ctx->ixc_client.protocol);
+	subdrv_call(ctx, init_ctx, ctx->i2c_client,
+			ctx->subctx.i2c_write_id);
+	ret = subdrv_call(ctx, get_id, &sensor_id);
+	adaptor_hw_power_off(ctx);
+	if (!ret) {
+		adaptor_logi(ctx, "sensor %s found\n",
+			ctx->subdrv->name);
+		subdrv_call(ctx, init_ctx, ctx->i2c_client,
+			ctx->subctx.i2c_write_id);
+		ctx->ctx_pw_seq = kmalloc_array(ctx->subdrv->pw_seq_cnt,
+				sizeof(struct subdrv_pw_seq_entry),
+				GFP_KERNEL);
+		if (ctx->ctx_pw_seq) {
+			memcpy(ctx->ctx_pw_seq, ctx->subdrv->pw_seq,
+			       ctx->subdrv->pw_seq_cnt *
+			       sizeof(struct subdrv_pw_seq_entry));
+		}
+		if (ctx->subctx.aov_sensor_support && ctx->cust_aov_csi_clk) {
+			ctx->subctx.aov_csi_clk = ctx->cust_aov_csi_clk;
+			adaptor_logi(ctx,
+				"aov_csi_clk:%u\n",
+				ctx->subctx.aov_csi_clk);
+		}
+		if (ctx->subctx.aov_sensor_support && ctx->phy_ctrl_ver) {
+			ctx->subctx.aov_phy_ctrl_ver = ctx->phy_ctrl_ver;
+			adaptor_logi(ctx,
+				"aov_phy_ctrl_ver:%s\n",
+				ctx->subctx.aov_phy_ctrl_ver);
+		}
+		return 0;
+	}
+	adaptor_logi(ctx, "sensor %s not found\n",
+		ctx->subdrv->name);
+
+	return -1;
+}
+
 static int search_sensor(struct adaptor_ctx *ctx)
 {
-	int ret, i, j, of_sensor_names_cnt, subdrvs_cnt;
+	int i, j, of_sensor_names_cnt, subdrvs_cnt;
 	struct subdrv_entry **subdrvs, *subdrv;
 	struct subdrv_entry *of_subdrvs[OF_SENSOR_NAMES_MAXCNT];
 	const char *of_sensor_names[OF_SENSOR_NAMES_MAXCNT];
 	int subdrv_name_ret;
 	const char *of_subdrv_name;
+	struct sensor_firmware_loader *loader = NULL;
+	struct sensor_firmware *firmware;
+	const char *specific_sensor_fw_names[1];
 
 	of_sensor_names_cnt = of_property_read_string_array(ctx->dev->of_node,
 		"sensor-names", of_sensor_names, ARRAY_SIZE(of_sensor_names));
@@ -1456,8 +1510,6 @@ static int search_sensor(struct adaptor_ctx *ctx)
 	}
 
 	for (i = 0; i < subdrvs_cnt; i++) {
-		u32 sensor_id = 0xffffffff;
-
 		ctx->subdrv = subdrvs[i];
 
 		if (ctx->subdrv == NULL) {
@@ -1465,47 +1517,69 @@ static int search_sensor(struct adaptor_ctx *ctx)
 			continue;
 		}
 
-		ctx->subctx.i2c_client = ctx->i2c_client;
-		ctx->subctx.ixc_client = ctx->ixc_client;
-		adaptor_cam_pmic_on(ctx);
-		adaptor_hw_power_on(ctx);
-		ret = adaptor_ixc_do_daa (&ctx->ixc_client);
-		if (ret)
-			adaptor_logi(ctx, "ixc_do_daa(ret=%d), prot= %d\n",
-				ret, ctx->ixc_client.protocol);
-		subdrv_call(ctx, init_ctx, ctx->i2c_client,
-				ctx->subctx.i2c_write_id);
-		ret = subdrv_call(ctx, get_id, &sensor_id);
-		adaptor_hw_power_off(ctx);
-		if (!ret) {
-			adaptor_logi(ctx, "sensor %s found\n",
-				ctx->subdrv->name);
-			subdrv_call(ctx, init_ctx, ctx->i2c_client,
-				ctx->subctx.i2c_write_id);
-			ctx->ctx_pw_seq = kmalloc_array(ctx->subdrv->pw_seq_cnt,
-					sizeof(struct subdrv_pw_seq_entry),
-					GFP_KERNEL);
-			if (ctx->ctx_pw_seq) {
-				memcpy(ctx->ctx_pw_seq, ctx->subdrv->pw_seq,
-				       ctx->subdrv->pw_seq_cnt *
-				       sizeof(struct subdrv_pw_seq_entry));
+		if (firmware_support(ctx->subdrv)) {
+			specific_sensor_fw_names[0] = ctx->subdrv->name;
+
+			ctx->subdrv = kzalloc(sizeof(struct subdrv_entry), GFP_KERNEL);
+			if (!ctx->subdrv)
+				return -EIO;
+
+			loader = kzalloc(sizeof(struct sensor_firmware_loader), GFP_KERNEL);
+			if (!loader) {
+				kfree(ctx->subdrv);
+				ctx->subdrv = subdrvs[i];
+				return -EIO;
 			}
-			if (ctx->subctx.aov_sensor_support && ctx->cust_aov_csi_clk) {
-				ctx->subctx.aov_csi_clk = ctx->cust_aov_csi_clk;
-				adaptor_logi(ctx,
-					"aov_csi_clk:%u\n",
-					ctx->subctx.aov_csi_clk);
+
+			memcpy(ctx->subdrv, subdrvs[i], sizeof(struct subdrv_entry));
+
+			adaptor_logi(ctx, "specific subdrv");
+			lookup_firmwares(loader, specific_sensor_fw_names, ARRAY_SIZE(specific_sensor_fw_names));
+			ctx->subdrv->fw_loader = loader;
+
+			for_each_firmware(firmware, ctx->subdrv) {
+				if (loading_firmware(ctx, firmware->name) == 0 &&
+				    try_probe_subdrv_entry(ctx) == 0)
+					return 0;
 			}
-			if (ctx->subctx.aov_sensor_support && ctx->phy_ctrl_ver) {
-				ctx->subctx.aov_phy_ctrl_ver = ctx->phy_ctrl_ver;
-				adaptor_logi(ctx,
-					"aov_phy_ctrl_ver:%s\n",
-					ctx->subctx.aov_phy_ctrl_ver);
-			}
-			return 0;
+			/* not found */
+			ctx->subdrv->fw_loader = NULL;
+			kfree(loader);
+			loader = NULL;
+			kfree(ctx->subdrv);
+			ctx->subdrv = subdrvs[i];
+		} else {
+			/* no support firmware */
+			if (try_probe_subdrv_entry(ctx) == 0)
+				return 0;
 		}
-		adaptor_logi(ctx, "sensor %s not found\n",
-			ctx->subdrv->name);
+
+	}
+
+	/* try using generic sensor entry */
+	ctx->subdrv = kzalloc(sizeof(struct subdrv_entry), GFP_KERNEL);
+	if (ctx->subdrv) {
+		memcpy(ctx->subdrv, &generic_subdrv_entry, sizeof(struct subdrv_entry));
+		loader = kzalloc(sizeof(struct sensor_firmware_loader), GFP_KERNEL);
+		if (loader) {
+			adaptor_logi(ctx, "generic subdrv");
+			lookup_firmwares(loader, of_sensor_names, of_sensor_names_cnt);
+			ctx->subdrv->fw_loader = loader;
+
+			for_each_firmware(firmware, ctx->subdrv) {
+				if (loading_firmware(ctx, firmware->name) == 0 &&
+				    try_probe_subdrv_entry(ctx) == 0)
+					return 0;
+			}
+
+			/* not found */
+			ctx->subdrv->fw_loader = loader;
+			kfree(loader);
+			loader = NULL;
+		}
+		/* not found */
+		kfree(ctx->subdrv);
+		ctx->subdrv = NULL;
 	}
 
 	return -EIO;

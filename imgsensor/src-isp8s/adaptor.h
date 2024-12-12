@@ -29,33 +29,49 @@
 
 #define adaptor_logd(_ctx, format, args...) do { \
 	if ((_ctx) && unlikely(*((_ctx)->sensor_debug_flag))) { \
-		dev_info((_ctx)->dev, "[%s][%s][%s] " format, \
+		dev_info((_ctx)->dev, "[%s][%s][%u.%u.%llu][%s] " format, \
 			(_ctx)->sd.name, \
-			((_ctx)->subdrv) ? ((_ctx)->subdrv->name) : "null", __func__, ##args); \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->name) : "null", \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->fw_major_ver) : 0, \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->fw_revision) : 0, \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->fw_modified_ts) : 0, \
+			__func__, ##args); \
 	} \
 } while (0)
 
 #define adaptor_loge(_ctx, format, args...) do { \
 	if (_ctx) { \
-		dev_info((_ctx)->dev, "[%s][%s][%s] ERROR: " format, \
+		dev_info((_ctx)->dev, "[%s][%s][%u.%u.%llu][%s] ERROR: " format, \
 			(_ctx)->sd.name, \
-			((_ctx)->subdrv) ? ((_ctx)->subdrv->name) : "null", __func__, ##args); \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->name) : "null", \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->fw_major_ver) : 0, \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->fw_revision) : 0, \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->fw_modified_ts) : 0, \
+			__func__, ##args); \
 	} \
 } while (0)
 
 #define adaptor_logm(_ctx, format, args...) do { \
 	if ((_ctx) && unlikely(*((_ctx)->sensor_debug_flag)==2)) { \
-		dev_info((_ctx)->dev, "[%s][%s][%s] " format, \
+		dev_info((_ctx)->dev, "[%s][%s][%u.%u.%llu][%s] " format, \
 			(_ctx)->sd.name, \
-			((_ctx)->subdrv) ? ((_ctx)->subdrv->name) : "null", __func__, ##args); \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->name) : "null", \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->fw_major_ver) : 0, \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->fw_revision) : 0, \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->fw_modified_ts) : 0, \
+			__func__, ##args); \
 	} \
 } while (0)
 
 #define adaptor_logi(_ctx, format, args...) do { \
 	if (_ctx) { \
-		dev_info((_ctx)->dev, "[%s][%s][%s] " format, \
+		dev_info((_ctx)->dev, "[%s][%s][%u.%u.%llu][%s] " format, \
 			(_ctx)->sd.name, \
-			((_ctx)->subdrv) ? ((_ctx)->subdrv->name) : "null", __func__, ##args); \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->name) : "null", \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->fw_major_ver) : 0, \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->fw_revision) : 0, \
+			((_ctx)->subdrv) ? ((_ctx)->subdrv->fw_modified_ts) : 0, \
+			__func__, ##args); \
 	} \
 } while (0)
 
@@ -66,6 +82,8 @@ static unsigned int set_ctrl_unlock;
 extern unsigned int gSensor_num;
 extern unsigned int is_multicam;
 extern unsigned int is_imgsensor_fusion_test_workaround;
+
+extern struct subdrv_entry generic_subdrv_entry;
 
 struct adaptor_ae_ctrl_dbg_info {
 	/* timestamp info when get ae ctrl */

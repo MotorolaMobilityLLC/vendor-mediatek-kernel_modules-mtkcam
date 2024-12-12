@@ -53,6 +53,8 @@ imgsensor_isp8s-objs += \
 	adaptor-fsync-ctrls.o \
 	adaptor-trace.o \
 	adaptor-util.o \
+	adaptor-fw-loader.o \
+	common/generic_subdrv.o \
 
 define FILTER_DRV
 ifeq ($(wildcard $(IMGSENSOR_DRIVER_PATH)/camera_project/$(IMGSENSOR_PROJECT)/$(1)),)
@@ -78,7 +80,22 @@ unknown_drv :=
 endif
 endef
 
-$(foreach drv,$(subst $\",,$(CONFIG_CUSTOM_KERNEL_IMGSENSOR)),$(eval $(call FILTER_DRV,$(drv))))
+# Build all driver in project folder
+ifneq ($(wildcard $(IMGSENSOR_PROJECT)),)
+ifneq ($(wildcard $(IMGSENSOR_DRIVER_PATH)/camera_project/$(IMGSENSOR_PROJECT)),)
+PROJ_DRV_LIST_FULL := $(dir $(wildcard $(IMGSENSOR_DRIVER_PATH)/camera_project/$(IMGSENSOR_PROJECT)/*/Makefile))
+PROJ_DRV_LIST := $(patsubst %/,%,$(PROJ_DRV_LIST_FULL:$(IMGSENSOR_DRIVER_PATH)/camera_project/$(IMGSENSOR_PROJECT)/%=%))
+$(info PROJ_DRV_LIST = $(PROJ_DRV_LIST))
+$(foreach drv,$(subst $\",,$(PROJ_DRV_LIST)),$(eval $(call FILTER_DRV,$(drv))))
+endif
+endif
+
+# Build all driver in common folder
+COMMON_DRV := common
+COMMON_DRV_LIST_FULL := $(dir $(wildcard $(IMGSENSOR_DRIVER_PATH)/$(COMMON_DRV)/*/Makefile))
+COMMON_DRV_LIST := $(patsubst %/,%,$(COMMON_DRV_LIST_FULL:$(IMGSENSOR_DRIVER_PATH)/$(COMMON_DRV)/%=%))
+$(info COMMON_DRV_LIST = $(COMMON_DRV_LIST))
+$(foreach drv,$(subst $\",,$(COMMON_DRV_LIST)),$(eval $(call FILTER_DRV,$(drv))))
 
 ifneq ($(wildcard $(IMGSENSOR_DRIVER_PATH)/$(FRAME_SYNC)/Makefile),)
 $(info framesync_drv: $(FRAME_SYNC))

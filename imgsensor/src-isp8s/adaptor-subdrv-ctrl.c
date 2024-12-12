@@ -77,6 +77,54 @@ u64 ixc_table_write(struct subdrv_ctx *ctx, u16 *list, u32 len)
 	return (ixc_end-ixc_start)/1000;
 }
 
+u64 ixc_table_write_with_entry(struct subdrv_ctx *ctx, struct reg_setting_entry *entry)
+{
+	u64 ixc_start = 0, ixc_end = 0;
+	u16 *list_16;
+	u8 *list_8;
+	u32 len;
+	int i;
+
+	if (unlikely(entry == NULL || entry->setting_table == NULL || entry->setting_table_len < 1))
+		return 0;
+
+	list_16 = entry->setting_table;
+	len = entry->setting_table_len;
+
+	ixc_start = ktime_get_boottime_ns();
+	switch (entry->i2c_transfer_tlb_data_type) {
+	case I2C_TABLE_DT_ADDR_16_DATA_16_BURST:
+		subdrv_ixc_wr_p16(ctx, list_16[0], list_16 + 1, len - 1);
+		break;
+	case I2C_TABLE_DT_ADDR_16_DATA_8_BURST:
+		list_8 = kzalloc(sizeof(u8) * (len - 1), GFP_KERNEL);
+		if (list_8) {
+			for (i = 0; i < len - 1; i++)
+				list_8[i] = (u8) list_16[i + 1];
+			subdrv_ixc_wr_p8(ctx, list_16[0], list_8, len - 1);
+		}
+		break;
+	case I2C_TABLE_DT_ADDR_16_DATA_8_SEQ:
+		list_8 = kzalloc(sizeof(u8) * (len - 1), GFP_KERNEL);
+		if (list_8) {
+			for (i = 0; i < len - 1; i++)
+				list_8[i] = (u8) list_16[i + 1];
+			subdrv_ixc_wr_seq_p8(ctx, list_16[0], list_8, len - 1);
+		}
+		break;
+	case I2C_TABLE_DT_ADDR_16_DATA_16:
+		subdrv_ixc_wr_regs_u16(ctx, list_16, len);
+		break;
+	case I2C_TABLE_DT_ADDR_16_DATA_8:
+	default:
+		subdrv_ixc_wr_regs_u8(ctx, list_16, len);
+		break;
+	}
+	ixc_end = ktime_get_boottime_ns();
+
+	return (ixc_end - ixc_start) / 1000;
+}
+
 static void dump_i2c_buf(struct subdrv_ctx *ctx)
 {
 	int i, j;
@@ -3342,7 +3390,7 @@ int common_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 	u32 addr_l = ctx->s_ctx.reg_addr_sensor_id.addr[1];
 	u32 addr_ll = ctx->s_ctx.reg_addr_sensor_id.addr[2];
 
-	while (ctx->s_ctx.i2c_addr_table[i] != 0xFF) {
+	while (ctx->s_ctx.i2c_addr_table[i] != 0xFF && ctx->s_ctx.i2c_addr_table[i] != 0) {
 		ctx->i2c_write_id = ctx->s_ctx.i2c_addr_table[i];
 		do {
 			*sensor_id = (subdrv_ixc_rd_u8(ctx, addr_h) << 8) |
@@ -3449,9 +3497,40 @@ void sensor_init(struct subdrv_ctx *ctx)
 {
 	u64 time_boot_begin = 0;
 	u64 ixc_time = 0;
+	int i;
+	u32 delay_in_us, total_init_len, tlb_len;
 
 	/* write init setting */
-	if (ctx->s_ctx.init_setting_table != NULL) {
+	if (ctx->s_ctx.init_setting_table_v2 != NULL) {
+		/* using init setting table v2 for initialization */
+		if ((ctx->power_on_profile_en != NULL) &&
+			(*ctx->power_on_profile_en))
+			time_boot_begin = ktime_get_boottime_ns();
+
+		total_init_len = 0;
+
+		/* apply setting */
+		for (i = 0; i < ctx->s_ctx.init_setting_table_v2_cnt; i++) {
+			delay_in_us = ctx->s_ctx.init_setting_table_v2[i].delay;
+			tlb_len = ctx->s_ctx.init_setting_table_v2[i].setting_table_len;
+
+			ixc_time = ixc_table_write_with_entry(ctx, &ctx->s_ctx.init_setting_table_v2[i]);
+			total_init_len += tlb_len;
+
+			udelay(delay_in_us);
+			DRV_LOG_MUST(ctx, "init table v2: item[%d] size:%u, i2c time(us):%lld, delay(us):%u\n",
+				     i, tlb_len, ixc_time, delay_in_us);
+		}
+
+		if ((ctx->power_on_profile_en != NULL) &&
+			(*ctx->power_on_profile_en)) {
+			ctx->sensor_pw_on_profile.i2c_init_period =
+				ktime_get_boottime_ns() - time_boot_begin;
+
+			 ctx->sensor_pw_on_profile.i2c_init_table_len = total_init_len;
+		}
+	} else if (ctx->s_ctx.init_setting_table != NULL) {
+		/* using legacy init setting table for initialization */
 		DRV_LOG(ctx, "S: size:%u\n", ctx->s_ctx.init_setting_len);
 		if ((ctx->power_on_profile_en != NULL) &&
 			(*ctx->power_on_profile_en))
@@ -5097,6 +5176,16 @@ int common_get_cycle_base_v1_linetime_in_ns(void *arg,
 			scenario_id, ctx->s_ctx.mode[scenario_id].aov_mode, mclk, pclk);
 		return -EINVAL;
 	}
+
+	return 0;
+}
+
+int common_init_ctx(struct subdrv_ctx *ctx, struct i2c_client *i2c_client, u8 i2c_write_id)
+{
+	subdrv_ctx_init(ctx);
+	ctx->i2c_client = i2c_client;
+	ctx->i2c_write_id = i2c_write_id;
+	DRV_LOG_MUST(ctx, "i2c_write_id = 0x%x\n", i2c_write_id);
 
 	return 0;
 }

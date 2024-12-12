@@ -17,8 +17,12 @@
 		_adaptor_ctx = to_ctx(_sd); \
 	if (_adaptor_ctx && (_adaptor_ctx)->subdrv \
 		&& unlikely(*((_adaptor_ctx)->sensor_debug_flag))) { \
-		dev_info(_adaptor_ctx->dev, "[%s][%s] " format, \
-			(_adaptor_ctx)->subdrv->name, __func__, ##args); \
+		dev_info(_adaptor_ctx->dev, "[%s][%u.%u.%llu][%s] " format, \
+			(_adaptor_ctx)->subdrv->name, \
+			(_adaptor_ctx)->subdrv->fw_major_ver, \
+			(_adaptor_ctx)->subdrv->fw_revision, \
+			(_adaptor_ctx)->subdrv->fw_modified_ts, \
+			__func__, ##args); \
 	} \
 } while (0)
 
@@ -32,8 +36,12 @@
 	if (_sd) \
 		_adaptor_ctx = to_ctx(_sd); \
 	if (_adaptor_ctx && (_adaptor_ctx)->subdrv) { \
-		dev_info(_adaptor_ctx->dev, "[%s][%s] ERROR: " format, \
-			(_adaptor_ctx)->subdrv->name, __func__, ##args); \
+		dev_info(_adaptor_ctx->dev, "[%s][%u.%u.%llu][%s] ERROR: " format, \
+			(_adaptor_ctx)->subdrv->name, \
+			(_adaptor_ctx)->subdrv->fw_major_ver, \
+			(_adaptor_ctx)->subdrv->fw_revision, \
+			(_adaptor_ctx)->subdrv->fw_modified_ts, \
+			__func__, ##args); \
 	} \
 } while (0)
 
@@ -47,8 +55,12 @@
 	if (_sd) \
 		_adaptor_ctx = to_ctx(_sd); \
 	if (_adaptor_ctx && (_adaptor_ctx)->subdrv) { \
-		dev_info(_adaptor_ctx->dev, "[%s][%s] " format, \
-			(_adaptor_ctx)->subdrv->name, __func__, ##args); \
+		dev_info(_adaptor_ctx->dev, "[%s][%u.%u.%llu][%s] " format, \
+			(_adaptor_ctx)->subdrv->name, \
+			(_adaptor_ctx)->subdrv->fw_major_ver, \
+			(_adaptor_ctx)->subdrv->fw_revision, \
+			(_adaptor_ctx)->subdrv->fw_modified_ts, \
+			__func__, ##args); \
 	} \
 } while (0)
 
@@ -63,8 +75,12 @@
 		_adaptor_ctx = to_ctx(_sd); \
 	if (_adaptor_ctx && (_adaptor_ctx)->subdrv \
 		&& unlikely(*((_adaptor_ctx)->sensor_debug_flag)==2)) { \
-		dev_info(_adaptor_ctx->dev, "[%s][%s] " format, \
-			(_adaptor_ctx)->subdrv->name, __func__, ##args); \
+		dev_info(_adaptor_ctx->dev, "[%s][%u.%u.%llu][%s] " format, \
+			(_adaptor_ctx)->subdrv->name, \
+			(_adaptor_ctx)->subdrv->fw_major_ver, \
+			(_adaptor_ctx)->subdrv->fw_revision, \
+			(_adaptor_ctx)->subdrv->fw_modified_ts, \
+			__func__, ##args); \
 	} \
 } while (0)
 
@@ -244,6 +260,7 @@ void common_get_prsh_length_lines_by_time(struct subdrv_ctx *ctx,
 	enum SENSOR_SCENARIO_ID_ENUM pre_seamless_scenario_id,
 	enum SENSOR_SCENARIO_ID_ENUM scenario_id,
 	int time_ms);
+int common_init_ctx(struct subdrv_ctx *ctx, struct i2c_client *i2c_client, u8 i2c_write_id);
 
 extern int read_cam_cal(unsigned int sensor_id, unsigned char *buf,
 	unsigned int offset, unsigned int size);
