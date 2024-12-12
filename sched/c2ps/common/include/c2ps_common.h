@@ -399,14 +399,22 @@ extern int set_sched_capacity_margin_dvfs(int capacity_margin);
 extern int set_target_margin_low(int cpu, int margin);
 extern int set_target_margin(int cpu, int margin);
 extern int set_turn_point_freq(int cpu, unsigned long freq);
-extern bool flt_ctrl_force_get(void);
-extern void flt_ctrl_force_set(int set);
-extern u32 group_get_mode(void);
-extern void group_set_mode(u32 mode);
 extern int get_grp_dvfs_ctrl(void);
 extern void set_grp_dvfs_ctrl(int set);
 extern bool get_ignore_idle_ctrl(void);
 extern void set_ignore_idle_ctrl(bool val);
+
+#if IS_ENABLED(CONFIG_MTK_SCHED_GROUP_AWARE) && IS_ENABLED(CONFIG_MTK_SCHED_FAST_LOAD_TRACKING)
+extern bool flt_ctrl_force_get(void);
+extern void flt_ctrl_force_set(int set);
+extern u32 group_get_mode(void);
+extern void group_set_mode(u32 mode);
+#else
+bool flt_ctrl_force_get(void);
+void flt_ctrl_force_set(int set);
+u32 group_get_mode(void);
+void group_set_mode(u32 mode);
+#endif
 
 #if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 int get_vip_task_prio_by_pid(int pid);

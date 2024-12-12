@@ -57,6 +57,24 @@ module_param(need_boost_uclamp_max, bool, 0644);
 module_param(um_min_virtual_ceiling, int, 0644);
 module_param(ignore_bcpu_idle_rate, bool, 0644);
 
+#if !(IS_ENABLED(CONFIG_MTK_SCHED_GROUP_AWARE) && IS_ENABLED(CONFIG_MTK_SCHED_FAST_LOAD_TRACKING))
+bool flt_ctrl_force_get(void)
+{
+	return false;
+}
+
+void flt_ctrl_force_set(int __always_unused set)
+{}
+
+u32 group_get_mode(void)
+{
+	return 0;
+}
+
+void group_set_mode(u32 __always_unused mode)
+{}
+#endif
+
 struct c2ps_task_info *c2ps_find_task_info_by_tskid(int task_id)
 {
 	struct c2ps_task_info *tsk_info = NULL;
