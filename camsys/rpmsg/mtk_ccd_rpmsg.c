@@ -36,18 +36,6 @@ void __ept_release(struct kref *kref)
 	put_device(&rpdev->dev);
 }
 
-void mtk_rpmsg_ipi_handler(void *data, unsigned int len, void *priv)
-{
-	struct mtk_ccd_rpmsg_endpoint *mept = priv;
-	struct rpmsg_endpoint *ept = &mept->ept;
-	int ret;
-
-	ret = (*ept->cb)(ept->rpdev, data, len, ept->priv, ept->addr);
-	if (ret)
-		dev_info(&ept->rpdev->dev, "rpmsg handler return error = %d",
-			 ret);
-}
-
 static struct rpmsg_endpoint *
 __rpmsg_create_ept(struct mtk_rpmsg_rproc_subdev *mtk_subdev,
 		   struct rpmsg_device *rpdev, rpmsg_rx_cb_t cb, void *priv,
@@ -467,21 +455,6 @@ find_failed:
 }
 EXPORT_SYMBOL_GPL(mtk_get_client_msgdevice);
 
-int mtk_rpmsg_subdev_probe(struct rproc_subdev *subdev)
-{
-	struct mtk_rpmsg_rproc_subdev *mtk_subdev = to_mtk_subdev(subdev);
-
-	dev_info(&mtk_subdev->pdev->dev, "%s: %p\n", __func__, mtk_subdev);
-	return 0;
-}
-
-void mtk_rpmsg_subdev_remove(struct rproc_subdev *subdev)
-{
-	struct mtk_rpmsg_rproc_subdev *mtk_subdev = to_mtk_subdev(subdev);
-
-	dev_info(&mtk_subdev->pdev->dev, "%s: %p\n", __func__, mtk_subdev);
-}
-
 struct rproc_subdev *
 mtk_rpmsg_create_rproc_subdev(struct platform_device *pdev,
 			      struct mtk_ccd_rpmsg_ops *ops)
@@ -503,7 +476,6 @@ mtk_rpmsg_create_rproc_subdev(struct platform_device *pdev,
 
 	mtk_subdev->pdev = pdev;
 	mtk_subdev->ops = ops;
-	mtk_subdev->ccd_msgdev_addr = rp_info.src;
 
 	idr_init(&mtk_subdev->endpoints);
 	mutex_init(&mtk_subdev->endpoints_lock);

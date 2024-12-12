@@ -16,35 +16,6 @@
 
 #define CCD_DEBUG 0
 
-int ccd_ipi_register(struct platform_device *pdev,
-		     enum ccd_ipi_id id,
-		     ccd_ipi_handler_t handler,
-		     void *priv)
-{
-	struct mtk_ccd *ccd = platform_get_drvdata(pdev);
-
-	if (!ccd) {
-		dev_info(&pdev->dev, "ccd device is not ready\n");
-		return -EPROBE_DEFER;
-	}
-
-	dev_info(ccd->dev, "ipi id: %d\n", id);
-	return 0;
-}
-EXPORT_SYMBOL_GPL(ccd_ipi_register);
-
-void ccd_ipi_unregister(struct platform_device *pdev, enum ccd_ipi_id id)
-{
-	struct mtk_ccd *ccd = platform_get_drvdata(pdev);
-
-	if (!ccd)
-		return;
-
-	if (WARN_ON(id < 0) || WARN_ON(id >= CCD_IPI_MAX))
-		return;
-}
-EXPORT_SYMBOL_GPL(ccd_ipi_unregister);
-
 int rpmsg_ccd_ipi_send(struct mtk_rpmsg_rproc_subdev *mtk_subdev,
 		       struct mtk_ccd_rpmsg_endpoint *mept,
 		       void *buf, unsigned int len, unsigned int wait)
