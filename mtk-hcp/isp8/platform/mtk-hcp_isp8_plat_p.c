@@ -1389,7 +1389,7 @@ static int impl_alloc(struct mtk_hcp_rsv_mb *mb)
 		goto error;
 	}
 
-#if HCP_NEW_DMA_BUF_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	sgt = dma_buf_map_attachment_unlocked(attachment, DMA_BIDIRECTIONAL);
 #else
 	sgt = dma_buf_map_attachment(attachment, DMA_BIDIRECTIONAL);
@@ -1403,7 +1403,7 @@ static int impl_alloc(struct mtk_hcp_rsv_mb *mb)
 
 	start_dma = sg_dma_address(sgt->sgl);
 
-#ifdef HCP_NEW_DMA_BUF_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	ret = dma_buf_vmap_unlocked(d_buf, &map);
 #else
 	ret = dma_buf_vmap(d_buf, &map);
@@ -1441,7 +1441,7 @@ error:
 			mb, GET_MEM_MODE(mb->cfg.id), mb->cfg.name,
 			mb->d_buf, mb->start_virt, mb->start_dma);
 	} else {
-#ifdef HCP_NEW_DMA_BUF_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		if (d_buf && start_virt)
 			dma_buf_vunmap_unlocked(d_buf, &map);
 
@@ -1482,7 +1482,7 @@ static int free_mb(struct mtk_hcp_rsv_mb *mb)
 			ret = -EINVAL;
 		}
 	} else {
-#ifdef HCP_NEW_DMA_BUF_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		dma_buf_vunmap_unlocked(mb->d_buf	, &mb->map);
 		dma_buf_unmap_attachment_unlocked(
 			mb->attach,

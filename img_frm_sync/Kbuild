@@ -29,19 +29,6 @@ $(info "img_frm_sync, srctree_path = $(srctree)")
 $(info "img_frm_sync, src_path = $(src)")
 $(info "img_frm_sync, ko_code_path = $(KO_CODE_PATH)")
 
-$(info img_frm_sync DEVICE_MODULES_PATH=$(DEVICE_MODULES_PATH))
-NOTDIR_DEVICE_MODULES_PATH = $(notdir $(DEVICE_MODULES_PATH))
-$(info img_frm_sync NOTDIR_DEVICE_MODULES_PATH=$(NOTDIR_DEVICE_MODULES_PATH))
-KERNEL_VERSION = $(patsubst kernel_device_modules-%,%,$(NOTDIR_DEVICE_MODULES_PATH))
-$(info img_frm_sync KERNEL_VERSION=$(KERNEL_VERSION))
-
-#$(info mtk_aov sort=$(sort 6.6 $(KERNEL_VERSION)))
-#$(info mtk_aov word=$(word 1,$(sort 6.6 $(KERNEL_VERSION))))
-
-ifeq (6.6,$(word 1,$(sort 6.6 $(KERNEL_VERSION))))
-ccflags-y += -DNEW_KERNEL_API
-endif
-
 #CFLAGS_mtk_imgsys-trace.o	:=-I$(src)
 # Utilities to provide frame-based streaming model
 # with v4l2 user interfaces and alloc context managing

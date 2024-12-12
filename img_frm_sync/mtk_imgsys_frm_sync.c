@@ -8,6 +8,7 @@
 #include <linux/of_device.h>
 #include <linux/pm.h>
 #include <linux/platform_device.h>
+#include <linux/version.h>
 /*include imgsys header*/
 #include "mtk_imgsys-dev.h"
 #include "mtk_imgsys_frm_sync.h"
@@ -246,7 +247,7 @@ static int mtk_imgsys_frm_sync_probe(struct platform_device *pdev)
 		dev_info(&pdev->dev, "cdev_add fail  err= %d", ret);
 		goto err_add;
 	}
-#ifdef NEW_KERNEL_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	frm_sync_dev->frm_sync_class = class_create("mtk_frm_sync_driver");
 #else
 	frm_sync_dev->frm_sync_class = class_create(THIS_MODULE, "mtk_frm_sync_driver");

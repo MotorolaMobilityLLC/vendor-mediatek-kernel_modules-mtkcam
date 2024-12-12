@@ -1132,7 +1132,7 @@ static int isp8s_module_driver_allocate_working_buffer_streaming(struct mtk_hcp 
 						PTR_ERR(attach));
 						return -1;
 					}
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					str_mblock[id].sgt =
 						dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
 					#else
@@ -1148,7 +1148,7 @@ static int isp8s_module_driver_allocate_working_buffer_streaming(struct mtk_hcp 
 					}
 					str_mblock[id].start_phys = sg_dma_address(sgt->sgl);
 					str_mblock[id].start_dma = str_mblock[id].start_phys;
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					ret = dma_buf_vmap_unlocked(str_mblock[id].d_buf, &map);
 					#else
 					ret = dma_buf_vmap(str_mblock[id].d_buf, &map);
@@ -1215,7 +1215,7 @@ static int isp8s_module_driver_allocate_working_buffer_streaming(struct mtk_hcp 
 						PTR_ERR(attach));
 						return -1;
 					}
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					str_mblock[id].sgt =
 						dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
 					#else
@@ -1231,7 +1231,7 @@ static int isp8s_module_driver_allocate_working_buffer_streaming(struct mtk_hcp 
 					}
 					str_mblock[id].start_phys = sg_dma_address(sgt->sgl);
 					str_mblock[id].start_dma = str_mblock[id].start_phys;
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					ret = dma_buf_vmap_unlocked(str_mblock[id].d_buf, &map);
 					#else
 					ret = dma_buf_vmap(str_mblock[id].d_buf, &map);
@@ -1284,7 +1284,7 @@ static int isp8s_module_driver_allocate_working_buffer_streaming(struct mtk_hcp 
 						PTR_ERR(attach));
 						return -1;
 					}
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					str_mblock[id].sgt =
 						dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
 					#else
@@ -1300,7 +1300,7 @@ static int isp8s_module_driver_allocate_working_buffer_streaming(struct mtk_hcp 
 					}
 					str_mblock[id].start_phys = sg_dma_address(sgt->sgl);
 					str_mblock[id].start_dma = str_mblock[id].start_phys;
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					ret = dma_buf_vmap_unlocked(str_mblock[id].d_buf, &map);
 					#else
 					ret = dma_buf_vmap(str_mblock[id].d_buf, &map);
@@ -1393,7 +1393,7 @@ static int isp8s_module_driver_allocate_working_buffer_capture(struct mtk_hcp *h
 						PTR_ERR(attach));
 						return -1;
 					}
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					cap_mblock[id].sgt =
 						dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
 					#else
@@ -1409,7 +1409,7 @@ static int isp8s_module_driver_allocate_working_buffer_capture(struct mtk_hcp *h
 					}
 					cap_mblock[id].start_phys = sg_dma_address(sgt->sgl);
 					cap_mblock[id].start_dma = cap_mblock[id].start_phys;
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					ret = dma_buf_vmap_unlocked(cap_mblock[id].d_buf, &map);
 					#else
 					ret = dma_buf_vmap(cap_mblock[id].d_buf, &map);
@@ -1476,7 +1476,7 @@ static int isp8s_module_driver_allocate_working_buffer_capture(struct mtk_hcp *h
 						PTR_ERR(attach));
 						return -1;
 					}
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					cap_mblock[id].sgt =
 						dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
 					#else
@@ -1492,7 +1492,7 @@ static int isp8s_module_driver_allocate_working_buffer_capture(struct mtk_hcp *h
 					}
 					cap_mblock[id].start_phys = sg_dma_address(sgt->sgl);
 					cap_mblock[id].start_dma = cap_mblock[id].start_phys;
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					ret = dma_buf_vmap_unlocked(cap_mblock[id].d_buf, &map);
 					#else
 					ret = dma_buf_vmap(cap_mblock[id].d_buf, &map);
@@ -1545,7 +1545,7 @@ static int isp8s_module_driver_allocate_working_buffer_capture(struct mtk_hcp *h
 						PTR_ERR(attach));
 						return -1;
 					}
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					cap_mblock[id].sgt =
 						dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
 					#else
@@ -1561,7 +1561,7 @@ static int isp8s_module_driver_allocate_working_buffer_capture(struct mtk_hcp *h
 					}
 					cap_mblock[id].start_phys = sg_dma_address(sgt->sgl);
 					cap_mblock[id].start_dma = cap_mblock[id].start_phys;
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					ret = dma_buf_vmap_unlocked(cap_mblock[id].d_buf, &map);
 					#else
 					ret = dma_buf_vmap(cap_mblock[id].d_buf, &map);
@@ -1654,7 +1654,7 @@ static int isp8s_module_driver_allocate_working_buffer_smvr(struct mtk_hcp *hcp_
 						PTR_ERR(attach));
 						return -1;
 					}
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					smvr_mblock[id].sgt =
 						dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
 					#else
@@ -1670,7 +1670,7 @@ static int isp8s_module_driver_allocate_working_buffer_smvr(struct mtk_hcp *hcp_
 					}
 					smvr_mblock[id].start_phys = sg_dma_address(sgt->sgl);
 					smvr_mblock[id].start_dma = smvr_mblock[id].start_phys;
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					ret = dma_buf_vmap_unlocked(smvr_mblock[id].d_buf, &map);
 					#else
 					ret = dma_buf_vmap(smvr_mblock[id].d_buf, &map);
@@ -1738,7 +1738,7 @@ static int isp8s_module_driver_allocate_working_buffer_smvr(struct mtk_hcp *hcp_
 						return -1;
 					}
 
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					smvr_mblock[id].sgt =
 						dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
 					#else
@@ -1754,7 +1754,7 @@ static int isp8s_module_driver_allocate_working_buffer_smvr(struct mtk_hcp *hcp_
 					}
 					smvr_mblock[id].start_phys = sg_dma_address(sgt->sgl);
 					smvr_mblock[id].start_dma = smvr_mblock[id].start_phys;
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					ret = dma_buf_vmap_unlocked(smvr_mblock[id].d_buf, &map);
 					#else
 					ret = dma_buf_vmap(smvr_mblock[id].d_buf, &map);
@@ -1807,7 +1807,7 @@ static int isp8s_module_driver_allocate_working_buffer_smvr(struct mtk_hcp *hcp_
 						PTR_ERR(attach));
 						return -1;
 					}
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					smvr_mblock[id].sgt =
 						dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
 					#else
@@ -1823,7 +1823,7 @@ static int isp8s_module_driver_allocate_working_buffer_smvr(struct mtk_hcp *hcp_
 					}
 					smvr_mblock[id].start_phys = sg_dma_address(sgt->sgl);
 					smvr_mblock[id].start_dma = smvr_mblock[id].start_phys;
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					ret = dma_buf_vmap_unlocked(smvr_mblock[id].d_buf, &map);
 					#else
 					ret = dma_buf_vmap(smvr_mblock[id].d_buf, &map);
@@ -1921,7 +1921,7 @@ int isp8s_allocate_gce_working_buffer(struct mtk_hcp *hcp_dev, unsigned int mode
 						PTR_ERR(attach));
 						return -1;
 					}
-						#ifdef HCP_NEW_DMA_BUF_API
+						#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 						gmblock[g_id].sgt =
 							dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
 						#else
@@ -1937,7 +1937,7 @@ int isp8s_allocate_gce_working_buffer(struct mtk_hcp *hcp_dev, unsigned int mode
 					}
 						gmblock[g_id].start_phys = sg_dma_address(sgt->sgl);
 						gmblock[g_id].start_dma = gmblock[g_id].start_phys;
-						#ifdef HCP_NEW_DMA_BUF_API
+						#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 						ret = dma_buf_vmap_unlocked(gmblock[g_id].d_buf, &map);
 						#else
 						ret = dma_buf_vmap(gmblock[g_id].d_buf, &map);
@@ -2055,7 +2055,7 @@ static void gce_release_streaming(struct kref *ref)
 		mblock->sgt = NULL;
 		return;
 	}
-	#ifdef HCP_NEW_DMA_BUF_API
+	#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	dma_buf_vunmap_unlocked(mblock->d_buf, &mblock->map);
 	/* free iova */
 	dma_buf_unmap_attachment_unlocked(mblock->attach, mblock->sgt, DMA_BIDIRECTIONAL);
@@ -2111,7 +2111,7 @@ static void gce_release_capture(struct kref *ref)
 		mblock->attach = NULL;
 		mblock->sgt = NULL;
 	} else {
-		#ifdef HCP_NEW_DMA_BUF_API
+		#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		dma_buf_vunmap_unlocked(mblock->d_buf, &mblock->map);
 		/* free iova */
 		dma_buf_unmap_attachment_unlocked(mblock->attach, mblock->sgt, DMA_BIDIRECTIONAL);
@@ -2173,7 +2173,7 @@ static void gce_release_smvr(struct kref *ref)
 		mblock->sgt = NULL;
 		return;
 	}
-	#ifdef HCP_NEW_DMA_BUF_API
+	#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	dma_buf_vunmap_unlocked(mblock->d_buf, &mblock->map);
 	/* free iova */
 	dma_buf_unmap_attachment_unlocked(mblock->attach, mblock->sgt, DMA_BIDIRECTIONAL);
@@ -2265,7 +2265,7 @@ static int isp8s_module_driver_release_working_buffer_streaming(struct mtk_hcp *
 					return -1;
 				}
 				if (str_mblock[id].fd != -1) {
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					/* free va */
 					dma_buf_vunmap_unlocked(str_mblock[id].d_buf, &str_mblock[id].map);
 					/* free iova */
@@ -2358,7 +2358,7 @@ static int isp8s_module_driver_release_working_buffer_capture(struct mtk_hcp *hc
 						return -1;
 					}
 					if (cap_mblock[id].fd != -1) {
-						#ifdef HCP_NEW_DMA_BUF_API
+						#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 						/* free va */
 						dma_buf_vunmap_unlocked(cap_mblock[id].d_buf, &cap_mblock[id].map);
 						/* free iova */
@@ -2457,7 +2457,7 @@ static int isp8s_module_driver_release_working_buffer_smvr(struct mtk_hcp *hcp_d
 						return -1;
 					}
 					if (smvr_mblock[id].fd != -1) {
-						#ifdef HCP_NEW_DMA_BUF_API
+						#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 						/* free va */
 						dma_buf_vunmap_unlocked(smvr_mblock[id].d_buf, &smvr_mblock[id].map);
 						/* free iova */
@@ -2544,7 +2544,7 @@ int isp8s_release_gce_working_buffer(struct mtk_hcp *hcp_dev)
 					return -1;
 				}
 				if (gmblock[gid].fd != -1) {
-					#ifdef HCP_NEW_DMA_BUF_API
+					#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 					/* free va */
 					dma_buf_vunmap_unlocked(gmblock[gid].d_buf, &gmblock[gid].map);
 					/* free iova */
