@@ -13,4 +13,5 @@ obj-y += imgsys/isp71/
 obj-y += imgsys/isp7s/
 obj-y += imgsys/isp7sp/
 obj-y += imgsys/isp8/
+obj-y += imgsys/isp8s/
 obj-y += imgsys/cmdq/

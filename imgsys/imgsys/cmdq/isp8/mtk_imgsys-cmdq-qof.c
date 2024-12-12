@@ -660,6 +660,7 @@ RETURN_FLOW:
 	return get_result;
 }
 
+#ifndef CONFIG_FPGA_EARLY_PORTING
 static int qof_smi_isp_module_get(void *data, int module)
 {
 	unsigned long flag;
@@ -687,6 +688,7 @@ static int qof_smi_isp_module_get(void *data, int module)
 
 	return 0;
 }
+#endif
 
 static int qof_smi_isp_module_put(void *data, int module)
 {
@@ -730,10 +732,12 @@ static int qof_smi_isp_module_put(void *data, int module)
 }
 
 /* SMI DIP CB */
+#ifndef CONFIG_FPGA_EARLY_PORTING
 static int smi_isp_dip_get(void *data)
 {
 	return qof_smi_isp_module_get(data, ISP8_PWR_DIP);
 }
+#endif
 
 int smi_isp_dip_get_if_in_use(void *data)
 {
@@ -748,10 +752,12 @@ int smi_isp_dip_put(void *data)
 EXPORT_SYMBOL(smi_isp_dip_put);
 
 /* SMI TRAW CB */
+#ifndef CONFIG_FPGA_EARLY_PORTING
 static int smi_isp_traw_get(void *data)
 {
 	return qof_smi_isp_module_get(data, ISP8_PWR_TRAW);
 }
+#endif
 
 int smi_isp_traw_get_if_in_use(void *data)
 {
@@ -766,10 +772,12 @@ int smi_isp_traw_put(void *data)
 EXPORT_SYMBOL(smi_isp_traw_put);
 
 /* SMI WPE1 CB */
+#ifndef CONFIG_FPGA_EARLY_PORTING
 static int smi_isp_wpe1_eis_get(void *data)
 {
 	return qof_smi_isp_module_get(data, ISP8_PWR_WPE_1_EIS);
 }
+#endif
 
 int smi_isp_wpe1_eis_get_if_in_use(void *data)
 {
@@ -784,10 +792,12 @@ int smi_isp_wpe1_eis_put(void *data)
 EXPORT_SYMBOL(smi_isp_wpe1_eis_put);
 
 /* SMI WPE2 CB */
+#ifndef CONFIG_FPGA_EARLY_PORTING
 static int smi_isp_wpe2_tnr_get(void *data)
 {
 	return qof_smi_isp_module_get(data, ISP8_PWR_WPE_2_TNR);
 }
+#endif
 
 int smi_isp_wpe2_tnr_get_if_in_use(void *data)
 {
@@ -802,10 +812,12 @@ int smi_isp_wpe2_tnr_put(void *data)
 EXPORT_SYMBOL(smi_isp_wpe2_tnr_put);
 
 /* SMI WPE3 CB */
+#ifndef CONFIG_FPGA_EARLY_PORTING
 static int smi_isp_wpe3_lite_get(void *data)
 {
 	return qof_smi_isp_module_get(data, ISP8_PWR_WPE_3_LITE);
 }
+#endif
 
 int smi_isp_wpe3_lite_get_if_in_use(void *data)
 {
@@ -819,6 +831,7 @@ int smi_isp_wpe3_lite_put(void *data)
 }
 EXPORT_SYMBOL(smi_isp_wpe3_lite_put);
 
+#ifndef CONFIG_FPGA_EARLY_PORTING
 static struct smi_user_pwr_ctrl smi_isp_dip_pwr_cb = {
 	 .name = "qof_isp_dip",
 	 .data = &is_smi_use_qof_locked[ISP8_PWR_DIP],
@@ -863,6 +876,7 @@ static struct smi_user_pwr_ctrl smi_isp_wpe3_lite_pwr_cb = {
 	 .smi_user_get_if_in_use = smi_isp_wpe3_lite_get_if_in_use,
 	 .smi_user_put = smi_isp_wpe3_lite_put,
 };
+#endif
 
 static void imgsys_cmdq_qof_set_restore_done(struct cmdq_pkt *pkt, u32 pwr_id)
 {
@@ -891,6 +905,7 @@ static void imgsys_cmdq_qof_set_restore_done(struct cmdq_pkt *pkt, u32 pwr_id)
 static void imgsys_cmdq_qof_set_larb_golden(struct qof_larb_info larb_info, struct cmdq_pkt *pkt)
 {
 	unsigned int reg_ba, ofset, bound, i;
+
 	if (larb_info.larb_reg_list == NULL) {
 		QOF_LOGE("Param is null !\n");
 		return;
@@ -1543,6 +1558,7 @@ void mtk_imgsys_cmdq_qof_init(struct mtk_imgsys_dev *imgsys_dev, struct cmdq_cli
 				__func__, rg_idx);
 		}
 	}
+#ifndef CONFIG_FPGA_EARLY_PORTING
 	/* smi cb register */
 	if (IS_MOD_SUPPORT_QOF(ISP8_PWR_DIP))
 		mtk_smi_dbg_register_pwr_ctrl_cb(&smi_isp_dip_pwr_cb);
@@ -1554,6 +1570,7 @@ void mtk_imgsys_cmdq_qof_init(struct mtk_imgsys_dev *imgsys_dev, struct cmdq_cli
 		mtk_smi_dbg_register_pwr_ctrl_cb(&smi_isp_wpe2_tnr_pwr_cb);
 	if (IS_MOD_SUPPORT_QOF(ISP8_PWR_WPE_3_LITE))
 		mtk_smi_dbg_register_pwr_ctrl_cb(&smi_isp_wpe3_lite_pwr_cb);
+#endif
 	QOF_LOGI("-\n");
 }
 

@@ -130,7 +130,7 @@ static int mtk_imgsys_power_ctrl_ccu(struct mtk_imgsys_dev *imgsys_dev, int on_o
 			dev_info(imgsys_dev->dev, "boot ccu rproc fail\n");
 	} else {
 		if (imgsys_dev->rproc_ccu_handle)
-#if IS_ENABLED(CONFIG_MTK_CCU_DEBUG)
+#if IS_ENABLED(CONFIG_MTK_CCU_DEBUG) && !defined(CONFIG_FPGA_EARLY_PORTING)
 			rproc_shutdownx(imgsys_dev->rproc_ccu_handle, RPROC_UID_IMG);
 #else
 			rproc_shutdown(imgsys_dev->rproc_ccu_handle);
@@ -159,8 +159,7 @@ static void module_uninit(struct kref *kref)
         if (imgsys_cmdq_dbg_enable())
 		dev_dbg(dvfs_info->dev,
 			"%s: [ERROR] reg is null or disabled\n", __func__);
-	}
-	else
+	} else
 		regulator_disable(dvfs_info->reg);
 
 	mtk_imgsys_power_ctrl_ccu(imgsys_dev, 0);
@@ -170,7 +169,7 @@ static void module_uninit(struct kref *kref)
 		dev_dbg(dvfs_info->dev,
 			"%s: [ERROR] mmdvfs_clk is null\n", __func__);
 	}
-#if DVFS_QOS_READY
+#ifndef CONFIG_FPGA_EARLY_PORTING
 	else {
 		mtk_mmdvfs_enable_ccu(false, CCU_PWR_USR_IMG);
 		mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_IMG);
@@ -391,5 +390,5 @@ static struct platform_driver mtk_imgsys_cmdq_driver = {
 
 module_platform_driver(mtk_imgsys_cmdq_driver);
 
-MODULE_LICENSE("GPL v2");
+MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Mediatek imgsys cmdq driver");

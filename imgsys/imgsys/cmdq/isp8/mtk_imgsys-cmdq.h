@@ -16,11 +16,7 @@
 #include <mtk_imgsys-sys.h>
 
 #define CMDQ_STOP_FUNC         (1)
-#ifndef CONFIG_FPGA_EARLY_PORTING
 #define DVFS_QOS_READY         (1)
-#else
-#define DVFS_QOS_READY         (0)
-#endif
 
 #define CMDQ_REFACTOR          (1)
 
@@ -90,7 +86,6 @@ struct mtk_imgsys_cb_param {
 	int req_fd;
 	int req_no;
 	int frm_no;
-	int fps;
 	u32 hw_comb;
 	s32 err;
 	u32 frm_idx;

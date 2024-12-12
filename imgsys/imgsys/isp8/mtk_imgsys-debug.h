@@ -68,5 +68,8 @@ bool imgsys_wpe_7sp_dbg_enable(void);
 bool imgsys_omc_8_dbg_enable(void);
 bool imgsys_pqdip_7sp_dbg_enable(void);
 bool imgsys_me_7sp_dbg_enable(void);
+bool imgsys_mae_8_dbg_enable(void);
+bool imgsys_dfp_8_dbg_enable(void);
+bool imgsys_dpe_8_dbg_enable(void);
 
 #endif /* _MTK_IMGSYS_DEBUG_H_ */

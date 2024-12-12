@@ -293,7 +293,7 @@ bool imgsys_omc_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine)
 	uint32_t value = 0;
  	uint32_t reg_ofst = 0x1c; //OMC_E1A_OMC_TOP_CTL_INT_STATUSX
 
-	if ((engine & IMGSYS_ENG_OMC_TNR))
+	if ((engine & IMGSYS_HW_FLAG_OMC_TNR))
 		hw_idx = (unsigned int) REG_MAP_E_OMC_TNR;
 	else
 		hw_idx = (unsigned int) REG_MAP_E_OMC_LITE;
@@ -334,6 +334,7 @@ void imgsys_omc_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			struct img_swfrm_info *user_info, int req_fd, u64 tuning_iova,
 			unsigned int mode)
 {
+	const struct mtk_hcp_ops *hcp_ops = mtk_hcp_fetch_ops(imgsys_dev->scp_pdev);
 	unsigned int i = 0, j = 0;
 	u64 u_iova_addr = 0;
 	struct mtk_imgsys_req_fd_info *fd_info = NULL;
@@ -344,106 +345,102 @@ void imgsys_omc_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 	struct mtk_imgsys_omc_dtable *dtable = NULL;
 	unsigned int tun_ofst = 0;
 	struct flush_buf_info omc_buf_info;
+	void *cq_base = NULL;
 
-	for (i = IMGSYS_OMC_TNR; i <= IMGSYS_OMC_LITE; i++) {
+	if (hcp_ops && hcp_ops->fetch_omc_cq_mb_virt)
+		cq_base = hcp_ops->fetch_omc_cq_mb_virt(imgsys_dev->scp_pdev, mode);
+
+	for (i = IMGSYS_HW_OMC_TNR; i <= IMGSYS_HW_OMC_LITE; i++) {
 		if (!user_info->priv[i].need_update_desc)
 			continue;
 
 		if (user_info->priv[i].buf_fd) {
-		dbuf = dma_buf_get(user_info->priv[i].buf_fd);
-		fd_info = &imgsys_dev->req_fd_cache.info_array[req_fd];
-		req = (struct mtk_imgsys_request *) fd_info->req_addr_va;
-		dev_b = req->buf_map[imgsys_dev->is_singledev_mode(req)];
+			dbuf = dma_buf_get(user_info->priv[i].buf_fd);
+			fd_info = &imgsys_dev->req_fd_cache.info_array[req_fd];
+			req = (struct mtk_imgsys_request *) fd_info->req_addr_va;
+			dev_b = req->buf_map[imgsys_dev->is_singledev_mode(req)];
 			u_iova_addr = imgsys_dev->imgsys_get_iova(dbuf,
 					user_info->priv[i].buf_fd,
 					imgsys_dev, dev_b) + user_info->priv[i].buf_offset;
-			#if SMVR_DECOUPLE
-			u_cq_desc = (u64 *)((void *)(mtk_hcp_get_omc_mem_virt(imgsys_dev->scp_pdev, mode) +
-			#else
-			u_cq_desc = (u64 *)((void *)(mtk_hcp_get_omc_mem_virt(imgsys_dev->scp_pdev) +
-			#endif
-						user_info->priv[i].desc_offset + (OMC_UFOD_P2_DESC_OFST
-						* (sizeof(struct mtk_imgsys_omc_dtable)))));
+			u_cq_desc = (u64 *)((void *)(cq_base +
+				user_info->priv[i].desc_offset +
+				(OMC_UFOD_P2_DESC_OFST * (sizeof(struct mtk_imgsys_omc_dtable)))));
 
 			dtable = (struct mtk_imgsys_omc_dtable *)u_cq_desc;
 			dtable->addr = u_iova_addr & 0xFFFFFFFF;
 			dtable->addr_msb = (u_iova_addr >> 32) & 0xF;
-            if (imgsys_omc_8_dbg_enable()) {
-			pr_debug(
-				"%s: buf_fd(0x%08x) buf_ofst(0x%08x) buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
-				__func__, user_info->priv[i].buf_fd,
-				user_info->priv[i].buf_offset,
-				u_iova_addr, user_info->priv[i].desc_offset,
-				u_cq_desc, dtable->empty,
-				dtable->addr, dtable->addr_msb);
-		}
+			if (imgsys_omc_8_dbg_enable())
+				pr_debug(
+					"%s: buf_fd(0x%08x) buf_ofst(0x%08x) buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
+					__func__, user_info->priv[i].buf_fd,
+					user_info->priv[i].buf_offset,
+					u_iova_addr, user_info->priv[i].desc_offset,
+					u_cq_desc, dtable->empty,
+					dtable->addr, dtable->addr_msb);
 		}
 
 		if (tuning_iova) {
-			#if SMVR_DECOUPLE
-			u_cq_desc = (u64 *)((void *)(mtk_hcp_get_omc_mem_virt(imgsys_dev->scp_pdev, mode) +
+			u_cq_desc = (u64 *)((void *)(cq_base +
 					user_info->priv[i].desc_offset));
-			#else
-			u_cq_desc = (u64 *)((void *)(mtk_hcp_get_omc_mem_virt(imgsys_dev->scp_pdev) +
-						user_info->priv[i].desc_offset));
-			#endif
+
 			dtable = (struct mtk_imgsys_omc_dtable *)u_cq_desc;
 			for (j = 0; j < OMC_CQ_DESC_NUM; j++) {
 				if ((dtable->addr_msb & PSEUDO_DESC_TUNING) == PSEUDO_DESC_TUNING) {
 					tun_ofst = dtable->addr;
 					dtable->addr = (tun_ofst + tuning_iova) & 0xFFFFFFFF;
 					dtable->addr_msb = ((tun_ofst + tuning_iova) >> 32) & 0xF;
-                    if (imgsys_omc_8_dbg_enable()) {
-					pr_debug(
-						"%s: tuning_buf_iova(0x%llx) tun_ofst(0x%08x) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
-						__func__, tuning_iova, tun_ofst,
-						user_info->priv[i].desc_offset,
-						u_cq_desc, dtable->empty,
-						dtable->addr, dtable->addr_msb);
-				}
+					if (imgsys_omc_8_dbg_enable())
+						pr_debug("%s: tuning_buf_iova(0x%llx) tun_ofst(0x%08x) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
+							__func__, tuning_iova, tun_ofst,
+							user_info->priv[i].desc_offset,
+							u_cq_desc, dtable->empty,
+							dtable->addr, dtable->addr_msb);
 				}
 				dtable++;
 			}
 		}
 		//
-		#if SMVR_DECOUPLE
-		omc_buf_info.fd = mtk_hcp_get_omc_mem_cq_fd(imgsys_dev->scp_pdev, mode);
-		#else
-		omc_buf_info.fd = mtk_hcp_get_omc_mem_cq_fd(imgsys_dev->scp_pdev);
-		#endif
+		if (hcp_ops && hcp_ops->fetch_omc_cq_mb_fd)
+			omc_buf_info.fd = hcp_ops->fetch_omc_cq_mb_fd(imgsys_dev->scp_pdev, mode);
 		omc_buf_info.offset = user_info->priv[i].desc_offset;
 		omc_buf_info.len =
 			((sizeof(struct mtk_imgsys_omc_dtable) * OMC_CQ_DESC_NUM) + OMC_REG_SIZE);
 		omc_buf_info.mode = mode;
 		omc_buf_info.is_tuning = false;
-        if (imgsys_omc_8_dbg_enable()) {
-		pr_debug("imgsys_fw cq omc_buf_info (%d/%d/%d), mode(%d)",
-			omc_buf_info.fd, omc_buf_info.len,
-			omc_buf_info.offset, omc_buf_info.mode);
-        }
-		mtk_hcp_partial_flush(imgsys_dev->scp_pdev, &omc_buf_info);
+		if (imgsys_omc_8_dbg_enable())
+			pr_debug("imgsys_fw cq omc_buf_info (%d/%d/%d), mode(%d)",
+				omc_buf_info.fd, omc_buf_info.len,
+				omc_buf_info.offset, omc_buf_info.mode);
+		if (hcp_ops && hcp_ops->flush_mb && hcp_ops->fetch_omc_cq_mb_id)
+			hcp_ops->flush_mb(
+				imgsys_dev->scp_pdev,
+				hcp_ops->fetch_omc_cq_mb_id(imgsys_dev->scp_pdev, mode),
+				omc_buf_info.offset,
+				omc_buf_info.len);
 	}
 
-	for (i = IMGSYS_OMC_TNR; i <= IMGSYS_OMC_LITE; i++) {
+	for (i = IMGSYS_HW_OMC_TNR; i <= IMGSYS_HW_OMC_LITE; i++) {
 		if (!user_info->priv[i].need_flush_tdr)
 			continue;
 
 		// tdr buffer
-		#if SMVR_DECOUPLE
-		omc_buf_info.fd = mtk_hcp_get_omc_mem_tdr_fd(imgsys_dev->scp_pdev, mode);
-		#else
-		omc_buf_info.fd = mtk_hcp_get_omc_mem_tdr_fd(imgsys_dev->scp_pdev);
-		#endif
+		if (hcp_ops && hcp_ops->fetch_omc_tdr_mb_fd)
+			omc_buf_info.fd = hcp_ops->fetch_omc_tdr_mb_fd(imgsys_dev->scp_pdev, mode);
 		omc_buf_info.offset = user_info->priv[i].tdr_offset;
 		omc_buf_info.len = OMC_TDR_BUF_MAXSZ;
 		omc_buf_info.mode = mode;
 		omc_buf_info.is_tuning = false;
-        if (imgsys_omc_8_dbg_enable()) {
-		pr_debug("imgsys_fw tdr omc_buf_info (%d/%d/%d), mode(%d)",
-			omc_buf_info.fd, omc_buf_info.len,
-			omc_buf_info.offset, omc_buf_info.mode);
-        }
-		mtk_hcp_partial_flush(imgsys_dev->scp_pdev, &omc_buf_info);
+		if (imgsys_omc_8_dbg_enable())
+			pr_debug("imgsys_fw tdr omc_buf_info (%d/%d/%d), mode(%d)",
+				omc_buf_info.fd, omc_buf_info.len,
+				omc_buf_info.offset, omc_buf_info.mode);
+
+		if (hcp_ops && hcp_ops->flush_mb && hcp_ops->fetch_omc_tdr_mb_id)
+			hcp_ops->flush_mb(
+				imgsys_dev->scp_pdev,
+				hcp_ops->fetch_omc_tdr_mb_id(imgsys_dev->scp_pdev, mode),
+				omc_buf_info.offset,
+				omc_buf_info.len);
 	}
 }
 
@@ -918,7 +915,7 @@ void imgsys_omc_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 
 	pr_info("%s: +\n", __func__);
 
-	if (engine & IMGSYS_ENG_OMC_TNR)
+	if (engine & IMGSYS_HW_FLAG_OMC_TNR)
 		hw_idx = REG_MAP_E_OMC_TNR;
 	else
 		hw_idx = REG_MAP_E_OMC_LITE;

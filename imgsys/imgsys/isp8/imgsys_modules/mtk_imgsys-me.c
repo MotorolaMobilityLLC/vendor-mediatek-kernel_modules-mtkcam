@@ -40,52 +40,57 @@ void imgsys_me_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			struct img_swfrm_info *user_info, int req_fd, u64 tuning_iova,
 			unsigned int mode)
 {
+	const struct mtk_hcp_ops *hcp_ops = mtk_hcp_fetch_ops(imgsys_dev->scp_pdev);
 	u64 iova_addr = tuning_iova;
 	u64 *cq_desc = NULL;
 	struct mtk_imgsys_me_dtable *dtable = NULL;
 	unsigned int i = 0, tun_ofst = 0;
 	struct flush_buf_info me_buf_info;
+	void *cq_base = NULL;
+
+	if (hcp_ops && hcp_ops->fetch_me_cq_mb_virt)
+		cq_base = hcp_ops->fetch_me_cq_mb_virt(imgsys_dev->scp_pdev, mode);
 
 	/* HWID defined in hw_definition.h */
-	if (user_info->priv[IMGSYS_ME].need_update_desc) {
+	if (user_info->priv[IMGSYS_HW_ME].need_update_desc) {
 		if (iova_addr) {
-			#if SMVR_DECOUPLE
-			cq_desc = (u64 *)((void *)(mtk_hcp_get_me_mem_virt(imgsys_dev->scp_pdev, mode) +
-					user_info->priv[IMGSYS_ME].desc_offset));
-			#else
-			cq_desc = (u64 *)((void *)(mtk_hcp_get_me_mem_virt(imgsys_dev->scp_pdev) +
-					user_info->priv[IMGSYS_ME].desc_offset));
-			#endif
+			cq_desc = (u64 *)((void *)(cq_base +
+				user_info->priv[IMGSYS_HW_ME].desc_offset));
+
 			for (i = 0; i < ME_CQ_DESC_NUM; i++) {
 				dtable = (struct mtk_imgsys_me_dtable *)cq_desc + i;
 				if ((dtable->addr_msb & PSEUDO_DESC_TUNING) == PSEUDO_DESC_TUNING) {
 					tun_ofst = dtable->addr;
 					dtable->addr = (tun_ofst + iova_addr) & 0xFFFFFFFF;
 					dtable->addr_msb = ((tun_ofst + iova_addr) >> 32) & 0xF;
-					if (imgsys_me_7sp_dbg_enable()) {
+					if (imgsys_me_7sp_dbg_enable())
 						pr_debug(
 							"%s: tuning_buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
 							__func__, iova_addr,
-							user_info->priv[IMGSYS_ME].desc_offset,
+							user_info->priv[IMGSYS_HW_ME].desc_offset,
 							cq_desc, dtable->empty, dtable->addr,
 							dtable->addr_msb);
-					}
 				}
 			}
 		}
 		//
-		me_buf_info.fd = mtk_hcp_get_dip_mem_cq_fd(imgsys_dev->scp_pdev, mode);
-		me_buf_info.offset = user_info->priv[IMGSYS_ME].desc_offset;
+		if (hcp_ops && hcp_ops->fetch_me_cq_mb_fd)
+			me_buf_info.fd = hcp_ops->fetch_me_cq_mb_fd(imgsys_dev->scp_pdev, mode);
+		me_buf_info.offset = user_info->priv[IMGSYS_HW_ME].desc_offset;
 		me_buf_info.len =
 			(sizeof(struct mtk_imgsys_me_dtable) * ME_CQ_DESC_NUM) + ME_REG_SIZE;
 		me_buf_info.mode = mode;
 		me_buf_info.is_tuning = false;
-		if (imgsys_me_7sp_dbg_enable()) {
+		if (imgsys_me_7sp_dbg_enable())
 			pr_debug("imgsys_fw cq me_buf_info (%d/%d/%d), mode(%d)",
 				me_buf_info.fd, me_buf_info.len,
 				me_buf_info.offset, me_buf_info.mode);
-		}
-		mtk_hcp_partial_flush(imgsys_dev->scp_pdev, &me_buf_info);
+		if (hcp_ops && hcp_ops->flush_mb && hcp_ops->fetch_me_cq_mb_id)
+			hcp_ops->flush_mb(
+				imgsys_dev->scp_pdev,
+				hcp_ops->fetch_me_cq_mb_id(imgsys_dev->scp_pdev, mode),
+				me_buf_info.offset,
+				me_buf_info.len);
 	}
 }
 
@@ -287,7 +292,7 @@ bool imgsys_me_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine)
 
 	uint32_t value = 0;
 
-	if (engine & IMGSYS_ENG_ME) {
+	if (engine & IMGSYS_HW_FLAG_ME) {
 		value = (uint32_t)ioread32((void *)(g_meRegBA + 0x174));
 		if (!(value & 0x1)) {
 			ret = false;

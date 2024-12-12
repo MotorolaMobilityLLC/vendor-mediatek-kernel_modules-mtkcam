@@ -165,12 +165,6 @@ static void mtk_imgsys_vb2_detach_dmabuf(void *mem_priv);
 
 static unsigned int mtk_imgsys_vb2_num_users(void *buf_priv);
 
-
-
-#ifdef BATCH_MODE_V3
-long mtk_imgsys_vidioc_default(struct file *file, void *fh,
-			bool valid_prio, unsigned int cmd, void *arg);
-#endif
 long mtk_imgsys_subdev_ioctl(struct v4l2_subdev *subdev, unsigned int cmd,
 								void *arg);
 
@@ -313,9 +307,6 @@ static const struct v4l2_ioctl_ops mtk_imgsys_v4l2_video_out_ioctl_ops = {
 
 	.vidioc_subscribe_event = v4l2_ctrl_subscribe_event,
 	.vidioc_unsubscribe_event = v4l2_event_unsubscribe,
-#ifdef BATCH_MODE_V3
-	.vidioc_default = mtk_imgsys_vidioc_default,
-#endif
 };
 
 static const struct v4l2_ioctl_ops mtk_imgsys_v4l2_video_cap_ioctl_ops = {

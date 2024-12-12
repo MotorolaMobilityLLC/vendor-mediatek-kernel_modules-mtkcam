@@ -11,6 +11,7 @@
 #include <mtk_imgsys-of.h>
 #include <mtk_imgsys-dev.h>
 #include <mtk_imgsys-vnode_id.h>
+#include <mtk_imgsys-engine-isp8.h>
 #include <imgsys_modules/mtk_dip_v4l2_vnode.h>
 #include <imgsys_modules/mtk_traw_v4l2_vnode.h>
 #include <imgsys_modules/mtk_pqdip_v4l2_vnode.h>
@@ -18,47 +19,47 @@
 #include <imgsys_modules/mtk_omc_v4l2_vnode.h>
 #include <imgsys_modules/mtk_me_v4l2_vnode.h>
 
-/*
- * TODO: register module pipeline desc in module order
- */
-enum mtk_imgsys_module_id {
-	IMGSYS_MODULE_TRAW = 0,
-	IMGSYS_MODULE_DIP,
-	IMGSYS_MODULE_PQDIP,
-	IMGSYS_MODULE_ME,
-	IMGSYS_MODULE_WPE,
-	IMGSYS_MODULE_OMC,
-	IMGSYS_MODULE_ADL,
-	IMGSYS_MODULE_MAIN,
-	IMGSYS_MODULE_NUM,
-};
+#define IMGSYS_MODULE_MAIN (IMGSYS_MOD_DRV_NUM_MAX)
+#define IMGSYS_MODULE_NUM (IMGSYS_MOD_DRV_NUM_MAX + 1)
 
 static const struct mtk_imgsys_mod_pipe_desc module_pipe_isp8[] = {
-	[IMGSYS_MODULE_TRAW] = {
-		.vnode_desc = traw_setting,
-		.node_num = ARRAY_SIZE(traw_setting),
-	},
-	[IMGSYS_MODULE_DIP] = {
-		.vnode_desc = dip_setting,
-		.node_num = ARRAY_SIZE(dip_setting),
-	},
-	[IMGSYS_MODULE_PQDIP] = {
-		.vnode_desc = pqdip_setting,
-		.node_num = ARRAY_SIZE(pqdip_setting),
-	},
-	[IMGSYS_MODULE_ME] = {
-		.vnode_desc = me_setting,
-		.node_num = ARRAY_SIZE(me_setting),
-	},
-	[IMGSYS_MODULE_WPE] = {
+	[IMGSYS_MOD_DRV_WPE] = {
 		.vnode_desc = wpe_setting,
 		.node_num = ARRAY_SIZE(wpe_setting),
 	},
-	[IMGSYS_MODULE_OMC] = {
+	[IMGSYS_MOD_DRV_OMC] = {
 		.vnode_desc = omc_setting,
 		.node_num = ARRAY_SIZE(omc_setting),
 	},
-	[IMGSYS_MODULE_ADL] = {
+	[IMGSYS_MOD_DRV_ADL] = {
+		.vnode_desc = NULL,
+		.node_num = 0,
+	},
+	[IMGSYS_MOD_DRV_TRAW] = {
+		.vnode_desc = traw_setting,
+		.node_num = ARRAY_SIZE(traw_setting),
+	},
+	[IMGSYS_MOD_DRV_DIP] = {
+		.vnode_desc = dip_setting,
+		.node_num = ARRAY_SIZE(dip_setting),
+	},
+	[IMGSYS_MOD_DRV_PQDIP] = {
+		.vnode_desc = pqdip_setting,
+		.node_num = ARRAY_SIZE(pqdip_setting),
+	},
+	[IMGSYS_MOD_DRV_ME] = {
+		.vnode_desc = me_setting,
+		.node_num = ARRAY_SIZE(me_setting),
+	},
+	[IMGSYS_MOD_DRV_MAE] = {
+		.vnode_desc = NULL,
+		.node_num = 0,
+	},
+	[IMGSYS_MOD_DRV_DFP] = {
+		.vnode_desc = NULL,
+		.node_num = 0,
+	},
+	[IMGSYS_MOD_DRV_DPE] = {
 		.vnode_desc = NULL,
 		.node_num = 0,
 	},
@@ -68,18 +69,7 @@ static const struct mtk_imgsys_mod_pipe_desc module_pipe_isp8[] = {
 	}
 };
 
-
-#define MTK_IMGSYS_MODULE_VNUM ARRAY_SIZE(module_pipe_isp8)
-
-
-
 static const struct mtk_imgsys_dev_format fw_param_fmts[] = {
-#ifdef MTK_CM4_SUPPORT
-	{
-		.format = V4L2_META_FMT_MTISP_PARAMS,
-		.buffer_size = 1024 * (128 + 288),
-	},
-#else
 	{
 		.format = V4L2_META_FMT_MTISP_PARAMS,
 		.buffer_size = DIP_TUNING_SZ,
@@ -88,7 +78,6 @@ static const struct mtk_imgsys_dev_format fw_param_fmts[] = {
 		.format = V4L2_META_FMT_MTISP_PARAMS,
 		.buffer_size = sizeof(struct dip_param),
 	},
-#endif
 	{	// Must have for SMVR/Multis-cale for every video_device nodes
 		.format = V4L2_META_FMT_MTISP_DESC,
 		.num_planes = 1,
@@ -115,12 +104,20 @@ static const struct mtk_imgsys_dev_format sd_fmts[] = {
 		.row_depth = { 8 },
 		.num_cplanes = 1,
 #endif
+#if defined (IMGSYS_SINGLE_NODE_DESC_V2)
+		.buffer_size = sizeof(struct singlenode_desc_smvr),
+#else
 		.buffer_size = sizeof(struct singlenode_desc),
+#endif
 	},
 	{
 		.format = V4L2_META_FMT_MTISP_SDNORM,
 		.num_planes = 1,
+#if defined (IMGSYS_SINGLE_NODE_DESC_V2)
+		.buffer_size = sizeof(struct singlenode_desc_normal),
+#else
 		.buffer_size = sizeof(struct singlenode_desc_norm),
+#endif
 	},
 };
 

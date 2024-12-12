@@ -28,7 +28,6 @@
 #include "mtk_imgsys-cmdq-qos.h"
 #include "mtk_imgsys-trace.h"
 #include "mtk-interconnect.h"
-#include "mtk_imgsys_cmdq_token.h"
 
 #if DVFS_QOS_READY
 #include "mtk-smi-dbg.h"
@@ -40,20 +39,13 @@
 #include "cmdq-sec-iwc-common.h"
 #endif
 
-#ifndef CFG_SUPPORT_MBRAIN
-#define CFG_SUPPORT_MBRAIN 0
-#endif
-#if CFG_SUPPORT_MBRAIN
-#include "bridge/mbraink_bridge.h"
-#endif /* CFG_SUPPORT_MBRAIN */
-
 #define IMGSYS_SEC_THD_IDX_START (IMGSYS_NOR_THD + IMGSYS_PWR_THD + IMGSYS_QOS_THD)
 
-#define WPE_BWLOG_HW_COMB (IMGSYS_ENG_WPE_TNR | IMGSYS_ENG_DIP)
-#define WPE_BWLOG_HW_COMB_ninA (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_PQDIP_A)
-#define WPE_BWLOG_HW_COMB_ninB (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_PQDIP_B)
-#define WPE_BWLOG_HW_COMB_ninC (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_TRAW)
-#define WPE_BWLOG_HW_COMB_ninD (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_LTR)
+#define WPE_BWLOG_HW_COMB (IMGSYS_HW_FLAG_WPE_TNR | IMGSYS_HW_FLAG_DIP)
+#define WPE_BWLOG_HW_COMB_ninA (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_PQDIP_A)
+#define WPE_BWLOG_HW_COMB_ninB (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_PQDIP_B)
+#define WPE_BWLOG_HW_COMB_ninC (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_TRAW)
+#define WPE_BWLOG_HW_COMB_ninD (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_LTR)
 
 #if CMDQ_CB_KTHREAD
 static struct kthread_worker imgsys_cmdq_worker;
@@ -73,17 +65,6 @@ static struct mtk_imgsys_cb_param g_cb_param[IMGSYS_CMDQ_CBPARAM_NUM];
 static u32 g_cb_param_idx;
 static struct mutex g_cb_param_lock;
 #endif
-
-#if CFG_SUPPORT_MBRAIN
-static int g_imgsys_hw_time_mbrain_factor = 5;
-static bool g_imgsys_hw_time_mbrain_en = 1;
-
-module_param(g_imgsys_hw_time_mbrain_factor, int, 0644);
-MODULE_PARM_DESC(g_imgsys_hw_time_mbrain_factor, "imgsys hw time mbrain factor");
-
-module_param(g_imgsys_hw_time_mbrain_en, bool, 0644);
-MODULE_PARM_DESC(g_imgsys_hw_time_mbrain_en, "imgsys hw time mbrain enable, 1 (default)");
-#endif /* CFG_SUPPORT_MBRAIN */
 
 u32 imgsys_cmdq_is_stream_off(void)
 {
@@ -121,9 +102,6 @@ void imgsys_cmdq_init_plat8(struct mtk_imgsys_dev *imgsys_dev, const int nr_imgs
 			pr_info("%s: Create workquque IMGSYS-CMDQ fail!\n",
 				__func__);
 #endif
-		if (!imgsys_cmdq_set_frm_sync_pdev(dev))
-			dev_info(dev, "%s: failed to get frm_sync_pdev device\n", __func__);
-
 	}
 
 	switch (nr_imgsys_dev) {
@@ -229,7 +207,9 @@ void imgsys_cmdq_streamon_plat8(struct mtk_imgsys_dev *imgsys_dev)
 		idx <= IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_END; idx++)
 		cmdq_clear_event(imgsys_clt[0]->chan, imgsys_event[idx].event);
 
+#ifndef CONFIG_FPGA_EARLY_PORTING
 	cmdq_mbox_disable(imgsys_clt[0]->chan);
+#endif
 
 	memset((void *)event_hist, 0x0,
 		sizeof(struct imgsys_event_history)*IMGSYS_CMDQ_SYNC_POOL_NUM);
@@ -251,8 +231,6 @@ void imgsys_cmdq_streamon_plat8(struct mtk_imgsys_dev *imgsys_dev)
 		__func__, IMGSYS_CMDQ_CBPARAM_NUM, sizeof(struct mtk_imgsys_cb_param));
     }
 #endif
-/* frm sync token init*/
-	imgsys_cmdq_frm_sync_init();
 }
 
 void imgsys_cmdq_streamoff_plat8(struct mtk_imgsys_dev *imgsys_dev)
@@ -286,7 +264,9 @@ void imgsys_cmdq_streamoff_plat8(struct mtk_imgsys_dev *imgsys_dev)
 	mutex_unlock(&(imgsys_dev->sec_task_lock));
 	#endif
 
-	//cmdq_mbox_disable(imgsys_clt[0]->chan);
+#ifdef CONFIG_FPGA_EARLY_PORTING
+	cmdq_mbox_disable(imgsys_clt[0]->chan);
+#endif
 
 	#if DVFS_QOS_READY
 	mtk_imgsys_mmdvfs_reset_plat8(imgsys_dev);
@@ -295,7 +275,6 @@ void imgsys_cmdq_streamoff_plat8(struct mtk_imgsys_dev *imgsys_dev)
 		mtk_imgsys_mmqos_monitor_plat8(imgsys_dev, SMI_MONITOR_STOP_STATE);
 	);
 	#endif
-	imgsys_cmdq_frm_sync_uninit();
 }
 
 static void imgsys_cmdq_cmd_dump_plat8(struct swfrm_info_t *frm_info, u32 frm_idx)
@@ -358,40 +337,19 @@ static void imgsys_cmdq_cmd_dump_plat8(struct swfrm_info_t *frm_info, u32 frm_id
 				cmd[cmd_idx].u.address, cmd[cmd_idx].u.value, cmd[cmd_idx].u.mask);
 			break;
 		case IMGSYS_CMD_WAIT:
-			if (imgsys_cmdq_is_vsdof_event(cmd[cmd_idx].u.event)) {
-				pr_info(
-				"%s: WAIT event(%d) action(%d)\n", __func__,
-					cmd[cmd_idx].u.event, cmd[cmd_idx].u.action);
-			} else {
-				pr_info(
-				"%s: WAIT event(%d/%d) action(%d)\n", __func__,
+			pr_info("%s: WAIT event(%d/%d) action(%d)\n", __func__,
 					cmd[cmd_idx].u.event, imgsys_event[cmd[cmd_idx].u.event].event,
 					cmd[cmd_idx].u.action);
-			}
 			break;
 		case IMGSYS_CMD_UPDATE:
-			if (imgsys_cmdq_is_vsdof_event(cmd[cmd_idx].u.event)) {
-				pr_info(
-				"%s: WAIT event(%d) action(%d)\n", __func__,
-					cmd[cmd_idx].u.event, cmd[cmd_idx].u.action);
-			} else {
-				pr_info(
-				"%s: UPDATE event(%d/%d) action(%d)\n", __func__,
+			pr_info("%s: UPDATE event(%d/%d) action(%d)\n", __func__,
 					cmd[cmd_idx].u.event, imgsys_event[cmd[cmd_idx].u.event].event,
 					cmd[cmd_idx].u.action);
-			}
 			break;
 		case IMGSYS_CMD_ACQUIRE:
-			if (imgsys_cmdq_is_vsdof_event(cmd[cmd_idx].u.event)) {
-				pr_info(
-				"%s: WAIT event(%d) action(%d)\n", __func__,
-					cmd[cmd_idx].u.event, cmd[cmd_idx].u.action);
-			} else {
-				pr_info(
-				"%s: ACQUIRE event(%d/%d) action(%d)\n", __func__,
+			pr_info("%s: ACQUIRE event(%d/%d) action(%d)\n", __func__,
 					cmd[cmd_idx].u.event, imgsys_event[cmd[cmd_idx].u.event].event,
 					cmd[cmd_idx].u.action);
-			}
 			break;
 		case IMGSYS_CMD_TIME:
 			pr_info("%s: Get cmdq TIME stamp\n", __func__);
@@ -426,10 +384,6 @@ static void imgsys_cmdq_cb_work_plat8(struct work_struct *work)
 	char logBuf_temp[MTK_IMGSYS_LOG_LENGTH];
 	u32 idx = 0;
 	u32 real_frm_idx = 0;
-#if CFG_SUPPORT_MBRAIN
-	u64 tsFps = 0, tsTask = 0;
-	struct ht_mbrain ht_mbrain_info;
-#endif /* CFG_SUPPORT_MBRAIN */
 
 	if (imgsys_cmdq_dbg_enable_plat8())
 		pr_debug("%s: +\n", __func__);
@@ -536,22 +490,6 @@ static void imgsys_cmdq_cb_work_plat8(struct work_struct *work)
 			cb_param->task_id, cb_param->task_num, cb_param->task_cnt,
 			cb_param->pkt_ofst[0], cb_param->pkt_ofst[1], cb_param->pkt_ofst[2],
 			cb_param->pkt_ofst[3], cb_param->pkt_ofst[4]);
-#if CFG_SUPPORT_MBRAIN
-	else if(g_imgsys_hw_time_mbrain_en && (cb_param->fps != 0)) {
-		/* Add mbrain check */
-		tsFps = 1000000/cb_param->fps;
-		tsTask = cb_param->cmdqTs.tsCmdqCbStart - cb_param->cmdqTs.tsFlushStart;
-		if (tsTask > (tsFps * g_imgsys_hw_time_mbrain_factor)) {
-			ht_mbrain_info.req_fd = cb_param->req_fd;
-			ht_mbrain_info.req_no = cb_param->req_no;
-			ht_mbrain_info.frm_no = cb_param->frm_no;
-			ht_mbrain_info.hw_comb = cb_param->hw_comb;
-			ht_mbrain_info.group_id = cb_param->group_id;
-			ht_mbrain_info.tsHwTime = tsTask;
-			imgsys2mbrain_notify_hw_time_info(ht_mbrain_info);
-		}
-	}
-#endif /* CFG_SUPPORT_MBRAIN */
 	if (is_stream_off == 1)
 		pr_info("%s: [ERROR] cb(%p) pipe already streamoff(%d)!\n",
 			__func__, cb_param, is_stream_off);
@@ -663,15 +601,6 @@ static void imgsys_cmdq_cb_work_plat8(struct work_struct *work)
 		IMGSYS_CMDQ_SYSTRACE_END();
 		tsDvfsQosEnd = ktime_get_boottime_ns()/1000;
 
-		if (!is_stream_off && isLastTaskInReq) {
-			int sw_ridx = 0;
-
-			for (idx = 0; idx < cb_param->frm_info->total_frmnum; idx++) {
-				sw_ridx = cb_param->frm_info->user_info[idx].sw_ridx;
-				imgsys_cmdq_release_token_vsdof(sw_ridx);
-			}
-		}
-
 		user_cb_data.err = cb_param->err;
 		user_cb_data.data = (void *)cb_param->frm_info;
 		cb_param->cmdqTs.tsUserCbStart = ktime_get_boottime_ns()/1000;
@@ -684,7 +613,6 @@ static void imgsys_cmdq_cb_work_plat8(struct work_struct *work)
 			cb_param->batchnum, cb_param->is_capture);
 		IMGSYS_CMDQ_SYSTRACE_END();
 		cb_param->cmdqTs.tsUserCbEnd = ktime_get_boottime_ns()/1000;
-
 	}
 
 	IMGSYS_CMDQ_SYSTRACE_BEGIN(
@@ -977,7 +905,266 @@ void imgsys_cmdq_task_cb_plat8(struct cmdq_cb_data data)
 					event_hist[event_sft].wait.req_no,
 					event_hist[event_sft].wait.frm_no,
 					event_hist[event_sft].wait.ts);
-
+		} else if ((event >= IMGSYS_CMDQ_VSDOF_EVENT_BEGIN) &&
+			(event <= IMGSYS_CMDQ_VSDOF_EVENT_END)) {
+			event_sft = event - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN +
+				(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+			event_diff = event_hist[event_sft].set.ts >
+						event_hist[event_sft].wait.ts ?
+						(event_hist[event_sft].set.ts -
+						event_hist[event_sft].wait.ts) :
+						(event_hist[event_sft].wait.ts -
+						event_hist[event_sft].set.ts);
+			pr_info(
+				"%s: [ERROR] SW event vsdof timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+				__func__,
+				cb_param->pkt->err_data.wfe_timeout,
+				cb_param->pkt->err_data.event, isHWhang,
+				event_hist[event_sft].st, event_diff,
+				event_hist[event_sft].set.req_fd,
+				event_hist[event_sft].set.req_no,
+				event_hist[event_sft].set.frm_no,
+				event_hist[event_sft].set.ts,
+				event_hist[event_sft].wait.req_fd,
+				event_hist[event_sft].wait.req_no,
+				event_hist[event_sft].wait.frm_no,
+				event_hist[event_sft].wait.ts);
+		} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT1_BEGIN) &&
+			(event <= IMGSYS_CMDQ_AISEG_EVENT1_END)) {
+			event_sft = event - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN +
+				(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+			event_diff = event_hist[event_sft].set.ts >
+						event_hist[event_sft].wait.ts ?
+						(event_hist[event_sft].set.ts -
+						event_hist[event_sft].wait.ts) :
+						(event_hist[event_sft].wait.ts -
+						event_hist[event_sft].set.ts);
+			pr_info(
+				"%s: [ERROR] SW event aiseg timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+				__func__,
+				cb_param->pkt->err_data.wfe_timeout,
+				cb_param->pkt->err_data.event, isHWhang,
+				event_hist[event_sft].st, event_diff,
+				event_hist[event_sft].set.req_fd,
+				event_hist[event_sft].set.req_no,
+				event_hist[event_sft].set.frm_no,
+				event_hist[event_sft].set.ts,
+				event_hist[event_sft].wait.req_fd,
+				event_hist[event_sft].wait.req_no,
+				event_hist[event_sft].wait.frm_no,
+				event_hist[event_sft].wait.ts);
+		} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT2_BEGIN) &&
+			(event <= IMGSYS_CMDQ_AISEG_EVENT2_END)) {
+			event_sft = event - IMGSYS_CMDQ_AISEG_EVENT2_BEGIN +
+				(IMGSYS_CMDQ_AISEG_EVENT1_END - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN + 1) +
+				(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+			event_diff = event_hist[event_sft].set.ts >
+						event_hist[event_sft].wait.ts ?
+						(event_hist[event_sft].set.ts -
+						event_hist[event_sft].wait.ts) :
+						(event_hist[event_sft].wait.ts -
+						event_hist[event_sft].set.ts);
+			pr_info(
+				"%s: [ERROR] SW event aiseg timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+				__func__,
+				cb_param->pkt->err_data.wfe_timeout,
+				cb_param->pkt->err_data.event, isHWhang,
+				event_hist[event_sft].st, event_diff,
+				event_hist[event_sft].set.req_fd,
+				event_hist[event_sft].set.req_no,
+				event_hist[event_sft].set.frm_no,
+				event_hist[event_sft].set.ts,
+				event_hist[event_sft].wait.req_fd,
+				event_hist[event_sft].wait.req_no,
+				event_hist[event_sft].wait.frm_no,
+				event_hist[event_sft].wait.ts);
+		} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT3_BEGIN) &&
+			(event <= IMGSYS_CMDQ_AISEG_EVENT3_END)) {
+			event_sft = event - IMGSYS_CMDQ_AISEG_EVENT3_BEGIN +
+				(IMGSYS_CMDQ_AISEG_EVENT2_END - IMGSYS_CMDQ_AISEG_EVENT2_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT1_END - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN + 1) +
+				(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+			event_diff = event_hist[event_sft].set.ts >
+						event_hist[event_sft].wait.ts ?
+						(event_hist[event_sft].set.ts -
+						event_hist[event_sft].wait.ts) :
+						(event_hist[event_sft].wait.ts -
+						event_hist[event_sft].set.ts);
+			pr_info(
+				"%s: [ERROR] SW event vsdof timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+				__func__,
+				cb_param->pkt->err_data.wfe_timeout,
+				cb_param->pkt->err_data.event, isHWhang,
+				event_hist[event_sft].st, event_diff,
+				event_hist[event_sft].set.req_fd,
+				event_hist[event_sft].set.req_no,
+				event_hist[event_sft].set.frm_no,
+				event_hist[event_sft].set.ts,
+				event_hist[event_sft].wait.req_fd,
+				event_hist[event_sft].wait.req_no,
+				event_hist[event_sft].wait.frm_no,
+				event_hist[event_sft].wait.ts);
+		} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT4_BEGIN) &&
+			(event <= IMGSYS_CMDQ_AISEG_EVENT4_END)) {
+			event_sft = event - IMGSYS_CMDQ_AISEG_EVENT4_BEGIN +
+				(IMGSYS_CMDQ_AISEG_EVENT3_END - IMGSYS_CMDQ_AISEG_EVENT3_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT2_END - IMGSYS_CMDQ_AISEG_EVENT2_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT1_END - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN + 1) +
+				(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+			event_diff = event_hist[event_sft].set.ts >
+						event_hist[event_sft].wait.ts ?
+						(event_hist[event_sft].set.ts -
+						event_hist[event_sft].wait.ts) :
+						(event_hist[event_sft].wait.ts -
+						event_hist[event_sft].set.ts);
+			pr_info(
+				"%s: [ERROR] SW event vsdof timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+				__func__,
+				cb_param->pkt->err_data.wfe_timeout,
+				cb_param->pkt->err_data.event, isHWhang,
+				event_hist[event_sft].st, event_diff,
+				event_hist[event_sft].set.req_fd,
+				event_hist[event_sft].set.req_no,
+				event_hist[event_sft].set.frm_no,
+				event_hist[event_sft].set.ts,
+				event_hist[event_sft].wait.req_fd,
+				event_hist[event_sft].wait.req_no,
+				event_hist[event_sft].wait.frm_no,
+				event_hist[event_sft].wait.ts);
+		} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT5_BEGIN) &&
+			(event <= IMGSYS_CMDQ_AISEG_EVENT5_END)) {
+			event_sft = event - IMGSYS_CMDQ_AISEG_EVENT5_BEGIN +
+				(IMGSYS_CMDQ_AISEG_EVENT4_END - IMGSYS_CMDQ_AISEG_EVENT4_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT3_END - IMGSYS_CMDQ_AISEG_EVENT3_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT2_END - IMGSYS_CMDQ_AISEG_EVENT2_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT1_END - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN + 1) +
+				(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+			event_diff = event_hist[event_sft].set.ts >
+						event_hist[event_sft].wait.ts ?
+						(event_hist[event_sft].set.ts -
+						event_hist[event_sft].wait.ts) :
+						(event_hist[event_sft].wait.ts -
+						event_hist[event_sft].set.ts);
+			pr_info(
+				"%s: [ERROR] SW event vsdof timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+				__func__,
+				cb_param->pkt->err_data.wfe_timeout,
+				cb_param->pkt->err_data.event, isHWhang,
+				event_hist[event_sft].st, event_diff,
+				event_hist[event_sft].set.req_fd,
+				event_hist[event_sft].set.req_no,
+				event_hist[event_sft].set.frm_no,
+				event_hist[event_sft].set.ts,
+				event_hist[event_sft].wait.req_fd,
+				event_hist[event_sft].wait.req_no,
+				event_hist[event_sft].wait.frm_no,
+				event_hist[event_sft].wait.ts);
+		} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT6_BEGIN) &&
+			(event <= IMGSYS_CMDQ_AISEG_EVENT6_END)) {
+			event_sft = event - IMGSYS_CMDQ_AISEG_EVENT6_BEGIN +
+				(IMGSYS_CMDQ_AISEG_EVENT5_END - IMGSYS_CMDQ_AISEG_EVENT5_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT4_END - IMGSYS_CMDQ_AISEG_EVENT4_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT3_END - IMGSYS_CMDQ_AISEG_EVENT3_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT2_END - IMGSYS_CMDQ_AISEG_EVENT2_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT1_END - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN + 1) +
+				(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+			event_diff = event_hist[event_sft].set.ts >
+						event_hist[event_sft].wait.ts ?
+						(event_hist[event_sft].set.ts -
+						event_hist[event_sft].wait.ts) :
+						(event_hist[event_sft].wait.ts -
+						event_hist[event_sft].set.ts);
+			pr_info(
+				"%s: [ERROR] SW event vsdof timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+				__func__,
+				cb_param->pkt->err_data.wfe_timeout,
+				cb_param->pkt->err_data.event, isHWhang,
+				event_hist[event_sft].st, event_diff,
+				event_hist[event_sft].set.req_fd,
+				event_hist[event_sft].set.req_no,
+				event_hist[event_sft].set.frm_no,
+				event_hist[event_sft].set.ts,
+				event_hist[event_sft].wait.req_fd,
+				event_hist[event_sft].wait.req_no,
+				event_hist[event_sft].wait.frm_no,
+				event_hist[event_sft].wait.ts);
+		} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT7_BEGIN) &&
+			(event <= IMGSYS_CMDQ_AISEG_EVENT7_END)) {
+			event_sft = event - IMGSYS_CMDQ_AISEG_EVENT7_BEGIN +
+				(IMGSYS_CMDQ_AISEG_EVENT6_END - IMGSYS_CMDQ_AISEG_EVENT6_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT5_END - IMGSYS_CMDQ_AISEG_EVENT5_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT4_END - IMGSYS_CMDQ_AISEG_EVENT4_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT3_END - IMGSYS_CMDQ_AISEG_EVENT3_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT2_END - IMGSYS_CMDQ_AISEG_EVENT2_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT1_END - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN + 1) +
+				(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+			event_diff = event_hist[event_sft].set.ts >
+						event_hist[event_sft].wait.ts ?
+						(event_hist[event_sft].set.ts -
+						event_hist[event_sft].wait.ts) :
+						(event_hist[event_sft].wait.ts -
+						event_hist[event_sft].set.ts);
+			pr_info(
+				"%s: [ERROR] SW event vsdof timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+				__func__,
+				cb_param->pkt->err_data.wfe_timeout,
+				cb_param->pkt->err_data.event, isHWhang,
+				event_hist[event_sft].st, event_diff,
+				event_hist[event_sft].set.req_fd,
+				event_hist[event_sft].set.req_no,
+				event_hist[event_sft].set.frm_no,
+				event_hist[event_sft].set.ts,
+				event_hist[event_sft].wait.req_fd,
+				event_hist[event_sft].wait.req_no,
+				event_hist[event_sft].wait.frm_no,
+				event_hist[event_sft].wait.ts);
 		} else if ((event >= IMGSYS_CMDQ_QOF_EVENT_BEGIN) &&
 			(event <= IMGSYS_CMDQ_QOF_EVENT_END)) {
 			dma_addr_t err_pc;
@@ -998,13 +1185,6 @@ void imgsys_cmdq_task_cb_plat8(struct cmdq_cb_data data)
 				__func__,
 				cb_param->pkt->err_data.wfe_timeout,
 				cb_param->pkt->err_data.event, isHWhang);
-		} else if ((event >= IMGSYS_CMDQ_VSDOF_EVENT_BEGIN) &&
-			(event <= IMGSYS_CMDQ_VSDOF_EVENT_END)) {
-			pr_info(
-				"%s: [ERROR] Cross Token event timeout! wfe(%d) event(%d)",
-				__func__,
-				cb_param->pkt->err_data.wfe_timeout,
-				cb_param->pkt->err_data.event);
 		} else if ((is_stream_off == 1) && (event == 0)) {
 			pr_info(
 				"%s: [ERROR] pipe had been turned off(%d)! wfe(%d) event(%d) isHW(%d)",
@@ -1047,7 +1227,8 @@ void imgsys_cmdq_task_cb_plat8(struct cmdq_cb_data data)
 		}
 
 		if (isGPRtimeout) {
-			if (cb_param->hw_comb & (IMGSYS_ENG_WPE_EIS|IMGSYS_ENG_WPE_TNR|IMGSYS_ENG_WPE_LITE)) {
+			if (cb_param->hw_comb &
+				(IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_WPE_TNR|IMGSYS_HW_FLAG_WPE_LITE)) {
 				idx = IMGSYS_MOD_WPE;
 				if (imgsys_dev->modules[idx].done_chk) {
 					isHwDone = imgsys_dev->modules[idx].done_chk(imgsys_dev,
@@ -1059,7 +1240,7 @@ void imgsys_cmdq_task_cb_plat8(struct cmdq_cb_data data)
 					}
 				}
 			}
-			if (isHwDone && (cb_param->hw_comb & (IMGSYS_ENG_TRAW|IMGSYS_ENG_LTR))) {
+			if (isHwDone && (cb_param->hw_comb & (IMGSYS_HW_FLAG_TRAW|IMGSYS_HW_FLAG_LTR))) {
 				idx = IMGSYS_MOD_TRAW;
 				if (imgsys_dev->modules[idx].done_chk) {
 					isHwDone = imgsys_dev->modules[idx].done_chk(imgsys_dev,
@@ -1071,7 +1252,7 @@ void imgsys_cmdq_task_cb_plat8(struct cmdq_cb_data data)
 					}
 				}
 			}
-			if (isHwDone && (cb_param->hw_comb & IMGSYS_ENG_DIP)) {
+			if (isHwDone && (cb_param->hw_comb & IMGSYS_HW_FLAG_DIP)) {
 				idx = IMGSYS_MOD_DIP;
 				if (imgsys_dev->modules[idx].done_chk) {
 					isHwDone = imgsys_dev->modules[idx].done_chk(imgsys_dev,
@@ -1083,7 +1264,7 @@ void imgsys_cmdq_task_cb_plat8(struct cmdq_cb_data data)
 				}
 				}
 			}
-			if (isHwDone && (cb_param->hw_comb & (IMGSYS_ENG_PQDIP_A|IMGSYS_ENG_PQDIP_B))) {
+			if (isHwDone && (cb_param->hw_comb & (IMGSYS_HW_FLAG_PQDIP_A|IMGSYS_HW_FLAG_PQDIP_B))) {
 				idx = IMGSYS_MOD_PQDIP;
 				if (imgsys_dev->modules[idx].done_chk) {
 					isHwDone = imgsys_dev->modules[idx].done_chk(imgsys_dev,
@@ -1095,7 +1276,7 @@ void imgsys_cmdq_task_cb_plat8(struct cmdq_cb_data data)
 					}
 				}
 			}
-			if (isHwDone && (cb_param->hw_comb & IMGSYS_ENG_ME)) {
+			if (isHwDone && (cb_param->hw_comb & IMGSYS_HW_FLAG_ME)) {
 				idx = IMGSYS_MOD_ME;
 				if (imgsys_dev->modules[idx].done_chk) {
 					isHwDone = imgsys_dev->modules[idx].done_chk(imgsys_dev,
@@ -1361,6 +1542,274 @@ int imgsys_cmdq_task_aee_cb_plat8(struct cmdq_cb_data data)
 			event_hist[event_sft].wait.req_no,
 			event_hist[event_sft].wait.frm_no,
 			event_hist[event_sft].wait.ts);
+	} else if ((event >= IMGSYS_CMDQ_VSDOF_EVENT_BEGIN) &&
+		(event <= IMGSYS_CMDQ_VSDOF_EVENT_END)) {
+		event_sft = event - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN +
+			(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+		event_diff = event_hist[event_sft].set.ts >
+					event_hist[event_sft].wait.ts ?
+					(event_hist[event_sft].set.ts -
+					event_hist[event_sft].wait.ts) :
+					(event_hist[event_sft].wait.ts -
+					event_hist[event_sft].set.ts);
+		ret = CMDQ_NO_AEE;
+		pr_info(
+			"%s: [ERROR] SW event vsdof timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+			__func__,
+			cb_param->pkt->err_data.wfe_timeout,
+			cb_param->pkt->err_data.event, isHWhang,
+			event_hist[event_sft].st, event_diff,
+			event_hist[event_sft].set.req_fd,
+			event_hist[event_sft].set.req_no,
+			event_hist[event_sft].set.frm_no,
+			event_hist[event_sft].set.ts,
+			event_hist[event_sft].wait.req_fd,
+			event_hist[event_sft].wait.req_no,
+			event_hist[event_sft].wait.frm_no,
+			event_hist[event_sft].wait.ts);
+	} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT1_BEGIN) &&
+		(event <= IMGSYS_CMDQ_AISEG_EVENT1_END)) {
+		event_sft = event - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN +
+			(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+		event_diff = event_hist[event_sft].set.ts >
+					event_hist[event_sft].wait.ts ?
+					(event_hist[event_sft].set.ts -
+					event_hist[event_sft].wait.ts) :
+					(event_hist[event_sft].wait.ts -
+					event_hist[event_sft].set.ts);
+		ret = CMDQ_NO_AEE;
+		pr_info(
+			"%s: [ERROR] SW event aiseg timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+			__func__,
+			cb_param->pkt->err_data.wfe_timeout,
+			cb_param->pkt->err_data.event, isHWhang,
+			event_hist[event_sft].st, event_diff,
+			event_hist[event_sft].set.req_fd,
+			event_hist[event_sft].set.req_no,
+			event_hist[event_sft].set.frm_no,
+			event_hist[event_sft].set.ts,
+			event_hist[event_sft].wait.req_fd,
+			event_hist[event_sft].wait.req_no,
+			event_hist[event_sft].wait.frm_no,
+			event_hist[event_sft].wait.ts);
+	} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT2_BEGIN) &&
+		(event <= IMGSYS_CMDQ_AISEG_EVENT2_END)) {
+		event_sft = event - IMGSYS_CMDQ_AISEG_EVENT2_BEGIN +
+			(IMGSYS_CMDQ_AISEG_EVENT1_END - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN + 1) +
+			(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+		event_diff = event_hist[event_sft].set.ts >
+					event_hist[event_sft].wait.ts ?
+					(event_hist[event_sft].set.ts -
+					event_hist[event_sft].wait.ts) :
+					(event_hist[event_sft].wait.ts -
+					event_hist[event_sft].set.ts);
+		ret = CMDQ_NO_AEE;
+		pr_info(
+			"%s: [ERROR] SW event aiseg timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+			__func__,
+			cb_param->pkt->err_data.wfe_timeout,
+			cb_param->pkt->err_data.event, isHWhang,
+			event_hist[event_sft].st, event_diff,
+			event_hist[event_sft].set.req_fd,
+			event_hist[event_sft].set.req_no,
+			event_hist[event_sft].set.frm_no,
+			event_hist[event_sft].set.ts,
+			event_hist[event_sft].wait.req_fd,
+			event_hist[event_sft].wait.req_no,
+			event_hist[event_sft].wait.frm_no,
+			event_hist[event_sft].wait.ts);
+	} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT3_BEGIN) &&
+		(event <= IMGSYS_CMDQ_AISEG_EVENT3_END)) {
+		event_sft = event - IMGSYS_CMDQ_AISEG_EVENT3_BEGIN +
+			(IMGSYS_CMDQ_AISEG_EVENT2_END - IMGSYS_CMDQ_AISEG_EVENT2_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT1_END - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN + 1) +
+			(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+		event_diff = event_hist[event_sft].set.ts >
+					event_hist[event_sft].wait.ts ?
+					(event_hist[event_sft].set.ts -
+					event_hist[event_sft].wait.ts) :
+					(event_hist[event_sft].wait.ts -
+					event_hist[event_sft].set.ts);
+		ret = CMDQ_NO_AEE;
+		pr_info(
+			"%s: [ERROR] SW event vsdof timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+			__func__,
+			cb_param->pkt->err_data.wfe_timeout,
+			cb_param->pkt->err_data.event, isHWhang,
+			event_hist[event_sft].st, event_diff,
+			event_hist[event_sft].set.req_fd,
+			event_hist[event_sft].set.req_no,
+			event_hist[event_sft].set.frm_no,
+			event_hist[event_sft].set.ts,
+			event_hist[event_sft].wait.req_fd,
+			event_hist[event_sft].wait.req_no,
+			event_hist[event_sft].wait.frm_no,
+			event_hist[event_sft].wait.ts);
+	} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT4_BEGIN) &&
+		(event <= IMGSYS_CMDQ_AISEG_EVENT4_END)) {
+		event_sft = event - IMGSYS_CMDQ_AISEG_EVENT4_BEGIN +
+			(IMGSYS_CMDQ_AISEG_EVENT3_END - IMGSYS_CMDQ_AISEG_EVENT3_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT2_END - IMGSYS_CMDQ_AISEG_EVENT2_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT1_END - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN + 1) +
+			(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+		event_diff = event_hist[event_sft].set.ts >
+					event_hist[event_sft].wait.ts ?
+					(event_hist[event_sft].set.ts -
+					event_hist[event_sft].wait.ts) :
+					(event_hist[event_sft].wait.ts -
+					event_hist[event_sft].set.ts);
+		ret = CMDQ_NO_AEE;
+		pr_info(
+			"%s: [ERROR] SW event vsdof timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+			__func__,
+			cb_param->pkt->err_data.wfe_timeout,
+			cb_param->pkt->err_data.event, isHWhang,
+			event_hist[event_sft].st, event_diff,
+			event_hist[event_sft].set.req_fd,
+			event_hist[event_sft].set.req_no,
+			event_hist[event_sft].set.frm_no,
+			event_hist[event_sft].set.ts,
+			event_hist[event_sft].wait.req_fd,
+			event_hist[event_sft].wait.req_no,
+			event_hist[event_sft].wait.frm_no,
+			event_hist[event_sft].wait.ts);
+	} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT5_BEGIN) &&
+		(event <= IMGSYS_CMDQ_AISEG_EVENT5_END)) {
+		event_sft = event - IMGSYS_CMDQ_AISEG_EVENT5_BEGIN +
+			(IMGSYS_CMDQ_AISEG_EVENT4_END - IMGSYS_CMDQ_AISEG_EVENT4_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT3_END - IMGSYS_CMDQ_AISEG_EVENT3_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT2_END - IMGSYS_CMDQ_AISEG_EVENT2_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT1_END - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN + 1) +
+			(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+		event_diff = event_hist[event_sft].set.ts >
+					event_hist[event_sft].wait.ts ?
+					(event_hist[event_sft].set.ts -
+					event_hist[event_sft].wait.ts) :
+					(event_hist[event_sft].wait.ts -
+					event_hist[event_sft].set.ts);
+		ret = CMDQ_NO_AEE;
+		pr_info(
+			"%s: [ERROR] SW event vsdof timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+			__func__,
+			cb_param->pkt->err_data.wfe_timeout,
+			cb_param->pkt->err_data.event, isHWhang,
+			event_hist[event_sft].st, event_diff,
+			event_hist[event_sft].set.req_fd,
+			event_hist[event_sft].set.req_no,
+			event_hist[event_sft].set.frm_no,
+			event_hist[event_sft].set.ts,
+			event_hist[event_sft].wait.req_fd,
+			event_hist[event_sft].wait.req_no,
+			event_hist[event_sft].wait.frm_no,
+			event_hist[event_sft].wait.ts);
+	} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT6_BEGIN) &&
+		(event <= IMGSYS_CMDQ_AISEG_EVENT6_END)) {
+		event_sft = event - IMGSYS_CMDQ_AISEG_EVENT6_BEGIN +
+			(IMGSYS_CMDQ_AISEG_EVENT5_END - IMGSYS_CMDQ_AISEG_EVENT5_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT4_END - IMGSYS_CMDQ_AISEG_EVENT4_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT3_END - IMGSYS_CMDQ_AISEG_EVENT3_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT2_END - IMGSYS_CMDQ_AISEG_EVENT2_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT1_END - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN + 1) +
+			(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+		event_diff = event_hist[event_sft].set.ts >
+					event_hist[event_sft].wait.ts ?
+					(event_hist[event_sft].set.ts -
+					event_hist[event_sft].wait.ts) :
+					(event_hist[event_sft].wait.ts -
+					event_hist[event_sft].set.ts);
+		ret = CMDQ_NO_AEE;
+		pr_info(
+			"%s: [ERROR] SW event vsdof timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+			__func__,
+			cb_param->pkt->err_data.wfe_timeout,
+			cb_param->pkt->err_data.event, isHWhang,
+			event_hist[event_sft].st, event_diff,
+			event_hist[event_sft].set.req_fd,
+			event_hist[event_sft].set.req_no,
+			event_hist[event_sft].set.frm_no,
+			event_hist[event_sft].set.ts,
+			event_hist[event_sft].wait.req_fd,
+			event_hist[event_sft].wait.req_no,
+			event_hist[event_sft].wait.frm_no,
+			event_hist[event_sft].wait.ts);
+	} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT7_BEGIN) &&
+		(event <= IMGSYS_CMDQ_AISEG_EVENT7_END)) {
+		event_sft = event - IMGSYS_CMDQ_AISEG_EVENT7_BEGIN +
+			(IMGSYS_CMDQ_AISEG_EVENT6_END - IMGSYS_CMDQ_AISEG_EVENT6_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT5_END - IMGSYS_CMDQ_AISEG_EVENT5_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT4_END - IMGSYS_CMDQ_AISEG_EVENT4_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT3_END - IMGSYS_CMDQ_AISEG_EVENT3_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT2_END - IMGSYS_CMDQ_AISEG_EVENT2_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT1_END - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN + 1) +
+			(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+		event_diff = event_hist[event_sft].set.ts >
+					event_hist[event_sft].wait.ts ?
+					(event_hist[event_sft].set.ts -
+					event_hist[event_sft].wait.ts) :
+					(event_hist[event_sft].wait.ts -
+					event_hist[event_sft].set.ts);
+		ret = CMDQ_NO_AEE;
+		pr_info(
+			"%s: [ERROR] SW event vsdof timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+			__func__,
+			cb_param->pkt->err_data.wfe_timeout,
+			cb_param->pkt->err_data.event, isHWhang,
+			event_hist[event_sft].st, event_diff,
+			event_hist[event_sft].set.req_fd,
+			event_hist[event_sft].set.req_no,
+			event_hist[event_sft].set.frm_no,
+			event_hist[event_sft].set.ts,
+			event_hist[event_sft].wait.req_fd,
+			event_hist[event_sft].wait.req_no,
+			event_hist[event_sft].wait.frm_no,
+			event_hist[event_sft].wait.ts);
 	} else if ((event >= IMGSYS_CMDQ_QOF_EVENT_BEGIN) &&
 		(event <= IMGSYS_CMDQ_QOF_EVENT_END)) {
 		ret = CMDQ_NO_AEE;
@@ -1380,15 +1829,6 @@ int imgsys_cmdq_task_aee_cb_plat8(struct cmdq_cb_data data)
 			__func__,
 			cb_param->pkt->err_data.wfe_timeout,
 			cb_param->pkt->err_data.event, isHWhang);
-	} else if ((event >= IMGSYS_CMDQ_VSDOF_EVENT_BEGIN) &&
-		(event <= IMGSYS_CMDQ_VSDOF_EVENT_END)) {
-		ret = CMDQ_NO_AEE;
-		imgsys_cmdq_frm_sync_dump_event_info(event);
-		pr_info(
-			"%s: [ERROR] cross token event timeout! wfe(%d) event(%d)",
-			__func__,
-			cb_param->pkt->err_data.wfe_timeout,
-			cb_param->pkt->err_data.event);
 	} else if ((is_stream_off == 1) && (event == 0)) {
 		ret = CMDQ_NO_AEE;
 		pr_info(
@@ -1563,7 +2003,7 @@ int imgsys_cmdq_sendtask_plat8(struct mtk_imgsys_dev *imgsys_dev,
 					hw_comb = hw_comb>>1;
 				}
 				/* This segment can be removed since user had set dependency */
-				if (frm_info->user_info[frm_idx].hw_comb & IMGSYS_ENG_DIP) {
+				if (frm_info->user_info[frm_idx].hw_comb & IMGSYS_HW_FLAG_DIP) {
 					thd_idx = 4;
 					clt = imgsys_clt[thd_idx];
 				}
@@ -1772,7 +2212,6 @@ int imgsys_cmdq_sendtask_plat8(struct mtk_imgsys_dev *imgsys_dev,
 				cb_param->req_fd = frm_info->request_fd;
 				cb_param->req_no = frm_info->request_no;
 				cb_param->frm_no = frm_info->frame_no;
-				cb_param->fps = frm_info->fps;
 				cb_param->hw_comb = hw_comb;
 				cb_param->frm_idx = frm_idx;
 				cb_param->frm_num = frm_num;
@@ -1912,15 +2351,9 @@ int imgsys_cmdq_parser_plat8(struct mtk_imgsys_dev *imgsys_dev,
 	bool iova_dbg = false;
 	u16 pre_fd = 0;
 #endif
-	struct token_data tdata = {0};
-
 	req_fd = frm_info->request_fd;
 	req_no = frm_info->request_no;
 	frm_no = frm_info->frame_no;
-	tdata.frm_owner = frm_info->frm_owner;
-        tdata.req_fd = req_fd;
-	tdata.req_no = req_no;
-	tdata.sw_ridx = sw_ridx;
 
     if (imgsys_cmdq_dbg_enable_plat8()) {
 	pr_debug("%s: +, cmd(%d)\n", __func__, cmd->opcode);
@@ -2158,7 +2591,6 @@ int imgsys_cmdq_parser_plat8(struct mtk_imgsys_dev *imgsys_dev,
 				cmd->u.action);
             }
 			if (cmd->u.action == 1) {
-				if (imgsys_cmdq_try_vsdof_wfe(&tdata, pkt, cmd->u.event)) {
 				cmdq_pkt_wfe(pkt, imgsys_event[cmd->u.event].event);
 				if ((cmd->u.event >= IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_POOL_START) &&
 					(cmd->u.event <= IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_END)) {
@@ -2172,11 +2604,8 @@ int imgsys_cmdq_parser_plat8(struct mtk_imgsys_dev *imgsys_dev,
 					event_hist[event].wait.frm_info = frm_info;
 					event_hist[event].wait.pkt = pkt;
 				}
-				}
 			} else if (cmd->u.action == 0) {
-				if(imgsys_cmdq_try_vsdof_wfe_no_clear(&tdata, pkt, cmd->u.event))
-					cmdq_pkt_wait_no_clear(pkt,
-							imgsys_event[cmd->u.event].event);
+				cmdq_pkt_wait_no_clear(pkt, imgsys_event[cmd->u.event].event);
 			} else
 				pr_info("%s: [ERROR]Not Support wait action(%d)!\n",
 					__func__, cmd->u.action);
@@ -2189,7 +2618,6 @@ int imgsys_cmdq_parser_plat8(struct mtk_imgsys_dev *imgsys_dev,
 					cmd->u.action);
 			}
 			if (cmd->u.action == 1) {
-				if (imgsys_cmdq_try_vsdof_set_event(&tdata, pkt, cmd->u.event)) {
 				cmdq_pkt_set_event(pkt, imgsys_event[cmd->u.event].event);
 				if ((cmd->u.event >= IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_POOL_START) &&
 					(cmd->u.event <= IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_END)) {
@@ -2203,10 +2631,8 @@ int imgsys_cmdq_parser_plat8(struct mtk_imgsys_dev *imgsys_dev,
 					event_hist[event].set.frm_info = frm_info;
 					event_hist[event].set.pkt = pkt;
 				}
-				}
 			} else if (cmd->u.action == 0) {
-				if (imgsys_cmdq_try_vsdof_clear_event(&tdata, pkt, cmd->u.event))
-					cmdq_pkt_clear_event(pkt, imgsys_event[cmd->u.event].event);
+				cmdq_pkt_clear_event(pkt, imgsys_event[cmd->u.event].event);
 			} else
 				pr_info("%s: [ERROR]Not Support update action(%d)!\n",
 					__func__, cmd->u.action);

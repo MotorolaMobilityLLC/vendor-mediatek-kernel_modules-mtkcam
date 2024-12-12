@@ -56,7 +56,6 @@ void mtk_imgsys_mmqos_init_plat8(struct mtk_imgsys_dev *imgsys_dev)
 	qos_info->dev = imgsys_dev->dev;
 	qos_info->qos_path = imgsys_qos_path;
 
-#ifndef CONFIG_FPGA_EARLY_PORTING
 	if (of_property_read_u32(qos_info->dev->of_node,
 		"mediatek,imgsys-qos-sc-motr", &ret) != 0) {
 		dev_info(qos_info->dev, "mmqos monitor is not exist\n");
@@ -85,8 +84,10 @@ void mtk_imgsys_mmqos_init_plat8(struct mtk_imgsys_dev *imgsys_dev)
 	}
 
 	for (idx = 0; idx < IMGSYS_M4U_PORT_MAX; idx++) {
+#ifndef CONFIG_FPGA_EARLY_PORTING
 		qos_info->qos_path[idx].path =
 			of_mtk_icc_get(qos_info->dev, qos_info->qos_path[idx].dts_name);
+#endif
 		qos_info->qos_path[idx].bw = 0;
 		dev_info(qos_info->dev, "[%s] idx=%d, path=%p, name=%s, bw=%llu\n",
 			__func__, idx,
@@ -94,7 +95,6 @@ void mtk_imgsys_mmqos_init_plat8(struct mtk_imgsys_dev *imgsys_dev)
 			qos_info->qos_path[idx].dts_name,
 			qos_info->qos_path[idx].bw);
 	}
-#endif
 	mtk_imgsys_mmqos_reset_plat8(imgsys_dev);
 }
 
@@ -105,17 +105,16 @@ void mtk_imgsys_mmqos_uninit_plat8(struct mtk_imgsys_dev *imgsys_dev)
 
 	for (idx = 0; idx < IMGSYS_M4U_PORT_MAX; idx++) {
 		if (IS_ERR_OR_NULL(qos_info->qos_path[idx].path)) {
-            if (imgsys_cmdq_dbg_enable_plat8())
-			dev_dbg(qos_info->dev, "[%s] path of idx(%d) is NULL\n", __func__, idx);
+			if (imgsys_cmdq_dbg_enable_plat8())
+				dev_dbg(qos_info->dev, "[%s] path of idx(%d) is NULL\n", __func__, idx);
 			continue;
 		}
-        if (imgsys_cmdq_dbg_enable_plat8()) {
-		dev_dbg(qos_info->dev, "[%s] idx=%d, path=%p, bw=%llu\n",
-			__func__, idx,
-			qos_info->qos_path[idx].path,
-			qos_info->qos_path[idx].bw);
+		if (imgsys_cmdq_dbg_enable_plat8())
+			dev_dbg(qos_info->dev, "[%s] idx=%d, path=%p, bw=%llu\n",
+				__func__, idx,
+				qos_info->qos_path[idx].path,
+				qos_info->qos_path[idx].bw);
 		qos_info->qos_path[idx].bw = 0;
-        }
 #ifndef CONFIG_FPGA_EARLY_PORTING
 		mtk_icc_set_bw(qos_info->qos_path[idx].path, 0, 0);
 #endif

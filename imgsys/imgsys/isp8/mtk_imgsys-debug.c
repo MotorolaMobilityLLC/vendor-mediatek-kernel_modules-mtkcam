@@ -19,15 +19,15 @@
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
 #include <linux/delay.h>
 
-#define DL_CHECK_ENG_NUM IMGSYS_ENG_NUM
+#define DL_CHECK_ENG_NUM IMGSYS_HW_FLAG_NUM
 #define WPE_HW_SET    3
 #define ADL_HW_SET    2
 #define SW_RST   (0x000C)
 #define DBG_SW_CLR   (0x0260)
 
-#define HAVE_IMGSYS_ENG_ADL_A   0
-#define HAVE_IMGSYS_ENG_ADL_B   0
-#define HAVE_IMGSYS_ENG_XTR     0
+#define HAVE_IMGSYS_HW_FLAG_ADL_A   0
+#define HAVE_IMGSYS_HW_FLAG_ADL_B   0
+#define HAVE_IMGSYS_HW_FLAG_XTR     0
 
 #define LOG_LEGNTH (64)
 #define FINAL_LOG_LENGTH (LOG_LEGNTH * 4)
@@ -71,22 +71,40 @@ bool imgsys_me_7sp_dbg_enable(void)
 	return imgsys_me_dbg_en;
 }
 
-/* Should follow the order of IMGSYS_ENG_xxx in enum_imgsys_engine */
+bool imgsys_mae_8_dbg_enable(void)
+{
+	return imgsys_mae_dbg_en;
+}
+
+bool imgsys_dfp_8_dbg_enable(void)
+{
+	return imgsys_dfp_dbg_en;
+}
+
+bool imgsys_dpe_8_dbg_enable(void)
+{
+	return imgsys_dpe_dbg_en;
+}
+
+/* Should follow the order of IMGSYS_HW_FLAG_xxx in enum_imgsys_engine */
 struct imgsys_dbg_engine_t dbg_engine_name_list[DL_CHECK_ENG_NUM] = {
-	{IMGSYS_ENG_WPE_EIS,  "WPE_EIS"},
-	{IMGSYS_ENG_WPE_TNR,  "WPE_TNR"},
-	{IMGSYS_ENG_WPE_LITE, "WPE_LITE"},
-	{IMGSYS_ENG_OMC_TNR,  "OMC_TNR"},
-	{IMGSYS_ENG_OMC_LITE, "OMC_LITE"},
-	{IMGSYS_ENG_ADL_A,    "ADL_A"},
-	{IMGSYS_ENG_ADL_B,    "ADL_A"},
-	{IMGSYS_ENG_TRAW,     "TRAW"},
-	{IMGSYS_ENG_LTR,      "LTRAW"},
-	{IMGSYS_ENG_XTR,      "XTRAW"},
-	{IMGSYS_ENG_DIP,      "DIP"},
-	{IMGSYS_ENG_PQDIP_A,  "PQDIP_A"},
-	{IMGSYS_ENG_PQDIP_B,  "PQDIP_B"},
-	{IMGSYS_ENG_ME,       "ME"},
+	{IMGSYS_HW_FLAG_WPE_EIS,  "WPE_EIS"},
+	{IMGSYS_HW_FLAG_WPE_TNR,  "WPE_TNR"},
+	{IMGSYS_HW_FLAG_WPE_LITE, "WPE_LITE"},
+	{IMGSYS_HW_FLAG_OMC_TNR,  "OMC_TNR"},
+	{IMGSYS_HW_FLAG_OMC_LITE, "OMC_LITE"},
+	{IMGSYS_HW_FLAG_ADL_A,    "ADL_A"},
+	{IMGSYS_HW_FLAG_ADL_B,    "ADL_A"},
+	{IMGSYS_HW_FLAG_TRAW,     "TRAW"},
+	{IMGSYS_HW_FLAG_LTR,      "LTRAW"},
+	{IMGSYS_HW_FLAG_XTR,      "XTRAW"},
+	{IMGSYS_HW_FLAG_DIP,      "DIP"},
+	{IMGSYS_HW_FLAG_PQDIP_A,  "PQDIP_A"},
+	{IMGSYS_HW_FLAG_PQDIP_B,  "PQDIP_B"},
+	{IMGSYS_HW_FLAG_ME,       "ME"},
+	{IMGSYS_HW_FLAG_MAE,      "MAE"},
+	{IMGSYS_HW_FLAG_DFP,      "DFP"},
+	{IMGSYS_HW_FLAG_DPE,      "DPE"},
 };
 
 void __iomem *imgsysmainRegBA;
@@ -241,7 +259,9 @@ void imgsys_main_set_init(struct mtk_imgsys_dev *imgsys_dev)
 	unsigned int HwIdx = 0;
 	uint32_t count;
 	uint32_t value;
+#ifndef CONFIG_FPGA_EARLY_PORTING
 	int i, num;
+#endif
 
 	pr_debug("%s: +.\n", __func__);
 
@@ -269,9 +289,11 @@ void imgsys_main_set_init(struct mtk_imgsys_dev *imgsys_dev)
 		return;
 	}
 
+#ifndef CONFIG_FPGA_EARLY_PORTING
 	num = imgsys_dev->larbs_num - 1;
 	for (i = 0; i < num; i++)
 		mtk_smi_larb_clamp_and_lock(imgsys_dev->larbs[i], 1);
+#endif
 
 	for (HwIdx = 0; HwIdx < WPE_HW_SET; HwIdx++) {
 		if (HwIdx == 0)
@@ -325,8 +347,10 @@ void imgsys_main_set_init(struct mtk_imgsys_dev *imgsys_dev)
 	iowrite32(0x3FC03, (void *)(dipRegBA + SW_RST));
 	iowrite32(0x0, (void *)(dipRegBA + SW_RST));
 
+#ifndef CONFIG_FPGA_EARLY_PORTING
 	for (i = 0; i < num; i++)
 		mtk_smi_larb_clamp_and_lock(imgsys_dev->larbs[i], 0);
+#endif
 
 	pr_debug("%s: -. qof ver = %d\n", __func__, imgsys_dev->qof_ver);
 }
@@ -421,7 +445,7 @@ void imgsys_debug_dump_routine(struct mtk_imgsys_dev *imgsys_dev,
 	int imgsys_module_num, unsigned int hw_comb)
 {
 	bool module_on[IMGSYS_MOD_MAX] = {
-		false, false, false, false, false, false, false, false, false};
+		false, false, false, false, false, false, false, false, false, false, false, false};
 	int i = 0;
 
 	dev_info(imgsys_dev->dev,
@@ -430,29 +454,35 @@ void imgsys_debug_dump_routine(struct mtk_imgsys_dev *imgsys_dev,
 
 	imgsys_dl_debug_dump(imgsys_dev, hw_comb);
 
-	if ((hw_comb & IMGSYS_ENG_WPE_EIS) || (hw_comb & IMGSYS_ENG_WPE_TNR)
-		 || (hw_comb & IMGSYS_ENG_WPE_LITE))
+	if ((hw_comb & IMGSYS_HW_FLAG_WPE_EIS) || (hw_comb & IMGSYS_HW_FLAG_WPE_TNR)
+		 || (hw_comb & IMGSYS_HW_FLAG_WPE_LITE))
 		module_on[IMGSYS_MOD_WPE] = true;
-	if ((hw_comb & IMGSYS_ENG_OMC_TNR) || (hw_comb & IMGSYS_ENG_OMC_LITE))
+	if ((hw_comb & IMGSYS_HW_FLAG_OMC_TNR) || (hw_comb & IMGSYS_HW_FLAG_OMC_LITE))
 		module_on[IMGSYS_MOD_OMC] = true;
-	if ((hw_comb & IMGSYS_ENG_ADL_A) || (hw_comb & IMGSYS_ENG_ADL_B))
+	if ((hw_comb & IMGSYS_HW_FLAG_ADL_A) || (hw_comb & IMGSYS_HW_FLAG_ADL_B))
 		module_on[IMGSYS_MOD_ADL] = true;
-	if ((hw_comb & IMGSYS_ENG_TRAW) || (hw_comb & IMGSYS_ENG_LTR)
-		 || (hw_comb & IMGSYS_ENG_XTR))
+	if ((hw_comb & IMGSYS_HW_FLAG_TRAW) || (hw_comb & IMGSYS_HW_FLAG_LTR)
+		 || (hw_comb & IMGSYS_HW_FLAG_XTR))
 		module_on[IMGSYS_MOD_TRAW] = true;
-	if ((hw_comb & IMGSYS_ENG_DIP))
+	if ((hw_comb & IMGSYS_HW_FLAG_DIP))
 		module_on[IMGSYS_MOD_DIP] = true;
-	if ((hw_comb & IMGSYS_ENG_PQDIP_A) || (hw_comb & IMGSYS_ENG_PQDIP_B))
+	if ((hw_comb & IMGSYS_HW_FLAG_PQDIP_A) || (hw_comb & IMGSYS_HW_FLAG_PQDIP_B))
 		module_on[IMGSYS_MOD_PQDIP] = true;
-	if ((hw_comb & IMGSYS_ENG_ME))
+	if ((hw_comb & IMGSYS_HW_FLAG_ME))
 		module_on[IMGSYS_MOD_ME] = true;
+	if ((hw_comb & IMGSYS_HW_FLAG_MAE))
+		module_on[IMGSYS_MOD_MAE] = true;
+	if ((hw_comb & IMGSYS_HW_FLAG_DFP))
+		module_on[IMGSYS_MOD_DFP] = true;
+	if ((hw_comb & IMGSYS_HW_FLAG_DPE))
+		module_on[IMGSYS_MOD_DPE] = true;
 
 	/* in case module driver did not set imgsys_modules in module order */
 	dev_info(imgsys_dev->dev,
 			"%s: imgsys_module_num: %d\n",
 			__func__, imgsys_module_num);
 	for (i = 0 ; i < imgsys_module_num ; i++) {
-		if (module_on[imgsys_modules[i].module_id])
+		if (module_on[imgsys_modules[i].module_id] && imgsys_modules[i].dump)
 			imgsys_modules[i].dump(imgsys_dev, hw_comb);
 	}
 }
@@ -481,7 +511,7 @@ void imgsys_cg_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		(unsigned int)ioread32((void *)(imgsysmainRegBA + i + 0xc)));
 	}
 
-	if (hw_comb & IMGSYS_ENG_DIP) {
+	if (hw_comb & IMGSYS_HW_FLAG_DIP) {
 		if (!dipRegBA) {
 			dev_info(imgsys_dev->dev, "%s Unable to ioremap dip registers\n",
 									__func__);
@@ -523,7 +553,7 @@ void imgsys_cg_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		}
 	}
 
-	if (hw_comb & IMGSYS_ENG_WPE_EIS) {
+	if (hw_comb & IMGSYS_HW_FLAG_WPE_EIS) {
 		if (!wpedip1RegBA) {
 			dev_info(imgsys_dev->dev, "%s Unable to ioremap wpe_dip1 registers\n",
 				__func__);
@@ -545,7 +575,7 @@ void imgsys_cg_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		}
 	}
 
-	if ((hw_comb & IMGSYS_ENG_WPE_TNR) || (hw_comb & IMGSYS_ENG_OMC_TNR)) {
+	if ((hw_comb & IMGSYS_HW_FLAG_WPE_TNR) || (hw_comb & IMGSYS_HW_FLAG_OMC_TNR)) {
 		if (!wpedip2RegBA) {
 			dev_info(imgsys_dev->dev, "%s Unable to ioremap wpe_dip2 registers\n",
 				__func__);
@@ -567,7 +597,7 @@ void imgsys_cg_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		}
 	}
 
-	if ((hw_comb & IMGSYS_ENG_WPE_LITE) || (hw_comb & IMGSYS_ENG_OMC_LITE)) {
+	if ((hw_comb & IMGSYS_HW_FLAG_WPE_LITE) || (hw_comb & IMGSYS_HW_FLAG_OMC_LITE)) {
 		if (!wpedip3RegBA) {
 			dev_info(imgsys_dev->dev, "%s Unable to ioremap wpe_dip3 registers\n",
 				__func__);
@@ -636,7 +666,7 @@ void imgsys_dl_checksum_dump(struct mtk_imgsys_dev *imgsys_dev,
 		return;
 	}
 
-	if (hw_comb & IMGSYS_ENG_WPE_EIS) {
+	if (hw_comb & IMGSYS_HW_FLAG_WPE_EIS) {
 		/* macro_comm status */
 		if (!wpedip1RegBA) {
 			dev_info(imgsys_dev->dev, "%s Unable to ioremap wpe_dip1 registers\n",
@@ -648,7 +678,7 @@ void imgsys_dl_checksum_dump(struct mtk_imgsys_dev *imgsys_dev,
 		wpe_pqdip_mux_v = (unsigned int)ioread32((void *)(wpedip1RegBA + 0xA8));
 	}
 
-	if ((hw_comb & IMGSYS_ENG_WPE_TNR) || (hw_comb & IMGSYS_ENG_OMC_TNR)) {
+	if ((hw_comb & IMGSYS_HW_FLAG_WPE_TNR) || (hw_comb & IMGSYS_HW_FLAG_OMC_TNR)) {
 		if (!wpedip2RegBA) {
 			dev_info(imgsys_dev->dev, "%s Unable to ioremap wpe_dip2 registers\n",
 				__func__);
@@ -659,7 +689,7 @@ void imgsys_dl_checksum_dump(struct mtk_imgsys_dev *imgsys_dev,
 		wpe_pqdip_mux2_v = (unsigned int)ioread32((void *)(wpedip2RegBA + 0xA8));
 	}
 
-	if ((hw_comb & IMGSYS_ENG_WPE_LITE) || (hw_comb & IMGSYS_ENG_OMC_LITE)) {
+	if ((hw_comb & IMGSYS_HW_FLAG_WPE_LITE) || (hw_comb & IMGSYS_HW_FLAG_OMC_LITE)) {
 		if (!wpedip3RegBA) {
 			dev_info(imgsys_dev->dev, "%s Unable to ioremap wpe_dip3 registers\n",
 				__func__);
@@ -837,13 +867,13 @@ void imgsys_dl_checksum_dump(struct mtk_imgsys_dev *imgsys_dev,
 		(unsigned int)(g_imgsys_main_reg_base + 0x8),
 		(unsigned int)ioread32((void *)(imgsysmainRegBA + 0x8)));
 
-	if (hw_comb & IMGSYS_ENG_WPE_EIS) {
+	if (hw_comb & IMGSYS_HW_FLAG_WPE_EIS) {
 		dev_info(imgsys_dev->dev, "%s:  0x%08X %08X", __func__,
 			(unsigned int)(g_imgsys_wpe1_dip1_reg_base + 0xA8), wpe_pqdip_mux_v);
-	} else if ((hw_comb & IMGSYS_ENG_WPE_TNR) || (hw_comb & IMGSYS_ENG_OMC_TNR)) {
+	} else if ((hw_comb & IMGSYS_HW_FLAG_WPE_TNR) || (hw_comb & IMGSYS_HW_FLAG_OMC_TNR)) {
 		dev_info(imgsys_dev->dev, "%s:  0x%08X %08X", __func__,
 			(unsigned int)(g_imgsys_wpe2_dip1_reg_base + 0xA8), wpe_pqdip_mux2_v);
-	} else if (hw_comb & IMGSYS_ENG_WPE_LITE || (hw_comb & IMGSYS_ENG_OMC_LITE)) {
+	} else if (hw_comb & IMGSYS_HW_FLAG_WPE_LITE || (hw_comb & IMGSYS_HW_FLAG_OMC_LITE)) {
 		dev_info(imgsys_dev->dev, "%s:  0x%08X %08X", __func__,
 			(unsigned int)(g_imgsys_wpe3_dip1_reg_base + 0xA8), wpe_pqdip_mux3_v);
 	}
@@ -901,7 +931,7 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 			__func__, logBuf_path);
 	switch (hw_comb) {
 	/*DL checksum case*/
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_TRAW):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_TRAW):
 		dl_path = IMGSYS_DL_WPE_EIS_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_EIS");
@@ -916,7 +946,7 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_LTR):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_LTR):
 		dl_path = IMGSYS_DL_WPE_EIS_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_EIS");
@@ -931,8 +961,8 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-#if HAVE_IMGSYS_ENG_XTR
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_XTR):
+#if HAVE_IMGSYS_HW_FLAG_XTR
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_XTR):
 		dl_path = IMGSYS_DL_WPEE_XTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_EIS");
@@ -948,7 +978,7 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
 #endif
-	case (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_TRAW):
+	case (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_TRAW):
 		dl_path = IMGSYS_DL_WPE_LITE_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_LITE");
@@ -966,7 +996,7 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 			"%s: we dont have checksum for WPELITE DL TRAW\n",
 			__func__);
 		break;
-	case (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_LTR):
+	case (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_LTR):
 		dl_path = IMGSYS_DL_WPE_LITE_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_LITE");
@@ -984,8 +1014,8 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 			"%s: we dont have checksum for WPELITE DL LTRAW\n",
 			__func__);
 		break;
-#if HAVE_IMGSYS_ENG_XTR
-	case (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_XTR):
+#if HAVE_IMGSYS_HW_FLAG_XTR
+	case (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_XTR):
 		dl_path = IMGSYS_DL_WPET_TRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_LITE");
@@ -1004,7 +1034,7 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 			__func__);
 		break;
 #endif
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_TRAW):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_TRAW):
 		dl_path = IMGSYS_DL_OMC_TNR_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"OMC_TNR");
@@ -1019,7 +1049,7 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_LTR):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_LTR):
 		dl_path = IMGSYS_DL_OMC_TNR_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"OMC_TNR");
@@ -1034,7 +1064,7 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_OMC_LITE | IMGSYS_ENG_TRAW):
+	case (IMGSYS_HW_FLAG_OMC_LITE | IMGSYS_HW_FLAG_TRAW):
 		dl_path = IMGSYS_DL_OMC_LITE_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"OMC_LITE");
@@ -1049,7 +1079,7 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_OMC_LITE | IMGSYS_ENG_LTR):
+	case (IMGSYS_HW_FLAG_OMC_LITE | IMGSYS_HW_FLAG_LTR):
 		dl_path = IMGSYS_DL_OMC_LITE_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"OMC_LITE");
@@ -1064,11 +1094,11 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_DIP):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A |
-		IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_DIP):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A |
+		IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_WPE_EIS_TO_DIP;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_EIS");
@@ -1119,11 +1149,11 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_DIP):
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A |
-		IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_DIP):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A |
+		IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_OMC_TNR_TO_DIP;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"OMC_TNR");
@@ -1174,10 +1204,10 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_PQDIP_A |
-		IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_PQDIP_A |
+		IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_NO_CHECK_SUM_DUMP;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_EIS");
@@ -1192,10 +1222,10 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_PQDIP_A |
-		IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_PQDIP_A |
+		IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_WPE_LITE_TO_PQDIP_A_B;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_LITE");
@@ -1210,10 +1240,10 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_PQDIP_A |
-		IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_PQDIP_A |
+		IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_NO_CHECK_SUM_DUMP;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_TNR");
@@ -1228,13 +1258,13 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_A | IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_A | IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_WPE_EIS_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_EIS");
@@ -1303,13 +1333,13 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_LTR | IMGSYS_ENG_DIP):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_LTR | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_LTR | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_LTR | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_A | IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_A | IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_WPE_EIS_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_EIS");
@@ -1378,13 +1408,13 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP):
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_A | IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_A | IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_OMC_TNR_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"OMC_TNR");
@@ -1453,13 +1483,13 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_LTR | IMGSYS_ENG_DIP):
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_LTR | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_LTR | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_LTR | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_A | IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_A | IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_OMC_TNR_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"OMC_TNR");
@@ -1528,13 +1558,13 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP):
-	case (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_A | IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP):
+	case (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_A | IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_WPE_LITE_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_LITE");
@@ -1602,13 +1632,13 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_LTR | IMGSYS_ENG_DIP):
-	case (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_LTR | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_LTR | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_LTR | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_A | IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP):
+	case (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_A | IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_WPE_LITE_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_LITE");
@@ -1676,13 +1706,13 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_DIP):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_DIP |
-		IMGSYS_ENG_PQDIP_A | IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_DIP):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_DIP |
+		IMGSYS_HW_FLAG_PQDIP_A | IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_WPE_EIS_TO_DIP;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_EIS");
@@ -1751,14 +1781,14 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_TRAW |
-		IMGSYS_ENG_DIP):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_TRAW |
-		IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_TRAW |
-		IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_TRAW |
-		IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A | IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_TRAW |
+		IMGSYS_HW_FLAG_DIP):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_TRAW |
+		IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_TRAW |
+		IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_TRAW |
+		IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A | IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_WPE_EIS_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_EIS");
@@ -1841,14 +1871,14 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_LTR |
-		IMGSYS_ENG_DIP):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_LTR |
-		IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_LTR |
-		IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_WPE_LITE | IMGSYS_ENG_LTR |
-		IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A | IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_LTR |
+		IMGSYS_HW_FLAG_DIP):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_LTR |
+		IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_LTR |
+		IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_WPE_LITE | IMGSYS_HW_FLAG_LTR |
+		IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A | IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_WPE_EIS_TO_TRAW_LTRAW;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"WPE_EIS");
@@ -1931,35 +1961,35 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_TRAW |
-		IMGSYS_ENG_DIP):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_TRAW |
-		IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_TRAW |
-		IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_TRAW |
-		IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A | IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_TRAW |
+		IMGSYS_HW_FLAG_DIP):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_TRAW |
+		IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_TRAW |
+		IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_TRAW |
+		IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A | IMGSYS_HW_FLAG_PQDIP_B):
 		dev_info(imgsys_dev->dev,
 			"%s: TOBE CHECKED SELECTION BASED ON FMT..\n",
 			__func__);
 		break;
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_LTR |
-		IMGSYS_ENG_DIP):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_LTR |
-		IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_LTR |
-		IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_WPE_EIS | IMGSYS_ENG_OMC_TNR | IMGSYS_ENG_LTR |
-		IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A | IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_LTR |
+		IMGSYS_HW_FLAG_DIP):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_LTR |
+		IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_LTR |
+		IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_WPE_EIS | IMGSYS_HW_FLAG_OMC_TNR | IMGSYS_HW_FLAG_LTR |
+		IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A | IMGSYS_HW_FLAG_PQDIP_B):
 		dev_info(imgsys_dev->dev,
 			"%s: TOBE CHECKED SELECTION BASED ON FMT..\n",
 			__func__);
 		break;
-	case (IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP):
-	case (IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_TRAW | IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A |
-		IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP):
+	case (IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_TRAW | IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A |
+		IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_TRAW_TO_DIP;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"TRAW");
@@ -2010,11 +2040,11 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_LTR | IMGSYS_ENG_DIP):
-	case (IMGSYS_ENG_LTR | IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_LTR | IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_LTR | IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A |
-		IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP):
+	case (IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_LTR | IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A |
+		IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_LTRAW_TO_DIP;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"LTRAW");
@@ -2065,9 +2095,9 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A):
-	case (IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_B):
-	case (IMGSYS_ENG_DIP | IMGSYS_ENG_PQDIP_A | IMGSYS_ENG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A):
+	case (IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_B):
+	case (IMGSYS_HW_FLAG_DIP | IMGSYS_HW_FLAG_PQDIP_A | IMGSYS_HW_FLAG_PQDIP_B):
 		dl_path = IMGSYS_DL_DIP_TO_PQDIP_A;
 		ret = snprintf(logBuf_inport, sizeof(logBuf_inport), "%s",
 			"DIP");
@@ -2100,8 +2130,8 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 		imgsys_dl_checksum_dump(imgsys_dev, hw_comb,
 			logBuf_path, logBuf_inport, logBuf_outport, dl_path);
 		break;
-	case (IMGSYS_ENG_ADL_A | IMGSYS_ENG_LTR):
-	case (IMGSYS_ENG_ADL_A | IMGSYS_ENG_ADL_B | IMGSYS_ENG_LTR):
+	case (IMGSYS_HW_FLAG_ADL_A | IMGSYS_HW_FLAG_LTR):
+	case (IMGSYS_HW_FLAG_ADL_A | IMGSYS_HW_FLAG_ADL_B | IMGSYS_HW_FLAG_LTR):
 		/**
 		 * dl_path = IMGSYS_DL_ADLA_LTRAW;
 		 * snprintf(logBuf_inport, sizeof(logBuf_inport), "%s", "ADL");
@@ -2113,8 +2143,17 @@ void imgsys_dl_debug_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int hw_com
 			"%s: we dont have checksum for ADL DL LTRAW\n",
 			__func__);
 		break;
-	case (IMGSYS_ENG_ME):
+	case (IMGSYS_HW_FLAG_ME):
 		imgsys_cg_debug_dump(imgsys_dev, hw_comb);
+		break;
+	case IMGSYS_HW_FLAG_MAE:
+		/*TODO(Ming-Hsuan): Check whether need to dump something for MAE debug */
+		break;
+	case IMGSYS_HW_FLAG_DFP:
+		/*TODO(Song-you): Check whether need to dump something for MAE debug */
+		break;
+	case IMGSYS_HW_FLAG_DPE:
+		/*TODO(Eric): Check whether need to dump something for MAE debug */
 		break;
 	default:
 		break;

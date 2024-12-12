@@ -26,15 +26,6 @@ ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/
 ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/vcp/include/
 ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/vcp/rv/
 
-ifeq ($(CONFIG_MTK_MBRAINK_BRIDGE), m)
-ccflags-y += -DCFG_SUPPORT_MBRAIN=1
-ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/mbraink
-
-$(info "cmdq isp8 ccflags-y = $(ccflags-y)")
-
-check_path := $(shell if [ ! -d $(DEVICE_MODULES_PATH)/drivers/misc/mediatek/mbraink/bridge ]; then echo "Error: Path $(DEVICE_MODULES_PATH)/drivers/misc/mediatek/mbraink/bridge not found" >&2; exit 1; fi)
-endif
-
 ccflags-y += -ferror-limit=0
 
 $(info "imgsys, cmdq-isp8 device_module_path = $(DEVICE_MODULES_PATH)")
@@ -58,7 +49,6 @@ mtk_imgsys-cmdq-plat.o \
 mtk_imgsys-cmdq-qof.o  \
 mtk_imgsys-cmdq-dvfs.o \
 mtk_imgsys-cmdq-hwqos.o \
-mtk_imgsys-cmdq-qos.o \
-mtk_imgsys_cmdq_token.o
+mtk_imgsys-cmdq-qos.o
 
 obj-$(CONFIG_VIDEO_MTK_ISP_IMGSYS_CMDQ_ISP8) += $(IMGSYS_CMDQ_ISP8_MODULE).o

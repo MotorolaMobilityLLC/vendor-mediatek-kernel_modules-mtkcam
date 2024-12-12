@@ -9,6 +9,7 @@
 #include <linux/types.h>
 #include <linux/time.h>
 #include "mtk_header_desc.h"
+#include "mtk_imgsys-engine-isp8.h"
 
 #ifndef __KERNEL__
 #define BIT(nr)	(1UL << (nr))
@@ -25,52 +26,51 @@ typedef int64_t s64;
 /* updated in W1948.1 */
 #define HEADER_VER 19481
 
-/* ISP-MDP generic input information */
-#define MTK_V4L2_BATCH_MODE_SUPPORT	1
-#define MTK_V4L2_SKIP_TILE_SUPPORT	0
-#define MTK_V4L2_CTRL_META_SUPPORT	1
-
-/* TODO */
-#define IMG_MAX_HW_INPUTS	3
-
 #define IMG_MAX_HW_OUTPUTS	4
 
-#define IMG_MAX_HW_DMAS		111
+#ifndef IMG_MAX_HW_DMAS
+#define IMG_MAX_HW_DMAS	(160)
+#endif
 
-#define IMG_MAX_PLANES		3
+#define IMG_MAX_PLANES	3
 
-#define IMG_IPI_INIT    1
-#define IMG_IPI_DEINIT  2
-#define IMG_IPI_FRAME   3
-#define IMG_IPI_DEBUG   4
+/* Imgsys memory mode type definitions */
+#define IMGSYS_MEMORY_MODE_NORMAL_STREAMING (0)
+#define IMGSYS_MEMORY_MODE_CAPTURE          (1)
+#define IMGSYS_MEMORY_MODE_SMVR             (2)
+//#define IMGSYS_MEMORY_MODE_VSDOF            (3)
+#if defined(IMGSYS_MEMORY_MODE_VSDOF)
+#define IMGSYS_MEMORY_MODE_NUM_MAX          (IMGSYS_MEMORY_MODE_VSDOF + 1)
+#else
+#define IMGSYS_MEMORY_MODE_NUM_MAX          (IMGSYS_MEMORY_MODE_SMVR + 1)
+#endif
 
-#define IMG_MODULE_SET 7
-#define SMVR_DECOUPLE 1
-// Definition about supported hw engines, aligned with hw_definition.h
-enum IMGSYS_ENG {
-	IMGSYS_WPE_EIS = 0,
-	IMGSYS_WPE_TNR,
-	IMGSYS_WPE_LITE,
-	IMGSYS_OMC_TNR,
-	IMGSYS_OMC_LITE,
-	IMGSYS_ADL_A,
-	IMGSYS_ADL_B,
-	IMGSYS_TRAW,
-	IMGSYS_LTR,
-	IMGSYS_XTR,
-	IMGSYS_DIP,
-	IMGSYS_PQDIP_A,
-	IMGSYS_PQDIP_B,
-	IMGSYS_ME,
-	IMGSYS_MAX,
-};
-
+/* legacy definition, prefer to use IMGSYS_MEMORY_MODE_XXX instead */
 enum Mem_Mode {
-     imgsys_streaming = 0,
-     imgsys_capture,
-     imgsys_smvr,
-     imgsys_mem_max,
+	imgsys_streaming = IMGSYS_MEMORY_MODE_NORMAL_STREAMING,
+	imgsys_capture   = IMGSYS_MEMORY_MODE_CAPTURE,
+	imgsys_smvr      = IMGSYS_MEMORY_MODE_SMVR,
+#if defined(IMGSYS_MEMORY_MODE_VSDOF)
+	imgsys_vsdof     = IMGSYS_MEMORY_MODE_VSDOF,
+#endif
+	imgsys_mem_max   = IMGSYS_MEMORY_MODE_NUM_MAX,
 };
+
+/* Module working buffer type definitions */
+#define IMGSYS_MODULE_WORKING_BUF_TYPE_CQ      (0)
+#define IMGSYS_MODULE_WORKING_BUF_TYPE_TDR     (1)
+#define IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC  (2)
+#define IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC (3)
+#define IMGSYS_MODULE_WORKING_BUF_TYPE_NUM_MAX \
+				(IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC + 1)
+
+#define IMGSYS_INIT_INFO_VERSION 2
+
+#if (IMGSYS_INIT_INFO_VERSION == 1)
+#define img_init_info img_init_info_v1
+#elif (IMGSYS_INIT_INFO_VERSION == 2)
+#define img_init_info img_init_info_v2
+#endif
 
 struct module_init_info {
 	uint64_t	c_wbuf;
@@ -82,14 +82,12 @@ struct module_init_info {
 	uint32_t	t_wbuf_sz;
 	uint32_t	t_wbuf_fd;
 } __packed;
-#if SMVR_DECOUPLE
 struct gce_init_info {
 	uint32_t	g_wbuf_fd;
 	uint64_t	g_wbuf;
 	uint32_t	g_wbuf_sz;
 } __packed;
-#endif
-struct img_init_info {
+struct img_init_info_v1 {
 	uint32_t	header_version;
 	uint32_t	isp_version;
 	uint32_t	dip_save_file;
@@ -105,28 +103,39 @@ struct img_init_info {
 	uint32_t	sub_frm_size;
 	uint32_t	cq_size;
 	uint64_t	drv_data;
+
 	/*new add, need refine*/
-#if SMVR_DECOUPLE
-	struct module_init_info module_info_streaming[IMG_MODULE_SET];
-        struct module_init_info module_info_capture[IMG_MODULE_SET];
-        struct module_init_info module_info_smvr[IMG_MODULE_SET];
-#else
-    struct module_init_info module_info[IMG_MODULE_SET];
-	#endif
-	uint32_t    g_wbuf_fd;
+	struct module_init_info module_info_streaming[IMGSYS_MOD_DRV_NUM_MAX];
+	struct module_init_info module_info_capture[IMGSYS_MOD_DRV_NUM_MAX];
+	struct module_init_info module_info_smvr[IMGSYS_MOD_DRV_NUM_MAX];
+
+	uint32_t	g_wbuf_fd;
 	uint64_t	g_wbuf;
 	uint32_t	g_wbuf_sz;
 	uint32_t	sec_tag;
 	uint16_t	full_wd;
 	uint16_t	full_ht;
 	uint32_t	smvr_mode;
-        #if SMVR_DECOUPLE
-            struct gce_init_info gce_info[imgsys_mem_max];
-    uint32_t	g_token_wbuf_fd;
+	struct gce_init_info gce_info[IMGSYS_MEMORY_MODE_NUM_MAX];
+	uint32_t	g_token_wbuf_fd;
 	uint64_t	g_token_wbuf;
 	uint32_t	g_token_wbuf_sz;
-uint32_t	is_capture;
-        #endif
+	uint32_t	is_capture;
+} __packed;
+struct imgsys_w_buf_info {
+	uint64_t wbuf_dma;
+	uint32_t wbuf_size;
+	uint32_t wbuf_fd;
+} __packed;
+struct img_init_info_v2 {
+	struct imgsys_w_buf_info module_wb_info
+		[IMGSYS_MOD_DRV_NUM_MAX][IMGSYS_MODULE_WORKING_BUF_TYPE_NUM_MAX];
+	struct imgsys_w_buf_info gce_wb_info;
+	struct imgsys_w_buf_info gce_clr_token_wb_info;
+	uint32_t sec_tag;
+	uint32_t memory_mode;
+	uint16_t full_wd;
+	uint16_t full_ht;
 } __packed;
 
 struct private_data {
@@ -152,7 +161,7 @@ struct img_swfrm_info {
 	void *bw_swbuf;
 	uint64_t pixel_bw;
 	int tunmeta_size;
-	struct private_data priv[IMGSYS_MAX];
+	struct private_data priv[IMGSYS_HW_NUM_MAX];
 } __packed;
 
 struct img_addr {
@@ -160,11 +169,7 @@ struct img_addr {
 	u32	pa;	/* Used by CM4 access */
 	u32	iova;	/* Used by IOMMU HW access */
 	u32	offset; /* Used by User Daemon access */
-#ifdef MTK_V4L2_BATCH_MODE_SUPPORT
-	// Batch mode {
 	int	fd;
-	// } Batch mode
-#endif
 } __packed;
 
 struct tuning_addr {
@@ -179,11 +184,8 @@ struct img_sw_addr {
 	u64	va;	/* Used by APMCU access */
 	u32	pa;	/* Used by CM4 access */
 	u32	offset; /* Used by User Daemon access */
-#ifdef MTK_V4L2_BATCH_MODE_SUPPORT
-	// Batch mode {
 	u32	fd; /* Used by User Daemon access */
-	// } Batch mode
-#endif
+
 } __packed;
 
 struct img_plane_format {
@@ -247,8 +249,6 @@ struct img_output {
 	u8		type; /* MCRP-D1, MCRP-D2 */
 } __packed;
 
-// Batch Mode {
-#if (MTK_V4L2_BATCH_MODE_SUPPORT == 1 || MTK_V4L2_CTRL_META_SUPPORT == 1)
 #define MAX_SRZ_CONFIGS  5
 #define MAX_EXTRA_PARAMS  5
 
@@ -299,66 +299,23 @@ struct dip_param {
 	// V3 batch mode added {
 	uint64_t next_frame;
 	// } V3 batch mode added
-#if MTK_V4L2_SKIP_TILE_SUPPORT
 	u32 frameflag;
-#endif
-#if MTK_V4L2_CTRL_META_SUPPORT == 1
 	u8 StreamTag;
-#endif
-
 } __packed;
-#endif
-// } Batch Mode
 
 struct dip_config_data {
 	struct img_addr ref;
 	struct img_addr alloc_buf;
 	struct img_addr output;
 };
-#define SHARED_BUFFER
-#ifdef SHARED_BUFFER
-#define TIME_MAX (144)
+
 struct img_ipi_frameparam {
 	u8		dmas_enable[IMG_MAX_HW_DMAS][TIME_MAX];
 	struct header_desc	dmas[IMG_MAX_HW_DMAS];
 	struct header_desc	tuning_meta;
 	struct header_desc	ctrl_meta;
 };
-#else
-struct img_ipi_frameparam {
-	u32		index;
-	u32		frame_no;
-	u64		timestamp;
-	u8		type;	/* enum mdp_stream_type */
-	u8		state;
-	u8		num_inputs;
-	u8		num_outputs;
-	u64		drv_data;
-	struct img_input	inputs[IMG_MAX_HW_INPUTS];
-	struct img_output	outputs[IMG_MAX_HW_OUTPUTS];
-	struct tuning_addr	tuning_data;
 
-	struct header_desc	dmas[IMG_MAX_HW_DMAS];
-	struct header_desc	tuning_meta;
-	struct header_desc	ctrl_meta;
-
-#if MTK_V4L2_SKIP_TILE_SUPPORT == 0
-	struct img_addr		subfrm_data;
-#else
-	struct dip_config_data	subfrm_data;
-#endif
-	struct img_sw_addr	config_data;
-	struct img_sw_addr	self_data;
-#if (MTK_V4L2_BATCH_MODE_SUPPORT == 1 || MTK_V4L2_CTL_META_SUPPORT == 1)
-	struct dip_param dip_param;
-#endif
-#ifdef MTK_V4L2_BATCH_MODE_SUPPORT
-	/* pointer to arrays of img_ipi_frameparam and dip_param. */
-	uint64_t framepack_buf_va;
-#endif
-
-} __packed;
-#endif
 struct img_sw_buffer {
 	u64	handle;		/* Used by APMCU access */
 	u32	scp_addr;	/* Used by CM4 access */
@@ -370,14 +327,10 @@ struct img_ipi_param {
 	u8	usage;
 	u8	smvr_mode;
 	struct img_sw_buffer frm_param;
-#ifdef MTK_V4L2_BATCH_MODE_SUPPORT
-	// V3 batch mode added {
 	u8	is_batch_mode;
 	u8	num_frames;
 	u64	req_addr_va;
 	u64	frm_param_offset;
-	// } V3 batch mode added
-#endif
 } __packed;
 
 #ifdef __KERNEL__

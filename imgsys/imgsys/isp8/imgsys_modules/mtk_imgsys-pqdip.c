@@ -715,80 +715,80 @@ void imgsys_pqdip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			struct img_swfrm_info *user_info, int req_fd, u64 tuning_iova,
 			unsigned int mode)
 {
+	const struct mtk_hcp_ops *hcp_ops = mtk_hcp_fetch_ops(imgsys_dev->scp_pdev);
 	u64 iova_addr = tuning_iova;
 	u64 *cq_desc = NULL;
 	struct mtk_imgsys_pqdip_dtable *dtable = NULL;
-	unsigned int i = 0, tun_ofst = 0, pq_hw = IMGSYS_PQDIP_A;
+	unsigned int i = 0, tun_ofst = 0, pq_hw = IMGSYS_HW_PQDIP_A;
 	struct flush_buf_info pqdip_buf_info;
 	size_t dtbl_sz = sizeof(struct mtk_imgsys_pqdip_dtable);
+	void *cq_base = NULL;
+
+	if (hcp_ops && hcp_ops->fetch_pqdip_cq_mb_virt)
+		cq_base = hcp_ops->fetch_pqdip_cq_mb_virt(imgsys_dev->scp_pdev, mode);
 
 	/* HWID defined in hw_definition.h */
-	for (pq_hw = IMGSYS_PQDIP_A; pq_hw <= IMGSYS_PQDIP_B; pq_hw++) {
+	for (pq_hw = IMGSYS_HW_PQDIP_A; pq_hw <= IMGSYS_HW_PQDIP_B; pq_hw++) {
 		if (!user_info->priv[pq_hw].need_update_desc)
 			continue;
 		if (iova_addr) {
-			cq_desc = (u64 *)((void *)(
-				#if SMVR_DECOUPLE
-				mtk_hcp_get_pqdip_mem_virt(imgsys_dev->scp_pdev, mode) +
-					user_info->priv[pq_hw].desc_offset));
-				#else
-					mtk_hcp_get_pqdip_mem_virt(imgsys_dev->scp_pdev) +
-					user_info->priv[pq_hw].desc_offset));
-				#endif
+			cq_desc = (u64 *)((void *)(cq_base + user_info->priv[pq_hw].desc_offset));
 			for (i = 0; i < PQDIP_CQ_DESC_NUM; i++) {
 				dtable = (struct mtk_imgsys_pqdip_dtable *)cq_desc + i;
 				if ((dtable->addr_msb & PSEUDO_DESC_TUNING) == PSEUDO_DESC_TUNING) {
 					tun_ofst = dtable->addr;
 					dtable->addr = (tun_ofst + iova_addr) & 0xFFFFFFFF;
 					dtable->addr_msb = ((tun_ofst + iova_addr) >> 32) & 0xF;
-                    if (imgsys_pqdip_7sp_dbg_enable()) {
-					pr_debug(
-						"%s: pq%d tuning_buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
-						__func__, pq_hw, iova_addr,
-						user_info->priv[pq_hw].desc_offset,
-						cq_desc, dtable->empty, dtable->addr,
-						dtable->addr_msb);
+					if (imgsys_pqdip_7sp_dbg_enable())
+						pr_debug("%s: pq%d tuning_buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
+							__func__, pq_hw, iova_addr,
+							user_info->priv[pq_hw].desc_offset,
+							cq_desc, dtable->empty, dtable->addr,
+							dtable->addr_msb);
 				}
 			}
 		}
-		}
 		//
-		#if SMVR_DECOUPLE
-		pqdip_buf_info.fd = mtk_hcp_get_pqdip_mem_cq_fd(imgsys_dev->scp_pdev, mode);
-		#else
-		pqdip_buf_info.fd = mtk_hcp_get_pqdip_mem_cq_fd(imgsys_dev->scp_pdev);
-		#endif
+		if (hcp_ops && hcp_ops->fetch_pqdip_cq_mb_fd)
+			pqdip_buf_info.fd =
+				hcp_ops->fetch_pqdip_cq_mb_fd(imgsys_dev->scp_pdev, mode);
 		pqdip_buf_info.offset = user_info->priv[pq_hw].desc_offset;
 		pqdip_buf_info.len =
 			((dtbl_sz * PQDIP_CQ_DESC_NUM) + PQDIP_REG_SIZE);
 		pqdip_buf_info.mode = mode;
 		pqdip_buf_info.is_tuning = false;
-        if (imgsys_pqdip_7sp_dbg_enable()) {
-		pr_debug("imgsys_fw cq pqdip_buf_info (%d/%d/%d), mode(%d)",
-			pqdip_buf_info.fd, pqdip_buf_info.len,
-			pqdip_buf_info.offset, pqdip_buf_info.mode);
-        }
-		mtk_hcp_partial_flush(imgsys_dev->scp_pdev, &pqdip_buf_info);
+		if (imgsys_pqdip_7sp_dbg_enable())
+			pr_debug("imgsys_fw cq pqdip_buf_info (%d/%d/%d), mode(%d)",
+				pqdip_buf_info.fd, pqdip_buf_info.len,
+				pqdip_buf_info.offset, pqdip_buf_info.mode);
+		if (hcp_ops && hcp_ops->flush_mb && hcp_ops->fetch_pqdip_cq_mb_id)
+			hcp_ops->flush_mb(
+				imgsys_dev->scp_pdev,
+				hcp_ops->fetch_pqdip_cq_mb_id(imgsys_dev->scp_pdev, mode),
+				pqdip_buf_info.offset,
+				pqdip_buf_info.len);
 	}
 
-	for (pq_hw = IMGSYS_PQDIP_A; pq_hw <= IMGSYS_PQDIP_B; pq_hw++) {
+	for (pq_hw = IMGSYS_HW_PQDIP_A; pq_hw <= IMGSYS_HW_PQDIP_B; pq_hw++) {
 		if (user_info->priv[pq_hw].need_flush_tdr) {
 			// tdr buffer
-			#if SMVR_DECOUPLE
-			pqdip_buf_info.fd = mtk_hcp_get_pqdip_mem_tdr_fd(imgsys_dev->scp_pdev, mode);
-			#else
-			pqdip_buf_info.fd = mtk_hcp_get_pqdip_mem_tdr_fd(imgsys_dev->scp_pdev);
-			#endif
+			if (hcp_ops && hcp_ops->fetch_pqdip_tdr_mb_fd)
+				pqdip_buf_info.fd =
+					hcp_ops->fetch_pqdip_tdr_mb_fd(imgsys_dev->scp_pdev, mode);
 			pqdip_buf_info.offset = user_info->priv[pq_hw].tdr_offset;
 			pqdip_buf_info.len = PQDIP_TDR_BUF_MAXSZ;
 			pqdip_buf_info.mode = mode;
 			pqdip_buf_info.is_tuning = false;
-            if (imgsys_pqdip_7sp_dbg_enable()) {
-			pr_debug("imgsys_fw tdr pqdip_buf_info (%d/%d/%d), mode(%d)",
-				pqdip_buf_info.fd, pqdip_buf_info.len,
-				pqdip_buf_info.offset, pqdip_buf_info.mode);
-            }
-			mtk_hcp_partial_flush(imgsys_dev->scp_pdev, &pqdip_buf_info);
+			if (imgsys_pqdip_7sp_dbg_enable())
+				pr_debug("imgsys_fw tdr pqdip_buf_info (%d/%d/%d), mode(%d)",
+					pqdip_buf_info.fd, pqdip_buf_info.len,
+					pqdip_buf_info.offset, pqdip_buf_info.mode);
+			if (hcp_ops && hcp_ops->flush_mb && hcp_ops->fetch_pqdip_tdr_mb_id)
+				hcp_ops->flush_mb(
+					imgsys_dev->scp_pdev,
+					hcp_ops->fetch_pqdip_tdr_mb_id(imgsys_dev->scp_pdev, mode),
+					pqdip_buf_info.offset,
+					pqdip_buf_info.len);
 		}
 	}
 }
@@ -1094,13 +1094,12 @@ bool imgsys_pqdip_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine)
 	uint32_t i = 0, hw_start = 0, hw_end = 1, value = 0;
  	uint32_t reg_ofst = 0x84; //PQDIPCTL_INT2_STATUSX
 
-	if (engine & IMGSYS_ENG_PQDIP_B) {
+	if (engine & IMGSYS_HW_FLAG_PQDIP_B) {
 		hw_start = 1;
 		hw_end = PQDIP_HW_SET;
 	}
-	if (engine & IMGSYS_ENG_PQDIP_A) {
+	if (engine & IMGSYS_HW_FLAG_PQDIP_A)
 		hw_start = 0;
-	}
 
 	for (i = hw_start; i < hw_end; i++) {
 		value = (uint32_t)ioread32((void *)(gpqdipRegBA[i] + reg_ofst));

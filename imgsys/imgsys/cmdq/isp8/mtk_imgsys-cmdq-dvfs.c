@@ -34,12 +34,14 @@ void mtk_imgsys_mmdvfs_init_plat8(struct mtk_imgsys_dev *imgsys_dev)
 		dev_info(dvfs_info->dev,
 			"%s: [ERROR] Failed to get dvfsrc-vmm\n", __func__);
 		dvfs_info->reg = NULL;
+#ifndef CONFIG_FPGA_EARLY_PORTING
 		if (!mmdvfs_get_version())
 			dvfs_info->mmdvfs_clk = devm_clk_get(dvfs_info->dev, "mmdvfs_clk");
 		else {
 			dvfs_info->mmdvfs_clk = devm_clk_get(dvfs_info->dev, "mmdvfs_mux");
 			dvfs_info->mmdvfs_clk_smi = devm_clk_get(dvfs_info->dev, "mmdvfs_mux_smi");
 		}
+#endif
 		if (IS_ERR_OR_NULL(dvfs_info->mmdvfs_clk)) {
 			dev_info(dvfs_info->dev,
 				"%s: [ERROR] Failed to get mmdvfs_clk\n", __func__);
@@ -208,7 +210,7 @@ void mtk_imgsys_mmdvfs_set_plat8(struct mtk_imgsys_dev *imgsys_dev,
 	}
 	else {
 		/* Choose for IPESYS */
-		/* if (hw_comb & IMGSYS_ENG_ME) */
+		/* if (hw_comb & IMGSYS_HW_FLAG_ME) */
 			/* opp_idx = 1; */
 
 		for (idx = 0; idx < dvfs_info->clklv_num[opp_idx]; idx++) {
@@ -396,7 +398,7 @@ void mtk_imgsys_mmdvfs_mmqos_cal_plat8(struct mtk_imgsys_dev *imgsys_dev,
 			/* Using ME for SMVR size check */
 	#if IMGSYS_DVFS_ENABLE
 			if ((batch_num > 1) &&
-				(frm_info->user_info[frm_idx].hw_comb & IMGSYS_ENG_ME))
+				(frm_info->user_info[frm_idx].hw_comb & IMGSYS_HW_FLAG_ME))
 				smvr_size = frm_info->user_info[frm_idx].pixel_bw;
 	#endif
 		}

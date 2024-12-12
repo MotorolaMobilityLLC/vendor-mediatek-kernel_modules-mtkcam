@@ -16,5 +16,8 @@ extern int imgsys_pqdip_dbg_en;
 extern int imgsys_wpe_dbg_en;
 extern int imgsys_omc_dbg_en;
 extern int imgsys_me_dbg_en;
+extern int imgsys_mae_dbg_en;
+extern int imgsys_dfp_dbg_en;
+extern int imgsys_dpe_dbg_en;
 
 #endif// _MTK_IMGSYS_ISP_DEBUG_H
