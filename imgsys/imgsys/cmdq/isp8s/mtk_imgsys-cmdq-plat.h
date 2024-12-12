@@ -15,7 +15,7 @@
 #define IMGSYS_QOS_SET_BY_SCEN (1)
 
 #ifndef CONFIG_FPGA_EARLY_PORTING
-#define IMGSYS_SECURE_ENABLE   (0)
+#define IMGSYS_SECURE_ENABLE   (1)
 #else
 #define IMGSYS_SECURE_ENABLE   (0)
 #endif
@@ -42,10 +42,10 @@ enum ISP8S_IMG_PWR {
 	ISP8S_PWR_NUM
 };
 
-#define IMGSYS_NOR_THD			(24)
+#define IMGSYS_NOR_THD			(25)
 #define	IMGSYS_PWR_THD			(5)
 #define IMGSYS_QOS_THD			(1)
-#define IMGSYS_SEC_THD			(2)
+#define IMGSYS_SEC_THD			(3)
 
 #define PRE_PWR_ON_2 (1UL << 4)
 #define PRE_PWR_ON_3 (1UL << 5)
