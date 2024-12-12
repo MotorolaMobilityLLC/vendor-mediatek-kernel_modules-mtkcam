@@ -709,6 +709,23 @@ u64 mtk_imgsys_get_kva(struct dma_buf *dma_buf, s32 ionFd,
 	if (cache) {
 		if (imgsys_dbg_enable())
 			dev_dbg(imgsys_dev->dev, "%s fd:%d cache hit\n", __func__, ionFd);
+		if (kva == 0) {
+			/* Add for kva */
+			dma_buf_begin_cpu_access(iova_info->dma_buf, DMA_BIDIRECTIONAL);
+			#if  KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+			ret = dma_buf_vmap_unlocked(iova_info->dma_buf, &map);
+			#else
+			ret = dma_buf_vmap(iova_info->dma_buf, &map);
+			#endif
+			if (ret) {
+				dma_buf_end_cpu_access(iova_info->dma_buf, DMA_BIDIRECTIONAL);
+				pr_info("%s, dma_buf_vmap failed(%d)\n", __func__, ret);
+				return -ENOMEM;
+			}
+			iova_info->kva = (u64)map.vaddr;
+			iova_info->map = map;
+			kva = iova_info->kva;
+		}
 		return kva;
 	}
 

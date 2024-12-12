@@ -1583,7 +1583,9 @@ static int mtkdip_ioc_add_iova(struct v4l2_subdev *subdev, void *arg)
 	struct dma_buf *dmabuf;
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
+#ifdef IMGSYS_EARLY_MAP_KVA
 	struct iosys_map map;
+#endif
 	dma_addr_t dma_addr;
 	unsigned int *kfd;
 	size_t size;
@@ -1654,6 +1656,7 @@ static int mtkdip_ioc_add_iova(struct v4l2_subdev *subdev, void *arg)
 
 		dma_addr = sg_dma_address(sgt->sgl);
 
+#ifdef IMGSYS_EARLY_MAP_KVA
 		/* Add for kva */
 		dma_buf_begin_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
 		#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
@@ -1675,6 +1678,7 @@ static int mtkdip_ioc_add_iova(struct v4l2_subdev *subdev, void *arg)
 			pr_info("%s, dma_buf_vmap failed(%d)\n", __func__, ret);
 			return -ENOMEM;
 		}
+#endif
 
 		fd_iova = vzalloc(sizeof(*fd_iova));
 		if (fd_iova == NULL)
@@ -1684,8 +1688,12 @@ static int mtkdip_ioc_add_iova(struct v4l2_subdev *subdev, void *arg)
 		fd_iova->dma_buf = dmabuf;
 		fd_iova->attach = attach;
 		fd_iova->sgt = sgt;
+#ifdef IMGSYS_EARLY_MAP_KVA
 		fd_iova->kva = (u64)map.vaddr;
 		fd_iova->map = map;
+#else
+		fd_iova->kva = 0;
+#endif
 		if (imgsys_dbg_enable())
 			dev_dbg(pipe->imgsys_dev->dev,
 				"%s:dma_buf:%lx,attach:%lx,sgt:%lx\n", __func__,
@@ -2138,9 +2146,12 @@ static int mtkdip_ioc_acquire_iova(struct v4l2_subdev *subdev, void *arg)
 	struct dma_buf *dmabuf;
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
+#ifdef IMGSYS_EARLY_MAP_KVA
 	struct iosys_map map;
+	int ret;
+#endif
 	dma_addr_t dma_addr;
-	int i, ret;
+	int i;
 	uint8_t acp_coherence_enable;
 
 	if (!fd_tbl->fds[0].fd) {
@@ -2200,6 +2211,7 @@ static int mtkdip_ioc_acquire_iova(struct v4l2_subdev *subdev, void *arg)
 
 		dma_addr = sg_dma_address(sgt->sgl);
 
+#ifdef IMGSYS_EARLY_MAP_KVA
 		/* Add for kva */
 		dma_buf_begin_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
 		#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
@@ -2221,6 +2233,7 @@ static int mtkdip_ioc_acquire_iova(struct v4l2_subdev *subdev, void *arg)
 			pr_info("%s, dma_buf_vmap failed(%d)\n", __func__, ret);
 			return -ENOMEM;
 		}
+#endif
 
 		fd_iova = vzalloc(sizeof(*fd_iova));
 		if (fd_iova == NULL)
@@ -2230,8 +2243,12 @@ static int mtkdip_ioc_acquire_iova(struct v4l2_subdev *subdev, void *arg)
 		fd_iova->dma_buf = dmabuf;
 		fd_iova->attach = attach;
 		fd_iova->sgt = sgt;
+#ifdef IMGSYS_EARLY_MAP_KVA
 		fd_iova->kva = (u64)map.vaddr;
 		fd_iova->map = map;
+#else
+		fd_iova->kva = 0;
+#endif
 		if (imgsys_dbg_enable())
 			dev_info(pipe->imgsys_dev->dev,
 				"%s:dma_buf:%lx,attach:%lx,sgt:%lx,acp(%d)\n",
