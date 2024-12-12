@@ -74,8 +74,8 @@
 
 /* platform ops header */
 #include "platform/mtk-hcp_data.h"
-#include "platform/mtk-hcp_isp8_plat_f.h"
-#include "platform/mtk-hcp_isp8_plat_p.h"
+#include "platform/mtk-hcp_isp8s_plat_f.h"
+#include "platform/mtk-hcp_isp8s_plat_p.h"
 
 /**
  * HCP (Hetero Control Processor ) is a tiny processor controlling
@@ -536,7 +536,7 @@ static inline void set_plat_op(struct platform_device *pdev)
 	}
 
 	hcp_dev->plat_op = of_device_get_match_data(&pdev->dev);
-	/* hcp_dev->plat_op = &plat_op_isp8_f; */
+	/* hcp_dev->plat_op = &plat_op_isp8s_f; */
 
 	HCP_PRINT_DBG("set plat_op successfully!\n");
 }
@@ -2476,6 +2476,10 @@ static const struct mtk_hcp_ops hcp_ops = {
 	MTK_HCP_REG_MOD_W_BUF_OPS_TDR(pqdip)
 	MTK_HCP_REG_MOD_W_BUF_OPS_C_MISC(pqdip)
 	MTK_HCP_REG_MOD_W_BUF_OPS_NC_MISC(pqdip)
+	MTK_HCP_REG_MOD_W_BUF_OPS_CQ(wpe)
+	MTK_HCP_REG_MOD_W_BUF_OPS_TDR(wpe)
+	MTK_HCP_REG_MOD_W_BUF_OPS_C_MISC(wpe)
+	MTK_HCP_REG_MOD_W_BUF_OPS_NC_MISC(wpe)
 	MTK_HCP_REG_MOD_W_BUF_OPS_CQ(me)
 	MTK_HCP_REG_MOD_W_BUF_OPS_TDR(me)
 	MTK_HCP_REG_MOD_W_BUF_OPS_C_MISC(me)
@@ -2747,8 +2751,8 @@ static void mtk_hcp_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id mtk_hcp_match[] = {
-	{.compatible = "mediatek,hcp8_f", .data = (void *)&plat_op_isp8_f},
-	{.compatible = "mediatek,hcp8_p", .data = (void *)&plat_op_isp8_p},
+	{.compatible = "mediatek,hcp8s_f", .data = (void *)&plat_op_isp8s_f},
+	{.compatible = "mediatek,hcp8s_p", .data = (void *)&plat_op_isp8s_p},
 	{}
 };
 MODULE_DEVICE_TABLE(of, mtk_hcp_match);

@@ -6,7 +6,7 @@
 #include <linux/kref.h>
 #include <linux/version.h>
 #include <mtk_heap.h>
-#include "mtk-hcp_isp8.h"
+#include "mtk-hcp_isp8s.h"
 #include "mtk-hcp_log.h"
 
 
@@ -17,7 +17,7 @@ static struct mtk_hcp_gce_token_reserve_mblock *gmb;
 
 
 
-enum isp8_rsv_mem_id_t {
+enum isp8s_rsv_mem_id_t {
 	/*need replace DIP_MEM_FOR_HW_ID & DIP_MEM_FOR_SW_ID*/
 	WPE_MEM_C_ID,	/*module cq buffer*/
 	WPE_MEM_T_ID,	/*module tdr buffer*/
@@ -36,14 +36,14 @@ enum isp8_rsv_mem_id_t {
 	NUMS_WB_MEM_ID,
 };
 
-enum isp8_rsv_gce_mem_id_t {
+enum isp8s_rsv_gce_mem_id_t {
 	DIP_MEM_FOR_HW_ID = (IMG_MEM_G_ID + 1),
 	IMG_MEM_FOR_HW_ID = DIP_MEM_FOR_HW_ID, /*shared buffer for ipi_param*/
 	IMG_MEM_G_TOKEN_ID,	/*gce cmd buffer*/
 	NUMS_CM_MEM_ID,
 };
 
-static struct mtk_hcp_smvr_reserve_mblock isp8_smvr_mblock[] = {
+static struct mtk_hcp_smvr_reserve_mblock isp8s_smvr_mblock[] = {
 	{
 		.name = "WPE_MEM_C_ID",
 		.num = WPE_MEM_C_ID,
@@ -279,7 +279,7 @@ static struct mtk_hcp_smvr_reserve_mblock isp8_smvr_mblock[] = {
 };
 
 
-static struct mtk_hcp_streaming_reserve_mblock isp8_streaming_mblock[] = {
+static struct mtk_hcp_streaming_reserve_mblock isp8s_streaming_mblock[] = {
 	{
 		.name = "WPE_MEM_C_ID",
 		.num = WPE_MEM_C_ID,
@@ -514,7 +514,7 @@ static struct mtk_hcp_streaming_reserve_mblock isp8_streaming_mblock[] = {
 	},
 };
 
-static struct mtk_hcp_capture_reserve_mblock isp8_capture_mblock[] = {
+static struct mtk_hcp_capture_reserve_mblock isp8s_capture_mblock[] = {
 	{
 		.name = "WPE_MEM_C_ID",
 		.num = WPE_MEM_C_ID,
@@ -749,7 +749,7 @@ static struct mtk_hcp_capture_reserve_mblock isp8_capture_mblock[] = {
 	},
 };
 
-static struct mtk_hcp_gce_token_reserve_mblock isp8_gce_mblock[] = {
+static struct mtk_hcp_gce_token_reserve_mblock isp8s_gce_mblock[] = {
 	{
 		/*share buffer for frame setting, to be sw usage*/
 		.name = "IMG_MEM_FOR_HW_ID",
@@ -787,7 +787,7 @@ static struct mtk_hcp_gce_token_reserve_mblock isp8_gce_mblock[] = {
 	},
 };
 
-phys_addr_t isp8_get_reserve_mem_phys(unsigned int id, unsigned int mode)
+phys_addr_t isp8s_get_reserve_mem_phys(unsigned int id, unsigned int mode)
 {
 	if (id >= (NUMS_CM_MEM_ID)) {
 		pr_info("[HCP] no reserve memory for %d", id);
@@ -802,9 +802,9 @@ phys_addr_t isp8_get_reserve_mem_phys(unsigned int id, unsigned int mode)
 	else
 		return smb[id].start_phys;
 }
-EXPORT_SYMBOL(isp8_get_reserve_mem_phys);
+EXPORT_SYMBOL(isp8s_get_reserve_mem_phys);
 
-void *isp8_get_reserve_mem_virt(unsigned int id, unsigned int mode)
+void *isp8s_get_reserve_mem_virt(unsigned int id, unsigned int mode)
 {
 	if (id >= (NUMS_CM_MEM_ID)) {
 		pr_info("[HCP] no reserve memory for %u", id);
@@ -819,9 +819,9 @@ void *isp8_get_reserve_mem_virt(unsigned int id, unsigned int mode)
 	else
 		return smb[id].start_virt;
 }
-EXPORT_SYMBOL(isp8_get_reserve_mem_virt);
+EXPORT_SYMBOL(isp8s_get_reserve_mem_virt);
 
-phys_addr_t isp8_get_reserve_mem_dma(unsigned int id, unsigned int mode)
+phys_addr_t isp8s_get_reserve_mem_dma(unsigned int id, unsigned int mode)
 {
 	if (id >= (NUMS_CM_MEM_ID)) {
 		pr_info("[HCP] no reserve memory for %u", id);
@@ -836,9 +836,9 @@ phys_addr_t isp8_get_reserve_mem_dma(unsigned int id, unsigned int mode)
 	else
 		return smb[id].start_dma;
 }
-EXPORT_SYMBOL(isp8_get_reserve_mem_dma);
+EXPORT_SYMBOL(isp8s_get_reserve_mem_dma);
 
-phys_addr_t isp8_get_reserve_mem_size(unsigned int id, unsigned int mode)
+phys_addr_t isp8s_get_reserve_mem_size(unsigned int id, unsigned int mode)
 {
 	if (id >= (NUMS_CM_MEM_ID)) {
 		pr_info("[HCP] no reserve memory for %u", id);
@@ -853,9 +853,9 @@ phys_addr_t isp8_get_reserve_mem_size(unsigned int id, unsigned int mode)
 	else
 		return smb[id].size;
 }
-EXPORT_SYMBOL(isp8_get_reserve_mem_size);
+EXPORT_SYMBOL(isp8s_get_reserve_mem_size);
 
-uint32_t isp8_get_reserve_mem_fd(unsigned int id, unsigned int mode)
+uint32_t isp8s_get_reserve_mem_fd(unsigned int id, unsigned int mode)
 {
 	if (id >= (NUMS_CM_MEM_ID)) {
 		pr_info("[HCP] no reserve memory for %u", id);
@@ -870,9 +870,9 @@ uint32_t isp8_get_reserve_mem_fd(unsigned int id, unsigned int mode)
 	else
 		return smb[id].fd;
 }
-EXPORT_SYMBOL(isp8_get_reserve_mem_fd);
+EXPORT_SYMBOL(isp8s_get_reserve_mem_fd);
 
-void *isp8_get_gce_virt(unsigned int mode)
+void *isp8s_get_gce_virt(unsigned int mode)
 {
 	if (mode == imgsys_streaming) {
 		//pr_info("mtk_hcp-get_gce-streaming(0x%lx)", (unsigned long)mb[IMG_MEM_G_ID].start_virt);
@@ -884,9 +884,9 @@ void *isp8_get_gce_virt(unsigned int mode)
 	//pr_info("mtk_hcp-get_gce-smvr(0x%lx)", (unsigned long)smb[IMG_MEM_G_ID].start_virt);
 	return smb[IMG_MEM_G_ID].start_virt;
 }
-EXPORT_SYMBOL(isp8_get_gce_virt);
+EXPORT_SYMBOL(isp8s_get_gce_virt);
 
-void *isp8_get_gce_token_virt(unsigned int mode)
+void *isp8s_get_gce_token_virt(unsigned int mode)
 {
 	if (hcp_dbg_enable()) {
 		pr_info("mtk_hcp gce_start_virt(0x%lx)",
@@ -894,9 +894,9 @@ void *isp8_get_gce_token_virt(unsigned int mode)
 	}
 	return gmb[IMG_MEM_G_TOKEN_ID - IMG_MEM_FOR_HW_ID].start_virt;
 }
-EXPORT_SYMBOL(isp8_get_gce_token_virt);
+EXPORT_SYMBOL(isp8s_get_gce_token_virt);
 
-void *isp8_get_wpe_virt(unsigned int mode)
+void *isp8s_get_wpe_virt(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[WPE_MEM_C_ID].start_virt;
@@ -905,9 +905,9 @@ void *isp8_get_wpe_virt(unsigned int mode)
 	else
 		return smb[WPE_MEM_C_ID].start_virt;
 }
-EXPORT_SYMBOL(isp8_get_wpe_virt);
+EXPORT_SYMBOL(isp8s_get_wpe_virt);
 
-int isp8_get_wpe_cq_fd(unsigned int mode)
+int isp8s_get_wpe_cq_fd(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[WPE_MEM_C_ID].fd;
@@ -916,9 +916,9 @@ int isp8_get_wpe_cq_fd(unsigned int mode)
 	else
 		return smb[WPE_MEM_C_ID].fd;
 }
-EXPORT_SYMBOL(isp8_get_wpe_cq_fd);
+EXPORT_SYMBOL(isp8s_get_wpe_cq_fd);
 
-int isp8_get_wpe_tdr_fd(unsigned int mode)
+int isp8s_get_wpe_tdr_fd(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[WPE_MEM_T_ID].fd;
@@ -927,9 +927,9 @@ int isp8_get_wpe_tdr_fd(unsigned int mode)
 	else
 		return smb[WPE_MEM_T_ID].fd;
 }
-EXPORT_SYMBOL(isp8_get_wpe_tdr_fd);
+EXPORT_SYMBOL(isp8s_get_wpe_tdr_fd);
 
-void *isp8_get_omc_virt(unsigned int mode)
+void *isp8s_get_omc_virt(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[OMC_MEM_C_ID].start_virt;
@@ -938,9 +938,9 @@ void *isp8_get_omc_virt(unsigned int mode)
 	else
 		return smb[OMC_MEM_C_ID].start_virt;
 }
-EXPORT_SYMBOL(isp8_get_omc_virt);
+EXPORT_SYMBOL(isp8s_get_omc_virt);
 
-int isp8_get_omc_cq_fd(unsigned int mode)
+int isp8s_get_omc_cq_fd(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[OMC_MEM_C_ID].fd;
@@ -949,9 +949,9 @@ int isp8_get_omc_cq_fd(unsigned int mode)
 	else
 		return smb[OMC_MEM_C_ID].fd;
 }
-EXPORT_SYMBOL(isp8_get_omc_cq_fd);
+EXPORT_SYMBOL(isp8s_get_omc_cq_fd);
 
-int isp8_get_omc_tdr_fd(unsigned int mode)
+int isp8s_get_omc_tdr_fd(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[OMC_MEM_T_ID].fd;
@@ -960,9 +960,9 @@ int isp8_get_omc_tdr_fd(unsigned int mode)
 	else
 		return smb[OMC_MEM_T_ID].fd;
 }
-EXPORT_SYMBOL(isp8_get_omc_tdr_fd);
+EXPORT_SYMBOL(isp8s_get_omc_tdr_fd);
 
-void *isp8_get_dip_virt(unsigned int mode)
+void *isp8s_get_dip_virt(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[DIP_MEM_C_ID].start_virt;
@@ -971,9 +971,9 @@ void *isp8_get_dip_virt(unsigned int mode)
 	else
 		return smb[DIP_MEM_C_ID].start_virt;
 }
-EXPORT_SYMBOL(isp8_get_dip_virt);
+EXPORT_SYMBOL(isp8s_get_dip_virt);
 
-int isp8_get_dip_cq_fd(unsigned int mode)
+int isp8s_get_dip_cq_fd(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[DIP_MEM_C_ID].fd;
@@ -982,9 +982,9 @@ int isp8_get_dip_cq_fd(unsigned int mode)
 	else
 		return smb[DIP_MEM_C_ID].fd;
 }
-EXPORT_SYMBOL(isp8_get_dip_cq_fd);
+EXPORT_SYMBOL(isp8s_get_dip_cq_fd);
 
-int isp8_get_dip_tdr_fd(unsigned int mode)
+int isp8s_get_dip_tdr_fd(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[DIP_MEM_T_ID].fd;
@@ -993,9 +993,9 @@ int isp8_get_dip_tdr_fd(unsigned int mode)
 	else
 		return smb[DIP_MEM_T_ID].fd;
 }
-EXPORT_SYMBOL(isp8_get_dip_tdr_fd);
+EXPORT_SYMBOL(isp8s_get_dip_tdr_fd);
 
-void *isp8_get_traw_virt(unsigned int mode)
+void *isp8s_get_traw_virt(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[TRAW_MEM_C_ID].start_virt;
@@ -1004,9 +1004,9 @@ void *isp8_get_traw_virt(unsigned int mode)
 	else
 		return smb[TRAW_MEM_C_ID].start_virt;
 }
-EXPORT_SYMBOL(isp8_get_traw_virt);
+EXPORT_SYMBOL(isp8s_get_traw_virt);
 
-int isp8_get_traw_cq_fd(unsigned int mode)
+int isp8s_get_traw_cq_fd(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[TRAW_MEM_C_ID].fd;
@@ -1015,9 +1015,9 @@ int isp8_get_traw_cq_fd(unsigned int mode)
 	else
 		return smb[TRAW_MEM_C_ID].fd;
 }
-EXPORT_SYMBOL(isp8_get_traw_cq_fd);
+EXPORT_SYMBOL(isp8s_get_traw_cq_fd);
 
-int isp8_get_traw_tdr_fd(unsigned int mode)
+int isp8s_get_traw_tdr_fd(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[TRAW_MEM_T_ID].fd;
@@ -1026,9 +1026,9 @@ int isp8_get_traw_tdr_fd(unsigned int mode)
 	else
 		return smb[TRAW_MEM_T_ID].fd;
 }
-EXPORT_SYMBOL(isp8_get_traw_tdr_fd);
+EXPORT_SYMBOL(isp8s_get_traw_tdr_fd);
 
-void *isp8_get_pqdip_virt(unsigned int mode)
+void *isp8s_get_pqdip_virt(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[PQDIP_MEM_C_ID].start_virt;
@@ -1037,9 +1037,9 @@ void *isp8_get_pqdip_virt(unsigned int mode)
 	else
 		return smb[PQDIP_MEM_C_ID].start_virt;
 }
-EXPORT_SYMBOL(isp8_get_pqdip_virt);
+EXPORT_SYMBOL(isp8s_get_pqdip_virt);
 
-int isp8_get_pqdip_cq_fd(unsigned int mode)
+int isp8s_get_pqdip_cq_fd(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[PQDIP_MEM_C_ID].fd;
@@ -1048,9 +1048,9 @@ int isp8_get_pqdip_cq_fd(unsigned int mode)
 	else
 		return smb[PQDIP_MEM_C_ID].fd;
 }
-EXPORT_SYMBOL(isp8_get_pqdip_cq_fd);
+EXPORT_SYMBOL(isp8s_get_pqdip_cq_fd);
 
-int isp8_get_pqdip_tdr_fd(unsigned int mode)
+int isp8s_get_pqdip_tdr_fd(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[PQDIP_MEM_T_ID].fd;
@@ -1059,15 +1059,15 @@ int isp8_get_pqdip_tdr_fd(unsigned int mode)
 	else
 		return smb[PQDIP_MEM_T_ID].fd;
 }
-EXPORT_SYMBOL(isp8_get_pqdip_tdr_fd);
+EXPORT_SYMBOL(isp8s_get_pqdip_tdr_fd);
 
-void *isp8_get_hwid_virt(unsigned int mode)
+void *isp8s_get_hwid_virt(unsigned int mode)
 {
 	return gmb[0].start_virt;
 }
-EXPORT_SYMBOL(isp8_get_hwid_virt);
+EXPORT_SYMBOL(isp8s_get_hwid_virt);
 
-void *isp8_get_me_virt(unsigned int mode)
+void *isp8s_get_me_virt(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[ME_MEM_C_ID].start_virt;
@@ -1076,9 +1076,9 @@ void *isp8_get_me_virt(unsigned int mode)
 	else
 		return smb[ME_MEM_C_ID].start_virt;
 }
-EXPORT_SYMBOL(isp8_get_me_virt);
+EXPORT_SYMBOL(isp8s_get_me_virt);
 
-int isp8_get_me_cq_fd(unsigned int mode)
+int isp8s_get_me_cq_fd(unsigned int mode)
 {
 	if (mode == imgsys_streaming)
 		return mb[ME_MEM_C_ID].fd;
@@ -1087,9 +1087,9 @@ int isp8_get_me_cq_fd(unsigned int mode)
 	else
 		return smb[ME_MEM_C_ID].fd;
 }
-EXPORT_SYMBOL(isp8_get_me_cq_fd);
+EXPORT_SYMBOL(isp8s_get_me_cq_fd);
 
-static int isp8_module_driver_allocate_working_buffer_streaming(struct mtk_hcp *hcp_dev,
+static int isp8s_module_driver_allocate_working_buffer_streaming(struct mtk_hcp *hcp_dev,
 	unsigned int str_mode, struct mtk_hcp_streaming_reserve_mblock *str_mblock)
 {
 	int id = 0;
@@ -1168,12 +1168,12 @@ static int isp8_module_driver_allocate_working_buffer_streaming(struct mtk_hcp *
 						pr_info(
 							"%s:[HCP_GCE][%s] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 							__func__, str_mblock[id].name,
-							isp8_get_reserve_mem_phys(id, str_mode),
-							isp8_get_reserve_mem_virt(id, str_mode),
-							isp8_get_reserve_mem_dma(id, str_mode),
-							isp8_get_reserve_mem_size(id, str_mode),
+							isp8s_get_reserve_mem_phys(id, str_mode),
+							isp8s_get_reserve_mem_virt(id, str_mode),
+							isp8s_get_reserve_mem_dma(id, str_mode),
+							isp8s_get_reserve_mem_size(id, str_mode),
 							str_mblock[id].is_dma_buf,
-							isp8_get_reserve_mem_fd(id, str_mode),
+							isp8s_get_reserve_mem_fd(id, str_mode),
 							str_mblock[id].d_buf);
 					}
 					break;
@@ -1249,12 +1249,12 @@ static int isp8_module_driver_allocate_working_buffer_streaming(struct mtk_hcp *
 						pr_debug(
 							"%s:[HCP_WORKING][%s] phys:0x%llx, virt:0x%p, dma:0x%llx,size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 							__func__, str_mblock[id].name,
-							isp8_get_reserve_mem_phys(id, str_mode),
-							isp8_get_reserve_mem_virt(id, str_mode),
-							isp8_get_reserve_mem_dma(id, str_mode),
-							isp8_get_reserve_mem_size(id, str_mode),
+							isp8s_get_reserve_mem_phys(id, str_mode),
+							isp8s_get_reserve_mem_virt(id, str_mode),
+							isp8s_get_reserve_mem_dma(id, str_mode),
+							isp8s_get_reserve_mem_size(id, str_mode),
 							str_mblock[id].is_dma_buf,
-							isp8_get_reserve_mem_fd(id, str_mode),
+							isp8s_get_reserve_mem_fd(id, str_mode),
 							str_mblock[id].d_buf);
 					}
 					break;
@@ -1318,12 +1318,12 @@ static int isp8_module_driver_allocate_working_buffer_streaming(struct mtk_hcp *
 						pr_debug(
 							"%s:[HCP_WORKING_DEFAULT][%s] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 							__func__, str_mblock[id].name,
-							isp8_get_reserve_mem_phys(id, str_mode),
-							isp8_get_reserve_mem_virt(id, str_mode),
-							isp8_get_reserve_mem_dma(id, str_mode),
-							isp8_get_reserve_mem_size(id, str_mode),
+							isp8s_get_reserve_mem_phys(id, str_mode),
+							isp8s_get_reserve_mem_virt(id, str_mode),
+							isp8s_get_reserve_mem_dma(id, str_mode),
+							isp8s_get_reserve_mem_size(id, str_mode),
 							str_mblock[id].is_dma_buf,
-							isp8_get_reserve_mem_fd(id, str_mode),
+							isp8s_get_reserve_mem_fd(id, str_mode),
 							str_mblock[id].d_buf);
 					}
 					break;
@@ -1339,19 +1339,19 @@ static int isp8_module_driver_allocate_working_buffer_streaming(struct mtk_hcp *
 			pr_debug(
 				"%s: [HCP][mem_reserve-%d] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 				__func__, id,
-				isp8_get_reserve_mem_phys(id, str_mode),
-				isp8_get_reserve_mem_virt(id, str_mode),
-				isp8_get_reserve_mem_dma(id, str_mode),
-				isp8_get_reserve_mem_size(id, str_mode),
+				isp8s_get_reserve_mem_phys(id, str_mode),
+				isp8s_get_reserve_mem_virt(id, str_mode),
+				isp8s_get_reserve_mem_dma(id, str_mode),
+				isp8s_get_reserve_mem_size(id, str_mode),
 				str_mblock[id].is_dma_buf,
-				isp8_get_reserve_mem_fd(id, str_mode),
+				isp8s_get_reserve_mem_fd(id, str_mode),
 				str_mblock[id].d_buf);
 		}
 	}
 	return 0;
 }
 
-static int isp8_module_driver_allocate_working_buffer_capture(struct mtk_hcp *hcp_dev,
+static int isp8s_module_driver_allocate_working_buffer_capture(struct mtk_hcp *hcp_dev,
 	unsigned int cap_mode, struct mtk_hcp_capture_reserve_mblock *cap_mblock)
 {
 	int id = 0;
@@ -1429,12 +1429,12 @@ static int isp8_module_driver_allocate_working_buffer_capture(struct mtk_hcp *hc
 						pr_debug(
 							"%s:[HCP_GCE][%s] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 							__func__, cap_mblock[id].name,
-							isp8_get_reserve_mem_phys(id, cap_mode),
-							isp8_get_reserve_mem_virt(id, cap_mode),
-							isp8_get_reserve_mem_dma(id, cap_mode),
-							isp8_get_reserve_mem_size(id, cap_mode),
+							isp8s_get_reserve_mem_phys(id, cap_mode),
+							isp8s_get_reserve_mem_virt(id, cap_mode),
+							isp8s_get_reserve_mem_dma(id, cap_mode),
+							isp8s_get_reserve_mem_size(id, cap_mode),
 							cap_mblock[id].is_dma_buf,
-							isp8_get_reserve_mem_fd(id, cap_mode),
+							isp8s_get_reserve_mem_fd(id, cap_mode),
 							cap_mblock[id].d_buf);
 					}
 					break;
@@ -1510,12 +1510,12 @@ static int isp8_module_driver_allocate_working_buffer_capture(struct mtk_hcp *hc
 						pr_debug(
 							"%s:[HCP_WORKING][%s] phys:0x%llx, virt:0x%p, dma:0x%llx,size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 							__func__, cap_mblock[id].name,
-							isp8_get_reserve_mem_phys(id, cap_mode),
-							isp8_get_reserve_mem_virt(id, cap_mode),
-							isp8_get_reserve_mem_dma(id, cap_mode),
-							isp8_get_reserve_mem_size(id, cap_mode),
+							isp8s_get_reserve_mem_phys(id, cap_mode),
+							isp8s_get_reserve_mem_virt(id, cap_mode),
+							isp8s_get_reserve_mem_dma(id, cap_mode),
+							isp8s_get_reserve_mem_size(id, cap_mode),
 							cap_mblock[id].is_dma_buf,
-							isp8_get_reserve_mem_fd(id, cap_mode),
+							isp8s_get_reserve_mem_fd(id, cap_mode),
 							cap_mblock[id].d_buf);
 					}
 					break;
@@ -1579,12 +1579,12 @@ static int isp8_module_driver_allocate_working_buffer_capture(struct mtk_hcp *hc
 						pr_debug(
 							"%s:[HCP_WORKING_DEFAULT][%s] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 							__func__, cap_mblock[id].name,
-							isp8_get_reserve_mem_phys(id, cap_mode),
-							isp8_get_reserve_mem_virt(id, cap_mode),
-							isp8_get_reserve_mem_dma(id, cap_mode),
-							isp8_get_reserve_mem_size(id, cap_mode),
+							isp8s_get_reserve_mem_phys(id, cap_mode),
+							isp8s_get_reserve_mem_virt(id, cap_mode),
+							isp8s_get_reserve_mem_dma(id, cap_mode),
+							isp8s_get_reserve_mem_size(id, cap_mode),
 							cap_mblock[id].is_dma_buf,
-							isp8_get_reserve_mem_fd(id, cap_mode),
+							isp8s_get_reserve_mem_fd(id, cap_mode),
 							cap_mblock[id].d_buf);
 					}
 					break;
@@ -1600,19 +1600,19 @@ static int isp8_module_driver_allocate_working_buffer_capture(struct mtk_hcp *hc
 			pr_debug(
 				"%s: [HCP][mem_reserve-%d] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 				__func__, id,
-				isp8_get_reserve_mem_phys(id, cap_mode),
-				isp8_get_reserve_mem_virt(id, cap_mode),
-				isp8_get_reserve_mem_dma(id, cap_mode),
-				isp8_get_reserve_mem_size(id, cap_mode),
+				isp8s_get_reserve_mem_phys(id, cap_mode),
+				isp8s_get_reserve_mem_virt(id, cap_mode),
+				isp8s_get_reserve_mem_dma(id, cap_mode),
+				isp8s_get_reserve_mem_size(id, cap_mode),
 				cap_mblock[id].is_dma_buf,
-				isp8_get_reserve_mem_fd(id, cap_mode),
+				isp8s_get_reserve_mem_fd(id, cap_mode),
 				cap_mblock[id].d_buf);
 		}
 	}
 	return 0;
 }
 
-static int isp8_module_driver_allocate_working_buffer_smvr(struct mtk_hcp *hcp_dev,
+static int isp8s_module_driver_allocate_working_buffer_smvr(struct mtk_hcp *hcp_dev,
 	unsigned int smvr_mode, struct mtk_hcp_smvr_reserve_mblock *smvr_mblock)
 {
 	int id = 0;
@@ -1690,12 +1690,12 @@ static int isp8_module_driver_allocate_working_buffer_smvr(struct mtk_hcp *hcp_d
 						pr_debug(
 							"%s:[HCP_GCE][%s] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 							__func__, smvr_mblock[id].name,
-							isp8_get_reserve_mem_phys(id, smvr_mode),
-							isp8_get_reserve_mem_virt(id, smvr_mode),
-							isp8_get_reserve_mem_dma(id, smvr_mode),
-							isp8_get_reserve_mem_size(id, smvr_mode),
+							isp8s_get_reserve_mem_phys(id, smvr_mode),
+							isp8s_get_reserve_mem_virt(id, smvr_mode),
+							isp8s_get_reserve_mem_dma(id, smvr_mode),
+							isp8s_get_reserve_mem_size(id, smvr_mode),
 							smvr_mblock[id].is_dma_buf,
-							isp8_get_reserve_mem_fd(id, smvr_mode),
+							isp8s_get_reserve_mem_fd(id, smvr_mode),
 							smvr_mblock[id].d_buf);
 					}
 					break;
@@ -1772,12 +1772,12 @@ static int isp8_module_driver_allocate_working_buffer_smvr(struct mtk_hcp *hcp_d
 						pr_debug(
 							"%s:[HCP_WORKING][%s] phys:0x%llx, virt:0x%p, dma:0x%llx,size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 							__func__, smvr_mblock[id].name,
-							isp8_get_reserve_mem_phys(id, smvr_mode),
-							isp8_get_reserve_mem_virt(id, smvr_mode),
-							isp8_get_reserve_mem_dma(id, smvr_mode),
-							isp8_get_reserve_mem_size(id, smvr_mode),
+							isp8s_get_reserve_mem_phys(id, smvr_mode),
+							isp8s_get_reserve_mem_virt(id, smvr_mode),
+							isp8s_get_reserve_mem_dma(id, smvr_mode),
+							isp8s_get_reserve_mem_size(id, smvr_mode),
 							smvr_mblock[id].is_dma_buf,
-							isp8_get_reserve_mem_fd(id, smvr_mode),
+							isp8s_get_reserve_mem_fd(id, smvr_mode),
 							smvr_mblock[id].d_buf);
 					}
 					break;
@@ -1841,12 +1841,12 @@ static int isp8_module_driver_allocate_working_buffer_smvr(struct mtk_hcp *hcp_d
 						pr_debug(
 							"%s:[HCP_WORKING_DEFAULT][%s] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 							__func__, smvr_mblock[id].name,
-							isp8_get_reserve_mem_phys(id, smvr_mode),
-							isp8_get_reserve_mem_virt(id, smvr_mode),
-							isp8_get_reserve_mem_dma(id, smvr_mode),
-							isp8_get_reserve_mem_size(id, smvr_mode),
+							isp8s_get_reserve_mem_phys(id, smvr_mode),
+							isp8s_get_reserve_mem_virt(id, smvr_mode),
+							isp8s_get_reserve_mem_dma(id, smvr_mode),
+							isp8s_get_reserve_mem_size(id, smvr_mode),
 							smvr_mblock[id].is_dma_buf,
-							isp8_get_reserve_mem_fd(id, smvr_mode),
+							isp8s_get_reserve_mem_fd(id, smvr_mode),
 							smvr_mblock[id].d_buf);
 					}
 					break;
@@ -1862,19 +1862,19 @@ static int isp8_module_driver_allocate_working_buffer_smvr(struct mtk_hcp *hcp_d
 			pr_debug(
 				"%s: [HCP][mem_reserve-%d] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 				__func__, id,
-				isp8_get_reserve_mem_phys(id, smvr_mode),
-				isp8_get_reserve_mem_virt(id, smvr_mode),
-				isp8_get_reserve_mem_dma(id, smvr_mode),
-				isp8_get_reserve_mem_size(id, smvr_mode),
+				isp8s_get_reserve_mem_phys(id, smvr_mode),
+				isp8s_get_reserve_mem_virt(id, smvr_mode),
+				isp8s_get_reserve_mem_dma(id, smvr_mode),
+				isp8s_get_reserve_mem_size(id, smvr_mode),
 				smvr_mblock[id].is_dma_buf,
-				isp8_get_reserve_mem_fd(id, smvr_mode),
+				isp8s_get_reserve_mem_fd(id, smvr_mode),
 				smvr_mblock[id].d_buf);
 		}
 	}
 	return 0;
 }
 
-int isp8_allocate_gce_working_buffer(struct mtk_hcp *hcp_dev, unsigned int mode)
+int isp8s_allocate_gce_working_buffer(struct mtk_hcp *hcp_dev, unsigned int mode)
 {
 		unsigned int block_num_gce = 0;
 		unsigned int g_id = 0;
@@ -1892,82 +1892,87 @@ int isp8_allocate_gce_working_buffer(struct mtk_hcp *hcp_dev, unsigned int mode)
 			if (gmblock[g_id].is_dma_buf) {
 				switch (g_id + IMG_MEM_FOR_HW_ID) {
 				case IMG_MEM_FOR_HW_ID:
-					/*allocated at probe via dts*/
-						break;
+						/*allocated at probe via dts*/
+							break;
 				case IMG_MEM_G_TOKEN_ID:
-					/* all supported heap name you can find with cmd */
-					/* (ls /dev/dma_heap/) in shell */
-					pdma_heap = dma_heap_find("mtk_mm");
+						/* all supported heap name you can find with cmd */
+						/* (ls /dev/dma_heap/) in shell */
+						pdma_heap = dma_heap_find("mtk_mm");
 					if (!pdma_heap) {
 						pr_info("pdma_heap find fail\n");
 						return -1;
 					}
-					gmblock[g_id].d_buf = dma_heap_buffer_alloc(
-					pdma_heap,
-					gmblock[g_id].size,
-					O_RDWR | O_CLOEXEC,
-					DMA_HEAP_VALID_HEAP_FLAGS);
+						gmblock[g_id].d_buf = dma_heap_buffer_alloc(
+						pdma_heap,
+						gmblock[g_id].size,
+						O_RDWR | O_CLOEXEC,
+						DMA_HEAP_VALID_HEAP_FLAGS);
 					if (IS_ERR(gmblock[g_id].d_buf)) {
 						pr_info("dma_heap_buffer_alloc fail :%ld\n",
 							PTR_ERR(gmblock[g_id].d_buf));
 						return -1;
 					}
-					mtk_dma_buf_set_name(gmblock[g_id].d_buf, gmblock[g_id].name);
-					gmblock[g_id].attach =
-						dma_buf_attach(gmblock[g_id].d_buf, hcp_dev->smmu_dev);
-					attach = gmblock[g_id].attach;
+						mtk_dma_buf_set_name(gmblock[g_id].d_buf, gmblock[g_id].name);
+						gmblock[g_id].attach =
+							dma_buf_attach(gmblock[g_id].d_buf, hcp_dev->smmu_dev);
+						attach = gmblock[g_id].attach;
 					if (IS_ERR(attach)) {
 						pr_info("dma_buf_attach fail :%ld\n",
 						PTR_ERR(attach));
 						return -1;
 					}
-					#ifdef HCP_NEW_DMA_BUF_API
-					gmblock[g_id].sgt =
-						dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
-					#else
-					gmblock[g_id].sgt =
-						dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
-					#endif
-					sgt = gmblock[g_id].sgt;
+						#ifdef HCP_NEW_DMA_BUF_API
+						gmblock[g_id].sgt =
+							dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
+						#else
+						gmblock[g_id].sgt =
+							dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
+						#endif
+						sgt = gmblock[g_id].sgt;
 					if (IS_ERR(sgt)) {
 						dma_buf_detach(gmblock[g_id].d_buf, attach);
 						pr_info("dma_buf_map_attachment fail sgt:%ld\n",
 						PTR_ERR(sgt));
 						return -1;
 					}
-					gmblock[g_id].start_phys = sg_dma_address(sgt->sgl);
-					gmblock[g_id].start_dma = gmblock[g_id].start_phys;
-					#ifdef HCP_NEW_DMA_BUF_API
-					ret = dma_buf_vmap_unlocked(gmblock[g_id].d_buf, &map);
-					#else
-					ret = dma_buf_vmap(gmblock[g_id].d_buf, &map);
-					#endif
+						gmblock[g_id].start_phys = sg_dma_address(sgt->sgl);
+						gmblock[g_id].start_dma = gmblock[g_id].start_phys;
+						#ifdef HCP_NEW_DMA_BUF_API
+						ret = dma_buf_vmap_unlocked(gmblock[g_id].d_buf, &map);
+						#else
+						ret = dma_buf_vmap(gmblock[g_id].d_buf, &map);
+						#endif
 					if (ret) {
 						pr_info("sg_dma_address fail\n");
 						return ret;
 					}
-					gmblock[g_id].start_virt = (void *)map.vaddr;
-					gmblock[g_id].map = map;
-					get_dma_buf(gmblock[g_id].d_buf);
-					gmblock[g_id].fd =
-						dma_buf_fd(gmblock[g_id].d_buf, O_RDWR | O_CLOEXEC);
-					dma_buf_begin_cpu_access(gmblock[g_id].d_buf, DMA_BIDIRECTIONAL);
-					kref_init(&gmblock[g_id].kref);
+						gmblock[g_id].start_virt = (void *)map.vaddr;
+						gmblock[g_id].map = map;
+						get_dma_buf(gmblock[g_id].d_buf);
+						gmblock[g_id].fd =
+							dma_buf_fd(gmblock[g_id].d_buf, O_RDWR | O_CLOEXEC);
+						dma_buf_begin_cpu_access(gmblock[g_id].d_buf, DMA_BIDIRECTIONAL);
+						kref_init(&gmblock[g_id].kref);
 					if (hcp_dbg_enable()) {
 						pr_debug(
 							"%s:[HCP_GCE_TOKEN][%s] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 							__func__, gmblock[g_id].name,
-							isp8_get_reserve_mem_phys(g_id + IMG_MEM_FOR_HW_ID, mode),
-							isp8_get_reserve_mem_virt(g_id + IMG_MEM_FOR_HW_ID, mode),
-							isp8_get_reserve_mem_dma(g_id + IMG_MEM_FOR_HW_ID, mode),
-							isp8_get_reserve_mem_size(g_id + IMG_MEM_FOR_HW_ID, mode),
+							isp8s_get_reserve_mem_phys(g_id + IMG_MEM_FOR_HW_ID,
+								mode),
+							isp8s_get_reserve_mem_virt(g_id + IMG_MEM_FOR_HW_ID,
+								mode),
+							isp8s_get_reserve_mem_dma(g_id + IMG_MEM_FOR_HW_ID,
+								mode),
+							isp8s_get_reserve_mem_size(g_id + IMG_MEM_FOR_HW_ID,
+								mode),
 							gmblock[g_id].is_dma_buf,
-							isp8_get_reserve_mem_fd(g_id + IMG_MEM_FOR_HW_ID, mode),
+							isp8s_get_reserve_mem_fd(g_id + IMG_MEM_FOR_HW_ID,
+								mode),
 							gmblock[g_id].d_buf);
 					}
-					break;
+						break;
 				default:
-					break;
+						break;
 				}
 			} else {
 				gmblock[g_id].start_virt =
@@ -1980,19 +1985,19 @@ int isp8_allocate_gce_working_buffer(struct mtk_hcp *hcp_dev, unsigned int mode)
 				pr_debug(
 					"%s: [HCP_GCE_TOKEN][gce_mem_reserve-%d] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 					__func__, g_id,
-					isp8_get_reserve_mem_phys(g_id + IMG_MEM_FOR_HW_ID, mode),
-					isp8_get_reserve_mem_virt(g_id + IMG_MEM_FOR_HW_ID, mode),
-					isp8_get_reserve_mem_dma(g_id + IMG_MEM_FOR_HW_ID, mode),
-					isp8_get_reserve_mem_size(g_id + IMG_MEM_FOR_HW_ID, mode),
+					isp8s_get_reserve_mem_phys(g_id + IMG_MEM_FOR_HW_ID, mode),
+					isp8s_get_reserve_mem_virt(g_id + IMG_MEM_FOR_HW_ID, mode),
+					isp8s_get_reserve_mem_dma(g_id + IMG_MEM_FOR_HW_ID, mode),
+					isp8s_get_reserve_mem_size(g_id + IMG_MEM_FOR_HW_ID, mode),
 					gmblock[g_id].is_dma_buf,
-					isp8_get_reserve_mem_fd(g_id + IMG_MEM_FOR_HW_ID, mode),
+					isp8s_get_reserve_mem_fd(g_id + IMG_MEM_FOR_HW_ID, mode),
 					gmblock[g_id].d_buf);
 			}
 		}
 		return 0;
 }
 
-int isp8_allocate_working_buffer(struct mtk_hcp *hcp_dev, unsigned int mode, unsigned int gmb_en)
+int isp8s_allocate_working_buffer(struct mtk_hcp *hcp_dev, unsigned int mode, unsigned int gmb_en)
 {
 		struct mtk_hcp_streaming_reserve_mblock *mblock = NULL;
 		struct mtk_hcp_smvr_reserve_mblock *smblock = NULL;
@@ -2012,23 +2017,23 @@ int isp8_allocate_working_buffer(struct mtk_hcp *hcp_dev, unsigned int mode, uns
 
 		if (gmb_en) {
 			pr_info("mtk_hcp: allocate gce buffer\n");
-			isp8_allocate_gce_working_buffer(hcp_dev, mode);
+			isp8s_allocate_gce_working_buffer(hcp_dev, mode);
 		}
 
 		if (mode == imgsys_streaming) {
 			pr_info("mtk_hcp: allocate streaming buffer\n");
-			ret = isp8_module_driver_allocate_working_buffer_streaming(hcp_dev, mode, mblock);
+			ret = isp8s_module_driver_allocate_working_buffer_streaming(hcp_dev, mode, mblock);
 		} else if (mode == imgsys_capture) {
 			pr_info("mtk_hcp: allocate capture buffer\n");
-			ret = isp8_module_driver_allocate_working_buffer_capture(hcp_dev, mode, cmblock);
+			ret = isp8s_module_driver_allocate_working_buffer_capture(hcp_dev, mode, cmblock);
 		} else {
 			pr_info("mtk_hcp: allocate smvr buffer\n");
-			ret = isp8_module_driver_allocate_working_buffer_smvr(hcp_dev, mode, smblock);
+			ret = isp8s_module_driver_allocate_working_buffer_smvr(hcp_dev, mode, smblock);
 		}
 
 		return ret;
 }
-EXPORT_SYMBOL(isp8_allocate_working_buffer);
+EXPORT_SYMBOL(isp8s_allocate_working_buffer);
 
 static void gce_release_streaming(struct kref *ref)
 {
@@ -2067,12 +2072,12 @@ static void gce_release_streaming(struct kref *ref)
 		pr_debug(
 			"%s:[HCP][%s] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 			__func__, mblock->name,
-			isp8_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_streaming),
-			isp8_get_reserve_mem_virt(IMG_MEM_G_ID, imgsys_streaming),
-			isp8_get_reserve_mem_dma(IMG_MEM_G_ID, imgsys_streaming),
-			isp8_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_streaming),
+			isp8s_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_streaming),
+			isp8s_get_reserve_mem_virt(IMG_MEM_G_ID, imgsys_streaming),
+			isp8s_get_reserve_mem_dma(IMG_MEM_G_ID, imgsys_streaming),
+			isp8s_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_streaming),
 			mblock->is_dma_buf,
-			isp8_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_streaming),
+			isp8s_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_streaming),
 			mblock->d_buf);
 
 	mblock->mem_priv = NULL;
@@ -2124,12 +2129,12 @@ static void gce_release_capture(struct kref *ref)
 		pr_debug(
 			"%s:[HCP][%s] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 			__func__, mblock->name,
-			isp8_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_capture),
-			isp8_get_reserve_mem_virt(IMG_MEM_G_ID, imgsys_capture),
-			isp8_get_reserve_mem_dma(IMG_MEM_G_ID, imgsys_capture),
-			isp8_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_capture),
+			isp8s_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_capture),
+			isp8s_get_reserve_mem_virt(IMG_MEM_G_ID, imgsys_capture),
+			isp8s_get_reserve_mem_dma(IMG_MEM_G_ID, imgsys_capture),
+			isp8s_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_capture),
 			mblock->is_dma_buf,
-			isp8_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_capture),
+			isp8s_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_capture),
 			mblock->d_buf);
 
 	// close fd in user space driver, you can't close fd in kernel site
@@ -2185,12 +2190,12 @@ static void gce_release_smvr(struct kref *ref)
 		pr_debug(
 			"%s:[HCP][%s] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d, d_buf:0x%p\n",
 			__func__, mblock->name,
-			isp8_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_smvr),
-			isp8_get_reserve_mem_virt(IMG_MEM_G_ID, imgsys_smvr),
-			isp8_get_reserve_mem_dma(IMG_MEM_G_ID, imgsys_smvr),
-			isp8_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_smvr),
+			isp8s_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_smvr),
+			isp8s_get_reserve_mem_virt(IMG_MEM_G_ID, imgsys_smvr),
+			isp8s_get_reserve_mem_dma(IMG_MEM_G_ID, imgsys_smvr),
+			isp8s_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_smvr),
 			mblock->is_dma_buf,
-			isp8_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_smvr),
+			isp8s_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_smvr),
 			mblock->d_buf);
 
 	// close fd in user space driver, you can't close fd in kernel site
@@ -2209,10 +2214,10 @@ static void gce_release_smvr(struct kref *ref)
 	mblock->sgt = NULL;
 }
 
-static int isp8_module_driver_release_working_buffer_streaming(struct mtk_hcp *hcp_dev,
+static int isp8s_module_driver_release_working_buffer_streaming(struct mtk_hcp *hcp_dev,
 	unsigned int str_mode, struct mtk_hcp_streaming_reserve_mblock *str_mblock)
 {
-	enum isp8_rsv_mem_id_t id;
+	enum isp8s_rsv_mem_id_t id;
 	unsigned int block_num;
 
 	block_num = hcp_dev->data->block_num;
@@ -2298,22 +2303,22 @@ static int isp8_module_driver_release_working_buffer_streaming(struct mtk_hcp *h
 			pr_debug(
 				"%s: [HCP][mem_reserve-%s(%d)] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d\n",
 				__func__, str_mblock[id].name, id,
-				isp8_get_reserve_mem_phys(id, str_mode),
-				isp8_get_reserve_mem_virt(id, str_mode),
-				isp8_get_reserve_mem_dma(id, str_mode),
-				isp8_get_reserve_mem_size(id, str_mode),
+				isp8s_get_reserve_mem_phys(id, str_mode),
+				isp8s_get_reserve_mem_virt(id, str_mode),
+				isp8s_get_reserve_mem_dma(id, str_mode),
+				isp8s_get_reserve_mem_size(id, str_mode),
 				str_mblock[id].is_dma_buf,
-				isp8_get_reserve_mem_fd(id, str_mode));
+				isp8s_get_reserve_mem_fd(id, str_mode));
 		}
 	}
 
 	return 0;
 }
 
-static int isp8_module_driver_release_working_buffer_capture(struct mtk_hcp *hcp_dev,
+static int isp8s_module_driver_release_working_buffer_capture(struct mtk_hcp *hcp_dev,
 	unsigned int cap_mode, struct mtk_hcp_capture_reserve_mblock *cap_mblock)
 {
-	enum isp8_rsv_mem_id_t id;
+	enum isp8s_rsv_mem_id_t id;
 	unsigned int block_num;
 
 	block_num = hcp_dev->data->block_num;
@@ -2397,22 +2402,22 @@ static int isp8_module_driver_release_working_buffer_capture(struct mtk_hcp *hcp
 			pr_debug(
 				"%s: [HCP][mem_reserve-%s(%d)] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d\n",
 				__func__, cap_mblock[id].name, id,
-				isp8_get_reserve_mem_phys(id, cap_mode),
-				isp8_get_reserve_mem_virt(id, cap_mode),
-				isp8_get_reserve_mem_dma(id, cap_mode),
-				isp8_get_reserve_mem_size(id, cap_mode),
+				isp8s_get_reserve_mem_phys(id, cap_mode),
+				isp8s_get_reserve_mem_virt(id, cap_mode),
+				isp8s_get_reserve_mem_dma(id, cap_mode),
+				isp8s_get_reserve_mem_size(id, cap_mode),
 				cap_mblock[id].is_dma_buf,
-				isp8_get_reserve_mem_fd(id, cap_mode));
+				isp8s_get_reserve_mem_fd(id, cap_mode));
 		}
 	}
 
 	return 0;
 }
 
-static int isp8_module_driver_release_working_buffer_smvr(struct mtk_hcp *hcp_dev,
+static int isp8s_module_driver_release_working_buffer_smvr(struct mtk_hcp *hcp_dev,
 	unsigned int smvr_mode, struct mtk_hcp_smvr_reserve_mblock *smvr_mblock)
 {
-	enum isp8_rsv_mem_id_t id;
+	enum isp8s_rsv_mem_id_t id;
 	unsigned int block_num;
 
 	block_num = hcp_dev->data->block_num;
@@ -2496,21 +2501,21 @@ static int isp8_module_driver_release_working_buffer_smvr(struct mtk_hcp *hcp_de
 			pr_debug(
 				"%s: [HCP][mem_reserve- %s(%d)] phys:0x%llx, virt:0x%p, dma:0x%llx, size:0x%llx, is_dma_buf:%d, fd:%d\n",
 				__func__, smvr_mblock[id].name, id,
-				isp8_get_reserve_mem_phys(id, smvr_mode),
-				isp8_get_reserve_mem_virt(id, smvr_mode),
-				isp8_get_reserve_mem_dma(id, smvr_mode),
-				isp8_get_reserve_mem_size(id, smvr_mode),
+				isp8s_get_reserve_mem_phys(id, smvr_mode),
+				isp8s_get_reserve_mem_virt(id, smvr_mode),
+				isp8s_get_reserve_mem_dma(id, smvr_mode),
+				isp8s_get_reserve_mem_size(id, smvr_mode),
 				smvr_mblock[id].is_dma_buf,
-				isp8_get_reserve_mem_fd(id, smvr_mode));
+				isp8s_get_reserve_mem_fd(id, smvr_mode));
 		}
 	}
 
 	return 0;
 }
 
-int isp8_release_gce_working_buffer(struct mtk_hcp *hcp_dev)
+int isp8s_release_gce_working_buffer(struct mtk_hcp *hcp_dev)
 {
-	enum isp8_rsv_gce_mem_id_t gid;
+	enum isp8s_rsv_gce_mem_id_t gid;
 	struct mtk_hcp_gce_token_reserve_mblock *gmblock = NULL;
 	unsigned int block_num_gce;
 
@@ -2581,9 +2586,9 @@ int isp8_release_gce_working_buffer(struct mtk_hcp *hcp_dev)
 
 	return 0;
 }
-EXPORT_SYMBOL(isp8_release_gce_working_buffer);
+EXPORT_SYMBOL(isp8s_release_gce_working_buffer);
 
-int isp8_release_working_buffer(struct mtk_hcp *hcp_dev, unsigned int mode)
+int isp8s_release_working_buffer(struct mtk_hcp *hcp_dev, unsigned int mode)
 {
 	struct mtk_hcp_streaming_reserve_mblock *mblock = NULL;
 	struct mtk_hcp_smvr_reserve_mblock *smblock = NULL;
@@ -2603,17 +2608,17 @@ int isp8_release_working_buffer(struct mtk_hcp *hcp_dev, unsigned int mode)
 	}
 
 	if (mode == imgsys_streaming)
-		isp8_module_driver_release_working_buffer_streaming(hcp_dev, mode, mblock);
+		isp8s_module_driver_release_working_buffer_streaming(hcp_dev, mode, mblock);
 	else if (mode == imgsys_capture)
-		isp8_module_driver_release_working_buffer_capture(hcp_dev, mode, cmblock);
+		isp8s_module_driver_release_working_buffer_capture(hcp_dev, mode, cmblock);
 	else
-		isp8_module_driver_release_working_buffer_smvr(hcp_dev, mode, smblock);
+		isp8s_module_driver_release_working_buffer_smvr(hcp_dev, mode, smblock);
 
 	return 0;
 }
-EXPORT_SYMBOL(isp8_release_working_buffer);
+EXPORT_SYMBOL(isp8s_release_working_buffer);
 
-int isp8_get_init_info(struct img_init_info *info)
+int isp8s_get_init_info(struct img_init_info *info)
 {
 	if (!info) {
 		pr_info("%s:NULL info\n", __func__);
@@ -2623,121 +2628,121 @@ int isp8_get_init_info(struct img_init_info *info)
 		if (!info->smvr_mode) {
 			/*WPE:0, OMC:1, ADL:2, TRAW:3, DIP:4, PQDIP:5, ME:6  */
 			info->module_info_streaming[0].c_wbuf =
-						isp8_get_reserve_mem_phys(WPE_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_phys(WPE_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[0].c_wbuf_dma =
-						isp8_get_reserve_mem_dma(WPE_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_dma(WPE_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[0].c_wbuf_sz =
-						isp8_get_reserve_mem_size(WPE_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_size(WPE_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[0].c_wbuf_fd =
-						isp8_get_reserve_mem_fd(WPE_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_fd(WPE_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[0].t_wbuf =
-						isp8_get_reserve_mem_phys(WPE_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_phys(WPE_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[0].t_wbuf_dma =
-						isp8_get_reserve_mem_dma(WPE_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_dma(WPE_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[0].t_wbuf_sz =
-						isp8_get_reserve_mem_size(WPE_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_size(WPE_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[0].t_wbuf_fd =
-						isp8_get_reserve_mem_fd(WPE_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_fd(WPE_MEM_T_ID, imgsys_streaming);
 
 			//OMC
 			info->module_info_streaming[1].c_wbuf =
-						isp8_get_reserve_mem_phys(OMC_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_phys(OMC_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[1].c_wbuf_dma =
-						isp8_get_reserve_mem_dma(OMC_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_dma(OMC_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[1].c_wbuf_sz =
-						isp8_get_reserve_mem_size(OMC_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_size(OMC_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[1].c_wbuf_fd =
-						isp8_get_reserve_mem_fd(OMC_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_fd(OMC_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[1].t_wbuf =
-						isp8_get_reserve_mem_phys(OMC_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_phys(OMC_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[1].t_wbuf_dma =
-						isp8_get_reserve_mem_dma(OMC_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_dma(OMC_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[1].t_wbuf_sz =
-						isp8_get_reserve_mem_size(OMC_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_size(OMC_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[1].t_wbuf_fd =
-						isp8_get_reserve_mem_fd(OMC_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_fd(OMC_MEM_T_ID, imgsys_streaming);
 
 			// ADL
 			info->module_info_streaming[2].c_wbuf =
-						isp8_get_reserve_mem_phys(ADL_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_phys(ADL_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[2].c_wbuf_dma =
-						isp8_get_reserve_mem_dma(ADL_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_dma(ADL_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[2].c_wbuf_sz =
-						isp8_get_reserve_mem_size(ADL_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_size(ADL_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[2].c_wbuf_fd =
-						isp8_get_reserve_mem_fd(ADL_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_fd(ADL_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[2].t_wbuf =
-						isp8_get_reserve_mem_phys(ADL_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_phys(ADL_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[2].t_wbuf_dma =
-						isp8_get_reserve_mem_dma(ADL_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_dma(ADL_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[2].t_wbuf_sz =
-						isp8_get_reserve_mem_size(ADL_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_size(ADL_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[2].t_wbuf_fd =
-						isp8_get_reserve_mem_fd(ADL_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_fd(ADL_MEM_T_ID, imgsys_streaming);
 
 			// TRAW
 			info->module_info_streaming[3].c_wbuf =
-						isp8_get_reserve_mem_phys(TRAW_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_phys(TRAW_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[3].c_wbuf_dma =
-						isp8_get_reserve_mem_dma(TRAW_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_dma(TRAW_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[3].c_wbuf_sz =
-						isp8_get_reserve_mem_size(TRAW_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_size(TRAW_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[3].c_wbuf_fd =
-						isp8_get_reserve_mem_fd(TRAW_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_fd(TRAW_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[3].t_wbuf =
-						isp8_get_reserve_mem_phys(TRAW_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_phys(TRAW_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[3].t_wbuf_dma =
-						isp8_get_reserve_mem_dma(TRAW_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_dma(TRAW_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[3].t_wbuf_sz =
-						isp8_get_reserve_mem_size(TRAW_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_size(TRAW_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[3].t_wbuf_fd =
-						isp8_get_reserve_mem_fd(TRAW_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_fd(TRAW_MEM_T_ID, imgsys_streaming);
 
 			// DIP
 			info->module_info_streaming[4].c_wbuf =
-						isp8_get_reserve_mem_phys(DIP_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_phys(DIP_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[4].c_wbuf_dma =
-						isp8_get_reserve_mem_dma(DIP_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_dma(DIP_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[4].c_wbuf_sz =
-						isp8_get_reserve_mem_size(DIP_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_size(DIP_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[4].c_wbuf_fd =
-						isp8_get_reserve_mem_fd(DIP_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_fd(DIP_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[4].t_wbuf =
-						isp8_get_reserve_mem_phys(DIP_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_phys(DIP_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[4].t_wbuf_dma =
-						isp8_get_reserve_mem_dma(DIP_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_dma(DIP_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[4].t_wbuf_sz =
-						isp8_get_reserve_mem_size(DIP_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_size(DIP_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[4].t_wbuf_fd =
-						isp8_get_reserve_mem_fd(DIP_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_fd(DIP_MEM_T_ID, imgsys_streaming);
 
 			// PQDIP
 			info->module_info_streaming[5].c_wbuf =
-						isp8_get_reserve_mem_phys(PQDIP_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_phys(PQDIP_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[5].c_wbuf_dma =
-						isp8_get_reserve_mem_dma(PQDIP_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_dma(PQDIP_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[5].c_wbuf_sz =
-						isp8_get_reserve_mem_size(PQDIP_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_size(PQDIP_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[5].c_wbuf_fd =
-					    isp8_get_reserve_mem_fd(PQDIP_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_fd(PQDIP_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[5].t_wbuf =
-						isp8_get_reserve_mem_phys(PQDIP_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_phys(PQDIP_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[5].t_wbuf_dma =
-						isp8_get_reserve_mem_dma(PQDIP_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_dma(PQDIP_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[5].t_wbuf_sz =
-						isp8_get_reserve_mem_size(PQDIP_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_size(PQDIP_MEM_T_ID, imgsys_streaming);
 			info->module_info_streaming[5].t_wbuf_fd =
-						isp8_get_reserve_mem_fd(PQDIP_MEM_T_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_fd(PQDIP_MEM_T_ID, imgsys_streaming);
 
 			// ME
 			info->module_info_streaming[6].c_wbuf =
-						isp8_get_reserve_mem_phys(ME_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_phys(ME_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[6].c_wbuf_dma =
-						isp8_get_reserve_mem_dma(ME_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_dma(ME_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[6].c_wbuf_sz =
-						isp8_get_reserve_mem_size(ME_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_size(ME_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[6].c_wbuf_fd =
-					    isp8_get_reserve_mem_fd(ME_MEM_C_ID, imgsys_streaming);
+				isp8s_get_reserve_mem_fd(ME_MEM_C_ID, imgsys_streaming);
 			info->module_info_streaming[6].t_wbuf = 0;
 			info->module_info_streaming[6].t_wbuf_dma = 0;
 			info->module_info_streaming[6].t_wbuf_sz = 0;
@@ -2745,131 +2750,134 @@ int isp8_get_init_info(struct img_init_info *info)
 
 			if (hcp_dbg_enable()) {
 				pr_info("mtk_hcp:streaming(fd/buf/sz(%d/%lx/%lx))",
-				isp8_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_streaming),
-				(unsigned long)isp8_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_streaming),
-				(unsigned long)isp8_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_streaming));
+				isp8s_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_streaming),
+				(unsigned long)isp8s_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_streaming),
+				(unsigned long)isp8s_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_streaming));
 			}
-			info->gce_info[imgsys_streaming].g_wbuf_fd = isp8_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_streaming);
-			info->gce_info[imgsys_streaming].g_wbuf = isp8_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_streaming);
-			info->gce_info[imgsys_streaming].g_wbuf_sz = isp8_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_streaming);
+			info->gce_info[imgsys_streaming].g_wbuf_fd = isp8s_get_reserve_mem_fd(IMG_MEM_G_ID,
+				imgsys_streaming);
+			info->gce_info[imgsys_streaming].g_wbuf = isp8s_get_reserve_mem_phys(IMG_MEM_G_ID,
+				imgsys_streaming);
+			info->gce_info[imgsys_streaming].g_wbuf_sz = isp8s_get_reserve_mem_size(IMG_MEM_G_ID,
+				imgsys_streaming);
 		} else {
 			/*WPE:0, OMC:1, ADL:2, TRAW:3, DIP:4, PQDIP:5, ME:6  */
 			info->module_info_smvr[0].c_wbuf =
-						isp8_get_reserve_mem_phys(WPE_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_phys(WPE_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[0].c_wbuf_dma =
-						isp8_get_reserve_mem_dma(WPE_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_dma(WPE_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[0].c_wbuf_sz =
-						isp8_get_reserve_mem_size(WPE_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_size(WPE_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[0].c_wbuf_fd =
-						isp8_get_reserve_mem_fd(WPE_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_fd(WPE_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[0].t_wbuf =
-						isp8_get_reserve_mem_phys(WPE_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_phys(WPE_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[0].t_wbuf_dma =
-						isp8_get_reserve_mem_dma(WPE_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_dma(WPE_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[0].t_wbuf_sz =
-						isp8_get_reserve_mem_size(WPE_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_size(WPE_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[0].t_wbuf_fd =
-						isp8_get_reserve_mem_fd(WPE_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_fd(WPE_MEM_T_ID, imgsys_smvr);
 
 			//OMC
 			info->module_info_smvr[1].c_wbuf =
-						isp8_get_reserve_mem_phys(OMC_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_phys(OMC_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[1].c_wbuf_dma =
-						isp8_get_reserve_mem_dma(OMC_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_dma(OMC_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[1].c_wbuf_sz =
-						isp8_get_reserve_mem_size(OMC_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_size(OMC_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[1].c_wbuf_fd =
-						isp8_get_reserve_mem_fd(OMC_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_fd(OMC_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[1].t_wbuf =
-						isp8_get_reserve_mem_phys(OMC_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_phys(OMC_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[1].t_wbuf_dma =
-						isp8_get_reserve_mem_dma(OMC_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_dma(OMC_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[1].t_wbuf_sz =
-						isp8_get_reserve_mem_size(OMC_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_size(OMC_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[1].t_wbuf_fd =
-						isp8_get_reserve_mem_fd(OMC_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_fd(OMC_MEM_T_ID, imgsys_smvr);
 
 			// ADL
 			info->module_info_smvr[2].c_wbuf =
-						isp8_get_reserve_mem_phys(ADL_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_phys(ADL_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[2].c_wbuf_dma =
-						isp8_get_reserve_mem_dma(ADL_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_dma(ADL_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[2].c_wbuf_sz =
-						isp8_get_reserve_mem_size(ADL_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_size(ADL_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[2].c_wbuf_fd =
-						isp8_get_reserve_mem_fd(ADL_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_fd(ADL_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[2].t_wbuf =
-						isp8_get_reserve_mem_phys(ADL_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_phys(ADL_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[2].t_wbuf_dma =
-						isp8_get_reserve_mem_dma(ADL_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_dma(ADL_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[2].t_wbuf_sz =
-						isp8_get_reserve_mem_size(ADL_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_size(ADL_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[2].t_wbuf_fd =
-						isp8_get_reserve_mem_fd(ADL_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_fd(ADL_MEM_T_ID, imgsys_smvr);
 
 			// TRAW
 			info->module_info_smvr[3].c_wbuf =
-						isp8_get_reserve_mem_phys(TRAW_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_phys(TRAW_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[3].c_wbuf_dma =
-						isp8_get_reserve_mem_dma(TRAW_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_dma(TRAW_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[3].c_wbuf_sz =
-						isp8_get_reserve_mem_size(TRAW_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_size(TRAW_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[3].c_wbuf_fd =
-						isp8_get_reserve_mem_fd(TRAW_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_fd(TRAW_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[3].t_wbuf =
-						isp8_get_reserve_mem_phys(TRAW_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_phys(TRAW_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[3].t_wbuf_dma =
-						isp8_get_reserve_mem_dma(TRAW_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_dma(TRAW_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[3].t_wbuf_sz =
-						isp8_get_reserve_mem_size(TRAW_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_size(TRAW_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[3].t_wbuf_fd =
-						isp8_get_reserve_mem_fd(TRAW_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_fd(TRAW_MEM_T_ID, imgsys_smvr);
 
 			// DIP
 			info->module_info_smvr[4].c_wbuf =
-						isp8_get_reserve_mem_phys(DIP_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_phys(DIP_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[4].c_wbuf_dma =
-						isp8_get_reserve_mem_dma(DIP_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_dma(DIP_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[4].c_wbuf_sz =
-						isp8_get_reserve_mem_size(DIP_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_size(DIP_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[4].c_wbuf_fd =
-						isp8_get_reserve_mem_fd(DIP_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_fd(DIP_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[4].t_wbuf =
-						isp8_get_reserve_mem_phys(DIP_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_phys(DIP_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[4].t_wbuf_dma =
-						isp8_get_reserve_mem_dma(DIP_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_dma(DIP_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[4].t_wbuf_sz =
-						isp8_get_reserve_mem_size(DIP_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_size(DIP_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[4].t_wbuf_fd =
-						isp8_get_reserve_mem_fd(DIP_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_fd(DIP_MEM_T_ID, imgsys_smvr);
 
 			// PQDIP
 			info->module_info_smvr[5].c_wbuf =
-						isp8_get_reserve_mem_phys(PQDIP_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_phys(PQDIP_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[5].c_wbuf_dma =
-						isp8_get_reserve_mem_dma(PQDIP_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_dma(PQDIP_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[5].c_wbuf_sz =
-						isp8_get_reserve_mem_size(PQDIP_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_size(PQDIP_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[5].c_wbuf_fd =
-						isp8_get_reserve_mem_fd(PQDIP_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_fd(PQDIP_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[5].t_wbuf =
-						isp8_get_reserve_mem_phys(PQDIP_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_phys(PQDIP_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[5].t_wbuf_dma =
-						isp8_get_reserve_mem_dma(PQDIP_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_dma(PQDIP_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[5].t_wbuf_sz =
-						isp8_get_reserve_mem_size(PQDIP_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_size(PQDIP_MEM_T_ID, imgsys_smvr);
 			info->module_info_smvr[5].t_wbuf_fd =
-						isp8_get_reserve_mem_fd(PQDIP_MEM_T_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_fd(PQDIP_MEM_T_ID, imgsys_smvr);
 
 			// ME
 			info->module_info_smvr[6].c_wbuf =
-						isp8_get_reserve_mem_phys(ME_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_phys(ME_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[6].c_wbuf_dma =
-						isp8_get_reserve_mem_dma(ME_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_dma(ME_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[6].c_wbuf_sz =
-						isp8_get_reserve_mem_size(ME_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_size(ME_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[6].c_wbuf_fd =
-						isp8_get_reserve_mem_fd(ME_MEM_C_ID, imgsys_smvr);
+						isp8s_get_reserve_mem_fd(ME_MEM_C_ID, imgsys_smvr);
 			info->module_info_smvr[6].t_wbuf = 0;
 			info->module_info_smvr[6].t_wbuf_dma = 0;
 			info->module_info_smvr[6].t_wbuf_sz = 0;
@@ -2877,132 +2885,132 @@ int isp8_get_init_info(struct img_init_info *info)
 
 			if (hcp_dbg_enable()) {
 				pr_info("mtk_hcp:smvr(fd/buf/sz(%d/%lx/%lx))",
-				isp8_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_smvr),
-				(unsigned long)isp8_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_smvr),
-				(unsigned long)isp8_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_smvr));
+				isp8s_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_smvr),
+				(unsigned long)isp8s_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_smvr),
+				(unsigned long)isp8s_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_smvr));
 			}
-			info->gce_info[imgsys_smvr].g_wbuf_fd = isp8_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_smvr);
-			info->gce_info[imgsys_smvr].g_wbuf = isp8_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_smvr);
-			info->gce_info[imgsys_smvr].g_wbuf_sz = isp8_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_smvr);
+			info->gce_info[imgsys_smvr].g_wbuf_fd = isp8s_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_smvr);
+			info->gce_info[imgsys_smvr].g_wbuf = isp8s_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_smvr);
+			info->gce_info[imgsys_smvr].g_wbuf_sz = isp8s_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_smvr);
 		}
 	} else {
 		/*WPE:0, OMC:1, ADL:2, TRAW:3, DIP:4, PQDIP:5, ME:6  */
 		info->module_info_capture[0].c_wbuf =
-				isp8_get_reserve_mem_phys(WPE_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_phys(WPE_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[0].c_wbuf_dma =
-				isp8_get_reserve_mem_dma(WPE_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_dma(WPE_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[0].c_wbuf_sz =
-				isp8_get_reserve_mem_size(WPE_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_size(WPE_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[0].c_wbuf_fd =
-				isp8_get_reserve_mem_fd(WPE_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_fd(WPE_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[0].t_wbuf =
-				isp8_get_reserve_mem_phys(WPE_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_phys(WPE_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[0].t_wbuf_dma =
-				isp8_get_reserve_mem_dma(WPE_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_dma(WPE_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[0].t_wbuf_sz =
-				isp8_get_reserve_mem_size(WPE_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_size(WPE_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[0].t_wbuf_fd =
-				isp8_get_reserve_mem_fd(WPE_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_fd(WPE_MEM_T_ID, imgsys_capture);
 
 		// OMC
 		info->module_info_capture[1].c_wbuf =
-				isp8_get_reserve_mem_phys(OMC_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_phys(OMC_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[1].c_wbuf_dma =
-				isp8_get_reserve_mem_dma(OMC_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_dma(OMC_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[1].c_wbuf_sz =
-				isp8_get_reserve_mem_size(OMC_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_size(OMC_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[1].c_wbuf_fd =
-				isp8_get_reserve_mem_fd(OMC_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_fd(OMC_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[1].t_wbuf =
-				isp8_get_reserve_mem_phys(OMC_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_phys(OMC_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[1].t_wbuf_dma =
-				isp8_get_reserve_mem_dma(OMC_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_dma(OMC_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[1].t_wbuf_sz =
-				isp8_get_reserve_mem_size(OMC_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_size(OMC_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[1].t_wbuf_fd =
-				isp8_get_reserve_mem_fd(OMC_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_fd(OMC_MEM_T_ID, imgsys_capture);
 
 		// ADL
 		info->module_info_capture[2].c_wbuf =
-				isp8_get_reserve_mem_phys(ADL_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_phys(ADL_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[2].c_wbuf_dma =
-				isp8_get_reserve_mem_dma(ADL_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_dma(ADL_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[2].c_wbuf_sz =
-				isp8_get_reserve_mem_size(ADL_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_size(ADL_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[2].c_wbuf_fd =
-				isp8_get_reserve_mem_fd(ADL_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_fd(ADL_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[2].t_wbuf =
-				isp8_get_reserve_mem_phys(ADL_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_phys(ADL_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[2].t_wbuf_dma =
-				isp8_get_reserve_mem_dma(ADL_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_dma(ADL_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[2].t_wbuf_sz =
-				isp8_get_reserve_mem_size(ADL_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_size(ADL_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[2].t_wbuf_fd =
-				isp8_get_reserve_mem_fd(ADL_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_fd(ADL_MEM_T_ID, imgsys_capture);
 
 		// TRAW
 		info->module_info_capture[3].c_wbuf =
-				isp8_get_reserve_mem_phys(TRAW_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_phys(TRAW_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[3].c_wbuf_dma =
-				isp8_get_reserve_mem_dma(TRAW_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_dma(TRAW_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[3].c_wbuf_sz =
-				isp8_get_reserve_mem_size(TRAW_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_size(TRAW_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[3].c_wbuf_fd =
-				isp8_get_reserve_mem_fd(TRAW_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_fd(TRAW_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[3].t_wbuf =
-				isp8_get_reserve_mem_phys(TRAW_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_phys(TRAW_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[3].t_wbuf_dma =
-				isp8_get_reserve_mem_dma(TRAW_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_dma(TRAW_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[3].t_wbuf_sz =
-				isp8_get_reserve_mem_size(TRAW_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_size(TRAW_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[3].t_wbuf_fd =
-				isp8_get_reserve_mem_fd(TRAW_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_fd(TRAW_MEM_T_ID, imgsys_capture);
 
 		// DIP
 		info->module_info_capture[4].c_wbuf =
-				isp8_get_reserve_mem_phys(DIP_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_phys(DIP_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[4].c_wbuf_dma =
-				isp8_get_reserve_mem_dma(DIP_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_dma(DIP_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[4].c_wbuf_sz =
-				isp8_get_reserve_mem_size(DIP_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_size(DIP_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[4].c_wbuf_fd =
-				isp8_get_reserve_mem_fd(DIP_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_fd(DIP_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[4].t_wbuf =
-				isp8_get_reserve_mem_phys(DIP_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_phys(DIP_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[4].t_wbuf_dma =
-				isp8_get_reserve_mem_dma(DIP_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_dma(DIP_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[4].t_wbuf_sz =
-				isp8_get_reserve_mem_size(DIP_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_size(DIP_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[4].t_wbuf_fd =
-				isp8_get_reserve_mem_fd(DIP_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_fd(DIP_MEM_T_ID, imgsys_capture);
 
 		// PQDIP
 		info->module_info_capture[5].c_wbuf =
-				isp8_get_reserve_mem_phys(PQDIP_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_phys(PQDIP_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[5].c_wbuf_dma =
-				isp8_get_reserve_mem_dma(PQDIP_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_dma(PQDIP_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[5].c_wbuf_sz =
-				isp8_get_reserve_mem_size(PQDIP_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_size(PQDIP_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[5].c_wbuf_fd =
-			isp8_get_reserve_mem_fd(PQDIP_MEM_C_ID, imgsys_capture);
+			isp8s_get_reserve_mem_fd(PQDIP_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[5].t_wbuf =
-				isp8_get_reserve_mem_phys(PQDIP_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_phys(PQDIP_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[5].t_wbuf_dma =
-				isp8_get_reserve_mem_dma(PQDIP_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_dma(PQDIP_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[5].t_wbuf_sz =
-				isp8_get_reserve_mem_size(PQDIP_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_size(PQDIP_MEM_T_ID, imgsys_capture);
 		info->module_info_capture[5].t_wbuf_fd =
-				isp8_get_reserve_mem_fd(PQDIP_MEM_T_ID, imgsys_capture);
+				isp8s_get_reserve_mem_fd(PQDIP_MEM_T_ID, imgsys_capture);
 
 		// ME
 		info->module_info_capture[6].c_wbuf =
-				isp8_get_reserve_mem_phys(ME_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_phys(ME_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[6].c_wbuf_dma =
-				isp8_get_reserve_mem_dma(ME_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_dma(ME_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[6].c_wbuf_sz =
-				isp8_get_reserve_mem_size(ME_MEM_C_ID, imgsys_capture);
+				isp8s_get_reserve_mem_size(ME_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[6].c_wbuf_fd =
-			isp8_get_reserve_mem_fd(ME_MEM_C_ID, imgsys_capture);
+			isp8s_get_reserve_mem_fd(ME_MEM_C_ID, imgsys_capture);
 		info->module_info_capture[6].t_wbuf = 0;
 		info->module_info_capture[6].t_wbuf_dma = 0;
 		info->module_info_capture[6].t_wbuf_sz = 0;
@@ -3010,31 +3018,31 @@ int isp8_get_init_info(struct img_init_info *info)
 
 		if (hcp_dbg_enable()) {
 			pr_info("mtk_hcp:capture(fd/buf/sz(%d/%lx/%lx))",
-			isp8_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_capture),
-			(unsigned long)isp8_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_capture),
-			(unsigned long)isp8_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_capture));
+			isp8s_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_capture),
+			(unsigned long)isp8s_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_capture),
+			(unsigned long)isp8s_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_capture));
 		}
-		info->gce_info[imgsys_capture].g_wbuf_fd = isp8_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_capture);
-		info->gce_info[imgsys_capture].g_wbuf = isp8_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_capture);
-		info->gce_info[imgsys_capture].g_wbuf_sz = isp8_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_capture);
+		info->gce_info[imgsys_capture].g_wbuf_fd = isp8s_get_reserve_mem_fd(IMG_MEM_G_ID, imgsys_capture);
+		info->gce_info[imgsys_capture].g_wbuf = isp8s_get_reserve_mem_phys(IMG_MEM_G_ID, imgsys_capture);
+		info->gce_info[imgsys_capture].g_wbuf_sz = isp8s_get_reserve_mem_size(IMG_MEM_G_ID, imgsys_capture);
 	}
-	info->hw_buf = isp8_get_reserve_mem_phys(DIP_MEM_FOR_HW_ID, imgsys_streaming);
+	info->hw_buf = isp8s_get_reserve_mem_phys(DIP_MEM_FOR_HW_ID, imgsys_streaming);
 
 	/*common*/
-	info->g_token_wbuf_fd = isp8_get_reserve_mem_fd(IMG_MEM_G_TOKEN_ID, imgsys_streaming);
-	info->g_token_wbuf = isp8_get_reserve_mem_phys(IMG_MEM_G_TOKEN_ID, imgsys_streaming);
+	info->g_token_wbuf_fd = isp8s_get_reserve_mem_fd(IMG_MEM_G_TOKEN_ID, imgsys_streaming);
+	info->g_token_wbuf = isp8s_get_reserve_mem_phys(IMG_MEM_G_TOKEN_ID, imgsys_streaming);
 	/*info->g_wbuf_sw = isp7s_get_reserve_mem_virt(IMG_MEM_G_ID);*/
-	info->g_token_wbuf_sz = isp8_get_reserve_mem_size(IMG_MEM_G_TOKEN_ID, imgsys_streaming);
+	info->g_token_wbuf_sz = isp8s_get_reserve_mem_size(IMG_MEM_G_TOKEN_ID, imgsys_streaming);
 
 
 	return 0;
 }
 
-int isp8_get_mem_info(struct img_init_info *info)
+int isp8s_get_mem_info(struct img_init_info *info)
 {
 	return 0;
 }
-static int isp8_put_gce(unsigned int mode)
+static int isp8s_put_gce(unsigned int mode)
 {
 	if (mode == imgsys_streaming) {
 		kref_put(&mb[IMG_MEM_G_ID].kref, gce_release_streaming);
@@ -3053,7 +3061,7 @@ static int isp8_put_gce(unsigned int mode)
 	return 0;
 }
 
-static int isp8_get_gce(unsigned int mode)
+static int isp8s_get_gce(unsigned int mode)
 {
 	if (mode == imgsys_streaming) {
 		kref_get(&mb[IMG_MEM_G_ID].kref);
@@ -3072,7 +3080,7 @@ static int isp8_get_gce(unsigned int mode)
 	return 0;
 }
 
-int isp8_partial_flush(struct mtk_hcp *hcp_dev, struct flush_buf_info *b_info)
+int isp8s_partial_flush(struct mtk_hcp *hcp_dev, struct flush_buf_info *b_info)
 {
 	struct mtk_hcp_streaming_reserve_mblock *mblock = NULL;
 	struct mtk_hcp_smvr_reserve_mblock *smblock = NULL;
@@ -3099,63 +3107,68 @@ int isp8_partial_flush(struct mtk_hcp *hcp_dev, struct flush_buf_info *b_info)
 		for (id = 0; id < block_num; id++) {
 			if (mode == imgsys_streaming) {
 				if (b_info->fd == mblock[id].fd) {
-					dma_buf_end_cpu_access_partial(mblock[id].d_buf, DMA_BIDIRECTIONAL, b_info->offset, b_info->len);
+					dma_buf_end_cpu_access_partial(mblock[id].d_buf, DMA_BIDIRECTIONAL,
+						b_info->offset, b_info->len);
 					break;
 				}
 			} else if (mode == imgsys_capture) {
 				if (b_info->fd == cmblock[id].fd) {
-					dma_buf_end_cpu_access_partial(cmblock[id].d_buf, DMA_BIDIRECTIONAL, b_info->offset, b_info->len);
+					dma_buf_end_cpu_access_partial(cmblock[id].d_buf, DMA_BIDIRECTIONAL,
+						b_info->offset, b_info->len);
 					break;
 				}
 			} else {
 				if (b_info->fd == smblock[id].fd) {
-					dma_buf_end_cpu_access_partial(smblock[id].d_buf, DMA_BIDIRECTIONAL, b_info->offset, b_info->len);
+					dma_buf_end_cpu_access_partial(smblock[id].d_buf, DMA_BIDIRECTIONAL,
+						b_info->offset, b_info->len);
 					break;
 				}
 			}
 		}
 		if (hcp_dbg_enable())
-			pr_debug("imgsys_fw partial flush info(%d/%d/%d)", b_info->fd, b_info->len, b_info->offset);
+			pr_debug(
+				"imgsys_fw partial flush info(%d/%d/%d)",
+				b_info->fd, b_info->len, b_info->offset);
 	}
 
 	return 0;
 }
 
-struct mtk_hcp_data isp8_hcp_data = {
-	.mblock = isp8_streaming_mblock,
-	.smblock = isp8_smvr_mblock,
-	.cmblock = isp8_capture_mblock,
-	.gmblock = isp8_gce_mblock,
+struct mtk_hcp_data isp8s_hcp_data = {
+	.mblock = isp8s_streaming_mblock,
+	.smblock = isp8s_smvr_mblock,
+	.cmblock = isp8s_capture_mblock,
+	.gmblock = isp8s_gce_mblock,
 	//.gsmblock = isp7s_gce_smvr_mblock,
-	.block_num = ARRAY_SIZE(isp8_streaming_mblock),
-	.block_num_gce = ARRAY_SIZE(isp8_gce_mblock),
-	.allocate = isp8_allocate_working_buffer,
-	.release = isp8_release_working_buffer,
-	.release_gce_buf = isp8_release_gce_working_buffer,
-	.get_init_info = isp8_get_init_info,
-	.get_mem_info = isp8_get_mem_info,
-	.get_gce_virt = isp8_get_gce_virt,
-	.get_gce = isp8_get_gce,
-	.put_gce = isp8_put_gce,
-	.get_gce_token_virt = isp8_get_gce_token_virt,
-	.get_hwid_virt = isp8_get_hwid_virt,
-	.get_wpe_virt = isp8_get_wpe_virt,
-	.get_wpe_cq_fd = isp8_get_wpe_cq_fd,
-	.get_wpe_tdr_fd = isp8_get_wpe_tdr_fd,
-	.get_omc_virt = isp8_get_omc_virt,
-	.get_omc_cq_fd = isp8_get_omc_cq_fd,
-	.get_omc_tdr_fd = isp8_get_omc_tdr_fd,
-	.get_dip_virt = isp8_get_dip_virt,
-	.get_dip_cq_fd = isp8_get_dip_cq_fd,
-	.get_dip_tdr_fd = isp8_get_dip_tdr_fd,
-	.get_traw_virt = isp8_get_traw_virt,
-	.get_traw_cq_fd = isp8_get_traw_cq_fd,
-	.get_traw_tdr_fd = isp8_get_traw_tdr_fd,
-	.get_pqdip_virt = isp8_get_pqdip_virt,
-	.get_pqdip_cq_fd = isp8_get_pqdip_cq_fd,
-	.get_pqdip_tdr_fd = isp8_get_pqdip_tdr_fd,
-	.get_me_virt = isp8_get_me_virt,
-	.get_me_cq_fd = isp8_get_me_cq_fd,
+	.block_num = ARRAY_SIZE(isp8s_streaming_mblock),
+	.block_num_gce = ARRAY_SIZE(isp8s_gce_mblock),
+	.allocate = isp8s_allocate_working_buffer,
+	.release = isp8s_release_working_buffer,
+	.release_gce_buf = isp8s_release_gce_working_buffer,
+	.get_init_info = isp8s_get_init_info,
+	.get_mem_info = isp8s_get_mem_info,
+	.get_gce_virt = isp8s_get_gce_virt,
+	.get_gce = isp8s_get_gce,
+	.put_gce = isp8s_put_gce,
+	.get_gce_token_virt = isp8s_get_gce_token_virt,
+	.get_hwid_virt = isp8s_get_hwid_virt,
+	.get_wpe_virt = isp8s_get_wpe_virt,
+	.get_wpe_cq_fd = isp8s_get_wpe_cq_fd,
+	.get_wpe_tdr_fd = isp8s_get_wpe_tdr_fd,
+	.get_omc_virt = isp8s_get_omc_virt,
+	.get_omc_cq_fd = isp8s_get_omc_cq_fd,
+	.get_omc_tdr_fd = isp8s_get_omc_tdr_fd,
+	.get_dip_virt = isp8s_get_dip_virt,
+	.get_dip_cq_fd = isp8s_get_dip_cq_fd,
+	.get_dip_tdr_fd = isp8s_get_dip_tdr_fd,
+	.get_traw_virt = isp8s_get_traw_virt,
+	.get_traw_cq_fd = isp8s_get_traw_cq_fd,
+	.get_traw_tdr_fd = isp8s_get_traw_tdr_fd,
+	.get_pqdip_virt = isp8s_get_pqdip_virt,
+	.get_pqdip_cq_fd = isp8s_get_pqdip_cq_fd,
+	.get_pqdip_tdr_fd = isp8s_get_pqdip_tdr_fd,
+	.get_me_virt = isp8s_get_me_virt,
+	.get_me_cq_fd = isp8s_get_me_cq_fd,
 	.partial_flush = NULL,
 };
 
