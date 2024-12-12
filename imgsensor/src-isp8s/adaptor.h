@@ -267,6 +267,9 @@ struct adaptor_ctx {
 	struct mtk_ebd_dump_record latest_ebd;
 	/* 1SOF timing prediction */
 	struct mtk_1sof_vsync_ts_info streamon_1sof_vsync_ts_info;
+
+	/* broadcast framework lock */
+	struct mutex broadcast_lock;
 };
 
 #endif

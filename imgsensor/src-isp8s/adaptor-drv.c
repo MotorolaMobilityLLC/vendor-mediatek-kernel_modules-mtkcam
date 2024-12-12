@@ -420,8 +420,11 @@ static void control_sensor(struct adaptor_ctx *ctx)
 				(u8 *)data, &len);
 		ctx->is_sensor_scenario_inited = 1;
 	}
-	if (!ctx->is_streaming) // no need to restore ae when seamless
+	if (!ctx->is_streaming) {// no need to restore ae when seamless
+		mutex_lock(&ctx->broadcast_lock);
 		restore_ae_ctrl(ctx);
+		mutex_unlock(&ctx->broadcast_lock);
+	}
 
 	adaptor_logm(ctx, "-\n");
 }
@@ -1607,6 +1610,7 @@ static int imgsensor_probe(struct i3c_i2c_device *client)
 	mutex_init(&ctx->mutex);
 	mutex_init(&ctx->ebd_lock);
 	mutex_init(&ctx->subctx.i2c_buffer_lock);
+	mutex_init(&ctx->broadcast_lock);
 
 
 	if (sentest_probe_init(ctx))

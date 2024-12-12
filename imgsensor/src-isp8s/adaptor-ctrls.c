@@ -1474,7 +1474,9 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 				ae_ctrl->gain.le_gain,
 				ae_ctrl->gain.me_gain,
 				CALC_LINE_TIME_IN_NS(ctx->subctx.pclk, ctx->subctx.line_length));
+			mutex_lock(&ctx->broadcast_lock);
 			s_ae_ctrl(ctrl);
+			mutex_unlock(&ctx->broadcast_lock);
 			ADAPTOR_SYSTRACE_END();
 		}
 		break;
@@ -1689,12 +1691,18 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 		}
 		break;
 	case V4L2_CID_MTK_MAX_FPS:
+		ADAPTOR_SYSTRACE_BEGIN(
+			"imgsensor::V4L2_CID_MTK_MAX_FPS, idx:%d, val:%d, cur_mode:%d",
+			ctx->idx, ctrl->val, ctx->cur_mode->id);
 		para.u64[0] = ctx->cur_mode->id;
 		para.u64[1] = ctrl->val;
+		mutex_lock(&ctx->broadcast_lock);
 		subdrv_call(ctx, feature_control,
 			SENSOR_FEATURE_SET_MAX_FRAME_RATE_BY_SCENARIO,
 			para.u8, &len);
 		notify_fsync_mgr_update_min_fl(ctx);
+		mutex_unlock(&ctx->broadcast_lock);
+		ADAPTOR_SYSTRACE_END();
 		break;
 	case V4L2_CID_SEAMLESS_SCENARIOS:
 		{
@@ -1732,14 +1740,6 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 
 			/* first, notify fsync cancel FL restore proc if needed */
 			notify_fsync_mgr_clear_fl_restore_info_if_needed(ctx);
-
-			/* update ctx req id */
-			ctx->req_id = info->ae_ctrl[0].req_id;
-			ctx->frame_id = info->ae_ctrl[0].frame_id;
-
-			/* copy original input data for fsync using */
-			memcpy(fsync_exp, &info->ae_ctrl[0].exposure.arr, sizeof(fsync_exp));
-
 			para.u64[0] = info->target_scenario_id;
 			para.u64[1] = (uintptr_t)&info->ae_ctrl[0];
 			para.u64[2] = (uintptr_t)&info->ae_ctrl[1];
@@ -1787,6 +1787,33 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 					info->target_scenario_id);
 				break;
 			}
+			ADAPTOR_SYSTRACE_BEGIN(
+				"imgsensor::V4L2_CID_START_SEAMLESS_SWITCH [inf:%d] idx:%d, req_no:%u, sub_sof_no:%u, seamless scen(%u => %u), req_id:%d/frame_id:%u s(%llu/%llu/%llu/%llu/%llu) sys_ts:(%llu/%llu|%llu)",
+				ctx->seninf_idx,
+				ctx->idx,
+				ctx->sof_cnt,
+				ctx->subctx.sof_no,
+				orig_scen_id,
+				info->target_scenario_id,
+				info->ae_ctrl[0].req_id,
+				info->ae_ctrl[0].frame_id,
+				info->ae_ctrl[0].exposure.arr[0],
+				info->ae_ctrl[0].exposure.arr[1],
+				info->ae_ctrl[0].exposure.arr[2],
+				info->ae_ctrl[0].exposure.arr[3],
+				info->ae_ctrl[0].exposure.arr[4],
+				ctx->sys_ts_update_sof_cnt,
+				time_boot,
+				time_mono);
+
+			mutex_lock(&ctx->broadcast_lock);
+			/* update ctx req id */
+			ctx->req_id = info->ae_ctrl[0].req_id;
+			ctx->frame_id = info->ae_ctrl[0].frame_id;
+
+			/* copy original input data for fsync using */
+			memcpy(fsync_exp, &info->ae_ctrl[0].exposure.arr, sizeof(fsync_exp));
+
 			subdrv_call(ctx, feature_control,
 				SENSOR_FEATURE_SEAMLESS_SWITCH,
 				para.u8, &len);
@@ -1813,6 +1840,8 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 			/* update timeout value upon seamless switch*/
 			update_shutter_for_timeout_by_ae_ctrl(ctx, &info->ae_ctrl[0]);
 			ctx->last_framelength = ctx->subctx.frame_length_rg;
+			mutex_unlock(&ctx->broadcast_lock);
+			ADAPTOR_SYSTRACE_END();
 		}
 		break;
 	case V4L2_CID_MTK_DEBUG_CMD:
@@ -1877,8 +1906,12 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 			adaptor_logi(ctx, "V4L2_CID_MTK_SENSOR_RESET\n");
 			if (adaptor_hw_sensor_reset(ctx) < 0)
 				break;
+			ADAPTOR_SYSTRACE_BEGIN(
+				"imgsensor::V4L2_CID_MTK_SENSOR_RESET, idx:%d, val:%d",
+				ctx->idx, ctrl->val);
 
 			ctx->is_sensor_reset_stream_off = 1;
+			mutex_lock(&ctx->broadcast_lock);
 			subdrv_call(ctx, open);
 			subdrv_call(ctx, control,
 					ctx->cur_mode->id,
@@ -1894,6 +1927,9 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 			update_framelength_for_timeout(ctx);
 
 			_sensor_reset_s_stream(ctrl);
+
+			mutex_unlock(&ctx->broadcast_lock);
+			ADAPTOR_SYSTRACE_END();
 			adaptor_logm(ctx, "exit V4L2_CID_MTK_SENSOR_RESET\n");
 		}
 		break;
@@ -1903,7 +1939,13 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 			adaptor_sensor_init(ctx);
 		break;
 	case V4L2_CID_MTK_SENSOR_RESET_S_STREAM:
+		ADAPTOR_SYSTRACE_BEGIN(
+			"imgsensor::V4L2_CID_MTK_SENSOR_RESET_S_STREAM, idx:%d, val:%d",
+			ctx->idx, ctrl->val);
+		mutex_lock(&ctx->broadcast_lock);
 		_sensor_reset_s_stream(ctrl);
+		mutex_unlock(&ctx->broadcast_lock);
+		ADAPTOR_SYSTRACE_END();
 		break;
 	case V4L2_CID_MTK_AOV_SWITCH_I2C_BUS_SCL_AUX:
 		ret = _aov_switch_i2c_bus_scl_aux(ctrl);

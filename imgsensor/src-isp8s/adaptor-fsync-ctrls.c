@@ -21,6 +21,7 @@
 #include "adaptor-subdrv-ctrl.h"
 #include "adaptor-fsync-ctrls.h"
 #include "adaptor-tsrec-cb-ctrl-impl.h"
+#include "adaptor-broadcast-ctrls.h"
 
 
 /*******************************************************************************
@@ -633,6 +634,39 @@ static void fsync_mgr_setup_exp_data(struct adaptor_ctx *ctx,
 		ae_exp_arr, ae_exp_cnt, mode_id);
 }
 
+/*******************************************************************************
+ * call back function for Frame-Sync sending broadcast event to sensors
+ ******************************************************************************/
+/* return: 0 => No-Error ; non-0 => Error */
+int cb_fsync_mgr_ctrls_event_executor(void *p_ctx,
+	void *p_data, const unsigned int event_tags)
+{
+	struct adaptor_ctx *ctx;
+	int ret = 0;
+
+	/* error handle */
+	if (unlikely(p_ctx == NULL)) {
+		pr_info(
+			"[%s] ERROR: get nullptr:%p, event_tags:%u return:1\n",
+			__func__, p_ctx, event_tags);
+		return 1;
+	}
+	ctx = (struct adaptor_ctx *)p_ctx;
+
+	/* check event tags then covert it to broadcast event flag */
+	switch (event_tags) {
+	case FSYNC_CTRL_EVENT_BCAST_RE_CTRL_FL:
+		adaptor_push_broadcast_event(ctx, ADAPT_BC_EVENT_FSYNC_RE_CALC_FL, false);
+		break;
+	default:
+		FSYNC_MGR_LOGI(ctx,
+			"ERROR: sidx:%d, broadcast event not found such tag:%u\n",
+			ctx->idx, event_tags);
+		break;
+	}
+
+	return ret;
+}
 
 /*******************************************************************************
  * call back function for Frame-Sync set frame length using
@@ -855,6 +889,7 @@ static void fsync_mgr_setup_fs_streaming_st(struct adaptor_ctx *ctx,
 
 	/* callback info */
 	s_info->func_ptr = cb_func_fsync_mgr_set_fl_info;
+	s_info->event_exe_bcast_func_ptr = cb_fsync_mgr_ctrls_event_executor;
 	s_info->p_ctx = ctx;
 }
 
@@ -1003,6 +1038,7 @@ static void fsync_mgr_setup_basic_fs_perframe_st(struct adaptor_ctx *ctx,
 	memset(pf_ctrl, 0, sizeof(*pf_ctrl));
 
 	pf_ctrl->req_id = ctx->req_id;
+	pf_ctrl->frame_id = ctx->frame_id;
 
 	pf_ctrl->sensor_id = (ctx->subdrv) ? (ctx->subdrv->id) : 0;
 	pf_ctrl->sensor_idx = ctx->idx;
@@ -1435,6 +1471,115 @@ void notify_fsync_mgr_sync_frame(struct adaptor_ctx *ctx,
 	// FSYNC_MGR_LOGD(ctx, "sidx:%d, flag:%u\n", ctx->idx, flag);
 
 	ctx->fsync_mgr->fs_sync_frame(flag);
+}
+
+
+/*******************************************************************************
+ * broadcast ctrls
+ ******************************************************************************/
+static void notify_fsync_mgr_bcast_event_re_ctrl_fl(struct adaptor_ctx *ctx,
+	const struct mtk_cam_broadcast_info *p_info)
+{
+	struct mtk_hdr_ae *ae_ctrl = ctx->hdr_ae_ctrl->p_new.p;
+	struct fs_perframe_st pf_ctrl;
+	const unsigned int mode_id = ctx->subctx.current_scenario_id;
+	long long curr_sys_ts = 0;
+	unsigned int ret;
+
+	/* not expected case */
+	if (unlikely(ctx->fsync_mgr == NULL)) {
+		FSYNC_MGR_LOGI(ctx,
+			"ERROR: sidx:%d, ctx->fsync_mgr:%p is NULL, return\n",
+			ctx->idx, ctx->fsync_mgr);
+		return;
+	}
+	/* check if sensor driver lock i2c operation */
+	if (unlikely(ctx->subctx.fast_mode_on)) {
+		FSYNC_MGR_LOGD(ctx,
+			"NOTICE: sidx:%d, detect fast_mode_on:%u, return\n",
+			ctx->idx,
+			ctx->subctx.fast_mode_on);
+		return;
+	}
+	if (unlikely(atomic_read(&long_exp_mode_bits) != 0)) {
+		FSYNC_MGR_LOGI(ctx,
+		"NOTICE: sidx:%d, detect enable sync sensor in long exp mode, long_exp_mode_bits:%#x => return [needs_fsync_assign_fl:%d]\n",
+			ctx->idx,
+			atomic_read(&long_exp_mode_bits),
+			ctx->needs_fsync_assign_fl);
+		return;
+	}
+
+
+	/* !!! start here !!! */
+	/* setup basic structure, exp info */
+	fsync_mgr_setup_basic_fs_perframe_st(ctx, &pf_ctrl, mode_id);
+	fsync_mgr_setup_exp_data(ctx, &pf_ctrl, mode_id, ae_ctrl->exposure.arr, -1);
+
+	/* setup cmd id for call back function using */
+	pf_ctrl.cmd_id = FSYNC_CTRL_FL_CMD_ID_EXP_WITH_FL;
+
+	/* setup extra event info */
+	pf_ctrl.extra_event.is_valid = 1;
+	pf_ctrl.extra_event.bcast_event_type =
+		FSYNC_CTRL_EVENT_BCAST_RE_CTRL_FL;
+
+	/* check if valid for triggering broadcast flow */
+	ret = ctx->fsync_mgr->fs_chk_bcast_for_re_ctrl_fl(
+		pf_ctrl.sensor_idx, pf_ctrl.frame_id);
+	if (unlikely(ret != 0))
+		return;
+
+	FSYNC_TRACE_BEGIN("%s::fs re-CTRL FL (set_shutter)", __func__);
+	ctx->fsync_mgr->fs_set_shutter(&pf_ctrl);
+	FSYNC_TRACE_END();
+
+	/* set fl (ctx->fsync_out_fl) */
+	fsync_mgr_s_frame_length(ctx);
+	/* update sensor current fl_lc */
+	fsync_mgr_update_sensor_actual_fl_info(ctx, &pf_ctrl);
+	/* update sensor current fl_lc to Frame-Sync */
+	ctx->fsync_mgr->fs_update_shutter(&pf_ctrl);
+
+	curr_sys_ts = ktime_get_boottime_ns();
+	FSYNC_MGR_LOGI(ctx,
+		"ctx:(fl:(%u,lut:%u/%u/%u)/RG:(%u,%u/%u/%u/%u/%u)), bc_info(type:%u(%u), s_idx:%u/inf:%u, req_id:%u, ts(sof:%llu, worker:(%llu(sof:+%llums)/%llu(+%lluus)))), curr_ts:%llu(dur:+%lluus)",
+		ctx->subctx.frame_length,
+		ctx->subctx.frame_length_in_lut[0],
+		ctx->subctx.frame_length_in_lut[1],
+		ctx->subctx.frame_length_in_lut[2],
+		ctx->subctx.frame_length_rg,
+		ctx->subctx.frame_length_in_lut_rg[0],
+		ctx->subctx.frame_length_in_lut_rg[1],
+		ctx->subctx.frame_length_in_lut_rg[2],
+		ctx->subctx.frame_length_in_lut_rg[3],
+		ctx->subctx.frame_length_in_lut_rg[4],
+		p_info->type,
+		p_info->need_broadcast_to_itself,
+		p_info->sensor_idx,
+		p_info->seninf_idx,
+		p_info->req_id,
+		p_info->sof_timestamp,
+		p_info->queue_work_ts_ns,
+		(p_info->queue_work_ts_ns - p_info->sof_timestamp)/1000000,
+		p_info->wakeup_work_ts_ns,
+		(p_info->wakeup_work_ts_ns - p_info->queue_work_ts_ns)/1000,
+		curr_sys_ts,
+		(curr_sys_ts - p_info->wakeup_work_ts_ns)/1000);
+}
+
+void notify_fsync_mgr_get_broadcast_event(struct adaptor_ctx *ctx,
+		const struct mtk_cam_broadcast_info *p_info)
+{
+	switch (p_info->type) {
+	case ADAPT_BC_EVENT_FSYNC_RE_CALC_FL:
+		/* call corresponded Frame-Sync API to re-trigger ae ctrl */
+		notify_fsync_mgr_bcast_event_re_ctrl_fl(ctx, p_info);
+		break;
+	default:
+		FSYNC_MGR_LOGD(ctx, "invalid bc event type %u\n", p_info->type);
+		break;
+	}
 }
 
 

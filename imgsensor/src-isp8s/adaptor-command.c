@@ -11,7 +11,7 @@
 #include "adaptor-sentest-ctrl.h"
 
 #include "adaptor-command.h"
-
+#include "adaptor-broadcast-ctrls.h"
 
 /*---------------------------------------------------------------------------*/
 // define
@@ -336,6 +336,21 @@ static int g_cmd_g_sensor_stream_status(struct adaptor_ctx *ctx, void *arg)
 	return ret;
 }
 
+static int s_cmd_sensor_broadcast_event(struct adaptor_ctx *ctx, void *arg)
+{
+	int ret = 0;
+	struct mtk_cam_broadcast_info *p_info = NULL;
+
+	/* unexpected case, arg is nullptr */
+	if (unlikely((chk_input_arg(ctx, arg, &ret, __func__)) != 0))
+		return ret;
+
+	p_info = arg;
+
+	adaptor_get_broadcast_event(ctx, p_info);
+
+	return ret;
+}
 
 /* SET */
 static int s_cmd_fsync_sync_frame_start_end(struct adaptor_ctx *ctx, void *arg)
@@ -615,7 +630,8 @@ static const struct command_entry command_list[] = {
 	{V4L2_CMD_SENSOR_PARSE_EBD, s_cmd_sensor_parse_ebd},
 	{V4L2_CMD_TSREC_SETUP_CB_FUNC_OF_SENSOR, s_cmd_tsrec_setup_cb_info},
 	{V4L2_CMD_SET_SENSOR_FL_PROLONG, s_cmd_sensor_fl_prolong},
-	{V4L2_CMD_SET_SENSOR_AOV_DUALSYNC, s_cmd_sensor_aov_dualsync}
+	{V4L2_CMD_SET_SENSOR_AOV_DUALSYNC, s_cmd_sensor_aov_dualsync},
+	{V4L2_CMD_SET_SENSOR_BROADCAST_EVENT, s_cmd_sensor_broadcast_event}
 };
 
 long adaptor_command(struct v4l2_subdev *sd, unsigned int cmd, void *arg)

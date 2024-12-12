@@ -276,6 +276,27 @@ struct mtk_seninf_lbmf_info {
 	bool is_lbmf;
 };
 
+#define MAX_BROADCAST_WAKE_UP_TIME_NS 1000000
+#define MAX_BROADCAST_EXECUTION_TIME_NS 3000000
+
+struct mtk_cam_broadcast_info {
+	/* filled by user (caller) */
+	u32 type;
+	char need_broadcast_to_itself;
+	u32 sensor_idx;
+	u32 seninf_idx;
+	int req_id;
+	u64 sof_timestamp;
+
+	/* filled by worker */
+	u64 queue_work_ts_ns;
+	u64 wakeup_work_ts_ns;
+	u64 done_work_ts_ns;
+
+	/* extra/custom */
+	void *p_data;
+	u32 data_size;
+};
 
 /* imgsensor commands */
 #define V4L2_CMD_FSYNC_SYNC_FRAME_START_END \
@@ -335,6 +356,9 @@ struct mtk_seninf_lbmf_info {
 #define V4L2_CMD_SET_SENSOR_AOV_DUALSYNC \
 	(V4L2_CMD_USER_MTK_SENSOR_BASE + 19)
 
+#define V4L2_CMD_SET_SENSOR_BROADCAST_EVENT \
+	(V4L2_CMD_USER_MTK_SENSOR_BASE + 20)
+
 /**
  * TSREC - notify vsync structure
  *         V4L2_CMD_TSREC_NOTIFY_VSYNC
@@ -389,6 +413,9 @@ enum tsrec_cb_cmd {
 	/* user get tsrec information */
 	TSREC_CB_CMD_READ_CURR_TS,
 	TSREC_CB_CMD_READ_TS_INFO,
+
+	/* user request tsrec worker to help to broadcast event */
+	TSREC_CB_CMD_SETUP_BROADCAST_EVENT,
 };
 
 enum tsrec_cb_ctrl_error_type {

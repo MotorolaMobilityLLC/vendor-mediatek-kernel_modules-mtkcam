@@ -66,6 +66,9 @@ void notify_fsync_mgr_set_shutter(struct adaptor_ctx *ctx,
 void notify_fsync_mgr_sync_frame(struct adaptor_ctx *ctx,
 	const unsigned int flag);
 
+void notify_fsync_mgr_get_broadcast_event(struct adaptor_ctx *ctx,
+	const struct mtk_cam_broadcast_info *p_info);
+
 
 /*******************************************************************************
  * ext ctrl
