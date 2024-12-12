@@ -119,10 +119,12 @@ static inline bool mtk_aov_is_open(struct mtk_aov *aov_dev)
 static int mtk_aov_open(struct inode *inode, struct file *file)
 {
 	struct mtk_aov *aov_dev;
+	struct aov_core *core_info;
 
 	pr_info("%s open aov driver+\n", __func__);
 
 	aov_dev = container_of(inode->i_cdev, struct mtk_aov, aov_cdev);
+	core_info = &aov_dev->core_info;
 	AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
 		"open inode->i_cdev = 0x%p\n", inode->i_cdev);
 
@@ -131,6 +133,8 @@ static int mtk_aov_open(struct inode *inode, struct file *file)
 	if (aov_dev->user_cnt == 0) {
 		aov_mtee_init(aov_dev);
 		aov_dev->is_open = true;
+		atomic_set(&(core_info->aov_start_in_used[0]), 0);
+		atomic_set(&(core_info->aov_start_in_used[1]), 0);
 	}
 	aov_dev->user_cnt++;
 
