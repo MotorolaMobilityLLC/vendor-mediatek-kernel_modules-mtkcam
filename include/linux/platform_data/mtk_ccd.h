@@ -9,6 +9,9 @@
 #include <linux/platform_device.h>
 #include <linux/cdev.h>
 #include <linux/rpmsg.h>
+#include <linux/sched.h>
+
+#define MAX_RPROC_SUBDEV_NUM 2
 
 struct dma_buf;
 struct mtk_ccd_memory;
@@ -22,7 +25,6 @@ struct mtk_ccd_memory;
 struct mtk_ccd_client_cb {
 	/**
 	 * FIXME: phase out id for channel optimization
-	 * name id = ipi_id - CCD_IPI_ISP_MAIN;
 	 */
 	int ipi_id;
 	rpmsg_rx_cb_t send_msg_ack;
@@ -44,10 +46,6 @@ struct mem_obj {
 	void *va;
 };
 
-struct ccd_master_status {
-	unsigned int state;
-};
-
 struct mtk_ccd {
 	struct device *dev;
 	struct device *smmu_dev;
@@ -57,28 +55,27 @@ struct mtk_ccd {
 	struct cdev ccd_cdev;
 	struct class *ccd_class;
 
-	struct rproc_subdev *rpmsg_subdev;  /* TODO: re-name */
-	struct ccd_master_status master_status;
+	// struct rproc_subdev *rpmsg_subdev;  /* TODO: re-name */
+	struct rproc_subdev *channel_center[MAX_RPROC_SUBDEV_NUM];
 	struct mtk_ccd_memory *ccd_memory;
 };
 
+/* For ccd */
 int rpmsg_ccd_ipi_send(struct mtk_rpmsg_rproc_subdev *mtk_subdev,
 		       struct mtk_ccd_rpmsg_endpoint *mept,
 		       void *buf, unsigned int len, unsigned int wait);
 
-void ccd_master_listen(struct mtk_ccd *ccd,
-			      struct ccd_master_listen_item *listen_obj);
+int ccd_master_init(struct mtk_ccd *ccd);
+int ccd_master_destroy(struct mtk_ccd *ccd);
+int ccd_master_listen(struct mtk_ccd *ccd,
+		      struct ccd_master_listen_item *listen_obj);
 
-void ccd_master_destroy(struct mtk_ccd *ccd,
-			struct ccd_master_status_item *master_obj);
-
-int ccd_worker_read(struct mtk_ccd *ccd,
-		     struct ccd_worker_item *read_obj);
-
-void ccd_worker_write(struct mtk_ccd *ccd,
-		      struct ccd_worker_item *write_obj);
+int ccd_worker_read(struct mtk_ccd *ccd, struct ccd_worker_item *read_obj);
+int ccd_worker_write(struct mtk_ccd *ccd, struct ccd_worker_item *write_obj);
 
 /* For ccd client */
+int mtk_ccd_get_channel_center_id(struct mtk_ccd *ccd);
+
 int mtk_ccd_get_channel(struct mtk_ccd *ccd, unsigned int center_id,
 			struct mtk_ccd_client_cb *client_cb);
 int mtk_ccd_put_channel(struct mtk_ccd *ccd,

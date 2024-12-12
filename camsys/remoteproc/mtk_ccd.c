@@ -59,24 +59,38 @@ static struct mtk_ccd_rpmsg_ops ccd_rpmsg_ops = {
 	.ccd_send = rpmsg_ccd_ipi_send,
 };
 
-static void ccd_add_rpmsg_subdev(struct mtk_ccd *ccd)
+static void ccd_create_channel_center(struct mtk_ccd *ccd)
 {
-	ccd->rpmsg_subdev =
-		mtk_rpmsg_create_rproc_subdev(to_platform_device(ccd->dev),
-					      &ccd_rpmsg_ops);
-	if (ccd->rpmsg_subdev) {
-		rproc_add_subdev(ccd->rproc, ccd->rpmsg_subdev);
-		mtk_ccd_center_create_channels(ccd->rpmsg_subdev);
+	int i;
+
+	for (i = 0; i < MAX_RPROC_SUBDEV_NUM; i++) {
+		struct rproc_subdev *subdev;
+
+		subdev = mtk_rpmsg_create_rproc_subdev(to_platform_device(ccd->dev),
+						       &ccd_rpmsg_ops,
+						       i);
+		if (subdev) {
+			ccd->channel_center[i] = subdev;
+			rproc_add_subdev(ccd->rproc, ccd->channel_center[i]);
+			mtk_ccd_center_create_channels(ccd->channel_center[i]);
+		}
 	}
 }
 
-static void ccd_remove_rpmsg_subdev(struct mtk_ccd *ccd)
+static void ccd_destroy_channel_center(struct mtk_ccd *ccd)
 {
-	if (ccd->rpmsg_subdev) {
-		mtk_ccd_center_destroy_channels(ccd->rpmsg_subdev);
-		rproc_remove_subdev(ccd->rproc, ccd->rpmsg_subdev);
-		mtk_rpmsg_destroy_rproc_subdev(ccd->rpmsg_subdev);
-		ccd->rpmsg_subdev = NULL;
+	int i;
+
+	for (i = 0; i < MAX_RPROC_SUBDEV_NUM; i++) {
+		struct rproc_subdev *subdev = ccd->channel_center[i];
+
+		if (!subdev)
+			continue;
+
+		mtk_ccd_center_destroy_channels(subdev);
+		rproc_remove_subdev(ccd->rproc, subdev);
+		mtk_rpmsg_destroy_rproc_subdev(subdev);
+		ccd->channel_center[i] = NULL;
 	}
 }
 
@@ -125,11 +139,9 @@ static int ccd_release(struct inode *inode,
 		       struct file *filp)
 {
 	int ret = 0;
-	struct ccd_master_status_item master_obj;
 	struct mtk_ccd *ccd = (struct mtk_ccd *)filp->private_data;
 
-	master_obj.state = CCD_MASTER_EXIT;
-	ccd_master_destroy(ccd, &master_obj);  /* TODO: do not destroy ept here */
+	ccd_master_destroy(ccd);  /* TODO: do not destroy ept here */
 	dev_info(ccd->dev, "%s: %p\n", __func__, ccd);
 	return ret;
 }
@@ -143,58 +155,81 @@ static long ccd_unlocked_ioctl(struct file *filp, unsigned int cmd,
 	struct ccd_master_listen_item listen_obj;
 	struct ccd_worker_item work_obj;
 	struct ccd_master_status_item master_obj;
+
 	memset(&work_obj, 0, sizeof(work_obj));
 	memset(&listen_obj, 0, sizeof(listen_obj));
 	memset(&master_obj, 0, sizeof(master_obj));
 
 	switch (cmd) {
 	case IOCTL_CCD_MASTER_INIT:
-		dev_dbg(ccd->dev, "enter IOCTL_CCD_MASTER_INIT\n");
+		dev_info(ccd->dev, "%s:IOCTL_CCD_MASTER_INIT\n", __func__);  // dbg
+
+		if (ccd_master_init(ccd)) {
+			ret = -EFAULT;  /* no free rproc_subdev */
+			break;
+		}
 		master_obj.state = CCD_MASTER_ACTIVE;
-		/*  TBD: Protect by lock? */
-		ccd->master_status.state = CCD_MASTER_ACTIVE;
 
 		if (copy_to_user(user_addr, &master_obj, sizeof(master_obj)))
 			ret = -EFAULT;
 		break;
 	case IOCTL_CCD_MASTER_DESTROY:
-		dev_dbg(ccd->dev, "enter IOCTL_CCD_MASTER_DESTROY\n");
-		if (copy_from_user(&master_obj, user_addr, sizeof(master_obj))) {
+		dev_info(ccd->dev, "%s:IOCTL_CCD_MASTER_DESTROY\n", __func__);  //dbg
+
+		if (ccd_master_destroy(ccd)) {
+			ret = -EFAULT;  /* no match subdev */
+			break;
+		}
+		master_obj.state = CCD_MASTER_EXIT;
+
+		if (copy_from_user(&master_obj, user_addr, sizeof(master_obj)))
+			ret = -EFAULT;
+
+		break;
+	case IOCTL_CCD_MASTER_LISTEN:
+		/* per stremaing ctrl for on/off */
+		dev_info(ccd->dev, "%s:IOCTL_CCD_MASTER_LISTEN +\n", __func__);  // dbg
+
+		if (ccd_master_listen(ccd, &listen_obj)) {  // wait for ON/OFF
 			ret = -EFAULT;
 			break;
 		}
-		/*  TBD: Protect by lock? */
-		ccd->master_status.state = master_obj.state;
-		break;
-	case IOCTL_CCD_MASTER_LISTEN:
-		ccd_master_listen(ccd, &listen_obj);
 
 		if (copy_to_user(user_addr, &listen_obj,
 				 sizeof(struct ccd_master_listen_item)))
 			ret = -EFAULT;
+
+		dev_info(ccd->dev, "%s:IOCTL_CCD_MASTER_LISTEN -\n", __func__);
 		break;
 	case IOCTL_CCD_WORKER_READ:
-		if (copy_from_user(&work_obj, user_addr,
-				sizeof(struct ccd_worker_item))) {
-			ret = -EFAULT;
-			break;
-		}
-
-		ret = ccd_worker_read(ccd, &work_obj);
-		if (ret < 0)
-			break;
-
-		if (copy_to_user(user_addr, &work_obj,
-				 sizeof(struct ccd_worker_item)))
-			ret = -EFAULT;
-		break;
-	case IOCTL_CCD_WORKER_WRITE:
+		/* backend read msg */
 		if (copy_from_user(&work_obj, user_addr,
 				   sizeof(struct ccd_worker_item))) {
 			ret = -EFAULT;
 			break;
 		}
-		ccd_worker_write(ccd, &work_obj);
+
+		if (ccd_worker_read(ccd, &work_obj)) {
+			ret = -EFAULT;
+			break;
+		}
+
+		if (copy_to_user(user_addr, &work_obj,
+				 sizeof(struct ccd_worker_item)))
+			ret = -EFAULT;
+
+		break;
+	case IOCTL_CCD_WORKER_WRITE:
+		/* backend write ack */
+		if (copy_from_user(&work_obj, user_addr,
+				   sizeof(struct ccd_worker_item))) {
+			ret = -EFAULT;
+			break;
+		}
+
+		if (ccd_worker_write(ccd, &work_obj))
+			ret = -EFAULT;
+
 		break;
 	default:
 		dev_info(ccd->dev, "Unknown ioctl\n");
@@ -234,6 +269,30 @@ static const struct file_operations ccd_fops = {
 	.compat_ioctl = ccd_ioctl_compat,
 #endif
 };
+
+int mtk_ccd_get_channel_center_id(struct mtk_ccd *ccd)
+{
+	struct device *dev;
+	struct mtk_rpmsg_rproc_subdev *mtk_subdev = NULL;
+	pid_t curr_pid;
+	int i;
+
+	dev = ccd->dev;
+	curr_pid = current->tgid;
+
+	for (i = 0; i < MAX_RPROC_SUBDEV_NUM; i++) {
+		mtk_subdev = to_mtk_subdev(ccd->channel_center[i]);
+		if (mtk_subdev->process_id == curr_pid) {  /* matched master */
+			dev_info(dev, "%s %d at %d", __func__, curr_pid, i);
+			return i;
+		}
+	}
+
+	dev_info(dev, "%s %d failed", __func__, curr_pid);
+
+	return -1;
+}
+EXPORT_SYMBOL_GPL(mtk_ccd_get_channel_center_id);
 
 static int ccd_regcdev(struct mtk_ccd *ccd)
 {
@@ -371,7 +430,7 @@ static int ccd_probe(struct platform_device *pdev)
 
 	/* If ccd is moved to real micro processor, map to physical address here */
 
-	ccd_add_rpmsg_subdev(ccd);
+	ccd_create_channel_center(ccd);
 
 	ccd->ccd_memory = mtk_ccd_mem_init(ccd->dev);
 
@@ -387,7 +446,7 @@ static int ccd_probe(struct platform_device *pdev)
 
 remove_subdev:
 	mtk_ccd_mem_release(ccd);
-	ccd_remove_rpmsg_subdev(ccd);
+	ccd_destroy_channel_center(ccd);
 	ccd_unregcdev(ccd);
 free_rproc:
 	rproc_free(rproc);
@@ -401,7 +460,7 @@ static void ccd_remove(struct platform_device *pdev)
 
 	mtk_ccd_mem_release(ccd);
 	ccd_unregcdev(ccd);
-	ccd_remove_rpmsg_subdev(ccd);
+	ccd_destroy_channel_center(ccd);
 	rproc_del(ccd->rproc);
 	rproc_free(ccd->rproc);
 }
