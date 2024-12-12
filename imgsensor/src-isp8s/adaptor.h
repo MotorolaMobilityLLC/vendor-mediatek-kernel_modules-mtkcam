@@ -249,6 +249,7 @@ struct adaptor_ctx {
 	unsigned int *p_set_ctrl_unlock_flag;
 	unsigned int sof_cnt;
 	int req_id; /* from mtk hdr ae ctrl */
+	int frame_id; /* from mtk hdr ae ctrl */
 	u64 shutter_for_timeout;
 	u64 framelength_for_timeout;
 	u64 last_framelength;

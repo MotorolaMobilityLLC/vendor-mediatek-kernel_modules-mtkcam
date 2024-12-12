@@ -138,12 +138,13 @@ static void dump_perframe_info(struct adaptor_ctx *ctx, struct mtk_hdr_ae *ae_ct
 	mutex_unlock(&ctx->ebd_lock);
 
 	adaptor_logi(ctx,
-		"[inf:%d] idx:%d, req_no:%u, sub_sof_no:%u, req_id:%d, [LLLE->SSSE] 64bit s(%llu/%llu/%llu/%llu/%llu) g(%d/%d/%d/%d/%d), w(%llu/%llu/%llu/%llu/%llu,%d/%d/%d/%d/%d) sub_tag:%u, ctx:(fl:(%u,lut:%u/%u/%u)/RG:(%u,%u/%u/%u/%u/%u), min_fl:%u, flick_en:%u, fsync(%d):(%u,%u/%u/%u/%u/%u), mode:(line_time:%u, margin:%u, scen:%u; STG:(rout_l:%u, r_margin:%u, ext_fl:%u)), fast_mode:%u), sys_ts:(%llu->%llu/%llu(+%u)/%llu(+%u))%s\n",
+		"[inf:%d] idx:%d, req_no:%u, sub_sof_no:%u, req_id:%d, frame_id:%u, [LLLE->SSSE] 64bit s(%llu/%llu/%llu/%llu/%llu) g(%d/%d/%d/%d/%d), w(%llu/%llu/%llu/%llu/%llu,%d/%d/%d/%d/%d) sub_tag:%u, ctx:(fl:(%u,lut:%u/%u/%u)/RG:(%u,%u/%u/%u/%u/%u), min_fl:%u, flick_en:%u, fsync(%d):(%u,%u/%u/%u/%u/%u), mode:(line_time:%u, margin:%u, scen:%u; STG:(rout_l:%u, r_margin:%u, ext_fl:%u)), fast_mode:%u), sys_ts:(%llu->%llu/%llu(+%u)/%llu(+%u))%s\n",
 		ctx->seninf_idx,
 		ctx->idx,
 		ctx->sof_cnt,
 		ctx->subctx.sof_no,
 		ae_ctrl->req_id,
+		ae_ctrl->frame_id,
 		ae_ctrl->exposure.le_exposure,
 		ae_ctrl->exposure.me_exposure,
 		ae_ctrl->exposure.se_exposure,
@@ -403,6 +404,7 @@ static int do_set_dcg_ae_ctrl(struct adaptor_ctx *ctx,
 
 	/* update ctx req id */
 	ctx->req_id = ae_ctrl->req_id;
+	ctx->frame_id = ae_ctrl->frame_id;
 
 	ctx->subctx.ae_ctrl_gph_en = 1;
 	while (exp_count < IMGSENSOR_STAGGER_EXPOSURE_CNT &&
@@ -572,6 +574,7 @@ static int do_set_ae_ctrl(struct adaptor_ctx *ctx,
 
 	/* update ctx req id */
 	ctx->req_id = ae_ctrl->req_id;
+	ctx->frame_id = ae_ctrl->frame_id;
 
 	ctx->subctx.ae_ctrl_gph_en = 1;
 	while (exp_count < IMGSENSOR_STAGGER_EXPOSURE_CNT &&
@@ -1732,6 +1735,7 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 
 			/* update ctx req id */
 			ctx->req_id = info->ae_ctrl[0].req_id;
+			ctx->frame_id = info->ae_ctrl[0].frame_id;
 
 			/* copy original input data for fsync using */
 			memcpy(fsync_exp, &info->ae_ctrl[0].exposure.arr, sizeof(fsync_exp));

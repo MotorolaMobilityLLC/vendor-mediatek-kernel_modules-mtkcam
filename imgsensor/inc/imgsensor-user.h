@@ -238,6 +238,7 @@ struct mtk_hdr_ae {
 	__u32 actions;
 	__u32 subsample_tags;
 	int req_id;
+	__u32 frame_id;
 };
 
 struct mtk_seamless_switch_param {
