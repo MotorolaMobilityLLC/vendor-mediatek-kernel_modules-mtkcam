@@ -1639,6 +1639,26 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 	return ret;
 }
 
+static void update_default_i2c_addr_table(struct adaptor_ctx *ctx)
+{
+	/* use default device tree i2c node reg value to i2c_addr_table */
+	if (ctx->i2c_client) {
+		/* i2c device. */
+		ctx->subctx.s_ctx.i2c_addr_table[0] = (ctx->i2c_client->addr << 1);
+		ctx->subctx.s_ctx.i2c_addr_table[1] = 0xFF;
+		adaptor_logi(ctx, "default s_ctx i2c addr tlb: {0x%02x, 0x%02x}\n",
+			     ctx->subctx.s_ctx.i2c_addr_table[0],
+			     ctx->subctx.s_ctx.i2c_addr_table[1]);
+	} else {
+		/* i3c device. Fill any default value just for probe */
+		ctx->subctx.s_ctx.i2c_addr_table[0] = 0x20;
+		ctx->subctx.s_ctx.i2c_addr_table[1] = 0xFF;
+		adaptor_logi(ctx, "default s_ctx i3c addr tlb: {0x%02x, 0x%02x}\n",
+			     ctx->subctx.s_ctx.i2c_addr_table[0],
+			     ctx->subctx.s_ctx.i2c_addr_table[1]);
+	}
+}
+
 static int register_ext_ops(struct adaptor_ctx *ctx)
 {
 	const struct subdrv_static_ctx_ext_ops *fw_ext_ops = ctx->subdrv->fw_ext_ops;
@@ -1670,6 +1690,21 @@ static int register_ext_ops(struct adaptor_ctx *ctx)
 			}
 
 			target->mode[t].imgsensor_pd_info = fw_ext_ops->mode_ext_ops_list[i].imgsensor_pd_info;
+		}
+
+		/* Copy customed i2c addr table */
+		i = 0;
+		while (i < 5 && fw_ext_ops->i2c_addr_table[i] != 0) {
+			target->i2c_addr_table[i] = fw_ext_ops->i2c_addr_table[i];
+			i++;
+		}
+		if (i > 0) {
+			adaptor_logi(ctx, "custom s_ctx i2c addr tlb: {0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x}\n",
+				     ctx->subctx.s_ctx.i2c_addr_table[0],
+				     ctx->subctx.s_ctx.i2c_addr_table[1],
+				     ctx->subctx.s_ctx.i2c_addr_table[2],
+				     ctx->subctx.s_ctx.i2c_addr_table[3],
+				     ctx->subctx.s_ctx.i2c_addr_table[4]);
 		}
 	}
 
@@ -1721,6 +1756,7 @@ int loading_firmware(struct adaptor_ctx *ctx, const char * const fw_name)
 		return ret;
 	}
 
+	update_default_i2c_addr_table(ctx);
 	ret = register_ext_ops(ctx);
 
 	return ret;

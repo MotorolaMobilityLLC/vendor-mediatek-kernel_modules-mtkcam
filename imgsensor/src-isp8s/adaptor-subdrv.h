@@ -494,6 +494,9 @@ struct subdrv_static_ctx_mode_ext_ops {
  * It's the same as the function pointer in subdrv_static_ctx
  */
 struct subdrv_static_ctx_ext_ops {
+	/* customed i2c addr table */
+	u8 i2c_addr_table[5]; /* must end with 0xFF */
+
 	/* customed feature control */
 	struct subdrv_feature_control *list;
 	u32 list_len;
