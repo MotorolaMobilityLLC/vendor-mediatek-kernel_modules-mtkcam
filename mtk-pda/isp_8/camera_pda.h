@@ -496,7 +496,6 @@ enum PDA_CMD_ENUM {
 void pda_mmqos_init(struct device *pdev);
 void pda_mmqos_bw_set(struct PDA_Data_t *pda_Pdadata);
 void pda_mmqos_bw_reset(void);
-void pda_init_larb(struct platform_device *pdev);
 int pda_devm_clk_get(struct platform_device *pdev);
 void pda_clk_prepare_enable(void);
 void pda_clk_disable_unprepare(void);

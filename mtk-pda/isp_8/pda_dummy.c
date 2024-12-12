@@ -33,12 +33,6 @@ void pda_debug_log(int32_t debug_log_en)
 {
 	pda_log_dbg_en = debug_log_en;
 }
-
-struct device *init_larb(struct platform_device *pdev, int idx)
-{
-	return NULL;
-}
-
 /*******************************************************************************
  *                                     API
  ******************************************************************************/
@@ -55,10 +49,6 @@ void pda_mmqos_bw_reset(void)
 {
 }
 #endif
-
-void pda_init_larb(struct platform_device *pdev)
-{
-}
 
 int pda_devm_clk_get(struct platform_device *pdev)
 {

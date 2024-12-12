@@ -50,12 +50,14 @@ static int32_t pda_log_dbg_en;
 
 // clock relate
 static const char * const clk_names[] = {
-	"camsys_mraw_pda0",
-	"camsys_mraw_pda1",
-	"mraw_larbx",
+	"cam_mraw_pda2",
+	"cam_mraw_pda",
+	"cam_main_cam_cg_con",
 	"cam_main_cam2mm0_gals_cg_con",
 	"cam_main_cam2mm1_gals_cg_con",
-	"cam_main_cam_cg_con",
+	"mraw_larbx",
+	"camsys_mraw_pda1",
+	"camsys_mraw_pda0",
 };
 #define PDA_CLK_NUM ARRAY_SIZE(clk_names)
 struct PDA_CLK_STRUCT pda_clk[PDA_CLK_NUM];
@@ -114,38 +116,6 @@ void pda_debug_log(int32_t debug_log_en)
 {
 	pda_log_dbg_en = debug_log_en;
 }
-
-struct device *init_larb(struct platform_device *pdev, int idx)
-{
-	struct device_node *node;
-	struct platform_device *larb_pdev;
-	struct device_link *link;
-
-	/* get larb node from dts */
-	node = of_parse_phandle(pdev->dev.of_node, "mediatek,larbs", idx);
-	if (!node) {
-		LOG_INF("fail to parse mediatek,larb\n");
-		return NULL;
-	}
-
-	larb_pdev = of_find_device_by_node(node);
-	if (WARN_ON(!larb_pdev)) {
-		of_node_put(node);
-		LOG_INF("no larb for idx %d\n", idx);
-		return NULL;
-	}
-	of_node_put(node);
-
-	link = device_link_add(&pdev->dev, &larb_pdev->dev,
-					DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
-	if (!link)
-		LOG_INF("unable to link smi larb%d\n", idx);
-
-	LOG_INF("pdev %p idx %d\n", pdev, idx);
-
-	return &larb_pdev->dev;
-}
-
 /*******************************************************************************
  *                                     API
  ******************************************************************************/
@@ -497,28 +467,12 @@ void pda_mmqos_bw_reset(void)
 }
 #endif
 
-void pda_init_larb(struct platform_device *pdev)
-{
-	int larbs, i;
-	struct device *larb;
-
-	// must porting in dts
-	larbs = of_count_phandle_with_args(
-				pdev->dev.of_node, "mediatek,larbs", NULL);
-	LOG_INF("larb_num:%d\n", larbs);
-	for (i = 0; i < larbs; i++) {
-		larb = init_larb(pdev, i);
-		if (larb == NULL)
-			LOG_INF("larb%d is NULL\n", i);
-	}
-
-	//get bwr device
-	bwr_device = mtk_cam_bwr_get_dev(pdev);
-}
-
 int pda_devm_clk_get(struct platform_device *pdev)
 {
 	int i = 0;
+
+	//get bwr device
+	bwr_device = mtk_cam_bwr_get_dev(pdev);
 
 	for (i = 0; i < PDA_CLK_NUM; ++i) {
 		// CCF: Grab clock pointer (struct clk*)
@@ -551,7 +505,7 @@ void pda_clk_disable_unprepare(void)
 {
 	int i;
 
-	for (i = 0; i < PDA_CLK_NUM; i++) {
+	for (i = PDA_CLK_NUM-1; i >= 0; i--) {
 		clk_disable_unprepare(pda_clk[i].CG_PDA_TOP_MUX);
 		if (pda_log_dbg_en == 1)
 			LOG_INF("clk_disable_unprepare (%s) done\n", clk_names[i]);
