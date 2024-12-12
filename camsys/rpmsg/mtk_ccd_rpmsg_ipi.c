@@ -8,7 +8,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
-#include <linux/platform_data/mtk_ccd_controls.h>
+#include <uapi/linux/mtk_ccd_controls.h>
 #include <linux/platform_data/mtk_ccd.h>
 #include <linux/rpmsg/mtk_ccd_rpmsg.h>
 

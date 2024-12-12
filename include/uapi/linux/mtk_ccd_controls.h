@@ -6,11 +6,11 @@
 #ifndef __UAPI_MTK_CCD_CONTROLS_H__
 #define __UAPI_MTK_CCD_CONTROLS_H__
 
-#define NAME_MAX_LEN			(32)
-#define BUF_MAX_SIZE			(1024)
+#define NAME_MAX_LEN (32)
+#define BUF_MAX_SIZE (1024)
 
-#define CCD_LISTEN_OBJECT_PREPARING     (0)
-#define CCD_LISTEN_OBJECT_READY		(1)
+#define CCD_LISTEN_OBJECT_PREPARING (0)
+#define CCD_LISTEN_OBJECT_READY (1)
 
 enum ccd_master_cmd {
 	CCD_MASTER_CMD_CREATE = 1,
@@ -18,6 +18,7 @@ enum ccd_master_cmd {
 };
 
 enum ccd_master_state {
+	CCD_MASTER_NONE = -1,
 	CCD_MASTER_INIT = 0,
 	CCD_MASTER_ACTIVE,
 	CCD_MASTER_EXIT
@@ -40,11 +41,16 @@ struct ccd_worker_item {
 	unsigned int	len;
 };
 
-#define IOCTL_CCD_MASTER_INIT	 _IOWR('c', 1, struct ccd_master_status_item)
-#define IOCTL_CCD_MASTER_LISTEN  _IOWR('c', 2, struct ccd_master_listen_item)
-#define IOCTL_CCD_MASTER_DESTROY _IOWR('c', 3, struct ccd_master_status_item)
-#define IOCTL_CCD_WORKER_READ	 _IOWR('c', 4, struct ccd_worker_item)
-#define IOCTL_CCD_WORKER_WRITE	 _IOWR('c', 5, struct ccd_worker_item)
+#define IOCTL_CCD_MASTER_INIT \
+	_IOWR('c', 1, struct ccd_master_status_item)
+#define IOCTL_CCD_MASTER_LISTEN \
+	_IOWR('c', 2, struct ccd_master_listen_item)
+#define IOCTL_CCD_MASTER_DESTROY \
+	_IOWR('c', 3, struct ccd_master_status_item)
+#define IOCTL_CCD_WORKER_READ \
+	_IOWR('c', 4, struct ccd_worker_item)
+#define IOCTL_CCD_WORKER_WRITE \
+	_IOWR('c', 5, struct ccd_worker_item)
 
 /**
  * enum ipi_id - the id of inter-processor interrupt
