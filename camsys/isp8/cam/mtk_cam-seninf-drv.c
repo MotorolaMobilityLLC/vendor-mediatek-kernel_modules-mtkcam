@@ -3210,6 +3210,13 @@ static int seninf_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	struct seninf_ctx *ctx = sd_to_ctx(sd);
 	unsigned int i;
 	int aov_csi_port = ctx->port;
+	int sensor_id = g_aov_ctrl[ctx->port].aov_sensor_idx;
+
+	if (ctx->is_aov_enable) {
+		dev_info(ctx->dev, "[%s]Warning: sensor_id(%d) aov_runtime_resume by seninf\n",
+			__func__, sensor_id);
+		mtk_cam_seninf_aov_runtime_resume(sensor_id, DEINIT_NORMAL);
+	}
 
 	mutex_lock(&ctx->mutex);
 	ctx->open_refcnt--;
@@ -3222,6 +3229,8 @@ static int seninf_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 		for (i = 0; i < AOV_SENINF_NUM; i++) {
 			if (g_aov_ctrl[aov_csi_port].aov_ctx == ctx) {
 				g_aov_ctrl[aov_csi_port].aov_ctx = NULL;
+				g_aov_ctrl[i].aov_sensor_idx = -1;
+				g_aov_ctrl[i].aov_csi_port = -1;
 				dev_info(ctx->dev, "%s clear aov_ctx[%u]\n", __func__, i);
 			}
 		}
@@ -3543,6 +3552,7 @@ static int seninf_probe(struct platform_device *pdev)
 	ctx->dbg_chmux_param = NULL;
 
 	ctx->open_refcnt = 0;
+	ctx->is_aov_enable = 0;
 	mutex_init(&ctx->mutex);
 
 	ret = get_csi_port(dev, &port);
@@ -4698,7 +4708,7 @@ int mtk_cam_seninf_aov_runtime_suspend(unsigned int sensor_id)
 
 	core = ctx->core;
 	mutex_lock(&core->mutex);
-
+	ctx->is_aov_enable = 1;
 	core->pwr_refcnt_for_aov++;
 	g_aov_ctrl[aov_csi_port].aov_scp_alive = 1;
 	if (core->pwr_refcnt_for_aov < 0) {
@@ -4820,7 +4830,6 @@ int mtk_cam_seninf_aov_runtime_resume(unsigned int sensor_id,
 	struct mtk_seninf_aov_param aov_param;
 
 	aov_csi_port = mtk_cam_seninf_aov_get_csi_port_from_sensor_id(sensor_id);
-
 	if (aov_csi_port == -1) {
 		pr_info("[%s] No match sensor_id(%d) in g_aov_ctrl\n", __func__, sensor_id);
 		return -ENODEV;
@@ -4870,7 +4879,13 @@ int mtk_cam_seninf_aov_runtime_resume(unsigned int sensor_id,
 
 	core = ctx->core;
 	mutex_lock(&core->mutex);
-
+	if (!ctx->is_aov_enable) {
+		mutex_unlock(&core->mutex);
+		pr_info("[%s] sensor_id(%d) already do aov_runtime_resume\n",
+			__func__, sensor_id);
+		return 0;
+	}
+	ctx->is_aov_enable = 0;
 	core->pwr_refcnt_for_aov--;
 	g_aov_ctrl[aov_csi_port].aov_scp_alive = 0;
 	if (core->pwr_refcnt_for_aov < 0) {
