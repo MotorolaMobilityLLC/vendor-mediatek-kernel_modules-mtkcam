@@ -852,6 +852,7 @@ static const struct plat_data_hw mt6991_hw_data = {
 	.dcif_slb_support = true,
 	.bwr_support = true,
 	.qof_support = true,
+	.snoc_support = true,
 	.max_main_pipe_w = 6632,
 	.max_main_pipe_twin_w = 6200,
 	.pixel_mode_max = 2,
