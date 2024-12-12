@@ -208,6 +208,11 @@ int monitor_anchor(
 		}
 	}
 
+	if (unlikely(g_info->switch_um_idle_rate_mode)) {
+		g_info->has_anchor_spec = false;
+		return 0;
+	}
+
 	g_info->has_anchor_spec = true;
 
 	switch (anc_type) {

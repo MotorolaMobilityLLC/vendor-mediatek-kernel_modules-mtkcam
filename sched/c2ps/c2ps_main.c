@@ -42,6 +42,7 @@ struct C2PS_NOTIFIER_PUSH_TAG {
 	bool reset_param;
 	bool set_task_idle_prefer;
 	bool enable_ineff_cpufreq;
+	bool switch_um_idle_rate_mode;
 	int critical_task_ids[MAX_CRITICAL_TASKS];
 	int critical_task_uclamp[MAX_CRITICAL_TASKS];
 	int reserved_1;
@@ -201,7 +202,8 @@ static void c2ps_notifier_task_single_shot(
 	bool reset_param, bool set_task_idle_prefer,
 	int *critical_task_ids, int *critical_task_uclamp, u32 util_margin,
 	u32 um_placeholder1, u32 um_placeholder2, u32 um_placeholder3,
-	bool enable_ineff_cpufreq, int reserved_1, int reserved_2, int reserved_3)
+	bool enable_ineff_cpufreq, bool switch_um_idle_rate_mode,
+	int reserved_1, int reserved_2, int reserved_3)
 {
 	struct global_info *g_info = get_glb_info();
 	unsigned int _vip_throttle_time = vip_throttle_time > 0 ?
@@ -268,6 +270,8 @@ static void c2ps_notifier_task_single_shot(
 			}
 		}
 	}
+	if (switch_um_idle_rate_mode)
+		g_info->switch_um_idle_rate_mode = reset_param ? false : true;
 
 	if (um_placeholder1)
 		g_info->um_placeholder1 = um_placeholder1;
@@ -369,7 +373,8 @@ static void c2ps_notifier_wq_cb(void)
 			vpPush->critical_task_uclamp, vpPush->util_margin,
 			vpPush->um_placeholder1, vpPush->um_placeholder2,
 			vpPush->um_placeholder3, vpPush->enable_ineff_cpufreq,
-			vpPush->reserved_1, vpPush->reserved_2, vpPush->reserved_3);
+			vpPush->switch_um_idle_rate_mode, vpPush->reserved_1,
+			vpPush->reserved_2, vpPush->reserved_3);
 		break;
 	case C2PS_NOTIFIER_ANCHOR:
 		monitor_anchor(vpPush->task_id, vpPush->order, vpPush->anc_register_fixed,
@@ -398,7 +403,8 @@ static int c2ps_thread_loop(void *arg)
 int c2ps_notify_init(
 	int cfg_camfps, int max_uclamp_cluster0, int max_uclamp_cluster1,
 	int max_uclamp_cluster2, int ineff_cpu_ceiling_freq0,
-	int ineff_cpu_ceiling_freq1, int ineff_cpu_ceiling_freq2)
+	int ineff_cpu_ceiling_freq1, int ineff_cpu_ceiling_freq2,
+	int lcore_mcore_um_ratio, int um_floor)
 {
 	C2PS_LOGD(
 		"config camfps (frames per 1000 seconds): %d, max_uclamp_cluster0: %d, max_uclamp_cluster1: %d, max_uclamp_cluster2: %d",
@@ -406,6 +412,8 @@ int c2ps_notify_init(
 	C2PS_LOGD(
 		"ineff_cpu_ceiling_freq0: %d, ineff_cpu_ceiling_freq1: %d, ineff_cpu_ceiling_freq2: %d",
 		ineff_cpu_ceiling_freq0, ineff_cpu_ceiling_freq1, ineff_cpu_ceiling_freq2);
+	C2PS_LOGD("lcore_mcore_um_ratio: %d, um_floor: %d",
+		lcore_mcore_um_ratio, um_floor);
 
 	// enable sugov per-gear uclamp max feature
 	set_gear_uclamp_ctrl(1);
@@ -425,6 +433,11 @@ int c2ps_notify_init(
 	c2ps_set_ineff_cpu_freq_ceiling(2, ineff_cpu_ceiling_freq2);
 
 	cache_possible_config_cpu_freq_info();
+
+	c2ps_lcore_mcore_um_ratio = lcore_mcore_um_ratio > 0 ?
+						min(LMCORE_UM_RATIO_MAX, lcore_mcore_um_ratio) : 10;
+
+	c2ps_regulator_um_min = um_floor > 0 ? um_floor : DEFAULT_UM_MIN;
 
 	trigger_bg_policy();
 	return 0;
@@ -547,7 +560,8 @@ int c2ps_notify_single_shot_control(
 	bool reset_param, bool set_task_idle_prefer,
 	int *critical_task_ids, int *critical_task_uclamp, u32 util_margin,
 	u32 um_placeholder1, u32 um_placeholder2, u32 um_placeholder3,
-	bool enable_ineff_cpufreq, int reserved_1, int reserved_2, int reserved_3)
+	bool enable_ineff_cpufreq, bool switch_um_idle_rate_mode,
+	int reserved_1, int reserved_2, int reserved_3)
 {
 	struct C2PS_NOTIFIER_PUSH_TAG *vpPush = NULL;
 	int ret = 0;
@@ -613,6 +627,7 @@ int c2ps_notify_single_shot_control(
 	vpPush->um_placeholder2 = um_placeholder2;
 	vpPush->um_placeholder3 = um_placeholder3;
 	vpPush->enable_ineff_cpufreq = enable_ineff_cpufreq;
+	vpPush->switch_um_idle_rate_mode = switch_um_idle_rate_mode;
 	vpPush->ePushType = C2PS_NOTIFIER_TASK_SINGLE_SHOT;
 
 	c2ps_queue_work(vpPush);
