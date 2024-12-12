@@ -3324,17 +3324,20 @@ static void mtk_cam_ctx_raw_qof_disable(struct mtk_cam_ctx *ctx)
 	struct mtk_camsv_device *sv;
 
 	qof_mtcmos_voter_handle(&ctx->cam->engines, 0, &ctx->DOL_not_support);
+	mtk_cam_power_ctrl_ccu(ctx->cam->dev, 1);
 	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
 		if (!ctx->hw_raw[i])
 			continue;
 
 		raw = dev_get_drvdata(ctx->hw_raw[i]);
+		qof_setup_twin(raw, true, false);
 		qof_enable(raw, false);
 		if (ctx->hw_sv) {
 			sv = dev_get_drvdata(ctx->hw_sv);
 			mtk_cam_sv_set_queue_mode(sv, false);
 		}
 	}
+	mtk_cam_power_ctrl_ccu(ctx->cam->dev, 0);
 
 	qof_reset_mtcmos_voter(ctx);
 	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
