@@ -637,6 +637,8 @@ static u16 imx989_preview_setting[] = {
 	0x0855, 0x29,
 	0x0858, 0x00,
 	0x0859, 0x1F,
+	0x0100, 0x01,
+	0x0100, 0x00,
 };
 static u16 imx989_capture_setting[] = {
 /* Reg_B: OBIN_4096_3072_30FPS_PD_On the fly1 */
@@ -937,6 +939,8 @@ static u16 imx989_capture_setting[] = {
 	0x0855, 0x29,
 	0x0858, 0x00,
 	0x0859, 0x1F,
+	0x0100, 0x01,
+	0x0100, 0x00,
 };
 static u16 imx989_normal_video_setting[] = {
 /* Reg_C: OBIN_4K_4096_2304_30FPS_PD_On the fly2 */
