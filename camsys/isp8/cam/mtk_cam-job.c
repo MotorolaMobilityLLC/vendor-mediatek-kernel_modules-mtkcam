@@ -6735,8 +6735,9 @@ int job_handle_done(struct mtk_cam_job *job)
 
 	cur_handle = atomic_long_read(&job->done_set) & ~job->done_handled;
 
-	MTK_CAM_TRACE_BEGIN(BASIC, "%s #%d cur=0x%lx", __func__,
-			    job->req_seq, cur_handle);
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s #%d cur=0x%lx afo=%d", __func__,
+			    job->req_seq, cur_handle,
+				atomic_long_read(&job->afo_done) == BIT(0));
 
 	if (atomic_long_read(&job->afo_done) == BIT(0)) {
 		_meta1_done(job);

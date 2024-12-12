@@ -1286,6 +1286,7 @@ int mtk_cam_power_rproc(struct mtk_cam_device *cam, int on)
 {
 	int ret = 0;
 
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s(%d)", __func__, on);
 	if (on) {
 		WARN_ON(cam->rproc_handle);
 
@@ -1293,6 +1294,7 @@ int mtk_cam_power_rproc(struct mtk_cam_device *cam, int on)
 		cam->rproc_handle = rproc_get_by_phandle(cam->rproc_phandle);
 		if (!cam->rproc_handle) {
 			dev_info(cam->dev, "fail to get rproc_handle\n");
+			MTK_CAM_TRACE_END(BASIC);
 			return -1;
 		}
 
@@ -1306,6 +1308,7 @@ int mtk_cam_power_rproc(struct mtk_cam_device *cam, int on)
 		cam->rproc_handle = NULL;
 	}
 
+	MTK_CAM_TRACE_END(BASIC);
 	return ret;
 }
 
@@ -2859,8 +2862,12 @@ struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 
 	dev_info(dev, "%s: by node %s\n", __func__, entity->name);
 
-	if (mtk_cam_initialize(cam) < 0)
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s->initialize", __func__);
+	if (mtk_cam_initialize(cam) < 0) {
+		MTK_CAM_TRACE_END(BASIC);
 		return NULL;
+	}
+	MTK_CAM_TRACE_END(BASIC);
 
 	ctx = mtk_cam_ctx_get(cam);
 	if (!ctx)
@@ -2868,36 +2875,70 @@ struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 
 	mtk_cam_ctx_reset(ctx);
 
-	if (mtk_cam_ctx_pipeline_start(ctx, entity))
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctx_pipeline_start", __func__);
+	if (mtk_cam_ctx_pipeline_start(ctx, entity)) {
+		MTK_CAM_TRACE_END(BASIC);
 		goto fail_ctx_put;
+	}
+	MTK_CAM_TRACE_END(BASIC);
 
-	if (mtk_cam_ctx_alloc_workers(ctx))
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctx_alloc_workers", __func__);
+	if (mtk_cam_ctx_alloc_workers(ctx)) {
+		MTK_CAM_TRACE_END(BASIC);
 		goto fail_pipeline_stop;
+	}
+	MTK_CAM_TRACE_END(BASIC);
 
-	if (mtk_cam_ctx_alloc_pool(ctx))
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctx_alloc_pool", __func__);
+	if (mtk_cam_ctx_alloc_pool(ctx)) {
+		MTK_CAM_TRACE_END(BASIC);
 		goto fail_destroy_workers;
+	}
+	MTK_CAM_TRACE_END(BASIC);
 
 	/* note: too early. move into mtk_cam_ctx_init_scenario */
-	if (mtk_cam_ctx_alloc_img_pool(ctx, NULL))
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctx_alloc_img_pool", __func__);
+	if (mtk_cam_ctx_alloc_img_pool(ctx, NULL)) {
+		MTK_CAM_TRACE_END(BASIC);
 		goto fail_destroy_pools;
+	}
+	MTK_CAM_TRACE_END(BASIC);
 
-	if (mtk_cam_ctx_alloc_sensor_meta_pool(ctx))
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctx_alloc_sensor_meta_pool", __func__);
+	if (mtk_cam_ctx_alloc_sensor_meta_pool(ctx)){
+		MTK_CAM_TRACE_END(BASIC);
 		goto fail_destroy_img_pool;
+	}
+	MTK_CAM_TRACE_END(BASIC);
 
-	if (mtk_cam_ctx_prepare_session(ctx))
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctx_prepare_session", __func__);
+	if (mtk_cam_ctx_prepare_session(ctx)) {
+		MTK_CAM_TRACE_END(BASIC);
 		goto fail_destroy_sensor_meta_pool;
+	}
+	MTK_CAM_TRACE_END(BASIC);
 
-	if (mtk_cam_ctx_init_job_pool(ctx))
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctx_init_job_pool", __func__);
+	if (mtk_cam_ctx_init_job_pool(ctx)) {
+		MTK_CAM_TRACE_END(BASIC);
 		goto fail_unprepare_session;
+	}
+	MTK_CAM_TRACE_END(BASIC);
 
 	mtk_cam_update_pipe_used(ctx, &cam->pipelines);
+
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctrl_start", __func__);
 	mtk_cam_ctrl_start(&ctx->cam_ctrl, ctx);
+	MTK_CAM_TRACE_END(BASIC);
+
 	mtk_raw_hdr_tsfifo_reset(ctx);
 
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s->cmdq_mbox_enable", __func__);
 	if (cam->cmdq_clt) {
 		cmdq_mbox_enable(cam->cmdq_clt->chan);
 		ctx->cmdq_enabled = 1;
 	}
+	MTK_CAM_TRACE_END(BASIC);
 
 	return ctx;
 

@@ -973,6 +973,11 @@ static void handle_engine_frame_start(struct mtk_cam_ctrl *ctrl,
 				      struct mtk_camsys_irq_info *irq_info,
 				      struct vsync_result *vsync_res)
 {
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s%s%s%s ",
+		__func__,
+		vsync_res->is_first ?  ": f-sof" : "",
+		vsync_res->is_last ? ": l-sof" : "",
+		!(vsync_res->is_first || vsync_res->is_last) ?  ": sof" : "");
 
 	if (vsync_res->is_first) {
 		int frame_sync_no;
@@ -1004,6 +1009,7 @@ static void handle_engine_frame_start(struct mtk_cam_ctrl *ctrl,
 	if (vsync_res->is_extmeta)
 		mtk_cam_ctrl_send_event(ctrl, CAMSYS_EVENT_IRQ_EXTMETA_SOF);
 
+	MTK_CAM_TRACE_END(BASIC);
 }
 
 static void handle_tuning_update(struct mtk_cam_ctrl *ctrl, int seq_no, u64 ts_ns)
@@ -1102,6 +1108,7 @@ static int mtk_camsys_event_handle_camsv(struct mtk_cam_ctrl *ctrl,
 				       unsigned int engine_id,
 				       struct mtk_camsys_irq_info *irq_info)
 {
+	MTK_CAM_TRACE_FUNC_BEGIN(BASIC);
 
 	/* camsv's SW done */
 	if (irq_info->irq_type & BIT(CAMSYS_IRQ_FRAME_DONE))
@@ -1149,6 +1156,7 @@ static int mtk_camsys_event_handle_camsv(struct mtk_cam_ctrl *ctrl,
 		handle_tuning_update(ctrl,
 			seq_from_fh_cookie(irq_info->frame_idx), irq_info->ts_ns);
 
+	MTK_CAM_TRACE_END(BASIC);
 	return 0;
 }
 
@@ -1156,6 +1164,7 @@ static int mtk_camsys_event_handle_mraw(struct mtk_cam_ctrl *ctrl,
 					unsigned int engine_id,
 					struct mtk_camsys_irq_info *irq_info)
 {
+	MTK_CAM_TRACE_FUNC_BEGIN(BASIC);
 
 	/* mraw's SW done */
 	if (irq_info->irq_type & BIT(CAMSYS_IRQ_FRAME_DONE))
@@ -1194,6 +1203,7 @@ static int mtk_camsys_event_handle_mraw(struct mtk_cam_ctrl *ctrl,
 			handle_setting_done(ctrl);
 	}
 
+	MTK_CAM_TRACE_END(BASIC);
 	return 0;
 }
 
@@ -1208,7 +1218,7 @@ int mtk_cam_ctrl_isr_event(struct mtk_cam_device *cam,
 	if (mtk_cam_ctrl_get(cam_ctrl))
 		return 0;
 
-	MTK_CAM_TRACE_BEGIN(BASIC, "irq_type %d, inner 0x%x",
+	MTK_CAM_TRACE_BEGIN(BASIC, "irq_type 0x%x, inner 0x%x",
 			    irq_info->irq_type, irq_info->frame_idx_inner);
 
 	/**

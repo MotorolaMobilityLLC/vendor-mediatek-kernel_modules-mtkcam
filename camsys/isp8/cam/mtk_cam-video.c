@@ -535,13 +535,18 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 	if (ret)
 		return ret;
 
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s->start_ctx", __func__);
 	ctx = mtk_cam_start_ctx(cam, node);
+	MTK_CAM_TRACE_END(BASIC);
 	if (!ctx)
 		return -EPIPE;
 
 	++ctx->streaming_node_cnt;
-	if (mtk_cam_ctx_all_nodes_streaming(ctx))
+	if (mtk_cam_ctx_all_nodes_streaming(ctx)) {
+		MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctx_stream_on", __func__);
 		mtk_cam_ctx_stream_on(ctx);
+		MTK_CAM_TRACE_END(BASIC);
+	}
 
 	return 0;
 }
@@ -561,8 +566,11 @@ static void mtk_cam_vb2_stop_streaming(struct vb2_queue *vq)
 	if (CAM_DEBUG_ENABLED(V4L2))
 		dev_info(cam->dev, "%s:streaming_node cnt:%d node_name:%s, queued_cnt:%d",
 		__func__, ctx->streaming_node_cnt, node->desc.name, atomic_read(&node->queued_cnt));
-	if (atomic_read(&node->queued_cnt))
+	if (atomic_read(&node->queued_cnt)) {
+		MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctx_stream_off", __func__);
 		mtk_cam_ctx_stream_off(ctx);
+		MTK_CAM_TRACE_END(BASIC);
+	}
 
 	--ctx->streaming_node_cnt;
 	atomic_set(&node->queued_cnt, 0);
@@ -571,8 +579,13 @@ static void mtk_cam_vb2_stop_streaming(struct vb2_queue *vq)
 	if (!mtk_cam_ctx_all_nodes_idle(ctx))
 		return;
 	/* for no req in driver and stream off case */
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctx_stream_off", __func__);
 	mtk_cam_ctx_stream_off(ctx);
+	MTK_CAM_TRACE_END(BASIC);
+
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s->stop_ctx", __func__);
 	mtk_cam_stop_ctx(ctx, &node->vdev.entity);
+	MTK_CAM_TRACE_END(BASIC);
 }
 
 static void mtk_cam_vb2_buf_queue(struct vb2_buffer *vb)
@@ -658,7 +671,7 @@ static long int mtk_cam_v4l2_file_ioctl(struct file *file,
 		}
 	}
 
-	MTK_CAM_TRACE_BEGIN(BASIC, "%s->video_ioctl2", __func__);
+	MTK_CAM_TRACE_BEGIN(BASIC, "%s->video_ioctl2(%u)", __func__, _IOC_NR(cmd));
 	ret = video_ioctl2(file, cmd, arg);
 	MTK_CAM_TRACE_END(BASIC);
 
