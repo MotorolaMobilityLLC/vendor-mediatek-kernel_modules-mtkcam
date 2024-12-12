@@ -1626,7 +1626,7 @@ static void set_cq_deadline(struct mtk_cam_job *job, int cq_deadline)
 	struct mtk_raw_device *dev;
 	struct mtk_camsv_device *sv_dev;
 	struct mtk_mraw_device *mraw_dev;
-	int i;
+	int i, raw_idx = 0;
 	unsigned long subset;
 
 	if (job->enable_hsf_raw)
@@ -1639,18 +1639,19 @@ static void set_cq_deadline(struct mtk_cam_job *job, int cq_deadline)
 		if (BIT(i) & subset) {
 			dev = dev_get_drvdata(cam->engines.raw_devs[i]);
 
-			if (!dev->is_slave)
+			if (!dev->is_slave) {
+				raw_idx = i;
 				update_scq_start_period(dev, cq_deadline,
 					get_sensor_interval_us(job) / 1000);
+			}
 		}
 	}
 
-	subset = bit_map_subset_of(MAP_HW_CAMSV, job->used_engine);
-	for (i = 0; i < cam->engines.num_camsv_devices; i++) {
-		if (BIT(i) & subset) {
-			sv_dev = dev_get_drvdata(cam->engines.sv_devs[i]);
-			mtk_cam_sv_update_start_period(sv_dev, cq_deadline);
-		}
+	if (is_m2m(job))
+		dev_info(cam->dev, "skip camsv setting start period\n");
+	else {
+		sv_dev = dev_get_drvdata(cam->engines.sv_devs[raw_idx]);
+		mtk_cam_sv_update_start_period(sv_dev, cq_deadline);
 	}
 
 	subset = bit_map_subset_of(MAP_HW_MRAW, job->used_engine);
