@@ -85,6 +85,9 @@ int aov_core_init(struct mtk_aov *device);
 
 struct mtk_aov *aov_core_get_device(void);
 
+int aov_ut_for_module_test(struct mtk_aov *aov_dev,
+	struct aov_ut_info *user_ut_info);
+
 int aov_core_send_cmd(struct mtk_aov *aov_dev,
 	uint32_t cmd, void *data, int len, bool ack);
 

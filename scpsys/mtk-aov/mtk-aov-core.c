@@ -45,6 +45,141 @@ struct mtk_aov *aov_core_get_device(void)
 	return curr_dev;
 }
 
+int aov_ut_for_module_test(struct mtk_aov *aov_dev,
+	struct aov_ut_info *user_ut_info)
+{
+	struct aov_core *core_info = &aov_dev->core_info;
+	unsigned long flag;
+	uint8_t *buf = NULL;
+	struct aov_ut_info *ut_info_buf = NULL;
+	struct packet packet;
+	int count = 0, retry = 0, scp_ready = 0, cmd_seq = 0, ret = 0;
+	unsigned long timeout = msecs_to_jiffies(1000);
+	uint32_t cmd_code = AOV_SCP_CMD_DRV_UT;
+
+	dev_info(aov_dev->dev, "%s: aov malloc info buffer+\n", __func__);
+	spin_lock_irqsave(&core_info->buf_lock, flag);
+	buf = tlsf_malloc(&(core_info->alloc), sizeof(struct aov_ut_info));
+	spin_unlock_irqrestore(&core_info->buf_lock, flag);
+	dev_info(aov_dev->dev, "%s: aov malloc info buffer, buf(%p)-\n", __func__, buf);
+	if (buf)
+		(void)copy_from_user(buf, user_ut_info, sizeof(struct aov_ut_info));
+	ut_info_buf = (struct aov_ut_info *)buf;
+	dev_info(aov_dev->dev, "%s: copy_from_user done\n", __func__);
+
+	// start send ipi to scp
+	mutex_lock(&core_info->sned_ipi_mutex);
+	cmd_seq = atomic_add_return(1, &(core_info->cmd_seq));
+
+	packet.sequence = cmd_seq;
+	packet.command  = cmd_code;
+	if (buf) {
+		packet.buffer = core_info->buf_pa + (buf - core_info->buf_va);
+		packet.length = sizeof(struct aov_ut_info);
+	} else {
+		packet.buffer = 0;
+		packet.length = 0;
+	}
+
+	dev_info(aov_dev->dev, "%s: send seq(%d), cmd(%d) case_id(%d) buffer(%#x)+\n",
+		__func__, cmd_seq, cmd_code, ut_info_buf->test_case_id, packet.buffer);
+
+	retry = 0;
+	do {
+		// wait scp ready
+		count = 0;
+		do {
+			ret = wait_event_interruptible_timeout(core_info->scp_queue,
+				((scp_ready = atomic_read(&(core_info->scp_ready))) == 2),
+				timeout);
+			if (ret == 0) {
+				dev_info(aov_dev->dev, "%s: send cmd(%d/%d) timeout!\n",
+					__func__, cmd_code, scp_ready);
+				mutex_unlock(&core_info->sned_ipi_mutex);
+				return -EIO;
+			} else if (-ERESTARTSYS == ret) {
+				if (count++ >= 100) {
+					dev_info(aov_dev->dev, "%s: send cmd(%d/%d/%d) failed\n",
+						__func__, cmd_code, scp_ready, count);
+					mutex_unlock(&core_info->sned_ipi_mutex);
+					return -ERESTARTSYS;
+				}
+				continue;
+			} else {
+				AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
+					"%s: send cmd(%d/%d) done\n",
+					__func__, cmd_code, scp_ready);
+				break;
+			}
+		} while (1);
+
+		packet.session = atomic_read(&(core_info->scp_session));
+
+		atomic_set(&(core_info->ack_cmd[cmd_code]), 0);
+		packet.command |= AOV_SCP_CMD_ACK;
+
+		ret = mtk_ipi_send(&scp_ipidev, IPI_OUT_AOV_SCP,
+			IPI_SEND_WAIT, &packet, 4, 1000);
+		if (ret < 0 && ret != IPI_PIN_BUSY) {
+			dev_info(aov_dev->dev, "%s: failed to send packet: %d", __func__, ret);
+			break;
+		}
+		if (ret == IPI_PIN_BUSY) {
+			if (retry++ >= 100) {
+				dev_info(aov_dev->dev, "%s: failed to send cmd(%d): %d\n",
+					__func__, cmd_code, ret);
+				mutex_unlock(&core_info->sned_ipi_mutex);
+				return -EBUSY;
+			}
+			if (retry % 100 == 0)
+				usleep_range(1000, 2000);
+		} else {
+			count = 0;
+			do {
+				ret = wait_event_interruptible_timeout(core_info->ack_wq[cmd_code],
+					atomic_cmpxchg(&(core_info->ack_cmd[cmd_code]), 1, 0),
+					timeout);
+				if (ret == 0) {
+					dev_info(aov_dev->dev, "%s: wait ack cmd(%d) timeout\n",
+						__func__, cmd_code);
+					mutex_unlock(&core_info->sned_ipi_mutex);
+					return -EIO;
+				} else if (-ERESTARTSYS == ret) {
+					if (count++ >= 100) {
+						dev_info(aov_dev->dev, "%s: wait cmd(%d/%d) ack failed\n",
+							__func__, cmd_code, count);
+						mutex_unlock(&core_info->sned_ipi_mutex);
+						return -ERESTARTSYS;
+					}
+					continue;
+				} else {
+					AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
+						"%s: wait cmd(%d) ack done\n",
+						__func__, cmd_code);
+					ret = 0;
+					break;
+				}
+			} while (1);
+		}
+	} while (ret == IPI_PIN_BUSY);
+
+	mutex_unlock(&core_info->sned_ipi_mutex);
+
+	dev_info(aov_dev->dev, "%s: send seq(%d), cmd(%d) case_id(%d) buffer(%#x)-\n",
+		__func__, cmd_seq, cmd_code, ut_info_buf->test_case_id, packet.buffer);
+
+	if (buf) {
+		(void)copy_to_user(user_ut_info, buf, sizeof(struct aov_ut_info));
+		dev_info(aov_dev->dev, "aov free buffer+\n");
+		spin_lock_irqsave(&core_info->buf_lock, flag);
+		tlsf_free(&(core_info->alloc), buf);
+		spin_unlock_irqrestore(&core_info->buf_lock, flag);
+		dev_info(aov_dev->dev, "aov free buffer-\n");
+	}
+
+	return 0;
+}
+
 static int send_cmd_internal(struct aov_core *core_info,
 	uint32_t cmd_code, uint32_t buffer, uint32_t length, bool wait, bool ack)
 {

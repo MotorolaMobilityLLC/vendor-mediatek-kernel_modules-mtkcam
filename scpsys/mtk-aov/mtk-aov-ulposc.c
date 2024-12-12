@@ -148,6 +148,7 @@ int aov_ulposc_check_cali_result(struct mtk_aov *aov_dev)
 	dev_info(aov_dev->dev,"[%s] fail: current_val: %dMHz/%dkhz, target: %dMHz\n",
 			__func__, KHZ_TO_MHZ(current_val), current_val,
 			aov_dev->ulposc_info.ulposc_cali_result_target);
+	WARN_ON(true);
 	return 0;
 }
 

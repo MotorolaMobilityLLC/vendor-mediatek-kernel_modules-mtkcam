@@ -24,6 +24,7 @@
 #define AOV_DEV_DISP_OFF_UT       _IO('H', 8)
 #define AOV_DEV_TURN_ON_ULPOSC    _IO('H', 9)
 #define AOV_DEV_TURN_OFF_ULPOSC   _IO('H', 10)
+#define AOV_DEV_MODULE_UT         _IOWR('H', 11, struct aov_ut_info)
 
 #if IS_ENABLED(CONFIG_COMPAT)
 #define COMPAT_AOV_DEV_START        _IOW('H', 0, struct aov_user)
@@ -37,6 +38,7 @@
 #define COMPAT_AOV_DEV_DISP_OFF_UT  _IO('H', 8)
 #define COMPAT_AOV_DEV_TURN_ON_ULPOSC _IO('H', 9)
 #define COMPAT_AOV_DEV_TURN_OFF_ULPOSC _IO('H', 10)
+#define COMPAT_AOV_DEV_MODULE_UT       _IOWR('H', 11, struct aov_ut_info)
 #endif
 
 /*
@@ -59,7 +61,8 @@
 #define AOV_SCP_CMD_RESET_SENSOR_END (14)
 #define AOV_SCP_CMD_TURN_ON_ULPOSC   (15)
 #define AOV_SCP_CMD_TURN_OFF_ULPOSC  (16)
-#define AOV_SCP_CMD_MAX              (17)
+#define AOV_SCP_CMD_DRV_UT           (17)
+#define AOV_SCP_CMD_MAX              (18)
 #define AOV_SCP_CMD_ACK              (0x8000)
 
 #define AOV_DEBUG_MODE_DUMP       (1)  // General debug
@@ -475,5 +478,19 @@ struct packet {
 	uint32_t buffer;
 	uint32_t length;
 } __packed;
+
+#define AOV_MAX_UT_SIZE  (10 * 1024)
+
+enum aov_ut_test_case_id {
+	AOV_UT_TEST_CASE_ID_MIN,
+	AOV_SENINF_UT,
+	AOV_UISP_UT,
+	AOV_UT_TEST_CASE_ID_MAX
+};
+
+struct aov_ut_info {
+	enum aov_ut_test_case_id test_case_id;
+	uint8_t data[AOV_MAX_UT_SIZE];
+};
 
 #endif  // MTK_AOV_DATA_H

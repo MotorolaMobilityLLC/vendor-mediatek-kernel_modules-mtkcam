@@ -307,6 +307,11 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 			"turn off ulposc done, ret(%d)\n", ret);
 		up(&core_info->start_stop_sema);
 		break;
+	case AOV_DEV_MODULE_UT:
+		dev_info(aov_dev->dev, "AOV module ut+\n");
+		ret = aov_ut_for_module_test(aov_dev, (struct aov_ut_info *)arg);
+		dev_info(aov_dev->dev, "AOV stop-(%d)\n", ret);
+		break;
 	default:
 		dev_info(aov_dev->dev, "unknown AOV control code(%d)\n", cmd);
 		return -EINVAL;
