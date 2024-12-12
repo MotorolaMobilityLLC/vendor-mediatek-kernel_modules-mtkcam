@@ -2,23 +2,24 @@
 /*
  * Copyright (c) 2019 MediaTek Inc.
  */
+
 /*****************************************************************************
  *
  * Filename:
  * ---------
- *     OV48B2Qmipiraw_Sensor.h
+ *     imx598mipiraw_Sensor.h
  *
  * Project:
  * --------
- *	 ALPS
+ *     ALPS
  *
  * Description:
  * ------------
- *	 CMOS sensor header file
+ *     CMOS sensor header file
  *
  ****************************************************************************/
-#ifndef _OV48B2QMIPIRAW_SENSOR_H
-#define _OV48B2QMIPIRAW_SENSOR_H
+#ifndef _IMX598MIPI_SENSOR_H
+#define _IMX598MIPI_SENSOR_H
 
 #include <linux/videodev2.h>
 #include <linux/i2c.h>
@@ -35,14 +36,11 @@
 #include "kd_imgsensor_define_v4l2.h"
 #include "kd_imgsensor_errcode.h"
 
-#include "ov48b_Sensor_setting.h"
+#include "imx598_ana_gain_table.h"
+#include "imx598_Sensor_setting.h"
 
 #include "adaptor-subdrv-ctrl.h"
 #include "adaptor-i2c.h"
 #include "adaptor.h"
-
-#ifdef OV48B_ISF_DBG
-extern struct subdrv_static_ctx ov48b_legacy_s_ctx;
-#endif
 
 #endif

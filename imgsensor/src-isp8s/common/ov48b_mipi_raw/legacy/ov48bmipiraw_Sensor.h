@@ -36,13 +36,10 @@
 #include "kd_imgsensor_errcode.h"
 
 #include "ov48b_Sensor_setting.h"
+#include "ov48b_ana_gain_table.h"
 
 #include "adaptor-subdrv-ctrl.h"
 #include "adaptor-i2c.h"
 #include "adaptor.h"
-
-#ifdef OV48B_ISF_DBG
-extern struct subdrv_static_ctx ov48b_legacy_s_ctx;
-#endif
 
 #endif

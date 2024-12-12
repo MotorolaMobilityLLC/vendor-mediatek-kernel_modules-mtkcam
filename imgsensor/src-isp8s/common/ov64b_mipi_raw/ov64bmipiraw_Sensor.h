@@ -36,11 +36,14 @@
 #include "kd_imgsensor_define_v4l2.h"
 #include "kd_imgsensor_errcode.h"
 
-#include "ov64b_ana_gain_table.h"
 #include "ov64b_Sensor_setting.h"
 
 #include "adaptor-subdrv-ctrl.h"
 #include "adaptor-i2c.h"
 #include "adaptor.h"
+
+#ifdef OV64B_ISF_DBG
+extern struct subdrv_static_ctx ov64b_legacy_s_ctx;
+#endif
 
 #endif
