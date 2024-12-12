@@ -116,10 +116,10 @@ endif
 $(CAM_MODULE)-objs += \
 	mtk_csi_phy_3_0/mtk_cam-seninf-hw_phy_3_0.o
 
-PLATFORM_PATH = $(srctree)/$(src)
+PLATFORM_PATH = $(KO_PATH)
 # workaround for external build
 ifneq ($(M),)
-PLATFORM_PATH = $(srctree)/$(src)
+PLATFORM_PATH = $(KO_PATH)
 endif
 
 # platform data
