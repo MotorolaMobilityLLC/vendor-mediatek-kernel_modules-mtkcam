@@ -18,6 +18,23 @@
 #include "rpmsg_internal.h"
 #include "mtk_ccd_rpmsg_internal.h"
 
+#undef dev_dbg
+#define dev_dbg(dev, fmt, arg...)			\
+	do {						\
+		if (mtk_ccd_debug_enabled())		\
+			dev_info(dev, fmt, ## arg);	\
+	} while (0)
+
+static unsigned int ccd_debug;
+module_param(ccd_debug, uint, 0644);
+MODULE_PARM_DESC(ccd_debug, "ccd debug log");
+
+int mtk_ccd_debug_enabled(void)
+{
+	return ccd_debug >= 1 ? 1 : 0;
+}
+EXPORT_SYMBOL_GPL(mtk_ccd_debug_enabled);
+
 static const struct rpmsg_endpoint_ops mtk_rpmsg_endpoint_ops;
 
 void __ept_release(struct kref *kref)
@@ -28,8 +45,8 @@ void __ept_release(struct kref *kref)
 	struct mtk_rpmsg_rproc_subdev *mtk_subdev = mept->mtk_subdev;
 	struct rpmsg_device *rpdev = ept->rpdev;
 
-	dev_info(&mtk_subdev->pdev->dev, "free mtk rpmsg endpoint: %p at %d-%d\n",
-		 mept, mtk_subdev->id, ept->addr);
+	dev_info(&mtk_subdev->pdev->dev, "%s: %p at %d-%d\n", __func__,
+		mept, mtk_subdev->id, ept->addr);
 	kfree(to_mtk_rpmsg_endpoint(ept));
 
 	rpdev->ept = NULL;
@@ -93,14 +110,14 @@ static void mtk_rpmsg_destroy_ept(struct rpmsg_endpoint *ept)
 	struct mtk_ccd_rpmsg_endpoint *mept = to_mtk_rpmsg_endpoint(ept);
 	struct mtk_rpmsg_rproc_subdev *mtk_subdev = mept->mtk_subdev;
 
-	dev_info(&mtk_subdev->pdev->dev, "%s: src[%d]\n", __func__, ept->addr);
-
 	atomic_set(&mept->ccd_mep_state, CCD_MENDPOINT_DESTROY);
 	wake_up(&mept->worker_readwq);
 
 	while (atomic_read(&mept->ccd_cmd_sent) > 0) {
-		dev_info(&mtk_subdev->pdev->dev, "%s: cmd_sent: %d\n",
-			 __func__, atomic_read(&mept->ccd_cmd_sent));
+		dev_info(&mtk_subdev->pdev->dev,
+			"%s: %p at %d-%d cmd_sent: %d\n",
+			__func__, mept, mtk_subdev->id, ept->addr,
+			atomic_read(&mept->ccd_cmd_sent));
 
 		spin_lock(&mept->pending_sendq.queue_lock);
 		ccd_params = list_first_entry(&mept->pending_sendq.queue,
@@ -161,8 +178,10 @@ static void mtk_rpmsg_release_device(struct device *dev)
 {
 	struct rpmsg_device *rpdev = to_rpmsg_device(dev);
 	struct mtk_rpmsg_device *mdev = to_mtk_rpmsg_device(rpdev);
+	struct mtk_rpmsg_rproc_subdev *mtk_subdev = mdev->mtk_subdev;
 
-	dev_info(dev, "%s: rpdev %p\n", __func__, rpdev);
+	dev_info(dev, "%s: %#x %p at %d-%d\n", __func__,
+		 rpdev->src, mdev, mtk_subdev->id, mdev->id);
 
 	kfree(mdev);
 }
@@ -183,8 +202,6 @@ static int set_rpmsg_channel_info(struct rpmsg_channel_info *msg,
 	(void) snprintf(msg->name, RPMSG_NAME_SIZE,
 			"mtk-camsys-\%x-%x", center_id, ipi_id);
 
-	pr_info("%s %#x/%s", __func__, msg->src, msg->name);
-
 	return 0;
 }
 
@@ -199,7 +216,8 @@ static void mtk_rpmsg_destroy_rpmsgdev(struct mtk_rpmsg_rproc_subdev *mtk_subdev
 
 	mdev = mtk_subdev->channels[id];
 	if (!mdev) {
-		dev_info(dev, "%s: no channel at %d\n", __func__, id);
+		dev_info(dev, "%s: no channel at %d-%d\n", __func__,
+			mtk_subdev->id, id);
 		return;
 	}
 
@@ -208,11 +226,13 @@ static void mtk_rpmsg_destroy_rpmsgdev(struct mtk_rpmsg_rproc_subdev *mtk_subdev
 	mutex_unlock(&mtk_subdev->endpoints_lock);
 
 	if (rpmsg_unregister_device(&mtk_subdev->pdev->dev, info))
-		dev_info(dev, "%s: failed, %s at %d\n", __func__, info->name, id);
+		dev_info(dev, "%s: failed, %s at %d-%d\n", __func__, info->name,
+			mtk_subdev->id, id);
 
 	if (mdev->rpdev.ept) {
 		WARN_ON(1);
-		dev_info(dev, "%s: ept leakage at %d\n", __func__, id);
+		dev_info(dev, "%s: ept leakage at %d-%d\n", __func__,
+			mtk_subdev->id, id);
 		rpmsg_destroy_ept(mdev->rpdev.ept);
 	}
 
@@ -302,7 +322,8 @@ mtk_ccd_center_create_channels(struct rproc_subdev *subdev)
 	for (ipi_id = CCD_IPI_INIT; ipi_id < CCD_IPI_MAX; ipi_id++) {
 		set_rpmsg_channel_info(&msg, center_id, ipi_id);
 		if (mtk_rpmsg_create_rpmsgdev(mtk_subdev, &msg, ipi_id) == NULL)
-			pr_info("%s: %s failed\n", __func__, msg.name);
+			dev_info(&mtk_subdev->pdev->dev, "%s: %s failed\n",
+				__func__, msg.name);
 	}
 }
 EXPORT_SYMBOL_GPL(mtk_ccd_center_create_channels);
@@ -330,11 +351,13 @@ int mtk_ccd_get_channel(struct mtk_ccd *ccd, unsigned int center_id,
 	channel_id = client_cb->ipi_id;
 	mdev = mtk_subdev->channels[channel_id];
 	if (!mdev) {
-		dev_info(dev, "%s channel-%d is not ready\n", __func__, channel_id);
+		dev_info(dev, "%s channel-%d-%d is not ready\n", __func__,
+			center_id, channel_id);
 		return -1;
 	}
 	if (mdev->channel_cb) {
-		dev_info(dev, "%s channel-%d is occupied\n", __func__, channel_id);
+		dev_info(dev, "%s channel-%d-%d is occupied\n", __func__,
+			center_id, channel_id);
 		WARN_ON(1);
 	}
 	mdev->channel_cb = client_cb;
@@ -352,7 +375,7 @@ int mtk_ccd_get_channel(struct mtk_ccd *ccd, unsigned int center_id,
 		return -1;
 	}
 
-	dev_info(dev, "%s channel-%d-%d", __func__, center_id, channel_id);
+	dev_dbg(dev, "%s channel-%d-%d", __func__, center_id, channel_id);
 	return channel_id;
 }
 EXPORT_SYMBOL_GPL(mtk_ccd_get_channel);
@@ -392,7 +415,7 @@ int mtk_ccd_put_channel(struct mtk_ccd *ccd,
 	/* put channel */
 	mdev->channel_cb = NULL;
 
-	dev_info(dev, "%s channel-%d-%d", __func__, center_id, channel_id);
+	dev_dbg(dev, "%s channel-%d-%d", __func__, center_id, channel_id);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(mtk_ccd_put_channel);
@@ -423,7 +446,7 @@ int mtk_ccd_channel_init(struct mtk_ccd *ccd,
 	}
 
 	/* start worker */
-	dev_info(dev, "%s channel-%d-%d +", __func__, center_id, channel_id);
+	dev_dbg(dev, "%s channel-%d-%d +", __func__, center_id, channel_id);
 
 	mutex_lock(&mtk_subdev->master_listen_lock);
 
@@ -441,8 +464,8 @@ int mtk_ccd_channel_init(struct mtk_ccd *ccd,
 				__func__, center_id);
 			return -1;
 		} else if (ret < 0) {
-			dev_info(dev, "%s is being canceled %d\n",
-				 __func__, ret);
+			dev_info(dev, "%s is being canceled %d, master-%d might be killed\n",
+				 __func__, ret, center_id);
 			return -1;
 		}
 
@@ -458,7 +481,7 @@ int mtk_ccd_channel_init(struct mtk_ccd *ccd,
 
 	mutex_unlock(&mtk_subdev->master_listen_lock);
 
-	dev_info(dev, "%s channel-%d-%d -", __func__, center_id, channel_id);
+	dev_dbg(dev, "%s channel-%d-%d -", __func__, center_id, channel_id);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(mtk_ccd_channel_init);
@@ -489,7 +512,7 @@ int mtk_ccd_channel_uninit(struct mtk_ccd *ccd,
 	}
 
 	/* stop worker */
-	dev_info(dev, "%s channel-%d-%d +", __func__, center_id, channel_id);
+	dev_dbg(dev, "%s channel-%d-%d +", __func__, center_id, channel_id);
 
 	mutex_lock(&mtk_subdev->master_listen_lock);
 
@@ -507,8 +530,8 @@ int mtk_ccd_channel_uninit(struct mtk_ccd *ccd,
 				__func__, center_id);
 			return -1;
 		} else if (ret < 0) {
-			dev_info(dev, "%s is being canceled %d\n",
-				 __func__, ret);
+			dev_info(dev, "%s is being canceled %d, master-%d might be killed\n",
+				 __func__, ret, center_id);
 			return -1;
 		}
 
@@ -524,7 +547,7 @@ int mtk_ccd_channel_uninit(struct mtk_ccd *ccd,
 
 	mutex_unlock(&mtk_subdev->master_listen_lock);
 
-	dev_info(dev, "%s channel-%d-%d -", __func__, center_id, channel_id);
+	dev_dbg(dev, "%s channel-%d-%d -", __func__, center_id, channel_id);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(mtk_ccd_channel_uninit);
@@ -608,7 +631,8 @@ void mtk_rpmsg_destroy_rproc_subdev(struct rproc_subdev *subdev)
 	/* channels check */
 	for (i = 0; i < CCD_IPI_MAX; i++)
 		if (mtk_subdev->channels[i]) {
-			pr_info("%s: channel-%d is not released\n", __func__, i);
+			pr_info("%s: channel-%d-%d is not released\n", __func__,
+				mtk_subdev->id, i);
 			WARN_ON(1);
 		}
 

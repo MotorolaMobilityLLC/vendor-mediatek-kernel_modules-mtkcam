@@ -55,9 +55,10 @@ struct mtk_ccd {
 	struct cdev ccd_cdev;
 	struct class *ccd_class;
 
-	// struct rproc_subdev *rpmsg_subdev;  /* TODO: re-name */
 	struct rproc_subdev *channel_center[MAX_RPROC_SUBDEV_NUM];
 	struct mtk_ccd_memory *ccd_memory;
+
+	atomic_t open_cnt;
 };
 
 /* For ccd */
@@ -100,4 +101,8 @@ int mtk_ccd_get_buffer_fd(struct mtk_ccd *ccd, void *mem_priv);
 
 struct dma_buf *mtk_ccd_get_buffer_dmabuf(struct mtk_ccd *ccd,
 			void *mem_priv);
+
+/* debug log */
+int mtk_ccd_debug_enabled(void);
+
 #endif /* _MTK_CCD_H */

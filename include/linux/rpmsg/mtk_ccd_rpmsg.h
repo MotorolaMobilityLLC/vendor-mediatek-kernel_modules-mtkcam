@@ -70,6 +70,4 @@ mtk_rpmsg_create_rproc_subdev(struct platform_device *pdev,
 
 void mtk_rpmsg_destroy_rproc_subdev(struct rproc_subdev *subdev);
 
-
-
 #endif

@@ -18,13 +18,21 @@
 
 #define CCD_DEV_NAME	"mtk_ccd"
 
+#undef dev_dbg
+#define dev_dbg(dev, fmt, arg...)			\
+	do {						\
+		if (mtk_ccd_debug_enabled())		\
+			dev_info(dev, fmt, ## arg);	\
+	} while (0)
+
 static int ccd_load(struct rproc *rproc, const struct firmware *fw)
 {
 	const struct mtk_ccd *ccd = rproc->priv;
 	struct device *dev = ccd->dev;
 	int ret = 0;
 
-	dev_info(dev, "remote_ccd loaded!\n");
+	dev_info(dev, "%s: %p\n", __func__, dev);
+
 	return ret;
 }
 
@@ -34,7 +42,7 @@ static int ccd_start(struct rproc *rproc)
 	struct device *dev = ccd->dev;
 	int ret = 0;
 
-	dev_info(dev, "ccd started: %p\n", dev);
+	dev_info(dev, "%s: %p\n", __func__, dev);
 
 	return ret;
 }
@@ -42,9 +50,10 @@ static int ccd_start(struct rproc *rproc)
 static int ccd_stop(struct rproc *rproc)
 {
 	struct mtk_ccd *ccd = (struct mtk_ccd *)rproc->priv;
+	struct device *dev = ccd->dev;
 	int ret = 0;
 
-	dev_info(ccd->dev, "%s\n", __func__);
+	dev_info(dev, "%s: %p\n", __func__, dev);
 
 	return ret;
 }
@@ -131,7 +140,10 @@ static int ccd_open(struct inode *inode,
 					   struct mtk_ccd,
 					   ccd_cdev);
 	filp->private_data = ccd;
-	dev_info(ccd->dev, "%s: %p\n", __func__, ccd);
+
+	dev_info(ccd->dev, "%s: %p, cnt:%d",
+		__func__, ccd, atomic_inc_return(&ccd->open_cnt));
+
 	return ret;
 }
 
@@ -142,7 +154,10 @@ static int ccd_release(struct inode *inode,
 	struct mtk_ccd *ccd = (struct mtk_ccd *)filp->private_data;
 
 	ccd_master_destroy(ccd);  /* TODO: do not destroy ept here */
-	dev_info(ccd->dev, "%s: %p\n", __func__, ccd);
+
+	dev_info(ccd->dev, "%s: %p, cnt:%d",
+		__func__, ccd, atomic_dec_return(&ccd->open_cnt));
+
 	return ret;
 }
 
@@ -162,8 +177,6 @@ static long ccd_unlocked_ioctl(struct file *filp, unsigned int cmd,
 
 	switch (cmd) {
 	case IOCTL_CCD_MASTER_INIT:
-		dev_info(ccd->dev, "%s:IOCTL_CCD_MASTER_INIT\n", __func__);  // dbg
-
 		if (ccd_master_init(ccd)) {
 			ret = -EFAULT;  /* no free rproc_subdev */
 			break;
@@ -172,10 +185,9 @@ static long ccd_unlocked_ioctl(struct file *filp, unsigned int cmd,
 
 		if (copy_to_user(user_addr, &master_obj, sizeof(master_obj)))
 			ret = -EFAULT;
+
 		break;
 	case IOCTL_CCD_MASTER_DESTROY:
-		dev_info(ccd->dev, "%s:IOCTL_CCD_MASTER_DESTROY\n", __func__);  //dbg
-
 		if (ccd_master_destroy(ccd)) {
 			ret = -EFAULT;  /* no match subdev */
 			break;
@@ -188,9 +200,7 @@ static long ccd_unlocked_ioctl(struct file *filp, unsigned int cmd,
 		break;
 	case IOCTL_CCD_MASTER_LISTEN:
 		/* per stremaing ctrl for on/off */
-		dev_info(ccd->dev, "%s:IOCTL_CCD_MASTER_LISTEN +\n", __func__);  // dbg
-
-		if (ccd_master_listen(ccd, &listen_obj)) {  // wait for ON/OFF
+		if (ccd_master_listen(ccd, &listen_obj)) {  /* wait for ON/OFF */
 			ret = -EFAULT;
 			break;
 		}
@@ -199,7 +209,6 @@ static long ccd_unlocked_ioctl(struct file *filp, unsigned int cmd,
 				 sizeof(struct ccd_master_listen_item)))
 			ret = -EFAULT;
 
-		dev_info(ccd->dev, "%s:IOCTL_CCD_MASTER_LISTEN -\n", __func__);
 		break;
 	case IOCTL_CCD_WORKER_READ:
 		/* backend read msg */
@@ -283,12 +292,12 @@ int mtk_ccd_get_channel_center_id(struct mtk_ccd *ccd)
 	for (i = 0; i < MAX_RPROC_SUBDEV_NUM; i++) {
 		mtk_subdev = to_mtk_subdev(ccd->channel_center[i]);
 		if (mtk_subdev->process_id == curr_pid) {  /* matched master */
-			dev_info(dev, "%s %d at %d", __func__, curr_pid, i);
+			dev_dbg(dev, "%s %d for %d", __func__, i, curr_pid);
 			return i;
 		}
 	}
 
-	dev_info(dev, "%s %d failed", __func__, curr_pid);
+	dev_info(dev, "%s for %d failed", __func__, curr_pid);
 
 	return -1;
 }
@@ -301,7 +310,8 @@ static int ccd_regcdev(struct mtk_ccd *ccd)
 
 	ret = alloc_chrdev_region(&ccd->ccd_devno, 0, 1, CCD_DEV_NAME);
 	if (ret < 0) {
-		pr_debug("alloc_chrdev_region failed, %d\n", ret);
+		dev_info(ccd->dev, "%s: alloc_chrdev_region failed, %d\n",
+			__func__, ret);
 		return ret;
 	}
 
@@ -311,7 +321,8 @@ static int ccd_regcdev(struct mtk_ccd *ccd)
 	/* Add to system */
 	ret = cdev_add(&ccd->ccd_cdev, ccd->ccd_devno, 1);
 	if (ret < 0) {
-		pr_debug("Attach file operation failed, %d\n", ret);
+		dev_info(ccd->dev, "%s: cdev_add failed, %d\n",
+			__func__, ret);
 		goto err_cdev_add;
 	}
 
@@ -323,7 +334,8 @@ static int ccd_regcdev(struct mtk_ccd *ccd)
 #endif
 	if (IS_ERR(ccd->ccd_class)) {
 		ret = PTR_ERR(ccd->ccd_class);
-		pr_debug("Unable to create class, err = %d\n", ret);
+		dev_info(ccd->dev, "%s: class_create failed, %d\n",
+			__func__, ret);
 		goto err_class_create;
 	}
 
@@ -332,23 +344,19 @@ static int ccd_regcdev(struct mtk_ccd *ccd)
 			    CCD_DEV_NAME);
 	if (IS_ERR(dev)) {
 		ret = PTR_ERR(dev);
-		pr_debug("Failed to create device: /dev/%s, err = %d\n",
-		       CCD_DEV_NAME,
-		       ret);
+		dev_info(ccd->dev, "%s: device_create failed: /dev/%s, err = %d\n",
+			__func__, CCD_DEV_NAME, ret);
 		goto err_device_create;
 	}
 
 	return ret;
 
 err_device_create:
-	device_destroy(ccd->ccd_class, ccd->ccd_devno);
-
-err_class_create:
 	class_destroy(ccd->ccd_class);
 	ccd->ccd_class = NULL;
-
-err_cdev_add:
+err_class_create:
 	cdev_del(&ccd->ccd_cdev);
+err_cdev_add:
 	unregister_chrdev_region(ccd->ccd_devno, 1);
 	return ret;
 }
@@ -440,7 +448,7 @@ static int ccd_probe(struct platform_device *pdev)
 		goto remove_subdev;
 	}
 
-	dev_info(ccd->dev, "%s: ccd is created: %p\n", __func__, ccd);
+	dev_info(dev, "%s: ccd is created: %p\n", __func__, ccd);
 
 	return 0;
 
@@ -457,6 +465,8 @@ free_rproc:
 static void ccd_remove(struct platform_device *pdev)
 {
 	struct mtk_ccd *ccd = platform_get_drvdata(pdev);
+
+	dev_info(ccd->dev, "%s: release ccd: %p", __func__, ccd);
 
 	mtk_ccd_mem_release(ccd);
 	ccd_unregcdev(ccd);
