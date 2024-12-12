@@ -265,6 +265,10 @@ enum EYE_SCAN_OPS_CMD {
 	EYE_SCAN_VAL,
 };
 
+static inline int is_apply_hw_ccf(struct seninf_core *core)
+{
+	return (core) ? (core->hwccf_apply ? true : false) : (false);
+}
 
 static int parse_debug_csi_port(char *csi_str)
 {
@@ -759,7 +763,7 @@ static int seninf_dfs_set(struct seninf_ctx *ctx, unsigned long freq)
 	return ret;
 }
 
-static int seninf_core_pm_runtime_enable(struct seninf_core *core)
+static int seninf_core_pm_runtime_enable_legacy(struct seninf_core *core)
 {
 	int i;
 
@@ -790,7 +794,13 @@ static int seninf_core_pm_runtime_enable(struct seninf_core *core)
 	return 0;
 }
 
-static int seninf_core_pm_runtime_disable(struct seninf_core *core)
+static int seninf_core_pm_runtime_enable(struct seninf_core *core)
+{
+	return is_apply_hw_ccf(core) ?
+			0 : seninf_core_pm_runtime_enable_legacy(core);
+}
+
+static int seninf_core_pm_runtime_disable_legacy(struct seninf_core *core)
 {
 	int i;
 
@@ -810,7 +820,37 @@ static int seninf_core_pm_runtime_disable(struct seninf_core *core)
 	return 0;
 }
 
-static int seninf_core_pm_runtime_get_sync(struct seninf_core *core)
+static int seninf_core_pm_runtime_disable(struct seninf_core *core)
+{
+	return is_apply_hw_ccf(core) ?
+			0 : seninf_core_pm_runtime_disable_legacy(core);
+}
+
+static int seninf_core_pm_runtime_get_sync_hw_ccf(struct seninf_core *core)
+{
+	int i;
+	int ret = 0;
+
+	for (i = CLK_VIRTUAL_CAM_CORE; i < CLK_MAXCNT; i++) {
+		if (core->clk[i] == NULL)
+			continue;
+
+		ret = clk_prepare_enable(core->clk[i]);
+		if (ret < 0) {
+			pr_info(
+				"clk_prepare_enable clk[%u]:%s(fail),ret(%d)\n",
+				i, clk_names[i], ret);
+		}
+		pr_info(
+			"clk_prepare_enable clk[%u]:%s(success),ret(%d)\n",
+			i, clk_names[i], ret);
+
+	}
+
+	return 0;
+}
+
+static int seninf_core_pm_runtime_get_sync_legacy(struct seninf_core *core)
 {
 	int i;
 	int ret = 0;
@@ -852,7 +892,29 @@ static int seninf_core_pm_runtime_get_sync(struct seninf_core *core)
 	return 0;
 }
 
-static int seninf_core_pm_runtime_put(struct seninf_core *core)
+static int seninf_core_pm_runtime_get_sync(struct seninf_core *core)
+{
+	return is_apply_hw_ccf(core) ?
+			seninf_core_pm_runtime_get_sync_hw_ccf(core) :
+			seninf_core_pm_runtime_get_sync_legacy(core);
+}
+
+static int seninf_core_pm_runtime_put__hw_ccf(struct seninf_core *core)
+{
+	int i;
+
+	for (i = CLK_MAXCNT -1 ; i >= CLK_VIRTUAL_CAM_CORE; i--) {
+		if (core->clk[i] == NULL)
+			continue;
+
+		clk_disable_unprepare(core->clk[i]);
+		pr_info("clk_disable_unprepare clk[%u]:%s(success)\n", i, clk_names[i]);
+	}
+
+	return 0;
+}
+
+static int seninf_core_pm_runtime_put_legacy(struct seninf_core *core)
 {
 	int i;
 	int ret = 0;
@@ -882,8 +944,14 @@ static int seninf_core_pm_runtime_put(struct seninf_core *core)
 		}
 	} else
 		dev_info(core->dev, "core->pm_domain_cnt < 0\n");
-
 	return 0;
+}
+
+static int seninf_core_pm_runtime_put(struct seninf_core *core)
+{
+	return is_apply_hw_ccf(core) ?
+			seninf_core_pm_runtime_put__hw_ccf(core) :
+			seninf_core_pm_runtime_put_legacy(core);
 }
 
 #if is_irq_ready
@@ -1091,6 +1159,9 @@ static int seninf_core_probe(struct platform_device *pdev)
 		dev_info(dev, "[%s] failed to get seninf ops\n", __func__);
 		return ret;
 	}
+
+	core->hwccf_apply = of_property_read_bool(pdev->dev.of_node, "ccf-apply");
+	dev_info(dev, "[%s] hwccf_apply %d\n", __func__, core->hwccf_apply);
 
 	// init outmux list
 	i = 0;
@@ -3642,8 +3713,8 @@ static int seninf_probe(struct platform_device *pdev)
 		goto err_free_handler;
 	}
 
-
-	pm_runtime_enable(dev);
+	if (is_apply_hw_ccf(core))
+		pm_runtime_enable(dev);
 	device_enable_async_suspend(dev);
 
 	memset(&g_aov_ctrl, 0, sizeof(struct mtk_seninf_aov_ctrl));
@@ -4302,7 +4373,7 @@ static void seninf_remove(struct platform_device *pdev)
 	}
 	seninf_sentest_uninit(ctx);
 
-	pm_runtime_disable(ctx->dev);
+	//pm_runtime_disable(ctx->dev);
 
 	component_del(dev, &seninf_comp_ops);
 

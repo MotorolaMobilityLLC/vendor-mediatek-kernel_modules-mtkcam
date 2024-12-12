@@ -363,6 +363,12 @@ enum {
 
 	/*mtk isp clk*/
 	CLK_MMDVFS = CLK_TOP_CAMTM_END,
+
+	/*mtk virtual power domain clk */
+	CLK_VIRTUAL_CAM_CORE,
+	CLK_VIRTUAL_CAM_MAIN,
+	CLK_VIRTUAL_CSI_BS_RX,
+	CLK_VIRTUAL_CSI_LS_RX,
 	CLK_MAXCNT,
 };
 
@@ -396,6 +402,10 @@ enum SENTEST_SEAMLESS_STATUS {
 	"clk_top_ap_step4", \
 	"clk_top_ap_step5", \
 	"mmdvfs_mux", \
+	"clk_virtual_cam_core", \
+	"clk_virtual_cam_main", \
+	"clk_virtual_csi_bs_rx", \
+	"clk_virtual_csi_ls_rx", \
 
 enum {
 	CLK_FMETER_ISP = 0,

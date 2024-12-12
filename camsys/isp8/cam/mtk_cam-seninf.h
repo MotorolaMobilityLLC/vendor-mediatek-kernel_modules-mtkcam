@@ -258,6 +258,9 @@ struct seninf_core {
 	/* dvfs vcore power */
 	struct regulator *dvfsrc_vcore_power;
 	struct mtk_seninf_cdphy_dvfs_step cdphy_dvfs_step[CDPHY_DVFS_STEP_MAX_NUM];
+
+	/* add dts info for hw ccf*/
+	bool hwccf_apply;
 };
 
 struct mtk_cam_sentest_watchdog {
