@@ -2524,7 +2524,18 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 
 static int stream_sensor(struct seninf_ctx *ctx, bool enable)
 {
-	int ret;
+	int ret = 0, has_en;
+
+	#if KERNEL_VERSION(6, 11, 0) <= LINUX_VERSION_CODE
+		has_en = v4l2_subdev_is_streaming(ctx->sensor_sd);
+
+		if (enable == has_en) {
+			seninf_logi(ctx,
+				"skip stream_sensor, enable:%d, has_en:%d\n",
+				enable, has_en);
+			return ret;
+		}
+	#endif
 
 	ret = v4l2_subdev_call(ctx->sensor_sd, video, s_stream, enable);
 	if (ret) {
