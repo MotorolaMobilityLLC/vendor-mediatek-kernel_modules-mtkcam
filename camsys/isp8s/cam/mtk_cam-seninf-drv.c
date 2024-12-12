@@ -154,12 +154,16 @@ static const char * const outmux_cam_type_name[] = {
 };
 
 static const char * const clk_fmeter_names[] = {
-	// CLK_FMETER_NAMES
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
+	CLK_FMETER_NAMES
+#endif
 };
 
 static const struct seninf_struct_map clk_fmeter_maps[] = {
 	// NOTE: CLK_FMETER_MAPS has added an "{}" due check patch service
-	//CLK_FMETER_MAPS
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
+	CLK_FMETER_MAPS
+#endif
 };
 
 
@@ -827,7 +831,6 @@ static int seninf_core_pm_runtime_get_sync(struct seninf_core *core)
 static int seninf_core_pm_runtime_put(struct seninf_core *core)
 {
 
-
 	return 0;
 }
 
@@ -982,13 +985,16 @@ static int seninf_core_probe(struct platform_device *pdev)
 	struct seninf_core *core;
 	struct device *dev = &pdev->dev;
 	const char *str = NULL;
-	u32 tmp_no = 0;
 	struct device_node *tmp_node = NULL;
 	int index;
 	u32 port_id = 0;
 	u32 seninf_async_idx = 0;
 	const char *pkvm_status = NULL;
 	struct device_node *pkvm_node;
+
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
+	u32 tmp_no = 0;
+#endif
 
 	device_enable_async_suspend(dev);
 
@@ -1215,6 +1221,7 @@ static int seninf_core_probe(struct platform_device *pdev)
 	dev_err(dev, "[%s] jeff after clk node get\n", __func__);
 
 	// fmeter dbg property
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 	memset(core->fmeter, 0, sizeof(core->fmeter));
 	for (i = 0; i < CLK_FMETER_MAX; i++) {
 		str = NULL;
@@ -1240,6 +1247,7 @@ static int seninf_core_probe(struct platform_device *pdev)
 		}
 		tmp_node = NULL;
 	}
+#endif
 
 	ret = of_platform_populate(dev->of_node, NULL, NULL, dev);
 	if (ret) {
@@ -1596,7 +1604,7 @@ static int mtk_cam_seninf_set_fmt(struct v4l2_subdev *sd,
 		if (seninf_pmsr_en && fmt->pad == PAD_SINK)
 			gather_csi_ps_info(ctx);
 #endif
-		if (bSinkFormatChanged) {
+		if (bSinkFormatChanged && !ctx->is_test_model) {
 			mtk_cam_seninf_get_sensor_usage(&ctx->subdev);
 			mtk_cam_sensor_get_vc_info_by_scenario(ctx, fmt->format.code);
 			update_cfg_done_max_wait_time(ctx);
@@ -1723,7 +1731,7 @@ static int set_test_model(struct seninf_ctx *ctx, char enable)
 	struct seninf_vcinfo *vcinfo = &ctx->vcinfo;
 	struct seninf_vc *vc;
 	struct seninf_dfs *dfs = &ctx->core->dfs;
-	int i = 0;
+	int i = 0, j = 0;
 	int ret = 0;
 
 	dev_info(ctx->dev, "[%s]+\n", __func__);
@@ -1753,14 +1761,21 @@ static int set_test_model(struct seninf_ctx *ctx, char enable)
 
 			vc = &vcinfo->vc[i];
 
-			vc->dest_cnt = 1;
+			if (vc->dest_cnt == 0)
+				vc->dest_cnt = 1;
+
 			vc->dest[0].outmux = ctx->pad2cam[vc->out_pad][0];
 			vc->enable = 1;
 
-			dev_info(ctx->dev,
-				"test mode asyncIdx %d outmux %d, pixel mode %d, vc = %d, dt = 0x%x\n",
-				ctx->seninfAsyncIdx, vc->dest[0].outmux, vc->dest[0].pix_mode,
-				vc->vc, vc->dt);
+			dev_info(ctx->dev, "[%s] vc->dest_cnt %d\n", __func__, vc->dest_cnt);
+			for (j = 0; j < vc->dest_cnt; j++)
+				dev_info(ctx->dev,
+					"test mode asyncIdx %d outmux %d, pixel mode %d, vc = %d, dt = 0x%x\n",
+					ctx->seninfAsyncIdx,
+					vc->dest[j].outmux,
+					vc->dest[j].pix_mode,
+					vc->vc,
+					vc->dt);
 
 			/* update final vc dt info to tsrec */
 			tsrec_vc_dt_info.vc = vc->vc;
@@ -2395,7 +2410,7 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 
 	if (ctx->is_test_model) {
 		dev_info(ctx->dev, "[%s] jeff ctx->is_test_model(%d)\n", __func__, ctx->is_test_model);
-		// return 0; // skip
+		return 0;
 	} else {
 		dev_info(ctx->dev, "[%s] jeff ctx->is_test_model(%d) else\n", __func__, ctx->is_test_model);
 	}
@@ -2754,7 +2769,7 @@ static int seninf_link_setup(struct media_entity *entity,
 			}
 		} else {
 			/* NOTE: update vcinfo once the link becomes enabled */
-			if (flags & MEDIA_LNK_FL_ENABLED) {
+			if (flags & MEDIA_LNK_FL_ENABLED && !ctx->is_test_model) {
 				ctx->sensor_sd =
 					media_entity_to_v4l2_subdev(remote->entity);
 
@@ -3963,15 +3978,8 @@ static int set_vcore_power(struct seninf_ctx *ctx, u64 data_rate)
 
 static int core_common_reg_setup(struct seninf_ctx *ctx)
 {
-	const unsigned int ccu_msg_id[] = {
-		MSG_TO_CCU_SENINF_TSREC_IRQ_SEL_CTRL, /* tsrec device irq sel */
-		MSG_TO_CCU_SENINF_DEVICE_GRP_SEL_CTRL, /* seninf outmux device sel */
-	};
 
-	/* setup reg control by ccu */
-	mtk_cam_seninf_rproc_ccu_ctrl(ctx->dev, &ctx->core->ccu_rproc_ctrl,
-		ccu_msg_id, ARRAY_SIZE(ccu_msg_id), __func__);
-
+	g_seninf_ops->set_irq_grping(ctx);
 	g_seninf_ops->_common_reg_setup(ctx);
 	return 0;
 }
@@ -4093,8 +4101,8 @@ static int runtime_resume(struct device *dev)
 			ret = seninf_core_pm_runtime_get_sync(core);
 			if (ret < 0) {
 				seninf_logi(ctx, "seninf_core_pm_runtime_get_sync(fail),ret(%d)\n", ret);
-#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 				mutex_unlock(&core->mutex);
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 				return ret;
 #endif
 			}

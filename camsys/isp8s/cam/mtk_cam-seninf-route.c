@@ -217,8 +217,8 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 		vc = &vcinfo->vc[vcinfo->cnt++];
 		vc->vc = 0;
 		vc->dt = 0x30;
-		vc->feature = VC_PDAF_STATS;
-		vc->out_pad = PAD_SRC_PDAF0;
+		vc->feature = VC_PDAF_STATS_PIX_1;
+		vc->out_pad = PAD_SRC_PDAF1;
 		vc->group = 0;
 		vc->exp_hsize = TEST_MODEL_HSIZE;
 		vc->exp_vsize = TEST_MODEL_VSIZE;
@@ -240,7 +240,7 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 		vc = &vcinfo->vc[vcinfo->cnt++];
 		vc->vc = 1;
 		vc->dt = 0x2b;
-		vc->feature = VC_RAW_DATA;
+		vc->feature = VC_PDAF_STATS_PIX_1;
 		vc->out_pad = PAD_SRC_RAW1;
 		vc->group = 0;
 		vc->exp_hsize = TEST_MODEL_HSIZE;
@@ -2429,7 +2429,7 @@ void mtk_cam_sensor_get_vc_info_by_scenario(struct seninf_ctx *ctx, u32 code)
 
 	if (first_vc == -1 || last_vc == -1) {
 		/* Assert */
-		dev_info(ctx->dev, "first_vc(%d) last_vc(%d) is not valid\n",
+		dev_info(ctx->dev, "[ERR]first_vc(%d) last_vc(%d) is not valid\n",
 			 first_vc, last_vc);
 		seninf_aee_print(SENINF_AEE_FS_SEQ,
 			"Check sensor's frame desc fs_seq setting\n");

@@ -1194,31 +1194,44 @@ static int mtk_cam_seninf_en_async_overrun_irq(struct seninf_ctx *ctx, int async
 
 static int mtk_cam_seninf_set_async(struct seninf_ctx *ctx, int async, int split, int tm)
 {
-	void *pSeninf;
+	void *pSeninf  = ctx->reg_if_async;
+	void *pSeninf_async = ctx->reg_if_top;
 	int val = 0;
-#if  DISABLE_FOR_JAYER_EP
-	struct mtk_cam_seninf_async_split split_info = {
-		.async_idx = async,
-		.is_split = split,
-	};
-#endif
 
 	if (async >= _seninf_ops->async_num)
 		return false;
 
-	pSeninf = ctx->reg_if_async;
 	mutex_lock(&ctx->core->seninf_top_rg_mutex);
 
-
-
 	/* set if split */
-#if  DISABLE_FOR_JAYER_EP
-	val = SENINF_READ_BITS(pSeninf, SENINF_ASYTOP_SENINF_ASYNC_CFG, SENINF_ASYTOP_MIPI_SPLIT);
-	if (((val >> (async << 1)) & 0x3) != split)
-		/* modify only when the split need to update */
-		mtk_cam_seninf_rproc_ccu_ctrl_with_para(ctx->dev, &ctx->core->ccu_rproc_ctrl,
-					MSG_TO_CCU_SENINF_MIPI_SPLIT_CTRL, &split_info, __func__);
-#endif
+	switch(async) {
+	case 0:
+		SENINF_BITS(pSeninf_async, SENINF_ASYTOP_MIPI_SPLIT, SENINF_ASYTOP_MIPI_SPLIT_0, split);
+		break;
+	case 1:
+		SENINF_BITS(pSeninf_async, SENINF_ASYTOP_MIPI_SPLIT, SENINF_ASYTOP_MIPI_SPLIT_1, split);
+		break;
+	case 2:
+		SENINF_BITS(pSeninf_async, SENINF_ASYTOP_MIPI_SPLIT, SENINF_ASYTOP_MIPI_SPLIT_2, split);
+		break;
+	case 3:
+		SENINF_BITS(pSeninf_async, SENINF_ASYTOP_MIPI_SPLIT, SENINF_ASYTOP_MIPI_SPLIT_3, split);
+		break;
+	case 4:
+		SENINF_BITS(pSeninf_async, SENINF_ASYTOP_MIPI_SPLIT, SENINF_ASYTOP_MIPI_SPLIT_4, split);
+		break;
+	case 5:
+		SENINF_BITS(pSeninf_async, SENINF_ASYTOP_MIPI_SPLIT, SENINF_ASYTOP_MIPI_SPLIT_5, split);
+		break;
+	default:
+		seninf_logi(ctx, "[ERR] invalid async %d\n" ,async);
+		break;
+	}
+
+	seninf_logd(ctx, "input async:%d, ASYNC_split = 0x%x\n",
+		async,
+		SENINF_READ_REG(pSeninf, SENINF_ASYTOP_MIPI_SPLIT));
+
 
 	/* set if test model */
 	val = SENINF_READ_BITS(pSeninf, SENINF_ASYTOP_SENINF_ASYNC_CFG, SENINF_ASYTOP_TESTMDL_SEL);
@@ -7065,17 +7078,13 @@ static int mtk_cam_seninf_common_reg_setup(struct seninf_ctx *ctx)
 	return 0;
 }
 
-static int mtk_cam_seninf_device_sel_setting(struct device *dev,
-			struct mtk_cam_seninf_dev *dev_setting)
+static int mtk_cam_seninf_set_irq_grping(struct seninf_ctx *ctx)
 {
-	if (!dev_setting) {
-		dev_info(dev, "[%s] parameter dev_setting is null", __func__);
-		return -EINVAL;
-	}
+	void *pSeninf_top = ctx->reg_if_top;
 
-	// Allocate all outmux to dev0
-	dev_setting->count = 1;
-	dev_setting->val[0] = 0x7FFFFF;
+	// Allocate all outmux to irq to VM0
+
+	SENINF_BITS(pSeninf_top, SENINF_TOP_DEVICE_IRQ_SEL_0, SENINF_TOP_DEVICE_IRQ_SEL_0, 0x3ff);
 
 	return 0;
 }
@@ -7400,7 +7409,7 @@ struct mtk_cam_seninf_ops mtk_csi_phy_3_0 = {
 	._set_csi_afifo_pop = mtk_cam_seninf_set_csi_afifo_pop,
 	._get_csi_irq_status = mtk_cam_get_csi_irq_status,
 	._common_reg_setup = mtk_cam_seninf_common_reg_setup,
-	._get_device_sel_setting = mtk_cam_seninf_device_sel_setting,
+	.set_irq_grping = mtk_cam_seninf_set_irq_grping,
 	._seninf_dump_mipi_err = seninf_dump_vsync_info,
 	._show_mac_chk_status = mtk_cam_show_mac_chk_status,
 	._get_csi_HV_HB_meter = mtk_cam_csi_mac_get_hv_hb,

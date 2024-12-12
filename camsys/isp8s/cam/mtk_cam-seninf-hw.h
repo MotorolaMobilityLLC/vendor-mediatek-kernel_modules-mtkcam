@@ -240,7 +240,7 @@ struct mtk_cam_seninf_ops {
 	int (*_set_csi_afifo_pop)(struct seninf_ctx *ctx);
 	int (*_get_csi_irq_status)(struct seninf_ctx *ctx);
 	int (*_common_reg_setup)(struct seninf_ctx *ctx);
-	int (*_get_device_sel_setting)(struct device *dev, struct mtk_cam_seninf_dev *dev_setting);
+	int (*set_irq_grping)(struct seninf_ctx *ctx);
 	void (*_seninf_dump_mipi_err)(struct seninf_core *core, struct mtk_cam_seninf_vsync_info *vsync_info);
 	int (*_show_mac_chk_status)(struct seninf_ctx *ctx, int is_clear);
 	int (*_get_csi_HV_HB_meter)(struct seninf_ctx *ctx, struct mtk_cam_seninf_meter_info *info,

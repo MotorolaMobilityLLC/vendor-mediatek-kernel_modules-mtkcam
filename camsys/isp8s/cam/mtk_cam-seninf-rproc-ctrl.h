@@ -28,7 +28,6 @@ enum ccu_msg_id_seninfctrl {
 
 	/* Receive by CCU (start from 1) */
 	MSG_TO_CCU_SENINF_TSREC_IRQ_SEL_CTRL, /* 1 */
-	MSG_TO_CCU_SENINF_DEVICE_GRP_SEL_CTRL,
 	MSG_TO_CCU_SENINF_MIPI_SPLIT_CTRL,
 
 	SENINFCTRL_MSG_MAX
