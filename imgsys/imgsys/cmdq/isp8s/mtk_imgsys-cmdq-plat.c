@@ -1164,6 +1164,44 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 				event_hist[event_sft].wait.req_no,
 				event_hist[event_sft].wait.frm_no,
 				event_hist[event_sft].wait.ts);
+		} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT8_BEGIN) &&
+			(event <= IMGSYS_CMDQ_AISEG_EVENT8_END)) {
+			event_sft = event - IMGSYS_CMDQ_AISEG_EVENT8_BEGIN +
+				(IMGSYS_CMDQ_AISEG_EVENT7_END - IMGSYS_CMDQ_AISEG_EVENT7_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT6_END - IMGSYS_CMDQ_AISEG_EVENT6_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT5_END - IMGSYS_CMDQ_AISEG_EVENT5_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT4_END - IMGSYS_CMDQ_AISEG_EVENT4_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT3_END - IMGSYS_CMDQ_AISEG_EVENT3_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT2_END - IMGSYS_CMDQ_AISEG_EVENT2_BEGIN + 1) +
+				(IMGSYS_CMDQ_AISEG_EVENT1_END - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN + 1) +
+				(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+				(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+			event_diff = event_hist[event_sft].set.ts >
+						event_hist[event_sft].wait.ts ?
+						(event_hist[event_sft].set.ts -
+						event_hist[event_sft].wait.ts) :
+						(event_hist[event_sft].wait.ts -
+						event_hist[event_sft].set.ts);
+			pr_info(
+				"%s: [ERROR] SW event vsdof timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+				__func__,
+				cb_param->pkt->err_data.wfe_timeout,
+				cb_param->pkt->err_data.event, isHWhang,
+				event_hist[event_sft].st, event_diff,
+				event_hist[event_sft].set.req_fd,
+				event_hist[event_sft].set.req_no,
+				event_hist[event_sft].set.frm_no,
+				event_hist[event_sft].set.ts,
+				event_hist[event_sft].wait.req_fd,
+				event_hist[event_sft].wait.req_no,
+				event_hist[event_sft].wait.frm_no,
+				event_hist[event_sft].wait.ts);
+
 		} else if ((event >= IMGSYS_CMDQ_QOF_EVENT_BEGIN) &&
 			(event <= IMGSYS_CMDQ_QOF_EVENT_END)) {
 			dma_addr_t err_pc;
@@ -1228,7 +1266,8 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 
 		if (isGPRtimeout) {
 			if (cb_param->hw_comb &
-				(IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_WPE_TNR|IMGSYS_HW_FLAG_WPE_LITE)) {
+				(IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_WPE_TNR|IMGSYS_HW_FLAG_WPE_LITE|
+				IMGSYS_HW_FLAG_WPE_DEPTH)) {
 				idx = IMGSYS_MOD_WPE;
 				if (imgsys_dev->modules[idx].done_chk) {
 					isHwDone = imgsys_dev->modules[idx].done_chk(imgsys_dev,
@@ -1288,6 +1327,56 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 					}
 				}
 			}
+			if (isHwDone && (cb_param->hw_comb & IMGSYS_HW_FLAG_MAE)) {
+				idx = IMGSYS_MOD_MAE;
+				if (imgsys_dev->modules[idx].done_chk) {
+					isHwDone = imgsys_dev->modules[idx].done_chk(imgsys_dev,
+						cb_param->hw_comb);
+					if(!isHwDone) {
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_MAE",
+							"DISPATCH:IMGSYS_MAE poll done fail, hwcomb:0x%x",
+							cb_param->hw_comb);
+					}
+				}
+			}
+			if (isHwDone && (cb_param->hw_comb & IMGSYS_HW_FLAG_DPE)) {
+				idx = IMGSYS_MOD_DPE;
+				if (imgsys_dev->modules[idx].done_chk) {
+					isHwDone = imgsys_dev->modules[idx].done_chk(imgsys_dev,
+						cb_param->hw_comb);
+					if(!isHwDone) {
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_DPE",
+							"DISPATCH:IMGSYS_DPE poll done fail, hwcomb:0x%x",
+							cb_param->hw_comb);
+					}
+				}
+			}
+			if (isHwDone && (cb_param->hw_comb & IMGSYS_HW_FLAG_DFP)) {
+				idx = IMGSYS_MOD_DFP;
+				if (imgsys_dev->modules[idx].done_chk) {
+					isHwDone = imgsys_dev->modules[idx].done_chk(imgsys_dev,
+						cb_param->hw_comb);
+					if(!isHwDone) {
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_DFP",
+							"DISPATCH:IMGSYS_DFP poll done fail, hwcomb:0x%x",
+							cb_param->hw_comb);
+					}
+				}
+			}
+
+			if (cb_param->hw_comb & (IMGSYS_HW_FLAG_ADL_A|IMGSYS_HW_FLAG_ADL_B)) {
+				idx = IMGSYS_MOD_ADL;
+				if (imgsys_dev->modules[idx].done_chk) {
+					isHwDone = imgsys_dev->modules[idx].done_chk(imgsys_dev,
+						cb_param->hw_comb);
+					if(!isHwDone) {
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_ADL",
+						"DISPATCH:IMGSYS_ADL poll done fail, hwcomb:0x%x",
+						cb_param->hw_comb);
+					}
+				}
+			}
+
 			/* Polling timeout but all modules are done */
 			if (isHwDone) {
 				aee_kernel_exception("CRDISPATCH_KEY:IMGSYS",
@@ -1810,6 +1899,45 @@ int imgsys_cmdq_task_aee_cb_plat8s(struct cmdq_cb_data data)
 			event_hist[event_sft].wait.req_no,
 			event_hist[event_sft].wait.frm_no,
 			event_hist[event_sft].wait.ts);
+	} else if ((event >= IMGSYS_CMDQ_AISEG_EVENT8_BEGIN) &&
+		(event <= IMGSYS_CMDQ_AISEG_EVENT8_END)) {
+		event_sft = event - IMGSYS_CMDQ_AISEG_EVENT8_BEGIN +
+			(IMGSYS_CMDQ_AISEG_EVENT7_END - IMGSYS_CMDQ_AISEG_EVENT7_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT6_END - IMGSYS_CMDQ_AISEG_EVENT6_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT5_END - IMGSYS_CMDQ_AISEG_EVENT5_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT4_END - IMGSYS_CMDQ_AISEG_EVENT4_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT3_END - IMGSYS_CMDQ_AISEG_EVENT3_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT2_END - IMGSYS_CMDQ_AISEG_EVENT2_BEGIN + 1) +
+			(IMGSYS_CMDQ_AISEG_EVENT1_END - IMGSYS_CMDQ_AISEG_EVENT1_BEGIN + 1) +
+			(IMGSYS_CMDQ_VSDOF_EVENT_END - IMGSYS_CMDQ_VSDOF_EVENT_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT6_END - IMGSYS_CMDQ_SW_EVENT6_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT5_END - IMGSYS_CMDQ_SW_EVENT5_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT4_END - IMGSYS_CMDQ_SW_EVENT4_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT3_END - IMGSYS_CMDQ_SW_EVENT3_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT2_END - IMGSYS_CMDQ_SW_EVENT2_BEGIN + 1) +
+			(IMGSYS_CMDQ_SW_EVENT1_END - IMGSYS_CMDQ_SW_EVENT1_BEGIN + 1);
+		event_diff = event_hist[event_sft].set.ts >
+					event_hist[event_sft].wait.ts ?
+					(event_hist[event_sft].set.ts -
+					event_hist[event_sft].wait.ts) :
+					(event_hist[event_sft].wait.ts -
+					event_hist[event_sft].set.ts);
+		ret = CMDQ_NO_AEE;
+		pr_info(
+			"%s: [ERROR] SW event vsdof timeout! wfe(%d) event(%d) isHW(%d); event st(%d)_ts(%lld)_set(%d/%d/%d/%lld)_wait(%d/%d/%d/%lld)",
+			__func__,
+			cb_param->pkt->err_data.wfe_timeout,
+			cb_param->pkt->err_data.event, isHWhang,
+			event_hist[event_sft].st, event_diff,
+			event_hist[event_sft].set.req_fd,
+			event_hist[event_sft].set.req_no,
+			event_hist[event_sft].set.frm_no,
+			event_hist[event_sft].set.ts,
+			event_hist[event_sft].wait.req_fd,
+			event_hist[event_sft].wait.req_no,
+			event_hist[event_sft].wait.frm_no,
+			event_hist[event_sft].wait.ts);
+
 	} else if ((event >= IMGSYS_CMDQ_QOF_EVENT_BEGIN) &&
 		(event <= IMGSYS_CMDQ_QOF_EVENT_END)) {
 		ret = CMDQ_NO_AEE;
@@ -2432,6 +2560,7 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 						(unsigned long)cmd->u.dma_addr);
 
 					switch (dma_addr_msb) {
+					/* TODO */
 					case 0x3410:
 					case 0x3416:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_DIP",
@@ -2468,6 +2597,11 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 							"DISPATCH:IMGSYS_OMC_LITE map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
+					case 0x3469:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_WPE_DEPTH",
+							"DISPATCH:IMGSYS_WPE_DEPTH map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
 					case 0x3421:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_PQDIP_A",
 							"DISPATCH:IMGSYS_PQDIP_A map iova fail, addr:0x%08llx",
@@ -2481,6 +2615,27 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					case 0x3407:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_ME",
 							"DISPATCH:IMGSYS_ME map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3431:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_MAE",
+							"DISPATCH:IMGSYS_MAE map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3a77:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_DFP",
+							"DISPATCH:IMGSYS_DFP map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3a00:
+					case 0x3a7a:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_DPE",
+							"DISPATCH:IMGSYS_DPE map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3401:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_ADL",
+							"DISPATCH:IMGSYS_ADL map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
 					case 0x3408:
@@ -2668,6 +2823,7 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 			u32 gpr_idx = 0;
 
 			switch (addr_msb) {
+			/* TODO */
 			case 0x3410:
 			case 0x3415:
 			case 0x3416:
