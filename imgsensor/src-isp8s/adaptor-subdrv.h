@@ -434,6 +434,9 @@ struct subdrv_static_ctx {
 	u8 chk_s_off_sta;
 	u8 chk_s_off_end;
 
+	u16 *i3c_precfg_setting_table;
+	u32 i3c_precfg_setting_len;
+
 	u32 checksum_value;
 
 	u8 aov_sensor_support;
@@ -534,6 +537,9 @@ struct subdrv_static_ctx_ext_ops {
 struct subdrv_ctx {
 	struct i2c_client *i2c_client;
 	struct i3c_i2c_device ixc_client;
+	/* for I3C device which needs to use i2c do some extra work to switch i3c mode*/
+	struct i3c_i2c_device i2c_vir_client;
+	u16 pre_cfg_addr;
 	u8 i2c_write_id;
 	struct cache_wr_regs_u8_ixc i2cmem;
 	u16 _size_to_write;
@@ -682,6 +688,8 @@ struct subdrv_ops {
 	int (*mcss_set_mask_frame)(struct subdrv_ctx *ctx, u32 num, u32 is_critical);
 
 	int (*aov_dualsync)(struct subdrv_ctx *ctx, u32 role);
+	/*this ops is for sensor switch to i3c mode*/
+	int (*i3c_pre_config)(struct subdrv_ctx *ctx);
 };
 
 struct sensor_firmware {

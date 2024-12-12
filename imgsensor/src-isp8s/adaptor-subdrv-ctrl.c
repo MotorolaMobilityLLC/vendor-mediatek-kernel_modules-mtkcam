@@ -5208,3 +5208,33 @@ int common_init_ctx(struct subdrv_ctx *ctx, struct i2c_client *i2c_client, u8 i2
 
 	return 0;
 }
+
+int common_i3c_pre_config(struct subdrv_ctx *ctx)
+{
+	int ret = 0;
+
+	if ((ctx->ixc_client.protocol == I3C_PROTOCOL)
+		&& (ctx->i2c_vir_client.i2c_dev)) {
+		switch (ctx->s_ctx.i2c_transfer_data_type) {
+		case I2C_DT_ADDR_16_DATA_16:
+			ret = adaptor_ixc_wr_regs_u16(&ctx->i2c_vir_client, ctx->pre_cfg_addr,
+				ctx->s_ctx.i3c_precfg_setting_table,
+				ctx->s_ctx.i3c_precfg_setting_len);
+			break;
+		case I2C_DT_ADDR_16_DATA_8:
+		default:
+			ret = adaptor_ixc_wr_regs_u8(&ctx->i2c_vir_client, ctx->pre_cfg_addr,
+				ctx->s_ctx.i3c_precfg_setting_table,
+				ctx->s_ctx.i3c_precfg_setting_len);
+			break;
+		}
+		if (ret) {
+			DRV_LOGE(ctx, "fail. ret=%d\n", ret);
+			return ERROR_SENSOR_CONNECT_FAIL;
+		}
+		DRV_LOG_MUST(ctx, "success. ret=%d, setting_len: %d\n",
+				ret, ctx->s_ctx.i3c_precfg_setting_len);
+		mdelay(15);
+	}
+	return ERROR_NONE;
+} /* pre_config */

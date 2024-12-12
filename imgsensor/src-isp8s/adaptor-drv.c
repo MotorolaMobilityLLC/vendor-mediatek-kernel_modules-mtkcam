@@ -724,15 +724,11 @@ static int imgsensor_set_pad_format(struct v4l2_subdev *sd,
 static int imgsensor_set_power(struct v4l2_subdev *sd, int on)
 {
 	struct adaptor_ctx *ctx = to_ctx(sd);
-	int ret, ret1;
+	int ret;
 
 	mutex_lock(&ctx->mutex);
 	if (on) {
 		ret = adaptor_hw_power_on(ctx);
-		ret1 = adaptor_ixc_do_daa (&ctx->ixc_client);
-		if (ret1)
-			adaptor_loge(ctx, "ixc_do_daa(ret=%d), prot= %d\n",
-					ret, ctx->ixc_client.protocol);
 	} else
 		ret = adaptor_hw_power_off(ctx);
 
@@ -1412,14 +1408,14 @@ static int try_probe_subdrv_entry(struct adaptor_ctx *ctx)
 
 	ctx->subctx.i2c_client = ctx->i2c_client;
 	ctx->subctx.ixc_client = ctx->ixc_client;
+	ctx->subctx.i2c_vir_client = ctx->i2c_vir_client;
+	ctx->subctx.pre_cfg_addr = ctx->pre_cfg_addr;
 	adaptor_cam_pmic_on(ctx);
 	adaptor_hw_power_on(ctx);
 	ret = adaptor_ixc_do_daa(&ctx->ixc_client);
-	if (ret)
-		adaptor_logi(ctx, "ixc_do_daa(ret=%d), prot= %d\n",
-			ret, ctx->ixc_client.protocol);
 	subdrv_call(ctx, init_ctx, ctx->i2c_client,
 			ctx->subctx.i2c_write_id);
+	adaptor_i3c_device_prepare(&ctx->ixc_client);
 	ret = subdrv_call(ctx, get_id, &sensor_id);
 	adaptor_hw_power_off(ctx);
 	if (!ret) {
@@ -1596,6 +1592,7 @@ static int imgsensor_probe(struct i3c_i2c_device *client)
 	int i, ret;
 	unsigned int reindex;
 	unsigned int pmic_delayus;
+	unsigned int pre_cfg_addr;
 	const char *reindex_match[OF_SENSOR_NAMES_MAXCNT];
 	int reindex_match_cnt;
 	int forbid_index;
@@ -1670,6 +1667,25 @@ static int imgsensor_probe(struct i3c_i2c_device *client)
 	}	else
 		ctx->pmic_delayus = 0;
 
+	ctx->pre_cfg_addr = 0;
+	if (!of_property_read_u32(dev->of_node, "pre-cfg-addr",	&pre_cfg_addr)) {
+		ctx->pre_cfg_addr = pre_cfg_addr;
+		adaptor_logi(ctx, "get i3c pre_cfg_addr:0x%x\n", ctx->pre_cfg_addr);
+		if (ctx->pre_cfg_addr) {
+			memset(&ctx->i2c_vir_client, 0, sizeof(ctx->i2c_vir_client));
+			ctx->i2c_vir_client = mtk_i3c_i2c_new_client_device(
+				&ctx->ixc_client, ctx->pre_cfg_addr, 0);
+			if (!ctx->i2c_vir_client.i2c_dev) {
+				adaptor_loge(ctx, "ctx->i2c_vir_client is NULL.\n");
+				return -ENODEV;
+			}
+			adaptor_logi(ctx, "ctx->i2c_vir_client.i2c_dev=%p,protocol=%u.\n",
+				ctx->i2c_vir_client.i2c_dev, ctx->i2c_vir_client.protocol);
+		}
+	} else {
+		adaptor_logi(ctx, "no config pre_cfg_addr:0x%x\n", ctx->pre_cfg_addr);
+	}
+	dev_set_drvdata(dev, &ctx->sd);
 	ret = search_sensor(ctx);
 	adaptor_hw_deinit(ctx);
 	if (ret) {

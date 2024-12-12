@@ -134,6 +134,8 @@ struct adaptor_ctx {
 	struct mutex mutex;
 	struct i2c_client *i2c_client;
 	struct i3c_i2c_device ixc_client;
+	struct i3c_i2c_device i2c_vir_client;
+	u16 pre_cfg_addr;
 	struct device *dev;
 	struct v4l2_subdev sd;
 	struct media_pad pad;

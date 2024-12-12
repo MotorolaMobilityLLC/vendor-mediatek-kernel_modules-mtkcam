@@ -264,6 +264,7 @@ void common_get_prsh_length_lines_by_time(struct subdrv_ctx *ctx,
 	enum SENSOR_SCENARIO_ID_ENUM scenario_id,
 	int time_ms);
 int common_init_ctx(struct subdrv_ctx *ctx, struct i2c_client *i2c_client, u8 i2c_write_id);
+int common_i3c_pre_config(struct subdrv_ctx *ctx);
 
 extern int read_cam_cal(unsigned int sensor_id, unsigned char *buf,
 	unsigned int offset, unsigned int size);

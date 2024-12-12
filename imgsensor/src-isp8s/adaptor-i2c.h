@@ -6,6 +6,7 @@
 
 #include <linux/i2c.h>
 #include <linux/slab.h>
+
 #include "mtk-i3c-i2c-wrap.h"
 
 #define MAX_BUF_SIZE_U8 765
@@ -38,6 +39,7 @@ struct cache_wr_regs_u16_ixc {
 struct device *adaptor_ixc_get_dev (struct i3c_i2c_device *client);
 void *adaptor_ixc_get_clientdata (struct i3c_i2c_device *client);
 int adaptor_ixc_do_daa (struct i3c_i2c_device *client);
+void adaptor_i3c_device_prepare(struct i3c_i2c_device *client);
 
 int adaptor_i2c_rd_u8(struct i2c_client *i2c_client,
 		u16 addr, u16 reg, u8 *val);

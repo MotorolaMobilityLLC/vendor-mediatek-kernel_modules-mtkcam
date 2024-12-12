@@ -631,6 +631,7 @@ int do_hw_power_on(struct adaptor_ctx *ctx)
 	adaptor_logm(ctx, "-\n");
 	adaptor_log_buf_flush(ctx, __func__, &buf);
 	adaptor_log_buf_deinit(&buf);
+	adaptor_i3c_device_prepare(&ctx->ixc_client);
 
 	return 0;
 }
@@ -940,7 +941,6 @@ int adaptor_hw_init(struct adaptor_ctx *ctx)
 
 int adaptor_hw_sensor_reset(struct adaptor_ctx *ctx)
 {
-	int ret;
 	int ulposc_flag = ctx->aov_mclk_ulposc_flag;
 
 	adaptor_logi(ctx, "%d|%d|%d\n",
@@ -956,10 +956,6 @@ int adaptor_hw_sensor_reset(struct adaptor_ctx *ctx)
 		/* restore aov mclk ulposc flag */
 		ctx->aov_mclk_ulposc_flag = ulposc_flag;
 		do_hw_power_on(ctx);
-		ret = adaptor_ixc_do_daa (&ctx->ixc_client);
-		if (ret)
-			adaptor_loge(ctx, "ixc_do_daa(ret=%d), prot= %d\n",
-				ret, ctx->ixc_client.protocol);
 
 		return 0;
 	}

@@ -3,10 +3,8 @@
 
 #include <linux/i2c.h>
 #include <linux/slab.h>
-#include "mtk-i3c-i2c-wrap.h"
 
-#include "adaptor-i2c.h"
-
+#include "adaptor.h"
 
 struct device *adaptor_ixc_get_dev (struct i3c_i2c_device *client)
 {
@@ -44,6 +42,22 @@ int adaptor_ixc_do_daa (struct i3c_i2c_device *client)
 		ret = mtk_i3c_i2c_device_do_daa(client);
 
 	return ret;
+}
+
+void adaptor_i3c_device_prepare(struct i3c_i2c_device *client)
+{
+	int ret = 0;
+	struct device *dev = adaptor_ixc_get_dev(client);
+	struct adaptor_ctx *ctx = to_ctx(dev_get_drvdata(dev));
+
+	if (!ctx || ctx->ixc_client.protocol != I3C_PROTOCOL)
+		return;
+	ret = subdrv_call(ctx, i3c_pre_config);
+	adaptor_logi(ctx, "i3c_pre_config(ret=%d)\n", ret);
+	ret = adaptor_ixc_do_daa (&ctx->ixc_client);
+	if (ret)
+		adaptor_logi(ctx, "ixc_do_daa(ret=%d), prot= %d\n",
+			ret, ctx->ixc_client.protocol);
 }
 
 int adaptor_i2c_rd_u8(struct i2c_client *i2c_client,

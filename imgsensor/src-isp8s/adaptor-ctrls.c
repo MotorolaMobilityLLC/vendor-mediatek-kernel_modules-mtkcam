@@ -1064,7 +1064,6 @@ static int _aov_switch_pm_ops(struct v4l2_ctrl *ctrl)
 	struct adaptor_ctx *ctx = ctrl_to_ctx(ctrl);
 	enum mtk_cam_sensor_pm_ops pm_ops =
 		(enum mtk_cam_sensor_pm_ops)ctrl->val;
-	int ret;
 
 	switch (pm_ops) {
 	case AOV_PM_RELAX:
@@ -1097,10 +1096,6 @@ static int _aov_switch_pm_ops(struct v4l2_ctrl *ctrl)
 		break;
 	case AOV_ABNORMAL_FORCE_SENSOR_PWR_ON:
 		adaptor_hw_power_on(ctx);
-		ret = adaptor_ixc_do_daa (&ctx->ixc_client);
-		if (ret)
-			adaptor_logi(ctx, "ixc_do_daa(ret=%d), prot= %d\n",
-				ret, ctx->ixc_client.protocol);
 		adaptor_logi(ctx, "adaptor_hw_power_on(done)");
 		break;
 	default:
@@ -1849,18 +1844,12 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_MTK_SENSOR_POWER:
 		{
-		int ret;
-
 		if (!ctx)
 			return -1;
 
 		adaptor_logi(ctx, "V4L2_CID_MTK_SENSOR_POWER val = %d\n", ctrl->val);
 		if (ctrl->val){
 			adaptor_hw_power_on(ctx);
-			ret = adaptor_ixc_do_daa(&ctx->ixc_client);
-			if (ret)
-				adaptor_logi(ctx, "ixc_do_daa(ret=%d), prot= %d\n",
-				ret, ctx->ixc_client.protocol);
 		} else {
 			adaptor_hw_power_off(ctx);
 		}
