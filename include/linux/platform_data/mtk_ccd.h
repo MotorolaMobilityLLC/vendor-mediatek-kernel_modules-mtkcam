@@ -62,22 +62,6 @@ struct mtk_ccd {
 	struct mtk_ccd_memory *ccd_memory;
 };
 
-/**
- * rpmsg_ccd_ipi_send - send data from AP to ccd.
- *
- * @pdev:	CCD platform device
- * @id:		IPI ID
- * @buf:	the data buffer
- * @len:	the data buffer length
- * @wait:	1: need ack
- *
- * This function is thread-safe. When this function returns,
- * CCD has received the data and starts the processing.
- * When the processing completes, IPI handler registered
- * by ccd_ipi_register will be called in interrupt context.
- *
- * Return: Return 0 if sending data successfully, otherwise it is failed.
- **/
 int rpmsg_ccd_ipi_send(struct mtk_rpmsg_rproc_subdev *mtk_subdev,
 		       struct mtk_ccd_rpmsg_endpoint *mept,
 		       void *buf, unsigned int len, unsigned int wait);
@@ -94,6 +78,22 @@ int ccd_worker_read(struct mtk_ccd *ccd,
 void ccd_worker_write(struct mtk_ccd *ccd,
 		      struct ccd_worker_item *write_obj);
 
+/* For ccd client */
+int mtk_ccd_get_channel(struct mtk_ccd *ccd, unsigned int center_id,
+			struct mtk_ccd_client_cb *client_cb);
+int mtk_ccd_put_channel(struct mtk_ccd *ccd,
+			unsigned int center_id, unsigned int channel_id);
+
+int mtk_ccd_channel_init(struct mtk_ccd *ccd,
+			 unsigned int center_id, unsigned int channel_id);
+int mtk_ccd_channel_uninit(struct mtk_ccd *ccd,
+			   unsigned int center_id, unsigned int channel_id);
+
+int mtk_ccd_channel_send(struct mtk_ccd *ccd,
+			 unsigned int center_id, unsigned int channel_id,
+			 void *data, int len);
+
+/* ccd memory */
 void *mtk_ccd_get_buffer(struct mtk_ccd *ccd,
 			 struct mem_obj *mem_buff_data);
 int mtk_ccd_put_buffer(struct mtk_ccd *ccd,

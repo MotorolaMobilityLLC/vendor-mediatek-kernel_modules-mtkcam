@@ -30,6 +30,7 @@ struct mtk_rpmsg_device {
 	struct rpmsg_device rpdev;
 	struct mtk_rpmsg_rproc_subdev *mtk_subdev;
 	struct mtk_ccd_client_cb *channel_cb;
+	int id; /* channels index */
 };
 
 struct mtk_rpmsg_rproc_subdev {
@@ -46,11 +47,6 @@ struct mtk_rpmsg_rproc_subdev {
 	atomic_t listen_obj_rdy;
 };
 
-struct mtk_ccd_channel_info {
-	struct rpmsg_channel_info chinfo;
-	u32 id;
-};
-
 #define to_mtk_subdev(d) container_of(d, struct mtk_rpmsg_rproc_subdev, subdev)
 #define to_mtk_rpmsg_device(r) container_of(r, struct mtk_rpmsg_device, rpdev)
 
@@ -60,16 +56,8 @@ struct mtk_ccd_rpmsg_ops {
 			void *buf, unsigned int len, unsigned int wait);
 };
 
-void mtk_create_client_msgdevice(
-			     struct rproc_subdev *subdev);
-
-struct mtk_rpmsg_device *mtk_get_client_msgdevice(
-			     struct rproc_subdev *subdev,
-			     struct rpmsg_channel_info *info,
-			    rpmsg_rx_cb_t cb, void *priv);
-
-int mtk_destroy_client_msgdevice(struct rproc_subdev *subdev,
-			     struct rpmsg_channel_info *info);
+void mtk_ccd_center_create_channels(struct rproc_subdev *subdev);
+void mtk_ccd_center_destroy_channels(struct rproc_subdev *subdev);
 
 struct rproc_subdev *
 mtk_rpmsg_create_rproc_subdev(struct platform_device *pdev,
@@ -77,6 +65,6 @@ mtk_rpmsg_create_rproc_subdev(struct platform_device *pdev,
 
 void mtk_rpmsg_destroy_rproc_subdev(struct rproc_subdev *subdev);
 
-void mtk_rpmsg_destroy_rpmsgdev(struct rproc_subdev *mtk_subdev);
+
 
 #endif

@@ -27,8 +27,8 @@ int rpmsg_ccd_ipi_send(struct mtk_rpmsg_rproc_subdev *mtk_subdev,
 	if (!ccd_params)
 		return -ENOMEM;
 
-	ccd_params->worker_obj.src = mept->mchinfo.chinfo.src;
-	ccd_params->worker_obj.id = mept->mchinfo.id;
+	ccd_params->worker_obj.src = mept->ept.addr;
+	ccd_params->worker_obj.id = mept->ept.addr;
 
 	/* TODO: Allocate shared memory for additional buffer
 	 * If no buffer ready now, wait or not depending on parameter
@@ -49,8 +49,8 @@ int rpmsg_ccd_ipi_send(struct mtk_rpmsg_rproc_subdev *mtk_subdev,
 	wake_up(&mept->worker_readwq);
 
 	if (CCD_DEBUG)
-		dev_dbg(ccd->dev, "%s: ccd: %p id: %d\n",
-			__func__, ccd, mept->mchinfo.id);
+		dev_info(ccd->dev, "%s: ccd: %p id: %d\n",
+			__func__, ccd, mept->ept.addr);
 
 	return ret;
 }
@@ -188,12 +188,11 @@ int ccd_worker_read(struct mtk_ccd *ccd,
 	mept = to_mtk_rpmsg_endpoint(srcmdev->rpdev.ept);
 
 	if (CCD_DEBUG)
-		dev_dbg(ccd->dev, "mept: %p src: %d id: %d\n",
-			mept, mept->mchinfo.chinfo.src, mept->mchinfo.id);
+		dev_info(ccd->dev, "mept: %p id: %d\n", mept, mept->ept.addr);
 
 	if (atomic_read(&mept->ccd_mep_state) == CCD_MENDPOINT_DESTROY) {
 		dev_info_ratelimited(ccd->dev, "mept: %p src: %d is destroyed\n",
-			 mept, mept->mchinfo.chinfo.src);
+			 mept, mept->ept.addr);
 		kref_put(&mept->ept.refcount, __ept_release);
 		put_device(&srcmdev->rpdev.dev);
 		return -ENODATA;
@@ -210,7 +209,7 @@ int ccd_worker_read(struct mtk_ccd *ccd,
 
 	if (atomic_read(&mept->ccd_mep_state) == CCD_MENDPOINT_DESTROY) {
 		dev_info(ccd->dev, "mept: %p src: %d would destroy\n",
-			 mept, mept->mchinfo.chinfo.src);
+			 mept, mept->ept.addr);
 		kref_put(&mept->ept.refcount, __ept_release);
 		put_device(&srcmdev->rpdev.dev);
 		return -ENODATA;
@@ -270,19 +269,19 @@ void ccd_worker_write(struct mtk_ccd *ccd,
 	mept = to_mtk_rpmsg_endpoint(srcmdev->rpdev.ept);
 
 	if (CCD_DEBUG)
-		dev_dbg(ccd->dev, "mept: %p src: %d id: %d\n",
-			mept, mept->mchinfo.chinfo.src, mept->mchinfo.id);
+		dev_dbg(ccd->dev, "mept: %p src: %d\n",
+			mept, mept->ept.addr);
 
 	if (atomic_read(&mept->ccd_mep_state) == CCD_MENDPOINT_DESTROY) {
 		dev_info(ccd->dev, "mept: %p src: %d is destroyed\n",
-			 mept, mept->mchinfo.chinfo.src);
+			 mept, mept->ept.addr);
 		goto err_ret;
 	}
 
 	ept = srcmdev->rpdev.ept;
 
 	if (CCD_DEBUG)
-		dev_dbg(ccd->dev, "%s, src: %d, ept: %p\n", __func__,
+		dev_info(ccd->dev, "%s, src: %d, ept: %p\n", __func__,
 			write_obj->src, ept);
 
 	mutex_lock(&ept->cb_lock);
