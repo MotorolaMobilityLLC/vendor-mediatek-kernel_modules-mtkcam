@@ -66,6 +66,18 @@ static u32 g_cb_param_idx;
 static struct mutex g_cb_param_lock;
 #endif
 
+#ifdef IMGSYS_MAE_WRITE_BACK_SUPPORT
+static u32 is_mae_read_cmd;
+static dma_addr_t g_pkt_mae_pa;
+static u32 *g_pkt_mae_va;
+static dma_addr_t mae_pa;
+static u32 *mae_va;
+static dma_addr_t g_pkt_mae_pa_end;
+static u32 *g_pkt_mae_va_end;
+#define SRAM_SIZE (4096)
+#define REG_SIZE (4)
+#endif
+
 u32 imgsys_cmdq_is_stream_off(void)
 {
 	return is_stream_off;
@@ -230,6 +242,14 @@ void imgsys_cmdq_streamon_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 			"%s: g_cb_param sz: %d * sizeof mtk_imgsys_cb_param %lu\n",
 			__func__, IMGSYS_CMDQ_CBPARAM_NUM, sizeof(struct mtk_imgsys_cb_param));
 #endif
+
+#ifdef IMGSYS_MAE_WRITE_BACK_SUPPORT
+	g_pkt_mae_va = cmdq_mbox_buf_alloc(imgsys_clt[0], &g_pkt_mae_pa);
+	mae_va = g_pkt_mae_va;
+	mae_pa = g_pkt_mae_pa;
+	g_pkt_mae_pa_end = g_pkt_mae_pa + SRAM_SIZE;
+	g_pkt_mae_va_end = g_pkt_mae_va + SRAM_SIZE / REG_SIZE;
+#endif
 }
 
 void imgsys_cmdq_streamoff_plat8s(struct mtk_imgsys_dev *imgsys_dev)
@@ -249,6 +269,13 @@ void imgsys_cmdq_streamoff_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 				"%s: calling cmdq_mbox_stop(%d, 0x%lx)\n",
 				__func__, idx, (unsigned long)imgsys_clt[idx]);
 	}
+	#endif
+
+	#ifdef IMGSYS_MAE_WRITE_BACK_SUPPORT
+	cmdq_mbox_buf_free(imgsys_clt[0], g_pkt_mae_va, g_pkt_mae_pa);
+	mae_va = NULL;
+	mae_pa = 0;
+	is_mae_read_cmd = 0;
 	#endif
 
 	#if IMGSYS_SECURE_ENABLE
@@ -678,6 +705,11 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 	bool isQOFhang = 0;
 	bool isHwDone = 1;
 	bool isGPRtimeout = 0;
+#ifdef IMGSYS_MAE_WRITE_BACK_SUPPORT
+	u32 *mae_write_back = NULL;
+	u32 *mae_read_back = NULL;
+	struct mtk_imgsys_hw_info *mae_info = NULL;
+#endif
 
 	if (imgsys_cmdq_dbg_enable_plat8s())
 		pr_debug("%s: +\n", __func__);
@@ -696,6 +728,25 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 		pr_debug(
 			"%s: Receive cb(%p) with err(%d) for frm(%d/%d)\n",
 			__func__, cb_param, data.err, cb_param->frm_idx, cb_param->frm_num);
+
+#ifdef IMGSYS_MAE_WRITE_BACK_SUPPORT
+	if ((cb_param->hw_comb == IMGSYS_HW_FLAG_MAE) && cb_param->hw_info.write_back_vaddr
+		&& (is_mae_read_cmd == 1) && (is_stream_off == 0)) {
+		mae_info = &cb_param->hw_info;
+		mae_write_back = mae_info->write_back_vaddr;
+		mae_read_back =  mae_info->read_va;
+		if (unlikely(&mae_read_back[IMGSYS_MAE_WRITE_BACK_REG_NUM - 1] >= g_pkt_mae_va_end))
+			pr_info("%s: [WARN] MAE readback out-of-range\n", __func__);
+		else {
+			for (idx = 0; idx < IMGSYS_MAE_WRITE_BACK_REG_NUM; idx++)
+				mae_write_back[idx] = mae_read_back[idx];
+
+			pr_debug("%s: [INFO] MAE writebacks regs(0x%x/0x%x/0x%x/0x%x)\n",
+				__func__, mae_write_back[0], mae_write_back[1],
+				mae_write_back[2], mae_write_back[3]);
+		}
+	}
+#endif
 
 	if ((cb_param->err != 0) && (cb_param->err != -800)) {
 		err_ofst = cb_param->pkt->err_data.offset;
@@ -2027,7 +2078,9 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 	bool isTimeShared = 0;
 	u32 log_sz = 0;
 	u32 cb_param_cnt = 0;
-
+#ifdef IMGSYS_MAE_WRITE_BACK_SUPPORT
+	struct mtk_imgsys_hw_info mae_info = {0};
+#endif
 	dvfs_info = &imgsys_dev->dvfs_info;
 	/* PMQOS API */
 	tsDvfsQosStart = ktime_get_boottime_ns()/1000;
@@ -2228,7 +2281,7 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 			ret = imgsys_cmdq_parser_plat8s(imgsys_dev, frm_info, pkt,
 				&cmd[cmd_idx], hw_comb, frm_info->user_info[frm_idx].sw_ridx,
 				(pkt_ts_pa + 4 * pkt_ts_ofst), &pkt_ts_num, thd_idx,
-				imgsys_get_iova, is_singledev_mode);
+				imgsys_get_iova, imgsys_get_kva, is_singledev_mode, &mae_info);
 			if (ret < 0) {
 				pr_info(
 					"%s: [ERROR] parsing idx(%d) with cmd(%d) in block(%d) for frm(%d/%d) fail\n",
@@ -2336,6 +2389,9 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 						__func__, cb_param, blk_idx, frm_idx, frm_num);
 
 				task_num++;
+#ifdef IMGSYS_MAE_WRITE_BACK_SUPPORT
+				cb_param->hw_info = mae_info;
+#endif
 				cb_param->pkt = pkt;
 				cb_param->frm_info = frm_info;
 				cb_param->req_fd = frm_info->request_fd;
@@ -2494,7 +2550,11 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					u64 (*imgsys_get_iova)(struct dma_buf *dma_buf, s32 ionFd,
 						struct mtk_imgsys_dev *imgsys_dev,
 						struct mtk_imgsys_dev_buffer *dev_buf),
-					int (*is_singledev_mode)(struct mtk_imgsys_request *req))
+					u64 (*imgsys_get_kva)(struct dma_buf *dma_buf, s32 ionFd,
+						struct mtk_imgsys_dev *imgsys_dev,
+						struct mtk_imgsys_dev_buffer *dev_buf),
+					int (*is_singledev_mode)(struct mtk_imgsys_request *req),
+					struct mtk_imgsys_hw_info *hw_info)
 {
 	bool stop = 0;
 	int count = 0;
@@ -2502,6 +2562,7 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 	u32 event = 0;
 #ifdef MTK_IOVA_SINK2KERNEL
 	u64 iova_addr = 0, cur_iova_addr = 0;
+	u64 vaddr = 0;
 	struct mtk_imgsys_req_fd_info *fd_info = NULL;
 	struct dma_buf *dbuf = NULL;
 	struct mtk_imgsys_request *req = NULL;
@@ -2510,6 +2571,9 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 	u16 pre_fd = 0;
 	u64 shift_iova_addr = 0;
 	u32 iova_mask = 0;
+#endif
+#ifdef IMGSYS_MAE_WRITE_BACK_SUPPORT
+	u32 first_read = 1;
 #endif
 	req_fd = frm_info->request_fd;
 	req_no = frm_info->request_no;
@@ -2534,6 +2598,62 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					"%s: [ERROR]Not enable imgsys read cmd!!\n",
 					__func__);
 			break;
+#ifdef IMGSYS_MAE_WRITE_BACK_SUPPORT
+		case IMGSYS_CMD_READ_FD:
+			iova_dbg = (imgsys_iova_dbg_port_plat8s() == cmd->u.dma_addr);
+			if (imgsys_iova_dbg_enable_plat8s() || iova_dbg) {
+				pr_info(
+					"%s: READ_FD with req_fd/no(%d/%d) frame_no(%d) addr(0x%08lx) msb_ofst(0x%08x) fd(0x%08x) ofst(0x%08x) rshift(%d)\n",
+					__func__, req_fd, req_no, frm_no,
+				(unsigned long)cmd->u.dma_addr, cmd->u.dma_addr_msb_ofst,
+				cmd->u.fd, cmd->u.ofst, cmd->u.right_shift);
+			}
+			if (cmd->u.fd <= 0) {
+				pr_info("%s: [ERROR] READ_FD with FD(%d)! req_fd/no(%d/%d) frame_no(%d)\n",
+					__func__, cmd->u.fd, req_fd, req_no, frm_no);
+				return -1;
+			}
+
+			if (hw_comb != IMGSYS_HW_FLAG_MAE) {
+				pr_info("%s: [ERROR]Not enable imgsys(%d) read cmd!!\n", __func__, hw_comb);
+				break;
+			}
+			if (first_read) {
+				hw_info->read_va = mae_va;
+
+				#ifndef MTK_IOVA_NOTCHECK
+				dbuf = dma_buf_get(cmd->u.fd);
+				#endif
+				fd_info = &imgsys_dev->req_fd_cache.info_array[req_fd];
+				req = (struct mtk_imgsys_request *) fd_info->req_addr_va;
+				dev_b = req->buf_map[is_singledev_mode(req)];
+				vaddr = imgsys_get_kva(dbuf, cmd->u.fd, imgsys_dev, dev_b);
+				if (vaddr <= 0) {
+					aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_MAE",
+						"DISPATCH:IMGSYS_MAE map kva fail, cmd->u.dma_addrddr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+					break;
+				}
+
+				hw_info->write_back_vaddr = (u32 *)(vaddr + cmd->u.ofst);
+				first_read = 0;
+				pr_debug("%s: MAE need to write-back to 0x%p",__func__,
+									hw_info->write_back_vaddr);
+			}
+			cmdq_pkt_mem_move(pkt, NULL, (dma_addr_t)cmd->u.dma_addr,
+				mae_pa, CMDQ_THR_SPR_IDX2);
+			is_mae_read_cmd = 1;
+
+			mae_pa = mae_pa + 4;
+			mae_va = mae_va + 1;
+			if (mae_pa >= g_pkt_mae_pa_end) {
+				mae_pa = g_pkt_mae_pa;
+				mae_va = g_pkt_mae_va;
+				pr_info("%s: mae gce sram rings back\n", __func__);
+			}
+			break;
+#endif
+
 		case IMGSYS_CMD_WRITE:
 			if (imgsys_cmdq_dbg_enable_plat8s())
 				pr_debug(

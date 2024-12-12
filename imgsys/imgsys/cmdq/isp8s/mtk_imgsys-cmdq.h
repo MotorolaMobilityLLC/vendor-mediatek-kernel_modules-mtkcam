@@ -67,6 +67,11 @@ struct mtk_imgsys_cmdq_timestamp {
 	u64 tsDvfsQosEnd;
 };
 
+struct mtk_imgsys_hw_info {
+	u32 *write_back_vaddr;
+	u32 *read_va;
+};
+
 struct mtk_imgsys_cb_param {
 #if CMDQ_CB_KTHREAD
 	struct kthread_work cmdq_cb_work;
@@ -109,6 +114,7 @@ struct mtk_imgsys_cb_param {
 	u32 fail_subfidx;
 	bool isHWhang;
 	u32 hangEvent;
+	struct mtk_imgsys_hw_info hw_info;
 };
 
 enum mtk_imgsys_cmd {
