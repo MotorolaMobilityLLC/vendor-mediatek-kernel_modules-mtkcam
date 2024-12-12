@@ -464,6 +464,7 @@ struct mtk_cam_job {
 	u64 local_ack_isp_ts;
 	u64 local_trigger_cq_ts;
 	u64 local_ispdone_ts;
+	u64 longest_exp_ns;
 	bool dump_luma;
 
 	/* QOF voter engine */
@@ -724,7 +725,7 @@ static inline int mtk_cam_job_manually_apply_isp_async(struct mtk_cam_job *job)
 
 int mtk_cam_job_update_clk(struct mtk_cam_job *job);
 int mtk_cam_job_update_clk_switching(struct mtk_cam_job *job, bool begin);
-
+int mtk_cam_job_is_enque_timeout(struct mtk_cam_job *job);
 int mtk_cam_job_initialize_engines(struct mtk_cam_ctx *ctx,
 				   struct mtk_cam_job *job,
 				   const struct initialize_params *params);

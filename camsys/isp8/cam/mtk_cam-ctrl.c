@@ -2706,6 +2706,7 @@ static int mtk_cam_watchdog_monitor_job(struct mtk_cam_watchdog *wd)
 	u64 job_ts;
 	u64 ts;
 	bool completed;
+	bool job_timeout = false;
 
 	if (!ctx)
 		return -1;
@@ -2725,12 +2726,19 @@ static int mtk_cam_watchdog_monitor_job(struct mtk_cam_watchdog *wd)
 	}
 
 	ts = ktime_get_boottime_ns();
-	if (!job_ts || in_valid_hw_processing_time(ts - job_ts)) {
-		dev_info(ctx->cam->dev, "[inner check] job #%d job_ts %llu ts %llu, skip\n",
-			 req_seq, job_ts, ts);
-		return 0;
+	if (mtk_cam_job_is_enque_timeout(job) == 0) {
+		if (!job_ts || in_valid_hw_processing_time(ts - job_ts)) {
+			dev_info(ctx->cam->dev, "[inner check] job #%d job_ts %llu ts %llu, skip\n",
+				 req_seq, job_ts, ts);
+			return 0;
+		}
+	} else {
+		job_timeout = true;
+		dev_info(ctrl->ctx->cam->dev, "[%s] job #%d timeout(%llu/%llu/%llu/%llu/%llu)\n",
+			 __func__, job->frame_seq_no, job->local_enqueue_isp_ts,
+			 job->local_compose_isp_ts, job->local_ack_isp_ts,
+			 job->local_trigger_cq_ts, job->local_ispdone_ts);
 	}
-
 	completed = try_wait_for_completion(&wd->work_complete);
 	if (!completed)
 		goto SKIP_SCHEDULE_WORK;
@@ -2743,8 +2751,8 @@ static int mtk_cam_watchdog_monitor_job(struct mtk_cam_watchdog *wd)
 	/* job is not updated */
 	dev_info(ctx->cam->dev, "schedule work for job_dump: ctx-%d req %d\n",
 		 ctx->stream_id, wd->req_seq);
-	mtk_cam_watchdog_schedule_job_dump(wd,
-		is_dc ? MSG_DC_SKIP_FRAME : MSG_DEQUE_ERROR);
+	mtk_cam_watchdog_schedule_job_dump(wd, job_timeout ? MSG_JOB_TIMEOUT :
+		(is_dc ? MSG_DC_SKIP_FRAME : MSG_DEQUE_ERROR) );
 	return -1;
 
 SKIP_SCHEDULE_WORK:

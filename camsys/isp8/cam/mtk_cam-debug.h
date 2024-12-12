@@ -150,6 +150,8 @@ int mtk_cam_debug_exp_dump(struct mtk_cam_debug *dbg,
 #define MSG_DC_SKIP_FRAME	"Camsys: dc mode skip frame"
 #define MSG_JOB_COMPOSE_FAILURE	"Camsys: ipi buffer not ready"
 #define MSG_SENINF_FRAME_ERROR "Seninf: frame error"
+#define MSG_JOB_TIMEOUT "Camsys: job timeout"
+
 
 
 #endif /* __MTK_CAM_DEBUG__ */
