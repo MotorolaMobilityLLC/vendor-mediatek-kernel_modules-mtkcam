@@ -311,6 +311,11 @@ static inline bool valid_cq_execution_subsample(
 	ret = (p->info->sof_ts_ns <= p->info->sof_l_ts_ns) &&
 		((p->event_ts - p->info->sof_ts_ns) < p->cq_trigger_thres) &&
 		(s_acc->seq_no == p->info->inner_seq_no + 1);
+	if (ret == false)
+		pr_info("[mtk-cam:vld_cq_exesubsample:%d/%d] event/l_sof/cq:%llu/%llu/%llu sof:%llu(%llu)",
+			s_acc->seq_no, p->info->inner_seq_no,
+			p->event_ts, p->info->sof_l_ts_ns, p->cq_trigger_thres, p->info->sof_ts_ns,
+			ktime_get_boottime_ns());
 	spin_unlock(p->info_lock);
 
 	return ret;
