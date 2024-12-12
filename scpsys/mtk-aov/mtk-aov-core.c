@@ -9,6 +9,7 @@
 #include <linux/list.h>
 #include <linux/delay.h>
 #include <linux/jiffies.h>
+#include <linux/version.h>
 #include <uapi/linux/dma-heap.h>
 
 #include <linux/suspend.h>
@@ -1201,7 +1202,7 @@ int aov_core_init(struct mtk_aov *aov_dev)
 
 	mtk_dma_buf_set_name(core_info->dma_buf, "AOV Event");
 
-#ifdef NEW_DMA_BUF_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	ret = dma_buf_vmap_unlocked(core_info->dma_buf, &(core_info->dma_map));
 #else
 	ret = dma_buf_vmap(core_info->dma_buf, &(core_info->dma_map));
@@ -1824,7 +1825,7 @@ int aov_core_uninit(struct mtk_aov *aov_dev)
 
 	if (core_info->dma_buf) {
 		if (core_info->event_data)
-#ifdef NEW_DMA_BUF_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 			dma_buf_vunmap_unlocked(core_info->dma_buf, &(core_info->dma_map));
 #else
 			dma_buf_vunmap(core_info->dma_buf, &(core_info->dma_map));

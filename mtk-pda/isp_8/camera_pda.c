@@ -573,7 +573,7 @@ static int pda_get_dma_buffer(struct pda_mmu *mmu, int fd)
 		goto err_attach;
 
 
-#ifdef DMA_BUF_UNLOCKED_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	mmu->sgt = dma_buf_map_attachment_unlocked(mmu->attach, DMA_BIDIRECTIONAL);
 #else
 	mmu->sgt = dma_buf_map_attachment(mmu->attach, DMA_BIDIRECTIONAL);
@@ -600,7 +600,7 @@ static void pda_put_dma_buffer(struct pda_mmu *mmu)
 
 	if (mmu->dma_buf) {
 
-#ifdef DMA_BUF_UNLOCKED_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		dma_buf_unmap_attachment_unlocked(mmu->attach, mmu->sgt, DMA_BIDIRECTIONAL);
 #else
 		dma_buf_unmap_attachment(mmu->attach, mmu->sgt, DMA_BIDIRECTIONAL);

@@ -1254,7 +1254,7 @@ static void mtk_aie_hw_disconnect(struct mtk_aie_dev *fd)
 
 		//mtk_aie_mmdvfs_set(fd, 0, 0);
 		if (fd->map_count == 1) { //have qbuf + map memory
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 			dma_buf_vunmap_unlocked(fd->para_dmabuf, &fd->para_map);
 #else
 			dma_buf_vunmap(fd->para_dmabuf, &fd->para_map);
@@ -1262,7 +1262,7 @@ static void mtk_aie_hw_disconnect(struct mtk_aie_dev *fd)
 			dma_buf_end_cpu_access(fd->para_dmabuf, DMA_BIDIRECTIONAL);
 			dma_buf_put(fd->para_dmabuf);
 
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 			dma_buf_unmap_attachment_unlocked(fd->config_attach,
 				fd->config_sgt, DMA_BIDIRECTIONAL);
 			dma_buf_detach(fd->config_dmabuf, fd->config_attach);
@@ -1275,7 +1275,7 @@ static void mtk_aie_hw_disconnect(struct mtk_aie_dev *fd)
 #endif
 			dma_buf_put(fd->config_dmabuf);
 
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 			dma_buf_unmap_attachment_unlocked(fd->model_attach,
 				fd->model_sgt, DMA_BIDIRECTIONAL);
 			dma_buf_detach(fd->model_dmabuf, fd->model_attach);
@@ -1648,7 +1648,7 @@ int mtk_aie_vidioc_qbuf(struct file *file, void *priv,
 				goto ERROR_PARA_PUTBUF;
 			}
 
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 			ret = (u64)dma_buf_vmap_unlocked(fd->para_dmabuf, &fd->para_map);
 #else
 			ret = (u64)dma_buf_vmap(fd->para_dmabuf, &fd->para_map);
@@ -1698,7 +1698,7 @@ int mtk_aie_vidioc_qbuf(struct file *file, void *priv,
 				goto ERROR_PARA_UMAP;
 			}
 
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 			ret = (u64)dma_buf_vmap_unlocked(fd->config_dmabuf,
 				&fd->config_map);
 #else
@@ -1722,7 +1722,7 @@ int mtk_aie_vidioc_qbuf(struct file *file, void *priv,
 				goto ERROR_CONFIG_UMAP;
 			}
 
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 			fd->config_sgt =
 				dma_buf_map_attachment_unlocked(fd->config_attach, DMA_BIDIRECTIONAL);
 #else
@@ -1752,7 +1752,7 @@ int mtk_aie_vidioc_qbuf(struct file *file, void *priv,
 				goto ERROR_CONFIG_UMAP_ATTACHMENT;
 			}
 
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 			ret = (u64)dma_buf_vmap_unlocked(fd->model_dmabuf,
 				&fd->model_map);
 #else
@@ -1776,7 +1776,7 @@ int mtk_aie_vidioc_qbuf(struct file *file, void *priv,
 				goto ERROR_MODEL_UMAP;
 			}
 
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 			fd->model_sgt =
 				dma_buf_map_attachment_unlocked(fd->model_attach, DMA_BIDIRECTIONAL);
 #else
@@ -1808,7 +1808,7 @@ ERROR_MODEL_DETACH:
 	dma_buf_detach(fd->model_dmabuf, fd->model_attach);
 
 ERROR_MODEL_UMAP:
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	dma_buf_vunmap_unlocked(fd->model_dmabuf, &fd->model_map);
 #else
 	dma_buf_vunmap(fd->model_dmabuf, &fd->model_map);
@@ -1818,7 +1818,7 @@ ERROR_PUT_MODEL_BUFFER:
 		dma_buf_put(fd->model_dmabuf);
 
 ERROR_CONFIG_UMAP_ATTACHMENT:
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	dma_buf_unmap_attachment_unlocked(fd->config_attach,
 		fd->config_sgt, DMA_BIDIRECTIONAL);
 #else
@@ -1830,7 +1830,7 @@ ERROR_CONFIG_DETACH:
 	dma_buf_detach(fd->config_dmabuf, fd->config_attach);
 
 ERROR_CONFIG_UMAP:
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	dma_buf_vunmap_unlocked(fd->config_dmabuf, &fd->config_map);
 #else
 	dma_buf_vunmap(fd->config_dmabuf, &fd->config_map);
@@ -1840,7 +1840,7 @@ ERROR_PUT_CONFIG_BUFFER:
 	dma_buf_put(fd->config_dmabuf);
 
 ERROR_PARA_UMAP:
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	dma_buf_vunmap_unlocked(fd->para_dmabuf, &fd->para_map);
 #else
 	dma_buf_vunmap(fd->para_dmabuf, &fd->para_map);

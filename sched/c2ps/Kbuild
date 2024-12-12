@@ -14,16 +14,6 @@ subdir-ccflags-y += \
         -I$(C2PS_MONITOR_TOP)/include/ \
         -I$(C2PS_REGULATOR_TOP)/include/
 
-$(info mtk_c2ps DEVICE_MODULES_PATH=$(DEVICE_MODULES_PATH))
-NOTDIR_DEVICE_MODULES_PATH = $(notdir $(DEVICE_MODULES_PATH))
-$(info mtk_c2ps NOTDIR_DEVICE_MODULES_PATH=$(NOTDIR_DEVICE_MODULES_PATH))
-KERNEL_VERSION = $(patsubst kernel_device_modules-%,%,$(NOTDIR_DEVICE_MODULES_PATH))
-$(info mtk_c2ps KERNEL_VERSION=$(KERNEL_VERSION))
-
-ifeq (6.6,$(word 1,$(sort 6.6 $(KERNEL_VERSION))))
-ccflags-y += -DNEW_C2PS_API_K66
-endif
-
 #c2ps_main
 MTK_C2PS_MAIN = c2ps_main.o
 #common

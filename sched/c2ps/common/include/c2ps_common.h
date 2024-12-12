@@ -408,7 +408,7 @@ extern void set_grp_dvfs_ctrl(int set);
 extern bool get_ignore_idle_ctrl(void);
 extern void set_ignore_idle_ctrl(bool val);
 
-#ifdef NEW_C2PS_API_K66
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 int get_vip_task_prio_by_pid(int pid);
 void c2ps_unset_vip_task(int pid);
 extern void set_task_vvip_and_throttle(int pid, unsigned int throttle_time);

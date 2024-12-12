@@ -366,7 +366,7 @@ static int aie_vb2_vmalloc_map_dmabuf(void *mem_priv)
 	struct iosys_map map;
 	int ret;
 
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	ret = dma_buf_vmap_unlocked(buf->dbuf, &map);
 #else
 	ret = dma_buf_vmap(buf->dbuf, &map);
@@ -383,7 +383,7 @@ static void aie_vb2_vmalloc_unmap_dmabuf(void *mem_priv)
 	struct vb2_vmalloc_buf *buf = mem_priv;
 	struct iosys_map map = IOSYS_MAP_INIT_VADDR(buf->vaddr);
 
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	dma_buf_vunmap_unlocked(buf->dbuf, &map);
 #else
 	dma_buf_vunmap(buf->dbuf, &map);
@@ -397,7 +397,7 @@ static void aie_vb2_vmalloc_detach_dmabuf(void *mem_priv)
 	struct iosys_map map = IOSYS_MAP_INIT_VADDR(buf->vaddr);
 
 	if (buf->vaddr)
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		dma_buf_vunmap_unlocked(buf->dbuf, &map);
 #else
 		dma_buf_vunmap(buf->dbuf, &map);

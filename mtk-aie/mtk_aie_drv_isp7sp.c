@@ -978,7 +978,7 @@ static void aie_free_iova(struct mtk_aie_dev *fd, struct imem_buf_info *bufinfo)
 {
 	if (bufinfo->pa) {
 		/*free iova*/
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		dma_buf_unmap_attachment_unlocked(bufinfo->attach, bufinfo->sgt, DMA_BIDIRECTIONAL);
 #else
 		dma_buf_unmap_attachment(bufinfo->attach, bufinfo->sgt, DMA_BIDIRECTIONAL);
@@ -991,7 +991,7 @@ static void aie_free_iova(struct mtk_aie_dev *fd, struct imem_buf_info *bufinfo)
 static void aie_free_va(struct mtk_aie_dev *fd, struct imem_buf_info *bufinfo)
 {
 	if (bufinfo->va) {
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		dma_buf_vunmap_unlocked(bufinfo->dmabuf, &bufinfo->map);
 #else
 		dma_buf_vunmap(bufinfo->dmabuf, &bufinfo->map);
@@ -1052,7 +1052,7 @@ static unsigned long long aie_get_sec_iova(struct mtk_aie_dev *fd, struct dma_bu
 	}
 	bufinfo->attach = attach;
 
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	sgt = dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
 #else
 	sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
@@ -1075,7 +1075,7 @@ static void *aie_get_va(struct mtk_aie_dev *fd, struct dma_buf *my_dma_buf,
 	void *buf_ptr = NULL;
 	int ret = 0;
 
-#ifdef AIE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	ret = dma_buf_vmap_unlocked(my_dma_buf, &bufinfo->map);
 #else
 	ret = dma_buf_vmap(my_dma_buf, &bufinfo->map);

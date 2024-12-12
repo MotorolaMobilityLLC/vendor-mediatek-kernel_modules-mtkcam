@@ -1684,7 +1684,7 @@ void reset_eas_setting(void)
 void c2ps_set_vip_task(int pid, int vip_prior,
 					unsigned int vip_throttle_time __maybe_unused)
 {
-	#ifdef NEW_C2PS_API_K66
+	#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		switch (vip_prior) {
 		case 0:
 			set_task_basic_vip_and_throttle(pid, vip_throttle_time);
@@ -1728,7 +1728,7 @@ void c2ps_set_vip_task(int pid, int vip_prior,
 
 inline bool is_task_vip(int pid)
 {
-	#ifdef NEW_C2PS_API_K66
+	#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		struct task_struct *p;
 		int vip_prio = -1;
 		bool task_vip = false;
@@ -1749,7 +1749,7 @@ inline bool is_task_vip(int pid)
 	#endif
 }
 
-#ifdef NEW_C2PS_API_K66
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 inline void c2ps_unset_vip_task(int pid)
 {
 	int vip_prior = get_vip_task_prio_by_pid(pid);

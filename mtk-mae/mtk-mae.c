@@ -387,7 +387,7 @@ static int mtk_mae_set_dmabuf_info(struct mtk_mae_dev *mae_dev,
 	}
 
 	if (addr_type == GET_VA || addr_type == GET_BOTH) {
-#ifdef MAE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		ret = dma_buf_vmap_unlocked(info->dmabuf, &info->map);
 #else
 		ret = dma_buf_vmap(info->dmabuf, &info->map);
@@ -413,7 +413,7 @@ static int mtk_mae_set_dmabuf_info(struct mtk_mae_dev *mae_dev,
 			goto ERROR_DMA_BUF_ATTACH_FAIL;
 		}
 
-#ifdef MAE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		info->sg_table =
 			dma_buf_map_attachment_unlocked(info->attach, DMA_BIDIRECTIONAL);
 #else
@@ -915,7 +915,7 @@ static int mtk_mae_hw_connect(struct mtk_mae_dev *mae_dev)
 			goto ERROR_DMA_BUF_ATTACH_FAIL;
 		}
 
-#ifdef MAE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		buf_info->sg_table =
 			dma_buf_map_attachment_unlocked(buf_info->attach, DMA_BIDIRECTIONAL);
 #else
@@ -999,7 +999,7 @@ static void mtk_mae_umap_detach(struct mtk_mae_dev *mae_dev,
 								struct dmabuf_info *info)
 {
 	if (info->is_map) {
-#ifdef MAE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		dma_buf_vunmap_unlocked(info->dmabuf, &info->map);
 #else
 		dma_buf_vunmap(info->dmabuf, &info->map);
@@ -1008,7 +1008,7 @@ static void mtk_mae_umap_detach(struct mtk_mae_dev *mae_dev,
 	}
 
 	if (info->is_attach) {
-#ifdef MAE_DMA_BUF_UNLOCK_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		dma_buf_unmap_attachment_unlocked(info->attach,
 			info->sg_table, DMA_BIDIRECTIONAL);
 #else
