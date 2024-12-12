@@ -2410,8 +2410,16 @@ static void trigger_error_dump(struct mtk_cam_job *job,
 
 		job_dump_engines_debug_status(job);
 
-		mtk_cam_event_error(&ctx->cam_ctrl, desc);
-		WRAP_AEE_EXCEPTION(desc, warn_desc);
+		/**
+		 * NOTE: skip raise aee exception if
+		 * camsv/mraw has received error interrupt status
+		 */
+		if (!ctx->is_sv_mraw_error) {
+			mtk_cam_event_error(&ctx->cam_ctrl, desc);
+			WRAP_AEE_EXCEPTION(desc, warn_desc);
+		} else {
+			ctx->is_sv_mraw_error = false;
+		}
 	}
 }
 
@@ -6148,7 +6156,7 @@ static void job_dump_engines_debug_status(struct mtk_cam_job *job)
 	mtk_engine_dump_debug_status(cam, job->used_engine, is_srt);
 	if (ctx->seninf) {
 #ifdef NOT_FPGA_STAGE
-		mtk_cam_seninf_dump(ctx->seninf, job->frame_seq_no, false);
+		mtk_cam_seninf_dump(ctx->seninf, job->frame_seq_no, false, false);
 #endif
 		vsync_collector_dump(&ctx->cam_ctrl.vsync_col);
 	}
