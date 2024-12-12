@@ -39,14 +39,12 @@ struct clk_bulk_data imgsys_isp8_clks_mt6991[] = {
 	{
 		.id = "IMG_WPE0",
 	},
-/*
- *	{
- *		.id = "IMG_FDVT",
- *	},
- *	{
- *		.id = "IMG_LARB12",
- *	},
- */
+	{
+		.id = "IMG_FDVT",
+	},
+	{
+		.id = "IMG_LARB12",
+	},
 	{
 		.id = "IMG_IPE",
 	},

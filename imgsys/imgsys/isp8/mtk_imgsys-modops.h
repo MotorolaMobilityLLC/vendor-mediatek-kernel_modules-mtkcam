@@ -105,13 +105,13 @@ const struct module_ops imgsys_isp8_modules[] = {
 	},
 	[IMGSYS_MOD_MAE] = {
 		.module_id = IMGSYS_MOD_MAE,
-		.init = NULL,//imgsys_mae_init,
-		.set = NULL,//imgsys_mae_set,
+		.init = imgsys_mae_init,
+		.set = imgsys_mae_set,
 		.updatecq = NULL,
 		.cmdq_set = NULL,
-		.dump = NULL,//imgsys_mae_debug_dump,
-		.done_chk = NULL,//imgsys_mae_done_chk,
-		.uninit = NULL,//imgsys_mae_uninit,
+		.dump = imgsys_mae_debug_dump,
+		.done_chk = imgsys_mae_done_chk,
+		.uninit = imgsys_mae_uninit,
 	},
 	[IMGSYS_MOD_DFP] = {
 		.module_id = IMGSYS_MOD_DFP,
