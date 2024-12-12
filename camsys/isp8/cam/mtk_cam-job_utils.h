@@ -128,6 +128,7 @@ int fill_sv_img_fp(struct req_buffer_helper *helper,
 int fill_imgo_buf_as_working_buf(
 	struct req_buffer_helper *helper, struct mtk_cam_buffer *buf,
 	struct mtk_cam_video_device *node);
+int update_ts_work_buffer_to_ipi_frame(struct req_buffer_helper *helper);
 int update_work_buffer_to_ipi_frame(struct req_buffer_helper *helper);
 int update_sensor_meta_buffer_to_ipi_frame(struct mtk_cam_job *job,
 	struct mtkcam_ipi_frame_param *fp);
@@ -150,6 +151,7 @@ int get_exp_order(struct mtk_cam_scen *scen);
 bool is_vhdr(struct mtk_cam_job *job);
 bool is_dc_mode(struct mtk_cam_job *job);
 bool is_sv_pure_raw(struct mtk_cam_job *job);
+bool is_offline_timeshare(struct mtk_cam_job *job);
 bool is_rgbw(struct mtk_cam_job *job);
 bool is_extisp(struct mtk_cam_job *job);
 bool is_dcg_sensor_merge(struct mtk_cam_job *job);

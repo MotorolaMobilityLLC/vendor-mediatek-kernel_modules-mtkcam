@@ -47,10 +47,13 @@ enum mtk_cam_isp_state {
 	S_ISP_COMPOSED,
 	S_ISP_APPLYING,
 	S_ISP_OUTER,
-	S_ISP_APPLYING_PROCRAW,
-	S_ISP_OUTER_PROCRAW,
+	S_ISP_APPLYING_PROCRAW,		/* extisp used */
+	S_ISP_OUTER_PROCRAW,		/* extisp used */
 	S_ISP_PROCESSING,
-	S_ISP_PROCESSING_PROCRAW, /* extisp used */
+	S_ISP_PROCESSING_PROCRAW,	/* extisp used */
+	S_ISP_DONE_READY,			/* timeshare used */
+	S_ISP_APPLYING_RAW,			/* timeshare used */
+	S_ISP_PROCESSING_RAW,		/* timeshare used */
 	S_ISP_SENSOR_MISMATCHED,
 	S_ISP_DONE,
 	S_ISP_DONE_MISMATCHED,
@@ -131,6 +134,7 @@ enum mtk_camsys_event_type {
 	CAMSYS_EVENT_IRQ_EXTMETA_SOF, /* extisp meta's vsync */
 	CAMSYS_EVENT_IRQ_EXTMETA_CQ_DONE, /* extisp meta's cq done */
 	CAMSYS_EVENT_IRQ_EXTMETA_FRAME_DONE, /* extisp meta's frame done */
+	CAMSYS_EVENT_IRQ_TRY_TS_TRIGGER, /* extisp meta's frame done */
 
 	CAMSYS_EVENT_OFF, /* stop event for flow worker quit */
 	CAMSYS_EVENT_HW_HANG, /* hw unrecoverable error */
@@ -148,6 +152,7 @@ struct mtk_cam_ctrl_runtime_info {
 	int ack_seq_no;
 	int outer_seq_no;
 	int inner_seq_no;
+	int outer_seq_no_ts;
 	int done_seq_no;
 
 	u64 sof_ts_ns;
@@ -155,6 +160,7 @@ struct mtk_cam_ctrl_runtime_info {
 	u64 sof_l_ts_ns;
 	u64 sof_l_ts_mono_ns;
 	bool ae_wa_enable;
+	int timeshare_enable; /* timeshare used */
 	int extisp_enable; /* extisp used */
 	int extisp_tg_cnt[NR_EXTISP_DATA]; /* extisp used */
 };
@@ -524,6 +530,7 @@ enum MTK_CAMSYS_JOB_TYPE {
 	JOB_TYPE_STAGGER,
 	JOB_TYPE_HW_PREISP,
 	JOB_TYPE_HW_SUBSAMPLE,
+	JOB_TYPE_SW_TIMESHARED,
 	JOB_TYPE_ONLY_SV = 0x100,
 
 	/* TODO(AY): remove following if we don't need */
