@@ -758,31 +758,31 @@ static int imgsensor_streaming_delay(struct adaptor_ctx *ctx)
 				hw_reinit_time_ns = 1.6 * 1000000;
 				systrace_log_len += snprintf(systrace_log + systrace_log_len,
 									1024 - systrace_log_len,
-									"Latency value:%llu(ns) by-default(OV),",
+									"hw_init:%llu(ns) def(OV),",
 									hw_reinit_time_ns);
 			} else if (! (strcmp(namebuff, "im"))) {
 				hw_reinit_time_ns = 3.3 * 1000000;
 				systrace_log_len += snprintf(systrace_log + systrace_log_len,
 									1024 - systrace_log_len,
-									"Latency value:%llu(ns) by-default(Sony),",
+									"hw_init:%llu(ns) def(Sony),",
 									hw_reinit_time_ns);
 			} else if (! (strcmp(namebuff, "s5"))) {
 				hw_reinit_time_ns = 8 * 1000000;
 				systrace_log_len += snprintf(systrace_log + systrace_log_len,
 									1024 - systrace_log_len,
-									"Latency value:%llu(ns) by-default(sams),",
+									"hw_init:%llu(ns) def(sams),",
 									hw_reinit_time_ns);
 			} else {
 				hw_reinit_time_ns = 5 * 1000000;
 				systrace_log_len += snprintf(systrace_log + systrace_log_len,
 									1024 - systrace_log_len,
-									"Latency value:%llu(ns) by-default(unknown),",
+									"hw_init:%llu(ns) def(unknown),",
 									hw_reinit_time_ns);
 			}
 		} else {
 			systrace_log_len += snprintf(systrace_log + systrace_log_len,
 							1024 - systrace_log_len,
-							"Latency value:%llu(ns) from-table,",
+							"hw_init:%llu(ns) from-table,",
 							hw_reinit_time_ns);
 		}
 		if ((ctx->subctx.s_ctx.mode[ctx->cur_mode->id].hdr_mode == HDR_RAW_LBMF) &&
@@ -812,14 +812,14 @@ static int imgsensor_streaming_delay(struct adaptor_ctx *ctx)
 			streamon_delay_ns = 0;
 		systrace_log_len += snprintf(systrace_log + systrace_log_len,
 								1024 - systrace_log_len,
-								"Sensor-ID:%u(%s), Mode-number:%u, Calculated delay time:%llu(ns)",
+								"sensor:%u(%s), sid:%u, dl:%llu(ns)",
 								ctx->dts_idx,
 								ctx->subdrv->name,
 								ctx->cur_mode->id,
 								streamon_delay_ns);
 		systrace_log_len += snprintf(systrace_log + systrace_log_len,
 								1024 - systrace_log_len,
-								",from streaming sensor (%llu/%llu/%llu) sys_ts:%llu mono_ts:%llu hw_reinit:%llu ae_memento_le_ns:%llu(%u*%llu)",
+								",streamon info vsync/fl/offset(ns) (%llu/%llu/%llu) sys_ts:%llu mono_ts:%llu hw_init:%llu ae_ns:%llu(%u*%llu)",
 								streaming_sensor_vsync_ts,
 								streaming_sensor_fl_ns,
 								target_timing_ns,
@@ -830,12 +830,12 @@ static int imgsensor_streaming_delay(struct adaptor_ctx *ctx)
 								ae_ctrl_cit,
 								ctx->cur_mode->linetime_in_ns);
 
-		ADAPTOR_SYSTRACE_BEGIN("imgsensor::streamondelay::%s",systrace_log);
+		ADAPTOR_SYSTRACE_BEGIN_MUST("imgsensor::streamondelay::%s",systrace_log);
 		udelay(streamon_delay_ns/1000);
 		// while (ktime_get_boottime_ns() < (sys_ts + streamon_delay_ns)) {
 		// ;
 		// }
-		ADAPTOR_SYSTRACE_END();
+		ADAPTOR_SYSTRACE_END_MUST();
 
 		adaptor_logi(ctx,
 					"cur_mode_id:%u (%llu/%llu/%llu) sys_ts:%llu mono_ts:%llu hw_reinit:%llu ae_memento_le_ns:%llu(%u*%llu) streamon_delay_ns:%lld(%u) [SYSTRACE: %s]\n",

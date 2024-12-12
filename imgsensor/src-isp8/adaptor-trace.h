@@ -55,6 +55,12 @@ TRACE_EVENT(tracing_mark_write,
 	} \
 } while (0)
 
+#define ADAPTOR_SYSTRACE_BEGIN_MUST(fmt, args...) \
+	ADAPTOR_TRACE_FORCE_BEGIN("adaptor::", fmt, ##args)
+
+#define ADAPTOR_SYSTRACE_END_MUST() \
+	ADAPTOR_TRACE_FORCE_END()
+
 bool inline adaptor_trace_enabled(void);
 void __adaptor_systrace(const char *fmt, ...);
 
