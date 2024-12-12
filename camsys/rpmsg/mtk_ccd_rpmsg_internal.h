@@ -9,6 +9,10 @@
 #include <linux/device.h>
 #include <linux/remoteproc.h>
 #include <linux/rpmsg.h>
+#include <linux/idr.h>
+
+
+#define MTK_CCD_MSGDEV_ADDR (0x3f0)
 
 struct ccd_worker_item;
 struct mtk_ccd_channel_info;
@@ -40,6 +44,8 @@ struct mtk_ccd_rpmsg_endpoint {
 
 #define to_mtk_rpmsg_endpoint(r) \
 	container_of(r, struct mtk_ccd_rpmsg_endpoint, ept)
+
+int ccd_msgdev_init(void);
 
 void __ept_release(struct kref *kref);
 

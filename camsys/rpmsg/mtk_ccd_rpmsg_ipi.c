@@ -72,9 +72,8 @@ void ccd_master_destroy(struct mtk_ccd *ccd,
 
 	/* use the src addr to fetch the callback of the appropriate user */
 	mutex_lock(&mtk_subdev->endpoints_lock);
-	for (id = 0; id < CCD_IPI_MAX; id++) {
-		srcmdev = mtk_subdev->channels[id];
-		if (mtk_subdev->channels[id] == NULL)
+	idr_for_each_entry(&mtk_subdev->endpoints, srcmdev, id) {
+		if (id == MTK_CCD_MSGDEV_ADDR)
 			continue;
 
 		ept = srcmdev->rpdev.ept;
@@ -168,7 +167,7 @@ int ccd_worker_read(struct mtk_ccd *ccd,
 
 	/* use the src addr to fetch the callback of the appropriate user */
 	mutex_lock(&mtk_subdev->endpoints_lock);
-	srcmdev = mtk_subdev->channels[read_obj->src];
+	srcmdev = idr_find(&mtk_subdev->endpoints, read_obj->src);
 	if (!srcmdev) {
 		dev_dbg(ccd->dev, "src ept is not exist\n");
 		mutex_unlock(&mtk_subdev->endpoints_lock);
@@ -250,7 +249,12 @@ void ccd_worker_write(struct mtk_ccd *ccd,
 	struct mtk_ccd_rpmsg_endpoint *mept;
 
 	mutex_lock(&mtk_subdev->endpoints_lock);
-	srcmdev = mtk_subdev->channels[write_obj->src];
+
+	if (CCD_DEBUG)
+		dev_dbg(ccd->dev, "%s: idr_find write_obj->src: %d\n", __func__,
+			write_obj->src);
+
+	srcmdev = idr_find(&mtk_subdev->endpoints, write_obj->src);
 	if (!srcmdev) {
 		dev_info(ccd->dev, "src ept is not exist\n");
 		mutex_unlock(&mtk_subdev->endpoints_lock);
