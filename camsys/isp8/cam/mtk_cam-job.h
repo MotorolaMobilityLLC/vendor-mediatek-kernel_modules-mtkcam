@@ -132,6 +132,7 @@ enum mtk_camsys_event_type {
 	CAMSYS_EVENT_IRQ_EXTMETA_CQ_DONE, /* extisp meta's cq done */
 	CAMSYS_EVENT_IRQ_EXTMETA_FRAME_DONE, /* extisp meta's frame done */
 
+	CAMSYS_EVENT_OFF, /* stop event for flow worker quit */
 	CAMSYS_EVENT_HW_HANG, /* hw unrecoverable error */
 };
 const char *str_event(int event);

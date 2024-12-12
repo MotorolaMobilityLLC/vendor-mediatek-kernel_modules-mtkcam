@@ -459,7 +459,8 @@ static const int waitable_event =
 	BIT(CAMSYS_EVENT_IRQ_L_SOF) |
 	BIT(CAMSYS_EVENT_IRQ_FRAME_DONE) |
 	BIT(CAMSYS_EVENT_IRQ_L_CQ_DONE) |
-	BIT(CAMSYS_EVENT_ACK);
+	BIT(CAMSYS_EVENT_ACK) |
+	BIT(CAMSYS_EVENT_OFF);
 
 static void mtk_cam_ctrl_wake_up_on_event(struct mtk_cam_ctrl *ctrl, int event)
 {
@@ -493,6 +494,8 @@ static bool check_for_seamless(struct mtk_cam_ctrl *ctrl, void *arg)
 	ack_seq = ctrl->r_info.ack_seq_no;
 	spin_unlock(&ctrl->info_lock);
 
+	if (atomic_read(&ctrl->ctx->streaming) == 0)
+		return 1;
 	if (inner_seq != args->expect_inner)
 		return 0;
 
@@ -1457,7 +1460,10 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 		mtk_cam_job_uninit_engine(job, job->raw_change_uninit_engine);
 		goto SWITCH_FAILURE;
 	}
-
+	if (atomic_read(&ctx->streaming) == 0) {
+		mtk_cam_job_uninit_engine(job, job->raw_change_uninit_engine);
+		goto SWITCH_FAILURE;
+	}
 	mtk_cam_job_update_clk_switching(job, 1);
 
 	if (dynamic_raw_change_stream_on(job, engine_uninit))
@@ -1589,11 +1595,12 @@ SWITCH_FAILURE:
 	if (GET_PLAT_HW(qof_support))
 		mtk_cam_power_ctrl_ccu(cam->dev, 0);
 #endif
-	dev_info(dev, "[%s] failed: ctx-%d job %d frame_seq 0x%x\n",
-		 __func__, ctx->stream_id, job->req_seq, job->frame_seq_no);
-
+	dev_info(dev, "[%s] failed: ctx-%d job %d frame_seq 0x%x (streaming:%d)\n",
+		 __func__, ctx->stream_id, job->req_seq, job->frame_seq_no,
+		 atomic_read(&ctx->streaming));
 	vsync_collector_dump(&ctrl->vsync_col);
-	WRAP_AEE_EXCEPTION(MSG_SWITCH_FAILURE, __func__);
+	if (atomic_read(&ctx->streaming))
+		WRAP_AEE_EXCEPTION(MSG_SWITCH_FAILURE, __func__);
 	for (i = 0; i < cam->engines.num_raw_devices; i++) {
 		if (BIT(i) & raw_all) {
 			struct mtk_raw_device *raw_dev;
@@ -2113,6 +2120,7 @@ void mtk_cam_ctrl_stop(struct mtk_cam_ctrl *cam_ctrl)
 	struct mtk_cam_job *job;
 	struct list_head job_list;
 
+	mtk_cam_ctrl_wake_up_on_event(cam_ctrl, CAMSYS_EVENT_OFF);
 	// if adl flow, await all job done to avoid hw abnormal issue
 	if (mtk_cam_ctx_is_adl_flow(ctx)) {
 		mtk_cam_ctrl_wait_list_empty(cam_ctrl);
