@@ -100,6 +100,7 @@ u64 get_line_time(struct mtk_cam_job *job)
 
 	return linet;
 }
+
 u32 get_sensor_w(struct mtk_cam_job *job)
 {
 	struct mtk_cam_resource_sensor_v2 *sensor_res;
@@ -111,7 +112,6 @@ u32 get_sensor_w(struct mtk_cam_job *job)
 	return 0;
 }
 
-
 u32 get_sensor_h(struct mtk_cam_job *job)
 {
 	struct mtk_cam_resource_sensor_v2 *sensor_res;
@@ -121,6 +121,59 @@ u32 get_sensor_h(struct mtk_cam_job *job)
 		return sensor_res->height;
 
 	return 0;
+}
+
+u32 get_tuning_begin_line(struct mtk_cam_job *job)
+{
+	return get_sensor_h(job) * CAM_TUNING_BEGIN_F_RATIO / 100;
+}
+
+u32 get_tuning_end_line(struct mtk_cam_job *job)
+{
+	return min(get_tuning_begin_line(job) +
+			CAM_TUNING_DEADLINE_NS / get_line_time(job), get_sensor_h(job));
+}
+
+u32 get_binning_w(struct mtk_cam_job *job)
+{
+	struct mtk_cam_resource_v2 *res;
+
+	res = _get_job_res(job);
+	if (!res)
+		return 0;
+
+	switch (res->raw_res.bin) {
+	case MTK_CAM_CBN_4X4_ON:
+		return res->sensor_res.width >> 2;
+	case MTK_CAM_CBN_3X3_ON:
+		return res->sensor_res.width / 3;
+	case MTK_CAM_CBN_2X2_ON:
+	case MTK_CAM_BIN_ON:
+		return res->sensor_res.width >> 1;
+	default:
+		return res->sensor_res.width;
+	}
+}
+
+u32 get_binning_h(struct mtk_cam_job *job)
+{
+	struct mtk_cam_resource_v2 *res;
+
+	res = _get_job_res(job);
+	if (!res)
+		return 0;
+
+	switch (res->raw_res.bin) {
+	case MTK_CAM_CBN_4X4_ON:
+		return res->sensor_res.height >> 2;
+	case MTK_CAM_CBN_3X3_ON:
+		return res->sensor_res.height / 3;
+	case MTK_CAM_CBN_2X2_ON:
+	case MTK_CAM_BIN_ON:
+		return res->sensor_res.height >> 1;
+	default:
+		return res->sensor_res.height;
+	}
 }
 
 u32 get_sensor_vb(struct mtk_cam_job *job)
@@ -172,6 +225,17 @@ u8 get_sensor_data_pattern(struct mtk_cam_job *job)
 		return sensor_res->pattern;
 
 	return MTK_CAM_PATTERN_BAYER;
+}
+
+u32 get_sensor_mode(struct mtk_cam_job *job)
+{
+	struct mtk_cam_resource_sensor_v2 *sensor_res;
+
+	sensor_res = _get_job_sensor_res(job);
+	if (sensor_res)
+		return (sensor_res->code >> 16) & 0xFF;
+
+	return 0;
 }
 
 void _set_timestamp(struct mtk_cam_job *job,
@@ -1922,6 +1986,17 @@ bool is_dc_mode(struct mtk_cam_job *job)
 		return false;
 
 	return res_raw_is_dc_mode(&res->raw_res);
+}
+
+bool is_ois_compensation(struct mtk_cam_job *job)
+{
+	struct mtk_cam_resource_v2 *res;
+
+	res = _get_job_res(job);
+	if (!res)
+		return false;
+
+	return res_raw_ois_compensation(&res->raw_res);
 }
 
 bool is_rgbw(struct mtk_cam_job *job)

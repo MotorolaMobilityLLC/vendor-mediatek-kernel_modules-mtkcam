@@ -1859,8 +1859,18 @@ static int mtk_cam_ctx_alloc_workers(struct mtk_cam_ctx *ctx)
 	if (!ctx->done_task)
 		goto fail_uninit_flow_worker_task;
 
+	kthread_init_worker(&ctx->tuning_worker);
+	ctx->tuning_task =
+		mtk_cam_ctx_create_task(ctx, "camsys_tuning",
+					     &ctx->tuning_worker, true);
+	if (!ctx->tuning_task)
+		goto fail_uninit_done_worker_task;
+
 	return 0;
 
+fail_uninit_done_worker_task:
+	kthread_stop(ctx->done_task);
+	ctx->done_task = NULL;
 fail_uninit_flow_worker_task:
 	kthread_stop(ctx->flow_task);
 	ctx->flow_task = NULL;
@@ -1879,6 +1889,8 @@ static void mtk_cam_ctx_destroy_workers(struct mtk_cam_ctx *ctx)
 	ctx->flow_task = NULL;
 	kthread_stop(ctx->done_task);
 	ctx->done_task = NULL;
+	kthread_stop(ctx->tuning_task);
+	ctx->tuning_task = NULL;
 }
 
 static struct dma_buf *_alloc_dma_buf(const char *name,
@@ -3626,6 +3638,12 @@ int mtk_cam_ctx_queue_flow_worker(struct mtk_cam_ctx *ctx,
 	return ctx_kthread_queue_work(ctx, &ctx->flow_worker, work, __func__);
 }
 
+int mtk_cam_ctx_queue_tuning_worker(struct mtk_cam_ctx *ctx,
+				  struct kthread_work *work)
+{
+	return ctx_kthread_queue_work(ctx, &ctx->tuning_worker, work, __func__);
+}
+
 /* fetch devs & reset unused elements */
 static int fill_devs(struct device **arr_dev, int arr_dev_size,
 		     struct device **arr_eng, int arr_eng_size,
@@ -5157,6 +5175,7 @@ SKIP_ADLRD_IRQ:
 	init_waitqueue_head(&cam_dev->shutdown_wq);
 
 	mtk_cam_get_chipid(cam_dev);
+	mtk_cam_tuning_probe();
 
 	return 0;
 
