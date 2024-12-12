@@ -113,6 +113,8 @@ ifeq ($(CAMSYS_HSF_ENABLE), y)
     ccflags-y += -DMTK_CAM_HSF_SUPPORT
 endif
 
+ccflags-y += -DMTK_CAM_KTHREAD_PRE_ALLOC
+
 #$(CAM_MODULE)-objs += mtk_cam-procdbg.o
 
 $(CAM_MODULE)-objs += \

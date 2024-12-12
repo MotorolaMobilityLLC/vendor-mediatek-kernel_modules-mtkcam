@@ -564,6 +564,9 @@ void mtk_cam_device_refcnt_buf_destroy(struct kref *ref);
 void mtk_cam_device_refcnt_buf_get(struct mtk_cam_device_refcnt_buf *buf);
 void mtk_cam_device_refcnt_buf_put(struct mtk_cam_device_refcnt_buf *buf);
 
+int mtk_cam_ctx_alloc_workers(struct mtk_cam_ctx *ctx);
+void mtk_cam_ctx_destroy_workers(struct mtk_cam_ctx *ctx);
+
 int mtk_cam_assign_ltms_buffer(struct mtk_cam_ctx *ctx,
 			 struct mtk_cam_pool_buffer *in,
 			 struct mtk_cam_pool_buffer *out);
