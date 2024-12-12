@@ -6283,6 +6283,11 @@ int mtk_cam_job_fill_dump_param(struct mtk_cam_job *job,
 		p->meta_in_cpu_addr = vaddr;
 		p->meta_in_dump_buf_size = buf->meta_info.buffersize;
 		p->meta_in_iova = buf->daddr;
+		if (vb2_plane_size(&buf->vbb.vb2_buf, 0) < buf->meta_info.buffersize) {
+			pr_info("%s: warn: meta_in is too small %lu/%u\n", __func__,
+			vb2_plane_size(&buf->vbb.vb2_buf, 0), buf->meta_info.buffersize);
+			p->meta_in_dump_buf_size = vb2_plane_size(&buf->vbb.vb2_buf, 0);
+		}
 	} else
 		pr_info("%s: meta_in not found\n", __func__);
 
