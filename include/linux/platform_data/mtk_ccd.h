@@ -8,7 +8,6 @@
 
 #include <linux/platform_device.h>
 #include <linux/cdev.h>
-#include <linux/rpmsg.h>
 
 struct dma_buf;
 struct mtk_ccd_memory;
@@ -18,18 +17,6 @@ struct ccd_master_status_item;
 struct ccd_master_listen_item;
 struct ccd_worker_item;
 struct mtk_ccd_memory;
-
-struct mtk_ccd_client_cb {
-	/**
-	 * FIXME: phase out id for channel optimization
-	 * name id = ipi_id - CCD_IPI_ISP_MAIN;
-	 */
-	int ipi_id;
-	rpmsg_rx_cb_t send_msg_ack;
-	void *priv; /* point the client top struct.*/
-	// int (*master_destroy)();
-	// int (*worker_destroy)();
-};
 
 /**
  * struct mem_obj - memory buffer allocated in kernel

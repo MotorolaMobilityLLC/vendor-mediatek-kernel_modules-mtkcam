@@ -26,7 +26,6 @@
 #include "mtk_cam-trace.h"
 #include "mtk_cam-raw_ctrl.h"
 #include "mtk_cam_vb2-dma-contig.h"
-#include "mtk_ccd_client.h"
 
 #define SCQ_DEADLINE_US(fi)		((fi) * 9 / 10) // 0.9 frame interval
 
@@ -1748,17 +1747,12 @@ static int ipi_config(struct mtk_cam_job *job)
 	struct mtkcam_ipi_session_cookie *session = &event.cookie;
 	struct mtkcam_ipi_config_param *config = &event.config_data;
 	struct mtkcam_ipi_config_param *src_config = &job->ipi_config;
-	struct mtk_ccd *ccd = (struct mtk_ccd *)ctx->cam->rproc_handle->priv;
 
 	event.cmd_id = CAM_CMD_CONFIG;
 	session->session_id = ctx->stream_id;
 	memcpy(config, src_config, sizeof(*src_config));
 
-	if (mtk_ccd_client_msg_send(ccd, ctx->ccd_channel_id, &event, sizeof(event))) {
-		dev_info(ctx->cam->dev, "%s send ipi msg failed", __func__);
-		return -1;
-	}
-
+	rpmsg_send(ctx->rpmsg_dev->rpdev.ept, &event, sizeof(event));
 	if (CAM_DEBUG_ENABLED(JOB))
 		dev_info(job->src_ctx->cam->dev, "%s: rpmsg_send id: %d\n",
 		 __func__, event.cmd_id);
@@ -1773,7 +1767,6 @@ static int send_ipi_frame(struct mtk_cam_job *job,
 	struct mtkcam_ipi_event event;
 	struct mtkcam_ipi_session_cookie *session = &event.cookie;
 	struct mtkcam_ipi_frame_info *frame_info = &event.frame_data;
-	struct mtk_ccd *ccd = (struct mtk_ccd *)ctx->cam->rproc_handle->priv;
 
 	event.cmd_id = CAM_CMD_FRAME;
 	session->session_id = ctx->stream_id;
@@ -1782,11 +1775,10 @@ static int send_ipi_frame(struct mtk_cam_job *job,
 	frame_info->cur_msgbuf_offset = ipi->size * ipi->priv.index;
 	frame_info->cur_msgbuf_size = ipi->size;
 
-	job->local_compose_isp_ts = local_clock();
-	if (mtk_ccd_client_msg_send(ccd, ctx->ccd_channel_id, &event, sizeof(event))) {
-		dev_info(ctx->cam->dev, "%s send ipi msg failed", __func__);
+	if (WARN_ON(!job->src_ctx->rpmsg_dev))
 		return -1;
-	}
+	job->local_compose_isp_ts = local_clock();
+	rpmsg_send(ctx->rpmsg_dev->rpdev.ept, &event, sizeof(event));
 
 	if (CAM_DEBUG_ENABLED(JOB))
 		dev_info(ctx->cam->dev,

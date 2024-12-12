@@ -10,8 +10,10 @@
 #include <linux/platform_device.h>
 #include <linux/vmalloc.h>
 
+#include <linux/platform_data/mtk_ccd.h>
 #include <linux/pm_runtime.h>
 #include <linux/remoteproc.h>
+#include <linux/rpmsg/mtk_ccd_rpmsg.h>
 #include <uapi/linux/mtk_ccd_controls.h>
 #include <linux/regulator/consumer.h>
 
@@ -50,7 +52,6 @@
 #include "mtk_cam-qof_regs.h"
 #include "mtk_cam-reg_utils.h"
 #include "iommu_debug.h"
-#include "mtk_ccd_client.h"
 
 static unsigned int debug_sensor_meta_dump = 0;
 module_param(debug_sensor_meta_dump, uint, 0644);
@@ -1164,8 +1165,7 @@ int isp_composer_create_session(struct mtk_cam_ctx *ctx)
 	struct mtkcam_ipi_event event;
 	struct mtkcam_ipi_session_cookie *session = &event.cookie;
 	struct mtkcam_ipi_session_param	*session_data = &event.session_data;
-	struct mtk_ccd *ccd = (struct mtk_ccd *)cam->rproc_handle->priv;
-	int ret = 0;
+	int ret;
 
 	memset(&event, 0, sizeof(event));
 	event.cmd_id = CAM_CMD_CREATE_SESSION;
@@ -1179,11 +1179,7 @@ int isp_composer_create_session(struct mtk_cam_ctx *ctx)
 	session_data->msg_buf.ccd_fd = mtk_cam_device_buf_fd(&ctx->ipi_buffer);
 	session_data->msg_buf.size = ctx->ipi_buffer.size;
 
-	if (mtk_ccd_client_msg_send(ccd, ctx->ccd_channel_id, &event, sizeof(event))) {
-		dev_info(cam->dev, "%s send ipi msg failed", __func__);
-		ret = -1;
-	}
-
+	ret = rpmsg_send(ctx->rpmsg_dev->rpdev.ept, &event, sizeof(event));
 	dev_info(cam->dev,
 		"%s: rpmsg_send id: %d cq_buf(fd:%d,sz:%d) msg_buf(fd:%d,sz%d) ret(%d)\n",
 		__func__, event.cmd_id, session_data->workbuf.ccd_fd,
@@ -1199,14 +1195,11 @@ void isp_composer_destroy_session(struct mtk_cam_ctx *ctx)
 	struct mtk_cam_device *cam = ctx->cam;
 	struct mtkcam_ipi_event event;
 	struct mtkcam_ipi_session_cookie *session = &event.cookie;
-	struct mtk_ccd *ccd = (struct mtk_ccd *)cam->rproc_handle->priv;
 
 	memset(&event, 0, sizeof(event));
 	event.cmd_id = CAM_CMD_DESTROY_SESSION;
 	session->session_id = ctx->stream_id;
-
-	if (mtk_ccd_client_msg_send(ccd, ctx->ccd_channel_id, &event, sizeof(event)))
-		dev_info(cam->dev, "%s send ipi msg failed", __func__);
+	rpmsg_send(ctx->rpmsg_dev->rpdev.ept, &event, sizeof(event));
 
 	dev_info(cam->dev, "rpmsg_send: ctx-%d DESTROY_SESSION\n",
 		 ctx->stream_id);
@@ -1217,15 +1210,11 @@ void isp_composer_flush_session(struct mtk_cam_ctx *ctx)
 	struct mtk_cam_device *cam = ctx->cam;
 	struct mtkcam_ipi_event event;
 	struct mtkcam_ipi_session_cookie *session = &event.cookie;
-	struct mtk_ccd *ccd = (struct mtk_ccd *)cam->rproc_handle->priv;
 
 	memset(&event, 0, sizeof(event));
 	event.cmd_id = CAM_CMD_FLUSH;
 	session->session_id = ctx->stream_id;
-
-	if (mtk_ccd_client_msg_send(ccd, ctx->ccd_channel_id, &event, sizeof(event)))
-		dev_info(cam->dev, "%s send ipi msg failed", __func__);
-
+	rpmsg_send(ctx->rpmsg_dev->rpdev.ept, &event, sizeof(event));
 	if (CAM_DEBUG_ENABLED(JOB))
 		dev_info(cam->dev, "rpmsg_send: ctx-%d FLUSH\n", ctx->stream_id);
 }
@@ -1238,32 +1227,34 @@ static int isp_composer_init(struct mtk_cam_ctx *ctx)
 	struct mtk_cam_device *cam = ctx->cam;
 	struct device *dev = cam->dev;
 	struct mtk_ccd *ccd;
+	struct rproc_subdev *rpmsg_subdev;
+	struct rpmsg_channel_info *msg = &ctx->rpmsg_channel;
 	int ipi_id;
 
 	/* Create message client */
 	ccd = (struct mtk_ccd *)cam->rproc_handle->priv;
+	rpmsg_subdev = ccd->rpmsg_subdev;
 
 	ipi_id = get_ipi_id(ctx->stream_id);
 	if (ipi_id < 0)
 		return -EINVAL;
 
-	ctx->ccd_cb = kmalloc(sizeof(*ctx->ccd_cb), GFP_KERNEL);
-	if (!ctx->ccd_cb)
-		return -EINVAL;
+	ctx->ipi_id = ipi_id;
 
-	ctx->ccd_cb->ipi_id = ipi_id;
-	ctx->ccd_cb->send_msg_ack = isp_composer_handler;
-	ctx->ccd_cb->priv = cam;
+	(void)snprintf(msg->name, RPMSG_NAME_SIZE, "mtk-camsys\%d", ctx->stream_id);
+	msg->src = ctx->ipi_id;
 
-	ctx->ccd_channel_id = mtk_ccd_client_get_channel(ccd, ctx->ccd_cb);
-	if (ctx->ccd_channel_id < 0) {
-		kfree(ctx->ccd_cb);
-		dev_info(dev, "%s failed mtk_ccd_client_get_channel, ctx:%d\n",
+	ctx->rpmsg_dev = mtk_get_client_msgdevice(rpmsg_subdev, msg,
+						  isp_composer_handler, cam);
+
+	if (!ctx->rpmsg_dev) {
+		dev_info(dev, "%s failed get_client_msgdevice, ctx:%d\n",
 			 __func__, ctx->stream_id);
 		return -EINVAL;
 	}
 
-	dev_info(dev, "%s initialized composer of ctx:%d\n",
+	if (CAM_DEBUG_ENABLED(V4L2_TRY))
+		dev_info(dev, "%s initialized composer of ctx:%d\n",
 		 __func__, ctx->stream_id);
 
 	return 0;
@@ -1278,11 +1269,8 @@ static void isp_composer_uninit(struct mtk_cam_ctx *ctx)
 
 	struct mtk_ccd *ccd = cam->rproc_handle->priv;
 
-	mtk_ccd_client_put_channel(ccd, ctx->ccd_channel_id);
-	kfree(ctx->ccd_cb);
-
-	ctx->ccd_channel_id = -1;
-	ctx->ccd_cb = NULL;
+	mtk_destroy_client_msgdevice(ccd->rpmsg_subdev, &ctx->rpmsg_channel);
+	ctx->rpmsg_dev = NULL;
 }
 #endif
 
@@ -1295,7 +1283,6 @@ __maybe_unused static int isp_composer_handle_ack(struct mtk_cam_device *cam,
 
 int mtk_cam_power_rproc(struct mtk_cam_device *cam, int on)
 {
-	struct mtk_ccd *ccd;
 	int ret = 0;
 
 	MTK_CAM_TRACE_BEGIN(BASIC, "%s(%d)", __func__, on);
@@ -1314,14 +1301,7 @@ int mtk_cam_power_rproc(struct mtk_cam_device *cam, int on)
 		ret = rproc_boot(cam->rproc_handle);
 		if (ret)
 			dev_info(cam->dev, "failed to rproc_boot:%d\n", ret);
-
-		ccd = (struct mtk_ccd *)cam->rproc_handle->priv;
-		ret = mtk_ccd_client_start(ccd);
-		if (ret)
-			dev_info(cam->dev, "failed to start ccd client:%d\n", ret);
 	} else {
-		ccd = (struct mtk_ccd *)cam->rproc_handle->priv;
-		mtk_ccd_client_stop(ccd);
 		rproc_shutdown(cam->rproc_handle);
 		rproc_put(cam->rproc_handle);
 		cam->rproc_handle = NULL;

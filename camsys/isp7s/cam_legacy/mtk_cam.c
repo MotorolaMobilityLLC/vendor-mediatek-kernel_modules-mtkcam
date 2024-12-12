@@ -10,8 +10,10 @@
 #include <linux/platform_device.h>
 #include <linux/vmalloc.h>
 
+#include <linux/platform_data/mtk_ccd.h>
 #include <linux/pm_runtime.h>
 #include <linux/remoteproc.h>
+#include <linux/rpmsg/mtk_ccd_rpmsg.h>
 #include <uapi/linux/mtk_ccd_controls.h>
 #include <linux/regulator/consumer.h>
 
@@ -47,7 +49,6 @@
 #include "mtk_cam-ufbc-def.h"
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
 #include <slbc/slbc_ops.h>
-#include "mtk_ccd_client.h"
 
 
 #ifdef CAMSYS_TF_DUMP_7S
@@ -6050,11 +6051,8 @@ static void isp_composer_uninit(struct mtk_cam_ctx *ctx)
 	struct mtk_cam_device *cam = ctx->cam;
 	struct mtk_ccd *ccd = cam->rproc_handle->priv;
 
-	mtk_ccd_client_put_channel(ccd, ctx->ccd_channel_id);
-	kfree(ctx->ccd_cb);
-
-	ctx->ccd_channel_id = -1;
-	ctx->ccd_cb = NULL;
+	mtk_destroy_client_msgdevice(ccd->rpmsg_subdev, &ctx->rpmsg_channel);
+	ctx->rpmsg_dev = NULL;
 }
 
 static int isp_composer_handle_ack(struct mtk_cam_device *cam,
@@ -6620,7 +6618,6 @@ static void isp_tx_frame_worker(struct work_struct *work)
 	struct mtk_cam_resource_v2 *res_user;
 	struct mtk_cam_resource_config *res_cfg;
 	struct mtkcam_ipi_config_param *config_param;
-	struct mtk_ccd *ccd;
 	int i;
 	struct mtk_cam_scen *scen;
 	int bin_flag;
@@ -6850,13 +6847,11 @@ static void isp_tx_frame_worker(struct work_struct *work)
 		mutex_unlock(&cam->dvfs_op_lock);
 	}
 
-	if (ctx->ccd_channel_id != -1) {
+	if (ctx->rpmsg_dev) {
 		MTK_CAM_TRACE_BEGIN(BASIC, "ipi_cmd_frame:%d",
 				    req_stream_data->frame_seq_no);
 
-		ccd = (struct mtk_ccd *)cam->rproc_handle->priv;
-		if (mtk_ccd_client_msg_send(ccd, ctx->ccd_channel_id, &event, sizeof(event)))
-			dev_info(cam->dev, "%s send ipi msg failed", __func__);
+		rpmsg_send(ctx->rpmsg_dev->rpdev.ept, &event, sizeof(event));
 
 		MTK_CAM_TRACE_END(BASIC);
 
@@ -6866,7 +6861,7 @@ static void isp_tx_frame_worker(struct work_struct *work)
 			 req_stream_data->frame_seq_no,
 			 frame_data->raw_param.bin_flag);
 	} else {
-		dev_dbg(cam->dev, "%s: ccd_channel_id not exist: %d, ctx:%d, req:%d\n",
+		dev_dbg(cam->dev, "%s: rpmsg_dev not exist: %d, ctx:%d, req:%d\n",
 			__func__, event.cmd_id, session->session_id,
 			req_stream_data->frame_seq_no);
 	}
@@ -6884,7 +6879,6 @@ static void isp_tx_sv_frame_worker(struct work_struct *work)
 	struct mtk_camsv_working_buf_entry *buf_entry;
 	struct mtk_cam_ctx *ctx;
 	struct mtk_cam_device *cam;
-	struct mtk_ccd *ccd;
 
 	req_stream_data = mtk_cam_req_work_get_s_data(req_work);
 	if (!req_stream_data) {
@@ -6959,17 +6953,15 @@ static void isp_tx_sv_frame_worker(struct work_struct *work)
 		cam->ctxs[session->session_id].buf_pool.working_buf_iova;
 	frame_data->cur_workbuf_size = buf_entry->buffer.size;
 
-	if (ctx->ccd_channel_id != -1) {
-		ccd = (struct mtk_ccd *)cam->rproc_handle->priv;
-		if (mtk_ccd_client_msg_send(ccd, ctx->ccd_channel_id, &event, sizeof(event)))
-			dev_info(cam->dev, "%s send ipi msg failed", __func__);
+	if (ctx->rpmsg_dev) {
+		rpmsg_send(ctx->rpmsg_dev->rpdev.ept, &event, sizeof(event));
 
 		dev_dbg(cam->dev,
 			 "%s: rpmsg_send id: %d, ctx:%d, seq:%d\n",
 			 req->req.debug_str, event.cmd_id, session->session_id,
 			 req_stream_data->frame_seq_no);
 	} else {
-		dev_dbg(cam->dev, "%s: ccd_channel_id not exist: %d, ctx:%d, req:%d\n",
+		dev_dbg(cam->dev, "%s: rpmsg_dev not exist: %d, ctx:%d, req:%d\n",
 			__func__, event.cmd_id, session->session_id,
 			req_stream_data->frame_seq_no);
 	}
@@ -7388,8 +7380,7 @@ int isp_composer_create_session(struct mtk_cam_ctx *ctx)
 	struct mtkcam_ipi_event event;
 	struct mtkcam_ipi_session_cookie *session = &event.cookie;
 	struct mtkcam_ipi_session_param	*session_data = &event.session_data;
-	struct mtk_ccd *ccd = (struct mtk_ccd *)cam->rproc_handle->priv;
-	int ret = 0;
+	int ret;
 
 	memset(&event, 0, sizeof(event));
 	event.cmd_id = CAM_CMD_CREATE_SESSION;
@@ -7401,11 +7392,7 @@ int isp_composer_create_session(struct mtk_cam_ctx *ctx)
 	session_data->msg_buf.ccd_fd = ctx->buf_pool.msg_buf_fd;
 	session_data->msg_buf.size = ctx->buf_pool.msg_buf_size;
 
-	if (mtk_ccd_client_msg_send(ccd, ctx->ccd_channel_id, &event, sizeof(event))) {
-		dev_info(cam->dev, "%s send ipi msg failed", __func__);
-		return -1;
-	}
-
+	ret = rpmsg_send(ctx->rpmsg_dev->rpdev.ept, &event, sizeof(event));
 	dev_dbg(cam->dev,
 		"%s: rpmsg_send id: %d, cq_buf(fd:%d,sz:%d, msg_buf(fd:%d,sz%d) ret(%d)\n",
 		__func__, event.cmd_id, session_data->workbuf.ccd_fd,
@@ -7421,13 +7408,11 @@ void isp_composer_destroy_session(struct mtk_cam_ctx *ctx)
 	struct mtk_cam_device *cam = ctx->cam;
 	struct mtkcam_ipi_event event;
 	struct mtkcam_ipi_session_cookie *session = &event.cookie;
-	struct mtk_ccd *ccd = (struct mtk_ccd *)cam->rproc_handle->priv;
 
 	memset(&event, 0, sizeof(event));
 	event.cmd_id = CAM_CMD_DESTROY_SESSION;
 	session->session_id = ctx->stream_id;
-	if (mtk_ccd_client_msg_send(ccd, ctx->ccd_channel_id, &event, sizeof(event)))
-		dev_info(cam->dev, "%s send ipi msg failed", __func__);
+	rpmsg_send(ctx->rpmsg_dev->rpdev.ept, &event, sizeof(event));
 
 	dev_info(cam->dev, "rpmsg_send: DESTROY_SESSION\n");
 }
@@ -7458,15 +7443,13 @@ isp_composer_hw_config(struct mtk_cam_device *cam,
 	struct mtkcam_ipi_event event;
 	struct mtkcam_ipi_session_cookie *session = &event.cookie;
 	struct mtkcam_ipi_config_param *config = &event.config_data;
-	struct mtk_ccd *ccd = (struct mtk_ccd *)cam->rproc_handle->priv;
 
 	memset(&event, 0, sizeof(event));
 	event.cmd_id = CAM_CMD_CONFIG;
 	session->session_id = ctx->stream_id;
 	memcpy(config, config_param, sizeof(*config_param));
 	dev_dbg(cam->dev, "%s sw_feature:%d\n", __func__, config->sw_feature);
-	if (mtk_ccd_client_msg_send(ccd, ctx->ccd_channel_id, &event, sizeof(event)))
-		dev_info(cam->dev, "%s send ipi msg failed", __func__);
+	rpmsg_send(ctx->rpmsg_dev->rpdev.ept, &event, sizeof(event));
 	dev_dbg(cam->dev, "rpmsg_send id: %d\n", event.cmd_id);
 
 	/* For debug dump file */
@@ -8640,27 +8623,24 @@ static int isp_composer_init(struct mtk_cam_ctx *ctx, unsigned int pipe_id)
 	struct mtk_cam_device *cam = ctx->cam;
 	struct device *dev = cam->dev;
 	struct mtk_ccd *ccd;
+	struct rproc_subdev *rpmsg_subdev;
+	struct rpmsg_channel_info *msg = &ctx->rpmsg_channel;
 	int ipi_id;
 
 	/* Create message client */
 	ccd = (struct mtk_ccd *)cam->rproc_handle->priv;
+	rpmsg_subdev = ccd->rpmsg_subdev;
 
 	ipi_id = mtk_cam_ctx_get_ipi_id(ctx, pipe_id);
 	if (ipi_id < 0)
 		return -EINVAL;
 
-	ctx->ccd_cb = kmalloc(sizeof(*ctx->ccd_cb), GFP_KERNEL);
-	if (!ctx->ccd_cb)
-		return -EINVAL;
-
-	ctx->ccd_cb->ipi_id = ipi_id;
-	ctx->ccd_cb->send_msg_ack = isp_composer_handler;
-	ctx->ccd_cb->priv = cam;
-
-	ctx->ccd_channel_id = mtk_ccd_client_get_channel(ccd, ctx->ccd_cb);
-	if (ctx->ccd_channel_id < 0) {
-		kfree(ctx->ccd_cb);
-		dev_info(dev, "%s failed mtk_ccd_client_get_channel, ctx:%d\n",
+	snprintf_safe(msg->name, RPMSG_NAME_SIZE, "mtk-camsys\%d", ipi_id - 1);
+	msg->src = ipi_id;
+	ctx->rpmsg_dev = mtk_get_client_msgdevice(rpmsg_subdev, msg,
+						 isp_composer_handler, cam);
+	if (!ctx->rpmsg_dev) {
+		dev_info(dev, "%s failed get_client_msgdevice, ctx:%d\n",
 			 __func__, ctx->stream_id);
 		return -EINVAL;
 	}
@@ -8710,7 +8690,6 @@ struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 	struct media_entity *entity = &node->vdev.entity;
 	struct media_pipeline_pad *ppad;
 	struct media_entity *entity_walked[32];
-	struct mtk_ccd *ccd;
 	int last_entity_walked = 0;
 	bool walked;
 
@@ -8772,11 +8751,6 @@ struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 					"failed to rproc_boot:%d\n", ret);
 				goto fail_rproc_put;
 			}
-			ccd = (struct mtk_ccd *)cam->rproc_handle->priv;
-			ret = mtk_ccd_client_start(ccd);
-			if (ret)
-				dev_info(cam->dev,
-					"failed to start ccd client:%d\n", ret);
 		}
 
 		/* To catch camsys exception and trigger dump */
@@ -8937,7 +8911,6 @@ fail_uninit_composer:
 	cam->composer_cnt--;
 fail_shutdown:
 	if (is_first_ctx) {
-		mtk_ccd_client_stop(ccd);
 		pm_runtime_mark_last_busy(cam->dev);
 		pm_runtime_put_sync_autosuspend(cam->dev);
 		rproc_shutdown(cam->rproc_handle);
@@ -8956,7 +8929,6 @@ void mtk_cam_stop_ctx(struct mtk_cam_ctx *ctx, struct media_entity *entity)
 {
 	struct mtk_cam_device *cam = ctx->cam;
 	struct mtk_raw_device *raw_dev;
-	struct mtk_ccd *ccd;
 	unsigned int i, j;
 	struct slbc_data slb;
 	int ret = 0;
@@ -9143,8 +9115,6 @@ void mtk_cam_stop_ctx(struct mtk_cam_ctx *ctx, struct media_entity *entity)
 		pm_runtime_mark_last_busy(cam->dev);
 		pm_runtime_put_sync_autosuspend(cam->dev);
 #if CCD_READY
-		ccd = (struct mtk_ccd *)cam->rproc_handle->priv;
-		mtk_ccd_client_stop(ccd);
 		rproc_shutdown(cam->rproc_handle);
 		rproc_put(cam->rproc_handle);
 		cam->rproc_handle = NULL;

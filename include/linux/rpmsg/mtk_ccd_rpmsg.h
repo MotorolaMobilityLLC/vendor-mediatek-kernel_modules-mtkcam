@@ -29,7 +29,6 @@ struct mtk_ccd_listen_item {
 struct mtk_rpmsg_device {
 	struct rpmsg_device rpdev;
 	struct mtk_rpmsg_rproc_subdev *mtk_subdev;
-	struct mtk_ccd_client_cb *channel_cb;
 };
 
 struct mtk_rpmsg_rproc_subdev {

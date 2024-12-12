@@ -112,9 +112,10 @@ struct mtk_cam_ctx {
 	int available_jobs; /* cached value for enque */
 
 	/* rpmsg related */
-	int ccd_channel_id;  /* -1, channl id + ipi id */
-	struct mtk_ccd_client_cb *ccd_cb;
+	struct rpmsg_channel_info rpmsg_channel;
+	struct mtk_rpmsg_device *rpmsg_dev;
 	struct work_struct session_work;
+	int ipi_id;
 	bool session_created;
 	struct completion session_complete;
 	struct completion session_flush;
