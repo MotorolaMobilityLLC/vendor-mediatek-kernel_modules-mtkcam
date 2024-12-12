@@ -1132,7 +1132,7 @@ static int mtk_cam_seninf_set_outmux_grp_en(struct seninf_ctx *ctx,
 {
 	void *pSeninf_outmux = NULL;
 
-	if (outmux < 0 || outmux >= _seninf_ops->outmux_num) {
+	if (outmux >= _seninf_ops->outmux_num) {
 		seninf_logi(ctx, "err outmux %u invalid (0~SENINF_OUTMUX_NUM:%d)\n", outmux, _seninf_ops->outmux_num);
 		return 0;
 	}
@@ -1151,7 +1151,7 @@ static int mtk_cam_seninf_set_outmux_cfg_rdy(struct seninf_ctx *ctx,
 {
 	void *pSeninf_outmux = NULL;
 
-	if (outmux < 0 || outmux >= _seninf_ops->outmux_num) {
+	if (outmux >= _seninf_ops->outmux_num) {
 		seninf_logi(ctx, "err outmux %u invalid (0~SENINF_OUTMUX_NUM:%d)\n", outmux, _seninf_ops->outmux_num);
 		return 0;
 	}
@@ -1877,11 +1877,15 @@ static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 	struct seninf_vc *vc1 = mtk_cam_seninf_get_vc_by_pad(ctx, PAD_SRC_RAW_EXT0);
 	u64 data_rate = 0;
 	u8 map_hdr_len[] = {0, 1, 2, 4, 5};
+	u8 dt = 0;
 
-	if (vc)
+	if (vc) {
 		bit_per_pixel = vc->bit_depth;
-	else if (vc1)
+		dt = vc->dt;
+	} else if (vc1) {
 		bit_per_pixel = vc1->bit_depth;
+		dt = vc1->dt;
+	}
 
 	/* enable raw8 pixel double for raw8 data, only impact dt = 0x2a */
 	SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_OPT, RG_RAW8_PIXEL_DOUBLE, 1);
@@ -1901,7 +1905,7 @@ static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 	SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_OPT, RG_CSI2_VS_OUTPUT_MODE, 0);
 	SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_OPT, RG_CSI2_VS_OUTPUT_LEN_SEL, 0);
 	/* mt6899 only start */
-	if (vc->dt == 0x27) {
+	if (dt == 0x27) {
 		SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_R24USERDEF_DT, RG_CSI2_RAW24LIKE_USERDEF_DT, 0x27);
 		SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_R24USERDEF_DT, RG_CSI2_USERDEF_DT_EN, 1);
 	}
