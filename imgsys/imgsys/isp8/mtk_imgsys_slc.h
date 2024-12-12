@@ -22,7 +22,7 @@ struct slc_info {
 	uint8_t slc_sb = 0;
 	uint8_t gid = 0;
 	uint8_t bid = 0;
-	uint8_t read_count = 0;
+	uint16_t buffer_id = 0;
 };
 #else
 struct slc_info {
@@ -30,6 +30,7 @@ struct slc_info {
 	uint8_t gid;
 	uint8_t bid;
 	uint8_t read_count;
+	uint16_t buffer_id;
 };
 #endif
 
