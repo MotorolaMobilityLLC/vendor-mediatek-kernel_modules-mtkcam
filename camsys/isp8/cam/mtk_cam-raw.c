@@ -1823,7 +1823,7 @@ static int raw_process_fsm(struct mtk_raw_device *raw_dev,
 
 	return recovered;
 }
-#define LOG_THREADED_IRQ (60 * 1000000)
+#define LOG_THREADED_IRQ (100 * 1000000)
 static irqreturn_t mtk_thread_irq_raw(int irq, void *data)
 {
 	struct mtk_raw_device *raw_dev = (struct mtk_raw_device *)data;
