@@ -35,7 +35,7 @@ struct aov_core {
 	atomic_t frame_mode;
 	atomic_t debug_mode;
 	atomic_t disp_mode;
-	atomic_t power_mode;
+	atomic_t power_mode[AOV_MAX_USER_CNT];
 
 	wait_queue_head_t scp_queue;
 	atomic_t scp_session;

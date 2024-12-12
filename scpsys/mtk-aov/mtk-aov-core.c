@@ -372,6 +372,7 @@ static int copy_event_data(struct mtk_aov *aov_dev,
 	uint32_t power_mode;
 	void *buffer;
 	int ret;
+	int user_data_id = -1;
 
 	AOV_TRACE_BEGIN("AOV Copy Event");
 
@@ -408,8 +409,21 @@ static int copy_event_data(struct mtk_aov *aov_dev,
 #endif  // AOV_FORCE_SKIP_MODE
 	}
 
+	for (int user_idx = 0; user_idx < AOV_MAX_USER_CNT; user_idx++) {
+		if (core_info->sensor_idx[user_idx] == event->sensor_id) {
+			user_data_id = user_idx;
+			dev_info(aov_dev->dev, "%s: event sensor(%d) data(%d)",
+				__func__, event->sensor_id, user_data_id);
+			break;
+		}
+	}
+	if (user_data_id == -1) {
+		dev_info(aov_dev->dev, "%s: no valid data id, bypass", __func__);
+		return 0;
+	}
+
 	debug_mode = atomic_read(&(core_info->debug_mode));
-	power_mode = atomic_read(&(core_info->power_mode));
+	power_mode = atomic_read(&(core_info->power_mode[user_data_id]));
 	if (debug_mode == AOV_DEBUG_MODE_NDD) {
 		// Copy yuvo1/yuvo2/imgo and etc.
 		memcpy(buffer, (void *)event, sizeof(struct ndd_event));
@@ -747,7 +761,7 @@ int aov_core_send_cmd(struct mtk_aov *aov_dev, uint32_t cmd,
 		start->disp_mode = atomic_read(&(core_info->disp_mode));
 
 		// Setup power mode
-		atomic_set(&(core_info->power_mode), start->power_mode);
+		atomic_set(&(core_info->power_mode[user_data_id]), start->power_mode);
 
 		// Record aov_start buffer
 		core_info->aov_start[user_data_id] = start;
@@ -1266,6 +1280,7 @@ int aov_core_copy(struct mtk_aov *aov_dev, struct aov_dqevent *dequeue)
 	uint32_t debug_mode;
 	uint32_t power_mode;
 	int ret = 0;
+	int user_data_id = -1;
 
 	AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag), "%s: copy aov event+\n", __func__);
 
@@ -1334,7 +1349,20 @@ int aov_core_copy(struct mtk_aov *aov_dev, struct aov_dqevent *dequeue)
 			}
 		}
 
-		power_mode = atomic_read(&(core_info->power_mode));
+		for (int user_idx = 0; user_idx < AOV_MAX_USER_CNT; user_idx++) {
+			if (core_info->sensor_idx[user_idx] == event->sensor_id) {
+				user_data_id = user_idx;
+				dev_info(aov_dev->dev, "%s: event sensor(%d) data(%d)",
+					__func__, event->sensor_id, user_data_id);
+				break;
+			}
+		}
+		if (user_data_id == -1) {
+			dev_info(aov_dev->dev, "%s: no valid data id, bypass", __func__);
+			return 0;
+		}
+
+		power_mode = atomic_read(&(core_info->power_mode[user_data_id]));
 		if ((debug_mode == AOV_DEBUG_MODE_DUMP) ||
 			(debug_mode == AOV_DEBUG_MODE_NDD) || (!power_mode)) {
 			// Setup yuvo1 stride
