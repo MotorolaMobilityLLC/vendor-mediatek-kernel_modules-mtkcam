@@ -21,12 +21,10 @@
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
-#include <linux/platform_data/mtk_ccd.h>
 #include <linux/platform_device.h>
 #include <linux/pm_domain.h>
 #include <linux/pm_runtime.h>
 #include <linux/remoteproc.h>
-#include <linux/rpmsg/mtk_ccd_rpmsg.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
@@ -34,6 +32,7 @@
 #include "mtk_cam_ut.h"
 #include "mtk_isp_ut_ioctl.h"
 #include "mtk_cam_ut-engines.h"
+#include "mtk_ccd_client.h"
 
 #define CAM_DEV_NAME "mtk_cam_ut"
 #define CAMSV_HW_ID 0
@@ -507,8 +506,6 @@ static int cam_composer_init(struct mtk_cam_ut *ut)
 {
 	struct device *dev = ut->dev;
 	struct mtk_ccd *ccd;
-	struct rproc_subdev *rpmsg_subdev;
-	struct rpmsg_channel_info *msg = &ut->rpmsg_channel;
 	int ret;
 
 	ut->rproc_handle = rproc_get_by_phandle(ut->rproc_phandle);
@@ -524,24 +521,33 @@ static int cam_composer_init(struct mtk_cam_ut *ut)
 	}
 
 	ccd = (struct mtk_ccd *)ut->rproc_handle->priv;
-	rpmsg_subdev = ccd->rpmsg_subdev;
-	ret = snprintf(msg->name, RPMSG_NAME_SIZE, "mtk-camsys0");
-	if (ret < 0) {
-		dev_info(dev, "failed to get name\n");
-		ret = -EINVAL;
+	if (mtk_ccd_client_start(ccd)) {
+		dev_info(dev, "failed to start ccd client:%d\n", ret);
 		goto fail_shutdown;
 	}
 
-	msg->src = CCD_IPI_ISP_MAIN;
-	ut->rpmsg_dev = mtk_get_client_msgdevice(rpmsg_subdev, msg,
-						 cam_composer_handler, ut);
-	if (!ut->rpmsg_dev) {
+	ut->ccd_cb = kmalloc(sizeof(*ut->ccd_cb), GFP_KERNEL);
+	if (!ut->ccd_cb) {
 		ret = -EINVAL;
-		goto fail_shutdown;
+		goto fail_stop;
+	}
+
+	ut->ccd_cb->ipi_id = CCD_IPI_ISP_MAIN;
+	ut->ccd_cb->send_msg_ack = cam_composer_handler;
+	ut->ccd_cb->priv = ut;
+
+	ut->ccd_channel_id = mtk_ccd_client_get_channel(ccd, ut->ccd_cb);
+	if (ut->ccd_channel_id < 0) {
+		dev_info(dev, "%s failed mtk_ccd_client_get_channel\n", __func__);
+		ret = -EINVAL;
+		goto fail_free;
 	}
 
 	return ret;
-
+fail_free:
+	kfree(ut->ccd_cb);
+fail_stop:
+	mtk_ccd_client_stop(ccd);
 fail_shutdown:
 	rproc_shutdown(ut->rproc_handle);
 fail_rproc_put:
@@ -552,10 +558,13 @@ fail_rproc_put:
 
 static void cam_composer_uninit(struct mtk_cam_ut *ut)
 {
-	struct mtk_ccd *ccd = ut->rproc_handle->priv;
+	struct mtk_ccd *ccd = (struct mtk_ccd *)ut->rproc_handle->priv;
 
-	mtk_destroy_client_msgdevice(ccd->rpmsg_subdev, &ut->rpmsg_channel);
-	ut->rpmsg_dev = NULL;
+	mtk_ccd_client_put_channel(ccd, ut->ccd_channel_id);
+	kfree(ut->ccd_cb);
+	ut->ccd_channel_id = -1;
+	ut->ccd_cb = NULL;
+	mtk_ccd_client_stop(ccd);
 	rproc_shutdown(ut->rproc_handle);
 	rproc_put(ut->rproc_handle);
 	ut->rproc_handle = NULL;
@@ -920,7 +929,8 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		INIT_LIST_HEAD(&ut->enque_list.list);
 		INIT_LIST_HEAD(&ut->deque_list.list);
 		INIT_LIST_HEAD(&ut->processing_list.list);
-		rpmsg_send(ut->rpmsg_dev->rpdev.ept, &event, sizeof(event));
+		if (mtk_ccd_client_msg_send(ccd, ut->ccd_channel_id, &event, sizeof(event)))
+			dev_info(dev, "%s send ipi msg failed", __func__);
 
 		ut->m2m_available = 1;
 
@@ -983,7 +993,8 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				"%s:ipi msg buffers release, mem(%p), sz(%d)\n",
 				__func__, smem.va, smem.len);
 
-		rpmsg_send(ut->rpmsg_dev->rpdev.ept, &event, sizeof(event));
+		if (mtk_ccd_client_msg_send(ccd, ut->ccd_channel_id, &event, sizeof(event)))
+			dev_info(dev, "%s send ipi msg failed", __func__);
 
 		return 0;
 	}
@@ -994,6 +1005,7 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		unsigned long flags;
 		struct mtkcam_ipi_frame_info *frame_info = &event.frame_data;
 		struct mtkcam_ipi_frame_param *frame_data;
+		struct mtk_ccd *ccd;
 		int i = 0;
 
 		struct cam_ioctl_enque *pEnque;
@@ -1060,13 +1072,16 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		buf_entry->cq_buf.size = buf_entry->sub_cq_size = 0;
 
 		spin_unlock_irqrestore(&ut->enque_list.lock, flags);
-		rpmsg_send(ut->rpmsg_dev->rpdev.ept, &event, sizeof(event));
+		ccd = (struct mtk_ccd *)ut->rproc_handle->priv;
+		if (mtk_ccd_client_msg_send(ccd, ut->ccd_channel_id, &event, sizeof(event)))
+			dev_info(dev, "%s send ipi msg failed", __func__);
 
 		return 0;
 	}
 	case ISP_UT_IOCTL_CONFIG: {
 		struct cam_ioctl_config config;
 		struct mtkcam_ipi_event event;
+		struct mtk_ccd *ccd;
 		int i;
 
 		LOG_CMD(ISP_UT_IOCTL_CONFIG);
@@ -1101,7 +1116,9 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		event.cmd_id = CAM_CMD_CONFIG;
 		event.cookie = config.cookie;
 		event.config_data = config.config_param;
-		rpmsg_send(ut->rpmsg_dev->rpdev.ept, &event, sizeof(event));
+		ccd = (struct mtk_ccd *)ut->rproc_handle->priv;
+		if (mtk_ccd_client_msg_send(ccd, ut->ccd_channel_id, &event, sizeof(event)))
+			dev_info(dev, "%s send ipi msg failed", __func__);
 
 		setup_hanlder(ut);
 

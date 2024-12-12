@@ -99,3 +99,7 @@ endif
 ifneq ($(wildcard $(PLATFORM_PATH)/mtk_cam-plat-dummy.c),)
 subdir-ccflags-y += -DCAMSYS_MRAW_DUMMY
 endif
+
+# ccd client
+subdir-ccflags-y += -I$(KO_PATH)/../../ccd_client/
+mtk-cam-isp-objs += ../../ccd_client/mtk_ccd_client.o

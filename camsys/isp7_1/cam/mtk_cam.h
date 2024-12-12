@@ -435,8 +435,8 @@ struct mtk_cam_ctx {
 	int session_created;
 	struct work_struct session_work;
 
-	struct rpmsg_channel_info rpmsg_channel;
-	struct mtk_rpmsg_device *rpmsg_dev;
+	int ccd_channel_id;  /* -1, channl id + ipi id */
+	struct mtk_ccd_client_cb *ccd_cb;
 
 	//  TODO: how to support multi-stream with frame-sync?
 	struct mtk_cam_working_buf_pool buf_pool;

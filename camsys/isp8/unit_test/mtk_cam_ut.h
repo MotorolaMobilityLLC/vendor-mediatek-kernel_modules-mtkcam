@@ -129,8 +129,8 @@ struct mtk_cam_ut {
 
 	phandle rproc_phandle;
 	struct rproc *rproc_handle;
-	struct rpmsg_channel_info rpmsg_channel;
-	struct mtk_rpmsg_device *rpmsg_dev;
+	struct mtk_ccd_client_cb *ccd_cb;
+	int ccd_channel_id;
 
 	struct mtk_cam_ut_buf_list enque_list;
 	struct mtk_cam_ut_buf_list processing_list;
