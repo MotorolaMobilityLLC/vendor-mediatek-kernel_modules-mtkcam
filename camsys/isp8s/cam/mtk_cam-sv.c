@@ -28,6 +28,9 @@
 #include "iommu_debug.h"
 #include "mtk-mmdvfs-debug.h"
 
+// place below all other include
+#include "mtk_cam-virt-isp.h"
+
 #define MTK_CAMSV_STOP_HW_TIMEOUT			(33 * USEC_PER_MSEC)
 #define CAMSV_DEBUG 0
 

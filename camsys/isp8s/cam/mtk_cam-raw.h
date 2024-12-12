@@ -126,10 +126,10 @@ struct mtk_yuv_device {
 };
 
 struct raw_io_ops {
-	u32 (*readl)(struct mtk_raw_device *raw, void __iomem *base, u32 offset);
-	u32 (*readl_relaxed)(struct mtk_raw_device *raw, void __iomem *base, u32 offset);
-	void (*writel)(struct mtk_raw_device *raw, u32 val, void __iomem *base, u32 offset);
-	void (*writel_relaxed)(struct mtk_raw_device *raw, u32 val, void __iomem *base, u32 offset);
+	u32 (*__readl)(struct mtk_raw_device *raw, void __iomem *base, u32 offset);
+	u32 (*__readl_relaxed)(struct mtk_raw_device *raw, void __iomem *base, u32 offset);
+	void (*__writel)(struct mtk_raw_device *raw, u32 val, void __iomem *base, u32 offset);
+	void (*__writel_relaxed)(struct mtk_raw_device *raw, u32 val, void __iomem *base, u32 offset);
 };
 
 extern struct raw_io_ops basic_io_ops;

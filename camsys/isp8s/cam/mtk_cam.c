@@ -53,7 +53,11 @@
 #include "mtk_cam-reg_utils.h"
 #include "iommu_debug.h"
 
+// place below all other include
+#include "mtk_cam-virt-isp.h"
+
 static unsigned int debug_sensor_meta_dump;
+
 module_param(debug_sensor_meta_dump, uint, 0644);
 MODULE_PARM_DESC(debug_sensor_meta_dump, "activates sensor meta dump");
 
@@ -64,20 +68,41 @@ MODULE_PARM_DESC(rms_freerun, "rms_freerun");
 #define CAM_DEBUG 0
 #define ENABLE_CCU
 
+
+#ifdef IS_VIRT_ISP
+static const struct of_device_id mtk_cam_of_ids[] = {
+#ifdef CAMSYS_ISP8S_MT6993
+		{.compatible = "mediatek,mt6991-camisp", .data = &mt6993_data},
+		{}
+};
+#endif
+#else
 static const struct of_device_id mtk_cam_of_ids[] = {
 #ifdef CAMSYS_ISP8S_MT6993
 		{.compatible = "mediatek,mt6993-camisp", .data = &mt6993_data},
-#endif
-	{}
+		{}
 };
+#endif
+#endif
 MODULE_DEVICE_TABLE(of, mtk_cam_of_ids);
 
+
+#ifdef IS_VIRT_ISP
+static const struct of_device_id mtk_cam_vcore_of_ids[] = {
+#ifdef CAMSYS_ISP8S_MT6993
+		{.compatible = "mediatek,mt6991-camisp-vcore",},
+		{}
+};
+#endif
+#else
 static const struct of_device_id mtk_cam_vcore_of_ids[] = {
 #ifdef CAMSYS_ISP8S_MT6993
 		{.compatible = "mediatek,mt6993-camisp-vcore",},
-#endif
-	{}
+		{}
 };
+#endif
+#endif
+
 MODULE_DEVICE_TABLE(of, mtk_cam_vcore_of_ids);
 
 static struct device *camsys_root_dev;
@@ -4610,7 +4635,7 @@ REGISTER_LARB_FAIL:
 }
 
 #ifdef TO_BE_REMOVE
-static irqreturn_t mtk_irq_adlrd(int irq, void *data)
+static irqreturn_t __maybe_unused mtk_irq_adlrd(int irq, void *data)
 {
 	struct mtk_cam_device *drvdata = (struct mtk_cam_device *)data;
 	struct device *dev = drvdata->dev;
@@ -4626,7 +4651,7 @@ static irqreturn_t mtk_irq_adlrd(int irq, void *data)
 #endif
 
 #ifdef SKIP_IN_FPGA_EP
-static irqreturn_t mtk_irq_qof(int irq, void *data)
+static irqreturn_t __maybe_unused mtk_irq_qof(int irq, void *data)
 {
 	struct mtk_cam_device *drvdata = (struct mtk_cam_device *)data;
 	struct device *dev = drvdata->dev;
@@ -4754,6 +4779,8 @@ static int mtk_cam_vcore_probe(struct platform_device *pdev)
 static void mtk_cam_vcore_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
+
+	(void)dev;
 
 	pm_runtime_disable(dev);
 }

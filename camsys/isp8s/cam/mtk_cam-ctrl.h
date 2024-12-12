@@ -107,6 +107,17 @@ void mtk_cam_watchdog_init(struct mtk_cam_watchdog *wd);
 int mtk_cam_watchdog_start(struct mtk_cam_watchdog *wd, bool monitor_vsync);
 void mtk_cam_watchdog_stop(struct mtk_cam_watchdog *wd);
 
+/* SOF event generator */
+struct mtk_cam_sof_gen {
+	atomic_t started;
+	struct mtk_cam_event_frame_sync_data data;
+
+	struct timer_list timer;
+};
+
+void mtk_cam_sof_gen_init(struct mtk_cam_sof_gen *sg);
+int mtk_cam_sof_gen_start(struct mtk_cam_sof_gen *sg);
+void mtk_cam_sof_gen_stop(struct mtk_cam_sof_gen *sg);
 
 /*per stream (sensor) */
 struct mtk_cam_ctrl {
@@ -152,6 +163,8 @@ struct mtk_cam_ctrl {
 	unsigned int sensor_seq;
 	unsigned int frame_sync_id;
 	unsigned int sensor_sync_id;
+
+	struct mtk_cam_sof_gen sof_timer;
 };
 
 /* engine's callback functions */

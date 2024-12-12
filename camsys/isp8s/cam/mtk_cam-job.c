@@ -27,6 +27,9 @@
 #include "mtk_cam-raw_ctrl.h"
 #include "mtk_cam_vb2-dma-contig.h"
 
+// place below all other include
+#include "mtk_cam-virt-isp.h"
+
 #define SCQ_DEADLINE_US(fi)		((fi) * 9 / 10) // 0.9 frame interval
 
 static unsigned int debug_buf_fmt_sel = -1;

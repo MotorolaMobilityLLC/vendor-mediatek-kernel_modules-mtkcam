@@ -18,6 +18,9 @@
 #include "mtk_cam-bwr_regs.h"
 #include "mtk_cam-debug_option.h"
 
+// place below all other include
+#include "mtk_cam-virt-isp.h"
+
 #define BWR_ENGINES   0x7FF
 
 static int debug_bwr_mode = BWR_ENGINES;
@@ -386,7 +389,7 @@ static int bwr_start(struct mtk_bwr_device *bwr)
 /* todo: check all csr is zero ? */
 static int bwr_stop(struct mtk_bwr_device *bwr)
 {
-	int rpt_state;
+	int rpt_state = 0;
 
 	mutex_lock(&bwr->op_lock);
 

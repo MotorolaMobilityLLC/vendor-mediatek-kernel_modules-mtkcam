@@ -14,6 +14,9 @@
 #include "mtk_cam-bit_mapping.h"
 #include "mtk_cam-hsf.h"
 
+// place below all other include
+#include "mtk_cam-virt-isp.h"
+
 /* QOF timer freq = (TM_FREQ / 2 / (QOF_TIMER_FREQ_DIV+1)) */
 #define TM_FREQ_KHZ						208000
 #define QOF_TIMER_FREQ_DIV				3
@@ -53,17 +56,17 @@ static void qof_writel_relaxed(struct mtk_raw_device *raw, u32 val,
 							   void __iomem *base, u32 offset);
 
 struct raw_io_ops qof_io_ops = {
-	.readl = qof_readl,
-	.readl_relaxed = qof_readl_relaxed,
-	.writel = qof_writel,
-	.writel_relaxed = qof_writel_relaxed,
+	.__readl = qof_readl,
+	.__readl_relaxed = qof_readl_relaxed,
+	.__writel = qof_writel,
+	.__writel_relaxed = qof_writel_relaxed,
 };
 
 struct raw_io_ops itc_only_io_ops = {
-	.readl = itc_readl,
-	.readl_relaxed = itc_readl_relaxed,
-	.writel = basic_writel,
-	.writel_relaxed = basic_writel_relaxed,
+	.__readl = itc_readl,
+	.__readl_relaxed = itc_readl_relaxed,
+	.__writel = basic_writel,
+	.__writel_relaxed = basic_writel_relaxed,
 };
 
 enum QOF_POWER_STATE {

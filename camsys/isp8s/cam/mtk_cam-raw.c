@@ -38,6 +38,9 @@
 #include "mtk-smi-dbg.h"
 #include "mtk-mmdvfs-debug.h"
 
+// place below all other include
+#include "mtk_cam-virt-isp.h"
+
 //static int debug_dump_fbc;
 //module_param(debug_dump_fbc, int, 0644);
 //MODULE_PARM_DESC(debug_dump_fbc, "debug: dump fbc");
@@ -59,22 +62,22 @@ MODULE_PARM_DESC(debug_ddren_sw_mode, "debug: 1 : active sw mode");
 
 #define raw_readl(raw, base, off) \
 ({\
-		raw->io_ops->readl(raw, base, off); \
+		raw->io_ops->__readl(raw, base, off); \
 })
 
 #define raw_readl_relaxed(raw, base, off) \
 ({\
-		raw->io_ops->readl_relaxed(raw, base, off); \
+		raw->io_ops->__readl_relaxed(raw, base, off); \
 })
 
 #define raw_writel(val, raw, base, off) \
 ({\
-	raw->io_ops->writel(raw, val, base, off); \
+	raw->io_ops->__writel(raw, val, base, off); \
 })
 
 #define raw_writel_relaxed(val, raw, base, off) \
 ({\
-	raw->io_ops->writel_relaxed(raw, val, base, off); \
+	raw->io_ops->__writel_relaxed(raw, val, base, off); \
 })
 
 static void set_fifo_threshold(void __iomem *dma_base, unsigned int fifo_size)
@@ -2204,10 +2207,10 @@ void basic_writel_relaxed(struct mtk_raw_device *raw, u32 val, void __iomem *bas
 }
 
 struct raw_io_ops basic_io_ops = {
-	.readl = basic_readl,
-	.readl_relaxed = basic_readl_relaxed,
-	.writel = basic_writel,
-	.writel_relaxed = basic_writel_relaxed,
+	.__readl = basic_readl,
+	.__readl_relaxed = basic_readl_relaxed,
+	.__writel = basic_writel,
+	.__writel_relaxed = basic_writel_relaxed,
 };
 
 static int mtk_raw_pm_suspend_prepare(struct mtk_raw_device *dev)

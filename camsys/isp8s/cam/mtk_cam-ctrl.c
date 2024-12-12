@@ -27,6 +27,9 @@
 #include "mtk_cam-job_utils.h"
 #include "mtk_cam-raw_ctrl.h"
 
+// place below all other include
+#include "mtk_cam-virt-isp.h"
+
 #define WATCHDOG_INTERVAL_MS		800
 /*
  * note:
@@ -1335,6 +1338,35 @@ static void trigger_fake_sof_event(struct mtk_cam_ctrl *ctrl)
 	mtk_cam_ctrl_send_event(ctrl, CAMSYS_EVENT_IRQ_L_SOF);
 }
 
+#ifdef IS_VIRT_ISP
+static void mtk_cam_ctrl_stream_on_flow(struct mtk_cam_job *job)
+{
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	struct mtk_cam_ctrl *ctrl = &ctx->cam_ctrl;
+	struct device *dev = ctx->cam->dev;
+	unsigned long timeout = msecs_to_jiffies(2000);
+
+	dev_info(dev, "[%s] ctx %d begin\n", __func__, ctrl->ctx->stream_id);
+
+	if (!wait_for_completion_timeout(&job->compose_completion, timeout)) {
+		pr_info("[%s] error: wait for job composed timeout\n",
+			__func__);
+		return;
+	}
+
+	ctrl->frame_interval_ns =
+			mtk_cam_query_interval_from_sensor(ctx->sensor);
+
+	/* should set ts for second job's apply_sensor */
+	ctrl->r_info.sof_ts_ns = ktime_get_boottime_ns();
+	ctrl->r_info.sof_l_ts_ns = ktime_get_boottime_ns();
+	ctrl->fs_event_subframe_cnt = job->frame_cnt;
+
+	atomic_dec(&ctrl->stream_on_cnt);
+	mtk_cam_ctrl_loop_job(ctrl, ctrl_enable_job_fsm_until_switch, NULL);
+	dev_info(dev, "[%s] ctx %d finish\n", __func__, ctrl->ctx->stream_id);
+}
+#else
 static void mtk_cam_ctrl_stream_on_flow(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -1353,6 +1385,7 @@ static void mtk_cam_ctrl_stream_on_flow(struct mtk_cam_job *job)
 
 	dev_info(dev, "[%s] ctx %d finish\n", __func__, ctrl->ctx->stream_id);
 }
+#endif
 
 static int dynamic_raw_change_stream_on(struct mtk_cam_job *job, int unit_engs)
 {
@@ -1939,6 +1972,10 @@ void mtk_cam_ctrl_job_enque(struct mtk_cam_ctrl *cam_ctrl,
 			pr_info("[%s:extisp] ctx:%d, extisp_enable:0x%x\n",
 				__func__, cam_ctrl->ctx->stream_id, cam_ctrl->r_info.extisp_enable);
 		}
+
+#ifdef IS_VIRT_ISP
+		mtk_cam_sof_gen_start(&cam_ctrl->sof_timer);
+#endif
 	}
 
 	/* add to statemachine */
@@ -2044,6 +2081,10 @@ void mtk_cam_ctrl_isp_job_enque(struct mtk_cam_ctrl *cam_ctrl,
 			pr_info("[%s:timeshare] ctx:%d, timeshare_enable:0x%x\n",
 				__func__, cam_ctrl->ctx->stream_id, cam_ctrl->r_info.timeshare_enable);
 		}
+
+#ifdef IS_VIRT_ISP
+		mtk_cam_sof_gen_start(&cam_ctrl->sof_timer);
+#endif
 	}
 
 	/* following would trigger actions */
@@ -2054,7 +2095,6 @@ void mtk_cam_ctrl_isp_job_enque(struct mtk_cam_ctrl *cam_ctrl,
 	mtk_cam_ctrl_put(cam_ctrl);
 }
 
-
 void mtk_cam_ctrl_job_composed(struct mtk_cam_ctrl *cam_ctrl,
 			       unsigned int fh_cookie,
 			       struct mtkcam_ipi_frame_ack_result *cq_ret,
@@ -2063,6 +2103,9 @@ void mtk_cam_ctrl_job_composed(struct mtk_cam_ctrl *cam_ctrl,
 	struct mtk_cam_job *job_composed;
 	struct mtk_cam_device *cam;
 	int ctx_id, seq;
+	int i = 0;
+
+	(void) i;
 
 	if (mtk_cam_ctrl_get(cam_ctrl))
 		return;
@@ -2081,13 +2124,40 @@ void mtk_cam_ctrl_job_composed(struct mtk_cam_ctrl *cam_ctrl,
 	}
 
 	call_jobop(job_composed, compose_done, cq_ret, ack_ret);
+// TODO: de-couple IS_VIRT_ISP and normal code
+#ifndef IS_VIRT_ISP
 	mtk_cam_job_put(job_composed);
+#endif
 
 	spin_lock(&cam_ctrl->info_lock);
 	cam_ctrl->r_info.ack_seq_no = seq;
 	spin_unlock(&cam_ctrl->info_lock);
 
+	cam_ctrl->sof_timer.data.frame_sequence = job_composed->req_seq;
+	cam_ctrl->sof_timer.data.sensor_sequence = job_composed->req_seq;
+	cam_ctrl->sof_timer.data.frame_sync_id = job_composed->req_info_id;
+	cam_ctrl->sof_timer.data.sensor_sync_id = job_composed->req_info_id;
+
 	mtk_cam_ctrl_send_event(cam_ctrl, CAMSYS_EVENT_ACK);
+
+#ifdef IS_VIRT_ISP
+	handle_meta1_done(cam_ctrl, seq);
+	handle_frame_done(cam_ctrl, CAMSYS_ENGINE_CAMSV,
+					  get_master_sv_id(job_composed->used_engine), seq);
+
+	for (i = 0; i < cam_ctrl->ctx->num_mraw_subdevs; i++) {
+		int mraw_idx = cam_ctrl->ctx->mraw_subdev_idx[i];
+
+		if (!(bit_map_subset_of(MAP_HW_MRAW, job_composed->used_engine) & BIT(mraw_idx)))
+			continue;
+
+		handle_frame_done(cam_ctrl, CAMSYS_ENGINE_MRAW, mraw_idx, seq);
+	}
+
+	handle_frame_done(cam_ctrl, CAMSYS_ENGINE_RAW,
+			  get_master_raw_id(job_composed->used_engine), seq);
+	mtk_cam_job_put(job_composed);
+#endif
 
 PUT_CTRL:
 	mtk_cam_ctrl_put(cam_ctrl);
@@ -2216,6 +2286,8 @@ void mtk_cam_ctrl_start(struct mtk_cam_ctrl *cam_ctrl, struct mtk_cam_ctx *ctx)
 	mtk_cam_watchdog_init(&cam_ctrl->watchdog);
 	cam_ctrl->hw_hang_count_down = 0;
 
+	mtk_cam_sof_gen_init(&cam_ctrl->sof_timer);
+
 	mtk_cam_ctx_queue_done_worker(ctx, &cam_ctrl->done_work);
 
 	dev_info(ctx->cam->dev, "[%s] ctx:%d\n", __func__, ctx->stream_id);
@@ -2312,6 +2384,9 @@ void mtk_cam_ctrl_stop(struct mtk_cam_ctrl *cam_ctrl)
 	if (ctx->seninf)
 		mtk_cam_seninf_set_abort(ctx->seninf);
 	mtk_cam_watchdog_stop(&cam_ctrl->watchdog);
+#ifdef IS_VIRT_ISP
+	mtk_cam_sof_gen_stop(&cam_ctrl->sof_timer);
+#endif
 
 	/* this would be time consuming */
 	ctx_stream_off_seninf_sensor(ctx);
@@ -2872,6 +2947,60 @@ void mtk_cam_watchdog_stop(struct mtk_cam_watchdog *wd)
 	wait_for_completion(&wd->work_complete);
 	pr_info("[%s] %llu/%llu/%llu\n",
 		__func__, ts_timer, ts_wait_monitor, ktime_get_boottime_ns());
+}
+
+#ifdef IS_VIRT_ISP
+#define DEFAULT_SOF_INTERVAL_MS		30
+static void mtk_cam_sof_gen_timer_callback(struct timer_list *t)
+{
+	struct mtk_cam_sof_gen *sg = from_timer(sg, t, timer);
+	struct mtk_cam_ctrl *cam_ctrl = container_of(sg, struct mtk_cam_ctrl, sof_timer);
+	struct mtk_cam_ctx *ctx = cam_ctrl->ctx;
+	struct v4l2_event event = {
+		.type = V4L2_EVENT_FRAME_SYNC,
+	};
+
+	sg->data.sensor_sequence = cam_ctrl->sensor_seq;
+	sg->data.sensor_sync_id = cam_ctrl->sensor_sync_id;
+	sg->data.ts_ns = ktime_get_boottime_ns();
+	memcpy(event.u.data, &sg->data, 24);
+
+	mtk_cam_ctx_send_raw_event(ctx, &event);
+
+	sg->timer.expires = jiffies + msecs_to_jiffies(DEFAULT_SOF_INTERVAL_MS);
+	add_timer(&sg->timer);
+}
+#endif
+
+void mtk_cam_sof_gen_init(struct mtk_cam_sof_gen *sg)
+{
+#ifdef IS_VIRT_ISP
+	atomic_set(&sg->started, 0);
+	memset(&sg->data, 0, sizeof(sg->data));
+	timer_setup(&sg->timer, mtk_cam_sof_gen_timer_callback, 0);
+#endif
+}
+
+int mtk_cam_sof_gen_start(struct mtk_cam_sof_gen *sg)
+{
+#ifdef IS_VIRT_ISP
+	atomic_set(&sg->started, 1);
+
+	sg->timer.expires = jiffies + msecs_to_jiffies(DEFAULT_SOF_INTERVAL_MS);
+	add_timer(&sg->timer);
+#endif
+
+	return 0;
+}
+
+void mtk_cam_sof_gen_stop(struct mtk_cam_sof_gen *sg)
+{
+#ifdef IS_VIRT_ISP
+	if (!atomic_cmpxchg(&sg->started, 1, 0))
+		return;
+
+	timer_delete_sync(&sg->timer);
+#endif
 }
 
 int mtk_cam_ctrl_ae_workaround(struct mtk_cam_device *cam,

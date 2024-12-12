@@ -18,6 +18,9 @@
 #include "mtk_cam.h"
 #include "mtk_cam-larb.h"
 
+// place below all other include
+#include "mtk_cam-virt-isp.h"
+
 struct mtk_cam_larb_device {
 	unsigned int	larb_id;
 	struct device	*dev;

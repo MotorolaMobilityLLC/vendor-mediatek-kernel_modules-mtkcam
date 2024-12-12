@@ -11,6 +11,9 @@
 #include "mtk_cam-reg_utils.h"
 #include "mtk_cam-raw_debug.h"
 
+// place below all other include
+#include "mtk_cam-virt-isp.h"
+
 #define LOGGER_PREFIX_SIZE 16
 #define LOGGER_BUFSIZE 128
 struct buffered_logger {

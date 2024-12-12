@@ -23,6 +23,9 @@
 
 #include "iommu_debug.h"
 
+// place below all other include
+#include "mtk_cam-virt-isp.h"
+
 static int debug_cam_mraw;
 module_param(debug_cam_mraw, int, 0644);
 
