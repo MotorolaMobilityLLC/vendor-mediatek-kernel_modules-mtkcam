@@ -230,6 +230,12 @@ enum mux_status {
 	IDLE,
 	USING,
 };
+
+enum tm_pattern {
+	WHITE = 0x00,
+	HOIZONTAL_COLOR_BAR =0x08,
+};
+
 struct mtk_ut_seninf_device {
 	struct device *dev;
 	void __iomem *base_top;
@@ -273,7 +279,7 @@ extern struct platform_driver mtk_ut_seninf_driver;
 #define WITH_CAMSV_DRIVER 1
 #define SUPPORT_PM 0
 #define SUPPORT_RAWB 0
-#define WITH_POWER_DRIVER 1
+#define WITH_POWER_DRIVER 0
 extern struct platform_driver mtk_ut_larb_driver;
 extern const struct mtk_cam_ut_data *cur_platform;
 

@@ -26,7 +26,6 @@
 #include <linux/pm_domain.h>
 #include <linux/pm_runtime.h>
 #include <linux/remoteproc.h>
-#include <linux/rpmsg/mtk_ccd_rpmsg.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
@@ -265,9 +264,9 @@ static int apply_req_on_composed_once(struct mtk_cam_ut *ut)
 	CALL_RAW_OPS(ut->raw[0], reset);
 
 	CALL_RAW_OPS(ut->raw[0], initialize, &raw_params);
-	//CALL_RAW_OPS(ut->raw[1], initialize, &raw_params);
-	//CALL_RAW_OPS(ut->raw[2], initialize, &raw_params);
-	if (is_dcif_required(ut->hardware_scenario) && (ut->num_camsv > CAMSV_HW_ID ))
+	CALL_RAW_OPS(ut->raw[1], initialize, &raw_params);
+	CALL_RAW_OPS(ut->raw[2], initialize, &raw_params);
+	if (is_dcif_required(ut->hardware_scenario) && (ut->num_camsv > CAMSV_HW_ID))
 		CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID], initialize, NULL);
 
 	ut->hdl.on_ipi_composed = on_ipi_composed;
@@ -512,7 +511,6 @@ static int cam_composer_init(struct mtk_cam_ut *ut)
 	}
 
 	ccd = (struct mtk_ccd *)ut->rproc_handle->priv;
-
 	if (mtk_ccd_client_start(ccd)) {
 		dev_info(dev, "failed to start ccd client:%d\n", ret);
 		goto fail_shutdown;
@@ -629,7 +627,7 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 #if WITH_CAMSV_DRIVER
 	struct mtk_ut_camsv_device *camsv_dev = NULL;
 
-	if (ut->num_camsv < CAMSV_HW_ID)
+	if (ut->num_camsv > CAMSV_HW_ID)
 		camsv_dev = dev_get_drvdata(ut->camsv[CAMSV_HW_ID]);
 #endif
 	width = testmdl->width;
@@ -1034,6 +1032,7 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			}
 
 			CALL_SENINF_OPS(ut->seninf, reset);
+
 		}
 
 		smem.va = ut->mem->va;
@@ -1436,6 +1435,7 @@ static struct component_match *mtk_cam_match_add(struct device *dev)
 	ut->num_camsv = add_match_by_driver(dev, &match, &mtk_ut_camsv_driver);
 	dev_info(dev, "# of camsv: %d\n", ut->num_camsv);
 #endif
+
 	if (IS_ERR(match))
 		mtk_cam_match_remove(dev);
 
@@ -1507,22 +1507,28 @@ static int mtk_cam_ut_master_bind(struct device *dev)
 	if (ut->num_raw) {
 		ut->raw = devm_kcalloc(dev, ut->num_raw, sizeof(*ut->raw),
 				       GFP_KERNEL);
-		if (!ut->raw)
+		if (!ut->raw) {
+			dev_info(dev, "kcalloc raw fail\n");
 			return -ENOMEM;
+		}
 	}
 
 	if (ut->num_yuv) {
 		ut->yuv = devm_kcalloc(dev, ut->num_yuv, sizeof(*ut->yuv),
 				       GFP_KERNEL);
-		if (!ut->yuv)
+		if (!ut->yuv) {
+			dev_info(dev, "kcalloc yuv fail\n");
 			return -ENOMEM;
+		}
 	}
 
 	if (ut->num_rms) {
 		ut->rms = devm_kcalloc(dev, ut->num_rms, sizeof(*ut->rms),
 				       GFP_KERNEL);
-		if (!ut->rms)
+		if (!ut->rms) {
+			dev_info(dev, "kcalloc rms fail\n");
 			return -ENOMEM;
+		}
 	}
 
 	if (ut->num_raw != ut->num_yuv || ut->num_raw != ut->num_rms) {
@@ -1535,8 +1541,10 @@ static int mtk_cam_ut_master_bind(struct device *dev)
 	if (ut->num_camsv) {
 		ut->camsv = devm_kcalloc(dev, ut->num_camsv, sizeof(*ut->camsv),
 				       GFP_KERNEL);
-		if (!ut->camsv)
+		if (!ut->camsv) {
+			dev_info(dev, "kcalloc camsv fail\n");
 			return -ENOMEM;
+		}
 	}
 #endif
 
@@ -1544,8 +1552,10 @@ static int mtk_cam_ut_master_bind(struct device *dev)
 	if (ut->num_larb) {
 		ut->larb = devm_kcalloc(dev, ut->num_larb, sizeof(*ut->larb),
 					GFP_KERNEL);
-		if (!ut->larb)
+		if (!ut->larb) {
+			dev_info(dev, "kcalloc larb fail\n");
 			return -ENOMEM;
+		}
 	}
 #endif
 
@@ -1615,6 +1625,7 @@ static int register_sub_drivers(struct device *dev)
 		goto REGISTER_CAMSV_FAIL;
 	}
 #endif
+
 	ret = platform_driver_register(&mtk_ut_seninf_driver);
 	if (ret) {
 		dev_info(dev, "%s register seninf driver fail\n", __func__);
@@ -1747,9 +1758,11 @@ static int mtk_cam_ut_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_cam_ut *ut;
+#if WITH_POWER_DRIVER
 	struct platform_device *vcore_pdev;
 	struct device_node *node;
 	struct device_link *link;
+#endif
 	const struct mtk_cam_ut_data *platform_data;
 	unsigned int i, clks;
 	int ret;
@@ -1834,7 +1847,7 @@ static int mtk_cam_ut_probe(struct platform_device *pdev)
 			return -ENODEV;
 		}
 	}
-
+#if WITH_POWER_DRIVER
 	node = of_parse_phandle(
 				pdev->dev.of_node, "mediatek,camisp-vcore", 0);
 	if (!node) {
@@ -1852,7 +1865,7 @@ static int mtk_cam_ut_probe(struct platform_device *pdev)
 					DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
 	if (!link)
 		dev_info(dev, "unable to link cam vcore\n");
-
+#endif
 	ret = register_sub_drivers(dev);
 	if (ret) {
 		dev_info(dev, "fail to register_sub_drivers\n");
@@ -1981,7 +1994,6 @@ static struct platform_driver mtk_cam_vcore_driver = {
 static int __init mtk_cam_ut_init(void)
 {
 	int ret;
-
 	ret = platform_driver_register(&mtk_cam_vcore_driver);
 	ret = platform_driver_register(&mtk_cam_ut_driver);
 	return ret;

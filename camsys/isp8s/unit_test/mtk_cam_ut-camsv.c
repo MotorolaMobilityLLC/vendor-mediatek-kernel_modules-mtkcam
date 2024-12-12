@@ -503,7 +503,6 @@ static int ut_camsv_initialize(struct device *dev, void *ext_params)
 static int ut_camsv_s_stream(struct device *dev, enum streaming_enum on)
 {
 	int ret = 0;
-
 	dev_info(dev, "%s: %d\n", __func__, on);
 	if (on)
 		ret = ut_mtk_camsv_central_common_enable(dev);
@@ -518,13 +517,11 @@ static int ut_camsv_dev_config(struct device *dev,
 	struct mtkcam_ipi_input_param *cfg_in_param)
 {
 	int ret = 0;
-
 	return ret;
 }
 static void ut_camsv_set_ops(struct device *dev)
 {
 	struct mtk_ut_camsv_device *sv_dev = dev_get_drvdata(dev);
-
 	sv_dev->ops.initialize = ut_camsv_initialize;
 	sv_dev->ops.reset = ut_sv_reset;
 	sv_dev->ops.s_stream = ut_camsv_s_stream;
@@ -556,7 +553,6 @@ static void mtk_ut_camsv_component_unbind(struct device *dev,
 {
 	struct mtk_ut_camsv_device *sv_dev = dev_get_drvdata(dev);
 	struct mtk_cam_ut *ut = data;
-
 	ut->camsv[sv_dev->id] = NULL;
 	remove_listener(&sv_dev->event_src, &ut->listener);
 }
@@ -800,7 +796,6 @@ static int ut_mtk_camsv_runtime_suspend(struct device *dev)
 {
 	struct mtk_ut_camsv_device *camsv = dev_get_drvdata(dev);
 	int i;
-
 	dev_info(dev, "%s:disable clock\n", __func__);
 	for (i = 0; i < camsv->num_clks; i++)
 		clk_disable_unprepare(camsv->clks[i]);

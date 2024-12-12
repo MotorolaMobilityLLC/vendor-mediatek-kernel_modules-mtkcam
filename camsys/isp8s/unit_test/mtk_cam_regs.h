@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2020 MediaTek Inc.
- * Author: Bibby Hsieh <bibby.hsieh@mediatek.com>
+ * Copyright (c) 2024 MediaTek Inc.
+ * Author: Kuan-Yu Su <kuan-yu.su@mediatek.com>
  */
 
 /* normal siganl */
@@ -71,12 +71,14 @@ enum topdebug_event {
 
 #define ISP_SENINF_ASYNC_CFG(regs)			(regs + 0x0000)
 
+#define ISP_SENINF_TM_BASE_BY_ID(base, id)			(base + 0x200 * id)
 #define ISP_SENINF_TM_CORE0_CTL(regs)			(regs + 0x0010)
 #define ISP_SENINF_TM_SIZE(regs)			(regs + 0x0018)
 #define ISP_SENINF_TM_DUM(regs)				(regs + 0x001C)
 #define ISP_SENINF_TM_CON0(regs)			(regs + 0x0024)
 #define ISP_SENINF_TM_CON1(regs)			(regs + 0x0028)
 #define ISP_SENINF_TM_CON2(regs)			(regs + 0x002C)
+#define ISP_SENINF_TM_BIT(regs)				(regs + 0x0080)
 
 #define ISP_SENINF_TM_EXP1_CTRL(regs)			(regs + 0x0044)
 #define ISP_SENINF_TM_EXP2_CTRL(regs)			(regs + 0x0048)
@@ -87,8 +89,15 @@ enum topdebug_event {
 #define ISP_SENINF_OUTMUX_SOURCE_CFG2(regs)		(regs + 0x0014)
 #define ISP_SENINF_OUTMUX_SRC_SEL(regs)			(regs + 0x0018)
 #define ISP_SENINF_OUTMUX_CFG_DONE(regs)		(regs + 0x001C)
+#define ISP_SENINF_OUTMUX_CFG_CTRL(regs)		(regs + 0x0020)
 #define ISP_SENINF_OUTMUX_CFG_RDY(regs)			(regs + 0x002C)
-#define ISP_SENINF_OUTMUX_TAG_VCDT(regs, tag)		(regs + 0x0080 + (tag * 0x1c))
+#define ISP_SENINF_OUTMUX_SW_RST(regs)			(regs + 0x0034)
+#define ISP_SENINF_OUTMUX_IRQ_EN(regs)			(regs + 0x0040)
+
+#define ISP_SENINF_OUTMUX_TAG_VCDT(regs, tag)		(regs + 0x0100 + (tag * 0x1c))
+#define ISP_SENINF_OUTMUX_TAG_EXP_SIZE(regs, tag)	(regs + 0x0104 + (tag * 0x1c))
+#define ISP_SENINF_OUTMUX_TAG_EXP_BYTE_2_PIX(regs, tag)	(regs + 0x0114 + (tag * 0x1c))
+
 
 #define CAMSYS_MAIN_REG_HALT1_EN(regs)			(regs + 0x00C4)
 #define CAMSYS_MAIN_REG_HALT2_EN(regs)			(regs + 0x00C8)
@@ -118,7 +127,7 @@ enum topdebug_event {
 #define REG_HALT1_EN					0x00c4
 #define REG_HALT2_EN					0x00c8
 #define REG_HALT3_EN					0x00cc
-#define REG_HALT4_EN					0x00cd
+#define REG_HALT4_EN					0x00d0
 #define REG_HALT5_EN					0x00d4
 #define REG_HALT6_EN					0x00d8
 #define REG_HALT7_EN					0x00dc
@@ -229,41 +238,47 @@ enum topdebug_event {
 #define REG_CQI_R1A_CON3					0x022c
 #define REG_CQI_R1A_CON4					0x0230
 
-#define REG_CAMRAWDMATOP_LOW_LATENCY_LINE_CNT_IMGO_R1		0x4090
-#define REG_CAMYUVDMATOP_LOW_LATENCY_LINE_CNT_YUVO_R1		0x4090
-#define REG_CAMYUVDMATOP_LOW_LATENCY_LINE_CNT_YUVO_R3		0x4098
-#define REG_CAMYUVDMATOP_LOW_LATENCY_LINE_CNT_DRZS4NO_R1	0x40A0
+// #define REG_CAMRAWDMATOP_LOW_LATENCY_LINE_CNT_IMGO_R1		0x4090
+// #define REG_CAMYUVDMATOP_LOW_LATENCY_LINE_CNT_YUVO_R1		0x4090
+// #define REG_CAMYUVDMATOP_LOW_LATENCY_LINE_CNT_YUVO_R3		0x4098
+// #define REG_CAMYUVDMATOP_LOW_LATENCY_LINE_CNT_DRZS4NO_R1	0x40A0
 
 /* error status */
-#define REG_RAWI_R2_ERR_STAT				0x05B8
-#define REG_UFDI_R2_ERR_STAT				0x0628
-#define REG_RAWI_R3_ERR_STAT				0x42F4 //Ponsot x
-#define REG_RAWI_R5_ERR_STAT				0x44B4
-#define REG_UFDI_R5_ERR_STAT				0x4524
+#define REG_RAWI_R2_ERR_STAT				0x03f8
+#define REG_UFDI_R2_ERR_STAT				0x0468
+#define REG_RAWI_R3_ERR_STAT				0x04d8 //Ponsot x
+#define REG_RAWI_R5_ERR_STAT				0x05b8
+#define REG_UFDI_R5_ERR_STAT				0x0628
 #define REG_CQI_R1_ERR_STAT				0x0238
 #define REG_CQI_R2_ERR_STAT				0x02A8
 #define REG_CQI_R3_ERR_STAT				0x0318
 #define REG_CQI_R4_ERR_STAT				0x0388
-#define REG_LSCI_R1_ERR_STAT				0x0A78
-#define REG_BPCI_R1_ERR_STAT				0x0938
-#define REG_BPCI_R2_ERR_STAT				0x45D4
-#define REG_BPCI_R3_ERR_STAT				0x46F4 //Ponsot x
-#define REG_PDI_R1_ERR_STAT				0x0AF8
-#define REG_AAI_R1_ERR_STAT				0x4714
-#define REG_CACI_R1_ERR_STAT				0x08F8
-#define REG_RAWI2_R6_ERR_STAT				0x4834 //Ponsot x
+#define REG_LSCI_R1_ERR_STAT				0x0798
+#define REG_BPCI_R1_ERR_STAT				0x0698
+#define REG_BPCI_R2_ERR_STAT				0x06D8
+#define REG_BPCI_R3_ERR_STAT				0x0718 //Ponsot x
+#define REG_PDI_R1_ERR_STAT				0x0818
+#define REG_AEI_R1_ERR_STAT				0x0858
+// #define REG_AAI_R1_ERR_STAT				0x4714
+#define REG_CACI_R1_ERR_STAT				0x0a18
+// #define REG_RAWI2_R6_ERR_STAT				0x4834 //Ponsot x
 #define REG_IMGO_R1_ERR_STAT				0x1038
-#define REG_FHO_R1_ERR_STAT				0x13A8
-#define REG_AAHO_R1_ERR_STAT				0x1538
-#define REG_PDO_R1_ERR_STAT				0x1498
-#define REG_AAO_R1_ERR_STAT				0x14E8
-#define REG_AFO_R1_ERR_STAT				0x1628
-#define REG_TSFSO_R1_ERR_STAT				0x4A74
-#define REG_LTMSO_R1_ERR_STAT				0x4AF4
-#define REG_LTMSHO_R1_ERR_STAT				0x4B34
-#define REG_FLKO_R1_ERR_STAT				0x1448
+#define REG_FHO_R1_ERR_STAT				0x1248
+#define REG_AEHO_R1_ERR_STAT				0x14D8
+// #define REG_AAHO_R1_ERR_STAT				0x1538
+#define REG_PDO_R1_ERR_STAT				0x1388
+#define REG_AEO_R1_ERR_STAT				0x1438
+// #define REG_AAO_R1_ERR_STAT				0x14E8
+#define REG_AFO_R1_ERR_STAT				0x15C8
+#define REG_TSFSO_R1_ERR_STAT				0x1618
+#define REG_LTMSBO_R1_ERR_STAT				0x1758
+#define REG_LTMSGO_R1_ERR_STAT				0x17A8
+#define REG_LTMSTO_R1_ERR_STAT				0x17F8
+// #define REG_LTMSO_R1_ERR_STAT				0x4AF4
+// #define REG_LTMSHO_R1_ERR_STAT				0x4B34
+#define REG_FLKO_R1_ERR_STAT				0x1298
 #define REG_UFEO_R1_ERR_STAT				0x10E8
-#define REG_TSFSO_R2_ERR_STAT				0x1678 //Ponsot x
+#define REG_TSFSO_R2_ERR_STAT				0x1668 //Ponsot x
 /* error status, yuv base */
 #define REG_YUVO_R1_ERR_STAT				0x1038
 #define REG_YUVBO_R1_ERR_STAT				0x10E8
@@ -271,29 +286,32 @@ enum topdebug_event {
 #define REG_YUVDO_R1_ERR_STAT				0x1248
 #define REG_YUVO_R3_ERR_STAT				0x12F8
 #define REG_YUVBO_R3_ERR_STAT				0x13A8
-#define REG_YUVCO_R3_ERR_STAT				0x4654
-#define REG_YUVDO_R3_ERR_STAT				0x4704
+#define REG_YUVCO_R3_ERR_STAT				0x1458
+#define REG_YUVDO_R3_ERR_STAT				0x1508
 #define REG_YUVO_R2_ERR_STAT				0x15B8
 #define REG_YUVBO_R2_ERR_STAT				0x1608
 #define REG_YUVO_R4_ERR_STAT				0x1658
 #define REG_YUVBO_R4_ERR_STAT				0x16A8
-#define REG_RZH1N2TO_R1_ERR_STAT			0x1718
-#define REG_RZH1N2TBO_R1_ERR_STAT			0x4934
-#define REG_RZH1N2TO_R2_ERR_STAT			0x49F4
-#define REG_RZH1N2TO_R3_ERR_STAT			0x4AF4
-#define REG_RZH1N2TBO_R3_ERR_STAT			0x4974
-#define REG_DRZS4NO_R1_ERR_STAT				0x18D4
-#define REG_DRZS4NO_R2_ERR_STAT				0x4A34 //Ponsot x
-#define REG_DRZS4NO_R3_ERR_STAT				0x4AB4
-#define REG_ACTSO_R1_ERR_STAT				0x4AF4 //Ponsot x
-#define REG_TNCSYO_R1_ERR_STAT				0x4BF4 //Ponsot x
-#define REG_YUVO_R5_ERR_STAT				0x16F8
-#define REG_YUVBO_R5_ERR_STAT				0x1748
-#define REG_TCYSO_R1_ERR_STAT				0x1798
-#define REG_DRZH2NO_R8_ERR_STAT				0x4A74
-#define REG_DRZB2NO_R1_ERR_STAT				0x1768
-#define REG_DRZB2NBO_R1_ERR_STAT			0x17B8
-#define REG_DRZB2NCO_R1_ERR_STAT			0x1808
+// #define REG_RZH1N2TO_R1_ERR_STAT			0x1718
+// #define REG_RZH1N2TBO_R1_ERR_STAT			0x4934
+#define REG_RZH1N2TO_R2_ERR_STAT			0x1748
+// #define REG_RZH1N2TO_R3_ERR_STAT			0x4AF4
+// #define REG_RZH1N2TBO_R3_ERR_STAT			0x4974
+// #define REG_DRZS4NO_R1_ERR_STAT				0x18D4
+// #define REG_DRZS4NO_R2_ERR_STAT				0x4A34 //Ponsot x
+#define REG_DRZS4NO_R3_ERR_STAT				0x1838
+// #define REG_ACTSO_R1_ERR_STAT				0x4AF4 //Ponsot x
+// #define REG_TNCSYO_R1_ERR_STAT				0x4BF4 //Ponsot x
+// #define REG_YUVO_R5_ERR_STAT				0x16F8
+// #define REG_YUVBO_R5_ERR_STAT				0x1748
+#define REG_TCYSO_R1_ERR_STAT				0x16F8
+#define REG_DRZH2NO_R8_ERR_STAT				0x18E8
+#define REG_DRZH2NO_R1_ERR_STAT				0x1798
+#define REG_DRZH1NO_R1_ERR_STAT			0x1888
+#define REG_DRZH1NBO_R1_ERR_STAT			0x18D8
+// #define REG_DRZB2NO_R1_ERR_STAT				0x1768
+// #define REG_DRZB2NBO_R1_ERR_STAT			0x17B8
+// #define REG_DRZB2NCO_R1_ERR_STAT			0x1808
 
 #define REG_CTL_DBG_SET					0x0F00
 #define REG_CTL_DBG_SET2				0x0F04
@@ -314,14 +332,14 @@ enum topdebug_event {
 #define REG_CQ_THR0_BASEADDR				0x1014
 #define REG_CQ_THR0_BASEADDR_MSB			0x1018
 #define REG_CQ_THR0_DESC_SIZE				0x101C
-#define REG_CQ_SUB_CQ_EN			        0x1030
-#define REG_CQ_SUB_THR0_CTL					0x1040
-#define REG_CQ_SUB_THR0_BASEADDR_2			0x104C
-#define REG_CQ_SUB_THR0_BASEADDR_MSB_2		0x1050
-#define REG_CQ_SUB_THR0_DESC_SIZE_2			0x1058
-#define REG_CQ_SUB_THR0_BASEADDR_1			0x1044
-#define REG_CQ_SUB_THR0_BASEADDR_MSB_1		0x1048
-#define REG_CQ_SUB_THR0_DESC_SIZE_1			0x1054
+#define REG_CQ_SUB_CQ_EN			        0x103C
+#define REG_CQ_SUB_THR0_CTL					0x1048
+#define REG_CQ_SUB_THR0_BASEADDR_2			0x1054
+#define REG_CQ_SUB_THR0_BASEADDR_MSB_2		0x1058
+#define REG_CQ_SUB_THR0_DESC_SIZE_2			0x1060
+#define REG_CQ_SUB_THR0_BASEADDR_1			0x104C
+#define REG_CQ_SUB_THR0_BASEADDR_MSB_1		0x1050
+#define REG_CQ_SUB_THR0_DESC_SIZE_1			0x105C
 #define REG_CTL_START						0x0408
 
 #define CQ_DB_EN					BIT(4)
@@ -331,14 +349,14 @@ enum topdebug_event {
 #define CQ_THR0_MODE_IMMEDIATE				BIT(4)
 #define CQ_THR0_MODE_CONTINUOUS				BIT(5)
 #define CQ_THR0_DONE_SEL				BIT(8)
-#define SCQ_EN						BIT(20)
+// #define SCQ_EN						BIT(20)
 #define SCQ_SUBSAMPLE_EN                                BIT(21)
 #define SCQ_SUB_RESET					BIT(16)
 
 #define CQ_THR0_EN						BIT(0)
 //#define CQ_CQI_R1_EN					BIT(15)
 //#define CQ_CQI_R2_EN					BIT(16)
-#define CAMCQ_SCQ_EN					BIT(20)
+// #define CAMCQ_SCQ_EN					BIT(20)
 //#define PASS1_DONE_SEL					BIT(16)
 
 /* camsys */
@@ -353,6 +371,7 @@ enum topdebug_event {
 #define REG_CTL_SW_CTL					0x0430
 #define REG_CTL_SW_PASS1_DONE			0x0100
 #define REG_CTL_SW_SUB_CTL				0x0104
+#define REG_CTL_DDREN_CTL			0x0440
 
 /* TG */
 #define REG_TG_SEN_MODE					0x1200
@@ -365,12 +384,13 @@ enum topdebug_event {
 #define TG_IDLE_ST					BIT(8)
 
 /* DBG */
-#define CAM_REG_CQ_SUB_THR0_BASEADDR_1(regs)			(regs + 0x1044)
-#define CAM_REG_CQ_SUB_THR0_BASEADDR_2(regs)			(regs + 0x104C)
-#define CAM_REG_SUB_THR0_DESC_SIZE_1(regs)			(regs + 0x1054)
-#define CAM_REG_SUB_THR0_DESC_SIZE_2(regs)			(regs + 0x1058)
+#define CAM_REG_CQ_SUB_THR0_BASEADDR_1(regs)			(regs + 0x104C)
+#define CAM_REG_CQ_SUB_THR0_BASEADDR_2(regs)			(regs + 0x1054)
+#define CAM_REG_SUB_THR0_DESC_SIZE_1(regs)			(regs + 0x105C)
+#define CAM_REG_SUB_THR0_DESC_SIZE_2(regs)			(regs + 0x1060)
 #define CAM_REG_IMGO_ORIWDMA_BASE_ADDR(regs)			(regs + 0x1000)
-#define CAM_REG_AAO_ULCWDMA_BASE_ADDR(regs)			(regs + 0x14B0)
+#define CAM_REG_AEO_ULCWDMA_BASE_ADDR(regs)			(regs + 0x1400)
+// #define CAM_REG_AAO_ULCWDMA_BASE_ADDR(regs)			(regs + 0x14B0)
 #define CAM_REG_YUVO_R1_ORIWDMA_BASE_ADDR(regs)			(regs + 0x1000)
 #define CAM_REG_YUVO_R3_ORIWDMA_BASE_ADDR(regs)			(regs + 0x12C0)
 #define CAM_REG_SMI_PORT_PSUEDO_MODE_EN(regs)			(regs + 0x0098)
@@ -380,7 +400,7 @@ enum topdebug_event {
 //#define CAM_REG_FBC_YUVO_R3_CTL2(regs)			        (regs + 0x3C24)
 
 #define CAM_REG_CQ_EN(regs)				        (regs + 0x1000)
-#define CAM_REG_SUB_CQ_EN(regs)				        (regs + 0x1030)
+#define CAM_REG_SUB_CQ_EN(regs)				        (regs + 0x103C)
 
 #define CAM_REG_SW_PASS1_DONE(regs)			        (regs + 0x0100)
 #define CAM_REG_SW_SUB_CTL(regs)			        (regs + 0x0104)

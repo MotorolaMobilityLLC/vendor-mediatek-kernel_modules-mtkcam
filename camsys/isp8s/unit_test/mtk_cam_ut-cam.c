@@ -114,10 +114,10 @@ static int ut_raw_reset(struct device *dev)
 	writel(0x0, base + CAM_REG_CTL_RAW_MOD5_DCM_DIS);
 	writel(0x0, base + CAM_REG_CTL_RAW_MOD6_DCM_DIS);
 	writel(0x0, yuv_base + CAM_REG_CTL_RAW_MOD5_DCM_DIS);
-
-	//writel_relaxed(0x0, base + REG_CTL_SW_PASS1_DONE);
-	//writel_relaxed(0x0, raw->base_inner + REG_CTL_SW_PASS1_DONE);
-
+/*
+ *	writel_relaxed(0x0, base + REG_CTL_SW_PASS1_DONE);
+ *	writel_relaxed(0x0, raw->base_inner + REG_CTL_SW_PASS1_DONE);
+ */
 	/* make sure reset take effect */
 
 	val = readl_relaxed(ut->base);
@@ -130,10 +130,18 @@ static int ut_raw_reset(struct device *dev)
 	dev_info(dev, "adlrd_base + 0x804: :0x%x",
 		readl_relaxed(ut->adlrd_base + 0x804));
 
-	// barrier
+
 	wmb();
 
 	return -1;
+}
+
+static void init_raw_ddren(struct mtk_ut_raw_device *raw)
+{
+	writel_relaxed(0x10, raw->base_inner + REG_CTL_DDREN_CTL);
+
+	dev_info(raw->dev, "REG_CTL_DDREN_CTL:%d\n",
+		readl_relaxed(raw->base_inner + REG_CTL_DDREN_CTL));
 }
 
 static void set_steamon_handle(struct device *dev, int type);
@@ -143,28 +151,29 @@ static void raw_set_camctl_toggle_db(struct mtk_ut_raw_device *raw);
 static int ut_raw_initialize(struct device *dev, void *ext_params)
 {
 	struct mtk_ut_raw_device *raw = dev_get_drvdata(dev);
-	//struct mtk_cam_ut *ut = raw->ut;
+    //struct mtk_cam_ut *ut = raw->ut;
 	struct mtk_ut_raw_initial_params *p = ext_params;
 	void __iomem *base = raw->base;
 	void __iomem *dma_base = raw->dma_base;
 	//void __iomem *yuv_base = raw->yuv_base;
-	//unsigned int reg_raw_urgent, reg_yuv_urgent;
-	//unsigned int raw_urgent, yuv_urgent;
+/*
+ *	unsigned int reg_raw_urgent, reg_yuv_urgent;
+ *	unsigned int raw_urgent, yuv_urgent;
+ */
 	u32 val;
 
 	if (!p)
 		return -1;
 
+	init_raw_ddren(raw);
+
 	/* initialize for CQ */
 	if (p->subsample) {
 		val = readl_relaxed(base + REG_CQ_EN);
-		writel_relaxed(val | SCQ_EN | SCQ_SUBSAMPLE_EN, base + REG_CQ_EN);
+		writel_relaxed(val | SCQ_SUBSAMPLE_EN, base + REG_CQ_EN);
 
 		writel_relaxed(0x100 | p->subsample, base + REG_CTL_SW_PASS1_DONE);
 		writel_relaxed(0x100 | p->subsample, raw->base_inner + REG_CTL_SW_PASS1_DONE);
-	} else {
-		val = readl_relaxed(base + REG_CQ_EN);
-		writel_relaxed(val | SCQ_EN, base + REG_CQ_EN);
 	}
 
 	writel_relaxed(CQ_THR0_MODE_IMMEDIATE | CQ_THR0_EN,
@@ -184,8 +193,7 @@ static int ut_raw_initialize(struct device *dev, void *ext_params)
 			dma_base + REG_CQI_R1A_CON3);
 	writel_relaxed((0x1 << 31) | FIFO_THRESHOLD(64, 1/10, 0),
 			dma_base + REG_CQI_R1A_CON4);
-
-#ifdef MASK_FOR_READY_LATER
+/*
 	writel_relaxed(HALT1_EN, ut->base + REG_HALT1_EN);
 	writel_relaxed(HALT2_EN, ut->base + REG_HALT2_EN);
 	writel_relaxed(HALT13_EN, ut->base + REG_HALT13_EN);
@@ -237,9 +245,7 @@ static int ut_raw_initialize(struct device *dev, void *ext_params)
 		dev_info(dev, "%s: is hrt, raw 0x%x.\n",
 			__func__, readl_relaxed(ut->base + reg_raw_urgent));
 	}
-#endif
-
-	// barrier
+	*/
 	wmb();
 
 	set_steamon_handle(dev, p->streamon_type);
@@ -632,30 +638,25 @@ static void raw_handle_dma_err(struct mtk_ut_raw_device *raw)
 	void __iomem *yuv_base = raw->yuv_dma_base;
 
 	dev_info_ratelimited(raw->dev,
-			    "IMGO:%x,YUVO_R1/R2/R3/R4/R5:%x/%x/%x/%x/%x\n",
+			    "IMGO:%x,YUVO_R1/R2/R3/R4:%x/%x/%x/%x\n",
 			    readl_relaxed(base + REG_IMGO_R1_ERR_STAT),
 			    readl_relaxed(yuv_base + REG_YUVO_R1_ERR_STAT),
 			    readl_relaxed(yuv_base + REG_YUVO_R2_ERR_STAT),
 			    readl_relaxed(yuv_base + REG_YUVO_R3_ERR_STAT),
-			    readl_relaxed(yuv_base + REG_YUVO_R4_ERR_STAT),
-			    readl_relaxed(yuv_base + REG_YUVO_R5_ERR_STAT)
+			    readl_relaxed(yuv_base + REG_YUVO_R4_ERR_STAT)
 			   );
 
 	dev_info_ratelimited(raw->dev,
-			    "RZH1N2TO_R1/R2/R3:%x/%x/%x,DRZS4NO_R1/R2/R3:%x/%x/%x\n",
-			    readl_relaxed(yuv_base + REG_RZH1N2TO_R1_ERR_STAT),
+			    "RZH1N2TO_R2:%x,DRZS4NO_R3:%x\n",
 			    readl_relaxed(yuv_base + REG_RZH1N2TO_R2_ERR_STAT),
-			    readl_relaxed(yuv_base + REG_RZH1N2TO_R3_ERR_STAT),
-			    readl_relaxed(yuv_base + REG_DRZS4NO_R1_ERR_STAT),
-			    readl_relaxed(yuv_base + REG_DRZS4NO_R2_ERR_STAT),
 			    readl_relaxed(yuv_base + REG_DRZS4NO_R3_ERR_STAT)
 			   );
 
 	dev_info_ratelimited(raw->dev,
-			    "AAO/AAHO/LTMSO/FLKO/AFO:%x/%x/%x/%x/%x,TSFSO_R1/R2:%x/%x\n",
-			    readl_relaxed(base + REG_AAO_R1_ERR_STAT),
-			    readl_relaxed(base + REG_AAHO_R1_ERR_STAT),
-			    readl_relaxed(base + REG_LTMSO_R1_ERR_STAT),
+			    "AEO/AEHO/LTMSBO/FLKO/AFO:%x/%x/%x/%x/%x,TSFSO_R1/R2:%x/%x\n",
+			    readl_relaxed(base + REG_AEO_R1_ERR_STAT),
+			    readl_relaxed(base + REG_AEHO_R1_ERR_STAT),
+			    readl_relaxed(base + REG_LTMSBO_R1_ERR_STAT),
 			    readl_relaxed(base + REG_FLKO_R1_ERR_STAT),
 			    readl_relaxed(base + REG_AFO_R1_ERR_STAT),
 			    readl_relaxed(base + REG_TSFSO_R1_ERR_STAT),
@@ -697,7 +698,6 @@ static void raw_set_camctl_toggle_db(struct mtk_ut_raw_device *raw)
 
 	writel(misc_db_off, base + REG_CTL_DB_LOAD_CTL1);
 	writel(misc, base + REG_CTL_DB_LOAD_CTL1);
-	// barrier
 	wmb();
 }
 
@@ -807,21 +807,16 @@ static void yuv_handle_dma_err(struct mtk_ut_yuv_device *raw)
 	void __iomem *yuv_dma_base = raw->dma_base;
 
 	dev_info_ratelimited(raw->dev,
-			    "YUVO_R1/R2/R3/R4/R5:%x/%x/%x/%x/%x\n",
+			    "YUVO_R1/R2/R3/R4:%x/%x/%x/%x\n",
 			    readl_relaxed(yuv_dma_base + REG_YUVO_R1_ERR_STAT),
 			    readl_relaxed(yuv_dma_base + REG_YUVO_R2_ERR_STAT),
 			    readl_relaxed(yuv_dma_base + REG_YUVO_R3_ERR_STAT),
-			    readl_relaxed(yuv_dma_base + REG_YUVO_R4_ERR_STAT),
-			    readl_relaxed(yuv_dma_base + REG_YUVO_R5_ERR_STAT)
+			    readl_relaxed(yuv_dma_base + REG_YUVO_R4_ERR_STAT)
 			   );
 
 	dev_info_ratelimited(raw->dev,
-			    "RZH1N2TO_R1/R2/R3:%x/%x/%x,DRZS4NO_R1/R2/R3:%x/%x/%x\n",
-			    readl_relaxed(yuv_dma_base + REG_RZH1N2TO_R1_ERR_STAT),
+			    "RZH1N2TO_R2:%x,DRZS4NO_R3:%x\n",
 			    readl_relaxed(yuv_dma_base + REG_RZH1N2TO_R2_ERR_STAT),
-			    readl_relaxed(yuv_dma_base + REG_RZH1N2TO_R3_ERR_STAT),
-			    readl_relaxed(yuv_dma_base + REG_DRZS4NO_R1_ERR_STAT),
-			    readl_relaxed(yuv_dma_base + REG_DRZS4NO_R2_ERR_STAT),
 			    readl_relaxed(yuv_dma_base + REG_DRZS4NO_R3_ERR_STAT)
 			   );
 }
@@ -1201,7 +1196,6 @@ static void mtk_ut_raw_remove(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct mtk_ut_raw_device *drvdata = dev_get_drvdata(dev);
 	int i;
-
 #if WITH_POWER_DRIVER
 	pm_runtime_disable(dev);
 #endif
@@ -1524,7 +1518,6 @@ static void mtk_ut_yuv_remove(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct mtk_ut_yuv_device *drvdata = dev_get_drvdata(dev);
 	int i;
-
 #if WITH_POWER_DRIVER
 	pm_runtime_disable(dev);
 #endif
@@ -1753,7 +1746,6 @@ static void mtk_ut_rms_remove(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct mtk_ut_rms_device *drvdata = dev_get_drvdata(dev);
 	int i;
-
 #if WITH_POWER_DRIVER
 	pm_runtime_disable(dev);
 #endif
@@ -1920,7 +1912,6 @@ static void mtk_ut_larb_remove(struct platform_device *pdev)
 	pm_runtime_put(dev);
 	pm_runtime_disable(dev);
 #endif
-	return 0;
 }
 
 static const struct of_device_id mtk_ut_larb_of_ids[] = {
