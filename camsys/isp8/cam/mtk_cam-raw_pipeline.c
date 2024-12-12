@@ -90,7 +90,7 @@ static inline struct v4l2_rect fullsize_as_crop(unsigned int w, unsigned int h)
 
 #define USE_CTRL_PIXEL_RATE 0
 #define DC_MODE_VB_MARGIN 100
-
+#define M2M_MODE_VB_RATIO 35
 static int res_calc_fill_sensor(struct mtk_cam_res_calc *c,
 				const struct mtk_cam_resource_sensor_v2 *s,
 				struct mtk_cam_resource_raw_v2 *r)
@@ -111,9 +111,15 @@ static int res_calc_fill_sensor(struct mtk_cam_res_calc *c,
 		* interval_d / interval_n;
 #endif
 	c->line_time = interval / max(s->height + s->vblank, 1U);
-	c->raw_line_time = (res_raw_is_dc_mode(r) || scen_is_m2m(&r->scen)) ?
-		interval / max(s->height + DC_MODE_VB_MARGIN, 1U) :
-		c->line_time;
+
+	if (res_raw_is_dc_mode(r))
+		c->raw_line_time = interval / max(s->height + DC_MODE_VB_MARGIN, 1U);
+	else if (scen_is_m2m(&r->scen))
+		c->raw_line_time = interval /
+			max(s->height + s->height * M2M_MODE_VB_RATIO / 100, 1U);
+	else
+		c->raw_line_time = c->line_time;
+
 	c->width = s->width;
 	c->height = s->height;
 
