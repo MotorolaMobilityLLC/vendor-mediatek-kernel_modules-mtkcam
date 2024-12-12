@@ -135,6 +135,9 @@ enum ISP8_IMG_PWR {
 
 #define IMGSYS_CMDQ_CBPARAM_NUM	(90*5)
 
+#define IMGSYS_MAE_WRITE_BACK_SUPPORT
+#define IMGSYS_MAE_WRITE_BACK_REG_NUM (4)
+
 #define IMGSYS_POLL_TIME_10MS	(0x341)
 #define IMGSYS_POLL_TIME_20MS	(IMGSYS_POLL_TIME_10MS*2)
 #define IMGSYS_POLL_TIME_30MS	(IMGSYS_POLL_TIME_10MS*3)
@@ -1437,7 +1440,11 @@ int imgsys_cmdq_parser_plat8(struct mtk_imgsys_dev *imgsys_dev,
 				u64 (*imgsys_get_iova)(struct dma_buf *dma_buf, s32 ionFd,
 					struct mtk_imgsys_dev *imgsys_dev,
 					struct mtk_imgsys_dev_buffer *dev_buf),
-				int (*is_singledev_mode)(struct mtk_imgsys_request *req));
+				u64 (*imgsys_get_kva)(struct dma_buf *dma_buf, s32 ionFd,
+					struct mtk_imgsys_dev *imgsys_dev,
+					struct mtk_imgsys_dev_buffer *dev_buf),
+				int (*is_singledev_mode)(struct mtk_imgsys_request *req),
+				struct mtk_imgsys_hw_info *hw_info);
 int imgsys_cmdq_sec_sendtask_plat8(struct mtk_imgsys_dev *imgsys_dev);
 void imgsys_cmdq_sec_cmd_plat8(struct cmdq_pkt *pkt);
 void imgsys_cmdq_sec_cmd_fdvt_plat8(struct cmdq_pkt *pkt);
