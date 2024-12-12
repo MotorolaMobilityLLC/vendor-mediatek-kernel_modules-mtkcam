@@ -219,6 +219,8 @@ struct singlenode_desc_norm {
 	/* Y-12bit packed */
 #define V4L2_PIX_FMT_YUV422      v4l2_fourcc('Y', 'U', '1', '6')
 	/* YUV-8bit packed 4:2:2 3plane */
+#define V4L2_PIX_FMT_YUV_2PY8C10P    v4l2_fourcc('U', '0', '2', '9')
+	/* YUV-Y8bit C10bit packed 4:2:0 2plane, (Y)(UV)  */
 #define V4L2_PIX_FMT_YUYV_Y210P    v4l2_fourcc('Y', 'U', '1', 'A')
 	/* YUV-10bit packed 4:2:2 1plane, YUYV  */
 #define V4L2_PIX_FMT_YVYU_Y210P    v4l2_fourcc('Y', 'V', '1', 'A')
@@ -500,6 +502,8 @@ struct singlenode_desc_norm {
 	/* YUV-8bit UFBC packed 4:2:0 2plane, (Y)(UV)  */
 #define V4L2_PIX_FMT_UFBC_NV21    v4l2_fourcc('V', 'F', '2', '8')
 	/* YUV-8bit UFBC packed 4:2:0 2plane, (Y)(VU)  */
+#define V4L2_PIX_FMT_UFBC_YUV_2PY8C10P    v4l2_fourcc('U', 'F', '2', '9')
+	/* YUV-Y8bit C10bit UFBC packed 4:2:0 2plane, (Y)(UV)  */
 #define V4L2_PIX_FMT_UFBC_YUV_2P010P    v4l2_fourcc('U', 'F', '2', 'A')
 	/* YUV-10bit UFBC packed 4:2:0 2plane, (Y)(UV)  */
 #define V4L2_PIX_FMT_UFBC_YVU_2P010P    v4l2_fourcc('V', 'F', '2', 'A')
