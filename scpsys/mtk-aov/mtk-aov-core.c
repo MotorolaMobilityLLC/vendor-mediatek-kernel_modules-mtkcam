@@ -366,7 +366,6 @@ static int copy_event_data(struct mtk_aov *aov_dev,
 		struct base_event *event)
 {
 	struct aov_core *core_info = &aov_dev->core_info;
-	struct aov_notify info;
 	uint32_t frame_mode;
 	uint32_t debug_mode;
 	uint32_t power_mode;
@@ -435,16 +434,6 @@ static int copy_event_data(struct mtk_aov *aov_dev,
 			// Only copy apu output
 			memcpy(buffer, (void *)event, offsetof(struct base_event, yuvo1_width));
 		}
-	}
-
-	if (atomic_read(&(core_info->aov_ready))) {
-		dev_info(aov_dev->dev, "%s: release aov event id(%d)\n", __func__, event->event_id);
-
-		info.notify = AOV_NOTIFY_EVT_AVAIL;
-		info.status = event->event_id;
-
-		(void)aov_core_send_cmd(aov_dev, AOV_SCP_CMD_NOTIFY,
-			(void *)&info, sizeof(struct aov_notify), true);
 	}
 
 	(void)queue_push(&(core_info->queue), buffer);
@@ -1365,6 +1354,7 @@ int aov_core_copy(struct mtk_aov *aov_dev, struct aov_dqevent *dequeue)
 			}
 		}
 		if (user_data_id == -1) {
+			buffer_release(core_info, event);
 			dev_info(aov_dev->dev, "%s: no valid data id, bypass", __func__);
 			return 0;
 		}
@@ -1635,6 +1625,12 @@ int aov_core_poll(struct mtk_aov *aov_dev, struct file *file,
 	if (event != NULL) {
 		ret = copy_event_data(aov_dev, event);
 
+		dev_info(aov_dev->dev, "%s: release event id(%d) after copy\n", __func__, event->event_id);
+		info.notify = AOV_NOTIFY_EVT_AVAIL;
+		info.status = event->event_id;
+		(void)aov_core_send_cmd(aov_dev, AOV_SCP_CMD_NOTIFY,
+			(void *)&info, sizeof(struct aov_notify), true);
+
 		AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
 			"%s: hold event wakelock after copy_event_data.\n", __func__);
 #ifdef CONFIG_PM_WAKELOCKS
@@ -1663,6 +1659,12 @@ int aov_core_poll(struct mtk_aov *aov_dev, struct file *file,
 	}
 	if (event != NULL) {
 		ret = copy_event_data(aov_dev, event);
+
+		dev_info(aov_dev->dev, "%s: release event id(%d) after copy\n", __func__, event->event_id);
+		info.notify = AOV_NOTIFY_EVT_AVAIL;
+		info.status = event->event_id;
+		(void)aov_core_send_cmd(aov_dev, AOV_SCP_CMD_NOTIFY,
+			(void *)&info, sizeof(struct aov_notify), true);
 
 		AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
 			"%s: hold event wakelock after copy_event_data.\n", __func__);

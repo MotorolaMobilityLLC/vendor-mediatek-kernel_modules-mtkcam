@@ -19,7 +19,7 @@
 
 #include "./alloc/tlsf/tlsf_alloc.h"
 
-#define AOV_TIMEOUT_MS 750U
+#define AOV_TIMEOUT_MS 1000U
 
 // Forward declaration
 struct mtk_aov;
