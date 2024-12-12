@@ -33,7 +33,7 @@
 #include "mtk-smi-user.h"
 
 uint32_t g_frame_mode;
-bool g_aov_start;
+uint32_t g_aov_start;
 /* smi full dump */
 struct device *uisp_larb_dev;
 
@@ -149,6 +149,7 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 	struct mtk_aov *aov_dev = (struct mtk_aov *)file->private_data;
 	struct aov_core *core_info = &aov_dev->core_info;
 	int ret = 0;
+	bool stop_w_scp_reboot_flow = false;
 
 	AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
 		"%s ioctl aov driver(%d)+\n", __func__, cmd);
@@ -164,8 +165,10 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 			return -EFAULT;
 		}
 		dev_info(aov_dev->dev, "AOV start+\n");
-		vmm_isp_ctrl_notify(1);
-		mtk_mmdvfs_aov_enable(1);
+		if (g_aov_start == 0) {
+			vmm_isp_ctrl_notify(1);
+			mtk_mmdvfs_aov_enable(1);
+		}
 
 		g_frame_mode = 0;
 		if (arg) {
@@ -188,13 +191,13 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 			wake_lock(&aov_wake_lock);
 #endif
 		}
-		g_aov_start = true;
+		g_aov_start += 1;
 
 		AOV_TRACE_FORCE_BEGIN("AOV start");
 		ret = aov_core_send_cmd(aov_dev, AOV_SCP_CMD_START,
 			(void *)arg, sizeof(struct aov_user), true);
 		AOV_TRACE_END();
-		if (ret < 0) {
+		if ((ret < 0) && (g_aov_start == 1)) {
 			vmm_isp_ctrl_notify(0);
 			mtk_mmdvfs_aov_enable(0);
 		}
@@ -235,17 +238,24 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 			dev_info(aov_dev->dev, "skip flow below AOV kernel!\n");
 			break;
 		}
-		if (down_interruptible(&core_info->start_stop_sema)) {
+		/* error handling of SCP rebooting: skip scp stop flow */
+		if (atomic_read(&(core_info->scp_ready)) == 1) {
+			dev_info(aov_dev->dev, "%s: SCP rebooting stop case\n", __func__);
+			stop_w_scp_reboot_flow = true;
+		}
+		if (!stop_w_scp_reboot_flow &&
+			(down_interruptible(&core_info->start_stop_sema))) {
 			dev_info(aov_dev->dev, "%s: failed to acquire semaphore\n", __func__);
 			return -EFAULT;
 		}
 		dev_info(aov_dev->dev, "AOV stop+\n");
 
-		g_aov_start = false;
+		g_aov_start -= 1;
 		AOV_TRACE_FORCE_BEGIN("AOV stop");
-		ret = aov_core_send_cmd(aov_dev, AOV_SCP_CMD_STOP, (void *)arg, sizeof(struct close_param), true);
+		ret = aov_core_send_cmd(aov_dev, AOV_SCP_CMD_STOP, (void *)arg,
+			sizeof(struct close_param), !stop_w_scp_reboot_flow);
 		AOV_TRACE_FORCE_END();
-		if (ret >= 0) {
+		if (g_aov_start == 0) {
 			dev_info(aov_dev->dev, "AOV disable vmm+\n");
 			vmm_isp_ctrl_notify(0);
 			mtk_mmdvfs_aov_enable(0);
@@ -262,7 +272,8 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 		}
 
 		dev_info(aov_dev->dev, "AOV stop-(%d)\n", ret);
-		up(&core_info->start_stop_sema);
+		if (!stop_w_scp_reboot_flow)
+			up(&core_info->start_stop_sema);
 		break;
 	case AOV_DEV_QEA:
 		AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag), "trigger AOV QEA\n");
@@ -428,7 +439,7 @@ static int uisp_get_if_in_use_for_smi_dbg(void *data)
 	struct mtk_aov *aov_dev = aov_core_get_device();
 	struct aov_core *core_info = &aov_dev->core_info;
 
-	if (g_aov_start && (core_info->smi_dump_id == 1))
+	if ((g_aov_start != 0) && (core_info->smi_dump_id == 1))
 		ret = 1;
 	return ret;
 }
@@ -462,7 +473,7 @@ static int mtk_aov_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	g_frame_mode = 0;
-	g_aov_start = false;
+	g_aov_start = 0;
 	uisp_larb_dev = NULL;
 
 #ifdef CONFIG_PM_WAKELOCKS

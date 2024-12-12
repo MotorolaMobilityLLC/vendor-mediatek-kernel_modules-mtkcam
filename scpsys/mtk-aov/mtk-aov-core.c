@@ -813,7 +813,14 @@ int aov_core_send_cmd(struct mtk_aov *aov_dev, uint32_t cmd,
 		if (*(aov_dev->bypass_aov_scp_flag)) {
 			dev_info(aov_dev->dev, "skip flow below AOV SCP!\n");
 		} else {
-			(void)send_cmd_internal(core_info, cmd, buffer, length, true, ack);
+			/* error handling of SCP rebooting: skip scp stop flow */
+			if ((cmd == AOV_SCP_CMD_STOP) &&
+				(atomic_read(&(core_info->scp_ready)) == 1)) {
+				dev_info(aov_dev->dev, "%s: SCP rebooting stop case\n", __func__);
+				(void)send_cmd_internal(core_info, cmd, buffer, length, false, ack);
+			} else {
+				(void)send_cmd_internal(core_info, cmd, buffer, length, true, ack);
+			}
 		}
 	} else {
 		AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
