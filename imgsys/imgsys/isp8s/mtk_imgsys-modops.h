@@ -18,6 +18,7 @@
 #include "imgsys_modules/mtk_imgsys-omc.h"
 #include "imgsys_modules/mtk_imgsys-me.h"
 #include "imgsys_modules/mtk_imgsys-mae.h"
+#include "imgsys_modules/mtk_imgsys-dfp.h"
 #include "imgsys_modules/mtk_imgsys-adl.h"
 //#include "mtk-ipesys-me.h"
 #include "mtk_imgsys-debug.h"
@@ -115,13 +116,13 @@ const struct module_ops imgsys_isp8s_modules[] = {
 	},
 	[IMGSYS_MOD_DFP] = {
 		.module_id = IMGSYS_MOD_DFP,
-		.init = NULL,
-		.set = NULL,
+		.init = imgsys_dfp_set_initial_value,
+		.set = imgsys_dfp_set_hw_initial_value,
 		.updatecq = NULL,
 		.cmdq_set = NULL,
-		.dump = NULL,
-		.done_chk = NULL,
-		.uninit = NULL,
+		.dump = imgsys_dfp_debug_dump,
+		.done_chk = imgsys_dfp_done_chk,
+		.uninit = imgsys_dfp_uninit,
 	},
 	[IMGSYS_MOD_DPE] = {
 		.module_id = IMGSYS_MOD_DPE,

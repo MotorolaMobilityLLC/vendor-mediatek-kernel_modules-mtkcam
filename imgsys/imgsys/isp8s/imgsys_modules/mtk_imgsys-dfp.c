@@ -1,0 +1,329 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2020 MediaTek Inc.
+ *
+ * Author: Marvin Lin <Marvin.Lin@mediatek.com>
+ *
+ */
+#include <linux/platform_device.h>
+#include <linux/module.h>
+#include <linux/device.h>
+#include <linux/of_address.h>
+#include <linux/pm_runtime.h>
+#include <linux/remoteproc.h>
+#include <linux/dma-mapping.h>
+#include <linux/clk.h>
+#include <linux/of_platform.h>
+#include <linux/of_irq.h>
+#include <linux/of_address.h>
+#include <linux/clk.h>
+#include "./../mtk_imgsys-engine-isp8s.h"
+#include "mtk_imgsys-dfp.h"
+#include "iommu_debug.h"
+#include "mtk_imgsys-v4l2-debug.h"
+#include "mtk-hcp.h"
+
+
+struct mtk_imgsys_dfp_dtable {
+	uint32_t empty;
+	uint32_t addr;
+	uint32_t addr_msb;
+};
+
+//static struct ipesys_dfp_device *me_dev;
+static void __iomem *g_dfptopRegBA;
+static void __iomem *g_feRegBA;
+static void __iomem *g_drzh2nRegBA;
+static void __iomem *g_fmRegBA;
+static void __iomem *g_dfp2topRegBA;
+static void __iomem *g_dvgfRegBA;
+
+int DFP_TranslationFault_callback(int port, dma_addr_t mva, void *data)
+{
+
+	void __iomem *feRegBA = 0L;
+	void __iomem *fmRegBA = 0L;
+	void __iomem *dvgfRegBA = 0L;
+	unsigned int i;
+
+	/* iomap registers */
+	feRegBA = g_feRegBA;
+	fmRegBA = g_fmRegBA;
+	dvgfRegBA = g_dvgfRegBA;
+	if (!feRegBA | !fmRegBA | !dvgfRegBA) {
+		pr_info("%s Unable to ioremap DFP registers\n",
+		__func__);
+	}
+
+	pr_info("FE register dump");
+	for (i = FE_CTL_OFFSET; i <= FE_CTL_RANGE; i += 0x10) {
+		pr_info("%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
+		(unsigned int)(DFP_FE_BASE + i),
+		(unsigned int)ioread32((void *)(feRegBA + i)),
+		(unsigned int)ioread32((void *)(feRegBA + (i+0x4))),
+		(unsigned int)ioread32((void *)(feRegBA + (i+0x8))),
+		(unsigned int)ioread32((void *)(feRegBA + (i+0xC))));
+	}
+
+	pr_info("FM register dump");
+	for (i = FM_CTL_OFFSET; i <= FM_CTL_RANGE; i += 0x10) {
+		pr_info("%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
+		(unsigned int)(DFP_FM_BASE + i),
+		(unsigned int)ioread32((void *)(fmRegBA + i)),
+		(unsigned int)ioread32((void *)(fmRegBA + (i+0x4))),
+		(unsigned int)ioread32((void *)(fmRegBA + (i+0x8))),
+		(unsigned int)ioread32((void *)(fmRegBA + (i+0xC))));
+	}
+
+	pr_info("DVGF register dump");
+	for (i = DVGF_CTL_OFFSET; i <= DVGF_CTL_RANGE; i += 0x10) {
+		pr_info("%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
+		(unsigned int)(DFP_DVGF_BASE + i),
+		(unsigned int)ioread32((void *)(dvgfRegBA + i)),
+		(unsigned int)ioread32((void *)(dvgfRegBA + (i+0x4))),
+		(unsigned int)ioread32((void *)(dvgfRegBA + (i+0x8))),
+		(unsigned int)ioread32((void *)(dvgfRegBA + (i+0xC))));
+	}
+
+
+	return 1;
+}
+
+void imgsys_dfp_set_initial_value(struct mtk_imgsys_dev *imgsys_dev)
+{
+	#ifdef ME_CLK_CTRL
+	int ret;
+	#endif
+
+	pr_info("%s: +\n", __func__);
+
+	g_dfptopRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_DFP_TOP);
+	g_feRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_DFP_FE);
+	g_drzh2nRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_DFP_DRZH2N);
+	g_fmRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_DFP_FM);
+	g_dfp2topRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_DFP2_TOP);
+	g_dvgfRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_DFP2_DVGF);
+
+	pr_info("%s: -\n", __func__);
+}
+//EXPORT_SYMBOL(imgsys_dfp_set_initial_value);
+
+void imgsys_dfp_uninit(struct mtk_imgsys_dev *imgsys_dev)
+{
+	if (g_dfptopRegBA) {
+		iounmap(g_dfptopRegBA);
+		g_dfptopRegBA = 0L;
+	}
+
+	if (g_feRegBA) {
+		iounmap(g_feRegBA);
+		g_feRegBA = 0L;
+	}
+
+	if (g_drzh2nRegBA) {
+		iounmap(g_drzh2nRegBA);
+		g_drzh2nRegBA = 0L;
+	}
+
+	if (g_fmRegBA) {
+		iounmap(g_fmRegBA);
+		g_fmRegBA = 0L;
+	}
+
+	if (g_dfp2topRegBA) {
+		iounmap(g_dfp2topRegBA);
+		g_dfp2topRegBA = 0L;
+	}
+
+	if (g_dvgfRegBA) {
+		iounmap(g_dvgfRegBA);
+		g_dvgfRegBA = 0L;
+	}
+}
+//EXPORT_SYMBOL(imgsys_dfp_uninit);
+
+void imgsys_dfp_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
+			unsigned int engine)
+{
+	void __iomem *dfptopRegBA = 0L;
+	void __iomem *feRegBA = 0L;
+	void __iomem *drzh2nRegBA = 0L;
+	void __iomem *fmRegBA = 0L;
+	void __iomem *dfp2topRegBA = 0L;
+	void __iomem *dvgfRegBA = 0L;
+	unsigned int i;
+
+	/* iomap registers */
+	dfptopRegBA = g_dfptopRegBA;
+	if (!dfptopRegBA ) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap DFP TOP registers\n",
+			__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+			__func__, imgsys_dev->dev->of_node->name);
+	}
+	feRegBA = g_feRegBA;
+	if (!feRegBA ) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap FE registers\n",
+			__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+			__func__, imgsys_dev->dev->of_node->name);
+	}
+	drzh2nRegBA = g_drzh2nRegBA;
+	if (!drzh2nRegBA ) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap DRZH2N registers\n",
+			__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+			__func__, imgsys_dev->dev->of_node->name);
+	}
+	fmRegBA = g_fmRegBA;
+	if (!fmRegBA) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap FM registers\n",
+			__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+			__func__, imgsys_dev->dev->of_node->name);
+	}
+	dfp2topRegBA = g_dfp2topRegBA;
+	if (!dfp2topRegBA) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap DFP2 TOP registers\n",
+			__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+			__func__, imgsys_dev->dev->of_node->name);
+	}
+	dvgfRegBA = g_dvgfRegBA;
+	if (!dvgfRegBA) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap DVGF registers\n",
+			__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+			__func__, imgsys_dev->dev->of_node->name);
+	}
+
+
+	pr_info("DFP TOP register dump");
+	for (i = DFP_TOP_CTL_OFFSET; i <= DFP_TOP_CTL_RANGE; i += 0x10) {
+		pr_info("%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
+		(unsigned int)(DFP_TOP_BASE + i),
+		(unsigned int)ioread32((void *)(g_dfptopRegBA + i)),
+		(unsigned int)ioread32((void *)(g_dfptopRegBA + (i+0x4))),
+		(unsigned int)ioread32((void *)(g_dfptopRegBA + (i+0x8))),
+		(unsigned int)ioread32((void *)(g_dfptopRegBA + (i+0xC))));
+	}
+
+	pr_info("FE register dump");
+	for (i = FE_CTL_OFFSET; i <= FE_CTL_RANGE; i += 0x10) {
+		pr_info("%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
+		(unsigned int)(DFP_FE_BASE + i),
+		(unsigned int)ioread32((void *)(feRegBA + i)),
+		(unsigned int)ioread32((void *)(feRegBA + (i+0x4))),
+		(unsigned int)ioread32((void *)(feRegBA + (i+0x8))),
+		(unsigned int)ioread32((void *)(feRegBA + (i+0xC))));
+	}
+
+	pr_info("DRZH2N register dump");
+	for (i = DRZH2N_CTL_OFFSET; i <= DRZH2N_CTL_RANGE; i += 0x10) {
+		pr_info("%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
+		(unsigned int)(DFP_DRZH2N_BASE + i),
+		(unsigned int)ioread32((void *)(g_drzh2nRegBA + i)),
+		(unsigned int)ioread32((void *)(g_drzh2nRegBA + (i+0x4))),
+		(unsigned int)ioread32((void *)(g_drzh2nRegBA + (i+0x8))),
+		(unsigned int)ioread32((void *)(g_drzh2nRegBA + (i+0xC))));
+	}
+
+	pr_info("FM register dump");
+	for (i = FM_CTL_OFFSET; i <= FM_CTL_RANGE; i += 0x10) {
+		pr_info("%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
+		(unsigned int)(DFP_FM_BASE + i),
+		(unsigned int)ioread32((void *)(fmRegBA + i)),
+		(unsigned int)ioread32((void *)(fmRegBA + (i+0x4))),
+		(unsigned int)ioread32((void *)(fmRegBA + (i+0x8))),
+		(unsigned int)ioread32((void *)(fmRegBA + (i+0xC))));
+	}
+
+	pr_info("DFP2 TOP register dump");
+	for (i = DFP2_TOP_CTL_OFFSET; i <= DFP2_TOP_CTL_RANGE; i += 0x10) {
+		pr_info("%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
+		(unsigned int)(DFP2_TOP_BASE + i),
+		(unsigned int)ioread32((void *)(g_dfp2topRegBA + i)),
+		(unsigned int)ioread32((void *)(g_dfp2topRegBA + (i+0x4))),
+		(unsigned int)ioread32((void *)(g_dfp2topRegBA + (i+0x8))),
+		(unsigned int)ioread32((void *)(g_dfp2topRegBA + (i+0xC))));
+	}
+
+	pr_info("DVGF register dump");
+	for (i = DVGF_CTL_OFFSET; i <= DVGF_CTL_RANGE; i += 0x10) {
+		pr_info("%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
+		(unsigned int)(DFP_DVGF_BASE + i),
+		(unsigned int)ioread32((void *)(dvgfRegBA + i)),
+		(unsigned int)ioread32((void *)(dvgfRegBA + (i+0x4))),
+		(unsigned int)ioread32((void *)(dvgfRegBA + (i+0x8))),
+		(unsigned int)ioread32((void *)(dvgfRegBA + (i+0xC))));
+	}
+}
+EXPORT_SYMBOL(imgsys_dfp_debug_dump);
+
+void imgsys_dfp_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev)
+{
+	void __iomem *dfptopRegBA = 0L;
+	void __iomem *feRegBA = 0L;
+	void __iomem *drzh2nRegBA = 0L;
+	void __iomem *fmRegBA = 0L;
+	void __iomem *dfp2topRegBA = 0L;
+	void __iomem *dvgfRegBA = 0L;
+
+	/* iomap registers */
+	dfptopRegBA = g_dfptopRegBA;
+	if (!dfptopRegBA ) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap DFP TOP registers\n",
+			__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+			__func__, imgsys_dev->dev->of_node->name);
+	}
+	feRegBA = g_feRegBA;
+	if (!feRegBA ) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap FE registers\n",
+			__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+			__func__, imgsys_dev->dev->of_node->name);
+	}
+	drzh2nRegBA = g_drzh2nRegBA;
+	if (!drzh2nRegBA ) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap DRZH2N registers\n",
+			__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+			__func__, imgsys_dev->dev->of_node->name);
+	}
+	fmRegBA = g_fmRegBA;
+	if (!fmRegBA) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap FM registers\n",
+			__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+			__func__, imgsys_dev->dev->of_node->name);
+	}
+	dfp2topRegBA = g_dfp2topRegBA;
+	if (!dfp2topRegBA) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap DFP2 TOP registers\n",
+			__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+			__func__, imgsys_dev->dev->of_node->name);
+	}
+	dvgfRegBA = g_dvgfRegBA;
+	if (!dvgfRegBA) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap DVGF registers\n",
+			__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+			__func__, imgsys_dev->dev->of_node->name);
+	}
+
+	/* FEFM HW mode ddren */
+	iowrite32(0x80000000, (void *)(dfptopRegBA + 0x158));
+
+	/* DVGF HW mode ddren */
+	iowrite32(0x80000000, (void *)(dfp2topRegBA + 0x158));
+
+}
+
+bool imgsys_dfp_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine)
+{
+	bool ret = true; //true: done
+
+	return ret;
+}
