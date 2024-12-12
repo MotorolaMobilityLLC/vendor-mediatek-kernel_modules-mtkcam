@@ -70,6 +70,7 @@ struct mtk_imgsys_cmdq_timestamp {
 struct mtk_imgsys_hw_info {
 	u32 *write_back_vaddr;
 	u32 *read_va;
+	u32 read_cnt;
 };
 
 struct mtk_imgsys_cb_param {

@@ -76,6 +76,7 @@ static dma_addr_t g_pkt_mae_pa_end;
 static u32 *g_pkt_mae_va_end;
 #define SRAM_SIZE (4096)
 #define REG_SIZE (4)
+static struct mutex cpr_lock;
 #endif
 
 u32 imgsys_cmdq_is_stream_off(void)
@@ -249,6 +250,7 @@ void imgsys_cmdq_streamon_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 	mae_pa = g_pkt_mae_pa;
 	g_pkt_mae_pa_end = g_pkt_mae_pa + SRAM_SIZE;
 	g_pkt_mae_va_end = g_pkt_mae_va + SRAM_SIZE / REG_SIZE;
+	mutex_init(&cpr_lock);
 #endif
 }
 
@@ -707,7 +709,8 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 	bool isGPRtimeout = 0;
 #ifdef IMGSYS_MAE_WRITE_BACK_SUPPORT
 	u32 *mae_write_back = NULL;
-	u32 *mae_read_back = NULL;
+	u32 *mae_read_back = NULL, *addr;
+	u32 read_cnt = 0;
 	struct mtk_imgsys_hw_info *mae_info = NULL;
 #endif
 
@@ -735,11 +738,14 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 		mae_info = &cb_param->hw_info;
 		mae_write_back = mae_info->write_back_vaddr;
 		mae_read_back =  mae_info->read_va;
-		if (unlikely(&mae_read_back[IMGSYS_MAE_WRITE_BACK_REG_NUM - 1] >= g_pkt_mae_va_end))
-			pr_info("%s: [WARN] MAE readback out-of-range\n", __func__);
-		else {
-			for (idx = 0; idx < IMGSYS_MAE_WRITE_BACK_REG_NUM; idx++)
-				mae_write_back[idx] = mae_read_back[idx];
+		read_cnt =  mae_info->read_cnt;
+		for (idx = 0; idx < read_cnt; idx++ ){
+			addr = &mae_read_back[idx];
+			if (unlikely(addr >= g_pkt_mae_va_end)) {
+				addr = (addr - g_pkt_mae_va_end) + g_pkt_mae_va;
+				pr_debug("%s: [INFO] cpr va rings back to %p at idx(%d)\n", __func__, addr, idx);
+			}
+			mae_write_back[idx] = *addr;
 
 			pr_debug("%s: [INFO] MAE writebacks regs(0x%x/0x%x/0x%x/0x%x)\n",
 				__func__, mae_write_back[0], mae_write_back[1],
@@ -2574,6 +2580,7 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 #endif
 #ifdef IMGSYS_MAE_WRITE_BACK_SUPPORT
 	u32 first_read = 1;
+	struct Command *nxt_cmd;
 #endif
 	req_fd = frm_info->request_fd;
 	req_no = frm_info->request_no;
@@ -2619,6 +2626,7 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				break;
 			}
 			if (first_read) {
+				mutex_lock(&cpr_lock);
 				hw_info->read_va = mae_va;
 
 				#ifndef MTK_IOVA_NOTCHECK
@@ -2642,6 +2650,8 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 			}
 			cmdq_pkt_mem_move(pkt, NULL, (dma_addr_t)cmd->u.dma_addr,
 				mae_pa, CMDQ_THR_SPR_IDX2);
+			hw_info->read_cnt++;
+
 			is_mae_read_cmd = 1;
 
 			mae_pa = mae_pa + 4;
@@ -2651,6 +2661,9 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				mae_va = g_pkt_mae_va;
 				pr_info("%s: mae gce sram rings back\n", __func__);
 			}
+			nxt_cmd = cmd + 1;
+			if (nxt_cmd->opcode != IMGSYS_CMD_READ_FD)
+				mutex_unlock(&cpr_lock);
 			break;
 #endif
 
