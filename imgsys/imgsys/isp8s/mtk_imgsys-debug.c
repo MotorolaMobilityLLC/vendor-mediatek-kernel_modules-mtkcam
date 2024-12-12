@@ -86,6 +86,17 @@ bool imgsys_dpe_8s_dbg_enable(void)
 	return imgsys_dpe_dbg_en;
 }
 
+int imgsys_isc_8s_ctrl(void)
+{
+	pr_info("%s: %08X", __func__, imgsys_isc_ctrl);
+	return imgsys_isc_ctrl;
+}
+
+bool imgsys_isc_8s_dbg_log_en(void)
+{
+	return imgsys_isc_log_en;
+}
+
 /* Should follow the order of IMGSYS_HW_FLAG_xxx in enum_imgsys_engine */
 struct imgsys_dbg_engine_t dbg_engine_name_list[DL_CHECK_ENG_NUM] = {
 	{IMGSYS_HW_FLAG_WPE_EIS,  "WPE_EIS"},
@@ -118,6 +129,7 @@ void __iomem *trawRegBA;
 void __iomem *adlARegBA;
 void __iomem *adlBRegBA;
 void __iomem *imgsysddrenRegBA;
+void __iomem *imgsysiscRegBA;
 int imgsys_ddr_en;
 
 void imgsys_main_init(struct mtk_imgsys_dev *imgsys_dev)
@@ -248,7 +260,101 @@ void imgsys_main_init(struct mtk_imgsys_dev *imgsys_dev)
 			return;
 		}
 
+	imgsysiscRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_ISC);
+	if (!imgsysiscRegBA) {
+		dev_info(imgsys_dev->dev, "%s: Unable to ioremap isc registers\n",
+				__func__);
+		dev_info(imgsys_dev->dev, "%s: of_iomap fail, devnode(%s).\n",
+				__func__, imgsys_dev->dev->of_node->name);
+		return;
+	}
+
 	pr_info("%s: -.\n", __func__);
+}
+
+#define ISC_BASE	(0x34060000)
+#define ISC_CTRL	(0x00000004)
+#define GID_0_ENTRY	(0x100)
+#define GID_ENTRY_OFST	(0x010)
+#define GID_TBL(g)	(GID_0_ENTRY + GID_ENTRY_OFST * (g))
+#define GID_RG_VAL(g)	((g) << 1)
+#define GID_START	(46)
+#define GID_END		(65)
+#define GID_NUM		(GID_END - GID_START + 1)
+
+void imgsys_main_slc_init(struct mtk_imgsys_dev *imgsys_dev)
+{
+	unsigned int i = 0, gid8 = 0, bid = 2, entry, val, opt;
+	void *addr = 0, *addr1 = 0;
+
+	for (i = 0; i < GID_NUM; i++) {
+		gid8 = (i + GID_START) << 1;
+		entry = i * bid;
+		addr = (void *)(imgsysiscRegBA + GID_TBL(entry));
+		iowrite32(GID_RG_VAL(gid8), addr);
+
+		gid8 = gid8 + 1;
+		entry++;
+		addr1 = (void *)(imgsysiscRegBA + GID_TBL(entry));
+		iowrite32(GID_RG_VAL(gid8), addr1);
+		if (imgsys_isc_8s_dbg_log_en())
+			dev_info(imgsys_dev->dev, "%s: ISC GID(%08X)| %08X %08X\n", __func__,
+				gid8 >> 1, (unsigned int)ioread32(addr), (unsigned int)ioread32(addr1));
+	}
+
+	addr = (void *)(imgsysiscRegBA + ISC_CTRL);
+	val = ioread32(addr);
+	opt = imgsys_isc_8s_ctrl();
+	if (opt & 0x2)
+		val |= 0x2;
+	if (opt & 0x4)
+		val |= 0x4;
+	if (opt & 0x1)
+		val |= 0x1;
+	if (opt & 0x10000000)
+		val |= 0x10000000;
+	iowrite32(val, addr);
+	dev_info(imgsys_dev->dev, "%s: ISC_CTRL [0x%08X 0x%08X]\n", __func__,
+					(ISC_BASE + ISC_CTRL), (unsigned int)ioread32(addr));
+
+}
+
+#define BID_NUM	(2)
+char log_buf[LOG_LEGNTH * 20] = {0};
+void imgsys_main_slc_dump(struct mtk_imgsys_dev *imgsys_dev)
+{
+	unsigned int i = 0, gid = 0, entry, b;
+	void *addr0 = 0;
+	int ret, ofst = 0;
+	unsigned int regs_ofst[] = {ISC_CTRL, 0x10, 0x14, 0x18, 0x1C, 0x28, 0x30, 0x34, 0x38};
+
+	log_buf[strlen(log_buf)] = '\0';
+
+	for (i = 0; i < ARRAY_SIZE(regs_ofst); i++) {
+		addr0 = (void *)(imgsysiscRegBA + regs_ofst[i]);
+		ret = snprintf(log_buf + ofst, sizeof(log_buf) - ofst, "ISC 0x%08X| %08X\n",
+						(ISC_BASE + regs_ofst[i]), (unsigned int)ioread32(addr0));
+		if (ret > 0 && ret < sizeof(log_buf) - ofst)
+			ofst += ret;
+		else if (ret > sizeof(log_buf) - ofst)
+			dev_info(imgsys_dev->dev, "%s: string truncated\n", __func__);
+	}
+	dev_info(imgsys_dev->dev, "%s:\n%s", __func__, log_buf);
+
+	for (i = 0 ; i < GID_NUM; i++) {
+		gid = i + GID_START;
+		for (b = 0; b < BID_NUM; b++) {
+			entry = i * BID_NUM + b;
+			addr0 = (void *)(imgsysiscRegBA + GID_TBL(entry));
+			dev_info(imgsys_dev->dev, "ISC GID(%d,%d) 0x%08X| %08X %08X %08X %08X\n",
+							gid, b << 1,
+							(ISC_BASE + GID_TBL(entry)),
+							(unsigned int)ioread32(addr0),
+							(unsigned int)ioread32(addr0 + 0x4),
+							(unsigned int)ioread32(addr0 + 0x8),
+							(unsigned int)ioread32(addr0 + 0xC));
+		}
+	}
 }
 
 void imgsys_main_set_init(struct mtk_imgsys_dev *imgsys_dev)
@@ -353,6 +459,12 @@ void imgsys_main_set_init(struct mtk_imgsys_dev *imgsys_dev)
 		mtk_smi_larb_clamp_and_lock(imgsys_dev->larbs[i], 0);
 #endif
 
+#ifdef MTK_ISC_SUPPORT
+	imgsys_main_slc_init(imgsys_dev);
+	if (imgsys_isc_8s_dbg_log_en())
+		imgsys_main_slc_dump(imgsys_dev);
+#endif
+
 	pr_debug("%s: -. qof ver = %d\n", __func__, imgsys_dev->qof_ver);
 }
 
@@ -376,6 +488,13 @@ void imgsys_main_cmdq_set_init(struct mtk_imgsys_dev *imgsys_dev, void *pkt, int
 			       0x1FF, 0xffffffff);
 	cmdq_pkt_write(package, NULL, (g_imgsys_main_reg_base + DBG_SW_CLR) /*address*/,
 			       0x0, 0xffffffff);
+}
+
+void imgsys_main_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int engine)
+{
+	pr_info("%s: +\n", __func__);
+	imgsys_main_slc_dump(imgsys_dev);
+	pr_info("%s: -\n", __func__);
 }
 
 void imgsys_main_uninit(struct mtk_imgsys_dev *imgsys_dev)
@@ -436,6 +555,12 @@ void imgsys_main_uninit(struct mtk_imgsys_dev *imgsys_dev)
 			iounmap(imgsysddrenRegBA);
 			imgsysddrenRegBA = 0L;
 		}
+
+	if (imgsysiscRegBA) {
+		iounmap(imgsysiscRegBA);
+		imgsysiscRegBA = 0L;
+	}
+
 
 	imgsys_ddr_en = 0;
 	pr_debug("%s: -.\n", __func__);

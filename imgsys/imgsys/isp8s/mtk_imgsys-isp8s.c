@@ -38,6 +38,12 @@ module_param(imgsys_dfp_dbg_en, int, 0644);
 int imgsys_dpe_dbg_en;
 module_param(imgsys_dpe_dbg_en, int, 0644);
 
+int imgsys_isc_ctrl;
+module_param(imgsys_isc_ctrl, int, 0644);
+
+int imgsys_isc_log_en;
+module_param(imgsys_isc_log_en, int, 0644);
+
 static const struct dev_pm_ops mtk_imgsys_pm_ops = {
 	SET_RUNTIME_PM_OPS(mtk_imgsys_runtime_suspend,
 						mtk_imgsys_runtime_resume, NULL)

@@ -18,6 +18,7 @@ extern int imgsys_quick_onoff_en;
 extern int imgsys_cmdq_ftrace_en;
 extern int imgsys_fence_dbg_en;
 extern int imgsys_fine_grain_dvfs_en;
+extern int imgsys_isc_xfd_dbg_en;
 extern int imgsys_iova_dbg_en;
 extern int imgsys_iova_dbg_port_en;
 extern int imgsys_cmdq_dbg_en;

@@ -61,6 +61,9 @@ module_param(imgsys_fence_dbg_en, int, 0644);
 int imgsys_fine_grain_dvfs_en;
 module_param(imgsys_fine_grain_dvfs_en, int, 0644);
 
+int imgsys_isc_xfd_dbg_en;
+module_param(imgsys_isc_xfd_dbg_en, int, 0644);
+
 int imgsys_iova_dbg_en;
 module_param(imgsys_iova_dbg_en, int, 0644);
 

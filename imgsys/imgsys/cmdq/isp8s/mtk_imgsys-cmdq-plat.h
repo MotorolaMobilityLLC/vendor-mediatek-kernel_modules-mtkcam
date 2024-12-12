@@ -46,6 +46,8 @@ enum ISP8S_IMG_PWR {
 #define	IMGSYS_PWR_THD			(5)
 #define IMGSYS_QOS_THD			(1)
 #define IMGSYS_SEC_THD			(3)
+#define IMGSYS_SEC_CAM_THD		(IMGSYS_SEC_THD - 1)
+#define IMGSYS_SEC_ISC			IMGSYS_SEC_CAM_THD
 
 #define PRE_PWR_ON_2 (1UL << 4)
 #define PRE_PWR_ON_3 (1UL << 5)
@@ -684,6 +686,8 @@ enum mtk_imgsys_event {
 	IMGSYS_CMDQ_SYNC_TOKEN_TZMP_ADL_SET,
 	IMGSYS_CMDQ_SYNC_TOKEN_TZMP_FDVT_WAIT,
 	IMGSYS_CMDQ_SYNC_TOKEN_TZMP_FDVT_SET,
+	IMGSYS_CMDQ_SYNC_TOKEN_TZMP_ISC_WAIT,
+	IMGSYS_CMDQ_SYNC_TOKEN_TZMP_ISC_SET,
 	IMGSYS_CMDQ_EVENT_MAX
 };
 
@@ -1228,6 +1232,8 @@ static struct imgsys_event_table imgsys_event[] = {
 	{IMGSYS_CMDQ_SYNC_TOKEN_TZMP_ADL_SET, "sw-sync-token-tzmp-adl-set"},
 	{IMGSYS_CMDQ_SYNC_TOKEN_TZMP_FDVT_WAIT, "sw-sync-token-tzmp-aie-wait"},
 	{IMGSYS_CMDQ_SYNC_TOKEN_TZMP_FDVT_SET, "sw-sync-token-tzmp-aie-set"},
+	{IMGSYS_CMDQ_SYNC_TOKEN_TZMP_ISC_WAIT, "sw-sync-token-tzmp-isc-wait"},
+	{IMGSYS_CMDQ_SYNC_TOKEN_TZMP_ISC_SET, "sw-sync-token-tzmp-isc-set"},
 	{IMGSYS_CMDQ_EVENT_MAX, "imgsys-event-max"},
 };
 
@@ -1444,6 +1450,7 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				int (*is_singledev_mode)(struct mtk_imgsys_request *req),
 				struct mtk_imgsys_hw_info *hw_info);
 int imgsys_cmdq_sec_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev);
+int imgsys_cmdq_sec_isc_init_plat8s(struct mtk_imgsys_dev *imgsys_dev);
 void imgsys_cmdq_sec_cmd_plat8s(struct cmdq_pkt *pkt);
 void imgsys_cmdq_sec_cmd_fdvt_plat8s(struct cmdq_pkt *pkt);
 void imgsys_cmdq_clearevent_plat8s(int event_id);
@@ -1461,6 +1468,7 @@ bool imgsys_qos_dbg_enable_plat8s(void);
 bool imgsys_quick_onoff_enable_plat8s(void);
 bool imgsys_fence_dbg_enable_plat8s(void);
 bool imgsys_fine_grain_dvfs_enable_plat8s(void);
+bool imgsy_isc_xfd_dbg_enable_plat8s(void);
 bool imgsys_iova_dbg_enable_plat8s(void);
 u32 imgsys_iova_dbg_port_plat8s(void);
 u32 imgsys_cmdq_is_stream_off(void);

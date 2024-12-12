@@ -217,6 +217,9 @@ struct clk_bulk_data imgsys_isp8s_clks_mt6993[] = {
 	{
 		.id = "TRAW_CAP_DIP1_TRAW_CAP",
 	},
+	{
+		.id = "ISC_CLK",
+	},
 };
 #define MTK_IMGSYS_CLK_NUM_MT6993	ARRAY_SIZE(imgsys_isp8s_clks_mt6993)
 //#define MTK_IMGSYS_CLK_NUM_MT6899	ARRAY_SIZE(imgsys_isp8_clks_mt6899)

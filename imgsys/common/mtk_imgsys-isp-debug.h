@@ -19,5 +19,7 @@ extern int imgsys_me_dbg_en;
 extern int imgsys_mae_dbg_en;
 extern int imgsys_dfp_dbg_en;
 extern int imgsys_dpe_dbg_en;
+extern int imgsys_isc_ctrl;
+extern int imgsys_isc_log_en;
 
 #endif// _MTK_IMGSYS_ISP_DEBUG_H

@@ -283,12 +283,16 @@ void imgsys_cmdq_streamoff_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 	#if IMGSYS_SECURE_ENABLE
 	mutex_lock(&(imgsys_dev->sec_task_lock));
 	if (is_sec_task_create) {
-		cmdq_sec_mbox_stop(imgsys_sec_clt[0]);
-		/* cmdq_pkt_destroy(pkt_sec); */
-		/* pkt_sec = NULL; */
+		for (idx = 0; idx < IMGSYS_SEC_CAM_THD; idx++)
+			cmdq_sec_mbox_stop(imgsys_sec_clt[idx]);
 		is_sec_task_create = 0;
 	}
 	mutex_unlock(&(imgsys_dev->sec_task_lock));
+
+	#ifdef MTK_ISC_SUPPORT
+	cmdq_sec_mbox_stop(imgsys_sec_clt[IMGSYS_SEC_ISC]);
+	#endif
+
 	#endif
 
 #ifdef CONFIG_FPGA_EARLY_PORTING
@@ -2672,6 +2676,12 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				pr_debug(
 					"%s: WRITE with addr(0x%08x) value(0x%08x) mask(0x%08x)\n",
 					__func__, cmd->u.address, cmd->u.value, cmd->u.mask);
+
+			if(imgsy_isc_xfd_dbg_enable_plat8s() && (cmd->u.address == 0x34060000))
+				pr_info(
+				"%s: WRITE with addr(0x%08x) value(0x%08x) mask(0x%08x)\n",
+				__func__, cmd->u.address, cmd->u.value, cmd->u.mask);
+
 			cmdq_pkt_write(pkt, NULL, (dma_addr_t)cmd->u.address,
 					cmd->u.value, cmd->u.mask);
 			break;
@@ -3134,6 +3144,57 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 	return count;
 }
 
+int isc_cookie[2] = {0};
+void imgsys_cmdq_isc_task_cb_plat8s(struct cmdq_cb_data data)
+{
+	struct cmdq_pkt *pkt = (struct cmdq_pkt *)data.data;
+	int *cookie;
+
+	cookie = (int *)pkt->user_priv;
+
+	pr_info("%s: isc init(%d) err(%d)\n", __func__, *cookie, data.err);
+
+	cmdq_pkt_destroy(pkt);
+}
+
+int imgsys_cmdq_sec_isc_init_plat8s(struct mtk_imgsys_dev *imgsys_dev)
+{
+	struct cmdq_client *clt_sec = NULL, *clt = NULL;
+	#if IMGSYS_SECURE_ENABLE
+	struct cmdq_pkt *pkt_sec = NULL, *pkt = NULL;
+	#endif
+	int ret = 0;
+
+	clt_sec = imgsys_sec_clt[IMGSYS_SEC_ISC];
+	#if IMGSYS_SECURE_ENABLE
+	pkt_sec = cmdq_pkt_create(clt_sec);
+	isc_cookie[0] = 0;
+	pkt_sec->user_priv = (void *)&isc_cookie[0];
+
+	cmdq_sec_pkt_set_data(pkt_sec, 0, 0, CMDQ_SEC_DEBUG, CMDQ_METAEX_TZMP);
+	cmdq_sec_pkt_set_mtee(pkt_sec, true);
+	cmdq_pkt_flush_threaded(pkt_sec, imgsys_cmdq_isc_task_cb_plat8s, (void *)pkt_sec);
+	#endif
+
+	clt = imgsys_clt[0];
+	#if IMGSYS_SECURE_ENABLE
+	pkt = cmdq_pkt_create(clt);
+	isc_cookie[1] = 1;
+	pkt->user_priv = (void *)&isc_cookie[1];
+	cmdq_pkt_wfe(pkt, imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_TZMP_ISC_SET].event);
+	ret = cmdq_pkt_flush_threaded(pkt, imgsys_cmdq_isc_task_cb_plat8s, (void *)pkt);
+
+	if (ret < 0)
+		pr_info("%s: cmdq_pkt_flush_async ret(%d)\n", __func__, ret);
+	#else
+		pr_info("%s: IMGSYS_SECURE_ENABLE not set\n", __func__);
+	#endif
+
+	return ret;
+}
+
+
+
 void imgsys_cmdq_sec_task_cb_plat8s(struct cmdq_cb_data data)
 {
 	struct cmdq_pkt *pkt_sec = (struct cmdq_pkt *)data.data;
@@ -3150,7 +3211,7 @@ int imgsys_cmdq_sec_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 	int ret = 0;
 	int i = 0;
 
-	for (i = 0; i < IMGSYS_SEC_THD; i++) {
+	for (i = 0; i < IMGSYS_SEC_CAM_THD; i++) {
 		clt_sec = imgsys_sec_clt[i];
 	#if IMGSYS_SECURE_ENABLE
 		pkt_sec = cmdq_pkt_create(clt_sec);
@@ -3259,6 +3320,10 @@ void mtk_imgsys_power_ctrl_plat8s(struct mtk_imgsys_dev *imgsys_dev, bool isPowe
 			for (i = 0; i < imgsys_dev->modules_num; i++)
 				if ((BIT(i) & img_main_modules) && imgsys_dev->modules[i].set)
 					imgsys_dev->modules[i].set(imgsys_dev);
+
+#ifdef MTK_ISC_SUPPORT
+			imgsys_cmdq_sec_isc_init_plat8s(imgsys_dev);
+#endif
 
 			MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
 				mtk_imgsys_cmdq_qof_stream_on(imgsys_dev);
@@ -3378,6 +3443,11 @@ bool imgsys_fence_dbg_enable_plat8s(void)
 bool imgsys_fine_grain_dvfs_enable_plat8s(void)
 {
 	return imgsys_fine_grain_dvfs_en;
+}
+
+bool imgsy_isc_xfd_dbg_enable_plat8s(void)
+{
+	return imgsys_isc_xfd_dbg_en;
 }
 
 bool imgsys_iova_dbg_enable_plat8s(void)

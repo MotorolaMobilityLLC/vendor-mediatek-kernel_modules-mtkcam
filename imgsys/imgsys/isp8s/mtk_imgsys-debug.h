@@ -60,6 +60,7 @@ void imgsys_debug_dump_routine(struct mtk_imgsys_dev *imgsys_dev,
 void imgsys_main_init(struct mtk_imgsys_dev *imgsys_dev);
 void imgsys_main_set_init(struct mtk_imgsys_dev *imgsys_dev);
 void imgsys_main_cmdq_set_init(struct mtk_imgsys_dev *imgsys_dev, void *pkt, int hw_idx);
+void imgsys_main_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int engine);
 void imgsys_main_uninit(struct mtk_imgsys_dev *imgsys_dev);
 
 bool imgsys_dip_8s_dbg_enable(void);
@@ -71,5 +72,7 @@ bool imgsys_me_8s_dbg_enable(void);
 bool imgsys_mae_8s_dbg_enable(void);
 bool imgsys_dfp_8s_dbg_enable(void);
 bool imgsys_dpe_8s_dbg_enable(void);
+int imgsys_isc_8s_ctrl(void);
+bool imgsys_isc_8s_dbg_log_en(void);
 
 #endif /* _MTK_IMGSYS_DEBUG_H_ */

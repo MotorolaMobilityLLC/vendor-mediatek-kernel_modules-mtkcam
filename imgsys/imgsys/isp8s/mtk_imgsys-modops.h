@@ -140,7 +140,7 @@ const struct module_ops imgsys_isp8s_modules[] = {
 		.set = imgsys_main_set_init,
 		.updatecq = NULL,
 		.cmdq_set = imgsys_main_cmdq_set_init,
-		.dump = NULL,
+		.dump = imgsys_main_dump,
 		.done_chk = NULL,
 		.uninit = imgsys_main_uninit,
 	},
