@@ -628,6 +628,12 @@ struct mtk_exp_line_by_scenario {
 	__u64 exp_line;
 };
 
+struct mtk_linetime_by_scenario {
+	__u32 scenario_id;
+	__u32 linetime_in_ns;
+	__u32 get_linetime_type;
+};
+
 struct mtk_1sof_vsync_ts_info {
 	__u64 vsync_ts_ns; // latest ts from streaming sensor
 	__u32 fps; // 30FPS: 300
@@ -800,6 +806,9 @@ struct mtk_fake_sensor_info {
 
 #define VIDIOC_MTK_G_EXP_LINE_BY_SCENARIO \
 	_IOWR('M', BASE_VIDIOC_PRIVATE + 51, struct mtk_exp_line_by_scenario)
+
+#define VIDIOC_MTK_G_LINETIME_BY_SCENARIO \
+	_IOWR('M', BASE_VIDIOC_PRIVATE + 52, struct mtk_linetime_by_scenario)
 /* SET */
 
 #define VIDIOC_MTK_S_VIDEO_FRAMERATE \

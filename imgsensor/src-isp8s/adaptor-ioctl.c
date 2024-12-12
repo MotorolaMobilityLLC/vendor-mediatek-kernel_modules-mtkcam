@@ -11,6 +11,7 @@
 #include "adaptor-fsync-ctrls.h"
 #include "adaptor-i2c.h"
 #include "adaptor-sentest-ioctrl.h"
+#include "adaptor-subdrv.h"
 
 #define GAIN_TBL_SIZE 32768
 #define sd_to_ctx(__sd) container_of(__sd, struct adaptor_ctx, sd)
@@ -1534,6 +1535,26 @@ static int g_exp_line_by_scenario(struct adaptor_ctx *ctx, void *arg)
 	return 0;
 }
 
+static int g_linetime_by_scenario(struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_linetime_by_scenario *info = arg;
+	u32 scenario_id = ctx->subctx.current_scenario_id;
+
+	if (ctx->subctx.s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->subctx.s_ctx.cust_get_linetime_in_us((void *)&ctx->subctx,
+			scenario_id, (u32 *)&info->linetime_in_ns,
+			(u32)info->get_linetime_type);
+	} else {
+		info->linetime_in_ns = CALC_LINE_TIME_IN_NS(ctx->subctx.s_ctx.mode[scenario_id].pclk,
+			ctx->subctx.s_ctx.mode[scenario_id].linelength);
+	}
+
+	adaptor_logi(ctx, "[%s] scenario(%d) get_linetime(%d)ns\n",
+		__func__, (u32)info->scenario_id, info->linetime_in_ns);
+
+	return 0;
+}
+
 struct ioctl_entry {
 	unsigned int cmd;
 	int (*func)(struct adaptor_ctx *ctx, void *arg);
@@ -1591,6 +1612,7 @@ static const struct ioctl_entry ioctl_list[] = {
 	{VIDIOC_MTK_G_MULTI_EXP_GAIN_RANGE_BY_SCENARIO, g_multi_exp_gain_range_by_scenario},
 	{VIDIOC_MTK_G_MULTI_EXP_SHUTTER_RANGE_BY_SCENARIO, g_multi_exp_shutter_range_by_scenario},
 	{VIDIOC_MTK_G_EXP_LINE_BY_SCENARIO, g_exp_line_by_scenario},
+	{VIDIOC_MTK_G_LINETIME_BY_SCENARIO, g_linetime_by_scenario},
 	/* SET */
 	{VIDIOC_MTK_S_VIDEO_FRAMERATE, s_video_framerate},
 	{VIDIOC_MTK_S_MAX_FPS_BY_SCENARIO, s_max_fps_by_scenario},

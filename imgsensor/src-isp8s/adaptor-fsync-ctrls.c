@@ -785,6 +785,7 @@ static void fsync_mgr_setup_fs_streaming_st(struct adaptor_ctx *ctx,
 {
 	const unsigned int mode_id = ctx->subctx.current_scenario_id;
 	unsigned int i;
+	u32 linetime_in_ns = 0;
 
 	memset(s_info, 0, sizeof(*s_info));
 
@@ -846,6 +847,11 @@ static void fsync_mgr_setup_fs_streaming_st(struct adaptor_ctx *ctx,
 	s_info->lineTimeInNs =
 		CALC_LINE_TIME_IN_NS(s_info->pclk, s_info->linelength);
 
+	if (ctx->subctx.s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->subctx.s_ctx.cust_get_linetime_in_us((void *)&ctx->subctx,
+			(u32)ctx->subctx.current_scenario_id, &linetime_in_ns, 0);
+		s_info->lineTimeInNs = linetime_in_ns ? linetime_in_ns : s_info->lineTimeInNs;
+	}
 
 	/* callback info */
 	s_info->func_ptr = cb_func_fsync_mgr_set_fl_info;
@@ -988,6 +994,7 @@ static void fsync_mgr_setup_basic_fs_perframe_st(struct adaptor_ctx *ctx,
 	struct fs_perframe_st *pf_ctrl, const unsigned int mode_id)
 {
 	unsigned int mode_crop_height, mode_linetime_readout_ns;
+	u32 linetime_in_ns = 0;
 
 	/* prepare sensor mode property/info */
 	fsync_mgr_prepare_mode_related_info(ctx, mode_id,
@@ -1010,6 +1017,13 @@ static void fsync_mgr_setup_basic_fs_perframe_st(struct adaptor_ctx *ctx,
 	pf_ctrl->linelength = ctx->subctx.line_length;
 	pf_ctrl->lineTimeInNs =
 		CALC_LINE_TIME_IN_NS(pf_ctrl->pclk, pf_ctrl->linelength);
+
+	if (ctx->subctx.s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->subctx.s_ctx.cust_get_linetime_in_us((void *)&ctx->subctx,
+			(u32)ctx->subctx.current_scenario_id, &linetime_in_ns, 0);
+		pf_ctrl->lineTimeInNs = linetime_in_ns ? linetime_in_ns : pf_ctrl->lineTimeInNs;
+	}
+
 	pf_ctrl->readout_time_us =
 		(mode_crop_height * mode_linetime_readout_ns / 1000);
 }

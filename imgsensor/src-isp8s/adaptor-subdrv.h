@@ -302,6 +302,7 @@ struct subdrv_static_ctx {
 	u8 mirror;
 
 	u8 mclk; /* mclk freqency, suggest 24 or 26 for 24Mhz or 26Mhz */
+	u8 aov_mclk; /* aov_mclk freqency, suggest 24 or 26 for 24Mhz or 26Mhz */
 	u8 isp_driving_current; /* mclk driving current */
 	u8 sensor_interface_type;
 	u8 mipi_sensor_type; /* 0,MIPI_OPHY_NCSI2; 1,MIPI_OPHY_CSI2, default is NCSI2 */
@@ -363,6 +364,7 @@ struct subdrv_static_ctx {
 	struct reg_ reg_addr_exposure_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
 	u16 long_exposure_support;
 	u16 reg_addr_exposure_lshift;
+	u16 reg_addr_frame_length_lshift;
 	struct reg_ reg_addr_ana_gain[IMGSENSOR_STAGGER_EXPOSURE_CNT];
 	struct reg_ reg_addr_ana_gain_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
 	struct reg_ reg_addr_dig_gain[IMGSENSOR_STAGGER_EXPOSURE_CNT];
@@ -423,6 +425,11 @@ struct subdrv_static_ctx {
 	u16 reg_addr_mcss_mc_frm_mask_num;
 	int (*mcss_init)(void *arg);
 	int (*mcss_update_subdrv_para)(void *arg, int scenario_id);
+
+	/* cust_get_linetime_in_us */
+	int (*cust_get_linetime_in_us)(void *arg, u32 scenario_id,
+		u32 *linetime_in_ns, enum GET_LINETIME_ENUM linetime_type);
+	u32 cycle_base_ratio;
 };
 
 #define HDR_CAP_IHDR 0x1

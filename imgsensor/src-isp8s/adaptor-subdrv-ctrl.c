@@ -746,9 +746,19 @@ void set_frame_length_in_lut(struct subdrv_ctx *ctx,
 void set_max_framerate(struct subdrv_ctx *ctx, u16 framerate, bool min_framelength_en)
 {
 	u32 frame_length = 0;
+	u32 linetime_in_ns = 0;
 
-	if (framerate && ctx->line_length)
-		frame_length = ctx->pclk / framerate * 10 / ctx->line_length;
+	if (framerate && ctx->line_length) {
+		if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+			ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+				ctx->current_scenario_id, &linetime_in_ns, 0);
+			frame_length = 1000000000 / framerate * 10
+				/ linetime_in_ns;
+		} else {
+			frame_length = ctx->pclk / framerate * 10 / ctx->line_length;
+		}
+	}
+
 	ctx->frame_length = max(frame_length, ctx->min_frame_length);
 	/*
 	 * For manual mode:
@@ -820,8 +830,17 @@ void set_max_framerate(struct subdrv_ctx *ctx, u16 framerate, bool min_frameleng
 		}
 	} else
 		ctx->frame_length = min(ctx->frame_length, ctx->s_ctx.frame_length_max);
-	if (ctx->frame_length && ctx->line_length)
-		ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+
+	if (ctx->frame_length && ctx->line_length) {
+		if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+			ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+				ctx->current_scenario_id, &linetime_in_ns, 0);
+			ctx->current_fps = 1000000000 / ctx->frame_length * 10 / linetime_in_ns;
+		} else {
+			ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+		}
+	}
+
 	if (min_framelength_en)
 		ctx->min_frame_length = ctx->frame_length;
 	if (ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_LBMF)
@@ -856,9 +875,19 @@ void set_max_framerate(struct subdrv_ctx *ctx, u16 framerate, bool min_frameleng
 void set_max_framerate_base100(struct subdrv_ctx *ctx, u16 framerate, bool min_framelength_en)
 {
 	u32 frame_length = 0, current_fps = 0;
+	u32 linetime_in_ns = 0;
 
-	if (framerate && ctx->line_length)
-		frame_length = ctx->pclk / framerate * 100 / ctx->line_length;
+	if (framerate && ctx->line_length) {
+		if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+			ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+				ctx->current_scenario_id, &linetime_in_ns, 0);
+			frame_length = 1000000000 / framerate * 100
+				/ linetime_in_ns;
+		} else {
+			frame_length = ctx->pclk / framerate * 100 / ctx->line_length;
+		}
+	}
+
 	ctx->frame_length = max(frame_length, ctx->min_frame_length);
 	/*
 	 * For manual mode:
@@ -931,8 +960,15 @@ void set_max_framerate_base100(struct subdrv_ctx *ctx, u16 framerate, bool min_f
 	} else
 		ctx->frame_length = min(ctx->frame_length, ctx->s_ctx.frame_length_max);
 	if (ctx->frame_length && ctx->line_length) {
-		ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
-		current_fps = ctx->pclk / ctx->frame_length * 100 / ctx->line_length;
+		if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+			ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+				ctx->current_scenario_id, &linetime_in_ns, 0);
+			ctx->current_fps = 1000000000 / ctx->frame_length * 10 / linetime_in_ns;
+			current_fps =1000000000 / ctx->frame_length * 100 / linetime_in_ns;
+		} else {
+			ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+			current_fps = ctx->pclk / ctx->frame_length * 100 / ctx->line_length;
+		}
 	}
 	if (min_framelength_en)
 		ctx->min_frame_length = ctx->frame_length;
@@ -961,6 +997,7 @@ void set_max_framerate_mcss_by_scenario(struct subdrv_ctx *ctx,
 	u32 frame_length_step;
 	u32 frame_length_min;
 	u32 frame_length_max;
+	u32 linetime_in_ns = 0;
 
 	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
 		DRV_LOGE(ctx, "invalid sid:%u, mode_num:%u\n",
@@ -972,11 +1009,28 @@ void set_max_framerate_mcss_by_scenario(struct subdrv_ctx *ctx,
 
 	frame_length_step = ctx->s_ctx.mode[scenario_id].framelength_step;
 	/* set on the step of frame length */
-	frame_length = ctx->s_ctx.mode[scenario_id].pclk / framerate * 10
-		/ ctx->line_length;
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		frame_length = 1000000000 / framerate * 10
+			/ linetime_in_ns;
+	} else {
+		frame_length = ctx->s_ctx.mode[scenario_id].pclk / framerate * 10
+			/ ctx->line_length;
+	}
+
+	frame_length_min = ctx->frame_length;
+
+	if (framerate == ctx->s_ctx.mode[scenario_id].max_framerate) {
+		frame_length = ctx->s_ctx.mode[scenario_id].framelength;
+		frame_length_min = frame_length;
+		ctx->min_frame_length = frame_length;
+	}
+
 	frame_length = frame_length_step ?
 		(frame_length - (frame_length % frame_length_step)) : frame_length;
-	frame_length_min = ctx->frame_length;
+
 	frame_length_max = ctx->s_ctx.frame_length_max;
 	frame_length_max = frame_length_step ?
 		(frame_length_max - (frame_length_max % frame_length_step)) : frame_length_max;
@@ -984,7 +1038,14 @@ void set_max_framerate_mcss_by_scenario(struct subdrv_ctx *ctx,
 	ctx->frame_length = max(frame_length, frame_length_min);
 	ctx->frame_length = min(ctx->frame_length, frame_length_max);
 
-	ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		ctx->current_fps = 1000000000 / ctx->frame_length * 10 / linetime_in_ns;
+	} else {
+		ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+	}
+
 	ctx->min_frame_length = ctx->frame_length;
 	DRV_LOG(ctx, "max_fps(input/output):%u/%u(sid:%u), min_fl_en:1\n",
 		framerate, ctx->current_fps, scenario_id);
@@ -1007,6 +1068,7 @@ void set_max_framerate_by_scenario(struct subdrv_ctx *ctx,
 	u32 frame_length_step;
 	u32 frame_length_min;
 	u32 frame_length_max;
+	u32 linetime_in_ns = 0;
 
 	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
 		DRV_LOGE(ctx, "invalid sid:%u, mode_num:%u\n",
@@ -1036,6 +1098,17 @@ void set_max_framerate_by_scenario(struct subdrv_ctx *ctx,
 	/* set on the step of frame length */
 	frame_length = ctx->s_ctx.mode[scenario_id].pclk / framerate * 10
 		/ ctx->s_ctx.mode[scenario_id].linelength;
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		frame_length = 1000000000 / framerate * 10
+			/ linetime_in_ns;
+	} else {
+		frame_length = ctx->s_ctx.mode[scenario_id].pclk / framerate * 10
+			/ ctx->line_length;
+	}
+
 	frame_length = frame_length_step ?
 		(frame_length - (frame_length % frame_length_step)) : frame_length;
 	frame_length_min = ctx->s_ctx.mode[scenario_id].framelength;
@@ -1057,6 +1130,15 @@ void set_max_framerate_by_scenario(struct subdrv_ctx *ctx,
 	ctx->current_fps = ctx->s_ctx.mode[scenario_id].pclk /
 						ctx->frame_length * 10 /
 						ctx->s_ctx.mode[scenario_id].linelength;
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		ctx->current_fps = 1000000000 / linetime_in_ns / ctx->frame_length * 10;
+	} else {
+		ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+	}
+
 	ctx->min_frame_length = ctx->frame_length;
 	DRV_LOG(ctx, "max_fps(input/output):%u/%u(sid:%u), min_fl_en:1, ctx->frame_length:%u\n",
 		framerate, ctx->current_fps, scenario_id, ctx->frame_length);
@@ -1088,9 +1170,21 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 	u32 cit_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT] = {0};
 	u32 calc_fl_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT] = {0};
 	int i;
+	u32 linetime_in_ns = 0;
 
-	frame_length = ctx->s_ctx.mode[scenario_id].pclk / framerate * 10
-		/ ctx->s_ctx.mode[scenario_id].linelength;
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		frame_length = 1000000000 / framerate * 10
+			/ linetime_in_ns;
+	} else {
+		frame_length = ctx->s_ctx.mode[scenario_id].pclk / framerate * 10
+			/ ctx->s_ctx.mode[scenario_id].linelength;
+	}
+
+	if (framerate == ctx->s_ctx.mode[scenario_id].max_framerate)
+		frame_length = ctx->s_ctx.mode[scenario_id].framelength;
+
 	frame_length_step = ctx->s_ctx.mode[scenario_id].framelength_step;
 	frame_length = frame_length_step ?
 		(frame_length - (frame_length % frame_length_step)) : frame_length;
@@ -1162,7 +1256,15 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 		/* update framelength */
 		ctx->frame_length =
 			ctx->frame_length_in_lut[0] + ctx->frame_length_in_lut[1];
-		ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+
+		if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+			ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+				ctx->current_scenario_id, &linetime_in_ns, 0);
+			ctx->current_fps = 1000000000 / linetime_in_ns / ctx->frame_length * 10;
+		} else {
+			ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+		}
+
 		ctx->min_frame_length = ctx->frame_length;
 		DRV_LOG(ctx,
 			"sid:%u,max_fps(input/output):%u/%u,min_fl_en:1,lut order:%u,fll(input/ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u/%un",
@@ -1267,7 +1369,15 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 			ctx->frame_length_in_lut[0] +
 			ctx->frame_length_in_lut[1] +
 			ctx->frame_length_in_lut[2];
-		ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+
+		if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+			ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+				ctx->current_scenario_id, &linetime_in_ns, 0);
+			ctx->current_fps = 1000000000 / linetime_in_ns / ctx->frame_length * 10;
+		} else {
+			ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+		}
+
 		ctx->min_frame_length = ctx->frame_length;
 		DRV_LOG(ctx,
 			"sid:%u,max_fps(input/output):%u/%u,min_fl_en:1,lut order:%u,fll(input/ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u/%u\n",
@@ -1290,7 +1400,7 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 				(ctx->exposure[0] + ctx->s_ctx.mode[scenario_id].read_margin)) ||
 				(ctx->frame_length_in_lut[2] >
 				(ctx->exposure[2] + ctx->s_ctx.mode[scenario_id].read_margin)))
-				set_dummy(ctx);
+					set_dummy(ctx);
 		} else {
 			if (ctx->s_ctx.reg_addr_auto_extend ||
 				(ctx->frame_length_in_lut[0] >
@@ -1299,7 +1409,7 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 				(ctx->exposure[2] + ctx->s_ctx.mode[scenario_id].read_margin)) ||
 				(ctx->frame_length_in_lut[2] >
 				(ctx->exposure[0] + ctx->s_ctx.mode[scenario_id].read_margin)))
-				set_dummy(ctx);
+					set_dummy(ctx);
 		}
 		break;
 	default:
@@ -1319,6 +1429,8 @@ bool set_auto_flicker(struct subdrv_ctx *ctx, bool min_framelength_en)
 {
 	u16 framerate = 0;
 	bool ret = TRUE;
+	u32 linetime_in_ns = 0;
+	u16 new_fps = 0;
 
 	if (!ctx->line_length) {
 		DRV_LOGE(ctx, "line_length(%u) is invalid\n", ctx->line_length);
@@ -1329,8 +1441,15 @@ bool set_auto_flicker(struct subdrv_ctx *ctx, bool min_framelength_en)
 		DRV_LOGE(ctx, "frame_length(%u) is invalid\n", ctx->frame_length);
 		return FALSE;
 	}
-	/* frame rate is 100-base. */
-	framerate = ctx->pclk / ctx->line_length * 100 / ctx->frame_length;
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		framerate = 1000000000 / linetime_in_ns * 100 / ctx->frame_length;
+	} else {
+		/* frame rate is 100-base. */
+		framerate = ctx->pclk / ctx->line_length * 100 / ctx->frame_length;
+	}
 
 	switch (ctx->autoflicker_en) {
 	case 1:
@@ -1393,9 +1512,18 @@ bool set_auto_flicker(struct subdrv_ctx *ctx, bool min_framelength_en)
 		ret = FALSE;
 	}
 
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		new_fps = 1000000000 / linetime_in_ns * 100 / ctx->frame_length;
+	} else {
+		/* frame rate is 100-base. */
+		new_fps = ctx->pclk / ctx->line_length * 100 / ctx->frame_length;
+	}
+
 	if (ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_LBMF)
 		DRV_LOG(ctx,
-	"sid:%u,cur_fps(100base):%u,flick_en:%d,min_fl_en:%u,fll(ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u,new_fps:%llu(100base)\n",
+	"sid:%u,cur_fps(100base):%u,flick_en:%d,min_fl_en:%u,fll(ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u,new_fps:%hu(100base)\n",
 			ctx->current_scenario_id,
 			framerate, ctx->autoflicker_en, min_framelength_en,
 			ctx->frame_length,
@@ -1404,11 +1532,11 @@ bool set_auto_flicker(struct subdrv_ctx *ctx, bool min_framelength_en)
 			ctx->frame_length_in_lut[2],
 			ctx->frame_length_in_lut[3],
 			ctx->frame_length_in_lut[4],
-			ctx->pclk / ctx->line_length * 100 / ctx->frame_length);
+			new_fps);
 	else
-		DRV_LOG(ctx, "cur_fps:%u(100base), flick_en:%d, min_fl_en:%u, new_fps:%llu(100base)\n",
+		DRV_LOG(ctx, "cur_fps:%u(100base), flick_en:%d, min_fl_en:%u, new_fps:%hu(100base)\n",
 			framerate, ctx->autoflicker_en, min_framelength_en,
-			ctx->pclk / ctx->line_length * 100 / ctx->frame_length);
+			new_fps);
 
 	return ret;
 }
@@ -2735,8 +2863,19 @@ void extend_frame_length(struct subdrv_ctx *ctx, u32 ns)
 	u32 calc_fl = 0;
 	u32 readoutLength = 0;
 	u32 readMargin = 0;
-	u32 per_frame_ns = (u64)ctx->frame_length *
-		(u64)ctx->line_length * 1000000000 / ctx->pclk;
+	u32 per_frame_ns = 0;
+	u32 linetime_in_ns = 0;
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		per_frame_ns = (u64)ctx->frame_length *
+			linetime_in_ns;
+	} else {
+		per_frame_ns = (u64)ctx->frame_length *
+			(u64)ctx->line_length * 1000000000 / ctx->pclk;
+	}
+
 
 	check_current_scenario_id_bound(ctx);
 	if (ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_LBMF)
@@ -2760,8 +2899,16 @@ void extend_frame_length(struct subdrv_ctx *ctx, u32 ns)
 	set_dummy(ctx);
 	ctx->extend_frame_length_en = TRUE;
 
-	ns = (u64)(ctx->frame_length - old_fl) *
-		(u64)ctx->line_length * 1000000000 / ctx->pclk;
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		ns = (u64)(ctx->frame_length - old_fl) *
+			linetime_in_ns;
+	} else {
+		ns = (u64)(ctx->frame_length - old_fl) *
+			(u64)ctx->line_length * 1000000000 / ctx->pclk;
+	}
+
 	DRV_LOG(ctx, "fll(old/new):%u/%u, add %u ns", old_fl, ctx->frame_length, ns);
 }
 
@@ -2969,6 +3116,7 @@ void get_readout_by_scenario(struct subdrv_ctx *ctx,
 		enum SENSOR_SCENARIO_ID_ENUM scenario_id, u64 *readout_time)
 {
 	u32 ratio = 1;
+	u32 linetime_in_ns = 0;
 
 	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
 		DRV_LOG(ctx, "invalid sid:%u, mode_num:%u\n",
@@ -2977,10 +3125,19 @@ void get_readout_by_scenario(struct subdrv_ctx *ctx,
 	}
 	if (ctx->s_ctx.mode[scenario_id].hdr_mode == HDR_RAW_STAGGER)
 		ratio = ctx->s_ctx.mode[scenario_id].exp_cnt;
-	*readout_time =
-		(u64)ctx->s_ctx.mode[scenario_id].linelength
-		* ctx->s_ctx.mode[scenario_id].imgsensor_winsize_info.h2_tg_size
-		* 1000000000 / ctx->s_ctx.mode[scenario_id].pclk * ratio;
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		*readout_time =
+			(u64)linetime_in_ns
+			* ctx->s_ctx.mode[scenario_id].imgsensor_winsize_info.h2_tg_size * ratio;
+	} else {
+		*readout_time =
+			(u64)ctx->s_ctx.mode[scenario_id].linelength
+			* ctx->s_ctx.mode[scenario_id].imgsensor_winsize_info.h2_tg_size
+			* 1000000000 / ctx->s_ctx.mode[scenario_id].pclk * ratio;
+	}
 }
 
 void get_exposure_count_by_scenario(struct subdrv_ctx *ctx,
@@ -3093,6 +3250,7 @@ void get_exp_line_by_scenario(struct subdrv_ctx *ctx,
 		u32 framerate, u64 *exposure_line)
 {
 	u64 shutter = 0;
+	u32 linetime_in_ns = 0;
 
 	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
 		DRV_LOGE(ctx, "invalid sid:%u, mode_num:%u\n",
@@ -3102,8 +3260,16 @@ void get_exp_line_by_scenario(struct subdrv_ctx *ctx,
 
 	if (framerate > ctx->s_ctx.mode[scenario_id].max_framerate)
 		framerate = ctx->s_ctx.mode[scenario_id].max_framerate;
-	shutter = ctx->s_ctx.mode[scenario_id].pclk / framerate * 10
-	/ ctx->s_ctx.mode[scenario_id].linelength;
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		shutter = 1000000000 / framerate * 10
+			/ linetime_in_ns;
+	} else {
+		shutter = ctx->s_ctx.mode[scenario_id].pclk / framerate * 10
+			/ ctx->s_ctx.mode[scenario_id].linelength;
+	}
 
 	if (ctx->s_ctx.mode[scenario_id].hdr_mode == HDR_RAW_STAGGER) {
 		shutter = shutter -(ctx->s_ctx.mode[scenario_id].readout_length +
@@ -3119,14 +3285,21 @@ void get_exp_line_by_scenario(struct subdrv_ctx *ctx,
 void update_hw_init_time(struct subdrv_ctx *ctx, u64 fisrt_vsync_time)
 {	u32 cur_id, shutter_lines, times;
 	u64 line_time_ns, shutter_time, cur_init_time, old_init_time, new_init_time;
-
+	u32 linetime_in_ns = 0;
 
 	cur_id = ctx->current_scenario_id;
 	times = ctx->hw_time_info[cur_id].times;
-	line_time_ns = ((u64)ctx->s_ctx.mode[cur_id].linelength*1000000000)
-					/ ctx->s_ctx.mode[cur_id].pclk;
 	new_init_time = 0;
 	old_init_time = ctx->hw_time_info[cur_id].init_time_ns;
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		line_time_ns = linetime_in_ns;
+	} else {
+		line_time_ns = ((u64)ctx->s_ctx.mode[cur_id].linelength*1000000000)
+						/ ctx->s_ctx.mode[cur_id].pclk;
+	}
 
 	if ((ctx->s_ctx.mode[cur_id].hdr_mode == HDR_RAW_LBMF) &&
 		(ctx->s_ctx.mode[cur_id].exposure_order_in_lbmf
@@ -3313,6 +3486,7 @@ int common_open(struct subdrv_ctx *ctx)
 {
 	u32 sensor_id = 0;
 	u32 scenario_id = 0;
+	u32 linetime_in_ns = 0;
 
 	/* get sensor id */
 	if (common_get_imgsensor_id(ctx, &sensor_id) != ERROR_NONE)
@@ -3338,7 +3512,15 @@ int common_open(struct subdrv_ctx *ctx)
 	ctx->line_length = ctx->s_ctx.mode[scenario_id].linelength;
 	ctx->frame_length = ctx->s_ctx.mode[scenario_id].framelength;
 	ctx->frame_length_rg = ctx->frame_length;
-	ctx->current_fps = ctx->pclk / ctx->line_length * 10 / ctx->frame_length;
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		ctx->current_fps = 1000000000 / linetime_in_ns * 10 / ctx->frame_length;
+	} else {
+		ctx->current_fps = ctx->pclk / ctx->line_length * 10 / ctx->frame_length;
+	}
+
 	ctx->readout_length = ctx->s_ctx.mode[scenario_id].readout_length;
 	ctx->read_margin = ctx->s_ctx.mode[scenario_id].read_margin;
 	ctx->min_frame_length = ctx->frame_length;
@@ -3449,6 +3631,7 @@ int common_get_info(struct subdrv_ctx *ctx,
 		sensor_info->aov_mode[i] = ctx->s_ctx.mode[i].aov_mode;
 		sensor_info->support_mcss[i] = ctx->s_ctx.mode[i].support_mcss;
 		sensor_info->SensorAwbEnabled[i] = ctx->s_ctx.mode[i].awb_enabled;
+		sensor_info->exposure_order_in_lbmf[i] = ctx->s_ctx.mode[i].exposure_order_in_lbmf;
 	}
 	sensor_info->SensorDrivingCurrent = ctx->s_ctx.isp_driving_current;
 	sensor_info->IHDR_Support = 0;
@@ -3487,13 +3670,24 @@ void mcss_get_prsh_length_lines(struct subdrv_ctx *ctx,
 	u64 current_fps;
 	u8 hw_fixed_value = ctx->s_ctx.seamless_switch_prsh_hw_fixed_value;
 	enum IMGSENSOR_HDR_MODE_ENUM hdr_mode;
+	u32 linetime_in_ns = 0;
 
 	current_fps = (u64)ctx->current_fps;
 	frame_duration_us = 10 * (1000000 / current_fps);
-	orig_readout_time_us = 1000000
-					* (u64)ctx->s_ctx.mode[pre_seamless_scenario_id].imgsensor_winsize_info.h1_size
-					* (ctx->line_length) // ctx->s_ctx.mode[pre_seamless_scenario_id].linelength
-					/ctx->s_ctx.mode[pre_seamless_scenario_id].pclk;
+
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		orig_readout_time_us =
+		(u64)ctx->s_ctx.mode[pre_seamless_scenario_id].imgsensor_winsize_info.h1_size
+			* linetime_in_ns / 1000;
+	} else {
+		orig_readout_time_us = 1000000 *
+		(u64)ctx->s_ctx.mode[pre_seamless_scenario_id].imgsensor_winsize_info.h1_size
+		* (ctx->line_length) // ctx->s_ctx.mode[pre_seamless_scenario_id].linelength
+		/ctx->s_ctx.mode[pre_seamless_scenario_id].pclk;
+	}
 
 	DRV_LOG_MUST(ctx,
 		"calc_prsh_length_lc(%d->%d): orig:pclk(%llu),linelength(%u),frame_length(%u),fps(%llu),frame_duration_us(%llu),readout_us(%llu) new:pclk(%llu),linelength(%u)\n",
@@ -3549,10 +3743,18 @@ void mcss_get_prsh_length_lines(struct subdrv_ctx *ctx,
 	}
 
 	ae_ctrl_cit = FINE_INTEG_CONVERT(ae_ctrl_cit, ctx->s_ctx.mode[scenario_id].fine_integ_line);
-	prsh_length_lc = frame_duration_us
-					* ctx->s_ctx.mode[scenario_id].pclk
-					/ ctx->line_length
-					/ 1000000;
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		prsh_length_lc = frame_duration_us
+						* 1000 / linetime_in_ns;
+	} else {
+		prsh_length_lc = frame_duration_us
+						* ctx->s_ctx.mode[scenario_id].pclk
+						/ ctx->line_length
+						/ 1000000;
+	}
 
 	ae_ctrl_cit = max(ae_ctrl_cit, ctx->s_ctx.exposure_min);
 	ae_ctrl_cit = min(ae_ctrl_cit, ctx->s_ctx.exposure_max);
@@ -3591,13 +3793,22 @@ void common_get_prsh_length_lines(struct subdrv_ctx *ctx,
 	u64 current_fps;
 	u8 hw_fixed_value = ctx->s_ctx.seamless_switch_prsh_hw_fixed_value;
 	enum IMGSENSOR_HDR_MODE_ENUM hdr_mode;
+	u32 linetime_in_ns = 0;
 
 	current_fps = (u64)ctx->current_fps;
 	frame_duration_us = 10 * (1000000 / current_fps);
-	orig_readout_time_us = 1000000
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		orig_readout_time_us = (u64)ctx->s_ctx.mode[pre_seamless_scenario_id].imgsensor_winsize_info.h1_size
+					* linetime_in_ns / 1000;
+	} else {
+		orig_readout_time_us = 1000000
 					* (u64)ctx->s_ctx.mode[pre_seamless_scenario_id].imgsensor_winsize_info.h1_size
 					*ctx->s_ctx.mode[pre_seamless_scenario_id].linelength
 					/ctx->s_ctx.mode[pre_seamless_scenario_id].pclk;
+	}
 
 	DRV_LOG_MUST(ctx,
 		"calc_prsh_length_lc(%d->%d): orig:pclk(%llu),linelength(%u),frame_length(%u),fps(%llu),frame_duration_us(%llu),readout_us(%llu) new:pclk(%llu),linelength(%u)\n",
@@ -3663,10 +3874,18 @@ void common_get_prsh_length_lines(struct subdrv_ctx *ctx,
 	}
 
 	ae_ctrl_cit = FINE_INTEG_CONVERT(ae_ctrl_cit, ctx->s_ctx.mode[scenario_id].fine_integ_line);
-	prsh_length_lc = frame_duration_us
-					* ctx->s_ctx.mode[scenario_id].pclk
-					/ ctx->s_ctx.mode[scenario_id].linelength
-					/ 1000000;
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		prsh_length_lc = frame_duration_us
+						* 1000 / linetime_in_ns;
+	} else {
+		prsh_length_lc = frame_duration_us
+						* ctx->s_ctx.mode[scenario_id].pclk
+						/ ctx->s_ctx.mode[scenario_id].linelength
+						/ 1000000;
+	}
 
 	ae_ctrl_cit = max(ae_ctrl_cit, ctx->s_ctx.exposure_min);
 	ae_ctrl_cit = min(ae_ctrl_cit, ctx->s_ctx.exposure_max);
@@ -3702,6 +3921,7 @@ void common_get_prsh_length_lines_by_time(struct subdrv_ctx *ctx,
 	u64 current_fps;
 	u8 hw_fixed_value = ctx->s_ctx.seamless_switch_prsh_hw_fixed_value;
 	enum IMGSENSOR_HDR_MODE_ENUM hdr_mode;
+	u32 linetime_in_ns = 0;
 
 	if (time_ms <= 0){
 		ctx->s_ctx.seamless_switch_prsh_length_lc = 0;
@@ -3710,10 +3930,18 @@ void common_get_prsh_length_lines_by_time(struct subdrv_ctx *ctx,
 
 	current_fps = (u64)ctx->current_fps;
 	prsh_time_us = 1000 * (u64)time_ms;
-	orig_readout_time_us = 1000000
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		orig_readout_time_us = (u64)ctx->s_ctx.mode[pre_seamless_scenario_id].imgsensor_winsize_info.h1_size
+					* linetime_in_ns / 1000;
+	} else {
+		orig_readout_time_us = 1000000
 					* (u64)ctx->s_ctx.mode[pre_seamless_scenario_id].imgsensor_winsize_info.h1_size
 					*ctx->s_ctx.mode[pre_seamless_scenario_id].linelength
 					/ctx->s_ctx.mode[pre_seamless_scenario_id].pclk;
+	}
 
 	if (prsh_time_us < (ctx->s_ctx.seamless_switch_hw_re_init_time_ns / 1000)) {
 		DRV_LOG_MUST(ctx,
@@ -3756,10 +3984,17 @@ void common_get_prsh_length_lines_by_time(struct subdrv_ctx *ctx,
 		break;
 	}
 
-	prsh_length_lc = prsh_time_us
-					* ctx->s_ctx.mode[scenario_id].pclk
-					/ ctx->s_ctx.mode[scenario_id].linelength
-					/ 1000000;
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		prsh_length_lc = prsh_time_us
+						* 1000 / linetime_in_ns;
+	} else {
+		prsh_length_lc = prsh_time_us
+						* ctx->s_ctx.mode[scenario_id].pclk
+						/ ctx->s_ctx.mode[scenario_id].linelength
+						/ 1000000;
+	}
 
 	ae_ctrl_cit = max_t(u64, ae_ctrl_cit, (u64)ctx->s_ctx.exposure_min);
 	ae_ctrl_cit = min_t(u64, ae_ctrl_cit, (u64)ctx->s_ctx.exposure_max);
@@ -3804,6 +4039,8 @@ int common_get_resolution(struct subdrv_ctx *ctx,
 
 void update_mode_info(struct subdrv_ctx *ctx, enum SENSOR_SCENARIO_ID_ENUM scenario_id)
 {
+	u32 linetime_in_ns = 0;
+
 	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
 		DRV_LOGE(ctx, "invalid sid:%u, mode_num:%u\n",
 			scenario_id, ctx->s_ctx.sensor_mode_num);
@@ -3814,7 +4051,15 @@ void update_mode_info(struct subdrv_ctx *ctx, enum SENSOR_SCENARIO_ID_ENUM scena
 	ctx->line_length = ctx->s_ctx.mode[scenario_id].linelength;
 	ctx->frame_length = ctx->s_ctx.mode[scenario_id].framelength;
 	ctx->frame_length_rg = ctx->frame_length;
-	ctx->current_fps = ctx->pclk / ctx->line_length * 10 / ctx->frame_length;
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		ctx->current_fps = 1000000000 / linetime_in_ns * 10 / ctx->frame_length;
+	} else {
+		ctx->current_fps = ctx->pclk / ctx->line_length * 10 / ctx->frame_length;
+	}
+
 	ctx->readout_length = ctx->s_ctx.mode[scenario_id].readout_length;
 	ctx->read_margin = ctx->s_ctx.mode[scenario_id].read_margin;
 	ctx->min_frame_length = ctx->frame_length;
@@ -4774,6 +5019,84 @@ int common_parse_ebd_line(struct subdrv_ctx *ctx, struct mtk_recv_sensor_ebd_lin
 			obj->dgain[IMGSENSOR_STAGGER_EXPOSURE_SSSE]);
 	} else
 		DRV_LOG_MUST(ctx, "buffer is null\n");
+
+	return 0;
+}
+
+int common_get_pixel_clk_base_linetime_in_ns(void *arg,
+	u32 scenario_id, u32 *linetime_in_ns, enum GET_LINETIME_ENUM linetime_type)
+{
+	struct subdrv_ctx *ctx = (struct subdrv_ctx *)arg;
+	unsigned long long pclk = 0;
+	unsigned int linelength = 0;
+
+	if (!ctx) {
+		DRV_LOGE(ctx, "ctx is NULL\n");
+		return -EINVAL;
+	}
+
+	if (!linetime_in_ns) {
+		DRV_LOGE(ctx, "linetime_in_ns is NULL\n");
+		return -EINVAL;
+	}
+
+	pclk = ctx->s_ctx.mode[scenario_id].pclk;
+	linelength = ctx->s_ctx.mode[scenario_id].linelength;
+
+	if (pclk != 0 && linelength != 0) {
+		*linetime_in_ns = (u32)CALC_LINE_TIME_IN_NS(pclk, linelength);
+		DRV_LOG_MUST(ctx, "linetime_in_ns(%d)\n", *linetime_in_ns);
+	} else {
+		DRV_LOGE(ctx, "pclk(%lld) or linelength(%d) is 0\n", pclk, linelength);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+int common_get_cycle_base_v1_linetime_in_ns(void *arg,
+	u32 scenario_id, u32 *linetime_in_ns, enum GET_LINETIME_ENUM linetime_type)
+{
+	struct subdrv_ctx *ctx = (struct subdrv_ctx *)arg;
+	u32 cycle_base_ratio = 0;
+	u32 linelength = 0;
+	u8 mclk = 0;
+	u64 pclk = 0;
+	u32 cycle_base_linetime_in_ns = 0;
+
+	if (!ctx) {
+		DRV_LOGE(ctx, "ctx is NULL\n");
+		return -EINVAL;
+	}
+
+	if (!linetime_in_ns) {
+		DRV_LOGE(ctx, "linetime_in_ns is NULL\n");
+		return -EINVAL;
+	}
+
+	cycle_base_ratio = ctx->s_ctx.cycle_base_ratio;
+	linelength = ctx->s_ctx.mode[scenario_id].linelength;
+
+	if (ctx->s_ctx.mode[scenario_id].aov_mode)
+		mclk = ctx->s_ctx.aov_mclk;
+	else
+		mclk = ctx->s_ctx.mclk;
+
+	pclk = ctx->s_ctx.mode[scenario_id].pclk;
+
+	if (cycle_base_ratio != 0 && linelength != 0 && mclk != 0 && pclk != 0) {
+		cycle_base_linetime_in_ns = (linelength + (2 * cycle_base_ratio)) * mclk / (pclk/1000000);
+		cycle_base_linetime_in_ns += 1; /* Round Up */
+		cycle_base_linetime_in_ns = cycle_base_linetime_in_ns * 1000 / mclk;
+		*linetime_in_ns = cycle_base_linetime_in_ns;
+		DRV_LOG(ctx, "linetime_in_ns(%d)\n", *linetime_in_ns);
+	} else {
+		DRV_LOGE(ctx, "scenario_id (%d) cycle_base_ratio(%d) linelength(%d)  is 0\n",
+			scenario_id, cycle_base_ratio, linelength);
+		DRV_LOGE(ctx, "scenario_id (%d) aov_mode(%d) mclk(%d) pclk(%llu) is 0\n",
+			scenario_id, ctx->s_ctx.mode[scenario_id].aov_mode, mclk, pclk);
+		return -EINVAL;
+	}
 
 	return 0;
 }
