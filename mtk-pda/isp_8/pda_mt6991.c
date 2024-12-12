@@ -480,7 +480,8 @@ int pda_devm_clk_get(struct platform_device *pdev)
 		pda_clk[i].CG_PDA_TOP_MUX = devm_clk_get(&pdev->dev, clk_names[i]);
 		if (IS_ERR(pda_clk[i].CG_PDA_TOP_MUX)) {
 			LOG_INF("cannot get %s clock\n", clk_names[i]);
-			return PTR_ERR(pda_clk[i].CG_PDA_TOP_MUX);
+			pda_clk[i].CG_PDA_TOP_MUX = NULL;
+			//return PTR_ERR(pda_clk[i].CG_PDA_TOP_MUX);
 		}
 	}
 	return 0;
@@ -493,10 +494,13 @@ void pda_clk_prepare_enable(void)
 	mtk_cam_bwr_enable(bwr_device);
 
 	for (i = 0; i < PDA_CLK_NUM; i++) {
+		if (pda_clk[i].CG_PDA_TOP_MUX == NULL)
+			continue;
+
 		ret = clk_prepare_enable(pda_clk[i].CG_PDA_TOP_MUX);
 		if (ret)
 			LOG_INF("cannot enable clock (%s)\n", clk_names[i]);
-		if (pda_log_dbg_en == 1)
+		else
 			LOG_INF("clk_prepare_enable (%s) done", clk_names[i]);
 	}
 }
@@ -506,6 +510,9 @@ void pda_clk_disable_unprepare(void)
 	int i;
 
 	for (i = PDA_CLK_NUM-1; i >= 0; i--) {
+		if (pda_clk[i].CG_PDA_TOP_MUX == NULL)
+			continue;
+
 		clk_disable_unprepare(pda_clk[i].CG_PDA_TOP_MUX);
 		if (pda_log_dbg_en == 1)
 			LOG_INF("clk_disable_unprepare (%s) done\n", clk_names[i]);
