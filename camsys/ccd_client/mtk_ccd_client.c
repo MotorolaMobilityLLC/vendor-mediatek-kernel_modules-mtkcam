@@ -33,15 +33,15 @@ static inline unsigned int to_ccd_id_mask(unsigned int center_id,
 
 int mtk_ccd_client_start(struct mtk_ccd *ccd)
 {
-	/* check master service ready */
-	if (mtk_ccd_get_channel_center_id(ccd) == -1)
-		return -1;
+	/* TODO: for multi open */
+	(void) ccd;
 	return 0;
 }
 
 int mtk_ccd_client_stop(struct mtk_ccd *ccd)
 {
-	(void) ccd;  /* do nothing */
+	/* TODO: for multi open */
+	(void) ccd;
 	return 0;
 }
 
@@ -51,11 +51,7 @@ int mtk_ccd_client_get_channel(struct mtk_ccd *ccd,
 	int center_id, channel_id, id_mask;
 
 	/* get channel center */
-	center_id = mtk_ccd_get_channel_center_id(ccd);
-	if (center_id == -1) {
-		pr_info("%s get center failed\n", __func__);
-		return -EINVAL;
-	}
+	center_id = 1;  /* TODO: for multi open */
 
 	/* get channel - get rpmsg dev + create ept */
 	channel_id = mtk_ccd_get_channel(ccd, center_id, cb);

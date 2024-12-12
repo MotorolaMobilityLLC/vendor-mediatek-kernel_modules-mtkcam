@@ -30,11 +30,10 @@ struct mtk_rpmsg_device {
 	struct rpmsg_device rpdev;
 	struct mtk_rpmsg_rproc_subdev *mtk_subdev;
 	struct mtk_ccd_client_cb *channel_cb;
-	unsigned int id; /* channels index */
+	int id; /* channels index */
 };
 
 struct mtk_rpmsg_rproc_subdev {
-	unsigned int id;  /* center_id, assign at creation */
 	struct platform_device *pdev;
 	struct mtk_ccd_rpmsg_ops *ops;
 	struct rproc_subdev subdev;
@@ -46,9 +45,6 @@ struct mtk_rpmsg_rproc_subdev {
 	wait_queue_head_t master_listen_wq;
 	wait_queue_head_t ccd_listen_wq;
 	atomic_t listen_obj_rdy;
-
-	unsigned int master_status;
-	pid_t process_id;
 };
 
 #define to_mtk_subdev(d) container_of(d, struct mtk_rpmsg_rproc_subdev, subdev)
@@ -65,8 +61,7 @@ void mtk_ccd_center_destroy_channels(struct rproc_subdev *subdev);
 
 struct rproc_subdev *
 mtk_rpmsg_create_rproc_subdev(struct platform_device *pdev,
-			      struct mtk_ccd_rpmsg_ops *ops,
-			      unsigned int id);
+			      struct mtk_ccd_rpmsg_ops *ops);
 
 void mtk_rpmsg_destroy_rproc_subdev(struct rproc_subdev *subdev);
 

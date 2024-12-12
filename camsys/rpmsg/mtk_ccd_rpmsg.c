@@ -28,8 +28,8 @@ void __ept_release(struct kref *kref)
 	struct mtk_rpmsg_rproc_subdev *mtk_subdev = mept->mtk_subdev;
 	struct rpmsg_device *rpdev = ept->rpdev;
 
-	dev_info(&mtk_subdev->pdev->dev, "free mtk rpmsg endpoint: %p at %d-%d\n",
-		 mept, mtk_subdev->id, ept->addr);
+	dev_info(&mtk_subdev->pdev->dev, "free mtk rpmsg endpoint: %p at %d\n",
+		 mept, ept->addr);
 	kfree(to_mtk_rpmsg_endpoint(ept));
 
 	rpdev->ept = NULL;
@@ -67,8 +67,7 @@ __rpmsg_create_ept(struct mtk_rpmsg_rproc_subdev *mtk_subdev,
 	atomic_set(&mept->ccd_cmd_sent, 0);
 	atomic_set(&mept->ccd_mep_state, CCD_MENDPOINT_CREATED);
 
-	dev_info(&pdev->dev, "%s: %p at %d-%d\n", __func__,
-		mept, mtk_subdev->id, ept->addr);
+	dev_info(&pdev->dev, "%s: %p at %d\n", __func__, mept, ept->addr);
 	return ept;
 }
 
@@ -180,8 +179,7 @@ static int set_rpmsg_channel_info(struct rpmsg_channel_info *msg,
 
 	memset(msg, 0, sizeof(msg));
 	msg->src = msg_id;
-	(void) snprintf(msg->name, RPMSG_NAME_SIZE,
-			"mtk-camsys-\%x-%x", center_id, ipi_id);
+	(void) snprintf(msg->name, RPMSG_NAME_SIZE, "mtk-camsys-\%x", msg_id);
 
 	pr_info("%s %#x/%s", __func__, msg->src, msg->name);
 
@@ -216,8 +214,7 @@ static void mtk_rpmsg_destroy_rpmsgdev(struct mtk_rpmsg_rproc_subdev *mtk_subdev
 		rpmsg_destroy_ept(mdev->rpdev.ept);
 	}
 
-	dev_info(dev, "%s: %s at %d-%d\n", __func__,
-		info->name, mtk_subdev->id, id);
+	dev_info(dev, "%s: %s at %d\n", __func__, info->name, id);
 }
 
 void
@@ -225,16 +222,14 @@ mtk_ccd_center_destroy_channels(struct rproc_subdev *subdev)
 {
 	struct mtk_rpmsg_rproc_subdev *mtk_subdev = to_mtk_subdev(subdev);
 	struct rpmsg_channel_info msg;
-	u32 ipi_id, center_id;
-
-	center_id = mtk_subdev->id;
+	u32 ipi_id = 0;
 
 	/* destroy rpmsg device */
 	for (ipi_id = CCD_IPI_INIT; ipi_id < CCD_IPI_MAX; ipi_id++) {
 		if (!mtk_subdev->channels[ipi_id])
 			continue;
 
-		set_rpmsg_channel_info(&msg, center_id, ipi_id);
+		set_rpmsg_channel_info(&msg, 1, ipi_id);
 		mtk_rpmsg_destroy_rpmsgdev(mtk_subdev, &msg, ipi_id);
 	}
 }
@@ -283,8 +278,7 @@ mtk_rpmsg_create_rpmsgdev(struct mtk_rpmsg_rproc_subdev *mtk_subdev,
 	mtk_subdev->channels[id] = mdev;  /* MAIN - MRAW*/
 	mutex_unlock(&mtk_subdev->endpoints_lock);
 
-	dev_info(&pdev->dev, "%s: %#x %p at %d-%d\n", __func__,
-		 rpdev->src, mdev, mtk_subdev->id, id);
+	dev_info(&pdev->dev, "%s: %#x %p at %d\n", __func__, rpdev->src, mdev, id);
 
 	return mdev;
 }
@@ -294,13 +288,13 @@ mtk_ccd_center_create_channels(struct rproc_subdev *subdev)
 {
 	struct mtk_rpmsg_rproc_subdev *mtk_subdev = to_mtk_subdev(subdev);
 	struct rpmsg_channel_info msg;
-	u32 ipi_id, center_id;
-
-	center_id = mtk_subdev->id;
+	u32 ipi_id = 0;
 
 	/* create client rpmsg device */
-	for (ipi_id = CCD_IPI_INIT; ipi_id < CCD_IPI_MAX; ipi_id++) {
-		set_rpmsg_channel_info(&msg, center_id, ipi_id);
+	for (ipi_id = CCD_IPI_INIT;
+	     ipi_id < CCD_IPI_MAX;
+	     ipi_id++) {
+		set_rpmsg_channel_info(&msg, 1, ipi_id);
 		if (mtk_rpmsg_create_rpmsgdev(mtk_subdev, &msg, ipi_id) == NULL)
 			pr_info("%s: %s failed\n", __func__, msg.name);
 	}
@@ -319,11 +313,7 @@ int mtk_ccd_get_channel(struct mtk_ccd *ccd, unsigned int center_id,
 	int channel_id;
 
 	dev = ccd->dev;
-	subdev = ccd->channel_center[center_id];
-	if (!subdev) {
-		dev_info(dev, "%s center-%d is not ready\n", __func__, center_id);
-		return -1;
-	}
+	subdev = ccd->rpmsg_subdev;
 	mtk_subdev = to_mtk_subdev(subdev);
 
 	/* get channel */
@@ -366,13 +356,8 @@ int mtk_ccd_put_channel(struct mtk_ccd *ccd,
 	struct mtk_rpmsg_device *mdev;
 
 	dev = ccd->dev;
-	subdev = ccd->channel_center[center_id];
-	if (!subdev) {
-		dev_info(dev, "%s center-%d is not ready\n", __func__, center_id);
-		return -1;
-	}
+	subdev = ccd->rpmsg_subdev;
 	mtk_subdev = to_mtk_subdev(subdev);
-
 	mdev = mtk_subdev->channels[channel_id];
 	if (!mdev) {
 		dev_info(dev, "%s channel-%d-%d is not ready\n",
@@ -408,13 +393,8 @@ int mtk_ccd_channel_init(struct mtk_ccd *ccd,
 	u32 listen_obj_rdy;
 
 	dev = ccd->dev;
-	subdev = ccd->channel_center[center_id];
-	if (!subdev) {
-		dev_info(dev, "%s center-%d is not ready\n", __func__, center_id);
-		return -1;
-	}
+	subdev = ccd->rpmsg_subdev;
 	mtk_subdev = to_mtk_subdev(subdev);
-
 	mdev = mtk_subdev->channels[channel_id];
 	if (!mdev) {
 		dev_info(dev, "%s channel-%d-%d is not ready\n",
@@ -437,8 +417,9 @@ int mtk_ccd_channel_init(struct mtk_ccd *ccd,
 			 CCD_LISTEN_OBJECT_PREPARING),
 			 msecs_to_jiffies(2000));
 		if (ret == 0) {
-			dev_info(dev, "%s wait timeout, master-%d might be killed\n",
-				__func__, center_id);
+			dev_info(dev,
+				"%s wait timeout, master service might be killed\n",
+				__func__);
 			return -1;
 		} else if (ret < 0) {
 			dev_info(dev, "%s is being canceled %d\n",
@@ -474,13 +455,8 @@ int mtk_ccd_channel_uninit(struct mtk_ccd *ccd,
 	u32 listen_obj_rdy;
 
 	dev = ccd->dev;
-	subdev = ccd->channel_center[center_id];
-	if (!subdev) {
-		dev_info(dev, "%s center-%d is not ready\n", __func__, center_id);
-		return -1;
-	}
+	subdev = ccd->rpmsg_subdev;
 	mtk_subdev = to_mtk_subdev(subdev);
-
 	mdev = mtk_subdev->channels[channel_id];
 	if (!mdev) {
 		dev_info(dev, "%s channel-%d-%d is not ready\n",
@@ -503,8 +479,9 @@ int mtk_ccd_channel_uninit(struct mtk_ccd *ccd,
 			 CCD_LISTEN_OBJECT_PREPARING),
 			 msecs_to_jiffies(2000));
 		if (ret == 0) {
-			dev_info(dev, "%s wait timeout, master-%d might be killed\n",
-				__func__, center_id);
+			dev_info(dev,
+				"%s wait timeout, master service might be killed\n",
+				__func__);
 			return -1;
 		} else if (ret < 0) {
 			dev_info(dev, "%s is being canceled %d\n",
@@ -539,14 +516,8 @@ int mtk_ccd_channel_send(struct mtk_ccd *ccd,
 	struct mtk_rpmsg_device *mdev;
 
 	dev = ccd->dev;
-	subdev = ccd->channel_center[center_id];
-	if (!subdev) {
-		dev_info(dev, "%s center-%d is not ready\n", __func__, center_id);
-		return -1;
-	}
+	subdev = ccd->rpmsg_subdev;
 	mtk_subdev = to_mtk_subdev(subdev);
-
-	/* TODO: get mtk endpoint(ccd, cneter_id, channel_id) */
 	mdev = mtk_subdev->channels[channel_id];
 	if (!mdev) {
 		dev_info(dev, "%s channel-%d-%d is not ready\n",
@@ -569,8 +540,7 @@ EXPORT_SYMBOL_GPL(mtk_ccd_channel_send);
 /* rproc_subdev */
 struct rproc_subdev *
 mtk_rpmsg_create_rproc_subdev(struct platform_device *pdev,
-			      struct mtk_ccd_rpmsg_ops *ops,
-			      unsigned int id)
+			      struct mtk_ccd_rpmsg_ops *ops)
 {
 	struct mtk_rpmsg_rproc_subdev *mtk_subdev;
 	int i;
@@ -581,9 +551,6 @@ mtk_rpmsg_create_rproc_subdev(struct platform_device *pdev,
 
 	mtk_subdev->pdev = pdev;
 	mtk_subdev->ops = ops;
-	mtk_subdev->id = id;
-	mtk_subdev->master_status = CCD_MASTER_INIT;
-	mtk_subdev->process_id = -1;
 
 	mutex_init(&mtk_subdev->endpoints_lock);
 
