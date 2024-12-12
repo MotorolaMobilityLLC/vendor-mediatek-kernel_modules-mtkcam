@@ -4125,11 +4125,8 @@ static int mtk_cam_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (alloc_dev->dma_parms) {
-		ret = dma_set_max_seg_size(alloc_dev, UINT_MAX);
-		if (ret)
-			dev_err(dev, "%s: Failed to set DMA segment size\n", __func__);
-	}
+	if (alloc_dev->dma_parms)
+		dma_set_max_seg_size(alloc_dev, UINT_MAX);
 
 	cam_dev->base =  devm_platform_ioremap_resource_byname(pdev, "base");
 	if (IS_ERR(cam_dev->base)) {

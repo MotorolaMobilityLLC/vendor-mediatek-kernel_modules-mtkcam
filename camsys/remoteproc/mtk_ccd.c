@@ -398,11 +398,8 @@ static int ccd_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (alloc_dev->dma_parms) {
-		ret = dma_set_max_seg_size(alloc_dev, UINT_MAX);
-		if (ret)
-			dev_info(dev, "Failed to set DMA segment size\n");
-	}
+	if (alloc_dev->dma_parms)
+		dma_set_max_seg_size(alloc_dev, UINT_MAX);
 
 	platform_set_drvdata(pdev, ccd);
 

@@ -15,7 +15,7 @@
 #include <linux/scatterlist.h>
 #include <uapi/linux/dma-heap.h>
 #include <linux/types.h>
-
+#include <linux/cdev.h>
 
 
 #include "mtk-hcp-aee.h"

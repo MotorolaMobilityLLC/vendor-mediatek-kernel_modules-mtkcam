@@ -4814,7 +4814,7 @@ static int mtk_cam_vcore_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct mtk_cam_vcore_device *drvdata;
 	struct device *alloc_dev;
-	int i, ret, clks;
+	int i, clks;
 
 	dev_info(dev, "%s++\n", __func__);
 
@@ -4846,11 +4846,9 @@ static int mtk_cam_vcore_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (alloc_dev->dma_parms) {
-		ret = dma_set_max_seg_size(alloc_dev, UINT_MAX);
-		if (ret)
-			dev_err(dev, "%s: Failed to set DMA segment size\n", __func__);
-	}
+	if (alloc_dev->dma_parms)
+		dma_set_max_seg_size(alloc_dev, UINT_MAX);
+
 	clks = of_count_phandle_with_args(
 				pdev->dev.of_node, "clocks", "#clock-cells");
 	drvdata->num_clks = (clks == -ENOENT) ? 0 : clks;
@@ -4986,11 +4984,8 @@ static int mtk_cam_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (alloc_dev->dma_parms) {
-		ret = dma_set_max_seg_size(alloc_dev, UINT_MAX);
-		if (ret)
-			dev_err(dev, "%s: Failed to set DMA segment size\n", __func__);
-	}
+	if (alloc_dev->dma_parms)
+		dma_set_max_seg_size(alloc_dev, UINT_MAX);
 
 	cam_dev->base =  devm_platform_ioremap_resource_byname(pdev, "base");
 	if (IS_ERR(cam_dev->base)) {

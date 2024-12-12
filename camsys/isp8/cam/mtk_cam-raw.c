@@ -2416,11 +2416,8 @@ static int mtk_raw_of_probe(struct platform_device *pdev,
 			return -ENOMEM;
 	}
 
-	if (dev->dma_parms) {
-		ret = dma_set_max_seg_size(dev, UINT_MAX);
-		if (ret)
-			dev_info(dev, "Failed to set DMA segment size\n");
-	}
+	if (dev->dma_parms)
+		dma_set_max_seg_size(dev, UINT_MAX);
 
 	/* base outer register */
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "base");
@@ -2982,11 +2979,8 @@ static int mtk_yuv_of_probe(struct platform_device *pdev,
 			return -ENOMEM;
 	}
 
-	if (dev->dma_parms) {
-		ret = dma_set_max_seg_size(dev, UINT_MAX);
-		if (ret)
-			dev_info(dev, "Failed to set DMA segment size\n");
-	}
+	if (dev->dma_parms)
+		dma_set_max_seg_size(dev, UINT_MAX);
 
 	/* base outer register */
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "base");

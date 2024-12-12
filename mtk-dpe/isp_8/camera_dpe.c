@@ -8616,7 +8616,6 @@ static signed int DPE_probe(struct platform_device *pDev)
 #ifndef EP_NO_CLKMGR
 	struct device_node *node;
 #endif
-	int ret;
 #if IS_ENABLED(CONFIG_OF)
 	struct DPE_device *DPE_dev;
 	#ifdef CMASYS_CLK_Debug
@@ -8790,11 +8789,8 @@ if (DPE_dev->irq > 0) {
 #endif
 	// if (!pm_runtime_enabled(DPE_dev->dev))
 		// goto EXIT;
-	ret = dma_set_max_seg_size(DPE_dev->dev, (unsigned int)DMA_BIT_MASK(34));
-	if (ret) {
-		dev_dbg(DPE_dev->dev, "Failed to set DMA segment size\n");
-		goto EXIT;
-	}
+	dma_set_max_seg_size(DPE_dev->dev, (unsigned int)DMA_BIT_MASK(34));
+
 	/* Only register char driver in the 1st time */
 	if (nr_DPE_devs == 3) {
 		DPE_dev->clks = isp8_dpe_clks;

@@ -2139,9 +2139,7 @@ int mtk_mae_probe(struct platform_device *pdev)
 			return -ENOMEM;
 	}
 
-	ret = dma_set_max_seg_size(dev, UINT_MAX);
-	if (ret)
-		mae_dev_info(dev, "Failed to set DMA segment size\n");
+	dma_set_max_seg_size(dev, UINT_MAX);
 
 	dev_set_drvdata(dev, mae_dev);
 	mae_dev->dev = dev;

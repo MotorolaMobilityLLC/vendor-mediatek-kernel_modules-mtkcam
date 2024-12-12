@@ -2625,10 +2625,8 @@ static int mtk_hcp_probe(struct platform_device *pdev)
 			devm_kzalloc(hcp_dev->dev, sizeof(*hcp_dev->dev->dma_parms), GFP_KERNEL);
 	}
 	if (hcp_dev->dev->dma_parms) {
-		if (dma_set_max_seg_size(hcp_dev->dev, (unsigned int)DMA_BIT_MASK(34)))
-			dev_info(hcp_dev->dev,
-				"Failed to set DMA segment size:%u\n",
-				(unsigned int)DMA_BIT_MASK(34));
+		dma_set_max_seg_size(hcp_dev->dev, (unsigned int)DMA_BIT_MASK(34));
+
 	} else {
 		ret = -ENOMEM;
 		goto error;

@@ -6312,7 +6312,6 @@ static signed int DPE_probe(struct platform_device *pDev)
 	struct DPE_device *_dpe_dev;
 	struct video_device *vfd = NULL;
 	struct device_node *node;
-	int ret;
 #if IS_ENABLED(CONFIG_OF)
 	struct DPE_device *DPE_dev;
 #endif
@@ -6431,11 +6430,8 @@ if (DPE_dev->irq > 0) {
 	if (!pm_runtime_enabled(DPE_dev->dev))
 		goto EXIT;
 	//dma_set_mask_and_coherent(DPE_dev->dev, DMA_BIT_MASK(34));
-	ret = dma_set_max_seg_size(DPE_dev->dev, (unsigned int)DMA_BIT_MASK(34));
-	if (ret) {
-		dev_dbg(DPE_dev->dev, "Failed to set DMA segment size\n");
-		goto EXIT;
-	}
+	dma_set_max_seg_size(DPE_dev->dev, (unsigned int)DMA_BIT_MASK(34));
+
 	/* Only register char driver in the 1st time */
 	if (nr_DPE_devs == 2) {
 		/* Register char driver */
