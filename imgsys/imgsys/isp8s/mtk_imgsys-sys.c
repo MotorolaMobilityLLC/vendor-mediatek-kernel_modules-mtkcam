@@ -43,8 +43,11 @@ struct tuning_meta_info {
 static struct gce_timeout_work imgsys_timeout_winfo[VIDEO_MAX_FRAME];
 static int imgsys_timeout_idx;
 #if IS_ENABLED(CONFIG_MTK_SLBC) && !defined(CONFIG_FPGA_EARLY_PORTING)
-static int gid;
-static struct slbc_gid_data *img_slbc_gid_data;
+#define SLC_USER_NUM	(2)
+static int gid[SLC_USER_NUM];
+static struct slbc_gid_data *img_slbc_gid_data[SLC_USER_NUM];
+static enum slc_ach_uid uid[SLC_USER_NUM] = {ID_IMG, ID_MAE};
+static int slc_user;
 #endif
 static struct info_list_t frm_info_list = {
 	.mymutex = __MUTEX_INITIALIZER(frm_info_list.mymutex),
@@ -2270,15 +2273,19 @@ static int mtk_imgsys_worker_hcp_init(struct mtk_imgsys_dev *imgsys_dev)
 #if IS_ENABLED(CONFIG_MTK_SLBC) && !defined(CONFIG_FPGA_EARLY_PORTING)
 		/*slc init*/
 		if (!imgsys_slc_dbg_enable()) {
-			gid = -1;
-			img_slbc_gid_data = vzalloc(sizeof(struct slbc_gid_data));
-			img_slbc_gid_data->sign = 0x51ca11ca;
-			ret = slbc_gid_request(ID_IMG, &gid, img_slbc_gid_data);
-			if (ret)
-				dev_info(imgsys_dev->dev, "slc request fail");
-			ret = slbc_validate(ID_IMG, gid);
-			if (ret)
-				dev_info(imgsys_dev->dev, "slc validate fail");
+			for (slc_user = 0; slc_user < SLC_USER_NUM; slc_user++) {
+				gid[slc_user] = -1;
+				img_slbc_gid_data[slc_user] = vzalloc(sizeof(struct slbc_gid_data));
+				img_slbc_gid_data[slc_user]->sign = 0x51ca11ca;
+				ret = slbc_gid_request(uid[slc_user], &gid[slc_user], img_slbc_gid_data[slc_user]);
+				if (ret)
+					dev_info(imgsys_dev->dev, "slc request failed: uid %d\n", uid[slc_user]);
+				ret = slbc_validate(uid[slc_user], gid[slc_user]);
+				if (ret)
+					dev_info(imgsys_dev->dev, "slc validate failed uid %d\n", uid[slc_user]);
+				dev_info(imgsys_dev->dev, "slc uid(%d): gid(%d) allocated\n",
+										uid[slc_user], gid[slc_user]);
+			}
 		}
 #endif /* IS_ENABLED(CONFIG_MTK_SLBC) */
 		/*imgsys hw working buffer init*/
@@ -2587,13 +2594,16 @@ static void mtk_imgsys_hw_disconnect(struct mtk_imgsys_dev *imgsys_dev)
 #if IS_ENABLED(CONFIG_MTK_SLBC) && !defined(CONFIG_FPGA_EARLY_PORTING)
 	/*slc uninit API*/
 	if (!imgsys_slc_dbg_enable()) {
-		ret = slbc_invalidate(ID_IMG, gid);
-		if (ret)
-			dev_info(imgsys_dev->dev, "slc invalidate fail");
-		ret = slbc_gid_release(ID_IMG, gid);
-		if (ret)
-			dev_info(imgsys_dev->dev, "slc release fail");
-		vfree(img_slbc_gid_data);
+		for (slc_user = 0; slc_user < SLC_USER_NUM; slc_user++) {
+
+			ret = slbc_invalidate(uid[slc_user], gid[slc_user]);
+			if (ret)
+				dev_info(imgsys_dev->dev, "slc invalidate fail");
+			ret = slbc_gid_release(uid[slc_user], gid[slc_user]);
+			if (ret)
+				dev_info(imgsys_dev->dev, "slc release fail");
+			vfree(img_slbc_gid_data[slc_user]);
+		}
 	}
 #endif /* IS_ENABLED(CONFIG_MTK_SLBC) */
 	ret = imgsys_send(imgsys_dev->scp_pdev, HCP_IMGSYS_DEINIT_ID,
