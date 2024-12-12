@@ -44,7 +44,7 @@ struct mtk_ccd {
 	struct cdev ccd_cdev;
 	struct class *ccd_class;
 
-	struct rproc_subdev *rpmsg_subdev;
+	struct rproc_subdev *rpmsg_subdev;  /* TODO: re-name */
 	struct ccd_master_status master_status;
 	struct mtk_ccd_memory *ccd_memory;
 };
@@ -80,10 +80,6 @@ int ccd_worker_read(struct mtk_ccd *ccd,
 
 void ccd_worker_write(struct mtk_ccd *ccd,
 		      struct ccd_worker_item *write_obj);
-
-void mtk_ccd_get_service(struct mtk_ccd *ccd,
-			 struct task_struct **task,
-			 struct files_struct **f);
 
 void *mtk_ccd_get_buffer(struct mtk_ccd *ccd,
 			 struct mem_obj *mem_buff_data);

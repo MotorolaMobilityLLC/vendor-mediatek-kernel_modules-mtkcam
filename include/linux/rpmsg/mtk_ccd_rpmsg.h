@@ -10,7 +10,8 @@
 #include <linux/device.h>
 #include <linux/remoteproc.h>
 #include <linux/rpmsg.h>
-#include <linux/idr.h>
+
+#include <uapi/linux/mtk_ccd_controls.h>
 
 #define NAME_MAX_LEN			(32)
 
@@ -25,12 +26,16 @@ struct mtk_ccd_listen_item {
 	unsigned int cmd;
 };
 
+struct mtk_rpmsg_device {
+	struct rpmsg_device rpdev;
+	struct mtk_rpmsg_rproc_subdev *mtk_subdev;
+};
+
 struct mtk_rpmsg_rproc_subdev {
 	struct platform_device *pdev;
 	struct mtk_ccd_rpmsg_ops *ops;
 	struct rproc_subdev subdev;
-	struct rpmsg_device *rpdev;
-	struct idr endpoints;
+	struct mtk_rpmsg_device *channels[CCD_IPI_MAX];
 	struct mutex endpoints_lock;
 
 	struct mutex master_listen_lock;
@@ -38,11 +43,6 @@ struct mtk_rpmsg_rproc_subdev {
 	wait_queue_head_t master_listen_wq;
 	wait_queue_head_t ccd_listen_wq;
 	atomic_t listen_obj_rdy;
-};
-
-struct mtk_rpmsg_device {
-	struct rpmsg_device rpdev;
-	struct mtk_rpmsg_rproc_subdev *mtk_subdev;
 };
 
 struct mtk_ccd_channel_info {
