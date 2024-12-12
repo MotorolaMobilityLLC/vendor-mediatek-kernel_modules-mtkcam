@@ -268,6 +268,7 @@ static const unsigned int fld_face_info_idx_1[MAX_FLD_V0_FACE_NUM] = {
 // 0x4200 MAE_RSZ0
 #define MAE_MAISR_BASE                   (0x4200)
 #define MAE_0170_MAISR                   (MAE_MAISR_BASE + 0x170)
+#define MAE_0174_MAISR                   (MAE_MAISR_BASE + 0x174)
 #define MAE_MAISR_LEN                     (0x0600)
 
 // 0x4800 MAE_RSZ0
