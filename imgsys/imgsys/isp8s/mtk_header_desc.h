@@ -119,7 +119,7 @@ struct buf_info {
 
 #define IMGSYS_SINGLE_NODE_DESC_V2
 
-#define IMG_MAX_HW_DMAS              (160)
+#define IMG_MAX_HW_DMAS              (176)
 #define IMGSYS_HW_DMAS_NUM_MAX       IMG_MAX_HW_DMAS
 #define FRAME_BUF_MAX                (1)
 #define TIME_MAX                     (144)
