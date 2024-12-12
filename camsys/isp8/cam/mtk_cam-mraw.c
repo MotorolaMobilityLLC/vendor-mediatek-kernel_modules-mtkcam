@@ -1921,7 +1921,7 @@ int mtk_mraw_runtime_resume(struct device *dev)
 	if (ret)
 		return ret;
 
-	dev_dbg(dev, "%s:enable clock\n", __func__);
+	dev_info_ratelimited(dev, "%s:enable clock\n", __func__);
 	for (i = 0; i < mraw_dev->num_clks; i++) {
 		ret = clk_prepare_enable(mraw_dev->clks[i]);
 		if (ret) {
