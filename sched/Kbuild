@@ -8,4 +8,3 @@ KO_CODE_PATH := $(if $(filter /%,$(src)),,$(srctree)/)$(src)
 
 subdir-ccflags-y += -I$(KO_CODE_PATH)/
 obj-$(CONFIG_MTK_C2PS) += c2ps/
-obj-$(CONFIG_MTK_C2PS) += c2ps_ioctl/
