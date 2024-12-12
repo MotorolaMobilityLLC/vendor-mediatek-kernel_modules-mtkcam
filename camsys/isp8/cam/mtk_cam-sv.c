@@ -1859,6 +1859,22 @@ int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tag
 	return need_smi_dump;
 }
 
+void camsv_dump_cq_debug_status(struct mtk_camsv_device *sv_dev)
+{
+	unsigned int debug_value;
+
+	CAMSV_WRITE_BITS(sv_dev->base_scq + REG_CAMSVCQ_CQ_EN,
+		CAMSVCQ_CQ_EN, CAMSVCQ_CQ_DBG_SEL, 1);
+	CAMSV_WRITE_BITS(sv_dev->base_scq + REG_CAMSVCQ_CQ_EN,
+		CAMSVCQ_CQ_EN, CAMSVCQ_CQ_DBG_MAIN_SUB_SEL, 1);
+
+	for (debug_value = 0x0; debug_value <= 0xF0000; debug_value += 0x10000) {
+		CAMSV_WRITE_REG(sv_dev->base_scq + REG_CAMSVCQTOP_DEBUG_SET, debug_value);
+		dev_info(sv_dev->dev, "cq 0x%x debug status:0x%x\n", debug_value,
+			CAMSV_READ_REG(sv_dev->base_scq + REG_CAMSVCQTOP_DEBUG));
+	}
+}
+
 void camsv_handle_cq_err(
 	struct mtk_camsv_device *sv_dev,
 	struct mtk_camsys_irq_info *data)
@@ -1880,6 +1896,9 @@ void camsv_handle_cq_err(
 
 	/* dump camsv debug data */
 	mtk_cam_sv_debug_dump(sv_dev, 0);
+
+	/* dump camsv cq debug data */
+	camsv_dump_cq_debug_status(sv_dev);
 
 	mtk_smi_dbg_hang_detect("camsys-camsv");
 }
