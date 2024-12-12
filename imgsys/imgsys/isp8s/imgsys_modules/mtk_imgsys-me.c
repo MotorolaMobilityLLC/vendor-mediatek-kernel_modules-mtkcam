@@ -23,6 +23,9 @@
 #include "mtk_imgsys-v4l2-debug.h"
 #include "mtk-hcp.h"
 
+
+#define PSEUDO_DESC_TUNING_ME 0xf
+
 struct clk_bulk_data imgsys_isp8s_me_clks[] = {
 	{ .id = "ME_CG_IPE" },
 	{ .id = "ME_CG_IPE_TOP" },
@@ -31,9 +34,9 @@ struct clk_bulk_data imgsys_isp8s_me_clks[] = {
 };
 
 struct mtk_imgsys_me_dtable {
-	uint32_t empty;
+	uint32_t cmd1;
 	uint32_t addr;
-	uint32_t addr_msb;
+	uint32_t cmd2; // it contains addr_msb at the endianness 4 bit
 };
 
 void imgsys_me_updatecq(struct mtk_imgsys_dev *imgsys_dev,
@@ -56,20 +59,20 @@ void imgsys_me_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 		if (iova_addr) {
 			cq_desc = (u64 *)((void *)(cq_base +
 				user_info->priv[IMGSYS_HW_ME].desc_offset));
-
 			for (i = 0; i < ME_CQ_DESC_NUM; i++) {
+				pr_info("enter for loop\n");
 				dtable = (struct mtk_imgsys_me_dtable *)cq_desc + i;
-				if ((dtable->addr_msb & PSEUDO_DESC_TUNING) == PSEUDO_DESC_TUNING) {
+				if ((dtable->cmd2 & PSEUDO_DESC_TUNING_ME) == PSEUDO_DESC_TUNING_ME) {
 					tun_ofst = dtable->addr;
 					dtable->addr = (tun_ofst + iova_addr) & 0xFFFFFFFF;
-					dtable->addr_msb = ((tun_ofst + iova_addr) >> 32) & 0xF;
-					if (imgsys_me_8s_dbg_enable())
-						pr_debug(
-							"%s: tuning_buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
+					dtable->cmd2 = (dtable->cmd2 & 0xFFFFFFF0) |
+							(((tun_ofst + iova_addr) >> 32) & 0xF);
+						pr_info("%s: tuning_buf_iova(0x%llx) des_ofst(0x%08x)",
 							__func__, iova_addr,
-							user_info->priv[IMGSYS_HW_ME].desc_offset,
-							cq_desc, dtable->empty, dtable->addr,
-							dtable->addr_msb);
+							user_info->priv[IMGSYS_HW_ME].desc_offset);
+						pr_info("cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
+							cq_desc, dtable->cmd1, dtable->addr,
+							dtable->cmd2);
 				}
 			}
 		}
@@ -114,7 +117,7 @@ int ME_TranslationFault_callback(int port, dma_addr_t mva, void *data)
 
 	for (i = ME_CTL_OFFSET; i <= ME_CTL_OFFSET + ME_CTL_RANGE_TF; i += 0x10) {
 		pr_info("%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
-		(unsigned int)(0x34070000 + i),
+		(unsigned int)(0x34550000 + i),
 		(unsigned int)ioread32((void *)(meRegBA + i)),
 		(unsigned int)ioread32((void *)(meRegBA + (i+0x4))),
 		(unsigned int)ioread32((void *)(meRegBA + (i+0x8))),
@@ -139,7 +142,7 @@ int MMG_TranslationFault_callback(int port, dma_addr_t mva, void *data)
 
 	for (i = MMG_CTL_OFFSET; i <= MMG_CTL_OFFSET + MMG_CTL_RANGE_TF; i += 0x10) {
 		pr_info("%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
-		(unsigned int)(0x34080000 + i),
+		(unsigned int)(0x34560000 + i),
 		(unsigned int)ioread32((void *)(mmgRegBA + i)),
 		(unsigned int)ioread32((void *)(mmgRegBA + (i+0x4))),
 		(unsigned int)ioread32((void *)(mmgRegBA + (i+0x8))),
@@ -204,7 +207,7 @@ void imgsys_me_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	dev_info(imgsys_dev->dev, "%s: dump me regs\n", __func__);
 	for (i = ME_CTL_OFFSET; i <= ME_CTL_OFFSET + ME_CTL_RANGE; i += 0x10) {
 		dev_info(imgsys_dev->dev, "%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
-		(unsigned int)(0x34070000 + i),
+		(unsigned int)(0x34550000 + i),
 		(unsigned int)ioread32((void *)(meRegBA + i)),
 		(unsigned int)ioread32((void *)(meRegBA + (i+0x4))),
 		(unsigned int)ioread32((void *)(meRegBA + (i+0x8))),
@@ -213,7 +216,7 @@ void imgsys_me_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	dev_info(imgsys_dev->dev, "%s: dump mmg regs\n", __func__);
 	for (i = MMG_CTL_OFFSET; i <= MMG_CTL_OFFSET + MMG_CTL_RANGE; i += 0x10) {
 		dev_info(imgsys_dev->dev, "%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
-		(unsigned int)(0x34080000 + i),
+		(unsigned int)(0x34560000 + i),
 		(unsigned int)ioread32((void *)(mmgRegBA + i)),
 		(unsigned int)ioread32((void *)(mmgRegBA + (i+0x4))),
 		(unsigned int)ioread32((void *)(mmgRegBA + (i+0x8))),
@@ -242,7 +245,7 @@ void ipesys_me_debug_dump_local(void)
 	pr_info("imgsys %s: dump me regs\n", __func__);
 	for (i = ME_CTL_OFFSET; i <= ME_CTL_OFFSET + ME_CTL_RANGE; i += 0x10) {
 		pr_info("imgsys %s: 0x%08X %08X, %08X, %08X, %08X", __func__,
-		(unsigned int)(0x34070000 + i),
+		(unsigned int)(0x34550000 + i),
 		(unsigned int)ioread32((void *)(meRegBA + i)),
 		(unsigned int)ioread32((void *)(meRegBA + (i+0x4))),
 		(unsigned int)ioread32((void *)(meRegBA + (i+0x8))),
@@ -251,7 +254,7 @@ void ipesys_me_debug_dump_local(void)
 	pr_info("imgsys %s: dump mmg regs\n", __func__);
 	for (i = MMG_CTL_OFFSET; i <= MMG_CTL_OFFSET + MMG_CTL_RANGE; i += 0x10) {
 		pr_info("imgsys %s: 0x%08X %08X, %08X, %08X, %08X", __func__,
-		(unsigned int)(0x34080000 + i),
+		(unsigned int)(0x34560000 + i),
 		(unsigned int)ioread32((void *)(mmgRegBA + i)),
 		(unsigned int)ioread32((void *)(mmgRegBA + (i+0x4))),
 		(unsigned int)ioread32((void *)(mmgRegBA + (i+0x8))),
@@ -278,11 +281,11 @@ void imgsys_me_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 		pr_info("imgsys %s Unable to ioremap mmg registers\n",
 			__func__);
 	}
-		/* ME HW mode ddren */
-		iowrite32(0x00000001, (void *)(meRegBA + 0x0000017c));
+		// /* ME HW mode ddren */
+		iowrite32(0x00000001, (void *)(meRegBA + 0x00000198));
 
-		/* MMG HW mode ddren */
-		iowrite32(0x00000001, (void *)(mmgRegBA + 0x00000060));
+		// /* MMG HW mode ddren */
+		iowrite32(0x00000001, (void *)(mmgRegBA + 0x00000074));
 
 }
 
@@ -293,7 +296,7 @@ bool imgsys_me_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine)
 	uint32_t value = 0;
 
 	if (engine & IMGSYS_HW_FLAG_ME) {
-		value = (uint32_t)ioread32((void *)(g_meRegBA + 0x174));
+		value = (uint32_t)ioread32((void *)(g_meRegBA + 0x17C));
 		if (!(value & 0x1)) {
 			ret = false;
 			pr_info(

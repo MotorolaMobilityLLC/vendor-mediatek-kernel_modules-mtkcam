@@ -23,7 +23,7 @@
 #define MMG_CTL_RANGE_TF    0x40
 
 // align userspace
-#define ME_CQ_DESC_NUM 117
+#define ME_CQ_DESC_NUM 37
 #define ME_REG_SIZE 0x2000
 
 
