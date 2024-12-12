@@ -2889,3 +2889,38 @@ imgsys_working_buf_alloc_helper(struct mtk_imgsys_dev *imgsys_dev)
 {
 	return mtk_imgsys_hw_working_buf_alloc(imgsys_dev);
 }
+
+#ifdef MTK_ISC_SUPPORT
+irqreturn_t mtk_imgsys_isc_irq(int irq, void *data)
+{
+
+	struct mtk_imgsys_dev *imgsys_dev = (struct mtk_imgsys_dev *) data;
+	const struct module_ops *imgsys_modules = imgsys_dev->modules;
+
+	imgsys_modules[IMGSYS_MOD_IMGMAIN].dump(imgsys_dev, 1);
+
+	return IRQ_WAKE_THREAD;
+}
+
+irqreturn_t mtk_imgsys_isc_thread_irq(int irq, void *data)
+{
+	struct mtk_imgsys_dev *imgsys_dev = (struct mtk_imgsys_dev *) data;
+	const struct module_ops *imgsys_modules = imgsys_dev->modules;
+
+	imgsys_modules[IMGSYS_MOD_IMGMAIN].dump(imgsys_dev, 2);
+
+	return IRQ_HANDLED;
+}
+#else
+irqreturn_t mtk_imgsys_isc_irq(int irq, void *data)
+{
+	return IRQ_WAKE_THREAD;
+}
+
+irqreturn_t mtk_imgsys_isc_thread_irq(int irq, void *data)
+{
+	return IRQ_HANDLED;
+}
+
+#endif
+

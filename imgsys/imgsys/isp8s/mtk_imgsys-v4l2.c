@@ -3298,7 +3298,7 @@ int mtk_imgsys_probe(struct platform_device *pdev)
 	const struct cust_data *data;
 
 	struct device_link *link;
-	int larbs_num, i;
+	int larbs_num, i, irq;
 	int ret;
 	const char *coherent_status = NULL;
 
@@ -3366,6 +3366,20 @@ int mtk_imgsys_probe(struct platform_device *pdev)
 	if (of_property_read_u32_index(imgsys_dev->dev->of_node,
 		"mediatek,imgsys-ver", 0, &imgsys_dev->dev_ver) == 0)
 		pr_info("[%s] imgsys-ver = %u\n", __func__, imgsys_dev->dev_ver);
+#ifdef MTK_ISC_SUPPORT
+	irq = platform_get_irq(pdev, 0);
+	if (irq < 0) {
+		dev_info(imgsys_dev->dev, "%s: failed to get irq(%d)\n", __func__, irq);
+	} else
+		ret = devm_request_threaded_irq(&pdev->dev, irq, mtk_imgsys_isc_irq, mtk_imgsys_isc_thread_irq,
+					(IRQF_ONESHOT | IRQF_NO_AUTOEN), dev_name(&pdev->dev), imgsys_dev);
+	imgsys_dev->isc_irq = irq;
+	dev_info(imgsys_dev->dev, "%d: request irq: %s\n", irq, ret ? "NG" : "OK");
+#else
+	imgsys_dev->isc_irq = -1;
+	(void) irq;
+#endif
+
 
 	imgsys_dev->scp_pdev = mtk_hcp_get_plat_device(pdev);
 	if (!imgsys_dev->scp_pdev) {

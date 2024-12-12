@@ -274,6 +274,7 @@ void imgsys_main_init(struct mtk_imgsys_dev *imgsys_dev)
 
 #define ISC_BASE	(0x34060000)
 #define ISC_CTRL	(0x00000004)
+#define ISC_ERR_ID	(0x0000001C)
 #define GID_0_ENTRY	(0x100)
 #define GID_ENTRY_OFST	(0x010)
 #define GID_TBL(g)	(GID_0_ENTRY + GID_ENTRY_OFST * (g))
@@ -321,14 +322,66 @@ void imgsys_main_slc_init(struct mtk_imgsys_dev *imgsys_dev)
 
 #define BID_NUM	(2)
 char log_buf[LOG_LEGNTH * 20] = {0};
-void imgsys_main_slc_dump(struct mtk_imgsys_dev *imgsys_dev)
+struct isc_debug {
+	unsigned int gid;
+	unsigned int bid;
+	unsigned int gid_tbl[4];
+} isc_info;
+static int primary_irq;
+
+void imgsys_main_slc_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int irq)
 {
-	unsigned int i = 0, gid = 0, entry, b;
+	unsigned int i = 0, gid = 0, gid9, entry, b, bid;
 	void *addr0 = 0;
 	int ret, ofst = 0;
 	unsigned int regs_ofst[] = {ISC_CTRL, 0x10, 0x14, 0x18, 0x1C, 0x28, 0x30, 0x34, 0x38};
 
+
+	if (!imgsysiscRegBA) {
+		dev_info(imgsys_dev->dev, "%s: isc already unmapped\n", __func__);
+		return;
+	}
+
 	log_buf[strlen(log_buf)] = '\0';
+
+	if (irq == 1) {
+		addr0 = (void *)(imgsysiscRegBA + ISC_ERR_ID);
+		gid9 = (unsigned int)ioread32(addr0);
+		gid = gid9 >> 2;
+		bid = gid9 & (0x3);
+		if ((gid >= GID_START) && (gid <= GID_END)) {
+			entry = (gid - GID_START) + (bid >> 1);
+			addr0 = (void *)(imgsysiscRegBA + GID_TBL(entry));
+			isc_info.gid = gid;
+			isc_info.bid = bid;
+			isc_info.gid_tbl[0] = (unsigned int)ioread32(addr0);
+			isc_info.gid_tbl[1] = (unsigned int)ioread32(addr0 + 0x4);
+			isc_info.gid_tbl[2] = (unsigned int)ioread32(addr0 + 0x8);
+			isc_info.gid_tbl[3] = (unsigned int)ioread32(addr0 + 0xC);
+
+		} else
+			isc_info.gid = 0;
+
+		primary_irq = 1;
+
+		return;
+	}
+
+	if ((irq == 2) && primary_irq) {
+		primary_irq = 0;
+
+		if (isc_info.gid)
+			dev_info(imgsys_dev->dev, "ISC GID(%d,%d) | %08X %08X %08X %08X\n",
+								isc_info.gid, isc_info.bid,
+								isc_info.gid_tbl[0],
+								isc_info.gid_tbl[1],
+								isc_info.gid_tbl[2],
+								isc_info.gid_tbl[3]);
+		else
+			goto full_dump;
+	}
+
+full_dump:
 
 	for (i = 0; i < ARRAY_SIZE(regs_ofst); i++) {
 		addr0 = (void *)(imgsysiscRegBA + regs_ofst[i]);
@@ -462,7 +515,7 @@ void imgsys_main_set_init(struct mtk_imgsys_dev *imgsys_dev)
 #ifdef MTK_ISC_SUPPORT
 	imgsys_main_slc_init(imgsys_dev);
 	if (imgsys_isc_8s_dbg_log_en())
-		imgsys_main_slc_dump(imgsys_dev);
+		imgsys_main_slc_dump(imgsys_dev, 0);
 #endif
 
 	pr_debug("%s: -. qof ver = %d\n", __func__, imgsys_dev->qof_ver);
@@ -493,7 +546,7 @@ void imgsys_main_cmdq_set_init(struct mtk_imgsys_dev *imgsys_dev, void *pkt, int
 void imgsys_main_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int engine)
 {
 	pr_info("%s: +\n", __func__);
-	imgsys_main_slc_dump(imgsys_dev);
+	imgsys_main_slc_dump(imgsys_dev, engine);
 	pr_info("%s: -\n", __func__);
 }
 

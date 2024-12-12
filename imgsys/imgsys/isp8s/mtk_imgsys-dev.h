@@ -10,6 +10,7 @@
 #define _MTK_DIP_DEV_H_
 
 #include <linux/completion.h>
+#include <linux/interrupt.h>
 #include <linux/types.h>
 #include <linux/time.h>
 #include <linux/list.h>
@@ -436,6 +437,7 @@ struct mtk_imgsys_dev {
 	/* register iommu TF cb */
 	const struct mtk_imgsys_port_table *dma_ports;
 	unsigned int dma_ports_num;
+	int isc_irq;
 };
 
 /* contained in struct mtk_imgsys_user's done_list */
@@ -752,6 +754,11 @@ void mtk_imgsys_mod_put(struct mtk_imgsys_dev *imgsys_dev);
 
 /***************************************************************************/
 void flush_fd_kva_list(struct mtk_imgsys_dev *imgsys_dev);
+
+irqreturn_t mtk_imgsys_isc_irq(int irq, void *data);
+irqreturn_t mtk_imgsys_isc_thread_irq(int irq, void *data);
+
+
 /*
  * macro define for list usage
  */

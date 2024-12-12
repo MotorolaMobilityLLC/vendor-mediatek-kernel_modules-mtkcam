@@ -288,11 +288,6 @@ void imgsys_cmdq_streamoff_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 		is_sec_task_create = 0;
 	}
 	mutex_unlock(&(imgsys_dev->sec_task_lock));
-
-	#ifdef MTK_ISC_SUPPORT
-	cmdq_sec_mbox_stop(imgsys_sec_clt[IMGSYS_SEC_ISC]);
-	#endif
-
 	#endif
 
 #ifdef CONFIG_FPGA_EARLY_PORTING
@@ -3144,15 +3139,35 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 	return count;
 }
 
-int isc_cookie[2] = {0};
+struct isc_init_info {
+	int isc_cookie;
+	struct mtk_imgsys_dev *imgsys_dev;
+} isc_init_info[2];
+
 void imgsys_cmdq_isc_task_cb_plat8s(struct cmdq_cb_data data)
 {
 	struct cmdq_pkt *pkt = (struct cmdq_pkt *)data.data;
-	int *cookie;
+	struct isc_init_info *isc;
+	int cookie;
 
-	cookie = (int *)pkt->user_priv;
 
-	pr_info("%s: isc init(%d) err(%d)\n", __func__, *cookie, data.err);
+	isc = (struct isc_init_info *)pkt->user_priv;
+	cookie = isc->isc_cookie;
+
+	if (cookie == 1) {
+		if ((isc->imgsys_dev->isc_irq > 0) && (!data.err))
+			enable_irq(isc->imgsys_dev->isc_irq);
+		isc->isc_cookie = 0;
+	}
+
+	if (cookie == 2) {
+	#if IMGSYS_SECURE_ENABLE
+		cmdq_sec_mbox_stop(imgsys_sec_clt[IMGSYS_SEC_ISC]);
+	#endif
+		isc->isc_cookie = 0;
+	}
+
+	pr_info("%s: isc init(%d) err(%d)\n", __func__, cookie, data.err);
 
 	cmdq_pkt_destroy(pkt);
 }
@@ -3165,11 +3180,13 @@ int imgsys_cmdq_sec_isc_init_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 	#endif
 	int ret = 0;
 
+
 	clt_sec = imgsys_sec_clt[IMGSYS_SEC_ISC];
 	#if IMGSYS_SECURE_ENABLE
 	pkt_sec = cmdq_pkt_create(clt_sec);
-	isc_cookie[0] = 0;
-	pkt_sec->user_priv = (void *)&isc_cookie[0];
+	isc_init_info[0].imgsys_dev = imgsys_dev;
+	isc_init_info[0].isc_cookie = 1;
+	pkt_sec->user_priv = (void *)&isc_init_info[0];
 
 	cmdq_sec_pkt_set_data(pkt_sec, 0, 0, CMDQ_SEC_DEBUG, CMDQ_METAEX_TZMP);
 	cmdq_sec_pkt_set_mtee(pkt_sec, true);
@@ -3179,8 +3196,9 @@ int imgsys_cmdq_sec_isc_init_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 	clt = imgsys_clt[0];
 	#if IMGSYS_SECURE_ENABLE
 	pkt = cmdq_pkt_create(clt);
-	isc_cookie[1] = 1;
-	pkt->user_priv = (void *)&isc_cookie[1];
+	isc_init_info[1].imgsys_dev = imgsys_dev;
+	isc_init_info[1].isc_cookie = 2;
+	pkt->user_priv = (void *)&isc_init_info[1];
 	cmdq_pkt_wfe(pkt, imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_TZMP_ISC_SET].event);
 	ret = cmdq_pkt_flush_threaded(pkt, imgsys_cmdq_isc_task_cb_plat8s, (void *)pkt);
 
