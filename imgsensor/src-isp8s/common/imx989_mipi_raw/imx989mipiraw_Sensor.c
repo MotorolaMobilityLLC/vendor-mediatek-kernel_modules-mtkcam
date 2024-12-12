@@ -5221,10 +5221,6 @@ static int imx989_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_table,
 		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_len);
 
-	if (ctx->s_ctx.reg_addr_fast_mode_in_lbmf &&
-		ctx->s_ctx.mode[scenario_id].hdr_mode == HDR_RAW_LBMF)
-		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_fast_mode_in_lbmf, 0x4);
-
 	ctx->ae_ctrl_gph_en = 1;
 	if (ae_ctrl) {
 		switch (ctx->s_ctx.mode[scenario_id].hdr_mode) {
