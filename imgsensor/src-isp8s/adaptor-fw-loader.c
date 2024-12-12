@@ -55,9 +55,15 @@ static int add_fw_list(struct list_head *list, const char *file_name, const int 
 {
 	struct sensor_firmware *item = NULL;
 
-	item = kmalloc(sizeof(*item), GFP_KERNEL);
+	item = kzalloc(sizeof(*item), GFP_KERNEL);
 	if (!item)
 		return -ENOMEM;
+
+	if (len > ARRAY_SIZE(item->name) - 1) {
+		pr_info("firmware name size %d is larger than sizelimit %lu.\n",
+			len, ARRAY_SIZE(item->name) - 1);
+		return -EINVAL;
+	}
 
 	strncpy(item->name, file_name, len);
 	list_add_tail(&item->list, list);
@@ -76,7 +82,7 @@ static bool actor(struct dir_context *ctx, const char *name, int namlen,
 	if (namlen == 2 && name[0] == '.' && name[1] == '.')
 		return true;
 
-	if (add_fw_list(&all_sensor_fw_list, name, namlen))
+	if (!add_fw_list(&all_sensor_fw_list, name, namlen))
 		all_sensor_fw_list_cnt++;
 
 	return true;
