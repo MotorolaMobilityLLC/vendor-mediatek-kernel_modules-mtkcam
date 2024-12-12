@@ -33,8 +33,10 @@
  * Global Define
  ********************************************************************/
 #define TRAW_CTL_ADDR_END		0x470
+#define TRAW_LTMTC_ADDR_OFST    0x1000
+#define TRAW_LTMTC_ADDR_END		0x2E60
 #define TRAW_DMA_ADDR_OFST		0x4000
-#define TRAW_DMA_ADDR_END		0x5D30
+#define TRAW_DMA_ADDR_END		0x6000
 #define TRAW_MOD_ADDR_OFST		0x8000
 #define TRAW_MAX_ADDR_OFST		0xFEEE
 
@@ -42,8 +44,8 @@
 
 #define IMG_MAIN_BASE		(0x34000000)
 #define TRAW_TOP_BASE		(0x34710000)
-#define TRAW_BASE			(0x34700000)
-#define LTRAW_BASE			(0x34040000)
+#define TRAW_BASE			(0x34760000)
+#define LTRAW_BASE			(0x34050000)
 
 #define IMG_MAIN_BASE_P		(0x15000000)
 #define TRAW_TOP_BASE_P		(0x15710000)
@@ -909,13 +911,6 @@ void imgsys_traw_cmdq_set_initial_value_hw(struct mtk_imgsys_dev *imgsys_dev,
 		traw_base = TRAW_BASE_P;
 	}
 
-	cmdq_pkt_write(package, NULL,
-		      (traw_top_base + SW_RST) /*address*/, 0x3C,
-		       0xffffffff);
-	cmdq_pkt_write(package, NULL,
-		       (traw_top_base + SW_RST) /*address*/, 0x0,
-		       0xffffffff);
-
 	/* ori traw set */
 	for (i = 0; i < ARRAY_SIZE(mtk_imgsys_traw_init_ary); i++) {
 		ofset = traw_base + mtk_imgsys_traw_init_ary[i].ofset;
@@ -1003,6 +998,17 @@ void imgsys_traw_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 #endif
 	/* Ctrl registers */
 	for (i = 0x0; i <= TRAW_CTL_ADDR_END; i += 16) {
+		if (sprintf(DbgStr, "[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X",
+			(unsigned int)(g_RegBaseAddr + i),
+			(unsigned int)ioread32((void *)(trawRegBA + i)),
+			(unsigned int)ioread32((void *)(trawRegBA + i + 4)),
+			(unsigned int)ioread32((void *)(trawRegBA + i + 8)),
+			(unsigned int)ioread32((void *)(trawRegBA + i + 12))) > 0)
+			pr_info("%s\n", DbgStr);
+	}
+
+	/* LTMTC registers */
+	for (i = TRAW_LTMTC_ADDR_OFST; i <= TRAW_LTMTC_ADDR_END; i += 16) {
 		if (sprintf(DbgStr, "[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X",
 			(unsigned int)(g_RegBaseAddr + i),
 			(unsigned int)ioread32((void *)(trawRegBA + i)),
