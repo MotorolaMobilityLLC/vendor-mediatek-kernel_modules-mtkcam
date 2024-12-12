@@ -326,6 +326,16 @@ static void imgsys_cmdq_cmd_dump_plat8s(struct swfrm_info_t *frm_info, u32 frm_i
 					cmd[cmd_idx].u.fd, cmd[cmd_idx].u.ofst,
 					cmd[cmd_idx].u.right_shift);
 			break;
+		case IMGSYS_CMD_WRITE_FD_HW:
+			if (imgsys_cmdq_dbg_enable_plat8s()) {
+				pr_debug(
+				"%s: WRITE_FD_HW with addr(0x%08x) hw_id(%d) fd(0x%08x) ofst(0x%08x) rsv(%d)\n",
+				__func__, cmd[cmd_idx].u.dma_addr,
+				cmd[cmd_idx].u.dma_addr_msb_ofst,
+				cmd[cmd_idx].u.fd, cmd[cmd_idx].u.ofst,
+				cmd[cmd_idx].u.right_shift);
+			}
+			break;
 #endif
 		case IMGSYS_CMD_POLL:
 			pr_info(
@@ -2300,6 +2310,37 @@ sendtask_done:
 	return ret;
 }
 
+static inline void imgsys_get_hw_shift_iova(u8 hw_id, u8 rsv, u64 cur_iova_addr, u64 *shift_iova_addr)
+{
+	if (hw_id == IMGSYS_HW_MAE) {
+		switch (rsv) {
+		case 0:
+			*shift_iova_addr = (cur_iova_addr>>4);
+			break;
+		case 1:
+			*shift_iova_addr = (cur_iova_addr>>20);
+			break;
+		default:
+			*shift_iova_addr = cur_iova_addr;
+			break;
+		}
+	}
+}
+
+static inline void imgsys_get_hw_iova_mask(u8 hw_id, u8 rsv, u32 *iova_mask)
+{
+	if (hw_id == IMGSYS_HW_MAE) {
+		switch (rsv) {
+		case 0:
+		case 1:
+			*iova_mask = 0xFFFF;
+			break;
+		default:
+			*iova_mask = 0xFFFFFFFF;
+			break;
+		}
+	}
+}
 
 int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					struct swfrm_info_t *frm_info, struct cmdq_pkt *pkt,
@@ -2322,6 +2363,8 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 	struct mtk_imgsys_dev_buffer *dev_b = 0;
 	bool iova_dbg = false;
 	u16 pre_fd = 0;
+	u64 shift_iova_addr = 0;
+	u32 iova_mask = 0;
 #endif
 	req_fd = frm_info->request_fd;
 	req_no = frm_info->request_no;
@@ -2487,6 +2530,135 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 			}
 
 			break;
+		case IMGSYS_CMD_WRITE_FD_HW:
+			iova_dbg = (imgsys_iova_dbg_port_plat8s() == cmd->u.dma_addr);
+			if (imgsys_iova_dbg_enable_plat8s() || iova_dbg) {
+				pr_info(
+					"%s: WRITE_FD_HW with req_fd/no(%d/%d) frame_no(%d) addr(0x%08lx) hw_id(%d) fd(0x%08x) ofst(0x%08x) rsv(%d)\n",
+					__func__, req_fd, req_no, frm_no,
+				(unsigned long)cmd->u.dma_addr, cmd->u.dma_addr_msb_ofst,
+				cmd->u.fd, cmd->u.ofst, cmd->u.right_shift);
+			}
+			if (cmd->u.fd <= 0) {
+				pr_info("%s: [ERROR] WRITE_FD_HW with FD(%d)! req_fd/no(%d/%d) frame_no(%d)\n",
+					__func__, cmd->u.fd, req_fd, req_no, frm_no);
+				return -1;
+			}
+			//
+			if (cmd->u.fd != pre_fd) {
+				#ifndef MTK_IOVA_NOTCHECK
+				dbuf = dma_buf_get(cmd->u.fd);
+				#endif
+				fd_info = &imgsys_dev->req_fd_cache.info_array[req_fd];
+				req = (struct mtk_imgsys_request *) fd_info->req_addr_va;
+				dev_b = req->buf_map[is_singledev_mode(req)];
+				iova_addr = imgsys_get_iova(dbuf, cmd->u.fd, imgsys_dev, dev_b);
+				pre_fd = cmd->u.fd;
+
+				if (iova_addr <= 0) {
+					u32 dma_addr_msb = (cmd->u.dma_addr >> 16);
+
+					pr_info(
+						"%s: [ERROR] WRITE_FD_HW map iova fail (%llu)! with req_fd/no(%d/%d) frame_no(%d) fd(%d) addr(0x%08lx)\n",
+						__func__, iova_addr, req_fd, req_no, frm_no, cmd->u.fd,
+						(unsigned long)cmd->u.dma_addr);
+
+					switch (dma_addr_msb) {
+					case 0x3410:
+					case 0x3416:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_DIP",
+							"DISPATCH:IMGSYS_DIP map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3470:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_TRAW",
+							"DISPATCH:IMGSYS_TRAW map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3404:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_LTRAW",
+							"DISPATCH:IMGSYS_LTRAW map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3420:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_WPE_EIS",
+							"DISPATCH:IMGSYS_WPE_EIS map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3454:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_OMC_TNR",
+							"DISPATCH:IMGSYS_OMC_TNR map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3460:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_WPE_LITE",
+							"DISPATCH:IMGSYS_WPE_LITE map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3464:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_OMC_LITE",
+							"DISPATCH:IMGSYS_OMC_LITE map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3421:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_PQDIP_A",
+							"DISPATCH:IMGSYS_PQDIP_A map iova fail, addr:0x%08llx",
+							 (unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3451:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_PQDIP_B",
+							"DISPATCH:IMGSYS_PQDIP_B map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3407:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_ME",
+							"DISPATCH:IMGSYS_ME map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3408:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_MMG",
+							"DISPATCH:IMGSYS_MMG map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3431:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_MAE",
+							"DISPATCH:IMGSYS_MAE map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					default:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS",
+							"DISPATCH:IMGSYS map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					}
+
+					return -1;
+				}
+			} else {
+				if (imgsys_cmdq_dbg_enable_plat8s()) {
+					pr_info(
+						"%s: Current fd(0x%08x) is the same with previous fd(0x%08x) with iova(0x%08llx), bypass map iova operation\n",
+						__func__, cmd->u.fd, pre_fd, iova_addr);
+				}
+			}
+			cur_iova_addr = iova_addr + cmd->u.ofst;
+			//
+			/* call module api to get mask and shifted iova */
+			imgsys_get_hw_shift_iova(cmd->u.dma_addr_msb_ofst, cmd->u.right_shift,
+									cur_iova_addr, &shift_iova_addr);
+			imgsys_get_hw_iova_mask(cmd->u.dma_addr_msb_ofst, cmd->u.right_shift,
+									&iova_mask);
+
+			if (imgsys_iova_dbg_enable_plat8s() || iova_dbg) {
+				pr_info(
+					"%s: WRITE_FD_HW with req_fd/no(%d/%d) frame_no(%d) addr(0x%08lx) value(0x%08llx) mask(0x%08lx)\n",
+					__func__, req_fd, req_no, frm_no,
+					(unsigned long)cmd->u.dma_addr,
+					shift_iova_addr, (unsigned long)iova_mask);
+			}
+			cmdq_pkt_write(pkt, NULL, cmd->u.dma_addr,
+				shift_iova_addr, iova_mask);
+			break;
 #endif
 		case IMGSYS_CMD_POLL:
 			/* cmdq_pkt_poll(pkt, NULL, cmd->u.value, cmd->u.address, */
@@ -2538,6 +2710,10 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 			case 0x3464:
 				/* OMC_LITE */
 				gpr_idx = 9;
+				break;
+			case 0x3431:
+				/* MAE */
+				gpr_idx = 11;
 				break;
 			default:
 				gpr_idx = thd_idx;
