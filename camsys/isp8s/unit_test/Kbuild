@@ -9,7 +9,6 @@ ccflags-y += \
 cam-isp8s-ut-objs := mtk_cam_ut-cam.o \
 	       mtk_cam_ut-seninf.o \
 	       mtk_cam_ut.o \
-	       mtk_cam_ut-camsv.o \
-		   mtk_cam_ut-mraw.o
+	       mtk_cam_ut-camsv.o
 
 obj-$(CONFIG_VIDEO_MTK_ISP_CAMSYS) += cam-isp8s-ut.o

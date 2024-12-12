@@ -254,20 +254,6 @@ static int apply_sv_req_on_composed_once(struct mtk_cam_ut *ut)
 	return apply_sv_next_req(ut);
 }
 
-static int apply_mraw_req_on_composed_once(struct mtk_cam_ut *ut)
-{
-	struct mtk_ut_mraw_initial_params mraw_params;
-
-	mraw_params.subsample = ut->subsample;
-
-	CALL_MRAW_OPS(ut->mraw[0], initialize, &mraw_params);
-
-	ut->hdl.on_ipi_composed = on_ipi_composed;
-
-	return apply_mraw_next_req(ut);
-
-}
-
 static int apply_req_on_composed_once(struct mtk_cam_ut *ut)
 {
 	struct mtk_ut_raw_initial_params raw_params;
@@ -330,11 +316,6 @@ static int single_sv_case(enum isp_hardware_enum isp_hardware)
 	return (isp_hardware & SINGLE_SV) ? 1 : 0;
 }
 
-static int single_mraw_case(enum isp_hardware_enum isp_hardware)
-{
-	return (isp_hardware & SINGLE_MRAW) ? 1 : 0;
-}
-
 static int streamon_on_cqdone_once(struct mtk_cam_ut *ut)
 {
 
@@ -378,16 +359,6 @@ static int streamon_sv_pdp_on_cqdone_once(struct mtk_cam_ut *ut)
 	ut->hdl.on_isr_cq_done = NULL;
 	return 0;
 }
-
-static int streamon_mraw_on_cqdone_once(struct mtk_cam_ut *ut)
-{
-
-	CALL_MRAW_OPS(ut->mraw[0], s_stream, streaming_vf);
-
-	ut->hdl.on_isr_cq_done = NULL;
-	return 0;
-}
-
 
 static int trigger_rawi(struct mtk_cam_ut *ut)
 {
@@ -605,9 +576,6 @@ static void ut_event_on_notify(struct ut_event_listener *listener,
 
 	if ((mask & EVENT_SV_SOF) && ut->hdl.on_isr_sv_sof)
 		ut->hdl.on_isr_sv_sof(ut);
-
-	if ((mask & EVENT_MRAW_SOF) && ut->hdl.on_isr_mraw_sof)
-		ut->hdl.on_isr_mraw_sof(ut);
 
 	if ((mask & EVENT_CQ_DONE) && ut->hdl.on_isr_cq_done)
 		ut->hdl.on_isr_cq_done(ut);
@@ -1066,9 +1034,6 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			}
 
 			CALL_SENINF_OPS(ut->seninf, reset);
-
-			if (ut->isp_hardware & SINGLE_MRAW)
-				CALL_MRAW_OPS(ut->mraw[0], s_stream, streaming_off);
 		}
 
 		smem.va = ut->mem->va;
@@ -1317,11 +1282,6 @@ static int cam_open(struct inode *inode, struct file *filp)
 		pm_runtime_get_sync(ut->camsv[i]);
 	}
 
-	for (i = 0; i < ut->num_mraw; i++) {
-		pr_info("get_sync mraw %d\n", i);
-		pm_runtime_get_sync(ut->mraw[i]);
-	}
-
 	/* Note: seninf's dts have no power-domains now, so do it after raw's */
 	pm_runtime_get_sync(ut->seninf);
 #endif
@@ -1341,9 +1301,6 @@ static int cam_release(struct inode *inode, struct file *filp)
 	cam_composer_uninit(ut);
 #if WITH_POWER_DRIVER
 	pm_runtime_put(ut->seninf);
-
-	for (i = 0; i < ut->num_mraw; i++)
-		pm_runtime_put(ut->mraw[i]);
 
 	for (i = 0; i < ut->num_camsv; i++)
 		pm_runtime_put(ut->camsv[i]);
@@ -1479,10 +1436,6 @@ static struct component_match *mtk_cam_match_add(struct device *dev)
 	ut->num_camsv = add_match_by_driver(dev, &match, &mtk_ut_camsv_driver);
 	dev_info(dev, "# of camsv: %d\n", ut->num_camsv);
 #endif
-#if WITH_MRAW_DRIVER
-	ut->num_mraw = add_match_by_driver(dev, &match, &mtk_ut_mraw_driver);
-	dev_info(dev, "# of mraw: %d\n", ut->num_mraw);
-#endif
 	if (IS_ERR(match))
 		mtk_cam_match_remove(dev);
 
@@ -1586,14 +1539,7 @@ static int mtk_cam_ut_master_bind(struct device *dev)
 			return -ENOMEM;
 	}
 #endif
-#if WITH_MRAW_DRIVER
-	if (ut->num_mraw) {
-		ut->mraw = devm_kcalloc(dev, ut->num_mraw, sizeof(*ut->mraw),
-				       GFP_KERNEL);
-		if (!ut->mraw)
-			return -ENOMEM;
-	}
-#endif
+
 #if WITH_LARB_DRIVER
 	if (ut->num_larb) {
 		ut->larb = devm_kcalloc(dev, ut->num_larb, sizeof(*ut->larb),
@@ -1669,13 +1615,6 @@ static int register_sub_drivers(struct device *dev)
 		goto REGISTER_CAMSV_FAIL;
 	}
 #endif
-#if WITH_MRAW_DRIVER
-	ret = platform_driver_register(&mtk_ut_mraw_driver);
-	if (ret) {
-		dev_info(dev, "%s register mraw driver fail\n", __func__);
-		goto REGISTER_MRAW_FAIL;
-	}
-#endif
 	ret = platform_driver_register(&mtk_ut_seninf_driver);
 	if (ret) {
 		dev_info(dev, "%s register seninf driver fail\n", __func__);
@@ -1702,12 +1641,7 @@ ADD_MATCH_FAIL:
 	platform_driver_unregister(&mtk_ut_seninf_driver);
 
 REGISTER_SENINF_FAIL:
-	platform_driver_unregister(&mtk_ut_mraw_driver);
-
-#if WITH_MRAW_DRIVER
-REGISTER_MRAW_FAIL:
 	platform_driver_unregister(&mtk_ut_camsv_driver);
-#endif
 
 #if WITH_CAMSV_DRIVER
 REGISTER_CAMSV_FAIL:

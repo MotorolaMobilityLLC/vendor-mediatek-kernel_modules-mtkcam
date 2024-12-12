@@ -11,7 +11,6 @@
 
 #include "mtk_cam-dvfs_qos_raw.h"
 #include "mtk_cam-dvfs_qos_sv.h"
-#include "mtk_cam-dvfs_qos_mraw.h"
 
 struct device;
 struct regulator;

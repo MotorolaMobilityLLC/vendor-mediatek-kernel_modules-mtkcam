@@ -15,6 +15,12 @@
 #include "mtk_cam_ut.h"
 #include "mtk_cam_ut-engines.h"
 #include "../cam/mtk_cam-sv-regs.h"
+#define SCQ_DEFAULT_CLK_RATE 208 // default 208MHz
+
+static int debug_ddren_camsv_sw_mode;
+module_param(debug_ddren_camsv_sw_mode, int, 0644);
+MODULE_PARM_DESC(debug_ddren_camsv_sw_mode, "debug: 1 : active camsv hw mode");
+
 #define CAMSV_WRITE_BITS(RegAddr, RegName, FieldName, FieldValue) do {\
 	union RegName reg;\
 	\
@@ -321,20 +327,40 @@ int ut_mtk_cam_sv_cq_config(struct device *dev)
 	return 0;
 }
 
+#define HW_TIMER_INC_PERIOD   0x2
+#define DDR_GEN_BEFORE_US     3
+#define QOS_GEN_BEFORE_US     100
+
 int ut_mtk_cam_sv_ddren_config(struct device *dev)
 {
 	struct mtk_ut_camsv_device *camsv_dev = dev_get_drvdata(dev);
-	/* sw mode */
-	CAMSV_WRITE_BITS(camsv_dev->base + REG_CAMSVCENTRAL_DDR_CFG,
-		CAMSVCENTRAL_DDR_CFG, DDR_MODE_SEL, 1);
+	int ddr_gen_pulse = 0;
+	int frm_time_us = 33333;
 
-	/* sw ddr en */
-	CAMSV_WRITE_BITS(camsv_dev->base + REG_CAMSVCENTRAL_DDR_CFG,
-		CAMSVCENTRAL_DDR_CFG, DDR_SET, 1);
+	ddr_gen_pulse = (frm_time_us - DDR_GEN_BEFORE_US) * SCQ_DEFAULT_CLK_RATE /
+		(2 * (HW_TIMER_INC_PERIOD + 1)) - 1;
 
-	/* cq en */
-	CAMSV_WRITE_BITS(camsv_dev->base + REG_CAMSVCENTRAL_DDR_CFG,
-		CAMSVCENTRAL_DDR_CFG, DDR_OR_CQ_EN, 1);
+	if (debug_ddren_camsv_sw_mode) {
+		/* sw ddr en */
+		CAMSV_WRITE_BITS(camsv_dev->base + REG_CAMSVCENTRAL_DDR_CFG,
+			CAMSVCENTRAL_DDR_CFG, DDR_SET, 1);
+
+		/* cq en */
+		CAMSV_WRITE_BITS(camsv_dev->base + REG_CAMSVCENTRAL_DDR_CFG,
+			CAMSVCENTRAL_DDR_CFG, DDR_OR_CQ_EN, 1);
+	} else {
+		/* hw mode */
+		CAMSV_WRITE_BITS(camsv_dev->base + REG_CAMSVCENTRAL_DDR_CFG,
+			CAMSVCENTRAL_DDR_CFG, DDR_MODE_SEL, 0);
+
+		/* ddr timer en */
+		CAMSV_WRITE_BITS(camsv_dev->base + REG_CAMSVCENTRAL_DDR_CFG,
+			CAMSVCENTRAL_DDR_CFG, DDR_TIMER_EN, 1);
+
+		/* ddr threshold */
+		CAMSV_WRITE_REG(camsv_dev->base + REG_CAMSVCENTRAL_DDR_THRESHOLD,
+			ddr_gen_pulse);
+	}
 
 	return 0;
 }
@@ -342,17 +368,33 @@ int ut_mtk_cam_sv_ddren_config(struct device *dev)
 int ut_mtk_cam_sv_bw_qos_config(struct device *dev)
 {
 	struct mtk_ut_camsv_device *camsv_dev = dev_get_drvdata(dev);
-	/* sw mode */
-	CAMSV_WRITE_BITS(camsv_dev->base + REG_CAMSVCENTRAL_BW_QOS_CFG,
-		CAMSVCENTRAL_BW_QOS_CFG, BW_QOS_MODE_SEL, 1);
+	int frm_time_us = 33333;
+	int qos_gen_pulse = 0;
 
-	/* sw bw_qos en */
-	CAMSV_WRITE_BITS(camsv_dev->base + REG_CAMSVCENTRAL_BW_QOS_CFG,
-		CAMSVCENTRAL_BW_QOS_CFG, BW_QOS_SET, 1);
+	qos_gen_pulse = (frm_time_us - QOS_GEN_BEFORE_US) * SCQ_DEFAULT_CLK_RATE /
+		(2 * (HW_TIMER_INC_PERIOD + 1)) - 1;
 
-	/* cq en */
-	CAMSV_WRITE_BITS(camsv_dev->base + REG_CAMSVCENTRAL_BW_QOS_CFG,
-		CAMSVCENTRAL_BW_QOS_CFG, BW_QOS_OR_CQ_EN, 1);
+	if (debug_ddren_camsv_sw_mode) {
+		/* sw bw_qos en */
+		CAMSV_WRITE_BITS(camsv_dev->base + REG_CAMSVCENTRAL_BW_QOS_CFG,
+			CAMSVCENTRAL_BW_QOS_CFG, BW_QOS_SET, 1);
+
+		/* cq en */
+		CAMSV_WRITE_BITS(camsv_dev->base + REG_CAMSVCENTRAL_BW_QOS_CFG,
+			CAMSVCENTRAL_BW_QOS_CFG, BW_QOS_OR_CQ_EN, 1);
+	} else {
+		/* hw mode */
+		CAMSV_WRITE_BITS(camsv_dev->base + REG_CAMSVCENTRAL_BW_QOS_CFG,
+			CAMSVCENTRAL_BW_QOS_CFG, BW_QOS_MODE_SEL, 0);
+
+		/* ddr timer en */
+		CAMSV_WRITE_BITS(camsv_dev->base + REG_CAMSVCENTRAL_BW_QOS_CFG,
+			CAMSVCENTRAL_BW_QOS_CFG, BW_QOS_TIMER_EN, 1);
+
+		/* ddr threshold */
+		CAMSV_WRITE_REG(camsv_dev->base + REG_CAMSVCENTRAL_BW_QOS_THRESHOLD,
+			qos_gen_pulse);
+	}
 
 	return 0;
 }
