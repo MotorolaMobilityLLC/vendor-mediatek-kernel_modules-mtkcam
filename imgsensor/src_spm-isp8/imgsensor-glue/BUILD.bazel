@@ -1,0 +1,38 @@
+load("//build/bazel_mgk_rules:mgk_ddk_ko.bzl", "define_mgk_ddk_ko")
+
+package(
+    default_visibility = [
+        "//visibility:public",
+    ],
+)
+
+filegroup(
+    name = "headers",
+    srcs = glob([
+        "*.h",
+    ]),
+)
+
+define_mgk_ddk_ko(
+    name = "imgsensor-glue_spm_isp8",
+    srcs = [
+	    "imgsensor-glue.c",
+    ],
+    header_deps = [
+        "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",
+        "//vendor/mediatek/kernel_modules/mtkcam/imgsensor:imgsensor_header",
+        "//vendor/mediatek/kernel_modules/mtkcam/imgsensor:imgsensor_spm_isp8_header",
+    ],
+    hdrs = glob([
+        "*.h"
+    ]),
+    copts = [
+        "-Wall",
+        "-Werror",
+        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/imgsensor",
+        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/imgsensor/inc",
+        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/i3c_i2c_wrap",
+        "-I$(DEVICE_MODULES_PATH)/drivers/i3c/master",
+    ],
+    includes = ["."],
+)

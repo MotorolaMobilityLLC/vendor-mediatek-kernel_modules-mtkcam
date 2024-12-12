@@ -34,7 +34,7 @@ subdir-ccflags-y += \
 	-I$(DEVICE_MODULES_PATH)/drivers/i3c/master \
 	-I$(srctree)/drivers/thermal
 
-obj-y += imgsensor-glue/
+#obj-y += imgsensor-glue/
 
 obj-$(CONFIG_MTK_V4L2_IMGSENSOR) += imgsensor_spm_isp8.o
 imgsensor_spm_isp8-objs :=
