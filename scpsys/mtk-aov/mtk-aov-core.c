@@ -1677,6 +1677,7 @@ int aov_core_reset(struct mtk_aov *aov_dev)
 					__func__, core_info->sensor_idx[user_idx]);
 				struct close_param close_info;
 
+				close_info.keep_start_param = false;
 				close_info.sensor_id = core_info->sensor_idx[user_idx];
 				AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag), "aov malloc buffer+\n");
 				spin_lock_irqsave(&core_info->buf_lock, flag);

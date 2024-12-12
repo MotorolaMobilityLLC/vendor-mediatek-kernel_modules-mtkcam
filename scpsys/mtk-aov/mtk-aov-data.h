@@ -402,6 +402,7 @@ struct stop_param {
 
 struct close_param {
 	uint32_t sensor_id;
+	bool keep_start_param;
 };
 
 #define AOV_MAX_UT_SIZE  (10 * 1024)
