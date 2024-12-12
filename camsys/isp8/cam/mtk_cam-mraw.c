@@ -1393,6 +1393,12 @@ void mraw_handle_error(struct mtk_mraw_device *mraw_dev,
 			ctx->is_seninf_error_trigger = mtk_cam_seninf_dump_current_status(ctx->seninf,
 				false);
 	}
+
+	if (mraw_dev->mraw_error_count >= 2 && ctx->is_seninf_error_trigger) {
+		dev_info(mraw_dev->dev, "%s trigger frame error event", __func__);
+		mtk_cam_event_error(&ctx->cam_ctrl, MSG_SENINF_FRAME_ERROR);
+	}
+
 	dev_info_ratelimited(mraw_dev->dev, "fbc empty or not:%d\n",
 		(data->fbc_empty) ? 1 : 0);
 }

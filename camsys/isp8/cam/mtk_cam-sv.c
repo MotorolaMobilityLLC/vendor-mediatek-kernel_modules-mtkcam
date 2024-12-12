@@ -1933,6 +1933,11 @@ void camsv_handle_err(
 	/* dump camsv debug data */
 	mtk_cam_sv_debug_dump(sv_dev, data->err_tags);
 
+	if (sv_dev->camsv_error_count >= 2 && ctx->is_seninf_error_trigger) {
+		dev_info(sv_dev->dev, "%s trigger frame error event", __func__);
+		mtk_cam_event_error(&ctx->cam_ctrl, MSG_SENINF_FRAME_ERROR);
+	}
+
 	/* check dma fifo status */
 	if (!(data->err_tags) && (err_status & CAMSVCENTRAL_DMA_SRAM_FULL_ST)) {
 		sv_fifo_full_times++;
