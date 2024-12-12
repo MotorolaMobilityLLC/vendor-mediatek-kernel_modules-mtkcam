@@ -570,7 +570,7 @@ static int mtk_ut_mraw_probe(struct platform_device *pdev)
 	dev_info(dev, "%s: success\n", __func__);
 	return 0;
 }
-static int mtk_ut_mraw_remove(struct platform_device *pdev)
+static void mtk_ut_mraw_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_ut_mraw_device *mraw = dev_get_drvdata(dev);
@@ -582,7 +582,6 @@ static int mtk_ut_mraw_remove(struct platform_device *pdev)
 	}
 	pm_runtime_disable(dev);
 	component_del(dev, &mtk_ut_mraw_component_ops);
-	return 0;
 }
 static int mtk_ut_mraw_pm_suspend(struct device *dev)
 {

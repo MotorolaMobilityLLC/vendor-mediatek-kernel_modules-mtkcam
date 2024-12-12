@@ -3359,7 +3359,7 @@ err_release_working_buf_pool:
 }
 EXPORT_SYMBOL(mtk_imgsys_probe);
 
-int mtk_imgsys_remove(struct platform_device *pdev)
+void mtk_imgsys_remove(struct platform_device *pdev)
 {
 	struct mtk_imgsys_dev *imgsys_dev = dev_get_drvdata(&pdev->dev);
 
@@ -3373,8 +3373,6 @@ int mtk_imgsys_remove(struct platform_device *pdev)
 	mtk_imgsys_mmdvfs_uninit(imgsys_dev);
 	#endif
 	imgsys_cmdq_release(imgsys_dev);
-
-	return 0;
 }
 EXPORT_SYMBOL(mtk_imgsys_remove);
 

@@ -2535,7 +2535,7 @@ err_destroy_mutex:
 	return ret;
 }
 
-static int mtk_aie_remove(struct platform_device *pdev)
+static void mtk_aie_remove(struct platform_device *pdev)
 {
 	struct mtk_aie_dev *fd = dev_get_drvdata(&pdev->dev);
 
@@ -2548,8 +2548,6 @@ static int mtk_aie_remove(struct platform_device *pdev)
 	destroy_workqueue(fd->frame_done_wq);
 	fd->frame_done_wq = NULL;
 	mutex_destroy(&fd->vfd_lock);
-
-	return 0;
 }
 
 static int mtk_aie_runtime_suspend(struct device *dev)

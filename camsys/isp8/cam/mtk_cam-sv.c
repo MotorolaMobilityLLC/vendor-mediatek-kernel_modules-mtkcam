@@ -2792,7 +2792,7 @@ UNREGISTER_PM_NOTIFIER:
 	return ret;
 }
 
-static int mtk_camsv_remove(struct platform_device *pdev)
+static void mtk_camsv_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_camsv_device *sv_dev = dev_get_drvdata(dev);
@@ -2805,7 +2805,6 @@ static int mtk_camsv_remove(struct platform_device *pdev)
 	mtk_cam_qos_remove(&sv_dev->qos);
 
 	component_del(dev, &mtk_camsv_component_ops);
-	return 0;
 }
 
 int mtk_camsv_runtime_suspend(struct device *dev)

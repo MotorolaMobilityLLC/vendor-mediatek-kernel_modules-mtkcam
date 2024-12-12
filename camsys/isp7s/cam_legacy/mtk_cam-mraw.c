@@ -2587,14 +2587,13 @@ static int mtk_mraw_probe(struct platform_device *pdev)
 	return component_add(dev, &mtk_mraw_component_ops);
 }
 
-static int mtk_mraw_remove(struct platform_device *pdev)
+static void mtk_mraw_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 
 	pm_runtime_disable(dev);
 
 	component_del(dev, &mtk_mraw_component_ops);
-	return 0;
 }
 
 static int mtk_mraw_runtime_suspend(struct device *dev)

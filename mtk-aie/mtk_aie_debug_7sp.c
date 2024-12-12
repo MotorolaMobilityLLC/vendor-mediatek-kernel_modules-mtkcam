@@ -88,11 +88,9 @@ int mtk_aie_debug_7sp_probe(struct platform_device *pdev)
     return 0;
 }
 
-int mtk_aie_debug_7sp_remove(struct platform_device *pdev)
+void mtk_aie_debug_7sp_remove(struct platform_device *pdev)
 {
     dev_info(&pdev->dev ,"[aie_dev] %s+-", __func__);
-
-	return 0;
 }
 
 static const struct of_device_id of_match_mtk_aie_debug_7sp_drv[] = {

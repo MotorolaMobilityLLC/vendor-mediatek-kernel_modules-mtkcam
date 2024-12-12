@@ -1715,7 +1715,7 @@ UNREGISTER_PM_NOTIFIER:
 	return ret;
 }
 
-static int mtk_mraw_remove(struct platform_device *pdev)
+static void mtk_mraw_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_mraw_device *mraw_dev = dev_get_drvdata(dev);
@@ -1728,7 +1728,6 @@ static int mtk_mraw_remove(struct platform_device *pdev)
 	mtk_cam_qos_remove(&mraw_dev->qos);
 
 	component_del(dev, &mtk_mraw_component_ops);
-	return 0;
 }
 
 static int mtk_mraw_runtime_suspend(struct device *dev)

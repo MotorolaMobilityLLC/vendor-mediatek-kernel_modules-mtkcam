@@ -4192,7 +4192,7 @@ fail_return:
 	return ret;
 }
 
-static int mtk_cam_remove(struct platform_device *pdev)
+static void mtk_cam_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_cam_device *cam_dev = dev_get_drvdata(dev);
@@ -4210,8 +4210,6 @@ static int mtk_cam_remove(struct platform_device *pdev)
 	platform_driver_unregister(&mtk_cam_larb_driver);
 	platform_driver_unregister(&seninf_core_pdrv);
 	platform_driver_unregister(&seninf_pdrv);
-
-	return 0;
 }
 
 #define SHUTDOWN_TIMEOUT 10000

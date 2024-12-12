@@ -567,7 +567,7 @@ static int seninf_core_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int seninf_core_remove(struct platform_device *pdev)
+static void seninf_core_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct seninf_core *core = dev_get_drvdata(dev);
@@ -583,8 +583,6 @@ static int seninf_core_remove(struct platform_device *pdev)
 		kthread_stop(core->seninf_kworker_task);
 
 	dev_info(dev, "%s\n", __func__);
-
-	return 0;
 }
 
 static const struct of_device_id seninf_core_of_match[] = {
@@ -1990,7 +1988,7 @@ static const struct dev_pm_ops pm_ops = {
 	SET_RUNTIME_PM_OPS(runtime_suspend, runtime_resume, NULL)
 };
 
-static int seninf_remove(struct platform_device *pdev)
+static void seninf_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct seninf_ctx *ctx = dev_get_drvdata(dev);
@@ -2009,8 +2007,6 @@ static int seninf_remove(struct platform_device *pdev)
 	mutex_destroy(&ctx->mutex);
 
 	//dev_info(dev, "%s\n", __func__);
-
-	return 0;
 }
 
 static const struct of_device_id seninf_of_match[] = {

@@ -422,7 +422,7 @@ static int mtk_ut_seninf_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int mtk_ut_seninf_remove(struct platform_device *pdev)
+static void mtk_ut_seninf_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_ut_seninf_device *seninf = dev_get_drvdata(dev);
@@ -438,7 +438,7 @@ static int mtk_ut_seninf_remove(struct platform_device *pdev)
 	pm_runtime_disable(dev);
 	if (seninf->pm_domain_cnt > 1) {
 		if (!seninf->pm_domain_devs)
-			return -EINVAL;
+			return;
 
 		for (i = 0; i < seninf->pm_domain_cnt; i++) {
 			if (seninf->pm_domain_devs[i])
@@ -447,7 +447,6 @@ static int mtk_ut_seninf_remove(struct platform_device *pdev)
 	}
 
 	component_del(dev, &mtk_ut_seninf_component_ops);
-	return 0;
 }
 
 static int mtk_ut_seninf_pm_suspend(struct device *dev)

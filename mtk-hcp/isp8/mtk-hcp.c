@@ -2653,7 +2653,7 @@ static const struct of_device_id mtk_hcp_match[] = {
 };
 MODULE_DEVICE_TABLE(of, mtk_hcp_match);
 
-static int mtk_hcp_remove(struct platform_device *pdev)
+static void mtk_hcp_remove(struct platform_device *pdev)
 {
 
 	struct mtk_hcp *hcp_dev = platform_get_drvdata(pdev);
@@ -2684,7 +2684,6 @@ static int mtk_hcp_remove(struct platform_device *pdev)
 
     if (hcp_dbg_enable())
 	dev_dbg(&pdev->dev, "- X. hcp driver remove.\n");
-	return 0;
 }
 
 bool hcp_dbg_enable(void)

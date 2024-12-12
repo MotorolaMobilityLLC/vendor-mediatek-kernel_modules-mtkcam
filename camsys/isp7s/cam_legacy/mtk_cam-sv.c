@@ -2992,14 +2992,13 @@ static int mtk_camsv_probe(struct platform_device *pdev)
 	return component_add(dev, &mtk_camsv_component_ops);
 }
 
-static int mtk_camsv_remove(struct platform_device *pdev)
+static void mtk_camsv_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 
 	pm_runtime_disable(dev);
 
 	component_del(dev, &mtk_camsv_component_ops);
-	return 0;
 }
 
 static int mtk_camsv_runtime_suspend(struct device *dev)

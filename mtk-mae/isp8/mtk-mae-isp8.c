@@ -44,8 +44,6 @@
 // #define FLOOR_NEG(X)		((X-(int)(X)) < 0 ? (int)(X-1) : (int)(X))
 // #define FLOOR(X)		( ((X) > 0) ? FLOOR_POS(X) : FLOOR_NEG(X) )
 
-#define MIN(X,Y)		(((X) > (Y)) ? (Y) : (X))
-#define MAX(X,Y)		(((X) > (Y)) ? (X) : (Y))
 #define ABS(X)			(((X) > 0) ? (X) : -(X))
 #define ROUND(X,Y)		((int)((2*(X))+(Y))/(2*(Y)))
 #define BUFFER_NAME_LEN		50
@@ -3641,10 +3639,9 @@ int mtk_mae_isp8_probe(struct platform_device *pdev)
 }
 
 
-int mtk_mae_isp8_remove(struct platform_device *pdev)
+void mtk_mae_isp8_remove(struct platform_device *pdev)
 {
 	dev_info(&pdev->dev ,"%s +-", __func__);
-	return 0;
 }
 
 static struct mae_plat_data mae_plat_data_isp8 = {

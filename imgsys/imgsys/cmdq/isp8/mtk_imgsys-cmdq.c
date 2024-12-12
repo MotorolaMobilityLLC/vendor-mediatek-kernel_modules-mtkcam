@@ -364,14 +364,13 @@ static int mtk_imgsys_cmdq_probe(struct platform_device *pdev)
 }
 
 
-static int mtk_imgsys_cmdq_remove(struct platform_device *pdev)
+static void mtk_imgsys_cmdq_remove(struct platform_device *pdev)
 {
     if (imgsys_cmdq_dbg_enable())
 	dev_dbg(&pdev->dev, "- E. imgsys cmdq driver remove\n");
 	devm_kfree(&pdev->dev, imgsys_cmdq_dev);
     if (imgsys_cmdq_dbg_enable())
 	dev_dbg(&pdev->dev, "- X. imgsys cmdq driver remove success\n");
-	return 0;
 }
 
 static const struct of_device_id mtk_imgsys_cmdq_of_match[] = {

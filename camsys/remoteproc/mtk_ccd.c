@@ -470,7 +470,7 @@ free_rproc:
 	return ret;
 }
 
-static int ccd_remove(struct platform_device *pdev)
+static void ccd_remove(struct platform_device *pdev)
 {
 	struct mtk_ccd *ccd = platform_get_drvdata(pdev);
 
@@ -479,8 +479,6 @@ static int ccd_remove(struct platform_device *pdev)
 	ccd_remove_rpmsg_subdev(ccd);
 	rproc_del(ccd->rproc);
 	rproc_free(ccd->rproc);
-
-	return 0;
 }
 
 static const struct of_device_id mtk_ccd_of_match[] = {

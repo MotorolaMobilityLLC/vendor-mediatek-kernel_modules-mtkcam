@@ -1699,7 +1699,7 @@ static int mtk_cam_ut_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int mtk_cam_ut_remove(struct platform_device *pdev)
+static void mtk_cam_ut_remove(struct platform_device *pdev)
 {
 	struct mtk_cam_ut *ut =
 		(struct mtk_cam_ut *)platform_get_drvdata(pdev);
@@ -1707,8 +1707,6 @@ static int mtk_cam_ut_remove(struct platform_device *pdev)
 	pm_runtime_disable(ut->dev);
 #endif
 	cam_unreg_char_dev(ut);
-
-	return 0;
 }
 
 static int mtk_cam_ut_pm_suspend(struct device *dev)

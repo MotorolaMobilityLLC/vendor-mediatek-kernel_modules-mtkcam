@@ -4855,13 +4855,11 @@ static int mtk_cam_vcore_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int mtk_cam_vcore_remove(struct platform_device *pdev)
+static void mtk_cam_vcore_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 
 	pm_runtime_disable(dev);
-
-	return 0;
 }
 
 static int mtk_cam_vcore_runtime_suspend(struct device *dev)
@@ -5227,7 +5225,7 @@ fail_return:
 	return ret;
 }
 
-static int mtk_cam_remove(struct platform_device *pdev)
+static void mtk_cam_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_cam_device *cam_dev = dev_get_drvdata(dev);
@@ -5247,8 +5245,6 @@ static int mtk_cam_remove(struct platform_device *pdev)
 	platform_driver_unregister(&seninf_pdrv);
 	if (GET_PLAT_HW(bwr_support))
 		platform_driver_unregister(&mtk_cam_bwr_driver);
-
-	return 0;
 }
 
 #define SHUTDOWN_TIMEOUT 10000

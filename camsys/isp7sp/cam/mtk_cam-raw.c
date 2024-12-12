@@ -1662,7 +1662,7 @@ UNREGISTER_PM_NOTIFIER:
 	return ret;
 }
 
-static int mtk_raw_remove(struct platform_device *pdev)
+static void mtk_raw_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_raw_device *raw_dev = dev_get_drvdata(dev);
@@ -1676,8 +1676,6 @@ static int mtk_raw_remove(struct platform_device *pdev)
 
 	for (i = 0; i < raw_dev->num_clks; i++)
 		clk_put(raw_dev->clks[i]);
-
-	return 0;
 }
 
 static int mtk_raw_runtime_suspend(struct device *dev)
@@ -2081,7 +2079,7 @@ UNREGISTER_PM_NOTIFIER:
 	return ret;
 }
 
-static int mtk_yuv_remove(struct platform_device *pdev)
+static void mtk_yuv_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_yuv_device *drvdata = dev_get_drvdata(dev);
@@ -2095,8 +2093,6 @@ static int mtk_yuv_remove(struct platform_device *pdev)
 
 	for (i = 0; i < drvdata->num_clks; i++)
 		clk_put(drvdata->clks[i]);
-
-	return 0;
 }
 
 /* driver for yuv part */
@@ -2507,7 +2503,7 @@ UNREGISTER_PM_NOTIFIER:
 	return ret;
 }
 
-static int mtk_rms_remove(struct platform_device *pdev)
+static void mtk_rms_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_rms_device *drvdata = dev_get_drvdata(dev);
@@ -2521,8 +2517,6 @@ static int mtk_rms_remove(struct platform_device *pdev)
 
 	for (i = 0; i < drvdata->num_clks; i++)
 		clk_put(drvdata->clks[i]);
-
-	return 0;
 }
 
 static int mtk_rms_runtime_suspend(struct device *dev)

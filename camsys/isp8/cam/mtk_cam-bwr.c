@@ -688,7 +688,7 @@ static int mtk_bwr_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int mtk_bwr_remove(struct platform_device *pdev)
+static void mtk_bwr_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_bwr_device *bwr = dev_get_drvdata(dev);
@@ -700,8 +700,6 @@ static int mtk_bwr_remove(struct platform_device *pdev)
 
 	for (i = 0; i < bwr->num_clks; i++)
 		clk_put(bwr->clks[i]);
-
-	return 0;
 }
 
 static int mtk_bwr_runtime_suspend(struct device *dev)
