@@ -311,6 +311,7 @@ struct subdrv_mode_struct {
 	struct mtk_sensor_saturation_info *saturation_info;
 	struct dcg_info_struct dcg_info;
 	u32 exposure_order_in_lbmf;
+	u32 exposure_order_in_dcg;
 	u32 mode_type_in_lbmf;
 	u32 sw_fl_delay;
 	u8 support_mcss;
