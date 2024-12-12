@@ -13,6 +13,9 @@
 
 struct clk_bulk_data imgsys_isp8_clks_mt6991[] = {
 	{
+		.id = "imgsys_pd_imgsys_fw",
+	},
+	{
 		.id = "VCORE_GALS",
 	},
 	{

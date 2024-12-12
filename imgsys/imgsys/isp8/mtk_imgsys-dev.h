@@ -436,6 +436,7 @@ struct mtk_imgsys_dev {
 	/* register iommu TF cb */
 	const struct mtk_imgsys_port_table *dma_ports;
 	unsigned int dma_ports_num;
+	int hwccf_apply;
 };
 
 /* contained in struct mtk_imgsys_user's done_list */
