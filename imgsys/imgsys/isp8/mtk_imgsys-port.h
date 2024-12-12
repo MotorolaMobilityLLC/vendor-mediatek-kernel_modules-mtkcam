@@ -72,6 +72,9 @@ static struct mtk_imgsys_port_table imgsys_dma_port_mt6991[] = {
 	{SMMU_L11_P13_IOSO_P1         , imgsys_pqdip_tfault_callback},
 	{SMMU_L11_P14_OMC_WDMA_0      , NULL},
 	{SMMU_L11_P15_DUMMY           , NULL},
+	/* Larb12 -- 12*/
+	{SMMU_L12_P0_FDVT_RDA_0       , MAE_TranslationFault_callback},
+	{SMMU_L12_P1_FDVT_WRA_0       , MAE_TranslationFault_callback},
 	/* Larb15 -- 7*/
 	{SMMU_L15_P0_VIPI_D1          , imgsys_dip_tfault_callback},
 	{SMMU_L15_P1_VIPCI_D1         , imgsys_dip_tfault_callback},
