@@ -474,7 +474,8 @@ static int ipi_receive(unsigned int id, void *unused,
 		atomic_set(&(core_info->do_smi_dump), 1);
 		wake_up_interruptible(&core_info->smi_dump_wq);
 	} else if (packet->command == AOV_SCP_CMD_RESET_SENSOR) {
-		dev_info(aov_dev->dev, "%s: receive reset sensor signal from SCP\n", __func__);
+		dev_info(aov_dev->dev, "%s: receive reset sensor signal from SCP (%u)\n", __func__, packet->buffer);
+		core_info->reset_sensor_id = packet->buffer;
 		atomic_set(&(core_info->do_reset_sensor), 1);
 		wake_up_interruptible(&core_info->reset_sensor_wq);
 	} else {
@@ -1070,13 +1071,6 @@ static int scp_state_notify(struct notifier_block *this,
 				up(&core_info->start_stop_sema);
 			return NOTIFY_DONE;
 		}
-
-		/* Recover emiisu when scp bootup */
-#if IS_ENABLED(CONFIG_MTK_LOAD_TRACKER_DEBUG)
-#if !IS_ENABLED(CONFIG_MTK_EMI_LEGACY)
-		mtk_emiisu_record_on();
-#endif
-#endif
 
 		// Recovery the interruped session
 		if (atomic_read(&(core_info->aov_ready))) {
@@ -1848,7 +1842,6 @@ int aov_smi_kernel_dump(void *arg)
 int reset_sensor_flow(void *arg)
 {
 	struct mtk_aov *aov_dev = aov_core_get_device();
-	/*
 	struct aov_core *core_info = &aov_dev->core_info;
 	int ret = 0;
 	long wait_ret = 0;
@@ -1862,20 +1855,19 @@ int reset_sensor_flow(void *arg)
 			continue;
 		}
 
-		dev_info(aov_dev->dev, "%s: do reset sensor flow+", __func__);
-		ret = mtk_cam_seninf_aov_reset_sensor(core_info->sensor_id);
+		dev_info(aov_dev->dev, "%s: reset sensor(%u)+", __func__, core_info->reset_sensor_id);
+		ret = mtk_cam_seninf_aov_reset_sensor(core_info->reset_sensor_id);
 		if (ret < 0)
 			dev_info(aov_dev->dev,
 				"mtk_cam_seninf_aov_reset_sensor(%d) fail, ret: %d\n",
-				core_info->sensor_id, ret);
-		dev_info(aov_dev->dev, "%s: do reset sensor flow-", __func__);
+				core_info->reset_sensor_id, ret);
+		dev_info(aov_dev->dev, "%s: reset sensor(%u)-", __func__, core_info->reset_sensor_id);
 
 		ret = send_cmd_internal(core_info, AOV_SCP_CMD_RESET_SENSOR_END, 0, 0, false, false);
 		if (ret < 0)
 			dev_info(aov_dev->dev, "%s: failed to do aov reset sensor end: %d\n",
 				__func__, ret);
 	}
-	*/
 	dev_info(aov_dev->dev, "%s: leave while loop for kthread stop", __func__);
 	return 0;
 }

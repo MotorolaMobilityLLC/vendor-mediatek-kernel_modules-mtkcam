@@ -32,13 +32,10 @@
 #include "mtk-smi-dbg.h"
 #include "mtk-smi-user.h"
 
-#include "mtk_notify_aov.h"
-
 uint32_t g_frame_mode;
 bool g_aov_start;
 /* smi full dump */
 struct device *uisp_larb_dev;
-struct device *mae_larb_dev;
 
 #ifdef CONFIG_PM_WAKELOCKS
 struct wakeup_source *aov_wake_lock;
@@ -446,31 +443,6 @@ static struct smi_user_pwr_ctrl uisp_pwr_ctrl = {
 	.smi_user_put = uisp_put_for_smi_dbg,
 };
 
-static int mae_get_if_in_use_for_smi_dbg(void *data)
-{
-	int ret = 0;
-	struct mtk_aov *aov_dev = aov_core_get_device();
-	struct aov_core *core_info = &aov_dev->core_info;
-
-	if (g_aov_start && (core_info->smi_dump_id == 2))
-		ret = 1;
-	return ret;
-}
-
-static int mae_put_for_smi_dbg(void *data)
-{
-	return 0;
-}
-
-static struct smi_user_pwr_ctrl mae_pwr_ctrl = {
-	.name = "aov_mae",
-	.data = NULL,
-	.smi_user_id = MTK_SMI_IMG_AOV,
-	.smi_user_get = NULL,
-	.smi_user_get_if_in_use = mae_get_if_in_use_for_smi_dbg,
-	.smi_user_put = mae_put_for_smi_dbg,
-};
-
 static int mtk_aov_probe(struct platform_device *pdev)
 {
 	struct platform_device *larb_pdev;
@@ -488,7 +460,6 @@ static int mtk_aov_probe(struct platform_device *pdev)
 	g_frame_mode = 0;
 	g_aov_start = false;
 	uisp_larb_dev = NULL;
-	mae_larb_dev = NULL;
 
 #ifdef CONFIG_PM_WAKELOCKS
 	aov_wake_lock = wakeup_source_register(&pdev->dev, "aov_lock_wakelock");
@@ -536,35 +507,6 @@ static int mtk_aov_probe(struct platform_device *pdev)
 				dev_info(&pdev->dev, "unable to link aov uisp smi larb%d\n", i);
 			else
 				uisp_larb_dev = &larb_pdev->dev;
-		}
-
-		num_larbs = of_count_phandle_with_args(
-						pdev->dev.of_node, "mediatek,larbs-mae", NULL);
-		num_larbs = (num_larbs < 0) ? 0 : num_larbs;
-		dev_info(&pdev->dev, "aov mae larb_num:%d\n", num_larbs);
-
-		for (i = 0; i < num_larbs; i++) {
-			larb_node = of_parse_phandle(
-						pdev->dev.of_node, "mediatek,larbs-mae", i);
-			if (!larb_node) {
-				dev_info(&pdev->dev, "failed to get aov mae larb node\n");
-				continue;
-			}
-
-			larb_pdev = of_find_device_by_node(larb_node);
-			if (WARN_ON(!larb_pdev)) {
-				of_node_put(larb_node);
-				dev_info(&pdev->dev, "failed to get aov mae larb pdev\n");
-				continue;
-			}
-			of_node_put(larb_node);
-
-			link = device_link_add(&pdev->dev, &larb_pdev->dev,
-							DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
-			if (!link)
-				dev_info(&pdev->dev, "unable to link aov mae smi larb%d\n", i);
-			else
-				mae_larb_dev = &larb_pdev->dev;
 		}
 	} else {
 		aov_dev->op_mode = 0;
@@ -614,12 +556,10 @@ static int mtk_aov_probe(struct platform_device *pdev)
 	}
 
 	mtk_smi_dbg_register_pwr_ctrl_cb(&uisp_pwr_ctrl);
-	mtk_smi_dbg_register_pwr_ctrl_cb(&mae_pwr_ctrl);
 	dev_info(&pdev->dev,
-		"mtk_smi_dbg_register_pwr_ctrl_cb name(uisp:%s, mae:%s)",
-			uisp_pwr_ctrl.name, mae_pwr_ctrl.name);
+		"mtk_smi_dbg_register_pwr_ctrl_cb name(uisp:%s)",
+			uisp_pwr_ctrl.name);
 
-	aov_notify_register(mtk_aov_notify);
 	dev_info(&pdev->dev, "%s probe aov driver-\n", __func__);
 	return 0;
 
@@ -646,7 +586,6 @@ static void mtk_aov_remove(struct platform_device *pdev)
 	pr_info("%s remove aov driver+\n", __func__);
 
 	mtk_smi_dbg_unregister_pwr_ctrl_cb(&uisp_pwr_ctrl);
-	mtk_smi_dbg_unregister_pwr_ctrl_cb(&mae_pwr_ctrl);
 
 	if (mtk_aov_is_open(aov_dev) == true) {
 		aov_dev->is_open = false;

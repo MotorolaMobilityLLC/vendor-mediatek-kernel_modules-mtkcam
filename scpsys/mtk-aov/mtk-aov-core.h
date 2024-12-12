@@ -74,6 +74,7 @@ struct aov_core {
 	wait_queue_head_t smi_dump_wq;
 	struct task_struct *smi_dump_thread;
 
+	uint32_t reset_sensor_id;
 	atomic_t do_reset_sensor;
 	wait_queue_head_t reset_sensor_wq;
 	struct task_struct *reset_sensor_thread;
