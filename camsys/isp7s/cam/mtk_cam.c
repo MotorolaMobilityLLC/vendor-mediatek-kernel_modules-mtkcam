@@ -13,7 +13,6 @@
 #include <linux/platform_data/mtk_ccd.h>
 #include <linux/pm_runtime.h>
 #include <linux/remoteproc.h>
-#include <linux/rpmsg/mtk_ccd_rpmsg.h>
 #include <uapi/linux/mtk_ccd_controls.h>
 #include <linux/regulator/consumer.h>
 

@@ -2,7 +2,6 @@
 //
 // Copyright (c) 2019 MediaTek Inc.
 
-#include <linux/rpmsg/mtk_ccd_rpmsg.h>
 #include <linux/pm_runtime.h>
 
 #include "mtk_cam-fmt_utils.h"

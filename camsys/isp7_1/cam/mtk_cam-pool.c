@@ -20,7 +20,6 @@
 
 #ifndef CONFIG_MTK_SCP
 #include <linux/platform_data/mtk_ccd.h>
-#include <linux/rpmsg/mtk_ccd_rpmsg.h>
 #include <linux/remoteproc/mtk_ccd_mem.h>
 #include <uapi/linux/mtk_ccd_controls.h>
 #endif

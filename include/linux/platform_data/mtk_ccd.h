@@ -8,6 +8,7 @@
 
 #include <linux/platform_device.h>
 #include <linux/cdev.h>
+#include <linux/rpmsg.h>
 
 struct dma_buf;
 struct mtk_ccd_memory;
@@ -16,7 +17,18 @@ struct mtk_ccd_rpmsg_endpoint;
 struct ccd_master_status_item;
 struct ccd_master_listen_item;
 struct ccd_worker_item;
-struct mtk_ccd_memory;
+
+struct mtk_ccd_client_cb {
+	/**
+	 * FIXME: phase out id for channel optimization
+	 * name id = ipi_id - CCD_IPI_ISP_MAIN;
+	 */
+	int ipi_id;
+	rpmsg_rx_cb_t send_msg_ack;
+	void *priv; /* point the client top struct. */
+	/* int (*master_destroy)(); */
+	/* int (*worker_destroy)(); */
+};
 
 /**
  * struct mem_obj - memory buffer allocated in kernel
@@ -80,6 +92,13 @@ int ccd_worker_read(struct mtk_ccd *ccd,
 
 void ccd_worker_write(struct mtk_ccd *ccd,
 		      struct ccd_worker_item *write_obj);
+
+/* For ccd client */
+int mtk_ccd_client_start(struct mtk_ccd *ccd);
+int mtk_ccd_client_stop(struct mtk_ccd *ccd);
+int mtk_ccd_client_get_channel(struct mtk_ccd *ccd, struct mtk_ccd_client_cb *cb);
+int mtk_ccd_client_put_channel(struct mtk_ccd *ccd, int id_mask);
+int mtk_ccd_client_msg_send(struct mtk_ccd *ccd, int id_mask, void *data, int len);
 
 void *mtk_ccd_get_buffer(struct mtk_ccd *ccd,
 			 struct mem_obj *mem_buff_data);

@@ -7,6 +7,9 @@ subdir-ccflags-y += \
 	-I$(srctree)/drivers/rpmsg \
 	-I$(DEVICE_MODULES_PATH)/include/
 
-$(MTK_CCD_MODULE)-objs := mtk_ccd_rpmsg.o mtk_ccd_rpmsg_ipi.o
+$(MTK_CCD_MODULE)-objs := \
+	mtk_ccd_rpmsg.o \
+	mtk_ccd_rpmsg_ipi.o \
+	mtk_ccd_rpmsg_client.o
 
 obj-$(CONFIG_RPMSG_MTK_CCD) += $(MTK_CCD_MODULE).o
