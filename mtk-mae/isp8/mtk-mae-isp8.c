@@ -576,6 +576,17 @@ static bool mtk_mae_config_dma(struct mtk_mae_dev *mae_dev, uint32_t idx)
 			param->image[loop].padding.down = 0;
 		}
 
+		mae_dev_dbg(mae_dev->dev,
+			"Debug MAE req:%d m:%d py:%d l:%d img:%d,%d stride:%d rsz:%d,%d roi:%d,%d,%d,%d,%d ppb:%d f:%d",
+			param->requestNum,
+			param->maeMode, param->pyramidNumber, loop,
+			param->image[loop].imgWidth, param->image[loop].imgHeight, param->image[loop].imgStride,
+			param->image[loop].resizeWidth, param->image[loop].resizeHeight,
+			param->image[loop].enRoi, param->image[loop].roi.x1,
+			param->image[loop].roi.y1, param->image[loop].roi.x2,
+			param->image[loop].roi.y2, mae_pixel_per_byte[param->image[loop].srcImgFmt],
+			param->image[loop].srcImgFmt);
+
 		// config the base address of input buffer
 		addr = mae_dev->map_table->image_dmabuf_info[idx].pa;
 
@@ -594,9 +605,9 @@ static bool mtk_mae_config_dma(struct mtk_mae_dev *mae_dev, uint32_t idx)
 		}
 
 		if (param->image[loop].enRoi) {
-				addr += (MAX(param->image[loop].roi.y1, 0) / 2 * 2) *
-						param->image[loop].imgWidth +
-						(MAX(param->image[loop].roi.x1, 0) / 16) * 16;
+			addr += (MAX(param->image[loop].roi.y1, 0) / 2 * 2) *
+				(param->image[loop].imgStride / mae_pixel_per_byte[param->image[loop].srcImgFmt]) +
+				(MAX(param->image[loop].roi.x1, 0) / 16) * 16;
 		}
 
 		if (CHECK_BASE_ADDR(addr) || addr == 0)
@@ -613,17 +624,18 @@ static bool mtk_mae_config_dma(struct mtk_mae_dev *mae_dev, uint32_t idx)
 				MSB_ADDR(addr));
 
 		addr = mae_dev->map_table->image_dmabuf_info[idx].pa +
-				(uint64_t)param->image[loop].imgWidth * param->image[loop].imgHeight;
+			(uint64_t)(param->image[loop].imgStride / mae_pixel_per_byte[param->image[loop].srcImgFmt])
+			* param->image[loop].imgHeight;
 
 		if (param->image[loop].enRoi) {
-				addr += (MAX(param->image[loop].roi.y1, 0) / 2 * 2) *
-						(param->image[loop].imgWidth / 2) +
-						(MAX(param->image[loop].roi.x1, 0) / 16) * 16;
+			addr += (MAX(param->image[loop].roi.y1, 0) / 2 * 2) *
+				((param->image[loop].imgStride / mae_pixel_per_byte[param->image[loop].srcImgFmt]) / 2)+
+				(MAX(param->image[loop].roi.x1, 0) / 16) * 16;
 		}
 
 		if (CHECK_BASE_ADDR(addr) || addr == 0)
 			mae_dev_info(mae_dev->dev, "Loop %d: %s(0x%llx) is not %d-aligned or zero",
-										loop, "image1", addr, MAE_BASE_ADDR_ALIGN);
+									loop, "image1", addr, MAE_BASE_ADDR_ALIGN);
 
 		mae_dev_dbg(mae_dev->dev, "Loop %d: %s(0x%llx)", loop, "image1", addr);
 		MAE_CMDQ_WRITE_REG(mae_dev->pkt[idx],
@@ -2046,7 +2058,8 @@ static bool mtk_mae_config_hw(struct mtk_mae_dev *mae_dev, uint32_t idx)
 
 		MAE_CMDQ_WRITE_REG(mae_dev->pkt[idx],
 							MAE_REG_EXTRN_LN_OFFSET_00_R + loop * COMMON_REG_SIZE,
-							param->image[loop].imgWidth);
+							param->image[loop].imgStride /
+							mae_pixel_per_byte[param->image[loop].srcImgFmt]);
 
 		if (param->image[loop].enRoi) {
 			MAE_CMDQ_WRITE_REG(mae_dev->pkt[idx],

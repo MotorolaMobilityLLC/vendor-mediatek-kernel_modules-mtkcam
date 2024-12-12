@@ -170,6 +170,8 @@ typedef enum {
 	MAE_FORMAT_MAX
 } MAE_FORMAT;
 
+const uint32_t mae_pixel_per_byte[MAE_FORMAT_MAX] = {1, 2, 1, 1};
+
 struct MAE_ROI {
 	uint32_t x1;
 	uint32_t y1;
@@ -187,6 +189,7 @@ struct MAE_PADDING {
 struct EnqueImage {
 	MAE_FORMAT srcImgFmt;
 	uint32_t imgWidth;
+	uint32_t imgStride;
 	uint32_t imgHeight;
 	bool enRoi;
 	struct MAE_ROI roi;
