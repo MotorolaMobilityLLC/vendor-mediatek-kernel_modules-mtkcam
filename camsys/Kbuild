@@ -16,5 +16,6 @@ obj-y += isp7_1/
 obj-y += isp7s/
 obj-y += isp7sp/
 obj-y += isp8/
+obj-y += isp8s/
 obj-$(CONFIG_RPMSG_MTK_CCD) += rpmsg/
 obj-$(CONFIG_MTK_CCD_REMOTEPROC) += remoteproc/

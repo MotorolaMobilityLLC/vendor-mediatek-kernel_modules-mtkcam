@@ -35,6 +35,8 @@ mgk_camsys_outs = [
     "isp7sp/unit_test/cam-ut.ko",
     "isp8/cam/mtk-cam-isp8.ko",
     "isp8/unit_test/cam-isp8-ut.ko",
+    "isp8s/cam/mtk-cam-isp8s.ko",
+    "isp8s/unit_test/cam-isp8s-ut.ko",
     "remoteproc/mtk_ccd_remoteproc.ko",
     "rpmsg/ccd_rpmsg.ko",
 ]
