@@ -18,13 +18,21 @@
 
 #define CCD_DEV_NAME	"mtk_ccd"
 
+#undef dev_dbg
+#define dev_dbg(dev, fmt, arg...)			\
+	do {						\
+		if (mtk_ccd_debug_enabled())		\
+			dev_info(dev, fmt, ## arg);	\
+	} while (0)
+
 static int ccd_load(struct rproc *rproc, const struct firmware *fw)
 {
 	const struct mtk_ccd *ccd = rproc->priv;
 	struct device *dev = ccd->dev;
 	int ret = 0;
 
-	dev_info(dev, "remote_ccd loaded!\n");
+	dev_info(dev, "%s: %p\n", __func__, dev);
+
 	return ret;
 }
 
@@ -34,7 +42,7 @@ static int ccd_start(struct rproc *rproc)
 	struct device *dev = ccd->dev;
 	int ret = 0;
 
-	dev_info(dev, "ccd started: %p\n", dev);
+	dev_info(dev, "%s: %p\n", __func__, dev);
 
 	return ret;
 }
@@ -60,28 +68,38 @@ static struct mtk_ccd_rpmsg_ops ccd_rpmsg_ops = {
 	.ccd_send = rpmsg_ccd_ipi_send,
 };
 
-static void ccd_add_rpmsg_subdev(struct mtk_ccd *ccd)
+static void ccd_create_channel_center(struct mtk_ccd *ccd)
 {
-	ccd->rpmsg_subdev =
-		mtk_rpmsg_create_rproc_subdev(to_platform_device(ccd->dev),
-					      &ccd_rpmsg_ops);
-	if (ccd->rpmsg_subdev) {
-		rproc_add_subdev(ccd->rproc, ccd->rpmsg_subdev);
-		mtk_create_client_msgdevice(ccd->rpmsg_subdev);
+	int i;
+
+	for (i = 0; i < MAX_RPROC_SUBDEV_NUM; i++) {
+		struct rproc_subdev *subdev;
+
+		subdev = mtk_rpmsg_create_rproc_subdev(to_platform_device(ccd->dev),
+						       &ccd_rpmsg_ops,
+						       i);
+		if (subdev) {
+			ccd->channel_center[i] = subdev;
+			rproc_add_subdev(ccd->rproc, ccd->channel_center[i]);
+			mtk_ccd_center_create_channels(ccd->channel_center[i]);
+		}
 	}
 }
 
-static void ccd_remove_rpmsg_subdev(struct mtk_ccd *ccd)
+static void ccd_destroy_channel_center(struct mtk_ccd *ccd)
 {
-	if (ccd->rpmsg_subdev) {
-		/* TODO: fix unbalanced locking function definition */
-		/* mtk_create_client_msgdevice/mtk_destroy_client_msgdevice */
-		/* mtk_rpmsg_create_rpmsgdev/mtk_rpmsg_destroy_rpmsgdev */
+	int i;
 
-		mtk_rpmsg_destroy_rpmsgdev(ccd->rpmsg_subdev);
-		rproc_remove_subdev(ccd->rproc, ccd->rpmsg_subdev);
-		mtk_rpmsg_destroy_rproc_subdev(ccd->rpmsg_subdev);
-		ccd->rpmsg_subdev = NULL;
+	for (i = 0; i < MAX_RPROC_SUBDEV_NUM; i++) {
+		struct rproc_subdev *subdev = ccd->channel_center[i];
+
+		if (!subdev)
+			continue;
+
+		mtk_ccd_center_destroy_channels(subdev);
+		rproc_remove_subdev(ccd->rproc, subdev);
+		mtk_rpmsg_destroy_rproc_subdev(subdev);
+		ccd->channel_center[i] = NULL;
 	}
 }
 
@@ -122,7 +140,10 @@ static int ccd_open(struct inode *inode,
 					   struct mtk_ccd,
 					   ccd_cdev);
 	filp->private_data = ccd;
-	dev_dbg(ccd->dev, "%s: %p\n", __func__, ccd);
+
+	dev_info(ccd->dev, "%s: %p, cnt:%d",
+		__func__, ccd, atomic_inc_return(&ccd->open_cnt));
+
 	return ret;
 }
 
@@ -130,12 +151,13 @@ static int ccd_release(struct inode *inode,
 		       struct file *filp)
 {
 	int ret = 0;
-	struct ccd_master_status_item master_obj;
 	struct mtk_ccd *ccd = (struct mtk_ccd *)filp->private_data;
 
-	master_obj.state = CCD_MASTER_EXIT;
-	ccd_master_destroy(ccd, &master_obj);
-	dev_info(ccd->dev, "%s: %p\n", __func__, ccd);
+	ccd_master_destroy(ccd);  /* TODO: do not destroy ept here */
+
+	dev_info(ccd->dev, "%s: %p, cnt:%d",
+		__func__, ccd, atomic_dec_return(&ccd->open_cnt));
+
 	return ret;
 }
 
@@ -148,58 +170,75 @@ static long ccd_unlocked_ioctl(struct file *filp, unsigned int cmd,
 	struct ccd_master_listen_item listen_obj;
 	struct ccd_worker_item work_obj;
 	struct ccd_master_status_item master_obj;
+
 	memset(&work_obj, 0, sizeof(work_obj));
 	memset(&listen_obj, 0, sizeof(listen_obj));
 	memset(&master_obj, 0, sizeof(master_obj));
 
 	switch (cmd) {
 	case IOCTL_CCD_MASTER_INIT:
-		dev_dbg(ccd->dev, "enter IOCTL_CCD_MASTER_INIT\n");
+		if (ccd_master_init(ccd)) {
+			ret = -EFAULT;  /* no free rproc_subdev */
+			break;
+		}
 		master_obj.state = CCD_MASTER_ACTIVE;
-		/*  TBD: Protect by lock? */
-		ccd->master_status.state = CCD_MASTER_ACTIVE;
 
 		if (copy_to_user(user_addr, &master_obj, sizeof(master_obj)))
 			ret = -EFAULT;
+
 		break;
 	case IOCTL_CCD_MASTER_DESTROY:
-		dev_dbg(ccd->dev, "enter IOCTL_CCD_MASTER_DESTROY\n");
-		if (copy_from_user(&master_obj, user_addr, sizeof(master_obj))) {
+		if (ccd_master_destroy(ccd)) {
+			ret = -EFAULT;  /* no match subdev */
+			break;
+		}
+		master_obj.state = CCD_MASTER_EXIT;
+
+		if (copy_from_user(&master_obj, user_addr, sizeof(master_obj)))
+			ret = -EFAULT;
+
+		break;
+	case IOCTL_CCD_MASTER_LISTEN:
+		/* per stremaing ctrl for on/off */
+		if (ccd_master_listen(ccd, &listen_obj)) {  /* wait for ON/OFF */
 			ret = -EFAULT;
 			break;
 		}
-		/*  TBD: Protect by lock? */
-		ccd->master_status.state = master_obj.state;
-		break;
-	case IOCTL_CCD_MASTER_LISTEN:
-		ccd_master_listen(ccd, &listen_obj);
 
 		if (copy_to_user(user_addr, &listen_obj,
 				 sizeof(struct ccd_master_listen_item)))
 			ret = -EFAULT;
+
 		break;
 	case IOCTL_CCD_WORKER_READ:
-		if (copy_from_user(&work_obj, user_addr,
-				sizeof(struct ccd_worker_item))) {
-			ret = -EFAULT;
-			break;
-		}
-
-		ret = ccd_worker_read(ccd, &work_obj);
-		if (ret < 0)
-			break;
-
-		if (copy_to_user(user_addr, &work_obj,
-				 sizeof(struct ccd_worker_item)))
-			ret = -EFAULT;
-		break;
-	case IOCTL_CCD_WORKER_WRITE:
+		/* backend read msg */
 		if (copy_from_user(&work_obj, user_addr,
 				   sizeof(struct ccd_worker_item))) {
 			ret = -EFAULT;
 			break;
 		}
-		ccd_worker_write(ccd, &work_obj);
+
+		if (ccd_worker_read(ccd, &work_obj)) {
+			ret = -EFAULT;
+			break;
+		}
+
+		if (copy_to_user(user_addr, &work_obj,
+				 sizeof(struct ccd_worker_item)))
+			ret = -EFAULT;
+
+		break;
+	case IOCTL_CCD_WORKER_WRITE:
+		/* backend write ack */
+		if (copy_from_user(&work_obj, user_addr,
+				   sizeof(struct ccd_worker_item))) {
+			ret = -EFAULT;
+			break;
+		}
+
+		if (ccd_worker_write(ccd, &work_obj))
+			ret = -EFAULT;
+
 		break;
 	default:
 		dev_info(ccd->dev, "Unknown ioctl\n");
@@ -247,7 +286,8 @@ static int ccd_regcdev(struct mtk_ccd *ccd)
 
 	ret = alloc_chrdev_region(&ccd->ccd_devno, 0, 1, CCD_DEV_NAME);
 	if (ret < 0) {
-		pr_debug("alloc_chrdev_region failed, %d\n", ret);
+		dev_info(ccd->dev, "%s: alloc_chrdev_region failed, %d\n",
+			__func__, ret);
 		return ret;
 	}
 
@@ -257,7 +297,8 @@ static int ccd_regcdev(struct mtk_ccd *ccd)
 	/* Add to system */
 	ret = cdev_add(&ccd->ccd_cdev, ccd->ccd_devno, 1);
 	if (ret < 0) {
-		pr_debug("Attach file operation failed, %d\n", ret);
+		dev_info(ccd->dev, "%s: cdev_add failed, %d\n",
+			__func__, ret);
 		goto err_cdev_add;
 	}
 
@@ -269,7 +310,8 @@ static int ccd_regcdev(struct mtk_ccd *ccd)
 #endif
 	if (IS_ERR(ccd->ccd_class)) {
 		ret = PTR_ERR(ccd->ccd_class);
-		pr_debug("Unable to create class, err = %d\n", ret);
+		dev_info(ccd->dev, "%s: class_create failed, %d\n",
+			__func__, ret);
 		goto err_class_create;
 	}
 
@@ -278,23 +320,19 @@ static int ccd_regcdev(struct mtk_ccd *ccd)
 			    CCD_DEV_NAME);
 	if (IS_ERR(dev)) {
 		ret = PTR_ERR(dev);
-		pr_debug("Failed to create device: /dev/%s, err = %d\n",
-		       CCD_DEV_NAME,
-		       ret);
+		dev_info(ccd->dev, "%s: device_create failed: /dev/%s, err = %d\n",
+			__func__, CCD_DEV_NAME, ret);
 		goto err_device_create;
 	}
 
 	return ret;
 
 err_device_create:
-	device_destroy(ccd->ccd_class, ccd->ccd_devno);
-
-err_class_create:
 	class_destroy(ccd->ccd_class);
 	ccd->ccd_class = NULL;
-
-err_cdev_add:
+err_class_create:
 	cdev_del(&ccd->ccd_cdev);
+err_cdev_add:
 	unregister_chrdev_region(ccd->ccd_devno, 1);
 	return ret;
 }
@@ -341,7 +379,8 @@ static int ccd_probe(struct platform_device *pdev)
 		ccd->smmu_dev = mtk_smmu_get_shared_device(&pdev->dev);
 		if (!ccd->smmu_dev) {
 			dev_info(dev, "failed to get smmu device\n");
-			return -ENODEV;
+			ret = -ENODEV;
+			goto free_rproc;
 		}
 	}
 
@@ -353,8 +392,10 @@ static int ccd_probe(struct platform_device *pdev)
 		alloc_dev->dma_parms =
 			devm_kzalloc(alloc_dev,
 				sizeof(*alloc_dev->dma_parms), GFP_KERNEL);
-		if (!alloc_dev->dma_parms)
-			return -ENOMEM;
+		if (!alloc_dev->dma_parms) {
+			ret = -ENODEV;
+			goto free_rproc;
+		}
 	}
 
 	if (alloc_dev->dma_parms) {
@@ -364,24 +405,34 @@ static int ccd_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, ccd);
-	ccd_regcdev(ccd);
+
+	if (ccd_regcdev(ccd)) {
+		dev_info(dev, "Register cdev failed\n");
+		ret = -ENODEV;
+		goto free_rproc;
+	}
 
 	/* If ccd is moved to real micro processor, map to physical address here */
 
-	ccd_add_rpmsg_subdev(ccd);
+	ccd_create_channel_center(ccd);
 
 	ccd->ccd_memory = mtk_ccd_mem_init(ccd->dev);
 
 	ret = rproc_add(rproc);
-	if (ret)
+	if (ret) {
+		dev_info(dev, "rproc_add failed\n");
 		goto remove_subdev;
+	}
 
-	dev_info(ccd->dev, "%s: ccd is created: %p\n", __func__, ccd);
+	dev_info(dev, "%s: ccd is created: %p\n", __func__, ccd);
 
 	return 0;
 
 remove_subdev:
-	ccd_remove_rpmsg_subdev(ccd);
+	mtk_ccd_mem_release(ccd);
+	ccd_destroy_channel_center(ccd);
+	ccd_unregcdev(ccd);
+free_rproc:
 	rproc_free(rproc);
 
 	return ret;
@@ -391,9 +442,11 @@ static void ccd_remove(struct platform_device *pdev)
 {
 	struct mtk_ccd *ccd = platform_get_drvdata(pdev);
 
+	dev_info(ccd->dev, "%s: release ccd: %p", __func__, ccd);
+
 	mtk_ccd_mem_release(ccd);
 	ccd_unregcdev(ccd);
-	ccd_remove_rpmsg_subdev(ccd);
+	ccd_destroy_channel_center(ccd);
 	rproc_del(ccd->rproc);
 	rproc_free(ccd->rproc);
 }

@@ -10,18 +10,14 @@
 #include <linux/cdev.h>
 #include <linux/rpmsg.h>
 
+#define MAX_RPROC_SUBDEV_NUM 2
+
 struct dma_buf;
 struct mtk_ccd_memory;
-struct mtk_rpmsg_rproc_subdev;
-struct mtk_ccd_rpmsg_endpoint;
-struct ccd_master_status_item;
-struct ccd_master_listen_item;
-struct ccd_worker_item;
 
 struct mtk_ccd_client_cb {
 	/**
 	 * FIXME: phase out id for channel optimization
-	 * name id = ipi_id - CCD_IPI_ISP_MAIN;
 	 */
 	int ipi_id;
 	rpmsg_rx_cb_t send_msg_ack;
@@ -43,10 +39,6 @@ struct mem_obj {
 	void *va;
 };
 
-struct ccd_master_status {
-	unsigned int state;
-};
-
 struct mtk_ccd {
 	struct device *dev;
 	struct device *smmu_dev;
@@ -56,50 +48,19 @@ struct mtk_ccd {
 	struct cdev ccd_cdev;
 	struct class *ccd_class;
 
-	struct rproc_subdev *rpmsg_subdev;  /* TODO: re-name */
-	struct ccd_master_status master_status;
+	struct rproc_subdev *channel_center[MAX_RPROC_SUBDEV_NUM];
 	struct mtk_ccd_memory *ccd_memory;
+
+	atomic_t open_cnt;
 };
 
-/**
- * rpmsg_ccd_ipi_send - send data from AP to ccd.
- *
- * @pdev:	CCD platform device
- * @id:		IPI ID
- * @buf:	the data buffer
- * @len:	the data buffer length
- * @wait:	1: need ack
- *
- * This function is thread-safe. When this function returns,
- * CCD has received the data and starts the processing.
- * When the processing completes, IPI handler registered
- * by ccd_ipi_register will be called in interrupt context.
- *
- * Return: Return 0 if sending data successfully, otherwise it is failed.
- **/
-int rpmsg_ccd_ipi_send(struct mtk_rpmsg_rproc_subdev *mtk_subdev,
-		       struct mtk_ccd_rpmsg_endpoint *mept,
-		       void *buf, unsigned int len, unsigned int wait);
-
-void ccd_master_listen(struct mtk_ccd *ccd,
-			      struct ccd_master_listen_item *listen_obj);
-
-void ccd_master_destroy(struct mtk_ccd *ccd,
-			struct ccd_master_status_item *master_obj);
-
-int ccd_worker_read(struct mtk_ccd *ccd,
-		     struct ccd_worker_item *read_obj);
-
-void ccd_worker_write(struct mtk_ccd *ccd,
-		      struct ccd_worker_item *write_obj);
-
-/* For ccd client */
 int mtk_ccd_client_start(struct mtk_ccd *ccd);
 int mtk_ccd_client_stop(struct mtk_ccd *ccd);
 int mtk_ccd_client_get_channel(struct mtk_ccd *ccd, struct mtk_ccd_client_cb *cb);
 int mtk_ccd_client_put_channel(struct mtk_ccd *ccd, int id_mask);
 int mtk_ccd_client_msg_send(struct mtk_ccd *ccd, int id_mask, void *data, int len);
 
+/* ccd memory */
 void *mtk_ccd_get_buffer(struct mtk_ccd *ccd,
 			 struct mem_obj *mem_buff_data);
 int mtk_ccd_put_buffer(struct mtk_ccd *ccd,
@@ -109,4 +70,5 @@ int mtk_ccd_get_buffer_fd(struct mtk_ccd *ccd, void *mem_priv);
 
 struct dma_buf *mtk_ccd_get_buffer_dmabuf(struct mtk_ccd *ccd,
 			void *mem_priv);
+
 #endif /* _MTK_CCD_H */
