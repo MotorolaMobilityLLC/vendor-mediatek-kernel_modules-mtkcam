@@ -336,6 +336,7 @@ struct DPE_device {
 	struct v4l2_device v4l2_dev;
 	struct mutex mutex;
 	struct video_device vid_dpe_dev;
+	struct platform_device *larb_pdev;
 };
 static struct DPE_device *DPE_devs;
 static int nr_DPE_devs;
@@ -401,6 +402,8 @@ struct cmdq_base *dpe_clt_base;
 u32 dvs_event_id;
 u32 dvp_event_id;
 u32 dvgf_event_id;
+
+bool is_ccf_apply;
 
 enum DPE_FRAME_STATUS_ENUM {
 	DPE_FRAME_STATUS_EMPTY,    /* 0 */
@@ -6603,17 +6606,25 @@ static signed int DPE_Dump_kernelReg(struct DPE_Config_ISP8 *cfg)
 
 static inline int DPE_Prepare_Enable_ccf_clock(void)
 {
-	int ret;
+	int ret = 0;
 	struct device *dev = gdev;
 	// struct DPE_device *dpe_dev = dev_get_drvdata(dev);
 
 	LOG_INF("DPE_Prepare_Enable_ccf_clock_star\n");
 	/* mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_CAM); */
 
-	ret = pm_runtime_get_sync(dev);
-	if (ret < 0) {
-		dev_info(dev, "pm_runtime_get_sync fail, %d\n", ret);
-		return ret;
+	if (is_ccf_apply) {
+		ret = mtk_smi_larb_enable(&DPE_devs->larb_pdev->dev);
+		if (ret) {
+			LOG_INF("cannot enable dpe larb\n");
+			return ret;
+		}
+	} else {
+		ret = pm_runtime_get_sync(dev);
+		if (ret < 0) {
+			dev_info(dev, "pm_runtime_get_sync fail, %d\n", ret);
+			return ret;
+		}
 	}
 
 	// dev_info(dev, "enable DPE clock:%d\n", dpe_dev->clk_num);
@@ -6682,7 +6693,12 @@ static inline void DPE_Disable_Unprepare_ccf_clock(void)
 	if (DPE_devs[0].dev_ver == 0)
 		mtk_cam_bwr_disable(dpe_bwr_device);
 
-	pm_runtime_put_sync(gdev);
+	if (is_ccf_apply){
+		if (mtk_smi_larb_disable(&DPE_devs->larb_pdev->dev) != 0)
+			LOG_INF("cannot disable dpe larb\n");
+	} else {
+		pm_runtime_put_sync(gdev);
+	}
 	// mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_CAM);
 
 	LOG_INF("Disable_Unprepare_ccf_clock end\n");
@@ -8796,7 +8812,12 @@ if (DPE_dev->irq > 0) {
 		DPE_dev->clks = isp8_dpe_clks;
 		DPE_dev->clk_num = ARRAY_SIZE(isp8_dpe_clks);
 		dev_set_drvdata(&pDev->dev, DPE_dev);
-		pm_runtime_enable(DPE_dev->dev);
+
+		is_ccf_apply = of_property_read_bool(pDev->dev.of_node, "ccf-apply");
+		dev_dbg(&pDev->dev, "ccf_apply: %s\n", is_ccf_apply ? "true" : "false");
+
+		if (!is_ccf_apply)
+			pm_runtime_enable(DPE_dev->dev);
 
 		/* Register char driver */
 		Ret = DPE_RegCharDev();
@@ -8863,7 +8884,8 @@ if (DPE_dev->irq > 0) {
 		if (!link) {
 			LOG_INF("%s smi larb device link fail", __func__);
 			return -EPROBE_DEFER;
-		}
+		} else
+			DPE_devs->larb_pdev = DPE_pdev;
 #endif
 bypass_larbs:
 		/*CCF: Grab clock pointer (struct clk*) */
@@ -9099,7 +9121,8 @@ static void DPE_remove(struct platform_device *pDev)
 	int i;
 	/*  */
 	LOG_DBG("- E.");
-	pm_runtime_disable(&pDev->dev);
+	if (!is_ccf_apply)
+		pm_runtime_disable(&pDev->dev);
 	/* wait for unfinished works in the workqueue. */
 	destroy_workqueue(DPEInfo.wkqueue);
 	DPEInfo.wkqueue = NULL;
