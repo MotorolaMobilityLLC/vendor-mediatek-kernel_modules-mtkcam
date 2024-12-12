@@ -3085,8 +3085,8 @@ static int mtk_cam_seninf_set_ctrl(struct v4l2_ctrl *ctrl)
 						g_aov_ctrl[aov_csi_port].aov_param.is_test_model = 0;
 					} else {
 						dev_info(ctx->dev,
-							"[%s] get_sensor_idx[%d] fail\n",
-							__func__, core->aov_sensor_id);
+							"[%s] get_sensor_idx[%d] aov_csi_port(%d) fail\n",
+							__func__, core->aov_sensor_id, aov_csi_port);
 						return core->aov_sensor_id;
 					}
 				}
@@ -3118,12 +3118,17 @@ static int mtk_cam_seninf_set_ctrl(struct v4l2_ctrl *ctrl)
 					/* array size of aov_ctx[] is
 					 * AOV_SENINF_NUM: most number of sensors support
 					 */
-					if (g_aov_ctrl[aov_csi_port].aov_param.sensor_idx < AOV_SENINF_NUM) {
+					if (g_aov_ctrl[aov_csi_port].aov_param.sensor_idx >= 0 &&
+						g_aov_ctrl[aov_csi_port].aov_param.sensor_idx < AOV_SENINF_NUM) {
 						g_aov_ctrl[aov_csi_port].aov_ctx = NULL;
 						memset(&g_aov_ctrl[aov_csi_port].aov_param, 0,
 							sizeof(struct mtk_seninf_aov_param));
-						seninf_logi(ctx, "[%s] ERROR: aov_csi_port(%d)\n",
-							__func__, aov_csi_port);
+					} else {
+						dev_info(ctx->dev,
+							"[%s] get_sensor_idx[%d] aov_csi_port(%d) fail\n",
+							__func__,
+							g_aov_ctrl[aov_csi_port].aov_param.sensor_idx, aov_csi_port);
+						return g_aov_ctrl[aov_csi_port].aov_param.sensor_idx;
 					}
 				}
 			}
