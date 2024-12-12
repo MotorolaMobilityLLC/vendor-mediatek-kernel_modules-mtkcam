@@ -1676,6 +1676,9 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 
 	parse_section(ctx, data, size, sect, ARRAY_SIZE(sect));
 
+	/* make sure s_ctx is reseted */
+	memset(&ctx->subctx.s_ctx, 0, sizeof(ctx->subctx.s_ctx));
+
 	for (i = 0; i < SECTION_MAX_NUM; i++) {
 		if (sect[i].init_fp && sect[i].has_data &&
 		    sect[i].init_fp(ctx, data + sect[i].fw_sect.fw_offset, size,
@@ -2431,8 +2434,6 @@ static bool compare_static_ctx(struct adaptor_ctx *ctx,
 					sensor_output_dataformat, "mode %d", i);
 		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy,
 					sensor_output_dataformat_cell_type, "mode %d", i);
-		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, ana_gain_min, "mode %d", i);
-		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, ana_gain_max, "mode %d", i);
 		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, dig_gain_min, "mode %d", i);
 		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, dig_gain_max, "mode %d", i);
 		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, dig_gain_step, "mode %d", i);
@@ -2551,7 +2552,8 @@ static int register_ext_ops(struct adaptor_ctx *ctx)
 
 		/* Copy customed i2c addr table */
 		i = 0;
-		while (i < 5 && fw_ext_ops->i2c_addr_table[i] != 0) {
+		while ((i < ARRAY_SIZE(target->i2c_addr_table)) && (i < ARRAY_SIZE(fw_ext_ops->i2c_addr_table)) &&
+		       (fw_ext_ops->i2c_addr_table[i] != 0)) {
 			target->i2c_addr_table[i] = fw_ext_ops->i2c_addr_table[i];
 			i++;
 		}
