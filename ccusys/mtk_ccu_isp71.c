@@ -1181,14 +1181,22 @@ static int mtk_ccu_probe(struct platform_device *pdev)
 		}
 		of_node_put(smi_node);
 
-		link = device_link_add(ccu->dev, &smi_pdev->dev, DL_FLAG_PM_RUNTIME |
-					DL_FLAG_STATELESS);
-		if (!link) {
-			dev_notice(ccu->dev, "ccu_rproc Unable to link SMI LARB\n");
-			return -ENODEV;
+		if ((ccu->no_pd) || (ccu->ccf_apply)) {
+			ccu->smi_dev = &smi_pdev->dev;
+			dev_notice(ccu->dev, "ccu_rproc save SMI device\n");
+		} else {
+			link = device_link_add(ccu->dev, &smi_pdev->dev, DL_FLAG_PM_RUNTIME |
+						DL_FLAG_STATELESS);
+			if (!link) {
+				dev_notice(ccu->dev, "ccu_rproc Unable to link SMI LARB\n");
+				return -ENODEV;
+			}
 		}
 	}
-	pm_runtime_enable(ccu->dev);
+	if (!ccu->no_pd) {
+		pm_runtime_enable(ccu->dev);
+		dev_notice(ccu->dev, "pm_runtime_enable(CCU)\n");
+	}
 
 	ccu->clock_num = 0;
 	if (ccu->ccu_version == CCU_VER_ISP8L)
@@ -1332,7 +1340,10 @@ static void mtk_ccu_remove(struct platform_device *pdev)
 	if (((ccu->ccu_version >= CCU_VER_ISP7SP) && (ccu->ccu_version <= CCU_VER_ISP7SPL))
 		|| (ccu->ccu_version == CCU_VER_ISP8L))
 		pm_runtime_disable(ccu->dev_cammainpwr);
-	pm_runtime_disable(ccu->dev);
+	if (!ccu->no_pd) {
+		pm_runtime_disable(ccu->dev);
+		dev_notice(ccu->dev, "pm_runtime_disable(CCU)\n");
+	}
 #if IS_ENABLED(CONFIG_MTK_CCU_DEBUG)
 	mtk_ccu_unreg_chardev(ccu);
 #endif
@@ -1384,6 +1395,15 @@ static int mtk_ccu_read_platform_info_from_dt(struct device_node
 	ret = of_property_read_u32(node, "systick-freq", reg);
 	ccu->systick_freq = (ret < 0) ? SYSTICK_FREQ_LEGACY : reg[0];
 
+	ret = of_property_read_u32_array(node, "power-domains", reg, 2);
+	if (ret < 0) {
+		ccu->no_pd = true;
+		dev_notice(ccu->dev, "No power-domains, set no_pd to true.\n");
+	}
+
+	ccu->ccf_apply = of_property_read_bool(node, "ccf-apply");
+	dev_notice(ccu->dev, "ccf-apply:%s\n", (ccu->ccf_apply) ? "true" : "false");
+
 	return 0;
 }
 
@@ -1425,11 +1445,29 @@ static int mtk_ccu1_remove(struct platform_device *pdev)
 static int mtk_ccu_get_power(struct mtk_ccu *ccu, struct device *dev)
 {
 	uint8_t *sram_con, *resource_con;
-	int rc, ret = pm_runtime_get_sync(dev);
+	int rc, ret;
 
-	if (ret < 0) {
-		dev_err(dev, "pm_runtime_get_sync failed %d", ret);
-		return ret;
+	if ((!ccu) || (!dev))
+		return -ENODEV;
+
+	if (!ccu->no_pd) {
+		ret = pm_runtime_get_sync(dev);
+		if (ret < 0) {
+			dev_err(dev, "pm_runtime_get_sync failed %d", ret);
+			return ret;
+		}
+		dev_notice(ccu->dev, "pm_runtime_get_sync(CCU)\n");
+	}
+
+	if ((ccu->no_pd) || (ccu->ccf_apply)) {
+		if (ccu->smi_dev) {
+			ret = mtk_smi_larb_enable(ccu->smi_dev);
+			if (ret)
+				dev_err(ccu->dev, "mtk_smi_larb_enable() failed %d\n", ret);
+			else
+				dev_notice(ccu->dev, "mtk_smi_larb_enable(LARB_CCU)\n");
+		} else
+			dev_err(ccu->dev, "ccu->smi_dev is NULL\n");
 	}
 
 	if (((ccu->ccu_version >= CCU_VER_ISP7SP) && (ccu->ccu_version <= CCU_VER_ISP7SPL))
@@ -1461,6 +1499,9 @@ static void mtk_ccu_put_power(struct mtk_ccu *ccu, struct device *dev)
 	uint8_t *sram_con, *resource_con;
 	int ret;
 
+	if ((!ccu) || (!dev))
+		return;
+
 	/* mt6899 CCU resource mask enabled on SPM init. */
 	if (ccu->ccu_version == CCU_VER_ISP8) {
 		resource_con = ((uint8_t *)ccu->spm_base)+ccu->ccu_resource_offset;
@@ -1483,9 +1524,24 @@ static void mtk_ccu_put_power(struct mtk_ccu *ccu, struct device *dev)
 		ccu->cammainpwr_powered = false;
 	}
 
-	ret = pm_runtime_put_sync(dev);
-	if (ret < 0)
-		dev_err(dev, "pm_runtime_put_sync failed %d", ret);
+	if ((ccu->no_pd) || (ccu->ccf_apply)) {
+		if (ccu->smi_dev) {
+			ret = mtk_smi_larb_disable(ccu->smi_dev);
+			if (ret)
+				dev_err(ccu->dev, "mtk_smi_larb_disable() failed %d\n", ret);
+			else
+				dev_notice(ccu->dev, "mtk_smi_larb_disable(LARB_CCU)\n");
+		} else
+			dev_err(ccu->dev, "ccu->smi_dev is NULL\n");
+	}
+
+	if (!ccu->no_pd) {
+		ret = pm_runtime_put_sync(dev);
+		if (ret < 0)
+			dev_err(dev, "pm_runtime_put_sync failed %d", ret);
+		else
+			dev_notice(ccu->dev, "pm_runtime_put_sync(CCU)\n");
+	}
 }
 
 static const struct of_device_id mtk_ccu_of_ids[] = {

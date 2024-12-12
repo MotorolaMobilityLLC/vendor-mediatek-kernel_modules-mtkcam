@@ -177,6 +177,7 @@ struct mtk_ccu {
 	struct device *dev;
 	struct device *dev_cammainpwr;
 	struct device *ccu_cdev_dev;
+	struct device *smi_dev;
 	struct class *ccu_class;
 	struct cdev ccu_cdev;
 	dev_t dev_no;
@@ -226,6 +227,8 @@ struct mtk_ccu {
 	bool disirq;
 	bool bWaitCond;
 	bool compact_ipc;
+	bool no_pd;
+	bool ccf_apply;
 	int g_LogBufIdx;
 	int log_level;
 	int log_taglevel;
