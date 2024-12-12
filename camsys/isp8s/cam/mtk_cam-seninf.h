@@ -102,9 +102,10 @@ struct mtk_seninf_work {
 	struct kthread_work work;
 	struct kthread_delayed_work dwork;
 	struct seninf_ctx *ctx;
-	union work_data_t {
+	struct work_data_t {
 		unsigned int sof;
 		void *data_ptr;
+		u64 sof_ts;
 	} data;
 };
 

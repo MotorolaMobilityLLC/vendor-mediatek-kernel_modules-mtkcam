@@ -592,7 +592,10 @@ static void mtk_notify_vsync_fn(struct kthread_work *work)
 	struct seninf_ctx *ctx = seninf_work->ctx;
 	struct v4l2_ctrl *ctrl;
 	struct v4l2_subdev *sensor_sd = ctx->sensor_sd;
-	unsigned int sof_cnt = seninf_work->data.sof;
+	struct mtk_sof_info sof_info;
+
+	sof_info.cnt = seninf_work->data.sof;
+	sof_info.ts = seninf_work->data.sof_ts;
 
 	ctrl = v4l2_ctrl_find(sensor_sd->ctrl_handler,
 				V4L2_CID_VSYNC_NOTIFY);
@@ -602,10 +605,8 @@ static void mtk_notify_vsync_fn(struct kthread_work *work)
 		return;
 	}
 
-//	seninf_logi(ctx, "sof %s cnt %d\n",
-//		sensor_sd->name,
-//		sof_cnt);
-	v4l2_ctrl_s_ctrl(ctrl, sof_cnt);
+	//	seninf_logd(ctx, "sof_cnt(%llu),ts(%llu)\n",sof_info.cnt, sof_info.ts);
+	v4l2_ctrl_s_ctrl_compound(ctrl, V4L2_CTRL_TYPE_U32, &sof_info);
 
 	kfree(seninf_work);
 }
@@ -645,6 +646,7 @@ void mtk_cam_seninf_sof_notify(struct mtk_seninf_sof_notify_param *param)
 					mtk_notify_vsync_fn);
 			seninf_work->ctx = ctx;
 			seninf_work->data.sof = param->sof_cnt;
+			seninf_work->data.sof_ts = param->sof_ts;
 			kthread_queue_work(&ctx->core->seninf_worker,
 					&seninf_work->work);
 		}

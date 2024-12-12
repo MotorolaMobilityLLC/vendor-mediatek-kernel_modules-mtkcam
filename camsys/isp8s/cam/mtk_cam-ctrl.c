@@ -1006,6 +1006,7 @@ static void handle_engine_frame_start(struct mtk_cam_ctrl *ctrl,
 			/* notify sof to sensor*/
 			param.sd = ctrl->ctx->seninf;
 			param.sof_cnt = req_no;
+			param.sof_ts = irq_info->ts_ns;
 			mtk_cam_seninf_sof_notify(&param);
 		}
 	}

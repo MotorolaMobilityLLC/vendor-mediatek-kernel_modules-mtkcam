@@ -1225,7 +1225,8 @@ static int seninf_core_probe(struct platform_device *pdev)
 	memset(core->fmeter, 0, sizeof(core->fmeter));
 	for (i = 0; i < CLK_FMETER_MAX; i++) {
 		str = NULL;
-		tmp_node = of_find_node_by_name(dev->of_node, clk_fmeter_names[i]);
+		/* search from root, due to of find node API will put node */
+		tmp_node = of_find_node_by_name(NULL, clk_fmeter_names[i]);
 		if (tmp_node) {
 			of_property_read_u32(tmp_node,
 				"fmeter-no", &tmp_no);
@@ -2519,7 +2520,21 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 
 static int stream_sensor(struct seninf_ctx *ctx, bool enable)
 {
-	int ret;
+	int ret = 0;
+#if KERNEL_VERSION(6, 11, 0) <= LINUX_VERSION_CODE
+	int has_en = 0;
+#endif
+
+#if KERNEL_VERSION(6, 11, 0) <= LINUX_VERSION_CODE
+	has_en = v4l2_subdev_is_streaming(ctx->sensor_sd);
+
+	if (enable == has_en) {
+		seninf_logi(ctx,
+			"skip stream_sensor, enable:%d, has_en:%d\n",
+			enable, has_en);
+		return ret;
+	}
+#endif
 
 	ret = v4l2_subdev_call(ctx->sensor_sd, video, s_stream, enable);
 	if (ret) {
@@ -2536,7 +2551,7 @@ static int stream_sensor(struct seninf_ctx *ctx, bool enable)
 	return ret;
 }
 
-static int seninf_s_stream(struct v4l2_subdev *sd, int enable)
+int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct seninf_ctx *ctx = sd_to_ctx(sd);
 	struct seninf_core *core = ctx->core;
@@ -2806,21 +2821,19 @@ static int seninf_notifier_bound(struct v4l2_async_notifier *notifier,
 	ret = media_create_pad_link(&sd->entity, 0,
 				    &ctx->subdev.entity, 0,
 				    MEDIA_LNK_FL_DYNAMIC);
+	mutex_unlock(&ctx->subdev.v4l2_dev->mdev->graph_mutex);
 	if (ret) {
 		dev_info(ctx->dev,
 			"failed to create link for %s\n",
 			sd->entity.name);
-		mutex_unlock(&ctx->subdev.v4l2_dev->mdev->graph_mutex);
 		return ret;
 	}
 
 	ret = v4l2_device_register_subdev_nodes(ctx->subdev.v4l2_dev);
 	if (ret) {
 		dev_info(ctx->dev, "failed to create subdev nodes\n");
-		mutex_unlock(&ctx->subdev.v4l2_dev->mdev->graph_mutex);
 		return ret;
 	}
-	mutex_unlock(&ctx->subdev.v4l2_dev->mdev->graph_mutex);
 	dev_info(ctx->dev, "%s bounded exit\n", sd->entity.name);
 
 	return 0;
@@ -4408,9 +4421,14 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 	if (!ctx)
 		return -EINVAL;
 
+	if (!ctx->streaming) {
+		dev_info(ctx->dev, "[%s] should not dump during stream off\n", __func__);
+		return ret;
+	}
+
 	if (!force_check && ctx->dbg_last_dump_req != 0 &&
 		ctx->dbg_last_dump_req == seq_id) {
-		dev_info(ctx->dev, "%s skip duplicate dump for req %u\n", __func__, seq_id);
+		dev_info(ctx->dev, "[%s] skip duplicate dump for req %u\n", __func__, seq_id);
 		return 0;
 	}
 
@@ -4439,7 +4457,7 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 
 	ret = pm_runtime_get_sync(ctx->dev);
 	if (ret < 0) {
-		dev_info(ctx->dev, "%s pm_runtime_get_sync ret %d\n", __func__, ret);
+		dev_info(ctx->dev, "[%s] pm_runtime_get_sync ret %d\n", __func__, ret);
 #ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 		pm_runtime_put_noidle(ctx->dev);
 		return ret;
@@ -4450,32 +4468,29 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 	if (!ctx->is_test_model)
 		sensor_sd->ops->core->command(sensor_sd, V4L2_CMD_SENSOR_IN_RESET, &in_reset);
 
-	if (ctx->streaming) {
-		if (!in_reset) {
-			ret = g_seninf_ops->_debug(sd_to_ctx(sd));
-			/* assert */
-			if (assert_when_error && ret != 0) {
-				seninf_aee_print(SENINF_AEE_FRMERR,
-						"Seninf dump with error code: %d\n", ret);
-				asserted = true;
-			}
+	if (!in_reset) {
+		ret = g_seninf_ops->_debug(sd_to_ctx(sd));
+		/* assert */
+		if (assert_when_error && ret != 0) {
+			seninf_aee_print(SENINF_AEE_FRMERR,
+					"Seninf dump with error code: %d\n", ret);
+			asserted = true;
+		}
 #if ESD_RESET_SUPPORT
-			else if (ret != 0 && !ctx->is_test_model) {
-				reset_by_user = is_reset_by_user(sd_to_ctx(sd));
-				if (!reset_by_user){
-					reset_sensor(sd_to_ctx(sd));
-					ctx->esd_status_flag = 1;
-				}
+		else if (ret != 0 && !ctx->is_test_model) {
+			reset_by_user = is_reset_by_user(sd_to_ctx(sd));
+			if (!reset_by_user){
+				reset_sensor(sd_to_ctx(sd));
+				ctx->esd_status_flag = 1;
 			}
+		}
 #endif
-		} else
-			dev_info(ctx->dev, "%s skip dump, sensor is in resetting\n", __func__);
 	} else
-		dev_info(ctx->dev, "%s should not dump during stream off\n", __func__);
+		dev_info(ctx->dev, "[%s] skip dump, sensor is in resetting\n", __func__);
 
 	pm_runtime_put_sync(ctx->dev);
 
-	dev_info(ctx->dev, "%s ret(%d), req(%u), force(%d) reset_by_user(%d) asserted(%d)\n",
+	dev_info(ctx->dev, "[%s] ret(%d), req(%u), force(%d) reset_by_user(%d) asserted(%d)\n",
 		 __func__, ret, seq_id, force_check, reset_by_user, asserted);
 
 	/* return -ESTRPIPE if seninf already assertion,
@@ -4498,15 +4513,21 @@ int mtk_cam_seninf_get_csi_irq_status(struct v4l2_subdev *sd, struct v4l2_ctrl *
 
 int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd, bool assert_when_error)
 {
+
 	int ret = 0;
 	struct seninf_ctx *ctx = sd_to_ctx(sd);
 	struct v4l2_subdev *sensor_sd = ctx->sensor_sd;
 	bool in_reset = 0;
 	bool asserted = false;
 
+	if (!ctx->streaming) {
+		dev_info(ctx->dev, "[%s] should not dump during stream off\n", __func__);
+		return ret;
+	}
+
 	ret = pm_runtime_get_sync(ctx->dev);
 	if (ret < 0) {
-		dev_info(ctx->dev, "%s pm_runtime_get_sync ret %d\n", __func__, ret);
+		dev_info(ctx->dev, "[%s] pm_runtime_get_sync ret %d\n", __func__, ret);
 #ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 		pm_runtime_put_noidle(ctx->dev);
 		return ret;
@@ -4517,23 +4538,20 @@ int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd, bool assert_when_
 	sensor_sd->ops->core->command(sensor_sd,
 			V4L2_CMD_SENSOR_IN_RESET, &in_reset);
 
-	if (ctx->streaming) {
-		if (!in_reset) {
-			ret = g_seninf_ops->_debug_current_status(sd_to_ctx(sd));
-			/* assert */
-			if (assert_when_error && ret != 0) {
-				seninf_aee_print(SENINF_AEE_FRMERR,
-						"Seninf dump with error code: %d\n", ret);
-				asserted = true;
-			}
-		} else
-			dev_info(ctx->dev, "%s skip dump, sensor is in resetting\n", __func__);
+	if (!in_reset) {
+		ret = g_seninf_ops->_debug_current_status(sd_to_ctx(sd));
+		/* assert */
+		if (assert_when_error && ret != 0) {
+			seninf_aee_print(SENINF_AEE_FRMERR,
+					"Seninf dump with error code: %d\n", ret);
+			asserted = true;
+		}
 	} else
-		dev_info(ctx->dev, "%s should not dump during stream off\n", __func__);
+		dev_info(ctx->dev, "[%s] skip dump, sensor is in resetting\n", __func__);
 
 	pm_runtime_put_sync(ctx->dev);
 
-	dev_info(ctx->dev, "%s ret(%d),asserted(%d)\n",
+	dev_info(ctx->dev, "[%s] ret(%d),asserted(%d)\n",
 		 __func__, ret, asserted);
 
 	/* return -ESTRPIPE if seninf already assertion,
