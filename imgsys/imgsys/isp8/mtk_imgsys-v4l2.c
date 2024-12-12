@@ -3472,15 +3472,15 @@ void mtk_imgsys_remove(struct platform_device *pdev)
 }
 EXPORT_SYMBOL(mtk_imgsys_remove);
 
-#define SHUTDOWN_TIMEOUT (3000)
+#define SHUTDOWN_TIMEOUT (30000)
 void mtk_imgsys_shutdown(struct platform_device *pdev)
 {
 	struct mtk_imgsys_dev *imgsys_dev = dev_get_drvdata(&pdev->dev);
-	struct mtk_imgsys_pipe *pipe = &imgsys_dev->imgsys_pipe[0];
 	int ret;
+	bool idle = true;
 
 	dev_info(imgsys_dev->dev, "%s shutdown +\n", __func__);
-	ret = wait_event_timeout(imgsys_dev->shutdown_waitq, !pipe->streaming,
+	ret = wait_event_timeout(imgsys_dev->shutdown_waitq, (idle = mtk_imgsys_idle(&pdev->dev)),
 				msecs_to_jiffies(SHUTDOWN_TIMEOUT));
 	if (!ret)
 		dev_info(imgsys_dev->dev,
