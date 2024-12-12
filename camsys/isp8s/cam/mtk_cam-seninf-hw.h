@@ -19,10 +19,7 @@
 
 #if IS_ENABLED(CONFIG_MTK_AEE_FEATURE)
 #define seninf_aee_print(title, string, args...) do { \
-		aee_kernel_exception_api(__FILE__, __LINE__, \
-			DB_OPT_DEFAULT | DB_OPT_FTRACE, \
-			title, "["title"]: "string, ##args); \
-		pr_info("["title"]: "string, ##args);  \
+	;\
 	} while (0)
 #else
 #define seninf_aee_print(title, string, args...) \
@@ -184,7 +181,7 @@ struct mtk_cam_seninf_ops {
 			      void __iomem *if_top_base, void __iomem *if_async_base,
 			      void __iomem *if_tm_base, void __iomem *if_outmux[],
 			      void __iomem *if_outmux_inner[],
-			      void __iomem *csi_top_0, void __iomem *csi_top_1,
+			      void __iomem *csi_top_0,
 				  struct csi_reg_base *csi_base);
 	int (*_init_port)(struct seninf_ctx *ctx, int port, struct csi_reg_base *csi_base);
 	int (*_disable_outmux)(struct seninf_ctx *ctx, int outmux, bool immed);
@@ -194,6 +191,7 @@ struct mtk_cam_seninf_ops {
 	int (*_set_vc)(struct seninf_ctx *ctx, int seninfIdx,
 				  struct seninf_vcinfo *vcinfo, struct seninf_glp_dt *glpinfo);
 	int (*_set_outmux_cg)(struct seninf_ctx *ctx, int outmux, int en);
+	int (*_set_outmux_dl_en)(struct seninf_ctx *ctx, u8 outmux, bool en);
 	int (*_is_outmux_used)(struct seninf_ctx *ctx, int outmux);
 	int (*_disable_all_outmux)(struct seninf_ctx *ctx);
 	int (*_wait_outmux_cfg_done)(struct seninf_ctx *ctx, u8 outmux_idx);
@@ -209,8 +207,8 @@ struct mtk_cam_seninf_ops {
 							 int outmux, int pixelMode);
 	int (*_set_outmux_grp_en)(struct seninf_ctx *ctx, u8 outmux_idx, bool grp_en);
 	int (*_set_outmux_cfg_rdy)(struct seninf_ctx *ctx, u8 outmux_idx, bool cfg_rdy);
-	int (*_set_test_model)(struct seninf_ctx *ctx, int intf);
 	int (*_set_test_model_fake_sensor)(struct seninf_ctx *ctx, int intf);
+	int (*_set_test_model)(struct seninf_ctx *ctx, int intf, const int bit_depth);
 	int (*_get_async_irq_st)(struct seninf_ctx *ctx, int async, bool clear);
 	int (*_set_csi_mipi)(struct seninf_ctx *ctx);
 	int (*_poweroff)(struct seninf_ctx *ctx);

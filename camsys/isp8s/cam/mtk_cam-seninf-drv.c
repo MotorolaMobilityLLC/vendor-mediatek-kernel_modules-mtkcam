@@ -17,7 +17,7 @@
 #include <uapi/linux/sched/types.h>
 #include <linux/sched.h>
 #include <linux/version.h>
-#include <soc/mediatek/mmdvfs_v3.h>
+// #include <soc/mediatek/mmdvfs_v3.h>
 
 #ifdef CONFIG_COMPAT
 #include <linux/compat.h>
@@ -31,6 +31,7 @@
 #include <media/v4l2-device.h>
 
 #include "mtk_cam.h"
+#include "mtk_cam-seninf-if.h"
 #include "mtk_cam-seninf-def.h"
 #include "mtk_cam-seninf.h"
 #include "mtk_cam-seninf-hw.h"
@@ -153,12 +154,14 @@ static const char * const outmux_cam_type_name[] = {
 };
 
 static const char * const clk_fmeter_names[] = {
-	CLK_FMETER_NAMES
+	// CLK_FMETER_NAMES
 };
 
-static const struct seninf_struct_map clk_fmeter_maps[] =
-	CLK_FMETER_MAPS
-;
+static const struct seninf_struct_map clk_fmeter_maps[] = {
+	// NOTE: CLK_FMETER_MAPS has added an "{}" due check patch service
+	//CLK_FMETER_MAPS
+};
+
 
 static const char * const cdphy_dvfs_step_name[] = {
 	CDPHY_DVFS_STEP
@@ -815,76 +818,15 @@ static int seninf_core_pm_runtime_disable(struct seninf_core *core)
 
 static int seninf_core_pm_runtime_get_sync(struct seninf_core *core)
 {
-	int i;
-	int ret = 0;
 
-	if (core->pm_domain_cnt == 1) {
-#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
-		mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_SENIF);
-#endif
-		ret = pm_runtime_get_sync(core->dev);
-		if (ret < 0) {
-			dev_info(core->dev, "pm_runtime_get_sync(fail),ret(%d)\n", ret);
-#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
-			return ret;
-#endif
-		}
-	} else if (core->pm_domain_cnt > 1) {
-		if (!core->pm_domain_devs)
-			return -EINVAL;
 
-		for (i = 0; i < core->pm_domain_cnt; i++) {
-			if (core->pm_domain_devs[i] != NULL) {
-#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
-				mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_SENIF);
-#endif
-				ret = pm_runtime_get_sync(core->pm_domain_devs[i]);
-				if (ret < 0) {
-					dev_info(core->dev,
-						"pm_runtime_get_sync(fail),ret(%d)\n",
-						ret);
-#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
-					return ret;
-#endif
-				}
-			}
-		}
-	} else
-		dev_info(core->dev, "core->pm_domain_cnt < 0\n");
 
 	return 0;
 }
 
 static int seninf_core_pm_runtime_put(struct seninf_core *core)
 {
-	int i;
-	int ret = 0;
 
-	if (core->pm_domain_cnt == 1) {
-		ret = pm_runtime_put_sync(core->dev);
-		if (ret < 0)
-			dev_info(core->dev, "pm_runtime_put_sync(fail),ret(%d)\n", ret);
-#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
-		mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_SENIF);
-#endif
-	} else if (core->pm_domain_cnt > 1) {
-		if (!core->pm_domain_devs)
-			return -ENOMEM;
-
-		for (i = core->pm_domain_cnt - 1; i >= 0; i--) {
-			if (core->pm_domain_devs[i] != NULL) {
-				ret = pm_runtime_put_sync(core->pm_domain_devs[i]);
-				if (ret < 0)
-					dev_info(core->dev,
-						"pm_runtime_put_sync(fail),ret(%d)\n",
-						ret);
-#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
-				mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_SENIF);
-#endif
-			}
-		}
-	} else
-		dev_info(core->dev, "core->pm_domain_cnt < 0\n");
 
 	return 0;
 }
@@ -1021,7 +963,7 @@ static int mtk_cam_seninf_irq_init(struct platform_device *pdev, struct seninf_c
 			if (ret) {
 				dev_err(core->dev, "[%s] Request %s failed\n", __func__,
 					seninf_irq_names[i]);
-				WRAP_AEE_EXCEPTION("seninf_core_probe", "Request seninf-irq");
+				// WRAP_AEE_EXCEPTION("seninf_core_probe", "Request seninf-irq");
 				/* return ret; */
 			}
 			dev_info(core->dev, "[%s] registered seninf-irq=%d\n", __func__, irq);
@@ -1052,7 +994,7 @@ static int seninf_core_probe(struct platform_device *pdev)
 
 	core = devm_kzalloc(&pdev->dev, sizeof(*core), GFP_KERNEL);
 	if (!core) {
-		WRAP_AEE_EXCEPTION("seninf_core_probe", "Kzalloc");
+		// WRAP_AEE_EXCEPTION("seninf_core_probe", "Kzalloc");
 		return -ENOMEM;
 	}
 
@@ -1066,28 +1008,35 @@ static int seninf_core_probe(struct platform_device *pdev)
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "seninf-top");
 	core->reg_seninf_top = devm_ioremap_resource(dev, res);
-	if (IS_ERR(core->reg_seninf_top))
+	if (IS_ERR(core->reg_seninf_top)) {
+		pr_info("[%s][%d] reg_seninf_top ioremap failed\n", __func__, __LINE__);
 		return PTR_ERR(core->reg_seninf_top);
+	}
+
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "seninf-async-top");
 	core->reg_seninf_async = devm_ioremap_resource(dev, res);
-	if (IS_ERR(core->reg_seninf_async))
+	if (IS_ERR(core->reg_seninf_async)) {
+		pr_info("[%s][%d] reg_seninf_async ioremap failed\n", __func__, __LINE__);
 		return PTR_ERR(core->reg_seninf_async);
+	}
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "seninf-tm");
-	core->reg_seninf_tm = devm_ioremap_resource(dev, res);
-	if (IS_ERR(core->reg_seninf_tm))
-		return PTR_ERR(core->reg_seninf_tm);
 
+	core->reg_seninf_tm = devm_ioremap_resource(dev, res);
+	if (IS_ERR(core->reg_seninf_tm)) {
+		pr_info("[%s][%d] reg_seninf_tm ioremap failed\n", __func__, __LINE__);
+		return PTR_ERR(core->reg_seninf_tm);
+	}
+
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "csi-top-0");
 	core->reg_csi_top_0 = devm_ioremap_resource(dev, res);
-	if (IS_ERR(core->reg_csi_top_0))
+	if (IS_ERR(core->reg_csi_top_0)) {
+		pr_info("[%s][%d] reg_csi_top_0 ioremap failed\n", __func__, __LINE__);
 		return PTR_ERR(core->reg_csi_top_0);
-
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "csi-top-1");
-	core->reg_csi_top_1 = devm_ioremap_resource(dev, res);
-	if (IS_ERR(core->reg_csi_top_1))
-		return PTR_ERR(core->reg_csi_top_1);
+	}
+#endif
 
 	ret = get_seninf_ops(dev, core);
 	if (ret) {
@@ -1186,13 +1135,17 @@ static int seninf_core_probe(struct platform_device *pdev)
 				dev_err(dev, "[%s] get seninf csi reg base (%d) failed\n", __func__, i);
 			} else {
 				// Success
-				dev_dbg(dev, "[%s] get seninf csi reg base (%d) succeeded\n", __func__, i);
+				dev_info(dev, "[%s] get seninf csi reg base (%d) succeeded\n", __func__, i);
 
 				core->reg_csi_base[port_id].reg_csi_base[i] =
 					devm_of_iomap(dev, tmp_node, index, NULL);
 				if (IS_ERR(core->reg_csi_base[port_id].reg_csi_base[i])) {
-					dev_err(dev,
+					dev_info(dev,
 						"[%s] seninf csi[%d] base reg %d index %d ioremap failed\n", __func__,
+						port_id, i, index);
+				} else {
+					dev_info(dev,
+						"[%s] seninf csi[%d] base reg %d index %d ioremap success\n", __func__,
 						port_id, i, index);
 				}
 			}
@@ -1202,7 +1155,7 @@ static int seninf_core_probe(struct platform_device *pdev)
 		// of_find_compatble_node will call it.
 	}
 
-	mtk_cam_seninf_tsrec_init(dev, core->reg_seninf_top);
+	// mtk_cam_seninf_tsrec_init(dev, core->reg_seninf_top);
 
 	spin_lock_init(&core->spinlock_irq);
 	spin_lock_init(&core->spinlock_aov);
@@ -1212,8 +1165,8 @@ static int seninf_core_probe(struct platform_device *pdev)
 
 	mtk_cam_seninf_tsrec_irq_init(core);
 #endif
-	/* init rproc ctrl */
-	mtk_cam_seninf_rproc_init_ccu_ctrl(dev, &core->ccu_rproc_ctrl);
+	// /* init rproc ctrl */
+	// mtk_cam_seninf_rproc_init_ccu_ctrl(dev, &core->ccu_rproc_ctrl);
 
 	/* default platform properties */
 	core->cphy_settle_delay_dt = SENINF_CPHY_SETTLE_DELAY_DT;
@@ -1259,6 +1212,8 @@ static int seninf_core_probe(struct platform_device *pdev)
 		}
 	}
 
+	dev_err(dev, "[%s] jeff after clk node get\n", __func__);
+
 	// fmeter dbg property
 	memset(core->fmeter, 0, sizeof(core->fmeter));
 	for (i = 0; i < CLK_FMETER_MAX; i++) {
@@ -1289,9 +1244,11 @@ static int seninf_core_probe(struct platform_device *pdev)
 	ret = of_platform_populate(dev->of_node, NULL, NULL, dev);
 	if (ret) {
 		dev_err(dev, "[%s] create sub devices failed\n", __func__);
-		WRAP_AEE_EXCEPTION("seninf_core_probe", "Create Sub Devices");
+		// WRAP_AEE_EXCEPTION("seninf_core_probe", "Create Sub Devices");
 		return ret;
 	}
+
+	dev_err(dev, "[%s] jeff after of_platform_populate\n", __func__);
 
 #ifdef SENINF_DVFS_READY
 	ret = seninf_dfs_init(&core->dfs, dev);
@@ -1300,6 +1257,8 @@ static int seninf_core_probe(struct platform_device *pdev)
 		//return ret;
 	}
 #endif
+
+	dev_err(dev, "[%s] jeff after seninf_dfs_init\n", __func__);
 
 	ret = device_create_file(dev, &dev_attr_status);
 	if (ret)
@@ -1317,6 +1276,8 @@ static int seninf_core_probe(struct platform_device *pdev)
 	if (ret)
 		dev_err(dev, "[%s] failed to create sysfs status\n", __func__);
 
+	dev_err(dev, "[%s] jeff after device_create_file\n", __func__);
+
 
 	seninf_core_pm_runtime_enable(core);
 
@@ -1333,12 +1294,16 @@ static int seninf_core_probe(struct platform_device *pdev)
 
 	g_seninf_ops->_init_irq_fifo(core);
 
+	dev_err(dev, "[%s] jeff after _init_irq_fifo\n", __func__);
+
 	pkvm_node = of_find_node_by_name(NULL, "pkvm");
 	if (pkvm_node) {
 		of_property_read_string(pkvm_node, "status", &pkvm_status);
 		if (strncmp(pkvm_status, "okay", sizeof("okay")) == 0)
 			pkvm_enabled = true;
 	}
+
+	dev_err(dev, "[%s] jeff core probe done\n", __func__);
 
 	return 0;
 }
@@ -1804,7 +1769,7 @@ static int set_test_model(struct seninf_ctx *ctx, char enable)
 			mtk_cam_seninf_tsrec_update_vc_dt_info(ctx,
 				ctx->tsrec_idx, &tsrec_vc_dt_info);
 		}
-		g_seninf_ops->_set_test_model(ctx, ctx->seninfAsyncIdx);
+		g_seninf_ops->_set_test_model(ctx, ctx->seninfAsyncIdx, vc->bit_depth);
 
 		mtk_cam_seninf_tsrec_dbg_dump_vc_dt_info(ctx->tsrec_idx, __func__);
 		/* notify tsrec seninf_csi relationship & start tsrec using test mode settings */
@@ -1842,7 +1807,9 @@ static int config_hw_csi(struct seninf_ctx *ctx)
 
 	mtk_cam_seninf_get_csi_param(ctx);
 	mtk_cam_seninf_get_sensor_usage(&ctx->subdev);
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 	mtk_cam_sensor_get_glp_dt(ctx, &glpinfo);
+#endif
 
 #if AOV_GET_PARAM
 	if (!(core->aov_sensor_id < 0) &&
@@ -1864,9 +1831,7 @@ static int config_hw_csi(struct seninf_ctx *ctx)
 #endif
 
 	g_seninf_ops->_reset(ctx, intf);
-
 	g_seninf_ops->_set_vc(ctx, intf, vcinfo, &glpinfo);
-
 	ret = g_seninf_ops->_set_csi_mipi(ctx);
 	if (ret) {
 		dev_info(ctx->dev, "[%s][Error] _set_csi_mipi ret(%d)\n", __func__, ret);
@@ -1879,7 +1844,6 @@ static int config_hw_csi(struct seninf_ctx *ctx)
 				__func__, ret);
 		return ret;
 	}
-
 
 	if (ctx->fake_sensor_info.is_fake_sensor)
 		g_seninf_ops->_set_test_model_fake_sensor(ctx, ctx->seninfAsyncIdx);
@@ -1997,6 +1961,7 @@ static int get_buffered_pixel_rate(struct seninf_ctx *ctx,
 					ctx->fps_n, ctx->fps_d, result);
 }
 
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 static int get_customized_pixel_rate(struct seninf_ctx *ctx, struct v4l2_subdev *sd,
 			  s64 *result)
 {
@@ -2022,6 +1987,7 @@ static int get_customized_pixel_rate(struct seninf_ctx *ctx, struct v4l2_subdev 
 
 	return 0;
 }
+#endif
 
 static int get_pixel_rate(struct seninf_ctx *ctx, struct v4l2_subdev *sd,
 			  s64 *result)
@@ -2253,6 +2219,7 @@ static int debug_err_detect_initialize(struct seninf_ctx *ctx)
 
 	return 0;
 }
+
 #if KERNEL_VERSION(6, 6, 0) == LINUX_VERSION_CODE
 static void gather_csi_ps_info(struct seninf_ctx *ctx)
 {
@@ -2417,6 +2384,8 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 	struct seninf_core *core = ctx->core;
 #endif
 
+	dev_info(ctx->dev, "[%s] jeff enable(%d) ctx->csi_streaming(%d)\n", __func__, enable, ctx->csi_streaming);
+
 	if (ctx->csi_streaming == enable) {
 		dev_info(ctx->dev,
 			"[%s] is_csi_streaming is (%d) already, return\n",
@@ -2424,8 +2393,13 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 		return 0;
 	}
 
-	if (ctx->is_test_model)
-		return 0; // skip
+	if (ctx->is_test_model) {
+		dev_info(ctx->dev, "[%s] jeff ctx->is_test_model(%d)\n", __func__, ctx->is_test_model);
+		// return 0; // skip
+	} else {
+		dev_info(ctx->dev, "[%s] jeff ctx->is_test_model(%d) else\n", __func__, ctx->is_test_model);
+	}
+
 
 	if (!ctx->sensor_sd) {
 		dev_info(ctx->dev, "[%s] no sensor\n", __func__);
@@ -2450,6 +2424,7 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 	if (enable) {
 		if (!(core->err_detect_init_flag))
 			debug_err_detect_initialize(ctx);
+
 		get_mbus_config(ctx, ctx->sensor_sd);
 
 		get_pixel_rate(ctx, ctx->sensor_sd, &ctx->mipi_pixel_rate);
@@ -2457,16 +2432,17 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 		ctx->buffered_pixel_rate = ctx->mipi_pixel_rate;
 		get_buffered_pixel_rate(ctx, ctx->sensor_sd,
 					ctx->sensor_pad_idx, &ctx->buffered_pixel_rate);
-
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 		get_customized_pixel_rate(ctx, ctx->sensor_sd, &ctx->customized_pixel_rate);
+
 		ret = pm_runtime_get_sync(ctx->dev);
 		if (ret < 0) {
 			dev_info(ctx->dev, "%s pm_runtime_get_sync ret %d\n", __func__, ret);
-#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
+
 			pm_runtime_put_noidle(ctx->dev);
 			return ret;
-#endif
 		}
+#endif
 
 		update_isp_clk(ctx);
 #if AOV_GET_PARAM
@@ -2480,7 +2456,6 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 			/* notify tsrec seninf_csi relationship & start tsrec */
 			mtk_cam_seninf_tsrec_n_start(ctx->tsrec_idx, ctx->tsrec_idx);
 		}
-
 		ret = config_hw_csi(ctx);
 		if (ret) {
 			dev_info(ctx->dev, "config_seninf_hw ret %d\n", ret);
@@ -2734,7 +2709,7 @@ static int get_fake_sensor_info(struct seninf_ctx *ctx)
 }
 
 static const struct v4l2_subdev_pad_ops seninf_subdev_pad_ops = {
-	.link_validate = mtk_cam_seninf_link_validate,
+	// .link_validate = mtk_cam_seninf_link_validate,
 #if (KERNEL_VERSION(6, 7, 0) >= LINUX_VERSION_CODE)
 	.init_cfg = mtk_cam_seninf_init_cfg,
 #endif
@@ -3521,12 +3496,12 @@ static int seninf_probe(struct platform_device *pdev)
 					core->reg_seninf_outmux,
 					core->reg_seninf_outmux_inner,
 					core->reg_csi_top_0,
-					core->reg_csi_top_1,
 					core->reg_csi_base);
 	if (ret) {
 		dev_info(dev, "g_seninf_ops->_init_iomem failed ret %d\n", ret);
 		return ret;
 	}
+
 	g_seninf_ops->_init_port(ctx, port, core->reg_csi_base);
 	init_fmt(ctx);
 

@@ -11,7 +11,7 @@
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-fwnode.h>
 
-#include "clk-fmeter.h"
+// #include "clk-fmeter.h"
 #include "mtk_cam-seninf-def.h"
 #include "mtk_cam-seninf-rproc-ctrl.h"
 #include "imgsensor-user.h"
@@ -23,6 +23,8 @@
 
 /* def V4L2_MBUS_CSI2_IS_USER_DEFINED_DATA */
 #define SENINF_VC_ROUTING
+#define REDUCE_KO_DEPENDENCY_FOR_SMT
+#define DISABLE_FOR_FPGA_EP
 
 #define CSI_EFUSE_SET
 //#define SENINF_UT_DUMP
@@ -128,6 +130,7 @@ struct outmux_tag_cfg {
 	bool enable;
 	u8 filt_vc;
 	u8 filt_dt;
+	u8 bit_depth;
 	u32 exp_hsize;
 	u32 exp_vsize;
 };
@@ -182,7 +185,7 @@ struct seninf_core {
 	struct mutex seninf_top_mux_mutex;
 	void __iomem *reg_seninf_top;
 	void __iomem *reg_seninf_async;
-	void __iomem *reg_seninf_tm;
+		void __iomem *reg_seninf_tm;
 	void __iomem *reg_seninf_outmux[SENINF_OUTMUX_NUM];
 	void __iomem *reg_seninf_outmux_inner[SENINF_OUTMUX_NUM];
 

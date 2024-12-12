@@ -166,6 +166,7 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 		vc->group = 0;
 		vc->exp_hsize = TEST_MODEL_HSIZE;
 		vc->exp_vsize = TEST_MODEL_VSIZE;
+		vc->bit_depth = 16;
 
 		ctx->cur_first_vs = 0;
 		ctx->cur_last_vs = 0;
@@ -178,6 +179,7 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 		vc->group = 0;
 		vc->exp_hsize = TEST_MODEL_HSIZE;
 		vc->exp_vsize = TEST_MODEL_VSIZE;
+		vc->bit_depth = 16;
 
 		vc = &vcinfo->vc[vcinfo->cnt++];
 		vc->vc = 1;
@@ -187,6 +189,7 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 		vc->group = 0;
 		vc->exp_hsize = TEST_MODEL_HSIZE;
 		vc->exp_vsize = TEST_MODEL_VSIZE;
+		vc->bit_depth = 16;
 
 		vc = &vcinfo->vc[vcinfo->cnt++];
 		vc->vc = 2;
@@ -196,6 +199,7 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 		vc->group = 0;
 		vc->exp_hsize = TEST_MODEL_HSIZE;
 		vc->exp_vsize = TEST_MODEL_VSIZE;
+		vc->bit_depth = 16;
 
 		ctx->cur_first_vs = 0;
 		ctx->cur_last_vs = 2;
@@ -208,6 +212,7 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 		vc->group = 0;
 		vc->exp_hsize = TEST_MODEL_HSIZE;
 		vc->exp_vsize = TEST_MODEL_VSIZE;
+		vc->bit_depth = 16;
 
 		vc = &vcinfo->vc[vcinfo->cnt++];
 		vc->vc = 0;
@@ -217,6 +222,7 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 		vc->group = 0;
 		vc->exp_hsize = TEST_MODEL_HSIZE;
 		vc->exp_vsize = TEST_MODEL_VSIZE;
+		vc->bit_depth = 16;
 
 		ctx->cur_first_vs = 0;
 		ctx->cur_last_vs = 0;
@@ -229,6 +235,7 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 		vc->group = 0;
 		vc->exp_hsize = TEST_MODEL_HSIZE;
 		vc->exp_vsize = TEST_MODEL_VSIZE;
+		vc->bit_depth = 16;
 
 		vc = &vcinfo->vc[vcinfo->cnt++];
 		vc->vc = 1;
@@ -238,6 +245,7 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 		vc->group = 0;
 		vc->exp_hsize = TEST_MODEL_HSIZE;
 		vc->exp_vsize = TEST_MODEL_VSIZE;
+		vc->bit_depth = 16;
 
 		vc = &vcinfo->vc[vcinfo->cnt++];
 		vc->vc = 2;
@@ -247,6 +255,7 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 		vc->group = 0;
 		vc->exp_hsize = TEST_MODEL_HSIZE;
 		vc->exp_vsize = TEST_MODEL_VSIZE;
+		vc->bit_depth = 16;
 
 		vc = &vcinfo->vc[vcinfo->cnt++];
 		vc->vc = 3;
@@ -256,6 +265,7 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 		vc->group = 0;
 		vc->exp_hsize = TEST_MODEL_HSIZE;
 		vc->exp_vsize = TEST_MODEL_VSIZE;
+		vc->bit_depth = 16;
 
 		vc = &vcinfo->vc[vcinfo->cnt++];
 		vc->vc = 4;
@@ -265,6 +275,7 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 		vc->group = 0;
 		vc->exp_hsize = TEST_MODEL_HSIZE;
 		vc->exp_vsize = TEST_MODEL_VSIZE;
+		vc->bit_depth = 16;
 
 		ctx->cur_first_vs = 0;
 		ctx->cur_last_vs = 4;
@@ -277,6 +288,7 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 		vc->group = 0;
 		vc->exp_hsize = TEST_MODEL_HSIZE;
 		vc->exp_vsize = TEST_MODEL_VSIZE;
+		vc->bit_depth = 16;
 
 		vc = &vcinfo->vc[vcinfo->cnt++];
 		vc->vc = 1;
@@ -286,6 +298,7 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 		vc->group = 0;
 		vc->exp_hsize = TEST_MODEL_HSIZE;
 		vc->exp_vsize = TEST_MODEL_VSIZE;
+		vc->bit_depth = 16;
 
 		ctx->cur_first_vs = 0;
 		ctx->cur_last_vs = 1;
@@ -1332,6 +1345,9 @@ static int mtk_cam_seninf_outmux_switch_apply(struct seninf_ctx *ctx, struct out
 	// pixel mode
 	g_seninf_ops->_set_outmux_pixel_mode(ctx, outmux_idx, pix_mode);
 
+	// set seninf DL EN
+	g_seninf_ops->_set_outmux_dl_en(ctx, outmux_idx, true);
+
 	//Set rdy grp en
 	g_seninf_ops->_set_outmux_grp_en(ctx, outmux_idx, grp_en);
 
@@ -2078,11 +2094,12 @@ int mtk_cam_seninf_s_stream_mux(struct seninf_ctx *ctx)
 					cfg->tag_cfg[dest->tag].filt_dt = dt_sel;
 					cfg->tag_cfg[dest->tag].exp_hsize = vc->exp_hsize;
 					cfg->tag_cfg[dest->tag].exp_vsize = vc->exp_vsize;
+					cfg->tag_cfg[dest->tag].bit_depth = vc->bit_depth;
 
 					seninf_logi(ctx,
-						    "vc[%d] dest[%u] pad %d intf %d sen %d outmux %d tag %d vc 0x%x dt 0x%x pix_mode %u\n",
+						    "vc[%d] dest[%u] pad %d intf %d sen %d outmux %d tag %d vc 0x%x dt 0x%x pix_mode %u bit_depth %d\n",
 						    i, j, vc->out_pad, intf, sen, dest->outmux,
-						    dest->tag, vc_sel, dt_sel, dest->pix_mode);
+						    dest->tag, vc_sel, dt_sel, dest->pix_mode, vc->bit_depth);
 				} else {
 					seninf_logi(ctx, "get outmux%d cfg failed\n", dest->outmux);
 				}
@@ -2262,6 +2279,7 @@ mtk_cam_seninf_streaming_mux_change(struct mtk_cam_seninf_mux_param *param, bool
 			cfg->tag_cfg[tag_id].filt_dt = vc->dt;
 			cfg->tag_cfg[tag_id].exp_hsize = cur_vc->exp_hsize;
 			cfg->tag_cfg[tag_id].exp_vsize = cur_vc->exp_vsize;
+			cfg->tag_cfg[tag_id].bit_depth = cur_vc->bit_depth;
 		} else {
 			dev_info(ctx->dev, "[%s] get outmux cfg failed\n", __func__);
 			mtk_cam_seninf_outmux_release_all(ctx, &outmux_cfgs);

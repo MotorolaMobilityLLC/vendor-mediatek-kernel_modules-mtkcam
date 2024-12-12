@@ -10,6 +10,7 @@
 #define LOG_INF(format, args...) pr_info(PFX "[%s] " format, __func__, ##args)
 #define PARAM_SIZE 4
 
+#define REDUCE_KO_DEPENDENCY_FOR_SMT
 
 #define SRV_NAME(name)   "com.mediatek.geniezone." name
 
