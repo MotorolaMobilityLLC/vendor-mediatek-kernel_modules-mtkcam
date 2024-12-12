@@ -445,7 +445,11 @@ struct mtk_csi_param {
 	__u32 dphy_csi2_resync_dmy_cycle;
 	__u8 not_fixed_dphy_settle;
 	__u8 dphy_init_deskew_support;
+	__u8 dphy_periodic_deskew_support;
+	__u8 dphy_lrte_support;
 	__u8 cphy_lrte_support;
+	__u8 dphy_alp_support;
+	__u8 cphy_alp_support;
 	__u8 clk_lane_no_initial_flow;
 	__u8 initial_skew;
 };

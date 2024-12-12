@@ -859,7 +859,7 @@ static int get_seninf_ops(struct device *dev, struct seninf_core *core)
 	g_seninf_ops = &mtk_csi_phy_3_0;
 	dev_info(dev, "[%s] phy default mtk-csi-phy-3-0\n", __func__);
 	if (of_property_read_string(dev->of_node, "mtk-iomem-ver", &g_seninf_ops->iomem_ver))
-		g_seninf_ops->iomem_ver = "mt6991";
+		g_seninf_ops->iomem_ver = "mt6993";
 	dev_info(dev, "[%s] mtk_iomem_ver = %s\n", __func__, g_seninf_ops->iomem_ver);
 
 	for (i = CDPHY_DVFS_STEP_0; i < CDPHY_DVFS_STEP_MAX_NUM; i++) {
@@ -2543,9 +2543,9 @@ static int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 	unsigned long flags;
 	int i;
 	bool pad_inited = false;
-#ifdef INIT_DESKEW_DEBUG
+#ifdef INIT_PERIODIC_DESKEW_DEBUG
 	int deskew_dump_idx;
-#endif /*INIT_DESKEW_DEBUG*/
+#endif /*INIT_PERIODIC_DESKEW_DEBUG*/
 
 	/* get current sensor idx by get_sensor_idx */
 	if (!ctx->is_test_model) {
@@ -2627,24 +2627,24 @@ static int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 		// notify_fsync_listen_target(ctx);
 	}
 
-#ifdef INIT_DESKEW_DEBUG
+#ifdef INIT_PERIODIC_DESKEW_DEBUG
 	dev_info(ctx->dev, "[%s]dump after deskew config before stream on\n", __func__);
-	g_seninf_ops->_debug_init_deskew_begin_end_apply_code(ctx);
-#endif /*INIT_DESKEW_DEBUG*/
+	g_seninf_ops->_debug_init_periodic_deskew_begin_end_apply_code(ctx);
+#endif /*INIT_PERIODIC_DESKEW_DEBUG*/
 
 	// stream on sensor after mux set
 	stream_sensor(ctx, enable);
 
-#ifdef INIT_DESKEW_DEBUG
+#ifdef INIT_PERIODIC_DESKEW_DEBUG
 	//read initdeskew irq
 	for(deskew_dump_idx = 0; deskew_dump_idx < 100; deskew_dump_idx++ ) {
-		g_seninf_ops->_debug_init_deskew_irq(ctx);
+		g_seninf_ops->_debug_init_periodic_deskew_irq(ctx);
 		mdelay(1);
 	}
 	dev_info(ctx->dev, "[%s]dump after deskew config after stream on\n", __func__);
-	g_seninf_ops->_debug_init_deskew_begin_end_apply_code(ctx);
+	g_seninf_ops->_debug_init_periodic_deskew_begin_end_apply_code(ctx);
 
-#endif /*INIT_DESKEW_DEBUG*/
+#endif /*INIT_PERIODIC_DESKEW_DEBUG*/
 	ctx->streaming = enable;
 	notify_fsync_listen_target_with_kthread(ctx, 2);
 

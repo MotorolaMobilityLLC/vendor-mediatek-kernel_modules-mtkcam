@@ -34,12 +34,24 @@
 
 /*ULPS-mode support*/
 #undef CDPHY_ULPS_MODE_SUPPORT
-//#define CDPHY_ULPS_MODE_SUPPORT
+// #define CDPHY_ULPS_MODE_SUPPORT
+
+/*Dphy LRTE support*/
+#undef DPHY_LRTE_SUPPORT
+// #define DPHY_LRTE_SUPPORT
+
+/*Dphy ALP support*/
+#undef DPHY_ALP_SUPPORT
+// #define DPHY_ALP_SUPPORT
+
+/*Cphy ALP support*/
+#undef CPHY_ALP_SUPPORT
+// #define CPHY_ALP_SUPPORT
 
 /*init deskew define*/
-#define INIT_DESKEW_SUPPORT
-//#define INIT_DESKEW_UT
-//#define INIT_DESKEW_DEBUG
+#define INIT_PERIODIC_DESKEW_SUPPORT
+//#define INIT_PERIODIC_DESKEW_UT
+//#define INIT_PERIODIC_DESKEW_DEBUG
 
 enum CSIRX_LANE_NUM {
 	CSIRX_LANE_A0 = 0,
@@ -234,8 +246,8 @@ struct mtk_cam_seninf_ops {
 	int (*_set_phya_clock_src)(struct seninf_ctx *ctx);
 	ssize_t (*_show_err_status)(struct device *dev, struct device_attribute *attr, char *buf);
 	int (*_enable_stream_err_detect)(struct seninf_ctx *ctx);
-	int (*_debug_init_deskew_irq)(struct seninf_ctx *ctx);
-	int (*_debug_init_deskew_begin_end_apply_code)(struct seninf_ctx *ctx);
+	int (*_debug_init_periodic_deskew_irq)(struct seninf_ctx *ctx);
+	int (*_debug_init_periodic_deskew_begin_end_apply_code)(struct seninf_ctx *ctx);
 	int (*_debug_current_status)(struct seninf_ctx *ctx);
 	int (*_set_csi_afifo_pop)(struct seninf_ctx *ctx);
 	int (*_get_csi_irq_status)(struct seninf_ctx *ctx);
