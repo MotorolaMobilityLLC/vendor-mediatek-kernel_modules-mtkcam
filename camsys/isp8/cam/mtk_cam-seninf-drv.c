@@ -4469,9 +4469,14 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 	if (!ctx)
 		return -EINVAL;
 
+	if (!ctx->streaming) {
+		dev_info(ctx->dev, "[%s] should not dump during stream off\n", __func__);
+		return ret;
+	}
+
 	if (!force_check && ctx->dbg_last_dump_req != 0 &&
 		ctx->dbg_last_dump_req == seq_id) {
-		dev_info(ctx->dev, "%s skip duplicate dump for req %u\n", __func__, seq_id);
+		dev_info(ctx->dev, "[%s] skip duplicate dump for req %u\n", __func__, seq_id);
 		return 0;
 	}
 
@@ -4500,7 +4505,7 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 
 	ret = pm_runtime_get_sync(ctx->dev);
 	if (ret < 0) {
-		dev_info(ctx->dev, "%s pm_runtime_get_sync ret %d\n", __func__, ret);
+		dev_info(ctx->dev, "[%s] pm_runtime_get_sync ret %d\n", __func__, ret);
 #ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 		pm_runtime_put_noidle(ctx->dev);
 		return ret;
@@ -4511,32 +4516,29 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 	if (!ctx->is_test_model)
 		sensor_sd->ops->core->command(sensor_sd, V4L2_CMD_SENSOR_IN_RESET, &in_reset);
 
-	if (ctx->streaming) {
-		if (!in_reset) {
-			ret = g_seninf_ops->_debug(sd_to_ctx(sd));
-			/* assert */
-			if (assert_when_error && ret != 0) {
-				seninf_aee_print(SENINF_AEE_FRMERR,
-						"Seninf dump with error code: %d\n", ret);
-				asserted = true;
-			}
+	if (!in_reset) {
+		ret = g_seninf_ops->_debug(sd_to_ctx(sd));
+		/* assert */
+		if (assert_when_error && ret != 0) {
+			seninf_aee_print(SENINF_AEE_FRMERR,
+					"Seninf dump with error code: %d\n", ret);
+			asserted = true;
+		}
 #if ESD_RESET_SUPPORT
-			else if (ret != 0 && !ctx->is_test_model) {
-				reset_by_user = is_reset_by_user(sd_to_ctx(sd));
-				if (!reset_by_user){
-					reset_sensor(sd_to_ctx(sd));
-					ctx->esd_status_flag = 1;
-				}
+		else if (ret != 0 && !ctx->is_test_model) {
+			reset_by_user = is_reset_by_user(sd_to_ctx(sd));
+			if (!reset_by_user){
+				reset_sensor(sd_to_ctx(sd));
+				ctx->esd_status_flag = 1;
 			}
+		}
 #endif
-		} else
-			dev_info(ctx->dev, "%s skip dump, sensor is in resetting\n", __func__);
 	} else
-		dev_info(ctx->dev, "%s should not dump during stream off\n", __func__);
+		dev_info(ctx->dev, "[%s] skip dump, sensor is in resetting\n", __func__);
 
 	pm_runtime_put_sync(ctx->dev);
 
-	dev_info(ctx->dev, "%s ret(%d), req(%u), force(%d) reset_by_user(%d) asserted(%d)\n",
+	dev_info(ctx->dev, "[%s] ret(%d), req(%u), force(%d) reset_by_user(%d) asserted(%d)\n",
 		 __func__, ret, seq_id, force_check, reset_by_user, asserted);
 
 	/* return -ESTRPIPE if seninf already assertion,
@@ -4565,9 +4567,14 @@ int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd, bool assert_when_
 	bool in_reset = 0;
 	bool asserted = false;
 
+	if (!ctx->streaming) {
+		dev_info(ctx->dev, "[%s] should not dump during stream off\n", __func__);
+		return ret;
+	}
+
 	ret = pm_runtime_get_sync(ctx->dev);
 	if (ret < 0) {
-		dev_info(ctx->dev, "%s pm_runtime_get_sync ret %d\n", __func__, ret);
+		dev_info(ctx->dev, "[%s] pm_runtime_get_sync ret %d\n", __func__, ret);
 #ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 		pm_runtime_put_noidle(ctx->dev);
 		return ret;
@@ -4578,23 +4585,20 @@ int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd, bool assert_when_
 	sensor_sd->ops->core->command(sensor_sd,
 			V4L2_CMD_SENSOR_IN_RESET, &in_reset);
 
-	if (ctx->streaming) {
-		if (!in_reset) {
-			ret = g_seninf_ops->_debug_current_status(sd_to_ctx(sd));
-			/* assert */
-			if (assert_when_error && ret != 0) {
-				seninf_aee_print(SENINF_AEE_FRMERR,
-						"Seninf dump with error code: %d\n", ret);
-				asserted = true;
-			}
-		} else
-			dev_info(ctx->dev, "%s skip dump, sensor is in resetting\n", __func__);
+	if (!in_reset) {
+		ret = g_seninf_ops->_debug_current_status(sd_to_ctx(sd));
+		/* assert */
+		if (assert_when_error && ret != 0) {
+			seninf_aee_print(SENINF_AEE_FRMERR,
+					"Seninf dump with error code: %d\n", ret);
+			asserted = true;
+		}
 	} else
-		dev_info(ctx->dev, "%s should not dump during stream off\n", __func__);
+		dev_info(ctx->dev, "[%s] skip dump, sensor is in resetting\n", __func__);
 
 	pm_runtime_put_sync(ctx->dev);
 
-	dev_info(ctx->dev, "%s ret(%d),asserted(%d)\n",
+	dev_info(ctx->dev, "[%s] ret(%d),asserted(%d)\n",
 		 __func__, ret, asserted);
 
 	/* return -ESTRPIPE if seninf already assertion,
