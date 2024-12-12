@@ -186,6 +186,8 @@ struct seninf_core {
 	void __iomem *reg_seninf_outmux[SENINF_OUTMUX_NUM];
 	void __iomem *reg_seninf_outmux_inner[SENINF_OUTMUX_NUM];
 
+	void __iomem *reg_csi_top_0;
+	void __iomem *reg_csi_top_1;
 	struct csi_reg_base reg_csi_base[CSI_PORT_PHYSICAL_MAX_NUM];
 	//void __iomem *reg_if;
 	//void __iomem *reg_ana;
@@ -347,6 +349,8 @@ struct seninf_ctx {
 	void __iomem *reg_if_outmux[SENINF_OUTMUX_NUM];
 	void __iomem *reg_if_outmux_inner[SENINF_OUTMUX_NUM];
 	void __iomem *reg_if_tg[SENINF_ASYNC_NUM];
+	void __iomem *reg_csi_top_0;
+	void __iomem *reg_csi_top_1;
 
 	/* resources */
 	struct list_head list_outmux;
