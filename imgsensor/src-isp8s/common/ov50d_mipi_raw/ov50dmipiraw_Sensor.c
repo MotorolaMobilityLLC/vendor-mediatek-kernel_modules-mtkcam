@@ -938,11 +938,11 @@ static int set_streaming_control(void *arg, bool enable)
 
 	if (enable) {
 		/* do streamon after config HW framesync */
-		/*
+
 		subdrv_i2c_wr_u8(ctx, 0x0100, 0X01);
 		DRV_LOG_MUST(ctx,
 			"MODE_SEL(%08x)\n", subdrv_i2c_rd_u8(ctx, 0x0100));
-		*/
+
 		ctx->test_pattern = 0;
 	} else {
 		subdrv_i2c_wr_u8(ctx, 0x0100, 0x00);
@@ -1040,10 +1040,6 @@ static int ov50d_aov_dualsync(struct subdrv_ctx *ctx, u32 role)
 	} else {
 		DRV_LOG_MUST(ctx, "unknown role:%u\n", role);
 	}
-
-	/* streamon */
-	DRV_LOG_MUST(ctx, "SW workaround re-streamon ov50d\n");
-	subdrv_i2c_wr_u8(ctx, 0x0100, 0x01);
 
 	return 0;
 }
