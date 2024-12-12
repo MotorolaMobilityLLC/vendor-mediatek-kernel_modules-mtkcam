@@ -29,7 +29,7 @@ typedef int64_t s64;
 #define IMG_MAX_HW_OUTPUTS	4
 
 #ifndef IMG_MAX_HW_DMAS
-#define IMG_MAX_HW_DMAS	(176)
+#define IMG_MAX_HW_DMAS	(181)
 #endif
 
 #define IMG_MAX_PLANES	3
