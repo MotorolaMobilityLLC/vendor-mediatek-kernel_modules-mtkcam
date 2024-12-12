@@ -1920,6 +1920,9 @@ int imgsys_cmdq_sendtask_plat8(struct mtk_imgsys_dev *imgsys_dev,
 				u64 (*imgsys_get_iova)(struct dma_buf *dma_buf, s32 ionFd,
 					struct mtk_imgsys_dev *imgsys_dev,
 					struct mtk_imgsys_dev_buffer *dev_buf),
+				u64 (*imgsys_get_kva)(struct dma_buf *dma_buf, s32 ionFd,
+					struct mtk_imgsys_dev *imgsys_dev,
+					struct mtk_imgsys_dev_buffer *dev_buf),
 				int (*is_singledev_mode)(struct mtk_imgsys_request *req))
 {
 	struct cmdq_client *clt = NULL;

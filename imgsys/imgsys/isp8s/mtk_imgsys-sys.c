@@ -218,9 +218,7 @@ static void mtk_imgsys_iova_map_tbl_unmap(struct mtk_imgsys_request *req)
 						&dmabufiovainfo->dma_addr);
 				}
 				//put dmabuf(iova)
-				mtk_imgsys_put_dma_buf(dmabufiovainfo->dma_buf,
-						dmabufiovainfo->attach,
-						dmabufiovainfo->sgt);
+				mtk_imgsys_put_dma_buf(dmabufiovainfo);
 				//free dmabuf
 				spin_lock(&dev_buf->iova_map_table.lock);
 				list_del(&dmabufiovainfo->list_entry);
@@ -251,9 +249,7 @@ static void mtk_imgsys_iova_map_tbl_unmap_sd(struct mtk_imgsys_request *req)
 					&dmabufiovainfo->dma_addr);
 			}
 			//put dmabuf(iova)
-			mtk_imgsys_put_dma_buf(dmabufiovainfo->dma_buf,
-					dmabufiovainfo->attach,
-					dmabufiovainfo->sgt);
+			mtk_imgsys_put_dma_buf(dmabufiovainfo);
 			//free dmabuf
 			spin_lock(&dev_buf->iova_map_table.lock);
 			list_del(&dmabufiovainfo->list_entry);
@@ -1546,7 +1542,8 @@ static void imgsys_runner_func(void *data)
 		hcp_ops->get_gce_mb(imgsys_dev->scp_pdev, mode);
 
 	ret = imgsys_cmdq_sendtask(imgsys_dev, frm_info, imgsys_mdp_cb_func,
-		imgsys_cmdq_timeout_cb_func, mtk_imgsys_get_iova, is_singledev_mode);
+		imgsys_cmdq_timeout_cb_func, mtk_imgsys_get_iova, mtk_imgsys_get_kva,
+		is_singledev_mode);
 	IMGSYS_SYSTRACE_END();
 #ifdef REQ_TIMESTAMP
 	req->tstate.time_cmqret = ktime_get_boottime_ns()/1000;

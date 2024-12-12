@@ -134,10 +134,12 @@ struct mtk_imgsys_req_dma_buf_iova_list {
 struct mtk_imgsys_dma_buf_iova_get_info {
 	s32 ionfd;
 	dma_addr_t dma_addr;
+	unsigned long kva;
 	/* ION case only */
 	struct dma_buf *dma_buf;
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
+	struct iosys_map map;
 	struct list_head list_entry;
 	struct hlist_node hnode;
 };
@@ -608,6 +610,10 @@ u64 mtk_imgsys_get_iova(struct dma_buf *dma_buf, s32 ionFd,
 				struct mtk_imgsys_dev *imgsys_dev,
 				struct mtk_imgsys_dev_buffer *dev_buf);
 
+u64 mtk_imgsys_get_kva(struct dma_buf *dma_buf, s32 ionFd,
+				struct mtk_imgsys_dev *imgsys_dev,
+				struct mtk_imgsys_dev_buffer *dev_buf);
+
 bool is_desc_fmt(const struct mtk_imgsys_dev_format *dev_fmt);
 
 void mtk_imgsys_desc_ipi_params_config(struct mtk_imgsys_request *req);
@@ -740,9 +746,7 @@ int mtk_imgsys_can_enqueue(struct mtk_imgsys_dev *imgsys_dev,
 void mtk_imgsys_desc_map_iova(struct mtk_imgsys_request *req);
 void mtk_imgsys_sd_desc_map_iova(struct mtk_imgsys_request *req);
 
-void mtk_imgsys_put_dma_buf(struct dma_buf *dma_buf,
-				struct dma_buf_attachment *attach,
-				struct sg_table *sgt);
+void mtk_imgsys_put_dma_buf(struct mtk_imgsys_dma_buf_iova_get_info *dma_info);
 void mtk_imgsys_mod_get(struct mtk_imgsys_dev *imgsys_dev);
 void mtk_imgsys_mod_put(struct mtk_imgsys_dev *imgsys_dev);
 

@@ -1362,9 +1362,7 @@ static int mtk_imgsys_subdev_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh
 
 	list_for_each_entry_safe(iova_info, tmp,
 		&pipe->iova_cache.list, list_entry) {
-		mtk_imgsys_put_dma_buf(iova_info->dma_buf,
-		iova_info->attach,
-		iova_info->sgt);
+		mtk_imgsys_put_dma_buf(iova_info);
 		spin_lock(&pipe->iova_cache.lock);
 		list_del(&iova_info->list_entry);
 		hash_del(&iova_info->hnode);
@@ -1585,6 +1583,7 @@ static int mtkdip_ioc_add_iova(struct v4l2_subdev *subdev, void *arg)
 	struct dma_buf *dmabuf;
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
+	struct iosys_map map;
 	dma_addr_t dma_addr;
 	unsigned int *kfd;
 	size_t size;
@@ -1655,6 +1654,28 @@ static int mtkdip_ioc_add_iova(struct v4l2_subdev *subdev, void *arg)
 
 		dma_addr = sg_dma_address(sgt->sgl);
 
+		/* Add for kva */
+		dma_buf_begin_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
+		#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+		ret = dma_buf_vmap_unlocked(dmabuf, &map);
+		#else
+		ret = dma_buf_vmap(dmabuf, &map);
+		#endif
+		if (ret) {
+			dma_buf_end_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
+			#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+			dma_buf_unmap_attachment_unlocked(attach, sgt,
+				DMA_BIDIRECTIONAL);
+			#else
+			dma_buf_unmap_attachment(attach, sgt,
+				DMA_BIDIRECTIONAL);
+			#endif
+			dma_buf_detach(dmabuf, attach);
+			dma_buf_put(dmabuf);
+			pr_info("%s, dma_buf_vmap failed(%d)\n", __func__, ret);
+			return -ENOMEM;
+		}
+
 		fd_iova = vzalloc(sizeof(*fd_iova));
 		if (fd_iova == NULL)
 			return -ENOMEM;
@@ -1663,6 +1684,8 @@ static int mtkdip_ioc_add_iova(struct v4l2_subdev *subdev, void *arg)
 		fd_iova->dma_buf = dmabuf;
 		fd_iova->attach = attach;
 		fd_iova->sgt = sgt;
+		fd_iova->kva = (u64)map.vaddr;
+		fd_iova->map = map;
 		if (imgsys_dbg_enable())
 			dev_dbg(pipe->imgsys_dev->dev,
 				"%s:dma_buf:%lx,attach:%lx,sgt:%lx\n", __func__,
@@ -1747,9 +1770,7 @@ static int mtkdip_ioc_del_iova(struct v4l2_subdev *subdev, void *arg)
 		spin_unlock(&pipe->iova_cache.lock);
 
 		if (found) {
-			mtk_imgsys_put_dma_buf(iova_info->dma_buf,
-					iova_info->attach,
-					iova_info->sgt);
+			mtk_imgsys_put_dma_buf(iova_info);
 			vfree(iova_info);
 		}
 		fd_info.fds_size[i] = dmabuf->size;
@@ -2117,8 +2138,9 @@ static int mtkdip_ioc_acquire_iova(struct v4l2_subdev *subdev, void *arg)
 	struct dma_buf *dmabuf;
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
+	struct iosys_map map;
 	dma_addr_t dma_addr;
-	int i;
+	int i, ret;
 	uint8_t acp_coherence_enable;
 
 	if (!fd_tbl->fds[0].fd) {
@@ -2178,6 +2200,28 @@ static int mtkdip_ioc_acquire_iova(struct v4l2_subdev *subdev, void *arg)
 
 		dma_addr = sg_dma_address(sgt->sgl);
 
+		/* Add for kva */
+		dma_buf_begin_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
+		#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+		ret = dma_buf_vmap_unlocked(dmabuf, &map);
+		#else
+		ret = dma_buf_vmap(dmabuf, &map);
+		#endif
+		if (ret) {
+			dma_buf_end_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
+			#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+			dma_buf_unmap_attachment_unlocked(attach, sgt,
+				DMA_BIDIRECTIONAL);
+			#else
+			dma_buf_unmap_attachment(attach, sgt,
+				DMA_BIDIRECTIONAL);
+			#endif
+			dma_buf_detach(dmabuf, attach);
+			dma_buf_put(dmabuf);
+			pr_info("%s, dma_buf_vmap failed(%d)\n", __func__, ret);
+			return -ENOMEM;
+		}
+
 		fd_iova = vzalloc(sizeof(*fd_iova));
 		if (fd_iova == NULL)
 			return -ENOMEM;
@@ -2186,6 +2230,8 @@ static int mtkdip_ioc_acquire_iova(struct v4l2_subdev *subdev, void *arg)
 		fd_iova->dma_buf = dmabuf;
 		fd_iova->attach = attach;
 		fd_iova->sgt = sgt;
+		fd_iova->kva = (u64)map.vaddr;
+		fd_iova->map = map;
 		if (imgsys_dbg_enable())
 			dev_info(pipe->imgsys_dev->dev,
 				"%s:dma_buf:%lx,attach:%lx,sgt:%lx,acp(%d)\n",
@@ -2248,9 +2294,7 @@ static int mtkdip_ioc_release_iova(struct v4l2_subdev *subdev, void *arg)
 		spin_unlock(&pipe->iova_cache.lock);
 
 		if (found) {
-			mtk_imgsys_put_dma_buf(iova_info->dma_buf,
-					iova_info->attach,
-					iova_info->sgt);
+			mtk_imgsys_put_dma_buf(iova_info);
 			vfree(iova_info);
 		}
 		dma_buf_put(dmabuf);

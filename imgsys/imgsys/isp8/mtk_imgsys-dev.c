@@ -663,20 +663,168 @@ err_attach:
 	return 0;
 }
 
-void mtk_imgsys_put_dma_buf(struct dma_buf *dma_buf,
-				struct dma_buf_attachment *attach,
-				struct sg_table *sgt)
+u64 mtk_imgsys_get_kva(struct dma_buf *dma_buf, s32 ionFd,
+				struct mtk_imgsys_dev *imgsys_dev,
+				struct mtk_imgsys_dev_buffer *dev_buf)
 {
-	if (!IS_ERR(dma_buf)) {
+	dma_addr_t dma_addr;
+	unsigned long kva;
+	struct iosys_map map;
+	struct device *dev;
+	struct dma_buf_attachment *attach;
+	struct sg_table *sgt;
+	struct mtk_imgsys_pipe *pipe = &imgsys_dev->imgsys_pipe[0];
+	struct mtk_imgsys_dma_buf_iova_get_info *iova_info;
+	bool cache = false;
+	int ret = 0;
+
+	spin_lock(&pipe->iova_cache.lock);
+#ifdef LINEAR_CACHE
+	list_for_each_entry(iova_info, &pipe->iova_cache.list, list_entry) {
+#else
+	hash_for_each_possible(pipe->iova_cache.hlists, iova_info, hnode, ionFd) {
+#endif
+#ifndef MTK_IOVA_NOTCHECK
+		if ((ionFd == iova_info->ionfd) &&
+				(dma_buf == iova_info->dma_buf)) {
+			cache = true;
+			//dma_addr = iova_info->dma_addr;
+			kva = iova_info->kva;
+			dma_buf_put(dma_buf);
+			break;
+		}
+#else
+		if (ionFd == iova_info->ionfd) {
+			cache = true;
+			//dma_addr = iova_info->dma_addr;
+			kva = iova_info->kva;
+			if (dma_buf != NULL)
+				dma_buf_put(dma_buf);
+			break;
+		}
+#endif
+	}
+	spin_unlock(&pipe->iova_cache.lock);
+
+	if (cache) {
+		if (imgsys_dbg_enable())
+			dev_dbg(imgsys_dev->dev, "%s fd:%d cache hit\n", __func__, ionFd);
+		return kva;
+	}
+
+	if (dma_buf == NULL)
+		dma_buf = dma_buf_get(ionFd);
+
+	if (IS_ERR_OR_NULL(dma_buf)) {
+		dev_info(imgsys_dev->dev, "%s: get dma_buf fail 0x%lx",
+				__func__, (unsigned long)dma_buf);
+		return 0;
+	}
+
+	dma_buf_begin_cpu_access(dma_buf, DMA_BIDIRECTIONAL);
+	#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+	ret = dma_buf_vmap_unlocked(dma_buf, &map);
+	#else
+	ret = dma_buf_vmap(dma_buf, &map);
+	#endif
+	if (ret) {
+		pr_info("%s, map kernel va failed(%d)\n", __func__, ret);
+		ret = -ENOMEM;
+		goto err_vmap_kva;
+	}
+
+	dev = imgsys_dev->smmu_dev;
+
+	attach = dma_buf_attach(dma_buf, dev);
+
+	if (IS_ERR(attach))
+		goto err_attach_kva;
+
+	#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+	sgt = dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
+	#else
+	sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
+	#endif
+
+	if (IS_ERR(sgt))
+		goto err_map_kva;
+
+	dma_addr = sg_dma_address(sgt->sgl);
+
+	if (imgsys_dbg_enable())
+		dev_dbg(imgsys_dev->dev,
+			"%s - sg_dma_address : ionFd(%d)-dma_addr:%lx\n",
+			__func__, ionFd, (unsigned long)dma_addr);
+
+	//add dma_buf_info_list to req for GCECB put it back
+	//add dmainfo to ionmaplist
+	{
+		struct mtk_imgsys_dma_buf_iova_get_info *ion;
+
+		ion = vzalloc(sizeof(*ion));
+		if (ion == NULL)
+			return -ENOMEM;
+		ion->ionfd = ionFd;
+		ion->dma_addr = dma_addr;
+		ion->dma_buf = dma_buf;
+		ion->attach = attach;
+		ion->sgt = sgt;
+		ion->kva = (u64)map.vaddr;
+		ion->map = map;
+	if (imgsys_dbg_enable()) {
+		pr_debug("mtk_imgsys_dma_buf_iova_get_info:dma_buf:%lx,attach:%lx,sgt:%lx\n",
+			(unsigned long)ion->dma_buf, (unsigned long)ion->attach, (unsigned long)ion->sgt);
+	}
+
+		// add data to list head
+		spin_lock(&dev_buf->iova_map_table.lock);
+		list_add_tail(&ion->list_entry, &dev_buf->iova_map_table.list);
+		spin_unlock(&dev_buf->iova_map_table.lock);
+	}
+
+	return (u64)map.vaddr;
+
+err_map_kva:
+	pr_info("%s: err_map_kva", __func__);
+	dma_buf_detach(dma_buf, attach);
+
+err_attach_kva:
+	pr_info("%s: err_attach_kva", __func__);
+	#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+	dma_buf_vunmap_unlocked(dma_buf, &map);
+	#else
+	dma_buf_vunmap(dma_buf, &map);
+	#endif
+
+err_vmap_kva:
+	pr_info("%s: err_vmap_kva", __func__);
+	dma_buf_end_cpu_access(dma_buf, DMA_BIDIRECTIONAL);
+	dma_buf_put(dma_buf);
+
+	return 0;
+}
+
+
+void mtk_imgsys_put_dma_buf(struct mtk_imgsys_dma_buf_iova_get_info *dma_info)
+{
+	if (!IS_ERR(dma_info->dma_buf)) {
+		if (dma_info->kva != 0) {
+			#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
+			dma_buf_vunmap_unlocked(dma_info->dma_buf, &dma_info->map);
+			#else
+			dma_buf_vunmap(dma_info->dma_buf, &dma_info->map);
+			#endif
+			dma_buf_end_cpu_access(dma_info->dma_buf, DMA_BIDIRECTIONAL);
+		}
 		#if KERNEL_VERSION(6, 4, 0) <= LINUX_VERSION_CODE
-		dma_buf_unmap_attachment_unlocked(attach, sgt,
+		dma_buf_unmap_attachment_unlocked(dma_info->attach, dma_info->sgt,
 			DMA_BIDIRECTIONAL);
 		#else
-		dma_buf_unmap_attachment(attach, sgt,
+		dma_buf_unmap_attachment(dma_info->attach, dma_info->sgt,
 			DMA_BIDIRECTIONAL);
 		#endif
-		dma_buf_detach(dma_buf, attach);
-		dma_buf_put(dma_buf);
+		dma_buf_detach(dma_info->dma_buf, dma_info->attach);
+		dma_buf_put(dma_info->dma_buf);
 	}
 }
 

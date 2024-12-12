@@ -115,6 +115,7 @@ enum mtk_imgsys_cmd {
 	IMGSYS_CMD_LOAD = 0,
 	IMGSYS_CMD_MOVE,
 	IMGSYS_CMD_READ,
+	IMGSYS_CMD_READ_FD,
 	IMGSYS_CMD_WRITE,
 	IMGSYS_CMD_WRITE_FD,
 	IMGSYS_CMD_WRITE_FD_HW,
@@ -208,6 +209,9 @@ int imgsys_cmdq_sendtask(struct mtk_imgsys_dev *imgsys_dev,
 				u64 (*imgsys_get_iova)(struct dma_buf *dma_buf, s32 ionFd,
 					struct mtk_imgsys_dev *imgsys_dev,
 					struct mtk_imgsys_dev_buffer *dev_buf),
+				u64 (*imgsys_get_kva)(struct dma_buf *dma_buf, s32 ionFd,
+					struct mtk_imgsys_dev *imgsys_dev,
+					struct mtk_imgsys_dev_buffer *dev_buf),
 				int (*is_singledev_mode)(struct mtk_imgsys_request *req));
 /*
  * int imgsys_cmdq_parser(struct swfrm_info_t *frm_info, struct cmdq_pkt *pkt,
@@ -278,6 +282,9 @@ struct imgsys_cmdq_cust_data {
 			void (*cmdq_err_cb)(struct cmdq_cb_data data,
 			uint32_t fail_uinfo_idx, bool isHWhang, uint32_t hangEvent),
 			u64 (*imgsys_get_iova)(struct dma_buf *dma_buf, s32 ionFd,
+				struct mtk_imgsys_dev *imgsys_dev,
+				struct mtk_imgsys_dev_buffer *dev_buf),
+			u64 (*imgsys_get_kva)(struct dma_buf *dma_buf, s32 ionFd,
 				struct mtk_imgsys_dev *imgsys_dev,
 				struct mtk_imgsys_dev_buffer *dev_buf),
 			int (*is_singledev_mode)(struct mtk_imgsys_request *req));

@@ -238,13 +238,16 @@ int imgsys_cmdq_sendtask(struct mtk_imgsys_dev *imgsys_dev,
 				u64 (*imgsys_get_iova)(struct dma_buf *dma_buf, s32 ionFd,
 					struct mtk_imgsys_dev *imgsys_dev,
 					struct mtk_imgsys_dev_buffer *dev_buf),
+				u64 (*imgsys_get_kva)(struct dma_buf *dma_buf, s32 ionFd,
+					struct mtk_imgsys_dev *imgsys_dev,
+					struct mtk_imgsys_dev_buffer *dev_buf),
 				int (*is_singledev_mode)(struct mtk_imgsys_request *req))
 {
 	int ret = 0;
 	struct mtk_imgcmdq_dev *cmdq_dev = platform_get_drvdata(imgsys_dev->imgcmdq_pdev);
 
 	ret = cmdq_dev->cust_data->cmdq_sendtask(imgsys_dev, frm_info, cmdq_cb, cmdq_err_cb,
-						imgsys_get_iova, is_singledev_mode);
+						imgsys_get_iova, imgsys_get_kva, is_singledev_mode);
 	return ret;
 }
 EXPORT_SYMBOL(imgsys_cmdq_sendtask);
