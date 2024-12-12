@@ -15,43 +15,50 @@
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
 
 #include "iommu_debug.h"
-#ifdef WPE_TF_DUMP_7SP_1
-#include <dt-bindings/memory/mt6897-larb-port.h>
-#endif
+// #ifdef WPE_TF_DUMP_7SP_1
+// #include <dt-bindings/memory/mt6897-larb-port.h>
+// #endif
 
-#define M4U_PORT_DUMMY_EIS  (0)
-#define M4U_PORT_DUMMY_TNR  (1)
-#define M4U_PORT_DUMMY_LITE (2)
+// #define M4U_PORT_DUMMY_EIS  (0)
+// #define M4U_PORT_DUMMY_TNR  (1)
+// #define M4U_PORT_DUMMY_LITE (2)
 
 #include "mtk_imgsys-wpe.h"
 #include "mtk-hcp.h"
 #include "mtk_imgsys-v4l2-debug.h"
 #include "../../cmdq/isp8s/mtk_imgsys-cmdq-qof.h"
 
-#define WPE_A_BASE        (0x34200000)
-#define WPE_A_BASE_P      (0x15200000)  /* imgsys_dev->dev_ver is 1 */
+#define WPE_A_BASE        (0x34240000)
+// #define WPE_A_BASE_P      (0x15200000)  /* imgsys_dev->dev_ver is 1 */
+
+// WPE_EIS: 0x34240000 ~ 0x34241200
+// WPE_TNR: ISP8S doesn't have WPE_TNR, but still define it in .dts
+// WPE_LITE: 0x34640000 ~ 0x34241200
 const unsigned int mtk_imgsys_wpe_base_ofst[] = {0x0, 0x300000, 0x400000};
 #define WPE_HW_NUM        ARRAY_SIZE(mtk_imgsys_wpe_base_ofst)
+const unsigned int mtk_imgsys_wpe_reg_size[] = {0x1200, 0x1200, 0x1200};
 
 //CTL_MOD_EN
-#define PQDIP_DL  0x40
-#define DIP_DL    0x80
-#define TRAW_DL   0x1000
+#define PQDIP_DL  0x40    // WPE_TOP_MDPCROP_EN (6,6)
+#define DIP_DL    0x80    // WPE_TOP_ISPCROP_EN (7,7)
+#define TRAW_DL   0x1000  // WPE_TOP_TILERAW_CROP_EN: (12,12)
+#define DECOMP_EN 0x400   // WPE_TOP_DECOMP_EN (10,10)
 
-// for CQ_THR0_CTL ~ CQ_THR14CTL
-#define CQ_THRX_CTL_EN (1L << 0)
-#define CQ_THRX_CTL_MODE (1L << 4)//immediately mode
-#define CQ_THRX_CTL	(CQ_THRX_CTL_EN | CQ_THRX_CTL_MODE)
+// no use
+// // for CQ_THR0_CTL ~ CQ_THR14CTL
+// #define CQ_THRX_CTL_EN (1L << 0)
+// #define CQ_THRX_CTL_MODE (1L << 4)//immediately mode
+// #define CQ_THRX_CTL	(CQ_THRX_CTL_EN | CQ_THRX_CTL_MODE)
 
 // register ofst
-#define WPE_REG_DBG_SET     (0x3C)
-#define WPE_REG_DBG_PORT    (0x40)
-#define WPE_REG_DMA_DBG_SET     (0xEA8)
-#define WPE_REG_DMA_DBG_PORT    (0xEB0)
-#define WPE_REG_CQ_THR0_CTL (0xC48)
-#define WPE_REG_CQ_THR1_CTL (0xC58)
-#define WPE_REG_DEC_CTL1    (0xFC0)
-#define SW_RST   (0x000C)
+#define WPE_REG_DBG_SET     (0x3C)  // WPE_E1A_WPE_TOP_CTL_DBG_SET
+#define WPE_REG_DBG_PORT    (0x40)  // WPE_E1A_WPE_TOP_CTL_DBG_PORT
+#define WPE_REG_DMA_DBG_SET     (0xEA8) // WPE_DMATOP_E1A_WPE_DMATOP_DMA_DBG_SEL
+#define WPE_REG_DMA_DBG_PORT    (0xEB0)  // WPE_DMATOP_E1A_WPE_DMATOP_DMA_DBG_PORT
+#define WPE_REG_CQ_THR0_CTL (0xC48)  // DIPCQ_E1A_DIPCQ_CQ_THR0_CTL
+#define WPE_REG_CQ_THR1_CTL (0xC58)  // DIPCQ_E1A_DIPCQ_CQ_THR1_CTL
+#define WPE_REG_DEC_CTL1    (0xFC0)  // WPE_DEC_E1A_WPE_DEC_DEC_CTL1
+// #define SW_RST   (0x000C)
 
 const struct mtk_imgsys_init_array
 			mtk_imgsys_wpe_init_ary[] = {
@@ -63,7 +70,35 @@ const struct mtk_imgsys_init_array
 	{0x00E8, 0xFFFFFFFF}, /* WPE_TOP_CQ_IRQ_STX3, w-clr */
 	{0x0118, 0x080A0A82}, /* WPE_TOP_STG_CTL */
 	{0x011C, 0x00002001}, /* WPE_TOP_STG_CTL_RANGE_UD */
-	{0x0124, 0x00010010}, /* WPE_TOP_STG_CTL_RANGE_LR */
+	{0x0120, 0x00010010}, /* WPE_TOP_STG_CTL_RANGE_LR jayer*/
+	// {0x0124, 0x00010010}, /* WPE_TOP_STG_CTL_RANGE_LR  liber*/
+
+	// {0x04A0, 0x10000040}, /* SVECI_CON, fifo size 0x40 */
+	// {0x04A4, 0x10400040}, /* SVECI_CON2, set pre-ultra */
+	// {0x04A8, 0x00400040}, /* SVECI_CON3, disable ultra */
+	// {0x0660, 0x10000040}, /* VECI_CON, fifo size 0x40 */
+	// {0x0664, 0x10400040}, /* VECI_CON2, set pre-ultra */
+	// {0x0668, 0x00400040}, /* VECI_CON3, disable ultra */
+	// {0x06E0, 0x10000040}, /* VEC2I_CON, fifo size 0x40 */
+	// {0x06E4, 0x10400040}, /* VEC2I_CON2, set pre-ultra */
+	// {0x06E8, 0x00400040}, /* VEC2I_CON3, disable ultra */
+	// {0x0760, 0x10000040}, /* SVEC2I_CON, fifo size 0x40 */
+	// {0x0764, 0x10400040}, /* SVEC2I_CON2, set pre-ultra */
+	// {0x0768, 0x00400040}, /* SVEC2I_CON3, disable ultra */
+	// {0x0B44, 0x00000002}, /* WPE_CACHE_RWCTL_CTL */
+	// {0x0B88, 0x00400040}, /* WPE_CACHE_CACHI_CON2_0 */
+	// {0x0B8C, 0x00400040}, /* WPE_CACHE_CACHI_CON3_0 */
+	// {0x07E0, 0x10000040}, /* WPEO_CON, fifo size 0x40 */
+	// {0x07E4, 0x10400040}, /* WPEO_CON2, set pre-ultra */
+	// {0x07E8, 0x00400040}, /* WPEO_CON3, disable ultra */
+	// {0x08A0, 0x10000040}, /* WPEO2_CON, fifo size 0x40 */
+	// {0x08A4, 0x10400040}, /* WPEO2_CON2, set pre-ultra */
+	// {0x08A8, 0x00400040}, /* WPEO2_CON3, disable ultra */
+	// {0x0960, 0x10000040}, /* MSKO_CON, fifo size 0x40 */
+	// {0x0964, 0x10400040}, /* MSKO_CON2, set pre-ultra */
+	// {0x0968, 0x00400040}, /* MSKO_CON3, disable ultra */
+	// {0x0A80, 0x00000000}, /* WPE_STG_EN_CTRL */
+	// {0x0EA0, 0x80000000}, /* WPE_DMA_DMA_ERR_CTRL */
 };
 #define WPE_INIT_ARRAY_COUNT  ARRAY_SIZE(mtk_imgsys_wpe_init_ary)
 
@@ -71,25 +106,25 @@ struct imgsys_reg_range {
 	uint32_t str;
 	uint32_t end;
 };
-const struct imgsys_reg_range wpe_regs[] = {
-	{0x0000, 0x077C}, /* TOP,VECI,VEC2I,SVECI,SVEC2I */
-	{0x07C0, 0x07FC}, /* WPEO */
-	{0x0880, 0x08BC}, /* WPEO2 */
-	{0x0940, 0x097C}, /* MSKO */
-	{0x0A00, 0x0A5C}, /* VGEN */
-	{0x0A80, 0x0B3C}, /* STG */
-	{0x0B40, 0x0BA0}, /* CACHE */
-	{0x0C40, 0x0C64}, /* CQ */
-	{0x0EA0, 0x0ED4}, /* DMA */
-	{0x0F00, 0x0FC4}, /* DEC */
 
-};
-#define WPE_REG_ARRAY_COUNT	ARRAY_SIZE(wpe_regs)
+// Need to align with userspace's wpe_hw.h
+union wpe_cq_cmd_desc_t {
+	struct {
+		// 1st word
+		uint32_t reg_offset_address : 24;  // apb initial address
+		uint32_t dummy_0 : 6;  // all zeros
+		uint32_t code : 2;  // descriptor code, 0x0: pab, 0x1: null, 0x3: end_marker
 
-struct mtk_imgsys_wpe_dtable {
-	uint32_t empty;
-	uint32_t addr;
-	uint32_t addr_msb;
+		// 2nd word
+		uint32_t dram_addr_lsb : 32;  // dram lsb address
+
+		// 3rd word
+		uint32_t dram_addr_msb : 4;  // dram msb address
+		uint32_t dummy_1 : 12;  // all zeros
+		uint32_t reg_count : 14;  // register count
+		uint32_t dummy_2 : 2;  // all zeros
+	};
+	uint32_t raw[3];
 };
 
 void __iomem *gWpeRegBA[WPE_HW_NUM] = {0L};
@@ -99,11 +134,11 @@ int imgsys_wpe_tfault_callback(int port,
 {
 	void __iomem *wpeRegBA = 0L;
 	unsigned int larb = 0;
-	unsigned int i =0, j = 0;
-	unsigned int wpeBase = 0;
 	unsigned int engine = 0;
 	int ret = 0;
 	bool is_qof = false;
+	unsigned int ofst_idx;
+	int i;
 
 	pr_debug("%s: +\n", __func__);
 	/* port: [10:5] larb / larb11: wpe_eis; larb22: wpe_tnr; larb23: wpe_lite */
@@ -114,7 +149,8 @@ int imgsys_wpe_tfault_callback(int port,
 
 	/* iomap registers */
 	engine = (larb == 11) ? REG_MAP_E_WPE_EIS : ((larb == 22) ? REG_MAP_E_WPE_TNR : REG_MAP_E_WPE_LITE);
-	wpeRegBA = gWpeRegBA[engine - REG_MAP_E_WPE_EIS];
+	ofst_idx = engine - REG_MAP_E_WPE_EIS;
+	wpeRegBA = gWpeRegBA[ofst_idx];
 	if (!wpeRegBA) {
 		pr_info("%s: WPE_%d, RegBA=0", __func__, port);
 		return 1;
@@ -126,20 +162,18 @@ int imgsys_wpe_tfault_callback(int port,
 		return 1;
 	}
 	pr_info("%s: ==== Dump WPE_%d, TF port: 0x%x =====",
-		__func__, (engine - REG_MAP_E_WPE_EIS), port);
+		__func__, ofst_idx, port);
 
-	//
-	wpeBase = WPE_A_BASE + mtk_imgsys_wpe_base_ofst[(engine - REG_MAP_E_WPE_EIS)];
-	for (j = 0; j < WPE_REG_ARRAY_COUNT; j++) {
-		for (i = wpe_regs[j].str; i <= wpe_regs[j].end; i += 0x10) {
-			pr_info("%s: [0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X", __func__,
-				(unsigned int)(wpeBase + i),
-				(unsigned int)ioread32((void *)(wpeRegBA + i)),
-				(unsigned int)ioread32((void *)(wpeRegBA + i + 0x4)),
-				(unsigned int)ioread32((void *)(wpeRegBA + i + 0x8)),
-				(unsigned int)ioread32((void *)(wpeRegBA + i + 0xC)));
-		}
+	// Dump all wpe register
+	for (i = 0; i < mtk_imgsys_wpe_reg_size[ofst_idx]; i += 0x10) {
+		pr_info("%s: [0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X", __func__,
+			(unsigned int)(WPE_A_BASE + mtk_imgsys_wpe_base_ofst[ofst_idx] + i),
+			(unsigned int)ioread32((void *)(wpeRegBA + i)),
+			(unsigned int)ioread32((void *)(wpeRegBA + i + 0x4)),
+			(unsigned int)ioread32((void *)(wpeRegBA + i + 0x8)),
+			(unsigned int)ioread32((void *)(wpeRegBA + i + 0xC)));
 	}
+
 	smi_isp_wpe2_tnr_put((void *)&is_qof);
 
 	return 1;
@@ -216,10 +250,9 @@ bool imgsys_wpe_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine)
 		return ret;
 	}
 
-	if (imgsys_dev->dev_ver == 1)
-		wpeBase = WPE_A_BASE_P + mtk_imgsys_wpe_base_ofst[ofst_idx];
-	else
-		wpeBase = WPE_A_BASE + mtk_imgsys_wpe_base_ofst[ofst_idx];
+	// if (imgsys_dev->dev_ver == 1)
+	// wpeBase = WPE_A_BASE_P + mtk_imgsys_wpe_base_ofst[ofst_idx];
+	wpeBase = WPE_A_BASE + mtk_imgsys_wpe_base_ofst[ofst_idx];
 
 	wpeRegBA = gWpeRegBA[ofst_idx];
 	if (!wpeRegBA) {
@@ -252,7 +285,7 @@ void imgsys_wpe_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 	struct mtk_imgsys_request *req = NULL;
 	struct mtk_imgsys_dev_buffer *dev_b = 0;
 	u64 *u_cq_desc = NULL;
-	struct mtk_imgsys_wpe_dtable *dtable = NULL;
+	union wpe_cq_cmd_desc_t *cq_desc = NULL;
 	unsigned int tun_ofst = 0;
 	struct flush_buf_info wpe_buf_info;
 	void *cq_base = NULL;
@@ -264,6 +297,7 @@ void imgsys_wpe_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 		if (!user_info->priv[i].need_update_desc)
 			continue;
 
+		// Update WPE_A_UFOD_P2 cq descriptor
 		if (user_info->priv[i].buf_fd) {
 			#ifndef MTK_IOVA_NOTCHECK
 			dbuf = dma_buf_get(user_info->priv[i].buf_fd);
@@ -274,45 +308,51 @@ void imgsys_wpe_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			u_iova_addr = imgsys_dev->imgsys_get_iova(dbuf,
 					user_info->priv[i].buf_fd,
 					imgsys_dev, dev_b) + user_info->priv[i].buf_offset;
+
 			u_cq_desc = (u64 *)((void *)(cq_base +
 				user_info->priv[i].desc_offset +
-				(WPE_UFOD_P2_DESC_OFST * (sizeof(struct mtk_imgsys_wpe_dtable)))));
+				(WPE_UFOD_P2_DESC_OFST * (sizeof(union wpe_cq_cmd_desc_t)))));
 
-			dtable = (struct mtk_imgsys_wpe_dtable *)u_cq_desc;
-			dtable->addr = u_iova_addr & 0xFFFFFFFF;
-			dtable->addr_msb = (u_iova_addr >> 32) & 0xF;
-			if (imgsys_wpe_8s_dbg_enable())
-				pr_debug("%s: buf_fd(0x%08x) buf_ofst(0x%08x) buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
+			cq_desc = (union wpe_cq_cmd_desc_t *)u_cq_desc;
+			cq_desc->dram_addr_lsb = u_iova_addr & 0xFFFFFFFF;
+			cq_desc->dram_addr_msb = (u_iova_addr >> 32) & 0xF;
+			if (imgsys_wpe_8s_dbg_enable()) {
+				pr_debug("%s: buf_fd(0x%08x) buf_ofst(0x%08x) buf_iova(0x%llx)\n",
 					__func__, user_info->priv[i].buf_fd,
-					user_info->priv[i].buf_offset,
-					u_iova_addr, user_info->priv[i].desc_offset,
-					u_cq_desc, dtable->empty,
-					dtable->addr, dtable->addr_msb);
+					user_info->priv[i].buf_offset, u_iova_addr);
+				pr_debug("%s: des_ofst(0x%08x) cq_kva(0x%p) cq_desc(0x%x/0x%x/0x%x)\n",
+					__func__, user_info->priv[i].desc_offset,
+					u_cq_desc, cq_desc->raw[0], cq_desc->raw[1], cq_desc->raw[2]);
+			}
 		}
 
+		// Update PSP tuning cq descriptor
 		if (tuning_iova) {
 			u_cq_desc = (u64 *)((void *)(cq_base + user_info->priv[i].desc_offset));
-			dtable = (struct mtk_imgsys_wpe_dtable *)u_cq_desc;
+			cq_desc = (union wpe_cq_cmd_desc_t *)u_cq_desc;
 			for (j = 0; j < WPE_CQ_DESC_NUM; j++) {
-				if ((dtable->addr_msb & PSEUDO_DESC_TUNING) == PSEUDO_DESC_TUNING) {
-					tun_ofst = dtable->addr;
-					dtable->addr = (tun_ofst + tuning_iova) & 0xFFFFFFFF;
-					dtable->addr_msb = ((tun_ofst + tuning_iova) >> 32) & 0xF;
-					if (imgsys_wpe_8s_dbg_enable())
-						pr_debug("%s: tuning_buf_iova(0x%llx) tun_ofst(0x%08x) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
-							__func__, tuning_iova, tun_ofst,
-							user_info->priv[i].desc_offset,
-							u_cq_desc, dtable->empty,
-							dtable->addr, dtable->addr_msb);
+				if (cq_desc->dummy_1 == PSEUDO_DESC_TUNING) {
+					tun_ofst = cq_desc->dram_addr_lsb;
+					cq_desc->dram_addr_lsb = (tun_ofst + tuning_iova) & 0xFFFFFFFF;
+					cq_desc->dram_addr_msb = ((tun_ofst + tuning_iova) >> 32) & 0xF;
+					cq_desc->dummy_1 = 0x0; // set dummy_1 back to all zeros
+
+					if (imgsys_wpe_8s_dbg_enable()) {
+						pr_debug("%s: tuning_buf_iova(0x%llx) tun_ofst(0x%08x)\n",
+							__func__, tuning_iova, tun_ofst);
+						pr_debug("%s: des_ofst(0x%08x) cq_kva(0x%p) cq_desc(0x%x/0x%x/0x%x)\n",
+							__func__, user_info->priv[i].desc_offset,
+							u_cq_desc, cq_desc->raw[0], cq_desc->raw[1], cq_desc->raw[2]);
+					}
 				}
-				dtable++;
+				cq_desc++;
 			}
 		}
 		if (hcp_ops && hcp_ops->fetch_wpe_cq_mb_fd)
 			wpe_buf_info.fd = hcp_ops->fetch_wpe_cq_mb_fd(imgsys_dev->scp_pdev, mode);
 		wpe_buf_info.offset = user_info->priv[i].desc_offset;
 		wpe_buf_info.len =
-			((sizeof(struct mtk_imgsys_wpe_dtable) * WPE_CQ_DESC_NUM) + WPE_REG_SIZE);
+			((sizeof(union wpe_cq_cmd_desc_t) * WPE_CQ_DESC_NUM) + WPE_REG_SIZE);
 		wpe_buf_info.mode = mode;
 		wpe_buf_info.is_tuning = false;
 		if (imgsys_wpe_8s_dbg_enable())
@@ -371,10 +411,9 @@ void imgsys_wpe_cmdq_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev,
 		dev_info(imgsys_dev->dev, "%s: +\n", __func__);
 
 	ary_idx = hw_idx - REG_MAP_E_WPE_EIS;
-	if (imgsys_dev->dev_ver == 1)
-		wpeBase = WPE_A_BASE_P + mtk_imgsys_wpe_base_ofst[ary_idx];
-	else
-		wpeBase = WPE_A_BASE+ mtk_imgsys_wpe_base_ofst[ary_idx];
+	// if (imgsys_dev->dev_ver == 1) {
+	// wpeBase = WPE_A_BASE_P + mtk_imgsys_wpe_base_ofst[ary_idx];
+	wpeBase = WPE_A_BASE + mtk_imgsys_wpe_base_ofst[ary_idx];
 
 	if (hw_idx != REG_MAP_E_WPE_TNR) { // if not wpe_tnr
 		/* iomap registers */
@@ -387,6 +426,7 @@ void imgsys_wpe_cmdq_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev,
 	dev_info(imgsys_dev->dev, "%s: -\n", __func__);
 }
 
+// TODO, this function haven't immgrate to jayer
 void imgsys_wpe_debug_ufo_dump(struct mtk_imgsys_dev *imgsys_dev,
 							void __iomem *wpeRegBA)
 {
@@ -420,7 +460,7 @@ void imgsys_wpe_debug_dl_dump(struct mtk_imgsys_dev *imgsys_dev,
 	unsigned int debug_value[3] = {0x0, 0x0, 0x0};
 	unsigned int sel_value[3] = {0x0, 0x0, 0x0};
 
-	dbg_sel_value[0] = (0xC << 12); //pqdip
+	dbg_sel_value[0] = (0xC << 12); //PQDIP
 	dbg_sel_value[1] = (0xD << 12); //DIP
 	dbg_sel_value[2] = (0xE << 12); //TRAW
 
@@ -766,9 +806,9 @@ void imgsys_wpe_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 							unsigned int engine)
 {
 	void __iomem *wpeRegBA = 0L;
-	unsigned int i, j, ctl_en;
+	unsigned int ctl_en;
 	unsigned int hw_idx = 0, ofst_idx;
-	unsigned int wpeBase = 0;
+	int i;
 
 	pr_info("%s: +\n", __func__);
 
@@ -785,18 +825,12 @@ void imgsys_wpe_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 		return;
 	}
 
-	if (imgsys_dev->dev_ver == 1)
-		wpeBase = WPE_A_BASE_P + mtk_imgsys_wpe_base_ofst[ofst_idx];
-	else
-		wpeBase = WPE_A_BASE + mtk_imgsys_wpe_base_ofst[ofst_idx];
-
 	wpeRegBA = gWpeRegBA[ofst_idx];
 	if (!wpeRegBA) {
 		pr_info("%s: WPE_%d, RegBA = 0", __func__, hw_idx);
 		return;
 	}
-	pr_info("%s: ==== Dump WPE_%d =====",
-		__func__, ofst_idx);
+	pr_info("%s: ==== Dump WPE_%d =====", __func__, ofst_idx);
 
 	//DL
 	ctl_en = (unsigned int)ioread32((void *)(wpeRegBA + 0x4));
@@ -812,20 +846,18 @@ void imgsys_wpe_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	imgsys_wpe_debug_cq_dump(imgsys_dev, wpeRegBA);
 	imgsys_wpe_debug_module_dump(imgsys_dev, wpeRegBA, 0);
 
-	//
-	for (j = 0; j < WPE_REG_ARRAY_COUNT; j++) {
-		for (i = wpe_regs[j].str; i <= wpe_regs[j].end; i += 0x10) {
-			pr_info("[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X",
-			(unsigned int)(wpeBase + i),
+	// Dump all wpe register
+	for (i = 0; i < mtk_imgsys_wpe_reg_size[ofst_idx]; i += 0x10) {
+		pr_info("%s: [0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X", __func__,
+			(unsigned int)(WPE_A_BASE + mtk_imgsys_wpe_base_ofst[ofst_idx] + i),
 			(unsigned int)ioread32((void *)(wpeRegBA + i)),
 			(unsigned int)ioread32((void *)(wpeRegBA + i + 0x4)),
 			(unsigned int)ioread32((void *)(wpeRegBA + i + 0x8)),
 			(unsigned int)ioread32((void *)(wpeRegBA + i + 0xC)));
-		}
 	}
 
 	//UFO
-	if (ctl_en & 0x400) {
+	if (ctl_en & DECOMP_EN) {
 		imgsys_wpe_debug_ufo_dump(imgsys_dev, wpeRegBA);
 		imgsys_wpe_debug_ufo_dump(imgsys_dev, wpeRegBA);
 	}
