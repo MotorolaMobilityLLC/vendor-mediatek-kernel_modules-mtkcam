@@ -275,6 +275,9 @@ void imgsys_main_init(struct mtk_imgsys_dev *imgsys_dev)
 #define ISC_BASE	(0x34060000)
 #define ISC_CTRL	(0x00000004)
 #define ISC_ERR_ID	(0x0000001C)
+#define ISC_INT_EN	(0x00000010)
+#define ISC_INT_STATUS	(0x00000014)
+#define ISC_INT_STATUSX	(0x00000018)
 #define GID_0_ENTRY	(0x100)
 #define GID_ENTRY_OFST	(0x010)
 #define GID_TBL(g)	(GID_0_ENTRY + GID_ENTRY_OFST * (g))
@@ -285,7 +288,7 @@ void imgsys_main_init(struct mtk_imgsys_dev *imgsys_dev)
 
 void imgsys_main_slc_init(struct mtk_imgsys_dev *imgsys_dev)
 {
-	unsigned int i = 0, gid8 = 0, bid = 2, entry, val, opt;
+	unsigned int i = 0, gid8 = 0, bid = 2, entry, val = 0, opt;
 	void *addr = 0, *addr1 = 0;
 
 	for (i = 0; i < GID_NUM; i++) {
@@ -304,7 +307,6 @@ void imgsys_main_slc_init(struct mtk_imgsys_dev *imgsys_dev)
 	}
 
 	addr = (void *)(imgsysiscRegBA + ISC_CTRL);
-	val = ioread32(addr);
 	opt = imgsys_isc_8s_ctrl();
 	if (opt & 0x2)
 		val |= 0x2;
@@ -318,6 +320,9 @@ void imgsys_main_slc_init(struct mtk_imgsys_dev *imgsys_dev)
 	dev_info(imgsys_dev->dev, "%s: ISC_CTRL [0x%08X 0x%08X]\n", __func__,
 					(ISC_BASE + ISC_CTRL), (unsigned int)ioread32(addr));
 
+	val = 0x21;
+	addr = (void *)(imgsysiscRegBA + ISC_INT_EN);
+	iowrite32(val, addr);
 }
 
 #define BID_NUM	(2)
@@ -326,6 +331,8 @@ struct isc_debug {
 	unsigned int gid;
 	unsigned int bid;
 	unsigned int gid_tbl[4];
+	unsigned int int_status;
+	unsigned int int_statusx;
 } isc_info;
 static int primary_irq;
 
@@ -345,22 +352,27 @@ void imgsys_main_slc_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int irq)
 	log_buf[strlen(log_buf)] = '\0';
 
 	if (irq == 1) {
+
+		addr0 = (void *)(imgsysiscRegBA + ISC_INT_STATUS);
+		isc_info.int_status = (unsigned int)ioread32(addr0);
+		addr0 = (void *)(imgsysiscRegBA + ISC_INT_STATUSX);
+		isc_info.int_statusx = (unsigned int)ioread32(addr0);
+
 		addr0 = (void *)(imgsysiscRegBA + ISC_ERR_ID);
 		gid9 = (unsigned int)ioread32(addr0);
 		gid = gid9 >> 2;
 		bid = gid9 & (0x3);
+		isc_info.gid = gid;
+		isc_info.bid = bid;
+
 		if ((gid >= GID_START) && (gid <= GID_END)) {
 			entry = (gid - GID_START) + (bid >> 1);
 			addr0 = (void *)(imgsysiscRegBA + GID_TBL(entry));
-			isc_info.gid = gid;
-			isc_info.bid = bid;
 			isc_info.gid_tbl[0] = (unsigned int)ioread32(addr0);
 			isc_info.gid_tbl[1] = (unsigned int)ioread32(addr0 + 0x4);
 			isc_info.gid_tbl[2] = (unsigned int)ioread32(addr0 + 0x8);
 			isc_info.gid_tbl[3] = (unsigned int)ioread32(addr0 + 0xC);
-
-		} else
-			isc_info.gid = 0;
+		}
 
 		primary_irq = 1;
 
@@ -370,18 +382,20 @@ void imgsys_main_slc_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int irq)
 	if ((irq == 2) && primary_irq) {
 		primary_irq = 0;
 
-		if (isc_info.gid)
-			dev_info(imgsys_dev->dev, "ISC GID(%d,%d) | %08X %08X %08X %08X\n",
+		if (isc_info.int_statusx & 0x20)
+			dev_info(imgsys_dev->dev, "ISC: unknown GID(%d,%d)\n",
+								isc_info.gid, isc_info.bid);
+		else if (isc_info.int_statusx & 0x1)
+			dev_info(imgsys_dev->dev, "ISC: SFD underflow GID(%d,%d) | %08X %08X %08X %08X\n",
 								isc_info.gid, isc_info.bid,
 								isc_info.gid_tbl[0],
 								isc_info.gid_tbl[1],
 								isc_info.gid_tbl[2],
 								isc_info.gid_tbl[3]);
-		else
-			goto full_dump;
-	}
+		dev_info(imgsys_dev->dev, "ISC status(%08X, %08X)\n", isc_info.int_status, isc_info.int_statusx);
 
-full_dump:
+		return;
+	}
 
 	for (i = 0; i < ARRAY_SIZE(regs_ofst); i++) {
 		addr0 = (void *)(imgsysiscRegBA + regs_ofst[i]);
