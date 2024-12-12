@@ -1422,6 +1422,9 @@ void mtk_cam_sv_fill_pdp_tag_info(struct mtk_camsv_tag_info *arr_tag,
 	tag_info->pixel_mode = pixelmode;
 	tag_info->is_meta_tag  = true;
 
+	ipi_config->sv_input[0][tag_param->tag_idx].is_unpack_msb =
+		is_unpack_msb;
+
 	cfg_in_param->pixel_mode = pixelmode;
 	cfg_in_param->data_pattern = 0x0;
 	cfg_in_param->in_crop.p.x = 0x0;
@@ -1751,7 +1754,7 @@ static void mtk_cam_sv_set_pdp_dense_fmt(
 	struct mraw_stats_cfg_param *param, unsigned int dmao_id)
 {
 	if (dmao_id == imgo_m1) {
-		if (param->mbn_pow < 2 || param->mbn_pow > 6) {
+		if (param->mbn_pow < 2 || param->mbn_pow > 4) {
 			dev_info(cam->dev, "%s:Invalid mbn_pow: %d",
 				__func__, param->mbn_pow);
 			return;
@@ -1771,7 +1774,7 @@ static void mtk_cam_sv_set_pdp_dense_fmt(
 		// divided for 2 path from MBN
 		*tg_width_temp /= 2;
 	} else if (dmao_id == cpio_m1) {
-		if (param->cpi_pow < 2 || param->cpi_pow > 6) {
+		if (param->cpi_pow < 2 || param->cpi_pow > 4) {
 			dev_info(cam->dev, "Invalid cpi_pow: %d", param->cpi_pow);
 			return;
 		}
@@ -1870,7 +1873,7 @@ void mtk_cam_sv_get_pdp_mqe_size(struct mtk_cam_device *cam, unsigned int pipe_i
 			*width /= 2;
 			break;
 		case PD_B02_MODE:
-			*height /= 2;
+			*width /= 2;
 			break;
 		default:
 			dev_info(cam->dev, "%s:MQE-Mode %d %s fail\n",
@@ -2054,7 +2057,7 @@ static void mtk_cam_sv_set_pdp_frame_param_dmao(
 	sv_dev = dev_get_drvdata(ctx->hw_sv);
 	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, pipe_id);
 
-	fp->camsv_param[0][tag_idx].dev_id = pipe_id;
+	fp->camsv_param[0][tag_idx].dev_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
 	fp->camsv_param[0][tag_idx].tag_id = tag_idx;
 	fp->camsv_param[0][tag_idx].pdp_enable = pdp_en;
 
@@ -2117,9 +2120,9 @@ int mtk_cam_sv_cal_cfg_info(struct mtk_cam_ctx *ctx, struct mtk_cam_buffer *buf,
 
 	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, pipe_id);
 	if (job->tag_info[tag_idx].is_pdp_enable)
-		pdp_fun_support = false;
-	else
 		pdp_fun_support = true;
+	else
+		pdp_fun_support = false;
 
 	mtk_cam_sv_set_pdp_dmao_info(ctx->cam, buf, pipe_id, info, imgo_fmt,
 		pdp_fun_support);

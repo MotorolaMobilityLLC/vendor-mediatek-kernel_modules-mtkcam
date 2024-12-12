@@ -2354,13 +2354,13 @@ int handle_sv_tag(struct mtk_cam_job *job)
 			max_pixel_mode,
 			job->sub_ratio,
 			mraw_sink->width, mraw_sink->height,
-			mraw_sink->mbus_code, 0, mraw_pipe);
+			mraw_sink->mbus_code, 1, mraw_pipe);
 
 		job->used_tag_cnt++;
 		job->enabled_tags |= (1 << tag_idx);
 		tag_idx++;
 
-		pr_info("[%s] tag_idx:%d seninf_padidx:%d tag_order:%d pixel_mode:%d sub_ratio:%d width/height/mbus_code:0x%x_0x%x_0x%x\n",
+		pr_info("[%s] mraw subdevice tag_idx:%d seninf_padidx:%d tag_order:%d pixel_mode:%d sub_ratio:%d width/height/mbus_code:0x%x_0x%x_0x%x\n",
 			__func__,
 			meta_tag_param.tag_idx,
 			meta_tag_param.seninf_padidx,
@@ -2397,7 +2397,7 @@ int handle_sv_tag(struct mtk_cam_job *job)
 		job->enabled_tags |= (1 << tag_idx);
 		tag_idx++;
 
-		pr_info("[%s] tag_idx:%d seninf_padidx:%d tag_order:%d pixel_mode:%d sub_ratio:%d width/height/mbus_code:0x%x_0x%x_0x%x\n",
+		pr_info("[%s] camsv subdevice tag_idx:%d seninf_padidx:%d tag_order:%d pixel_mode:%d sub_ratio:%d width/height/mbus_code:0x%x_0x%x_0x%x\n",
 			__func__,
 			meta_tag_param.tag_idx,
 			meta_tag_param.seninf_padidx,

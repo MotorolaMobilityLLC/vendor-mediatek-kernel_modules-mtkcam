@@ -238,7 +238,6 @@ struct mtk_cam_engines {
 
 	int num_raw_devices;
 	int num_camsv_devices;
-	int num_mraw_devices;
 	int num_larb_devices;
 
 	/* raw */
@@ -248,9 +247,6 @@ struct mtk_cam_engines {
 
 	/* camsv */
 	struct device **sv_devs;
-
-	/* mraw */
-	struct device **mraw_devs;
 
 	/* larb */
 	struct device **larb_devs;
@@ -364,7 +360,6 @@ int mtk_cam_set_dev_raw(struct device *dev, int idx,
 			struct device *raw, struct device *yuv,
 			struct device *rms);
 int mtk_cam_set_dev_sv(struct device *dev, int idx, struct device *sv);
-int mtk_cam_set_dev_mraw(struct device *dev, int idx, struct device *mraw);
  /* special case: larb dev is push back into array */
 int mtk_cam_set_dev_larb(struct device *dev, struct device *larb);
 struct device *mtk_cam_get_larb(struct device *dev, int larb_id);

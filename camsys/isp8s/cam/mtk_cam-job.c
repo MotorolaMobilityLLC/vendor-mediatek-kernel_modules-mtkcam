@@ -5398,8 +5398,9 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 				sv_input->is_queue_mode = atomic_read(&sv_dev->is_queue_mode);
 				if (job->tag_info[i].is_meta_tag) {
 					struct mtk_mraw_pipeline *pipe = job->tag_info[i].mraw_pipe;
+					unsigned int mraw_subdev_idx = pipe->id - MTKCAM_SUBDEV_MRAW_START;
 					struct mtk_mraw_sink_data *sink =
-						&req->mraw_data[ctx->mraw_subdev_idx[i]].sink;
+							&req->mraw_data[mraw_subdev_idx].sink;
 
 					pipe->res_config.tg_crop = v4l2_rect_to_ipi_crop(&sink->crop);
 					atomic_set(&pipe->res_config.is_fmt_change, 1);
