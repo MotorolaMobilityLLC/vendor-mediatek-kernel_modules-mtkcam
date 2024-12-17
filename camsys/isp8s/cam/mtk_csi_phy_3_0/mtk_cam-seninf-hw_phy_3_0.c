@@ -1195,8 +1195,8 @@ static int mtk_cam_seninf_en_async_overrun_irq(struct seninf_ctx *ctx, int async
 
 static int mtk_cam_seninf_set_async(struct seninf_ctx *ctx, int async, int split, int tm)
 {
-	void *pSeninf  = ctx->reg_if_async;
-	void *pSeninf_async = ctx->reg_if_top;
+	void *pSeninf  = ctx->reg_if_top;
+	void *pSeninf_async = ctx->reg_if_async;
 	int val = 0;
 
 	if (async >= _seninf_ops->async_num)
@@ -2155,8 +2155,6 @@ static int csirx_mac_csi_checker_v1(struct seninf_ctx *ctx)
 
 static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 {
-	ctx->num_data_lanes = 1;
-
 	void *csirx_mac_csi = ctx->reg_csirx_mac_csi[(uint32_t)ctx->port];
 	int bit_per_pixel = 10;
 	struct seninf_vc *vc = mtk_cam_seninf_get_vc_by_pad(ctx, PAD_SRC_RAW0);
@@ -3622,6 +3620,7 @@ static int csirx_dphy_alp_setting(struct seninf_ctx *ctx) //jeff porting cdphy p
 	if (!ctx->csi_param.dphy_alp_support) {
 		/* Disable DPHYALP_EN */
 		SENINF_BITS(dphy_base, DPHY_DPHYV21_CTRL, RG_DPHYALP_EN, 0);
+		SENINF_BITS(dphy_base, DPHY_DPHYV21_CTRL, RG_DPHYALP_HSRX_EN_SEL, 0x0);
 		return 0;
 	}
 

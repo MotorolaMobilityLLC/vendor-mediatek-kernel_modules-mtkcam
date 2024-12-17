@@ -769,6 +769,14 @@ static int seninf_dfs_set(struct seninf_ctx *ctx, unsigned long freq)
 	return ret;
 }
 
+static int core_common_reg_setup(struct seninf_ctx *ctx)
+{
+	g_seninf_ops->_common_reg_setup(ctx);
+	g_seninf_ops->set_irq_grping(ctx);
+
+	return 0;
+}
+
 static int seninf_core_pm_runtime_enable(struct seninf_core *core)
 {
 	int i;
@@ -2562,6 +2570,8 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 	int deskew_dump_idx;
 #endif /*INIT_PERIODIC_DESKEW_DEBUG*/
 
+	core_common_reg_setup(ctx);
+
 	/* get current sensor idx by get_sensor_idx */
 	if (!ctx->is_test_model) {
 		ctx->current_sensor_id = get_sensor_idx(ctx);
@@ -3986,14 +3996,6 @@ static int set_vcore_power(struct seninf_ctx *ctx, u64 data_rate)
 		clk_names[ctx->clk_index], clk_names[ctx->clk_src_index],
 		ctx->is_cphy, ctx->is_4d1c);
 
-	return 0;
-}
-
-static int core_common_reg_setup(struct seninf_ctx *ctx)
-{
-
-	g_seninf_ops->set_irq_grping(ctx);
-	g_seninf_ops->_common_reg_setup(ctx);
 	return 0;
 }
 
