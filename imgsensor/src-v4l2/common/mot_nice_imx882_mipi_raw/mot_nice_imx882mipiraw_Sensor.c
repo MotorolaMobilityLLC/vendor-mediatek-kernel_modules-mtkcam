@@ -236,6 +236,17 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x0800,
+			.vsize = 0x0180,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
+		},
+	},
 };
 
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
@@ -847,8 +858,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 2048,
 			.h2_tg_size = 1536,
 		},
-		//.pdaf_cap = TRUE,
-		//.imgsensor_pd_info = &imgsensor_pd_info,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
