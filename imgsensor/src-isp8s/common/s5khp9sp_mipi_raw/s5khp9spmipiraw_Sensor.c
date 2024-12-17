@@ -1813,11 +1813,12 @@ static struct subdrv_ops ops = {
 };
 
 static struct subdrv_pw_seq_entry pw_seq[] = {
+	{HW_ID_RST, {0}, 0},
+	{HW_ID_DOVDD, {1800000, 1800000}, 1000},
 	{HW_ID_AVDD, {2200000, 2200000}, 1000},
 	{HW_ID_DVDD, {900000, 900000}, 1000},
-	{HW_ID_DOVDD, {1800000, 1800000}, 1000},
-	{HW_ID_AFVDD, {2800000, 2800000}, 1000},
 	{HW_ID_OISVDD, {3250000, 3250000}, 5000},
+	{HW_ID_AFVDD, {2800000, 2800000}, 1000},
 	{HW_ID_RST, {1}, 5000},
 	{HW_ID_MCLK_DRIVING_CURRENT, {6}, 1000},
 	{HW_ID_MCLK, {26}, 10000},

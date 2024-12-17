@@ -1108,9 +1108,10 @@ static struct subdrv_ops ops = {
 
 static struct subdrv_pw_seq_entry pw_seq[] = {
 	{HW_ID_RST, {0}, 1000},
-	{HW_ID_DVDD, {1100000, 1100000}, 1000},
 	{HW_ID_DOVDD, {1800000, 1800000}, 1000},
+	{HW_ID_DVDD, {1100000, 1100000}, 1000},
 	{HW_ID_AVDD, {2800000, 2800000}, 1000},
+	{HW_ID_AFVDD, {2800000, 2800000}, 1000},
 	{HW_ID_RST, {1}, 2000},
 	{HW_ID_MCLK_DRIVING_CURRENT, {2}, 0},
 	{HW_ID_MCLK, {24}, 5000},
@@ -1118,8 +1119,8 @@ static struct subdrv_pw_seq_entry pw_seq[] = {
 
 static struct subdrv_pw_seq_entry aov_pw_seq[] = {
 	{HW_ID_RST, {0}, 1000},
-	{HW_ID_DVDD, {1100000, 1100000}, 1000},
 	{HW_ID_DOVDD, {1800000, 1800000}, 1000},
+	{HW_ID_DVDD, {1100000, 1100000}, 1000},
 	{HW_ID_AVDD, {2800000, 2800000}, 1000},
 	{HW_ID_RST, {1}, 2000},
 	{HW_ID_MCLK_DRIVING_CURRENT, {2}, 0},

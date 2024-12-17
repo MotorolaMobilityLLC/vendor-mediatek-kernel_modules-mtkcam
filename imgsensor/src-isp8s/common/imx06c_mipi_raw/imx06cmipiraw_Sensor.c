@@ -6577,12 +6577,12 @@ static struct subdrv_pw_seq_entry pw_seq[] = {
 	{HW_ID_RST, {0}, 0},
 	{HW_ID_MCLK_DRIVING_CURRENT, {2}, 1000},
 	{HW_ID_MCLK, {24}, 0},
+	{HW_ID_DOVDD, {1800000, 1800000}, 0}, // pmic_gpo(1.8V ldo) for dovdd
 	{HW_ID_AVDD, {2700000, 2900000}, 0}, // pmic_ldo5 support min:1.7V ~ max:3.0V
-	{HW_ID_AVDD2, {1800000, 1800000}, 0}, // pmic_gpo1.8V to pmic_ldo(1.8V ldo) for avdd1
+	{HW_ID_AVDD1, {1800000, 1800000}, 0}, // pmic_gpo1.8V to pmic_ldo(1.8V ldo) for avdd1
 	// {HW_ID_AFVDD, {3300000, 3300000}, 0}, // pmic_ldo for afvdd
 	{HW_ID_AFVDD1, {1800000, 1800000}, 0}, // pmic_gpo(3.1V ldo) for afvdd
-	{HW_ID_DOVDD, {1800000, 1800000}, 0}, // pmic_gpo(1.8V ldo) for dovdd
-	{HW_ID_DVDD, {720000, 900000}, 1000}, // pmic_ldo8(min:0.72V ~ max:0.9V ldo) for dvdd
+	{HW_ID_DVDD1, {720000, 900000}, 1000}, // pmic_ldo8(min:0.72V ~ max:0.9V ldo) for dvdd
 	{HW_ID_OISVDD, {3300000, 3300000}, 1000},
 	{HW_ID_RST, {1}, 2000}
 };
@@ -6591,12 +6591,12 @@ static struct subdrv_pw_seq_entry aov_pw_seq[] = {
 	{HW_ID_RST, {0}, 0},
 	{HW_ID_MCLK_DRIVING_CURRENT, {2}, 1000},
 	{HW_ID_MCLK, {26, MCLK_ULPOSC}, 0},
+	{HW_ID_DOVDD, {1800000, 1800000}, 0}, // pmic_gpo(1.8V ldo) for dovdd
 	{HW_ID_AVDD, {2700000, 2900000}, 0}, // pmic_ldo5 support min:1.7V ~ max:3.0V
-	{HW_ID_AVDD2, {1800000, 1800000}, 0}, // pmic_gpo1.8V to pmic_ldo(1.8V ldo) for avdd1
+	{HW_ID_AVDD1, {1800000, 1800000}, 0}, // pmic_gpo1.8V to pmic_ldo(1.8V ldo) for avdd1
 	// {HW_ID_AFVDD, {3300000, 3300000}, 0}, // pmic_ldo for afvdd
 	{HW_ID_AFVDD1, {1800000, 1800000}, 0}, // pmic_gpo(3.1V ldo) for afvdd
-	{HW_ID_DOVDD, {1800000, 1800000}, 0}, // pmic_gpo(1.8V ldo) for dovdd
-	{HW_ID_DVDD, {720000, 900000}, 1000}, // pmic_ldo8(min:0.72V ~ max:0.9V ldo) for dvdd
+	{HW_ID_DVDD1, {720000, 900000}, 1000}, // pmic_ldo8(min:0.72V ~ max:0.9V ldo) for dvdd
 	{HW_ID_OISVDD, {3300000, 3300000}, 1000},
 	{HW_ID_RST, {1}, 2000}
 };
