@@ -73,16 +73,16 @@ MODULE_PARM_DESC(rms_freerun, "rms_freerun");
 static const struct of_device_id mtk_cam_of_ids[] = {
 #ifdef CAMSYS_ISP8S_MT6993
 		{.compatible = "mediatek,mt6991-camisp", .data = &mt6993_data},
+#endif
 		{}
 };
-#endif
 #else
 static const struct of_device_id mtk_cam_of_ids[] = {
 #ifdef CAMSYS_ISP8S_MT6993
 		{.compatible = "mediatek,mt6993-camisp", .data = &mt6993_data},
+#endif
 		{}
 };
-#endif
 #endif
 MODULE_DEVICE_TABLE(of, mtk_cam_of_ids);
 
@@ -91,16 +91,16 @@ MODULE_DEVICE_TABLE(of, mtk_cam_of_ids);
 static const struct of_device_id mtk_cam_vcore_of_ids[] = {
 #ifdef CAMSYS_ISP8S_MT6993
 		{.compatible = "mediatek,mt6991-camisp-vcore",},
+#endif
 		{}
 };
-#endif
 #else
 static const struct of_device_id mtk_cam_vcore_of_ids[] = {
 #ifdef CAMSYS_ISP8S_MT6993
 		{.compatible = "mediatek,mt6993-camisp-vcore",},
+#endif
 		{}
 };
-#endif
 #endif
 
 MODULE_DEVICE_TABLE(of, mtk_cam_vcore_of_ids);
