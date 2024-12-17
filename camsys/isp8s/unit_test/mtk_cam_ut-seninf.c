@@ -205,6 +205,8 @@ static int set_seninf_top(struct device *dev, struct mtk_ut_seninf_device *senin
 	writel(0x0000003F, ISP_SENINF_TOP_ASYNC_CG(seninf_top));
 	writel(0x7FFFFF, ISP_SENINF_TOP_OUTMUX_CG(seninf_top));
 
+	dev_info(dev, "%s target here %d\n", __func__, __LINE__);
+
 	return 0;
 }
 
@@ -324,6 +326,11 @@ static int ut_seninf_set_testmdl(struct device *dev,
 	tml_cfg.vc_info[SE].DT = 0x2B;
 	tml_cfg.bit_depth = 16;
 
+	if (set_seninf_top(dev, seninf)) {
+		SENINF_LOGE("set_seninf_top return failed\n");
+		return -EINVAL;
+	}
+
 	if (set_seninf_tm(dev, seninf, tml_cfg)) {
 		SENINF_LOGE("set_seninf_tm return failed\n");
 		return -EINVAL;
@@ -331,11 +338,6 @@ static int ut_seninf_set_testmdl(struct device *dev,
 
 	if (set_seninf_asnyc(dev, seninf)) {
 		SENINF_LOGE("set_seninf_asnyc return failed\n");
-		return -EINVAL;
-	}
-
-	if (set_seninf_top(dev, seninf)) {
-		SENINF_LOGE("set_seninf_top return failed\n");
 		return -EINVAL;
 	}
 
