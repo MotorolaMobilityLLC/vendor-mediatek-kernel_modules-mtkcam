@@ -3713,8 +3713,7 @@ static int seninf_probe(struct platform_device *pdev)
 		goto err_free_handler;
 	}
 
-	if (is_apply_hw_ccf(core))
-		pm_runtime_enable(dev);
+	pm_runtime_enable(dev);
 	device_enable_async_suspend(dev);
 
 	memset(&g_aov_ctrl, 0, sizeof(struct mtk_seninf_aov_ctrl));
