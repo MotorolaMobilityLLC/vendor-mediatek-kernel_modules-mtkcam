@@ -663,13 +663,41 @@ static int gc13a2_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 
 
 #if ENABLE_GC13A2_FAST_STANDBY
+void gc13a2_check_stream_off(struct subdrv_ctx *ctx)
+{
+	u32 i = 0;
+	u32 timeout = 0;
+	u32 total_framecnt = 0;
+	u32 cur_framecnt = 0;
+
+	ctx->current_fps = ctx->pclk / ctx->line_length * 10 / ctx->frame_length;
+	timeout = ctx->current_fps ? (10000 / ctx->current_fps) + 1 : 101;
+
+	for (i = 0; i < timeout; i++) {
+		cur_framecnt = subdrv_i2c_rd_u16(ctx, 0x0115);
+
+		total_framecnt += cur_framecnt;
+		DRV_LOG(ctx, "frame cnt check. total=%x, cur=%x, i = %d",total_framecnt, cur_framecnt, i);
+
+		//framecnt should be fixed, if stream off is successful
+		if (i == timeout - 1 && total_framecnt == cur_framecnt * (i + 1) )
+			return;
+		mdelay(1);
+	}
+	DRV_LOGE(ctx, "stream off fail!,cur_fps:%u,timeout:%u\n",
+		ctx->current_fps, timeout);
+}
+
 static int gc13a2_streaming_control(struct subdrv_ctx *ctx, kal_bool enable)
 {
 	DRV_LOG_MUST(ctx, "13a2 fast_standby streming. enable=%d(0=stream off, 1=stream on) \n", enable);
 	if(enable)
 		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_stream, 0x01);
 	else
+	{
 		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_stream, 0x80);
+		gc13a2_check_stream_off(ctx);
+	}
 
 	return ERROR_NONE;
 }
