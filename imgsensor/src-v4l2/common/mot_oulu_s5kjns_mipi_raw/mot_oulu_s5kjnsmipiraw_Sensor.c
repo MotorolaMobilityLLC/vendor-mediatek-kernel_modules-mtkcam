@@ -32,6 +32,9 @@ static void s5kjns_sensor_init(struct subdrv_ctx *ctx);
 static int open(struct subdrv_ctx *ctx);
 static int s5kjns_set_ctrl_locker(struct subdrv_ctx *ctx, u32 cid, bool *is_lock);
 static int s5kjns_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
+static int s5kjns_ops_close(struct subdrv_ctx *ctx);
+static int s5kjns_streaming_off(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int s5kjns_streaming_on(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 
 #define ENABLE_S5KJNS_LONG_EXPOSURE TRUE
 #if  ENABLE_S5KJNS_LONG_EXPOSURE
@@ -45,6 +48,8 @@ static struct subdrv_feature_control feature_control_list[] = {
 #if  ENABLE_S5KJNS_LONG_EXPOSURE
 	{SENSOR_FEATURE_SET_ESHUTTER, s5kjns_set_shutter},
 #endif
+	{SENSOR_FEATURE_SET_STREAMING_SUSPEND, s5kjns_streaming_off},
+	{SENSOR_FEATURE_SET_STREAMING_RESUME, s5kjns_streaming_on},
 };
 
 #if  ENABLE_S5KJNS_LONG_EXPOSURE
@@ -706,7 +711,7 @@ static struct subdrv_ops ops = {
 	.get_resolution = common_get_resolution,
 	.control = common_control,
 	.feature_control = common_feature_control,
-	.close = common_close,
+	.close = s5kjns_ops_close,
 	.get_frame_desc = common_get_frame_desc,
 	.get_csi_param = common_get_csi_param,
 	.update_sof_cnt = common_update_sof_cnt,
@@ -811,14 +816,76 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 	return 0;
 }
 
+static int s5kjns_streaming_control(struct subdrv_ctx *ctx, kal_bool enable)
+{
+	int timeout = ctx->current_fps ? (10000 / ctx->current_fps) +1 : 101;
+	int i = 0;
+	int framecnt = 0;
+	int check_cnt = 100;
+
+	DRV_LOG(ctx, "streaming_control. enable=%d(0=stream off, 1=stream on)\n", enable);
+	if(enable)
+	{
+		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_stream, 0x01);
+		mDELAY(10);
+	}
+	else
+	{
+
+		for (i = 0; i < check_cnt; i++)
+		{
+			mDELAY(1);
+			framecnt = subdrv_i2c_rd_u8(ctx, 0x0005);
+			if(framecnt != 0xFF)
+			{
+				DRV_LOG_MUST(ctx,"last stream on OK at i=%d.\n", i);
+				break;
+			}
+		}
+
+		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_stream, 0x00);
+		for (i = 0; i < timeout; i++)
+		{
+			mDELAY(5);
+			framecnt = subdrv_i2c_rd_u8(ctx, 0x0005);
+			if(framecnt == 0xFF)
+			{
+				DRV_LOG_MUST(ctx,"stream off OK at i=%d.\n", i);
+				return ERROR_NONE;
+			}
+		}
+		DRV_LOG_MUST(ctx, "stream off Fail! framecnt = %d.\n", framecnt);
+	}
+	return ERROR_NONE;
+}
+
+static int s5kjns_streaming_on(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	DRV_LOG_MUST(ctx, "subdrv open \n");
+	return s5kjns_streaming_control(ctx, KAL_TRUE);
+}
+
+static int s5kjns_streaming_off(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	DRV_LOG_MUST(ctx, "subdrv close \n");
+	return s5kjns_streaming_control(ctx, KAL_FALSE);
+}
+
+static int s5kjns_ops_close(struct subdrv_ctx *ctx)
+{
+	s5kjns_streaming_control(ctx, KAL_FALSE);
+	DRV_LOG_MUST(ctx, "subdrv close \n");
+	return ERROR_NONE;
+}
+
 static void s5kjns_sensor_init(struct subdrv_ctx *ctx)
 {
 	DRV_LOG(ctx, "E\n");
 	DRV_LOG(ctx, "MOT OULU S5KJNS init start\n");
 	subdrv_i2c_wr_u16(ctx, 0x6028, 0x4000);
-	subdrv_i2c_wr_u16(ctx, 0x0000, 0x0003);
-	subdrv_i2c_wr_u16(ctx, 0x0000, 0x38E1);
-	subdrv_i2c_wr_u16(ctx, 0x001E, 0x0007);
+	subdrv_i2c_wr_u16(ctx, 0x0000, 0x0001);
+	subdrv_i2c_wr_u16(ctx, 0x0000, 0x38EE);
+	subdrv_i2c_wr_u16(ctx, 0x001E, 0x000B);
 	subdrv_i2c_wr_u16(ctx, 0x6028, 0x4000);
 	subdrv_i2c_wr_u16(ctx, 0x6010, 0x0001);
 	mdelay(13);
