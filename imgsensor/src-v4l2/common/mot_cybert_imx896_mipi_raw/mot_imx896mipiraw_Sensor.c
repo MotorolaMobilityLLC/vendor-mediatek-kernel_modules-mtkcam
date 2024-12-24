@@ -185,6 +185,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
+#if 0
 	{
 		.bus.csi2 = {
 			.channel = 0,
@@ -196,6 +197,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = {
 			.is_active_line = TRUE,
 		},
 	},
+#endif
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_cus3[] = {
@@ -306,6 +308,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus1_info = {
 	},
 };
 
+#if 0
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 	.i4OffsetX = 16,
 	.i4OffsetY = 32,
@@ -340,7 +343,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 		.i4PDOrder = {1,1,0,0,0,0,1,1}, // R = 1, L = 0
 	},
 };
-
+#endif
 static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_prev,
@@ -697,8 +700,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 2304,
 		},
-		.pdaf_cap = TRUE,
-		.imgsensor_pd_info = &imgsensor_pd_cus2_info,
+		.pdaf_cap = FALSE,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
