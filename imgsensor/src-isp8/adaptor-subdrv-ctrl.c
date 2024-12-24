@@ -3373,6 +3373,7 @@ int common_get_info(struct subdrv_ctx *ctx,
 		sensor_info->DelayFrame[i] = ctx->s_ctx.mode[i].delay_frame;
 		sensor_info->ModeInfo[i].SensorDpcEnabled = ctx->s_ctx.mode[i].dpc_enabled;
 		sensor_info->ModeInfo[i].SensorPdcEnabled = ctx->s_ctx.mode[i].pdc_enabled;
+		sensor_info->bit_align_type[i] = ctx->s_ctx.mode[i].bit_align_type;
 		if (ctx->s_ctx.mode[i].saturation_info) {
 			sensor_info->gain_ratio[i] =
 				ctx->s_ctx.mode[i].saturation_info->gain_ratio;
