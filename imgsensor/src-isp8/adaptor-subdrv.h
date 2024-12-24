@@ -283,6 +283,7 @@ struct subdrv_mode_struct {
 	u32 mode_type_in_lbmf;
 	u32 sw_fl_delay;
 	u8 support_mcss;
+	u32 bit_align_type;
 };
 
 #define REG_ADDR_MAXCNT 4
