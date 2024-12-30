@@ -2670,6 +2670,7 @@ int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job,
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_cam_device *cam = ctx->cam;
 	struct v4l2_subdev *seninf = ctx->seninf;
+	unsigned int mraw_idx;
 	int ret;
 	int i;
 
@@ -2734,9 +2735,10 @@ int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job,
 
 	/* mraw */
 	for (i = 0; i < ctx->num_mraw_subdevs; i++) {
-		if (ctx->hw_mraw[i]) {
+		mraw_idx = ctx->mraw_subdev_idx[i];
+		if (cam->engines.mraw_devs[mraw_idx]) {
 			struct mtk_mraw_device *mraw_dev =
-				dev_get_drvdata(ctx->hw_mraw[i]);
+				dev_get_drvdata(cam->engines.mraw_devs[mraw_idx]);
 			struct mtk_mraw_pipeline *mraw_pipe =
 				&cam->pipelines.mraw[ctx->mraw_subdev_idx[i]];
 
@@ -2831,9 +2833,11 @@ int mtk_cam_ctx_stream_off(struct mtk_cam_ctx *ctx)
 
 void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 {
+	struct mtk_cam_device *cam = ctx->cam;
 	struct mtk_raw_device *raw_dev;
 	struct mtk_camsv_device *sv_dev;
 	struct mtk_mraw_device *mraw_dev;
+	unsigned int mraw_idx;
 	int i;
 
 	dev_info(ctx->cam->dev, "%s: ctx-%d pipe 0x%x engine 0x%x\n",
@@ -2846,8 +2850,9 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 	}
 
 	for (i = 0; i < ctx->num_mraw_subdevs; i++) {
-		if (ctx->hw_mraw[i]) {
-			mraw_dev = dev_get_drvdata(ctx->hw_mraw[i]);
+		mraw_idx = ctx->mraw_subdev_idx[i];
+		if (cam->engines.mraw_devs[mraw_idx]) {
+			mraw_dev = dev_get_drvdata(cam->engines.mraw_devs[mraw_idx]);
 			mtk_cam_mraw_dev_stream_on(mraw_dev, false);
 		}
 	}
