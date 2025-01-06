@@ -3237,7 +3237,7 @@ int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job,
 			 ctx->stream_id, seninf->name, ret);
 		return -EPERM;
 	}
-
+	atomic_set(&ctx->seninf_streaming, 1);
 	MTK_CAM_TRACE_END(BASIC);
 	return ret;
 }
@@ -3256,14 +3256,17 @@ int ctx_stream_off_seninf_sensor(struct mtk_cam_ctx *ctx)
 
 	if (!ctx->seninf)
 		return ret;
-
+	if (atomic_read(&ctx->seninf_streaming) == 0) {
+		dev_info(ctx->cam->dev, "seninf not streaming\n");
+		return ret;
+	}
 	ret = v4l2_subdev_call(ctx->seninf, video, s_stream, 0);
 	if (ret) {
 		dev_info(ctx->cam->dev, "ctx %d failed to stream_off %s %d\n",
 			 ctx->stream_id, ctx->seninf->name, ret);
 		return -EPERM;
 	}
-
+	atomic_set(&ctx->seninf_streaming, 0);
 	return ret;
 }
 
