@@ -2410,12 +2410,12 @@ void streaming_control(struct subdrv_ctx *ctx, bool enable)
 		}
 		subdrv_ixc_wr_u8(ctx, ctx->s_ctx.reg_addr_stream, 0x00);
 		if (ctx->s_ctx.reg_addr_fast_mode && ctx->fast_mode_on) {
-			ctx->fast_mode_on = FALSE;
-			ctx->ref_sof_cnt = 0;
 			DRV_LOG(ctx, "seamless_switch disabled.");
 			set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_fast_mode, 0x00);
 			commit_i2c_buffer(ctx);
 		}
+		ctx->fast_mode_on = FALSE;
+		ctx->ref_sof_cnt = 0;
 		memset(ctx->exposure, 0, sizeof(ctx->exposure));
 		memset(ctx->ana_gain, 0, sizeof(ctx->ana_gain));
 		ctx->autoflicker_en = FALSE;
