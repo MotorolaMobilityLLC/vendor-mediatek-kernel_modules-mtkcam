@@ -3170,7 +3170,13 @@ static int seninf_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct seninf_ctx *ctx = sd_to_ctx(sd);
 	unsigned int i;
+	int sensor_id = g_aov_param.sensor_idx;
 
+	if (ctx->is_aov_enable) {
+		dev_info(ctx->dev, "[%s]Warning: sensor_id(%d) aov_runtime_resume by seninf\n",
+			__func__, sensor_id);
+		mtk_cam_seninf_aov_runtime_resume(sensor_id, DEINIT_NORMAL);
+	}
 	mutex_lock(&ctx->mutex);
 	ctx->open_refcnt--;
 
@@ -3504,6 +3510,7 @@ static int seninf_probe(struct platform_device *pdev)
 	ctx->dbg_chmux_param = NULL;
 
 	ctx->open_refcnt = 0;
+	ctx->is_aov_enable = 0;
 	mutex_init(&ctx->mutex);
 
 	ret = get_csi_port(dev, &port);
@@ -4630,6 +4637,7 @@ int mtk_cam_seninf_aov_runtime_suspend(unsigned int sensor_id)
 	core = ctx->core;
 	mutex_lock(&core->mutex);
 
+	ctx->is_aov_enable = 1;
 	core->pwr_refcnt_for_aov++;
 	if (core->pwr_refcnt_for_aov < 0) {
 		dev_info(ctx->dev,
@@ -4790,6 +4798,13 @@ int mtk_cam_seninf_aov_runtime_resume(unsigned int sensor_id,
 	core = ctx->core;
 	mutex_lock(&core->mutex);
 
+	if (!ctx->is_aov_enable) {
+		mutex_unlock(&core->mutex);
+		pr_info("[%s] sensor_id(%d) already do aov_runtime_resume\n",
+			__func__, sensor_id);
+		return 0;
+	}
+	ctx->is_aov_enable = 0;
 	core->pwr_refcnt_for_aov--;
 	if (core->pwr_refcnt_for_aov < 0) {
 		dev_info(ctx->dev,
