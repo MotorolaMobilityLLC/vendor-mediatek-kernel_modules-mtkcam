@@ -290,10 +290,12 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 		}
 		AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
 			"turn on ulposc\n");
-		aov_ulposc_check_cali_result(aov_dev);
+		ret = aov_ulposc_check_cali_result(aov_dev);
 		AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
 			"turn on ulposc done, ret(%d)\n", ret);
 		up(&core_info->start_stop_sema);
+		if (ret != 1)
+			ret = -EFAULT;
 		break;
 	case AOV_DEV_TURN_OFF_ULPOSC:
 		if (down_interruptible(&core_info->start_stop_sema)) {
