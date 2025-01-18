@@ -5047,7 +5047,7 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 		break;
 	case JOB_TYPE_ONLY_SV:
 		mtk_cam_job_state_init_basic(&job->job_state, &sf_state_cb,
-					     !!job->sensor_hdl_obj);
+			mtk_cam_is_display_ic(ctx) ? 0 : !!job->sensor_hdl_obj);
 		job->ops = &otf_only_sv_job_ops;
 		pack_helper = &only_sv_pack_helper;
 		break;
