@@ -2241,8 +2241,7 @@ static void reset_runtime_info(struct mtk_cam_ctrl *ctrl)
 	info->outer_seq_no = -1;
 	info->inner_seq_no = -1;
 	info->done_seq_no = -1;
-	info->ae_wa_enable = ctrl->ctx->raw_subdev_idx >= 0 &&
-		ctrl->ctx->cam->sw_ver != 0x0001;
+	info->ae_wa_enable = false;
 
 	spin_unlock(&ctrl->info_lock);
 }
