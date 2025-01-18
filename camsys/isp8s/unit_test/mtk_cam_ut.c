@@ -1688,7 +1688,7 @@ static int mtk_cam_vcore_probe(struct platform_device *pdev)
 
 	clks = of_count_phandle_with_args(
 				pdev->dev.of_node, "clocks", "#clock-cells");
-	drvdata->num_clks = (clks == -ENOENT) ? 0 : clks;
+	drvdata->num_clks = (clks <= 0) ? 0 : clks;
 	dev_info(dev, "clk_num:%d\n", drvdata->num_clks);
 
 	if (drvdata->num_clks) {
@@ -1832,7 +1832,7 @@ static int mtk_cam_ut_probe(struct platform_device *pdev)
 
 	clks = of_count_phandle_with_args(
 					pdev->dev.of_node, "clocks", "#clock-cells");
-	ut->num_clks = (clks == -ENOENT) ? 0 : clks;
+	ut->num_clks = (clks <= 0) ? 0 : clks;
 	dev_info(dev, "clk_num:%d\n", ut->num_clks);
 	if (ut->num_clks) {
 		ut->clks = devm_kcalloc(

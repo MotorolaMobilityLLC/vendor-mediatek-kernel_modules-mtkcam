@@ -1110,7 +1110,7 @@ static int mtk_ut_raw_of_probe(struct platform_device *pdev,
 	clks = of_count_phandle_with_args(pdev->dev.of_node,
 				"clocks", "#clock-cells");
 
-	raw->num_clks = (clks == -ENOENT) ? 0:clks;
+	raw->num_clks = (clks <= 0) ? 0:clks;
 	dev_info(dev, "clk_num:%d\n", raw->num_clks);
 
 	if (raw->num_clks) {
@@ -1438,7 +1438,7 @@ static int mtk_ut_yuv_of_probe(struct platform_device *pdev,
 	clks = of_count_phandle_with_args(pdev->dev.of_node,
 				"clocks", "#clock-cells");
 
-	drvdata->num_clks = (clks == -ENOENT) ? 0:clks;
+	drvdata->num_clks = (clks <= 0) ? 0:clks;
 	dev_info(dev, "clk_num:%d\n", drvdata->num_clks);
 
 	if (drvdata->num_clks) {
@@ -1692,7 +1692,7 @@ static int mtk_ut_rms_of_probe(struct platform_device *pdev,
 	clks = of_count_phandle_with_args(pdev->dev.of_node,
 				"clocks", "#clock-cells");
 
-	drvdata->num_clks = (clks == -ENOENT) ? 0:clks;
+	drvdata->num_clks = (clks <= 0) ? 0:clks;
 	dev_info(dev, "clk_num:%d\n", drvdata->num_clks);
 
 	if (drvdata->num_clks) {

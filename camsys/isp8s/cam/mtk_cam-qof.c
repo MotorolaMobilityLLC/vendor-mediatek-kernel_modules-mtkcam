@@ -82,10 +82,12 @@ enum QOF_POWER_STATE {
 
 static inline u32 wait_itc_done(struct mtk_raw_device *raw)
 {
+	int read_ret = 0;
 	u32 ret, val;
 
-	ret = readx_poll_timeout_atomic(readl, raw->qof_base + REG_QOF_CAM_A_QOF_DONE_STATUS_1,
+	read_ret = readx_poll_timeout_atomic(readl, raw->qof_base + REG_QOF_CAM_A_QOF_DONE_STATUS_1,
 								 val, (val & 0x2), 30 /*us*/, 600);
+	ret = read_ret == 0 ? 0 : 1;
 
 	return ret;
 }

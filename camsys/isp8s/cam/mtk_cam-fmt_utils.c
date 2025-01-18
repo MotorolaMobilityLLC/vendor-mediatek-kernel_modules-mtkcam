@@ -323,7 +323,7 @@ unsigned int mtk_cam_get_pixel_bits(unsigned int ipi_fmt)
 	}
 	pr_debug("not supported ipi-fmt 0x%08x", ipi_fmt);
 
-	return -1;
+	return 8;
 }
 
 unsigned int mtk_cam_get_img_fmt(unsigned int fourcc)

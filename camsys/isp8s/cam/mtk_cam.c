@@ -2078,6 +2078,9 @@ static int mtk_cam_ctx_request_slb(struct mtk_cam_ctx *ctx, int uid,
 
 #ifdef SKIP_IN_FPGA_EP
 		ret = slbc_request(&slb);
+#else
+		slb.paddr = NULL;
+		slb.size = 0;
 #endif
 		if (ret < 0) {
 			dev_info(dev, "%s: allocate slb fail\n", __func__);
@@ -4799,7 +4802,7 @@ static int mtk_cam_vcore_probe(struct platform_device *pdev)
 
 	clks = of_count_phandle_with_args(
 				pdev->dev.of_node, "clocks", "#clock-cells");
-	drvdata->num_clks = (clks == -ENOENT) ? 0 : clks;
+	drvdata->num_clks = (clks <= 0) ? 0 : clks;
 	dev_info(dev, "clk_num:%d\n", drvdata->num_clks);
 
 	if (drvdata->num_clks) {
@@ -5324,6 +5327,9 @@ static void __exit mtk_cam_exit(void)
 
 bool mtk_cam_is_dcif_slb_supported(void)
 {
+#ifndef SKIP_IN_FPGA_EP
+	return false;
+#else
 	static int is_supported;
 	struct slbc_data slb;
 	int ret = -1;
@@ -5340,15 +5346,14 @@ bool mtk_cam_is_dcif_slb_supported(void)
 	slb.uid = UID_SENSOR;
 	slb.type = TP_BUFFER;
 
-#ifdef SKIP_IN_FPGA_EP
 	ret = slbc_status(&slb);
-#endif
 	is_supported = ret < 0 ? -1 : 1;
 
 	if (is_supported < 0)
 		pr_info("%s: not supported\n", __func__);
 
 	return is_supported > 0;
+#endif
 }
 
 bool mtk_cam_ctx_is_raw_sink_changed(struct mtk_cam_ctx *ctx,

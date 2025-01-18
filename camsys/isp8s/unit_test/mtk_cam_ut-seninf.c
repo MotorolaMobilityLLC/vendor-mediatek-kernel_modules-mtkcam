@@ -481,7 +481,7 @@ static int mtk_ut_seninf_of_probe(struct platform_device *pdev,
 	clks = of_count_phandle_with_args(pdev->dev.of_node,
 				"clocks", "#clock-cells");
 
-	seninf->num_clks = (clks == -ENOENT) ? 0:clks;
+	seninf->num_clks = (clks <= 0) ? 0:clks;
 	dev_info(dev, "clk_num:%d\n", seninf->num_clks);
 
 	if (seninf->num_clks) {
@@ -610,4 +610,3 @@ struct platform_driver mtk_ut_seninf_driver = {
 		.pm     = &mtk_ut_seninf_pm_ops,
 	}
 };
-

@@ -654,6 +654,7 @@ static int fill_sv_img_fp_working_buffer(struct req_buffer_helper *helper,
 	struct mtk_camsv_device *sv_dev;
 	struct mtkcam_ipi_img_output *out;
 	struct mtkcam_ipi_uid uid;
+	int idx = -1;
 	unsigned int tag_idx;
 	unsigned int job_exp_no = 0;
 	int ret = 0;
@@ -671,15 +672,17 @@ static int fill_sv_img_fp_working_buffer(struct req_buffer_helper *helper,
 		goto EXIT;
 	}
 
-	tag_idx = ((is_dc_mode(job) || is_offline_timeshare(job)) &&
+	idx = ((is_dc_mode(job) || is_offline_timeshare(job)) &&
 		job_exp_no > 1 && (exp_no + 1) == job_exp_no) ?
 		get_sv_tag_idx_hdr(job_exp_no, MTKCAM_IPI_ORDER_LAST_TAG, is_w) :
 		get_sv_tag_idx_hdr(job_exp_no, exp_no, is_w);
-	if (tag_idx == -1) {
+	if (idx < 0) {
 		ret = -1;
 		pr_info("%s: tag_idx not found(exp_no:%d)", __func__, job_exp_no);
 		goto EXIT;
 	}
+
+	tag_idx = idx;
 
 	uid.pipe_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
 	uid.id = MTKCAM_IPI_CAMSV_MAIN_OUT;
@@ -2496,6 +2499,11 @@ int handle_sv_tag_display_ic(struct mtk_cam_job *job)
 		return 1;
 
 	sv_pipe_idx = ctx->sv_subdev_idx[0];
+	if (sv_pipe_idx < 0) {
+		pr_info("[%s] invalid sv pipe idx\n", __func__);
+		return 1;
+	}
+
 	sv_pipe = &ctx->cam->pipelines.camsv[sv_pipe_idx];
 	sv_sink = &job->req->sv_data[sv_pipe_idx].sink;
 	hw_scen = (1 << MTKCAM_SV_SPECIAL_SCENARIO_DISPLAY_IC);

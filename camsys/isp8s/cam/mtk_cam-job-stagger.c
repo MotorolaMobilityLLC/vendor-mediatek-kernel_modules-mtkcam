@@ -130,8 +130,14 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 
 			for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
 				mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
-				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+				int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 					ctx->mraw_subdev_idx[mraw_dev_idx] + MTKCAM_SUBDEV_MRAW_START);
+
+				if (tag_idx < 0) {
+					pr_err("[%s] invalid mraw tag_idx", __func__);
+					return -1;
+				}
+
 				settings[i].seninf = ctx->seninf;
 				settings[i].source = job->tag_info[tag_idx].seninf_padidx;
 				settings[i].camtg  = sv_dev->cammux_id;
@@ -141,8 +147,14 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 			}
 
 			for (sv_idx = 0; sv_idx < ctx->num_sv_subdevs; sv_idx++) {
-				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+				int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 					ctx->sv_subdev_idx[sv_idx] + MTKCAM_SUBDEV_CAMSV_START);
+
+				if (tag_idx < 0) {
+					pr_err("[%s] invalid sv tag_idx", __func__);
+					return -1;
+				}
+
 				settings[i].seninf = ctx->seninf;
 				settings[i].source = job->tag_info[tag_idx].seninf_padidx;
 				settings[i].camtg  = sv_dev->cammux_id;
@@ -200,8 +212,13 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 
 			for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
 				mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
-				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+				int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 					ctx->mraw_subdev_idx[mraw_dev_idx] + MTKCAM_SUBDEV_MRAW_START);
+
+				if (tag_idx < 0) {
+					pr_err("[%s] invalid mraw tag_idx", __func__);
+					return -1;
+				}
 
 				settings[i].seninf = ctx->seninf;
 				settings[i].source = job->tag_info[tag_idx].seninf_padidx;
@@ -212,8 +229,14 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 			}
 
 			for (sv_idx = 0; sv_idx < ctx->num_sv_subdevs; sv_idx++) {
-				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+				int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 					ctx->sv_subdev_idx[sv_idx] + MTKCAM_SUBDEV_CAMSV_START);
+
+				if (tag_idx < 0) {
+					pr_err("[%s] invalid sv tag_idx", __func__);
+					return -1;
+				}
+
 				settings[i].seninf = ctx->seninf;
 				settings[i].source = job->tag_info[tag_idx].seninf_padidx;
 				settings[i].camtg  = sv_dev->cammux_id;
@@ -275,8 +298,13 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 
 			for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
 				mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
-				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+				int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 					ctx->mraw_subdev_idx[mraw_dev_idx] + MTKCAM_SUBDEV_MRAW_START);
+
+				if (tag_idx < 0) {
+					pr_err("[%s] invalid mraw tag_idx", __func__);
+					return -1;
+				}
 
 				settings[i].seninf = ctx->seninf;
 				settings[i].source = job->tag_info[tag_idx].seninf_padidx;
@@ -287,8 +315,14 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 			}
 
 			for (sv_idx = 0; sv_idx < ctx->num_sv_subdevs; sv_idx++) {
-				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+				int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 					ctx->sv_subdev_idx[sv_idx] + MTKCAM_SUBDEV_CAMSV_START);
+
+				if (tag_idx < 0) {
+					pr_err("[%s] invalid sv tag_idx", __func__);
+					return -1;
+				}
+
 				settings[i].seninf = ctx->seninf;
 				settings[i].source = job->tag_info[tag_idx].seninf_padidx;
 				settings[i].camtg  = sv_dev->cammux_id;
@@ -384,8 +418,13 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 
 			for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
 				mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
-				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+				int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 					ctx->mraw_subdev_idx[mraw_dev_idx] + MTKCAM_SUBDEV_MRAW_START);
+
+				if (tag_idx < 0) {
+					pr_err("[%s] invalid mraw tag_idx", __func__);
+					return -1;
+				}
 
 				settings[i].seninf = ctx->seninf;
 				settings[i].source = job->tag_info[tag_idx].seninf_padidx;
@@ -396,8 +435,14 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 			}
 
 			for (sv_idx = 0; sv_idx < ctx->num_sv_subdevs; sv_idx++) {
-				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+				int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 					ctx->sv_subdev_idx[sv_idx] + MTKCAM_SUBDEV_CAMSV_START);
+
+				if (tag_idx < 0) {
+					pr_err("[%s] invalid sv tag_idx", __func__);
+					return -1;
+				}
+
 				settings[i].seninf = ctx->seninf;
 				settings[i].source = job->tag_info[tag_idx].seninf_padidx;
 				settings[i].camtg  = sv_dev->cammux_id;
@@ -481,8 +526,13 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 
 			for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
 				mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
-				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+				int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 					ctx->mraw_subdev_idx[mraw_dev_idx] + MTKCAM_SUBDEV_MRAW_START);
+
+				if (tag_idx < 0) {
+					pr_err("[%s] invalid mraw tag_idx", __func__);
+					return -1;
+				}
 
 				settings[i].seninf = ctx->seninf;
 				settings[i].source = job->tag_info[tag_idx].seninf_padidx;
@@ -493,8 +543,14 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 			}
 
 			for (sv_idx = 0; sv_idx < ctx->num_sv_subdevs; sv_idx++) {
-				unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+				int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 					ctx->sv_subdev_idx[sv_idx] + MTKCAM_SUBDEV_CAMSV_START);
+
+				if (tag_idx < 0) {
+					pr_err("[%s] invalid sv tag_idx", __func__);
+					return -1;
+				}
+
 				settings[i].seninf = ctx->seninf;
 				settings[i].source = job->tag_info[tag_idx].seninf_padidx;
 				settings[i].camtg  = sv_dev->cammux_id;
@@ -574,8 +630,13 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 
 		for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
 			mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
-			unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+			int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 				ctx->mraw_subdev_idx[mraw_dev_idx] + MTKCAM_SUBDEV_MRAW_START);
+
+			if (tag_idx < 0) {
+				pr_err("[%s] invalid mraw tag_idx", __func__);
+				return -1;
+			}
 
 			settings[i].seninf = ctx->seninf;
 			settings[i].source = job->tag_info[tag_idx].seninf_padidx;
@@ -586,8 +647,14 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 		}
 
 		for (sv_idx = 0; sv_idx < ctx->num_sv_subdevs; sv_idx++) {
-			unsigned int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+			int tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 				ctx->sv_subdev_idx[sv_idx] + MTKCAM_SUBDEV_CAMSV_START);
+
+			if (tag_idx < 0) {
+				pr_err("[%s] invalid sv tag_idx", __func__);
+				return -1;
+			}
+
 			settings[i].seninf = ctx->seninf;
 			settings[i].source = job->tag_info[tag_idx].seninf_padidx;
 			settings[i].camtg  = sv_dev->cammux_id;
@@ -629,4 +696,3 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 
 	return 0;
 }
-

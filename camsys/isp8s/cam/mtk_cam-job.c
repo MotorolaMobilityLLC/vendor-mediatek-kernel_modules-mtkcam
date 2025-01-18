@@ -49,6 +49,10 @@ static unsigned int ltmsgo_low_latency = 1;
 module_param(ltmsgo_low_latency, int, 0644);
 MODULE_PARM_DESC(ltmsgo_low_latency, "ltmsgo_low_latency");
 
+static unsigned int disable_ufbc = 1;
+module_param(disable_ufbc, int, 0644);
+MODULE_PARM_DESC(disable_ufbc, "disable_ufbc (default off)");
+
 //static unsigned int rms_freerun;
 //module_param(rms_freerun, int, 0644);
 //MODULE_PARM_DESC(rms_freerun, "rms_freerun");
@@ -425,7 +429,7 @@ static void update_buf_fmt_sel(struct mtk_cam_job *job)
 		&job->src_ctx->img_work_buf_desc;
 	bool use_ufbc = true;
 
-	use_ufbc = use_ufbc
+	use_ufbc = !disable_ufbc
 		&& is_sv_support_ufbc(job)
 		&& !is_4cell_sensor(job)
 		&& is_scen_support_ufbc(job);
@@ -1561,7 +1565,7 @@ disable_seninf_cammux(struct mtk_cam_job *job)
 	struct mtk_camsv_device *sv_dev;
 	int i, max_exp = scen_max_exp_num(&job->job_scen);
 	bool is_w = is_rgbw(job);
-	unsigned int tag_idx;
+	int tag_idx;
 
 	for (i = 0; i < max_exp; ++i) {
 		mtk_cam_seninf_set_camtg_multiraw(
@@ -1580,17 +1584,25 @@ disable_seninf_cammux(struct mtk_cam_job *job)
 			tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 				ctx->sv_subdev_idx[i] + MTKCAM_SUBDEV_CAMSV_START);
 
-			mtk_cam_seninf_set_camtg_camsv(seninf,
-				job->tag_info[tag_idx].seninf_padidx,
-				0xFF, tag_idx);
+			if (tag_idx >= 0) {
+				mtk_cam_seninf_set_camtg_camsv(seninf,
+					job->tag_info[tag_idx].seninf_padidx,
+					0xFF, tag_idx);
+			} else {
+				pr_err("[%s] invalid sv tag_idx", __func__);
+			}
 		}
 		for (i = 0; i < ctx->num_mraw_subdevs; i++) {
 			tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 				ctx->mraw_subdev_idx[i] + MTKCAM_SUBDEV_MRAW_START);
 
-			mtk_cam_seninf_set_camtg_camsv(seninf,
-				job->tag_info[tag_idx].seninf_padidx,
-				0xFF, tag_idx);
+			if (tag_idx >= 0) {
+				mtk_cam_seninf_set_camtg_camsv(seninf,
+					job->tag_info[tag_idx].seninf_padidx,
+					0xFF, tag_idx);
+			} else {
+				pr_err("[%s] invalid mraw tag_idx", __func__);
+			}
 		}
 	}
 
@@ -3498,7 +3510,8 @@ static int fill_sv_img_buffer_to_ipi_frame(
 	struct mtk_camsv_device *sv_dev;
 	struct vb2_buffer *vb;
 	struct dma_info info;
-	unsigned int tag_idx, pad_idx, img_fmt;
+	int tag_idx;
+	unsigned int pad_idx, img_fmt;
 	void *vaddr;
 	int ret = -1;
 
@@ -3507,6 +3520,10 @@ static int fill_sv_img_buffer_to_ipi_frame(
 
 	sv_dev = dev_get_drvdata(ctx->hw_sv);
 	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, node->uid.pipe_id);
+	if (tag_idx < 0) {
+		pr_err("[%s] invalid sv tag_idx", __func__);
+		return ret;
+	}
 	pad_idx = mtk_cam_get_seninf_pad_index(job->tag_info, node->uid.pipe_id);
 
 	out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[0];
@@ -5720,6 +5737,13 @@ static int update_pdp_meta_buf_to_ipi_frame(
 	default:
 		pr_info("%s %s: not supported port: %d\n",
 			__FILE__, __func__, node->desc.dma_port);
+	}
+
+	if (param_idx < 0) {
+		ret = -1;
+		pr_info("%s %s: mraw param idx out of bound(param idx:%d)\n",
+			__FILE__, __func__, param_idx);
+		goto EXIT;
 	}
 
 	if (atomic_read(&mraw_pipe->res_config.enque_node_num) ==
