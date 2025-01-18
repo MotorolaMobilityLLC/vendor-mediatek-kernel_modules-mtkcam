@@ -97,6 +97,26 @@ struct seninf_ctx {
 /*----------------------------------------------------------------------------*/
 /* !!! sync from mtk_camera-v4l2-controls-common.h !!! */
 /*----------------------------------------------------------------------------*/
+struct mtk_cam_broadcast_info {
+	/* filled by user (caller) */
+	__u32 type;
+	char need_broadcast_to_itself;
+	__u32 sensor_idx;
+	__u32 seninf_idx;
+	int req_id;
+	__u64 sof_timestamp;
+
+	/* filled by worker */
+	__u64 queue_work_ts_ns;
+	__u64 wakeup_work_ts_ns;
+	__u64 done_work_ts_ns;
+
+	/* extra/custom */
+	void *p_data;
+	__u32 data_size;
+};
+
+
 #define TSREC_TS_REC_MAX_CNT (4)
 #define TSREC_EXP_MAX_CNT    (3)
 
@@ -145,6 +165,9 @@ enum tsrec_cb_cmd {
 	/* user get tsrec information */
 	TSREC_CB_CMD_READ_CURR_TS,
 	TSREC_CB_CMD_READ_TS_INFO,
+
+	/* user request tsrec worker to help to broadcast event */
+	TSREC_CB_CMD_SETUP_BROADCAST_EVENT,
 };
 
 enum tsrec_cb_ctrl_error_type {
