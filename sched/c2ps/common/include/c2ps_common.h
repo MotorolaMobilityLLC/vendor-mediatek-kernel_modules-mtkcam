@@ -43,6 +43,10 @@
 #define LxF_S_KF_QVAL 10
 #define LxF_F_KF_QVAL 20
 #define LxF_DIFF_THRES 10000
+// freq kf param for L/M um ratio
+#define FREQ_KF_MIN_EST_ERR 1000
+#define FREQ_KF_QVAL 50
+#define FREQ_KF_MEAS_ERR 50000
 
 #define DEFAULT_UM_MIN 65
 #define RESET_VAL 999999
@@ -55,11 +59,30 @@ extern bool c2ps_um_mode_on;
 extern int c2ps_regulator_base_update_um;
 extern int c2ps_regulator_um_min;
 extern int c2ps_lcore_mcore_um_ratio;
+extern bool enable_runnable_monitor;
+extern int c2ps_pwr_eff_threshold;
+extern int L_dvide_M_ratio;
+extern int long_period_idle;
 
 enum c2ps_env_status : int {
 	C2PS_STAT_NODEF = 0,
 	C2PS_STAT_STABLE,
 	C2PS_STAT_TRANSIENT,
+	C2PS_STAT_RUNNABLE_BOOST,
+};
+
+enum c2ps_guided_index : int {
+	C2PS_GUIDED_INDEX_NONE = 0,
+	C2PS_GUIDED_INDEX_IDLE,
+	C2PS_GUIDED_INDEX_RUNNABLE,
+	C2PS_GUIDED_INDEX_IDLE_AND_RUNNABLE,
+};
+
+enum c2ps_runnable_signal : int {
+	C2PS_RUNNABLE_NORMAL = 0,
+	C2PS_RUNNABLE_NONDEC,
+	C2PS_RUNNABLE_DEC,
+	C2PS_RUNNABLE_DANGER,
 };
 
 struct c2ps_task_info {
@@ -176,6 +199,7 @@ struct global_info {
 	/******** cpu idle rate related ********/
 	struct per_cpu_idle_rate cpu_idle_rates[MAX_CPU_NUM];
 	int avg_cluster_idle_rate[MAX_CPU_NUM];
+	int avg_available_cpus_idle_rate;
 	int last_sum_idle_rate;
 	// TODO(MTK): check if this can be simplified
 	u64 s_loadxfreq[MAX_CPU_NUM];
@@ -186,6 +210,10 @@ struct global_info {
 	u32 scn_cpu_freq_floor[MAX_NUMBER_OF_CLUSTERS];
 	u32 possible_config_cpu_freq[MAX_NUMBER_OF_CLUSTERS];
 	bool is_cpu_boost;
+	u32 runnable_count[MAX_NUMBER_OF_CLUSTERS];
+	u32 last_runnable_count_sum;
+	enum c2ps_runnable_signal runnable_count_signal;
+	int available_cpus;
 
 	/**
 	 * need_update_bg definition:
@@ -222,6 +250,7 @@ struct global_info {
 	int curr_um;
 	// um setting for idle rate control
 	int curr_um_idle;
+	int curr_runnable_boost_um;
 	struct um_update_vote um_vote;
 	/******** single shot um related ********/
 	u32 overwrite_util_margin;
@@ -234,6 +263,12 @@ struct global_info {
 	u32 single_shot_enable_ineff_cpufreq_cnt;
 	bool switch_um_idle_rate_mode;
 	struct mutex mlock;
+};
+
+struct cpu_info {
+	u32 l_core_max_util;
+	u32 m_core_max_util;
+	u32 b_core_max_util;
 };
 
 struct eas_settings {
@@ -327,6 +362,7 @@ void c2ps_check_last_anc(struct c2ps_anchor *anc);
 u64 c2ps_get_time(void);
 void c2ps_update_task_info_hist(struct c2ps_task_info *tsk_info);
 struct global_info *get_glb_info(void);
+struct cpu_info *get_cpu_info(void);
 void set_config_camfps(int camfps);
 void decide_special_uclamp_max(int placeholder_type);
 void update_vsync_time(u64 ts);
@@ -376,6 +412,23 @@ void set_uclamp(const int pid, unsigned int max_util, unsigned int min_util);
 void reset_task_eas_setting(struct c2ps_task_info *tsk_info);
 void reset_task_uclamp(int pid);
 void cache_possible_config_cpu_freq_info(void);
+int refine_uclamp(struct global_info *g_info, int ori_uclamp);
+// cpu dynamic isolation
+void update_available_cpus(void);
+void update_c2ps_set_m_core_cpus(int m_core_cpus);
+bool get_enable_dyna_isolation(void);
+void check_cpu_on_condition(void);
+void check_cpu_off_condition(void);
+void cancel_dyna_core_isolation(void);
+// for L/M um ratio
+int c2ps_get_kf_freq(int curr_freq, int cluster_index);
+extern int get_cpu_util_with_margin(int cpu, int cpu_util);
+extern int pd_util2opp(int cpu, int util, int quant, int wl, int *val_s, int r_o, int caller);
+extern int pd_freq2opp(int cpu, int freq, int quant, int wl);
+extern int pd_opp2freq(int cpu, int opp, int quant, int wl);
+extern int pd_opp2cap(int cpu, int opp, int quant, int wl, int *val_s, int r_o, int caller);
+extern int pd_opp2pwr_eff(int cpu, int opp, int quant, int wl, int *val_s, int r_o, int caller);
+extern unsigned long pd_get_freq_pwr_eff(unsigned int cpu, unsigned long freq);
 
 // EAS
 extern void set_curr_uclamp_ctrl(int val);
@@ -403,6 +456,11 @@ extern int get_grp_dvfs_ctrl(void);
 extern void set_grp_dvfs_ctrl(int set);
 extern bool get_ignore_idle_ctrl(void);
 extern void set_ignore_idle_ctrl(bool val);
+// core ctl new function
+extern int core_ctl_get_min_cpus(unsigned int cid);
+extern int core_ctl_set_min_cpus(unsigned int cid, unsigned int min, int requester, unsigned int have_demand);
+extern int core_ctl_get_max_cpus(unsigned int cid);
+extern int core_ctl_set_max_cpus(unsigned int cid, unsigned int max, int requester, unsigned int have_demand);
 
 #if IS_ENABLED(CONFIG_MTK_SCHED_GROUP_AWARE) && IS_ENABLED(CONFIG_MTK_SCHED_FAST_LOAD_TRACKING)
 extern bool flt_ctrl_force_get(void);
@@ -428,6 +486,11 @@ extern int get_vip_task_prio(struct task_struct *p);
 extern bool prio_is_vip(int vip_prio, int type);
 extern void unset_task_priority_based_vip(int pid);
 extern void unset_task_vvip(int pid);
+#endif
+
+#if KERNEL_VERSION(6, 12, 0) <= LINUX_VERSION_CODE
+extern int unset_target_margin(int gearid);
+extern int unset_target_margin_low(int gearid);
 #endif
 
 // QoS

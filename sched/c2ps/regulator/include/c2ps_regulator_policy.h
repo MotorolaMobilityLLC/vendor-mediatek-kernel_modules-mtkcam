@@ -12,7 +12,7 @@
 
 // critical task policy
 void c2ps_regulator_policy_fix_uclamp(struct regulator_req *req);
-void c2ps_regulator_policy_simple(struct regulator_req *req);
+// void c2ps_regulator_policy_simple(struct regulator_req *req);
 void c2ps_regulator_policy_debug_uclamp(struct regulator_req *req);
 
 // background uclamp max policy
@@ -21,7 +21,10 @@ void c2ps_regulator_bgpolicy_simple(struct regulator_req *req);
 void c2ps_regulator_bgpolicy_um_stable_default(struct regulator_req *req);
 void c2ps_regulator_bgpolicy_um_stable(struct regulator_req *req);
 void c2ps_regulator_bgpolicy_um_transient(struct regulator_req *req);
-
+void c2ps_regulator_bgpolicy_um_runnable_boost(struct regulator_req *req);
+// dynamically adjust c2ps_lcore_mcore_um_ratio
+int c2ps_cal_pwr_eff(int cluster);
+int c2ps_decide_l_m_um_ratio(u32 *l_cpu_freq_floor, u32 *m_cpu_freq_floor);
 
 enum c2ps_regulator_mode : int
 {
@@ -35,6 +38,7 @@ enum c2ps_regulator_mode : int
 	C2PS_REGULATOR_BGMODE_UM_STABLE_DEFAULT,
 	C2PS_REGULATOR_BGMODE_UM_STABLE,
 	C2PS_REGULATOR_BGMODE_UM_TRANSIENT,
+	C2PS_REGULATOR_BGMODE_UM_RUNNABLE_BOOST,
 };
 
 #endif  // C2PS_REGULATOR_INCLUDE_C2PS_REGULATOR_POLICY_H_

@@ -25,6 +25,10 @@ int (*c2ps_notify_task_start_fp)(int pid, int task_id);
 EXPORT_SYMBOL_GPL(c2ps_notify_task_start_fp);
 int (*c2ps_notify_task_end_fp)(int pid, int task_id);
 EXPORT_SYMBOL_GPL(c2ps_notify_task_end_fp);
+int (*c2ps_notify_perf_monitor_fp)(unsigned int target_id,
+	unsigned int serial_no, unsigned int strategy,
+	unsigned int spec, bool is_start);
+EXPORT_SYMBOL_GPL(c2ps_notify_perf_monitor_fp);
 int (*c2ps_notify_vsync_fp)(void);
 EXPORT_SYMBOL_GPL(c2ps_notify_vsync_fp);
 int (*c2ps_notify_camfps_fp)(int camfps);
@@ -84,6 +88,7 @@ static long device_ioctl(
 	struct C2PS_INIT_PARAM c2ps_init_param;
 	struct C2PS_UNINIT_PARAM c2ps_uninit_param;
 	struct C2PS_TASK_INIT_PARAMS c2ps_tsk_init_param;
+	struct C2PS_PERF_MONITOR_PARAM c2ps_perf_monitor_param;
 	struct C2PS_INFO_NOTIFY c2ps_info;
 	struct C2PS_SINGLE_SHOT_PARAM c2ps_single_shot;
 	struct C2PS_SINGLE_SHOT_TASK_PARAM c2ps_single_shot_tsk;
@@ -170,6 +175,20 @@ static long device_ioctl(
 		if (likely(c2ps_notify_task_scene_change_fp))
 			c2ps_notify_task_scene_change_fp(
 			(&c2ps_pkg)->task_id, (&c2ps_pkg)->mode_change_hint);
+		break;
+	case C2PS_PERF_MONITOR:
+		C2PS_LOGD("C2PS_PERF_MONITOR");
+		if (unlikely(perfctl_copy_from_user(&c2ps_perf_monitor_param, argp,
+			sizeof(c2ps_perf_monitor_param)))) {
+			ret = -EFAULT;
+			goto ret_ioctl;
+		}
+		if (likely(c2ps_notify_perf_monitor_fp))
+			c2ps_notify_perf_monitor_fp((&c2ps_perf_monitor_param)->target_id,
+				(&c2ps_perf_monitor_param)->serial_no,
+				(&c2ps_perf_monitor_param)->strategy,
+				(&c2ps_perf_monitor_param)->spec,
+				(&c2ps_perf_monitor_param)->is_start);
 		break;
 	case C2PS_NOTIFY_VSYNC:
 		C2PS_LOGD("C2PS_NOTIFY_VSYNC");

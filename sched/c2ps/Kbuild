@@ -24,7 +24,7 @@ MTK_C2PS_COMMON = $(mtk_c2ps_common_objs:%.o=common/%.o)
 include $(C2PS_MONITOR_TOP)/Kbuild
 MTK_C2PS_MONITOR = $(mtk_c2ps_monitor_objs:%.o=monitor/%.o)
 
-#uclamp regulator
+#regulator
 include $(C2PS_REGULATOR_TOP)/Kbuild
 MTK_C2PS_REGULATOR = $(mtk_c2ps_regulator_objs:%.o=regulator/%.o)
 

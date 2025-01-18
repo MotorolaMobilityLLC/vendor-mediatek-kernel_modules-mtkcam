@@ -4,16 +4,208 @@
  */
 
 #include <linux/string.h>
+#include <linux/timer.h>
+#include <linux/workqueue.h>
 
 #include "c2ps_common.h"
 #include "c2ps_monitor.h"
 #include "c2ps_regulator.h"
 #include "c2ps_stat_selector.h"
 
+struct timer_list c2ps_reg_check_timer;
+struct workqueue_struct *proxy_wq;
+
+static atomic_t enable_reg_check_timer = ATOMIC_INIT(0);
+static DEFINE_HASHTABLE(reg_check_task_list, 3);
+static DEFINE_MUTEX(reg_check_task_list_lock);
+
+static void update_reg_check_timer(void)
+{
+	unsigned long cur_timeout = c2ps_reg_check_timer.expires;
+	struct reg_check_task *tsk = NULL;
+	bool need_update_timer = false;
+	bool at_least_one_task_active = false;
+	u32 tmp = 0;
+
+	mutex_lock(&reg_check_task_list_lock);
+
+	if (unlikely(hash_empty(reg_check_task_list))) {
+		C2PS_LOGD("empty reg_check_task_list\n");
+		goto out;
+	}
+	hash_for_each(reg_check_task_list, tmp, tsk, hlist) {
+		at_least_one_task_active |= tsk->active;
+
+		if (tsk->active && tsk->start_timing > 0 && tsk->start_timing < cur_timeout) {
+			cur_timeout = tsk->start_timing;
+			need_update_timer = true;
+		}
+	}
+
+out:
+	mutex_unlock(&reg_check_task_list_lock);
+
+	if (need_update_timer) {
+		atomic_set(&enable_reg_check_timer, 1);
+		mod_timer(&c2ps_reg_check_timer, cur_timeout);
+	} else if(!at_least_one_task_active) {
+		atomic_set(&enable_reg_check_timer, 0);
+		// set the timeout to 10 sec later to keep the timer pending
+		mod_timer(&c2ps_reg_check_timer, jiffies + 10*HZ);
+	}
+}
+
+struct reg_check_task *c2ps_find_reg_check_task_by_id(u32 id)
+{
+	struct reg_check_task *tsk = NULL;
+
+	C2PS_LOGD("+\n");
+	mutex_lock(&reg_check_task_list_lock);
+
+	if (unlikely(hash_empty(reg_check_task_list))) {
+		C2PS_LOGD("empty reg_check_task_list\n");
+		goto out;
+	}
+	hash_for_each_possible(reg_check_task_list, tsk, hlist, id) {
+		C2PS_LOGD("find reg check task with id: %u\n", id);
+		goto out;
+	}
+
+out:
+	mutex_unlock(&reg_check_task_list_lock);
+	C2PS_LOGD("-\n");
+	return tsk;
+}
+
+int register_reg_check_task(struct reg_check_task *tsk)
+{
+	if (unlikely(!tsk)) {
+		C2PS_LOGE("tsk is null\n");
+		return -EINVAL;
+	}
+	mutex_lock(&reg_check_task_list_lock);
+	hash_add(reg_check_task_list, &tsk->hlist, tsk->id);
+	mutex_unlock(&reg_check_task_list_lock);
+	return 0;
+}
+
+void clear_reg_check_task_list(void)
+{
+	struct reg_check_task *tsk = NULL;
+	struct hlist_node *tmp = NULL;
+	int bkt = 0;
+
+	C2PS_LOGD("+\n");
+	mutex_lock(&reg_check_task_list_lock);
+	if (unlikely(hash_empty(reg_check_task_list))) {
+		C2PS_LOGD("task info table is empty\n");
+		goto out;
+	}
+
+	hash_for_each_safe(
+		reg_check_task_list, bkt, tmp, tsk, hlist) {
+		hash_del(&tsk->hlist);
+		kfree(tsk);
+		tsk = NULL;
+	}
+
+out:
+	mutex_unlock(&reg_check_task_list_lock);
+	C2PS_LOGD("-\n");
+}
+
+// set start_in_ms to -1 to notify task stop
+int set_reg_check_task(struct reg_check_input_data input_data, void (*procfunc)(struct reg_check_input_data))
+{
+	struct reg_check_task *tsk = c2ps_find_reg_check_task_by_id(input_data.target_id);
+
+	if (unlikely(tsk == NULL)) {
+		// return directly if a task never starts but calling stop
+		if (input_data.start_in_ms < 0)
+			return -EINVAL;
+
+		tsk = kzalloc(sizeof(*tsk), GFP_KERNEL);
+		if (unlikely(!tsk)) {
+			C2PS_LOGE("OOM\n");
+			return -EINVAL;
+		}
+
+		tsk->id = input_data.target_id;
+		tsk->cache_data.num_thread = MAX_PERFMONITOR_THREAD_NUM;
+
+		if (unlikely(procfunc != NULL))
+			tsk->procfunc = procfunc;
+
+		if (unlikely(register_reg_check_task(tsk))) {
+			C2PS_LOGE("add reg check task failed\n");
+			return -EINVAL;
+		}
+	}
+
+	if (input_data.start_in_ms >= 0) {
+		input_data.cache_data = &(tsk->cache_data);
+		input_data.cache_data->start_timing = c2ps_get_time();
+		tsk->input_data = input_data;
+		tsk->start_timing = jiffies + input_data.start_in_ms*HZ/1000;
+		tsk->active = true;
+	} else {
+		if (likely(procfunc != NULL && tsk->active)) {
+			input_data.cache_data = &(tsk->cache_data);
+			procfunc(input_data);
+		}
+		tsk->start_timing = 0;
+		tsk->active = false;
+	}
+
+	update_reg_check_timer();
+
+	return 0;
+}
+
+void notify_rescue_task(struct reg_check_input_data input_data, bool is_start)
+{
+	if (is_start) {
+		if (unlikely(input_data.start_in_ms < 10)) {
+			C2PS_LOGW("do not support time spec less than 10ms");
+			return;
+		}
+
+		C2PS_LOGD("check start rescue_mode: %d", input_data.rescue_mode);
+		switch (input_data.rescue_mode) {
+		case C2PS_RESCUE_AGGRESIVE:
+			set_reg_check_task(input_data, reg_check_action_aggresive_set_uclamp);
+			break;
+		case C2PS_RESCUE_CONVERGE:
+			set_reg_check_task(input_data, reg_check_action_converge_set_uclamp);
+			break;
+		case C2PS_RESCUE_NORMAL:
+			set_reg_check_task(input_data, reg_check_action_normal_set_uclamp);
+			break;
+		default:
+			break;
+		}
+	} else {
+		C2PS_LOGD("check end rescue_mode: %d", input_data.rescue_mode);
+		input_data.start_in_ms = -1;
+		switch (input_data.rescue_mode) {
+		case C2PS_RESCUE_AGGRESIVE:
+			set_reg_check_task(input_data, reg_check_action_aggresive_unset_uclamp);
+			break;
+		case C2PS_RESCUE_CONVERGE:
+			set_reg_check_task(input_data, reg_check_action_converge_unset_uclamp);
+			break;
+		case C2PS_RESCUE_NORMAL:
+			set_reg_check_task(input_data, reg_check_action_normal_unset_uclamp);
+			break;
+		default:
+			break;
+		}
+	}
+}
 
 static bool check_if_update_uclamp(struct c2ps_task_info *tsk_info)
 {
-	if (tsk_info->tsk_group) {
+	if (unlikely(tsk_info->tsk_group)) {
 		u64 remaining_time = tsk_info->tsk_group->group_target_time -
 			tsk_info->tsk_group->accumulate_time;
 		C2PS_LOGD("task_id: %d, group_head: %d"
@@ -49,7 +241,7 @@ static void reset_history_info(struct c2ps_task_info *tsk_info)
 	c2ps_info_unlock(&tsk_info->mlock);
 }
 
-int __maybe_unused monitor_task_start(int pid, int task_id)
+int monitor_task_start(int pid, int task_id)
 {
 	struct c2ps_task_info *tsk_info = c2ps_find_task_info_by_tskid(task_id);
 
@@ -78,45 +270,35 @@ int __maybe_unused monitor_task_start(int pid, int task_id)
 	}
 
 	tsk_info->pid = pid;
-	tsk_info->start_time = c2ps_get_time();
-	tsk_info->sum_exec_runtime_start = c2ps_get_sum_exec_runtime(pid);
-
-	C2PS_LOGD("task_id: %d, start_time: %llu\n", task_id, tsk_info->start_time);
-
-	if (tsk_info->tsk_group) {
-		c2ps_info_lock(&tsk_info->tsk_group->mlock);
-		if (is_group_head(tsk_info)) {
-			tsk_info->tsk_group->accumulate_time = 0;
-			tsk_info->tsk_group->group_start_time = tsk_info->start_time;
-		} else {
-			tsk_info->tsk_group->accumulate_time =
-				tsk_info->start_time - tsk_info->tsk_group->group_start_time;
-		}
-		c2ps_info_unlock(&tsk_info->tsk_group->mlock);
-	}
 
 	if (check_if_update_uclamp(tsk_info)) {
-		struct regulator_req *req = get_regulator_req();
+		struct global_info *g_info = get_glb_info();
+		int action_uclamp = 0;
 
-		if (likely(req != NULL)) {
-			req->tsk_info = tsk_info;
-			req->glb_info = get_glb_info();
-			req->curr_um = 100;
+		if (!g_info)
+			return -1;
 
-			if (likely(req->glb_info)) {
-				if (req->glb_info->has_anchor_spec && req->glb_info->curr_um > 0)
-					req->curr_um = req->glb_info->curr_um;
-				else if (req->glb_info->curr_um_idle > 0)
-					req->curr_um = req->glb_info->curr_um_idle;
+		action_uclamp = refine_uclamp(g_info, tsk_info->default_uclamp);
+		set_uclamp(pid, action_uclamp, action_uclamp);
+		tsk_info->latest_uclamp = action_uclamp;
+
+		if (unlikely(tsk_info->is_enable_dep_thread)) {
+			int _i = 0;
+
+			for (; _i < MAX_DEP_THREAD_NUM; _i++) {
+				if (tsk_info->dep_thread[_i] <= 0)
+					break;
+				C2PS_LOGD("thread (%d) set dep thread: %d",
+					tsk_info->pid, tsk_info->dep_thread[_i]);
+				set_uclamp(tsk_info->dep_thread[_i], action_uclamp, action_uclamp);
 			}
-			send_regulator_req(req);
 		}
 	}
 	C2PS_LOGD("-\n");
 	return 0;
 }
 
-int __maybe_unused monitor_task_end(int pid, int task_id)
+int monitor_task_end(int pid, int task_id)
 {
 	struct c2ps_task_info *tsk_info = c2ps_find_task_info_by_tskid(task_id);
 
@@ -127,22 +309,6 @@ int __maybe_unused monitor_task_end(int pid, int task_id)
 		return -1;
 	}
 
-	tsk_info->end_time = c2ps_get_time();
-	tsk_info->proc_time = tsk_info->end_time - tsk_info->start_time;
-	tsk_info->real_exec_runtime = cal_real_exec_runtime(tsk_info);
-	tsk_info->overlap_task = NULL;
-
-	C2PS_LOGD("task_name: %s, task_id: %d, "
-		"end_time: %llu, proc_time: %llu, exec_time: %llu\n",
-		tsk_info->task_name, task_id, tsk_info->end_time, tsk_info->proc_time,
-		tsk_info->real_exec_runtime);
-	c2ps_update_task_info_hist(tsk_info);
-
-	/* debug tool tag */
-	c2ps_main_systrace("task_name: %s, task_id: %d, proc_time: %llu, "
-			"real exec_time: %llu",
-			tsk_info->task_name, tsk_info->task_id,
-			tsk_info->proc_time, tsk_info->real_exec_runtime);
 	c2ps_critical_task_systrace(tsk_info);
 
 	if (unlikely(tsk_info->is_enable_dep_thread)) {
@@ -172,7 +338,8 @@ inline void cal_um(struct c2ps_anchor *anc)
 		req->anc_info = anc;
 		req->glb_info = g_info;
 		req->stat = g_info->stat;
-		send_regulator_req(req);
+		if (req->stat != C2PS_STAT_RUNNABLE_BOOST)
+			send_regulator_req(req);
 	}
 }
 
@@ -307,4 +474,76 @@ int monitor_task_scene_change(int task_id, int scene_mode)
 	reset_history_info(tsk_info);
 	C2PS_LOGD("-\n");
 	return 0;
+}
+
+static void c2ps_proxy_wq_process(struct work_struct *work)
+{
+	if (unlikely(hash_empty(reg_check_task_list) || !work)) {
+		C2PS_LOGD("no registered reg_check_task\n");
+		return;
+	}
+
+	struct c2ps_reg_check_proxy_task *w = NULL;
+
+	w = container_of(work, struct c2ps_reg_check_proxy_task, m_work);
+
+	{
+		struct reg_check_task *tsk = NULL;
+		u32 tmp = 0;
+		unsigned long curr_ns_time = c2ps_get_time();
+
+		mutex_lock(&reg_check_task_list_lock);
+		hash_for_each(reg_check_task_list, tmp, tsk, hlist) {
+			if (tsk->active && tsk->start_timing >= 0 &&
+				tsk->procfunc != NULL) {
+				if (curr_ns_time - tsk->input_data.cache_data->start_timing >=
+						tsk->input_data.start_in_ms * 1000000)
+					tsk->procfunc(tsk->input_data);
+			}
+		}
+		mutex_unlock(&reg_check_task_list_lock);
+	}
+
+	kfree(w);
+}
+
+static void c2ps_reg_check_timer_callback(struct timer_list *t)
+{
+	struct c2ps_reg_check_proxy_task *work = NULL;
+
+	if (atomic_read(&enable_reg_check_timer) > 0)
+		mod_timer(&c2ps_reg_check_timer, jiffies);
+
+	work = kzalloc(sizeof(struct c2ps_reg_check_proxy_task), GFP_KERNEL);
+	if (unlikely(!work)) {
+		C2PS_LOGE("reg check proxy task allocate failed\n");
+		return;
+	}
+
+	c2ps_main_systrace("reg check timer callback");
+	INIT_WORK(&work->m_work, c2ps_proxy_wq_process);
+	queue_work(proxy_wq, &work->m_work);
+}
+
+void c2ps_monitor_init(void)
+{
+	c2ps_reg_check_timer.expires = jiffies + 10*HZ;
+	timer_setup(&c2ps_reg_check_timer, c2ps_reg_check_timer_callback, 0);
+	add_timer(&c2ps_reg_check_timer);
+	atomic_set(&enable_reg_check_timer, 0);
+
+	if (proxy_wq == NULL)
+		proxy_wq = alloc_ordered_workqueue("c2ps_proxy_wq", 0);
+}
+
+void c2ps_monitor_uninit(void)
+{
+	atomic_set(&enable_reg_check_timer, 0);
+	del_timer_sync(&c2ps_reg_check_timer);
+	clear_reg_check_task_list();
+	if (proxy_wq) {
+		flush_workqueue(proxy_wq);
+		destroy_workqueue(proxy_wq);
+		proxy_wq = NULL;
+	}
 }

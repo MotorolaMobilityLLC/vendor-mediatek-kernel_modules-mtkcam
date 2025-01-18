@@ -20,6 +20,8 @@ extern int (*c2ps_notify_add_task_fp)(
 	bool is_enable_dep_thread, const char *task_name);
 extern int (*c2ps_notify_task_start_fp)(int pid, int task_id);
 extern int (*c2ps_notify_task_end_fp)(int pid, int task_id);
+extern int (*c2ps_notify_perf_monitor_fp)(unsigned int target_id, unsigned int serial_no,
+		unsigned int strategy, unsigned int spec, bool is_start);
 extern int (*c2ps_notify_vsync_fp)(void);
 extern int (*c2ps_notify_camfps_fp)(int camfps);
 extern int (*c2ps_notify_task_scene_change_fp)(int task_id, int scene_mode);

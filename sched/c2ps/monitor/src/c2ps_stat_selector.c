@@ -35,6 +35,14 @@ inline enum c2ps_env_status c2ps_stat_selector_v1(struct global_info *glb_info)
 	return C2PS_STAT_STABLE;
 }
 
+inline enum c2ps_env_status c2ps_stat_selector_v2(struct global_info *glb_info)
+{
+	if (glb_info->has_anchor_spec &&
+		glb_info->runnable_count_signal == C2PS_RUNNABLE_DANGER)
+		return C2PS_STAT_RUNNABLE_BOOST;
+	return C2PS_STAT_STABLE;
+}
+
 enum c2ps_env_status determine_cur_system_state(struct global_info *glb_info)
 {
 	switch (stat_selector_mode) {
@@ -42,6 +50,8 @@ enum c2ps_env_status determine_cur_system_state(struct global_info *glb_info)
 		return C2PS_STAT_STABLE;
 	case C2PS_STAT_SELECTOR_V1:
 		return c2ps_stat_selector_v1(glb_info);
+	case C2PS_STAT_SELECTOR_V2:
+		return c2ps_stat_selector_v2(glb_info);
 	default:
 		return C2PS_STAT_NODEF;
 	}

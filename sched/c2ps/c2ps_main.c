@@ -69,6 +69,9 @@ static int picked_wl_table = 0;
 static unsigned int background_monitor_duration = BACKGROUND_MONITOR_DURATION;
 static unsigned int c2ps_vip_throttle_time = 12;
 static atomic_t processing_count = ATOMIC_INIT(0);
+static int cam_hal_pid;
+static char cam_hal_name[TASK_COMM_LEN + 1];
+
 unsigned int c2ps_nr_clusters;
 struct timer_list background_info_update_timer;
 struct timer_list self_uninit_timer;
@@ -77,32 +80,56 @@ module_param(picked_wl_table, int, 0644);
 module_param(background_monitor_duration, int, 0644);
 module_param(c2ps_vip_throttle_time, int, 0644);
 
+static void trigger_bg_policy(void)
+{
+	C2PS_LOGD("trigger bg policy");
+	if (need_update_background()) {
+		C2PS_LOGD("trigger bg policy: update background");
+		signal_regulator_req();
+		reset_need_update_status();
+	}
+}
+
+static inline void core_isolation_update(void)
+{
+	static int check_cpu_on_off_count;
+
+	check_cpu_on_off_count++;
+	check_cpu_on_condition();
+	if (check_cpu_on_off_count >= 3) {
+		check_cpu_off_condition();
+		check_cpu_on_off_count = 0;
+	}
+}
+
 static void background_info_update_timer_callback(struct timer_list *t)
 {
 	if (unlikely(background_monitor_duration == 0))
 		background_monitor_duration = BACKGROUND_MONITOR_DURATION;
+	if (enable_runnable_monitor) {
+		/*
+		 * force 4 ms monitor duration when runnable monitor enabled
+		 */
+		background_monitor_duration = 4;
+		long_period_idle = 4;
+	} else {
+		long_period_idle = 2;
+	}
 	mod_timer(t, jiffies + background_monitor_duration*HZ / 1000 / 2);
 	monitor_system_info();
+	trigger_bg_policy();
+	if (get_enable_dyna_isolation())
+		core_isolation_update();
+	else
+		cancel_dyna_core_isolation();
+	update_available_cpus();
 }
 
-static void trigger_bg_policy(void)
+static inline void save_cam_hal_info(void)
 {
-	if (need_update_background()) {
-		struct regulator_req *req = NULL;
-		struct global_info *g_info = get_glb_info();
-
-		if (unlikely(!g_info))
-			return;
-
-		req = get_regulator_req();
-
-		if (likely(req != NULL)) {
-			req->glb_info = g_info;
-			req->stat = g_info->stat;
-			send_regulator_req(req);
-			reset_need_update_status();
-		}
-	}
+	cam_hal_pid = READ_ONCE(current->tgid);
+	C2PS_LOGD("camera hal pid: %d, %s", cam_hal_pid, current->group_leader->comm);
+	strscpy(cam_hal_name, current->group_leader->comm, TASK_COMM_LEN);
 }
 
 static void c2ps_notifier_init(int cfg_camfps)
@@ -111,6 +138,7 @@ static void c2ps_notifier_init(int cfg_camfps)
 		C2PS_LOGD("init_c2ps_common failed\n");
 		return;
 	}
+	save_cam_hal_info();
 
 	self_uninit_timer.expires = jiffies + 5*HZ;
 	timer_setup(&self_uninit_timer, self_uninit_timer_callback, 0);
@@ -124,13 +152,12 @@ static void c2ps_notifier_init(int cfg_camfps)
 		set_wl_manual(picked_wl_table);
 	else
 		set_wl_manual(0);
+	c2ps_monitor_init();
 	c2ps_regulator_init();
 }
 
 static void c2ps_notifier_uninit(void)
 {
-	short _idx = 0;
-
 	C2PS_LOGD("[C2PS_CB] uninit\n");
 	// disable sugov per-gear uclamp max feature
 	set_gear_uclamp_ctrl(0);
@@ -138,14 +165,20 @@ static void c2ps_notifier_uninit(void)
 	set_curr_uclamp_ctrl(0);
 	reset_eas_setting();
 	c2ps_regulator_flush();
+	c2ps_monitor_uninit();
 	del_timer_sync(&background_info_update_timer);
 	exit_c2ps_common();
 	del_timer_sync(&self_uninit_timer);
 	set_wl_manual(-1);
 
 	// reset util margin to default
-	for (; _idx < c2ps_nr_clusters; ++_idx)
-		c2ps_set_turn_point_freq(_idx, 0);
+	for (int i = 0; i < MAX_CPU_NUM; i++) {
+	#if KERNEL_VERSION(6, 12, 0) <= LINUX_VERSION_CODE
+		unset_target_margin(i);
+		unset_target_margin_low(i);
+	#endif
+		set_turn_point_freq(i, 0);
+	}
 }
 
 static void c2ps_notifier_add_task(
@@ -281,10 +314,8 @@ static void c2ps_notifier_task_single_shot(
 		g_info->um_placeholder3 = um_placeholder3;
 }
 
-static void c2ps_queue_work(struct C2PS_NOTIFIER_PUSH_TAG *vpPush, bool update_timer)
+static void c2ps_queue_work(struct C2PS_NOTIFIER_PUSH_TAG *vpPush, bool update_timer __maybe_unused)
 {
-	if (update_timer && likely(timer_pending(&self_uninit_timer)))
-		mod_timer(&self_uninit_timer, jiffies + 5*HZ);
 	mutex_lock(&notifier_wq_lock);
 	list_add_tail(&vpPush->queue_list, &head);
 	condition_notifier_wq = 1;
@@ -401,7 +432,6 @@ static void c2ps_notifier_wq_cb(void)
 		break;
 	}
 	c2ps_free(vpPush, sizeof(*vpPush));
-	trigger_bg_policy();
 }
 
 static int c2ps_thread_loop(void *arg)
@@ -489,7 +519,6 @@ int c2ps_notify_init(
 
 	c2ps_regulator_um_min = um_floor > 0 ? um_floor : DEFAULT_UM_MIN;
 
-	trigger_bg_policy();
 	return 0;
 }
 
@@ -530,33 +559,38 @@ int c2ps_notify_add_task(
 	bool is_enable_dep_thread, const char *task_name)
 {
 	C2PS_LOGD("task_id: %d\n", task_id);
-	if (likely(timer_pending(&self_uninit_timer)))
-		mod_timer(&self_uninit_timer, jiffies + 5*HZ);
 	c2ps_notifier_add_task(task_id, task_target_time, default_uclamp,
 			group_head, task_group_target_time, is_vip_task, is_dynamic_tid,
 			is_enable_dep_thread, task_name);
-	trigger_bg_policy();
 	return 0;
 }
 
-int c2ps_notify_task_start(int pid __maybe_unused, int task_id)
+int c2ps_notify_task_start(int pid, int task_id)
 {
 	C2PS_LOGD("task_id: %d\n", task_id);
 
 	atomic_inc(&processing_count);
-	if (likely(timer_pending(&self_uninit_timer)))
-		mod_timer(&self_uninit_timer, jiffies + 5*HZ);
-	trigger_bg_policy();
+	if (unlikely(monitor_task_start(pid, task_id))) {
+		C2PS_LOGW_ONCE("monitor_task_start failed\n");
+		C2PS_LOGW("monitor_task_start failed\n");
+		atomic_dec(&processing_count);
+		return -1;
+	}
 	atomic_dec(&processing_count);
 	return 0;
 }
 
-int c2ps_notify_task_end(int pid __maybe_unused, int task_id)
+int c2ps_notify_task_end(int pid, int task_id)
 {
 	C2PS_LOGD("task_id: %d\n", task_id);
 
 	atomic_inc(&processing_count);
-	trigger_bg_policy();
+	if (unlikely(monitor_task_end(pid, task_id))) {
+		C2PS_LOGW_ONCE("monitor_task_end failed\n");
+		C2PS_LOGW("monitor_task_end failed\n");
+		atomic_dec(&processing_count);
+		return -1;
+	}
 	atomic_dec(&processing_count);
 	return 0;
 }
@@ -568,6 +602,17 @@ int c2ps_notify_task_scene_change(int task_id, int scene_mode)
 		C2PS_LOGE("monitor_task_scene_change failed\n");
 		return -1;
 	}
+	return 0;
+}
+
+int c2ps_notify_perf_monitor(unsigned int target_id, unsigned int serial_no,
+		unsigned int strategy, unsigned int spec, bool is_start)
+{
+	struct reg_check_input_data input_data = {target_id, serial_no, spec, strategy};
+
+	C2PS_LOGD("+(%d)", is_start);
+	c2ps_main_systrace("%s (%d)", __func__, is_start);
+	notify_rescue_task(input_data, is_start);
 	return 0;
 }
 
@@ -722,10 +767,35 @@ out:
 	return ret;
 }
 
+static bool is_task_terminated(pid_t pid)
+{
+	struct task_struct *p;
+	bool terminated = false;
+
+	rcu_read_lock();
+	p = find_task_by_vpid(pid);
+	if (p) {
+		get_task_struct(p);
+		if (strcmp(p->comm, cam_hal_name))
+			terminated = true;
+		put_task_struct(p);
+	} else {
+		terminated = true;
+	}
+	rcu_read_unlock();
+
+	return terminated;
+}
+
 static void self_uninit_timer_callback(struct timer_list *t)
 {
 	C2PS_LOGD("uninit expired");
-	c2ps_uninit_wo_lock();
+	if (is_task_terminated(cam_hal_pid)) {
+		C2PS_LOGD("camera hal terminated");
+		c2ps_uninit_wo_lock();
+	} else {
+		mod_timer(&self_uninit_timer, jiffies + 5*HZ);
+	}
 }
 
 static ssize_t um_placeholder_store(struct kobject *kobj,
@@ -818,6 +888,7 @@ static int __init c2ps_init(void)
 	c2ps_notify_add_task_fp = c2ps_notify_add_task;
 	c2ps_notify_task_start_fp = c2ps_notify_task_start;
 	c2ps_notify_task_end_fp = c2ps_notify_task_end;
+	c2ps_notify_perf_monitor_fp = c2ps_notify_perf_monitor;
 	c2ps_notify_vsync_fp = c2ps_notify_vsync;
 	c2ps_notify_camfps_fp = c2ps_notify_camfps;
 	c2ps_notify_task_scene_change_fp = c2ps_notify_task_scene_change;
@@ -827,8 +898,8 @@ static int __init c2ps_init(void)
 	c2ps_notify_anchor_fp = c2ps_notify_anchor;
 
 	c2ps_sysfs_init();
-	if (unlikely(regulator_init())) {
-		C2PS_LOGD("regulator_init failed\n");
+	if (unlikely(regulator_module_init())) {
+		C2PS_LOGD("regulator_module_init failed\n");
 		return -EFAULT;
 	}
 
@@ -851,7 +922,7 @@ static void __exit c2ps_exit(void)
 	c2ps_sysfs_remove_dir(&main_base_kobj);
 
 	c2ps_sysfs_exit();
-	regulator_exit();
+	regulator_module_exit();
 	C2PS_LOGD("- \n");
 }
 

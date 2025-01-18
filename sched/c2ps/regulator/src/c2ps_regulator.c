@@ -20,6 +20,7 @@ static int c2ps_regulator_process_mode;
 static unsigned int c2ps_remote_monitor_proc_time;
 static unsigned int c2ps_remote_monitor_uclamp;
 static char c2ps_remote_monitor_task[30] = "None";
+static atomic_t regulator_notifier_signal = ATOMIC_INIT(0);
 bool c2ps_um_mode_on = true;
 bool c2ps_regulator_is_flushed;
 
@@ -33,8 +34,6 @@ module_param(c2ps_um_mode_on, bool, 0644);
 static inline enum c2ps_regulator_mode
 decide_process_type(struct regulator_req *req)
 {
-	if (req->tsk_info)
-		return c2ps_regulator_process_mode;
 	if (c2ps_um_mode_on) {
 		switch (req->stat) {
 		case C2PS_STAT_NODEF:
@@ -50,6 +49,8 @@ decide_process_type(struct regulator_req *req)
 			break;
 		case C2PS_STAT_TRANSIENT:
 			return C2PS_REGULATOR_BGMODE_UM_TRANSIENT;
+		case C2PS_STAT_RUNNABLE_BOOST:
+			return C2PS_REGULATOR_BGMODE_UM_RUNNABLE_BOOST;
 		default:
 			break;
 		}
@@ -61,7 +62,7 @@ static void regulator_process(struct regulator_req *req)
 {
 	if (unlikely(req == NULL))
 		return;
-
+	c2ps_main_systrace("%s +", __func__);
 	if (unlikely(req->is_flush)) {
 		regulator_flush_finish = true;
 		wake_up_interruptible(&regulator_flush_wq);
@@ -71,24 +72,14 @@ static void regulator_process(struct regulator_req *req)
 	}
 
 	if (unlikely(c2ps_regulator_is_flushed)) {
-		C2PS_LOGW("c2ps regulator is already flushed");
+		C2PS_LOGE("c2ps regulator is already flushed");
+		kmem_cache_free(regulator_reqs, req);
 		return;
-	}
-
-	if (req->tsk_info &&
-		strstr(c2ps_remote_monitor_task, req->tsk_info->task_name)) {
-		c2ps_remote_monitor_uclamp = req->tsk_info->latest_uclamp;
-		c2ps_remote_monitor_proc_time = req->tsk_info->hist_proc_time_sum /
-							proc_time_window_size;
 	}
 
 	switch (decide_process_type(req)) {
 	case C2PS_REGULATOR_MODE_FIX:
 		c2ps_regulator_policy_fix_uclamp(req);
-		break;
-
-	case C2PS_REGULATOR_MODE_SIMPLE:
-		c2ps_regulator_policy_simple(req);
 		break;
 
 	case C2PS_REGULATOR_MODE_DEBUG:
@@ -111,10 +102,14 @@ static void regulator_process(struct regulator_req *req)
 		c2ps_regulator_bgpolicy_um_transient(req);
 		break;
 
+	case C2PS_REGULATOR_BGMODE_UM_RUNNABLE_BOOST:
+		c2ps_regulator_bgpolicy_um_runnable_boost(req);
+		break;
+
 	default:
 		break;
 	}
-
+	c2ps_main_systrace("%s -", __func__);
 	kmem_cache_free(regulator_reqs, req);
 }
 
@@ -126,10 +121,12 @@ static int c2ps_regulator_loop(void *arg)
 		C2PS_LOGD("+\n");
 		wait_event_interruptible(regulator_notifier_wq_queue,
 					 regulator_condition_notifier_wq ||
+					 atomic_read(&regulator_notifier_signal) ||
 					 regulator_condition_notifier_exit);
 
 		if (unlikely(regulator_condition_notifier_exit))
 			return 0;
+		C2PS_LOGD("regulator notified");
 		mutex_lock(&regulator_notifier_wq_lock);
 
 		if (unlikely(!list_empty(&regulator_wq))) {
@@ -143,6 +140,23 @@ static int c2ps_regulator_loop(void *arg)
 		} else {
 			regulator_condition_notifier_wq = 0;
 			mutex_unlock(&regulator_notifier_wq_lock);
+		}
+		if (atomic_read(&regulator_notifier_signal)) {
+			struct regulator_req *signal_req = NULL;
+			struct global_info *g_info = get_glb_info();
+
+			if (unlikely(c2ps_regulator_is_flushed || !g_info)) {
+				atomic_set(&regulator_notifier_signal, 0);
+				continue;
+			}
+
+			signal_req = get_regulator_req();
+			if (signal_req) {
+				signal_req->glb_info = g_info;
+				signal_req->stat = g_info->stat;
+				regulator_process(signal_req);
+			}
+			atomic_set(&regulator_notifier_signal, 0);
 		}
 	}
 	C2PS_LOGD("-\n");
@@ -161,6 +175,12 @@ void send_regulator_req(struct regulator_req *req)
 	regulator_condition_notifier_wq = 1;
 	mutex_unlock(&regulator_notifier_wq_lock);
 
+	wake_up_interruptible(&regulator_notifier_wq_queue);
+}
+
+void signal_regulator_req(void)
+{
+	atomic_set(&regulator_notifier_signal, 1);
 	wake_up_interruptible(&regulator_notifier_wq_queue);
 }
 
@@ -204,7 +224,7 @@ void c2ps_regulator_init(void)
 	c2ps_regulator_is_flushed = false;
 }
 
-int regulator_init(void)
+int regulator_module_init(void)
 {
 	C2PS_LOGD("[C2PS] %s", __func__);
 	regulator_condition_notifier_exit = false;
@@ -223,7 +243,7 @@ int regulator_init(void)
 	return 0;
 }
 
-void regulator_exit(void)
+void regulator_module_exit(void)
 {
 	C2PS_LOGD("+\n");
 	regulator_condition_notifier_exit = true;

@@ -104,6 +104,15 @@ struct C2PS_ANCHOR_POINT_PARAM {
 	u32 jitter_spec;
 } C2PS_ANCHOR_POINT_PARAM;
 
+struct C2PS_PERF_MONITOR_PARAM {
+	u32 target_id;
+	u32 serial_no;
+	u32 strategy;
+	/* spec in ms */
+	u32 spec;
+	bool is_start;
+};
+
 #define C2PS_IOCTL_MAGIC 'g'
 #define C2PS_ACTIVATE       _IOW(C2PS_IOCTL_MAGIC, 27, struct C2PS_INIT_PARAM)
 #define C2PS_ADD_TASK       _IOW(C2PS_IOCTL_MAGIC, 28, struct C2PS_TASK_INIT_PARAMS)
@@ -119,6 +128,7 @@ struct C2PS_ANCHOR_POINT_PARAM {
 #define C2PS_SINGLE_SHOT_TASK_END \
 	_IOW(C2PS_IOCTL_MAGIC, 37, struct C2PS_SINGLE_SHOT_TASK_PARAM)
 #define C2PS_ANCHOR_POINT   _IOW(C2PS_IOCTL_MAGIC, 38, struct C2PS_ANCHOR_POINT_PARAM)
+#define C2PS_PERF_MONITOR   _IOW(C2PS_IOCTL_MAGIC, 39, struct C2PS_PERF_MONITOR_PARAM)
 
 
 #define C2PS_LOGD(fmt, ...)                                                 \
