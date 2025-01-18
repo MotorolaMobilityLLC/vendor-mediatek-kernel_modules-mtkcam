@@ -306,13 +306,16 @@ int mtk_camsv_translation_fault_callback(int port, dma_addr_t mva, void *data)
 	tag_idx = ffs(first_tag) - 1;
 	frame_idx_inner = readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_FH_SPARE_TAG_1 +
 			tag_idx * CAMSVCENTRAL_FH_SPARE_SHIFT);
-	dev_info_ratelimited(sv_dev->dev, "tg_sen_mode:0x%x tg_vf_con:0x%x tg_path_cfg:0x%x",
+	dev_info(sv_dev->dev, "tg_sen_mode:0x%x tg_vf_con:0x%x tg_path_cfg:0x%x cq desc_size:0x%x cq addr0x%x_%x",
 		readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_SEN_MODE),
 		readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_VF_CON),
-		readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_PATH_CFG));
+		readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_PATH_CFG),
+		readl_relaxed(sv_dev->base_scq_inner + REG_CAMSVCQ_CQ_SUB_THR0_DESC_SIZE_2),
+		readl_relaxed(sv_dev->base_scq_inner + REG_CAMSVCQ_CQ_SUB_THR0_BASEADDR_2_MSB),
+		readl_relaxed(sv_dev->base_scq_inner + REG_CAMSVCQ_CQ_SUB_THR0_BASEADDR_2));
 
 	for (index = 0; index < CAMSV_MAX_TAGS; index++) {
-		dev_info_ratelimited(sv_dev->dev, "tag:%d seq_no:%d_%d tg_grab_pxl:0x%x tg_grab_lin:0x%x fmt:0x%x imgo_fbc0: 0x%x imgo_fbc1: 0x%x",
+		dev_info(sv_dev->dev, "tag:%d seq_no:%d_%d tg_grab_pxl:0x%x tg_grab_lin:0x%x fmt:0x%x imgo_fbc0: 0x%x imgo_fbc1: 0x%x",
 		index,
 		readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_FH_SPARE_TAG_1 +
 			index * CAMSVCENTRAL_FH_SPARE_SHIFT),
@@ -331,7 +334,7 @@ int mtk_camsv_translation_fault_callback(int port, dma_addr_t mva, void *data)
 	}
 
 	for (index = 0; index < CAMSV_MAX_TAGS; index++) {
-		dev_info_ratelimited(sv_dev->dev, "tag:%d imgo_stride_img_a:0x%x imgo_addr_img_a:0x%x_%x",
+		dev_info(sv_dev->dev, "tag:%d imgo_stride_img_a:0x%x imgo_addr_img_a:0x%x_%x",
 			index,
 			readl_relaxed(sv_dev->base_dma_inner +
 				REG_CAMSVDMATOP_WDMA_BASIC_IMG1_A +
@@ -343,7 +346,7 @@ int mtk_camsv_translation_fault_callback(int port, dma_addr_t mva, void *data)
 				REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG1_A +
 				index * CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG_SHIFT));
 		if (index >= SVTAG_0 && index <= SVTAG_5)
-			dev_info_ratelimited(sv_dev->dev, "tag:%d imgo_stride_img_b:0x%x imgo_addr_img_b:0x%x_%x stride_len_a:0x%x addr_len_a:0x%x_%x stride_len_b:0x%x addr_len_b:0x%x_%x",
+			dev_info(sv_dev->dev, "tag:%d imgo_stride_img_b:0x%x imgo_addr_img_b:0x%x_%x stride_len_a:0x%x addr_len_a:0x%x_%x stride_len_b:0x%x addr_len_b:0x%x_%x",
 				index,
 				readl_relaxed(sv_dev->base_dma_inner +
 					REG_CAMSVDMATOP_WDMA_BASIC_IMG1_B +
@@ -1141,13 +1144,13 @@ void apply_camsv_cq(struct mtk_camsv_device *sv_dev,
 	if (cq_size == 0)
 		return;
 
-	CAMSV_WRITE_REG(sv_dev->base_scq  + REG_CAMSVCQ_CQ_SUB_THR0_DESC_SIZE_2,
+	CAMSV_WRITE_REG(sv_dev->base_scq + REG_CAMSVCQ_CQ_SUB_THR0_DESC_SIZE_2,
 		cq_size);
-	CAMSV_WRITE_REG(sv_dev->base_scq  + REG_CAMSVCQ_CQ_SUB_THR0_BASEADDR_2_MSB,
+	CAMSV_WRITE_REG(sv_dev->base_scq + REG_CAMSVCQ_CQ_SUB_THR0_BASEADDR_2_MSB,
 		cq_addr_msb);
-	CAMSV_WRITE_REG(sv_dev->base_scq  + REG_CAMSVCQ_CQ_SUB_THR0_BASEADDR_2,
+	CAMSV_WRITE_REG(sv_dev->base_scq + REG_CAMSVCQ_CQ_SUB_THR0_BASEADDR_2,
 		cq_addr_lsb);
-	CAMSV_WRITE_REG(sv_dev->base_scq  + REG_CAMSVCQTOP_THR_START, 1);
+	CAMSV_WRITE_REG(sv_dev->base_scq + REG_CAMSVCQTOP_THR_START, 1);
 	wmb(); /* TBC */
 
 	if (initial) {
@@ -2840,7 +2843,6 @@ static int mtk_camsv_of_probe(struct platform_device *pdev,
 	struct resource *res;
 	unsigned int i, j;
 	int ret, num_clks, num_iommus, num_ports, smmus;
-	unsigned int larb_idx = 0;
 	unsigned int raw_lock_sel_addr = 0;
 
 	ret = of_property_read_u32(dev->of_node, "mediatek,camsv-id",
@@ -3119,7 +3121,6 @@ static int mtk_camsv_of_probe(struct platform_device *pdev,
 					args.args[0],
 					mtk_camsv_translation_fault_callback,
 					(void *)sv_dev, false);
-				sv_dev->larb_master_id[larb_idx++] = args.args[0];
 			}
 
 		}
@@ -3137,7 +3138,6 @@ static int mtk_camsv_of_probe(struct platform_device *pdev,
 				args.args[0],
 				mtk_camsv_translation_fault_callback,
 				(void *)sv_dev, false);
-			sv_dev->larb_master_id[i] = args.args[0];
 		}
 	}
 
@@ -3153,7 +3153,6 @@ static int mtk_camsv_of_probe(struct platform_device *pdev,
 			mtk_iommu_register_fault_callback(
 				axid, mtk_camsv_translation_fault_callback,
 				(void *)sv_dev, false);
-			sv_dev->larb_master_id[i] = axid;
 		}
 	}
 #ifdef CONFIG_PM_SLEEP
