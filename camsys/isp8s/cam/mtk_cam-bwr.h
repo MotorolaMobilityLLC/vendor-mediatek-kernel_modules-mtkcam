@@ -66,9 +66,45 @@ static inline int get_axi_port(int raw_id, int is_raw)
 }
 
 /* todo: need camsv check */
-static inline int get_sv_axi_port(int sv_id)
+static inline int get_sv_axi_port(int sv_id, int port_id)
 {
-	return 0;
+	switch(sv_id) {
+	case 0:
+		if (port_id == 0)
+			return CAM3_PORT;
+		else if (port_id == 1)
+			return CAM1_PORT;
+		else
+			return CAM2_PORT;
+	case 1:
+		if (port_id == 0)
+			return CAM0_PORT;
+		else if (port_id == 1)
+			return CAM3_PORT;
+		else
+			return CAM2_PORT;
+	case 2:
+		if (port_id == 0)
+			return CAM1_PORT;
+		else
+			return CAM0_PORT;
+	case 3:
+		return CAM2_PORT;
+	case 4:
+		return CAM2_PORT;
+	case 5:
+		return CAM0_PORT;
+	default:
+		return 0;
+	}
+}
+static inline int get_sv_axi_port_num(int sv_id)
+{
+	if (sv_id <= 2)
+		return 3;
+	else if (sv_id == 3)
+		return 2;
+	return 1;
 }
 
 /* Jayer no used */
@@ -98,6 +134,8 @@ static inline int get_sv_bwr_engine(int sv_id)
 		return ENGINE_CAMSV_A;
 	case 1:
 		return ENGINE_CAMSV_B;
+	case 2:
+		return ENGINE_CAMSV_C;
 	default:
 		return ENGINE_CAMSV_OTHER;
 	}

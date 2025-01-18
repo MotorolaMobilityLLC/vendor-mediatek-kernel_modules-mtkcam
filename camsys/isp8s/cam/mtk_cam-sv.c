@@ -3183,7 +3183,7 @@ static int mtk_camsv_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_camsv_device *sv_dev;
-	unsigned int is_multi_smi_out = 0;
+	unsigned int sv_port_num = 0;
 	int ret;
 
 	sv_dev = devm_kzalloc(dev, sizeof(*sv_dev), GFP_KERNEL);
@@ -3197,15 +3197,18 @@ static int mtk_camsv_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	/* wenjie todo*/
 	CALL_PLAT_V4L2(
-		get_sv_smi_setting, sv_dev->id, &is_multi_smi_out);
-	if (is_multi_smi_out) {
+		get_sv_smi_setting, sv_dev->id, &sv_port_num);
+	if (sv_port_num == SMI_PORT_SV_TYPE0_NUM) {
 		ret = mtk_cam_qos_probe(dev, &sv_dev->qos, SMI_PORT_SV_TYPE0_NUM);
 		if (ret)
 			goto UNREGISTER_PM_NOTIFIER;
-	} else {
+	} else if (sv_port_num == SMI_PORT_SV_TYPE1_NUM) {
 		ret = mtk_cam_qos_probe(dev, &sv_dev->qos, SMI_PORT_SV_TYPE1_NUM);
+		if (ret)
+			goto UNREGISTER_PM_NOTIFIER;
+	} else {
+		ret = mtk_cam_qos_probe(dev, &sv_dev->qos, SMI_PORT_SV_TYPE2_NUM);
 		if (ret)
 			goto UNREGISTER_PM_NOTIFIER;
 	}
@@ -3252,6 +3255,7 @@ int mtk_camsv_runtime_suspend(struct device *dev)
 {
 	struct mtk_camsv_device *sv_dev = dev_get_drvdata(dev);
 	int i, ret = 0;
+	unsigned int sv_output_port;
 
 	dev_dbg(dev, "%s:disable clock\n", __func__);
 
@@ -3264,10 +3268,13 @@ int mtk_camsv_runtime_suspend(struct device *dev)
 
 	mtk_cam_reset_qos(dev, &sv_dev->qos);
 
-	mtk_cam_isp8s_bwr_set_chn_bw(sv_dev->cam->bwr,
-		get_sv_bwr_engine(sv_dev->id), get_sv_axi_port(sv_dev->id),
-		0, -sv_dev->sv_avg_applied_bw_w,
-		0, -sv_dev->sv_peak_applied_bw_w, false);
+	sv_output_port = get_sv_axi_port_num(sv_dev->id);
+	for (i = 0; i < sv_output_port; i++) {
+		mtk_cam_isp8s_bwr_set_chn_bw(sv_dev->cam->bwr,
+			get_sv_bwr_engine(sv_dev->id), get_sv_axi_port(sv_dev->id, i),
+			0, -(sv_dev->sv_avg_applied_bw_w / sv_output_port),
+			0, -(sv_dev->sv_peak_applied_bw_w / sv_output_port), false);
+	}
 
 	mtk_cam_isp8s_bwr_set_ttl_bw(sv_dev->cam->bwr,
 		get_sv_bwr_engine(sv_dev->id), -sv_dev->sv_avg_applied_bw_w,

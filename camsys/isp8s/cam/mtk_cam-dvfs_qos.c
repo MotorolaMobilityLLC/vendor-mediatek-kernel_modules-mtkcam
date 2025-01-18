@@ -725,7 +725,7 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 	struct mtk_camsv_device *sv_dev;
 	unsigned int i, x_size, img_h, sv_id;
 	u64 avg_bw, peak_bw, stash_avg_bw, stash_peak_bw;
-	unsigned int is_two_smi_out = 0;
+	unsigned int sv_port_num = 0;
 	bool is_smmu_enabled = true;
 
 	/* cqi */
@@ -733,7 +733,7 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 	job->sv_mmqos[SMI_PORT_SV_CQI].avg_bw += avg_bw;
 	job->sv_mmqos[SMI_PORT_SV_CQI].peak_bw += peak_bw;
 	if (CAM_DEBUG_ENABLED(MMQOS))
-		pr_info("%s: sensor_h:%u/vb:%u/linet:%llu/fps:%u avg_bw:%llu_%u/peak_bw:%llu_%u\n",
+		pr_info("%s: sensor_h:%u/vb:%u/linet:%llu(ns)/fps:%u avg_bw:%lluKB/s, %uKB/s/peak_bw:%lluKB/s, %uKB/s\n",
 			__func__,
 			sensor_h, sensor_vb, linet, sensor_fps,
 			avg_bw, job->sv_mmqos[SMI_PORT_SV_CQI].avg_bw,
@@ -756,7 +756,7 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 		img_h = in->fmt.s.h;
 
 		CALL_PLAT_V4L2(
-			get_sv_smi_setting, sv_dev->id, &is_two_smi_out);
+			get_sv_smi_setting, sv_dev->id, &sv_port_num);
 
 		if (i < SVTAG_IMG_END) {
 			avg_bw =
@@ -787,57 +787,74 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 				stash_peak_bw = stash_avg_bw = to_qos_icc(2097152);
 		}
 
-		if (is_two_smi_out) {
-			job->sv_mmqos[SMI_PORT_SV_MDP_WDMA_0].avg_bw += avg_bw / 2;
-			job->sv_mmqos[SMI_PORT_SV_MDP_WDMA_0].peak_bw += peak_bw / 2;
-			job->sv_mmqos[SMI_PORT_SV_MDP_WDMA_1].avg_bw += avg_bw / 2;
-			job->sv_mmqos[SMI_PORT_SV_MDP_WDMA_1].peak_bw += peak_bw / 2;
+		if (sv_port_num == SMI_PORT_SV_TYPE0_NUM) {
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw += avg_bw;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += peak_bw;
 			if (is_smmu_enabled) {
-				job->sv_mmqos[SMI_PORT_SV_MDP_STG_0].avg_bw += stash_avg_bw;
-				job->sv_mmqos[SMI_PORT_SV_MDP_STG_0].peak_bw += stash_peak_bw;
-				job->sv_mmqos[SMI_PORT_SV_MDP_STG_1].avg_bw += stash_avg_bw;
-				job->sv_mmqos[SMI_PORT_SV_MDP_STG_1].peak_bw += stash_peak_bw;
+				job->sv_mmqos[SMI_PORT_SV_STG_0].avg_bw += stash_avg_bw;
+				job->sv_mmqos[SMI_PORT_SV_STG_0].peak_bw += stash_peak_bw;
 			}
-		} else {
-			job->sv_mmqos[SMI_PORT_SV_DISP_WDMA_0].avg_bw += avg_bw;
-			job->sv_mmqos[SMI_PORT_SV_DISP_WDMA_0].peak_bw += peak_bw;
+		} else if (sv_port_num == SMI_PORT_SV_TYPE1_NUM){
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw += avg_bw / 2;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += peak_bw / 2;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_1].avg_bw += avg_bw / 2;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw += peak_bw / 2;
 			if (is_smmu_enabled) {
-				job->sv_mmqos[SMI_PORT_SV_DISP_STG_0].avg_bw += stash_avg_bw;
-				job->sv_mmqos[SMI_PORT_SV_DISP_STG_0].peak_bw += stash_peak_bw;
+				job->sv_mmqos[SMI_PORT_SV_STG_0].avg_bw += stash_avg_bw / 2;
+				job->sv_mmqos[SMI_PORT_SV_STG_0].peak_bw += stash_peak_bw / 2;
+				job->sv_mmqos[SMI_PORT_SV_STG_1].avg_bw += stash_avg_bw / 2;
+				job->sv_mmqos[SMI_PORT_SV_STG_1].peak_bw += stash_peak_bw / 2;
+			}
+		} else if (sv_port_num == SMI_PORT_SV_TYPE2_NUM) {
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw += avg_bw / 3;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += peak_bw / 3;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_1].avg_bw += avg_bw / 3;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw += peak_bw / 3;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_2].avg_bw += avg_bw / 3;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_2].peak_bw += peak_bw / 3;
+			if (is_smmu_enabled) {
+				job->sv_mmqos[SMI_PORT_SV_STG_0].avg_bw += stash_avg_bw / 3;
+				job->sv_mmqos[SMI_PORT_SV_STG_0].peak_bw += stash_peak_bw / 3;
+				job->sv_mmqos[SMI_PORT_SV_STG_1].avg_bw += stash_avg_bw / 3;
+				job->sv_mmqos[SMI_PORT_SV_STG_1].peak_bw += stash_peak_bw / 3;
+				job->sv_mmqos[SMI_PORT_SV_STG_2].avg_bw += stash_avg_bw / 3;
+				job->sv_mmqos[SMI_PORT_SV_STG_2].peak_bw += stash_peak_bw / 3;
 			}
 		}
 		if (CAM_DEBUG_ENABLED(MMQOS) && is_smmu_enabled)
-			pr_info("%s: xsize:%u/height:%u sensor_h:%u/vb:%u/linet:%llu/fps:%u avg_bw:%llu_%u_%u_%u_%u_%u_%u_%u_%u/peak_bw:%llu_%u_%u_%u_%u_%u_%u_%u_%u\n",
+			pr_info("%s: xsize:%u/height:%u sensor_h:%u/vb:%u/linet:%llu(ns)/fps:%u avg_bw:%lluKB/s, %uKB/s, %uKB/s, %uKB/s %uKB/s %uKB/s, %uKB/s, peak_bw:%lluKB/s, %uKB/s, %uKB/s, %uKB/s %uKB/s %uKB/s, %uKB/s\n",
 				__func__, x_size, img_h,
-				sensor_h, sensor_vb, linet, sensor_fps,
-				avg_bw, job->sv_mmqos[SMI_PORT_SV_DISP_WDMA_0].avg_bw,
-				job->sv_mmqos[SMI_PORT_SV_MDP_WDMA_0].avg_bw,
-				job->sv_mmqos[SMI_PORT_SV_DISP_STG_0].avg_bw,
-				job->sv_mmqos[SMI_PORT_SV_MDP_STG_0].avg_bw,
-				job->sv_mmqos[SMI_PORT_SV_DISP_WDMA_1].avg_bw,
-				job->sv_mmqos[SMI_PORT_SV_MDP_WDMA_1].avg_bw,
-				job->sv_mmqos[SMI_PORT_SV_DISP_STG_1].avg_bw,
-				job->sv_mmqos[SMI_PORT_SV_MDP_STG_1].avg_bw,
-				peak_bw, job->sv_mmqos[SMI_PORT_SV_DISP_WDMA_0].peak_bw,
-				job->sv_mmqos[SMI_PORT_SV_MDP_WDMA_0].peak_bw,
-				job->sv_mmqos[SMI_PORT_SV_DISP_STG_0].peak_bw,
-				job->sv_mmqos[SMI_PORT_SV_MDP_STG_0].peak_bw,
-				job->sv_mmqos[SMI_PORT_SV_DISP_WDMA_1].peak_bw,
-				job->sv_mmqos[SMI_PORT_SV_MDP_WDMA_1].peak_bw,
-				job->sv_mmqos[SMI_PORT_SV_DISP_STG_1].peak_bw,
-				job->sv_mmqos[SMI_PORT_SV_MDP_STG_1].peak_bw);
+				sensor_h, sensor_vb, linet, sensor_fps, avg_bw,
+				job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw,
+				job->sv_mmqos[SMI_PORT_SV_STG_0].avg_bw,
+				job->sv_mmqos[SMI_PORT_SV_WDMA_1].avg_bw,
+				job->sv_mmqos[SMI_PORT_SV_STG_1].avg_bw,
+				job->sv_mmqos[SMI_PORT_SV_WDMA_2].avg_bw,
+				job->sv_mmqos[SMI_PORT_SV_STG_2].avg_bw,
+				peak_bw,
+				job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw,
+				job->sv_mmqos[SMI_PORT_SV_STG_0].peak_bw,
+				job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw,
+				job->sv_mmqos[SMI_PORT_SV_STG_1].peak_bw,
+				job->sv_mmqos[SMI_PORT_SV_WDMA_2].peak_bw,
+				job->sv_mmqos[SMI_PORT_SV_STG_2].peak_bw);
 		if (CAM_DEBUG_ENABLED(MMQOS) && !is_smmu_enabled)
-			pr_info("%s: xsize:%u/height:%u sensor_h:%u/vb:%u/linet:%llu/fps:%u avg_bw:%llu_%u_%u_%u_%u/peak_bw:%llu_%u_%u_%u_%u\n",
+			pr_info("%s: xsize:%u/height:%u sensor_h:%u/vb:%u/linet:%llu/fps:%u avg_bw:%llu KB/s, %u KB/s, %u KB/s, %u KB/s %u KB/s %u KB/s, %u KB/s, peak_bw:%llu KB/s, %u KB/s, %u KB/s, %u KB/s %u KB/s %u KB/s, %u KB/s\n",
 				__func__, x_size, img_h,
-				sensor_h, sensor_vb, linet, sensor_fps,
-				avg_bw, job->sv_mmqos[SMI_PORT_SV_DISP_WDMA_0].avg_bw,
-				job->sv_mmqos[SMI_PORT_SV_MDP_WDMA_0].avg_bw,
-				job->sv_mmqos[SMI_PORT_SV_DISP_WDMA_1].avg_bw,
-				job->sv_mmqos[SMI_PORT_SV_MDP_WDMA_1].avg_bw,
-				peak_bw, job->sv_mmqos[SMI_PORT_SV_DISP_WDMA_0].peak_bw,
-				job->sv_mmqos[SMI_PORT_SV_MDP_WDMA_0].peak_bw,
-				job->sv_mmqos[SMI_PORT_SV_DISP_WDMA_1].peak_bw,
-				job->sv_mmqos[SMI_PORT_SV_MDP_WDMA_1].peak_bw);
+				sensor_h, sensor_vb, linet, sensor_fps, avg_bw,
+				job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw,
+				job->sv_mmqos[SMI_PORT_SV_STG_0].avg_bw,
+				job->sv_mmqos[SMI_PORT_SV_WDMA_1].avg_bw,
+				job->sv_mmqos[SMI_PORT_SV_STG_1].avg_bw,
+				job->sv_mmqos[SMI_PORT_SV_WDMA_2].avg_bw,
+				job->sv_mmqos[SMI_PORT_SV_STG_2].avg_bw,
+				peak_bw,
+				job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw,
+				job->sv_mmqos[SMI_PORT_SV_STG_0].peak_bw,
+				job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw,
+				job->sv_mmqos[SMI_PORT_SV_STG_1].peak_bw,
+				job->sv_mmqos[SMI_PORT_SV_WDMA_2].peak_bw,
+				job->sv_mmqos[SMI_PORT_SV_STG_2].peak_bw);
 	}
 
 	return 0;
@@ -1071,13 +1088,13 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 	struct mtk_camsv_device *sv_dev = NULL;
 	unsigned int fifo_img_p1, fifo_img_p2, fifo_img_p3 = 0;
 	unsigned int fifo_len_p1, fifo_len_p2, fifo_len_p3 = 0;
-	unsigned int is_two_smi_out = 0;
 	u32 a_bw, p_bw;
-	int i, port_num;
+	int i, port_num = 0;
 	unsigned int leading_line_cnt, raw_id;
 	bool apply, apply_sv_th = false, apply_bwr = false;
 	int sv_avg_bw_w = 0, sv_peak_bw_w = 0, sv_avg_diff_bw_w = 0, sv_peak_diff_bw_w = 0;
 	u64 avg_linet;
+	unsigned int sv_output_port;
 
 	if (ctx->has_raw_subdev) {
 		raw_id = get_master_raw_id(job->used_engine);
@@ -1089,9 +1106,7 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 
 	if (sv_dev) {
 		CALL_PLAT_V4L2(
-			get_sv_smi_setting, sv_dev->id, &is_two_smi_out);
-		port_num = (is_two_smi_out) ?
-			SMI_PORT_SV_TYPE0_NUM : SMI_PORT_SV_TYPE1_NUM;
+			get_sv_smi_setting, sv_dev->id, &port_num);
 
 		port_num = sv_dev->qos.n_path ? port_num : 0;
 
@@ -1111,7 +1126,7 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 			}
 
 			if (CAM_DEBUG_ENABLED(MMQOS))
-				pr_info("%s: req_seq:%d %s sv-%d icc_path:%s avg/peak:%u/%u applied/pending:%lld/%lld\n",
+				pr_info("%s: req_seq:%d %s sv-%d icc_path:%s avg/peak:%uKB/s, %uKB/s applied/pending:%lldKB/s, %lldKB/s\n",
 						__func__, job->req_seq,
 						apply ? "APPLY" : "BYPASS", sv_dev->id,
 						sv_dev->qos.cam_path[i].name, a_bw, p_bw,
@@ -1127,23 +1142,24 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 			sv_peak_diff_bw_w = p_bw_w_KB - sv_dev->sv_peak_applied_bw_w;
 			sv_dev->sv_avg_applied_bw_w = a_bw_w_KB;
 			sv_dev->sv_peak_applied_bw_w = p_bw_w_KB;
-			mtk_cam_isp8s_bwr_set_chn_bw(cam->bwr,
-				get_sv_bwr_engine(sv_dev->id), get_sv_axi_port(sv_dev->id),
-				0, sv_avg_diff_bw_w, 0, sv_peak_diff_bw_w, false);
-
+			sv_output_port = get_sv_axi_port_num(sv_dev->id);
+			for (i = 0; i < sv_output_port; i++) {
+				mtk_cam_isp8s_bwr_set_chn_bw(cam->bwr,
+					get_sv_bwr_engine(sv_dev->id), get_sv_axi_port(sv_dev->id, i),
+					0, sv_avg_diff_bw_w / sv_output_port, 0,
+					sv_peak_diff_bw_w / sv_output_port, false);
+			}
 			mtk_cam_isp8s_bwr_set_ttl_bw(cam->bwr,
-				get_sv_bwr_engine(sv_dev->id), sv_avg_diff_bw_w, sv_peak_diff_bw_w, false);
-
+				get_sv_bwr_engine(sv_dev->id), sv_avg_diff_bw_w, sv_peak_diff_bw_w,
+				false);
 		}
 
 		if (apply_sv_th) {
 			/* apply fifo setting according to bandwidth */
 			fifo_img_p1 =
-				(job->sv_mmqos[SMI_PORT_SV_DISP_WDMA_0].peak_bw +
-				job->sv_mmqos[SMI_PORT_SV_MDP_WDMA_0].peak_bw) * 64 * 12 / 1000000;
+				job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw * 64 * 12 / 1000000;
 			fifo_img_p2 =
-				(job->sv_mmqos[SMI_PORT_SV_DISP_WDMA_1].peak_bw +
-				job->sv_mmqos[SMI_PORT_SV_MDP_WDMA_1].peak_bw) * 64 * 12 / 1000000;
+				job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw * 64 * 12 / 1000000;
 			fifo_len_p1 = fifo_img_p1 / 80;
 			fifo_len_p2 = fifo_img_p2 / 80;
 			avg_linet = ctx->act_line_info.avg_linetime_in_ns ? : get_line_time(job);

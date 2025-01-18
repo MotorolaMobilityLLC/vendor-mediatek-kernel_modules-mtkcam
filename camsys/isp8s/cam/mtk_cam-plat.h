@@ -11,7 +11,7 @@
 #include <media/v4l2-subdev.h>
 #include "mtk_cam-raw_pads.h"
 
-#define MULTI_SMI_SV_HW_NUM 2
+#define MULTI_SMI_SV_HW_NUM 3
 #define DMA_GROUP_SIZE 4
 
 enum camsys_module_id {
