@@ -55,6 +55,8 @@ static struct subdrv_feature_control feature_control_list[] = {
 
 static struct eeprom_info_struct eeprom_info[] = {
 	{
+		.header_id = 0x12163702,
+		.addr_header_id = 0x0000000A,
 		.i2c_write_id = 0xA0,
 		.qsc_support = TRUE,
 		.qsc_size = 3072,
@@ -6625,8 +6627,8 @@ static void set_sensor_cali(void *arg)
 	u16 addr = 0;
 	struct eeprom_info_struct *info = ctx->s_ctx.eeprom_info;
 
-	//if (!probe_eeprom(ctx))
-	//	return;
+	if (!probe_eeprom(ctx))
+		return;
 
 	idx = ctx->eeprom_index;
 
