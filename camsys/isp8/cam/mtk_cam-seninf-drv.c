@@ -45,6 +45,7 @@
 #include "mtk_cam-seninf-sentest-ctrl.h"
 #include "mtk_cam-seninf-aov-sentest-ioctrl.h"
 #include "mtk_cam-seninf-aov-sentest-ctrl.h"
+#include "mtk_cam-seninf-eint.h"
 #if KERNEL_VERSION(6, 6, 0) == LINUX_VERSION_CODE
 #define CSI_POWER_STATE
 #ifdef CSI_POWER_STATE
@@ -1283,6 +1284,8 @@ static int seninf_core_probe(struct platform_device *pdev)
 	/* init rproc ctrl */
 	mtk_cam_seninf_rproc_init_ccu_ctrl(dev, &core->ccu_rproc_ctrl);
 
+	mtk_cam_seninf_eint_core_init(dev, core);
+
 	/* default platform properties */
 	core->cphy_settle_delay_dt = SENINF_CPHY_SETTLE_DELAY_DT;
 	core->dphy_settle_delay_dt = SENINF_DPHY_SETTLE_DELAY_DT;
@@ -1426,6 +1429,8 @@ static void seninf_core_remove(struct platform_device *pdev)
 	device_remove_file(dev, &dev_attr_outmux_status);
 
 	mtk_cam_seninf_tsrec_uninit();
+
+	mtk_cam_seninf_eint_core_uninit();
 
 	if (core->seninf_kworker_task)
 		kthread_stop(core->seninf_kworker_task);
@@ -2547,6 +2552,8 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 		if (likely(ctx->is_test_model == 0)) {
 			/* notify tsrec seninf_csi relationship & start tsrec */
 			mtk_cam_seninf_tsrec_n_start(ctx->tsrec_idx, ctx->tsrec_idx);
+
+			mtk_cam_seninf_eint_start(ctx);
 		}
 
 		ret = config_hw_csi(ctx);
@@ -2580,6 +2587,7 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 #endif
 		g_seninf_ops->_set_idle(ctx);
 		mtk_cam_seninf_release_outmux(ctx);
+		mtk_cam_seninf_eint_reset(ctx);
 		mtk_cam_seninf_tsrec_n_reset(ctx->tsrec_idx);
 		seninf_dfs_set(ctx, 0);
 		g_seninf_ops->_poweroff(ctx);
@@ -3101,6 +3109,12 @@ static int mtk_cam_seninf_set_ctrl(struct v4l2_ctrl *ctrl)
 	int aov_csi_port = ctx->port;
 
 	switch (ctrl->id) {
+	case V4L2_CID_MTK_SENINF_EINT_IRQ_EN:
+		ret = mtk_cam_seninf_eint_irq_en(ctx, ctrl->val);
+		dev_info(ctx->dev,
+			"[%s] V4L2_CID_MTK_SENINF_EINT_IRQ_EN, eint_idx:%u, en:%u\n",
+			__func__, ctx->eint_idx, ctrl->val);
+		break;
 	case V4L2_CID_TEST_PATTERN:
 		ret = seninf_test_pattern(ctx, ctrl->val);
 		break;
@@ -3418,6 +3432,16 @@ static const struct v4l2_ctrl_config cfg_g_csi2_irq_status = {
 	.step = 1,
 };
 
+static const struct v4l2_ctrl_config cfg_seninf_eint_irq_en = {
+	.ops = &seninf_ctrl_ops,
+	.id = V4L2_CID_MTK_SENINF_EINT_IRQ_EN,
+	.name = "seninf_eint_irq_en",
+	.type = V4L2_CTRL_TYPE_INTEGER,
+	.flags = V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
+	.max = 0x7fffffff,
+	.step = 1,
+};
+
 static int seninf_initialize_controls(struct seninf_ctx *ctx)
 {
 	struct v4l2_ctrl_handler *handler;
@@ -3442,6 +3466,7 @@ static int seninf_initialize_controls(struct seninf_ctx *ctx)
 	v4l2_ctrl_new_custom(handler, &cfg_s_test_model_for_aov_param, NULL);
 	v4l2_ctrl_new_custom(handler, &cfg_s_real_sensor_for_aov_param, NULL);
 	v4l2_ctrl_new_custom(handler, &cfg_g_csi2_irq_status, NULL);
+	v4l2_ctrl_new_custom(handler, &cfg_seninf_eint_irq_en, NULL);
 
 	if (handler->error) {
 		ret = handler->error;
@@ -3755,6 +3780,8 @@ static int seninf_probe(struct platform_device *pdev)
 		__func__, ctx->port, ctx->seninfAsyncIdx, ctx->seninfSelSensor, ctx->tsrec_idx);
 
 	seninf_sentest_probe_init(ctx);
+
+	mtk_cam_seninf_eint_init(pdev, ctx);
 
 	return 0;
 
@@ -4402,6 +4429,8 @@ static void seninf_remove(struct platform_device *pdev)
 	v4l2_ctrl_handler_free(&ctx->ctrl_handler);
 
 	mutex_destroy(&ctx->mutex);
+
+	mtk_cam_seninf_eint_uninit(pdev, ctx);
 }
 
 static const struct of_device_id seninf_of_match[] = {

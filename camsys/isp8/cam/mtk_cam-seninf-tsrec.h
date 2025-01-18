@@ -83,6 +83,9 @@ unsigned int chk_exist_tsrec_hw(const char *caller,
 unsigned int chk_tsrec_no_valid(const unsigned int tsrec_no,
 	const char *caller);
 
+struct kthread_worker *mtk_cam_seninf_tsrec_g_kthread(
+	const unsigned int tsrec_no, const char *caller);
+
 
 /*
  * return:

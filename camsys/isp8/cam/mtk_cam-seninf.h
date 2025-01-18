@@ -302,6 +302,7 @@ struct seninf_ctx {
 #endif
 	unsigned int is_secure:1;
 	unsigned int tsrec_idx;
+	unsigned int eint_idx;
 	u64 SecInfo_addr;
 	int seninfAsyncIdx;
 	int seninfSelSensor;
