@@ -157,19 +157,20 @@ void mtk_imgsys_mmdvfs_init_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 	dvfs_info->smvr_task_cnt = 0;
 	dvfs_info->opp_num = opp_num;
 
-	idx = of_property_match_string(dvfs_info->dev->of_node, "clocks", "mmdvfs_mux");
+	idx = of_property_match_string(dvfs_info->dev->of_node, "clock-names", "mmdvfs_mux");
 	if (idx >= 0) {
-		ret = of_parse_phandle_with_args(dvfs_info->dev->of_node, "clocks", "#clocks-cells",
+		ret = of_parse_phandle_with_args(dvfs_info->dev->of_node, "clocks", "#clock-cells",
 											idx, &spec);
-		if (!ret)
+		if (!ret) {
 			dvfs_info->mmdvfs_user = spec.args[0];
-		else {
+			dev_info(dvfs_info->dev, "mmdvfs_user(%d)\n", dvfs_info->mmdvfs_user);
+		} else {
 			dvfs_info->mmdvfs_user = -1;
 			dev_info(dvfs_info->dev, "mmdvfs_user_img not found\n");
 		}
 	} else {
 		dvfs_info->mmdvfs_user = -1;
-		dev_info(dvfs_info->dev, "mmdvfs_mux not found\n");
+		dev_info(dvfs_info->dev, "mmdvfs_mux not found(%d)\n", idx);
 	}
 
 }
