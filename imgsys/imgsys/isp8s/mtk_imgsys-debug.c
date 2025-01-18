@@ -33,13 +33,13 @@
 #define FINAL_LOG_LENGTH (LOG_LEGNTH * 4)
 #define DDREN_ACK_TIMEOUT_CNT 1000000
 
-const unsigned int g_imgsys_main_reg_base      = (0x34000000);
-const unsigned int g_imgsys_dip_top_reg_base   = (0x34110000);
-const unsigned int g_imgsys_dip_nr_reg_base    = (0x34130000);
-const unsigned int g_imgsys_wpe1_dip1_reg_base = (0x34220000);
-const unsigned int g_imgsys_wpe2_dip1_reg_base = (0x34520000);
-const unsigned int g_imgsys_wpe3_dip1_reg_base = (0x34620000);
-const unsigned int g_imgsys_traw_dip1_reg_base = (0x34710000);
+const unsigned int g_imgsys_main_reg_base      = (0x34010000);
+const unsigned int g_imgsys_dip_top_reg_base   = (0x34100000);
+const unsigned int g_imgsys_dip_nr_reg_base    = (0x34120000);
+const unsigned int g_imgsys_wpe1_dip1_reg_base = (0x34200000);
+const unsigned int g_imgsys_wpe2_dip1_reg_base = (0x34500000);
+const unsigned int g_imgsys_wpe3_dip1_reg_base = (0x34600000);
+const unsigned int g_imgsys_traw_dip1_reg_base = (0x34700000);
 
 bool imgsys_dip_8s_dbg_enable(void)
 {
@@ -130,6 +130,12 @@ void __iomem *adlARegBA;
 void __iomem *adlBRegBA;
 void __iomem *imgsysddrenRegBA;
 void __iomem *imgsysiscRegBA;
+void __iomem *wpeeispqdipaRegBA;
+void __iomem *wpetnrpqdipbRegBA;
+void __iomem *mainwpe0RegBA;
+void __iomem *mainwpe1RegBA;
+void __iomem *mainwpe2RegBA;
+void __iomem *mainomcliteRegBA;
 int imgsys_ddr_en;
 
 void imgsys_main_init(struct mtk_imgsys_dev *imgsys_dev)
@@ -251,20 +257,74 @@ void imgsys_main_init(struct mtk_imgsys_dev *imgsys_dev)
 		dev_info(imgsys_dev->dev, "ddr_en(%d/%d)\n", ddr_en, imgsys_ddr_en);
 	}
 
-		imgsysddrenRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_IMG_VCORE);
-		if (!imgsysddrenRegBA) {
-			dev_info(imgsys_dev->dev, "%s: Unable to ioremap img_vcore registers\n",
-					__func__);
-			dev_info(imgsys_dev->dev, "%s: of_iomap fail, devnode(%s).\n",
-					__func__, imgsys_dev->dev->of_node->name);
-			return;
-		}
+	imgsysddrenRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_IMG_VCORE);
+	if (!imgsysddrenRegBA) {
+		dev_info(imgsys_dev->dev, "%s: Unable to ioremap img_vcore registers\n",
+				__func__);
+		dev_info(imgsys_dev->dev, "%s: of_iomap fail, devnode(%s).\n",
+				__func__, imgsys_dev->dev->of_node->name);
+		return;
+	}
 
 	imgsysiscRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_ISC);
 	if (!imgsysiscRegBA) {
 		dev_info(imgsys_dev->dev, "%s: Unable to ioremap isc registers\n",
 				__func__);
 		dev_info(imgsys_dev->dev, "%s: of_iomap fail, devnode(%s).\n",
+				__func__, imgsys_dev->dev->of_node->name);
+		return;
+	}
+
+	wpeeispqdipaRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_WPE_EIS_PQDIP_A);
+	if (!wpeeispqdipaRegBA) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap wpe_eis_pqdip_a registers\n",
+								__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+				__func__, imgsys_dev->dev->of_node->name);
+		return;
+	}
+
+	wpetnrpqdipbRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_WPE_TNR_PQDIP_B);
+	if (!wpetnrpqdipbRegBA) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap wpe_tnr_pqdip_b registers\n",
+								__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+				__func__, imgsys_dev->dev->of_node->name);
+		return;
+	}
+
+	mainwpe0RegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_MAIN_WPE0);
+	if (!mainwpe0RegBA) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap main_wpe0 registers\n",
+								__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+				__func__, imgsys_dev->dev->of_node->name);
+		return;
+	}
+
+	mainwpe1RegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_MAIN_WPE1);
+	if (!mainwpe1RegBA) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap main_wpe1 registers\n",
+								__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+				__func__, imgsys_dev->dev->of_node->name);
+		return;
+	}
+
+	mainwpe2RegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_MAIN_WPE2);
+	if (!mainwpe2RegBA) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap main_wpe2 registers\n",
+								__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+				__func__, imgsys_dev->dev->of_node->name);
+		return;
+	}
+
+	mainomcliteRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_MAIN_OMC_LITE);
+	if (!mainomcliteRegBA) {
+		dev_info(imgsys_dev->dev, "%s Unable to ioremap main_omc_lite registers\n",
+								__func__);
+		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 				__func__, imgsys_dev->dev->of_node->name);
 		return;
 	}
@@ -623,16 +683,45 @@ void imgsys_main_uninit(struct mtk_imgsys_dev *imgsys_dev)
 		adlBRegBA = 0L;
 	}
 
-		if (imgsysddrenRegBA) {
-			iounmap(imgsysddrenRegBA);
-			imgsysddrenRegBA = 0L;
-		}
+	if (imgsysddrenRegBA) {
+		iounmap(imgsysddrenRegBA);
+		imgsysddrenRegBA = 0L;
+	}
 
 	if (imgsysiscRegBA) {
 		iounmap(imgsysiscRegBA);
 		imgsysiscRegBA = 0L;
 	}
 
+	if (wpeeispqdipaRegBA) {
+		iounmap(wpeeispqdipaRegBA);
+		wpeeispqdipaRegBA = 0L;
+	}
+
+	if (wpetnrpqdipbRegBA) {
+		iounmap(wpetnrpqdipbRegBA);
+		wpetnrpqdipbRegBA = 0L;
+	}
+
+	if (mainwpe0RegBA) {
+		iounmap(mainwpe0RegBA);
+		mainwpe0RegBA = 0L;
+	}
+
+	if (mainwpe1RegBA) {
+		iounmap(mainwpe1RegBA);
+		mainwpe1RegBA = 0L;
+	}
+
+	if (mainwpe2RegBA) {
+		iounmap(mainwpe2RegBA);
+		mainwpe2RegBA = 0L;
+	}
+
+	if (mainomcliteRegBA) {
+		iounmap(mainomcliteRegBA);
+		mainomcliteRegBA = 0L;
+	}
 
 	imgsys_ddr_en = 0;
 	pr_debug("%s: -.\n", __func__);
@@ -845,11 +934,40 @@ void imgsys_dl_checksum_dump(struct mtk_imgsys_dev *imgsys_dev,
 	unsigned int wpe_pqdip_mux3_v = 0x0;
 	char logBuf_temp[LOG_LEGNTH];
 	int ret;
+	unsigned int dip_pqdip_a_mux_v = 0x0;
+	unsigned int dip_pqdip_b_mux_v = 0x0;
 
 	memset((char *)logBuf_final, 0x0, sizeof(logBuf_final));
 	logBuf_final[strlen(logBuf_final)] = '\0';
 	memset((char *)logBuf_temp, 0x0, sizeof(logBuf_temp));
 	logBuf_temp[strlen(logBuf_temp)] = '\0';
+
+	/* Check DIP-PQDIP is MCRP_D1 or MCRP_D2 */
+	if (dl_path == IMGSYS_DL_DIP_TO_PQDIP_A) {
+		if (!wpeeispqdipaRegBA) {
+			dev_info(imgsys_dev->dev, "%s Unable to ioremap wpe_eis_pqdip_a registers\n",
+				__func__);
+			dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+				__func__, imgsys_dev->dev->of_node->name);
+			return;
+		}
+		dip_pqdip_a_mux_v = (unsigned int)ioread32((void *)(wpeeispqdipaRegBA + 0x0));
+		dip_pqdip_a_mux_v = (dip_pqdip_a_mux_v & 0x000000006) >> 1;
+		if (dip_pqdip_a_mux_v == 0)
+			dl_path = IMGSYS_DL_DIP2_TO_PQDIP_A;
+	} else if (dl_path == IMGSYS_DL_DIP_TO_PQDIP_B) {
+		if (!wpetnrpqdipbRegBA) {
+			dev_info(imgsys_dev->dev, "%s Unable to ioremap wpe_tnr_pqdip_b registers\n",
+				__func__);
+			dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
+				__func__, imgsys_dev->dev->of_node->name);
+			return;
+		}
+		dip_pqdip_b_mux_v = (unsigned int)ioread32((void *)(wpetnrpqdipbRegBA + 0x0));
+		dip_pqdip_b_mux_v = (dip_pqdip_b_mux_v & 0x000000006) >> 1;
+		if (dip_pqdip_b_mux_v == 0)
+			dl_path = IMGSYS_DL_DIP2_TO_PQDIP_B;
+	}
 
 	dev_info(imgsys_dev->dev,
 		"%s: + hw_comb/path(0x%x/%s) dl_path:%d, start dump\n",
@@ -903,12 +1021,12 @@ void imgsys_dl_checksum_dump(struct mtk_imgsys_dev *imgsys_dev,
 	} else {
 		/*dump former engine in DL (imgsys main in port) status */
 		checksum_dbg_sel = (unsigned int)((dl_path << 1) | (0 << 0));
-		original_dbg_sel_value = (unsigned int)ioread32((void *)(imgsysmainRegBA + 0x4C));
+		original_dbg_sel_value = (unsigned int)ioread32((void *)(imgsysmainRegBA + 0x50));
 		original_dbg_sel_value = original_dbg_sel_value & 0xff00ffff; /*clear last time data*/
 		dbg_sel_value[0] = (original_dbg_sel_value | 0x1 |
 			((checksum_dbg_sel << 16) & 0x00ff0000));
-		writel(dbg_sel_value[0], (imgsysmainRegBA + 0x4C));
-		dbg_sel_value[0] = (unsigned int)ioread32((void *)(imgsysmainRegBA + 0x4C));
+		writel(dbg_sel_value[0], (imgsysmainRegBA + 0x50));
+		dbg_sel_value[0] = (unsigned int)ioread32((void *)(imgsysmainRegBA + 0x50));
 		debug0_value[0] = (unsigned int)ioread32((void *)(imgsysmainRegBA + 0x200));
 		debug0_checksum[0] = (debug0_value[0] & 0x0000ffff);
 		debug0_rdy[0] = (debug0_value[0] & 0x00800000) >> 23;
@@ -924,8 +1042,8 @@ void imgsys_dl_checksum_dump(struct mtk_imgsys_dev *imgsys_dev,
 		checksum_dbg_sel = (unsigned int)((dl_path << 1) | (1 << 0));
 		dbg_sel_value[1] = (original_dbg_sel_value | 0x1 |
 			((checksum_dbg_sel << 16) & 0x00ff0000));
-		writel(dbg_sel_value[1], (imgsysmainRegBA + 0x4C));
-		dbg_sel_value[1] = (unsigned int)ioread32((void *)(imgsysmainRegBA + 0x4C));
+		writel(dbg_sel_value[1], (imgsysmainRegBA + 0x50));
+		dbg_sel_value[1] = (unsigned int)ioread32((void *)(imgsysmainRegBA + 0x50));
 		debug0_value[1] = (unsigned int)ioread32((void *)(imgsysmainRegBA + 0x200));
 		debug0_checksum[1] = (debug0_value[1] & 0x0000ffff);
 		debug0_rdy[1] = (debug0_value[1] & 0x00800000) >> 23;
@@ -1034,7 +1152,7 @@ void imgsys_dl_checksum_dump(struct mtk_imgsys_dev *imgsys_dev,
 	dev_info(imgsys_dev->dev, "%s: ===(%s): %s DBG INFO===",
 		__func__, logBuf_path, logBuf_inport);
 	dev_info(imgsys_dev->dev, "%s:  0x%08X %08X", __func__,
-		(unsigned int)(g_imgsys_main_reg_base + 0x4C), dbg_sel_value[0]);
+		(unsigned int)(g_imgsys_main_reg_base + 0x50), dbg_sel_value[0]);
 	dev_info(imgsys_dev->dev, "%s:  0x%08X %08X", __func__,
 		(unsigned int)(g_imgsys_main_reg_base + 0x200), debug0_value[0]);
 	dev_info(imgsys_dev->dev, "%s:  0x%08X %08X", __func__,
@@ -1045,7 +1163,7 @@ void imgsys_dl_checksum_dump(struct mtk_imgsys_dev *imgsys_dev,
 	dev_info(imgsys_dev->dev, "%s: ===(%s): %s DBG INFO===",
 		__func__, logBuf_path, logBuf_outport);
 	dev_info(imgsys_dev->dev, "%s:  0x%08X %08X", __func__,
-		(unsigned int)(g_imgsys_main_reg_base + 0x4C), dbg_sel_value[1]);
+		(unsigned int)(g_imgsys_main_reg_base + 0x50), dbg_sel_value[1]);
 	dev_info(imgsys_dev->dev, "%s:  0x%08X %08X", __func__,
 		(unsigned int)(g_imgsys_main_reg_base + 0x200), debug0_value[1]);
 	dev_info(imgsys_dev->dev, "%s:  0x%08X %08X", __func__,
