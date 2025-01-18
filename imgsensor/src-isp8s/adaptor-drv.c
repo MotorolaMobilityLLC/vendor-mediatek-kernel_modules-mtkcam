@@ -28,6 +28,7 @@
 #include "adaptor-trace.h"
 #include "adaptor-tsrec-cb-ctrl-impl.h"
 #include "adaptor-sentest-ctrl.h"
+#include "adaptor-eint-cb-ctrl-impl.h"
 #include "imgsensor-glue/imgsensor-glue.h"
 #include "virt-sensor/virt-sensor-entry.h"
 #include "adaptor-fw-loader.h"
@@ -892,6 +893,8 @@ static int imgsensor_start_streaming(struct adaptor_ctx *ctx)
 
 	adaptor_logm(ctx, "[SENSOR_FEATURE_SET_STREAMING_RESUME] -\n");
 
+	/* notify seninf-eint streaming ON */
+	notify_seninf_eint_streaming(ctx, 1);
 
 	/* update timeout value after reset*/
 	update_shutter_for_timeout_by_ae_ctrl(ctx, &ctx->ae_memento);
@@ -927,6 +930,9 @@ static int imgsensor_stop_streaming(struct adaptor_ctx *ctx)
 	subdrv_call(ctx, feature_control,
 		    SENSOR_FEATURE_SET_TEST_PATTERN,
 		    para.u8, &len);
+
+	/* notify seninf-eint streaming OFF */
+	notify_seninf_eint_streaming(ctx, 0);
 
 	/* notify frame-sync streaming OFF */
 	notify_fsync_mgr_streaming(ctx, 0);

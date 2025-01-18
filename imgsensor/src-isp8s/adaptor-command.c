@@ -8,6 +8,7 @@
 #include "adaptor-fsync-ctrls.h"
 #include "adaptor-common-ctrl.h"
 #include "adaptor-tsrec-cb-ctrl-impl.h"
+#include "adaptor-eint-cb-ctrl-impl.h"
 #include "adaptor-sentest-ctrl.h"
 
 #include "adaptor-command.h"
@@ -452,6 +453,91 @@ static int s_cmd_tsrec_notify_sensor_hw_pre_latch(
 	return ret;
 }
 
+static int s_cmd_eint_notify_vsync(
+	struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_cam_seninf_eint_timestamp_info *ts_info = NULL;
+	unsigned long long sys_ts;
+	int ret = 0;
+
+	/* unexpected case, arg is nullptr */
+	if (unlikely((chk_input_arg(ctx, arg, &ret, __func__)) != 0))
+		return ret;
+
+	ts_info = (struct mtk_cam_seninf_eint_timestamp_info *)arg;
+	sys_ts = ktime_get_boottime_ns();
+
+	adaptor_logd(ctx,
+		"eint_no:%u tsrec_idx:%u ts:%llu(%llu/%u) seq_no:%d (%llu %llu) [%llu %llu %llu %llu]",
+		ts_info->eint_no,
+		ts_info->tsrec_idx,
+		ts_info->tick / ts_info->tick_factor,
+		ts_info->tick,
+		ts_info->tick_factor,
+		ts_info->irq_seq_no,
+		ts_info->irq_sys_time_ns,
+		ts_info->irq_mono_time_ns,
+		ts_info->ts_us[0],
+		ts_info->ts_us[1],
+		ts_info->ts_us[2],
+		ts_info->ts_us[3]);
+
+	/* notify framesync */
+	notify_fsync_mgr_vsync_by_eint(ctx, ts_info);
+
+	return 0;
+}
+
+static int s_cmd_eint_notify_irq_en(
+	struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_cam_seninf_eint_irq_en_info *info = NULL;
+	unsigned long long sys_ts;
+	int ret = 0;
+
+	/* unexpected case, arg is nullptr */
+	if (unlikely((chk_input_arg(ctx, arg, &ret, __func__)) != 0))
+		return ret;
+
+	info = (struct mtk_cam_seninf_eint_irq_en_info *)arg;
+	sys_ts = ktime_get_boottime_ns();
+
+	adaptor_logi(ctx,
+		"eint_no:%u tsrec_idx:%u flag:%u sys_ts:%llu\n",
+		info->eint_no,
+		info->tsrec_idx,
+		info->flag,
+		sys_ts);
+
+	notify_fsync_mgr_eint_irq_en(ctx, info->eint_no, info->flag);
+
+	return 0;
+}
+
+static int s_cmd_eint_setup_cb_info(struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_cam_seninf_eint_cb_info *eint_cb_info = NULL;
+	unsigned long long sys_ts;
+	int ret = 0;
+
+	/* unexpected case, arg is nullptr */
+	if (unlikely((chk_input_arg(ctx, arg, &ret, __func__)) != 0))
+		return ret;
+
+	eint_cb_info = (struct mtk_cam_seninf_eint_cb_info *)arg;
+	sys_ts = ktime_get_boottime_ns();
+
+	adaptor_logi(ctx,
+		"eint_no:%u tsrec_idx:%u is_start:%u sys_ts:%llu\n",
+		eint_cb_info->eint_no,
+		eint_cb_info->tsrec_idx,
+		eint_cb_info->is_start,
+		sys_ts);
+
+	adaptor_eint_cb_ctrl_info_setup(ctx, eint_cb_info, eint_cb_info->is_start);
+
+	return ret;
+}
 
 static int s_cmd_tsrec_send_timestamp_info(struct adaptor_ctx *ctx, void *arg)
 {
@@ -656,6 +742,9 @@ static const struct command_entry command_list[] = {
 	{V4L2_CMD_TSREC_NOTIFY_VSYNC, s_cmd_tsrec_notify_vsync},
 	{V4L2_CMD_TSREC_NOTIFY_SENSOR_HW_PRE_LATCH,
 		s_cmd_tsrec_notify_sensor_hw_pre_latch},
+	{V4L2_CMD_EINT_NOTIFY_VSYNC, s_cmd_eint_notify_vsync},
+	{V4L2_CMD_EINT_NOTIFY_IRQ_EN, s_cmd_eint_notify_irq_en},
+	{V4L2_CMD_EINT_SETUP_CB_FUNC_OF_SENSOR, s_cmd_eint_setup_cb_info},
 	{V4L2_CMD_TSREC_SEND_TIMESTAMP_INFO, s_cmd_tsrec_send_timestamp_info},
 	{V4L2_CMD_SENSOR_PARSE_EBD, s_cmd_sensor_parse_ebd},
 	{V4L2_CMD_TSREC_SETUP_CB_FUNC_OF_SENSOR, s_cmd_tsrec_setup_cb_info},

@@ -13,6 +13,7 @@
 #include "adaptor-hw.h"
 #include "adaptor-trace.h"
 #include "adaptor-util.h"
+#include "adaptor-eint-cb-ctrl-impl.h"
 
 #define ctrl_to_ctx(ctrl) \
 	container_of(ctrl->handler, struct adaptor_ctx, ctrls)
@@ -1813,6 +1814,8 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 			subdrv_call(ctx, feature_control,
 				SENSOR_FEATURE_SEAMLESS_SWITCH,
 				para.u8, &len);
+
+			notify_seninf_eint_seamless_switch(ctx, 1);
 
 			notify_fsync_mgr_seamless_switch(ctx,
 				fsync_exp, IMGSENSOR_STAGGER_EXPOSURE_CNT,

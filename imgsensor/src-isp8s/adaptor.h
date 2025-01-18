@@ -18,6 +18,7 @@
 #include "adaptor-def.h"
 #include "adaptor-subdrv.h"
 #include "adaptor-tsrec-cb-ctrl.h"
+#include "adaptor-eint-cb-ctrl.h"
 #include "adaptor-sentest.h"
 #include "imgsensor-user.h"
 #include "mtk-i3c-i2c-wrap.h"
@@ -260,6 +261,9 @@ struct adaptor_ctx {
 	unsigned int aov_mclk_ulposc_flag;	/* flag for aov switch mclk to ulposc */
 	u32 cust_aov_csi_clk;
 	const char *phy_ctrl_ver;
+
+	/* seninf-eint */
+	struct adaptor_eint_cb_ctrl eint_cb_ctrl;
 
 	/* MCSS only */
 	u32 mask_frm_num_last;

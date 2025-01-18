@@ -1663,6 +1663,36 @@ void notify_fsync_mgr_receive_tsrec_timestamp_info(struct adaptor_ctx *ctx,
 }
 
 
+void notify_fsync_mgr_eint_irq_en(struct adaptor_ctx *ctx,
+	const unsigned int eint_no, const unsigned int flag)
+{
+	/* not expected case */
+	if (unlikely(ctx->fsync_mgr == NULL)) {
+		FSYNC_MGR_LOGI(ctx,
+			"ERROR: sidx:%d, ctx->fsync_mgr:%p is NULL, return\n",
+			ctx->idx, ctx->fsync_mgr);
+		return;
+	}
+
+	ctx->fsync_mgr->fs_notify_eint_irq_en_status(ctx->idx, eint_no, flag);
+}
+
+
+void notify_fsync_mgr_vsync_by_eint(struct adaptor_ctx *ctx,
+	const struct mtk_cam_seninf_eint_timestamp_info *ts_info)
+{
+	/* not expected case */
+	if (unlikely(ctx->fsync_mgr == NULL)) {
+		FSYNC_MGR_LOGI(ctx,
+			"ERROR: sidx:%d, ctx->fsync_mgr:%p is NULL, return\n",
+			ctx->idx, ctx->fsync_mgr);
+		return;
+	}
+
+	ctx->fsync_mgr->fs_notify_vsync_by_eint(ctx->idx, ts_info);
+}
+
+
 void notify_fsync_mgr_g_fl_record_info(struct adaptor_ctx *ctx,
 	struct mtk_fs_frame_length_info *p_fl_info)
 {
