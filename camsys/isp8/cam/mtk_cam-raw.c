@@ -3239,8 +3239,7 @@ int mtk_yuv_runtime_resume(struct device *dev)
 	if (is_hwccf_apply())
 		mtk_smi_larb_enable(&drvdata->larbs[0]->dev);
 
-	if (CAM_DEBUG_ENABLED(RAW_CG))
-		dev_dbg(dev, "%s:enable clock\n", __func__);
+	dev_info_ratelimited(dev, "%s:enable clock\n", __func__);
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		cg_dump_and_test(dev, CG_YUV, 1);
 	for (i = 0; i < drvdata->num_clks; i++) {
@@ -3727,8 +3726,7 @@ int mtk_rms_runtime_resume(struct device *dev)
 	struct mtk_rms_device *drvdata = dev_get_drvdata(dev);
 	int i, ret;
 
-	if (CAM_DEBUG_ENABLED(RAW_CG))
-		dev_info(dev, "%s:enable clock\n", __func__);
+	dev_info_ratelimited(dev, "%s:enable clock\n", __func__);
 
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		cg_dump_and_test(dev, CG_RMS, 1);

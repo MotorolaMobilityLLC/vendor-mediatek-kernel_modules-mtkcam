@@ -6943,6 +6943,7 @@ int mtk_cam_job_manually_apply_sensor(struct mtk_cam_job *job)
 
 int mtk_cam_job_manually_apply_isp(struct mtk_cam_job *job, bool wait_completion)
 {
+	struct mtk_cam_device *cam = job->src_ctx->cam;
 	unsigned long timeout = msecs_to_jiffies(2000);
 
 	if (!wait_for_completion_timeout(&job->compose_completion, timeout)) {
@@ -6954,15 +6955,24 @@ int mtk_cam_job_manually_apply_isp(struct mtk_cam_job *job, bool wait_completion
 		mtk_cam_job_state_set(&job->job_state, ISP_STATE, S_ISP_APPLYING_PROCRAW);
 	else
 		mtk_cam_job_state_set(&job->job_state, ISP_STATE, S_ISP_APPLYING);
+	pr_info("[%s] cg: vcore:0x%x, cammain:0x%x, A:0x%x/0x%x/0x%x, B:0x%x/0x%x/0x%x, C:0x%x/0x%x/0x%x",
+			__func__, readl(cam->vcore_cg_con), readl(cam->base),
+			readl(cam->rawa_cg_con), readl(cam->rmsa_cg_con), readl(cam->yuva_cg_con),
+			readl(cam->rawb_cg_con), readl(cam->rmsb_cg_con), readl(cam->yuvb_cg_con),
+			readl(cam->rawc_cg_con), readl(cam->rmsc_cg_con), readl(cam->yuvc_cg_con));
 	call_jobop(job, apply_isp);
 
 	if (!wait_completion)
 		return 0;
 
 	if (!wait_for_completion_timeout(&job->cq_exe_completion, timeout)) {
-		pr_info("[%s] error: wait for job cq exe\n", __func__);
-		pr_info("[%s] cq_not_ready:%lx", __func__,
+		pr_info("[%s] error: wait for job cq exe, cq_not_ready:%lx\n", __func__,
 			atomic_long_read(&job->cq_ref.cq_not_ready));
+		pr_info("[%s] cg: vcore:0x%x, cammain:0x%x, A:0x%x/0x%x/0x%x, B:0x%x/0x%x/0x%x, C:0x%x/0x%x/0x%x",
+			__func__, readl(cam->vcore_cg_con), readl(cam->base),
+			readl(cam->rawa_cg_con), readl(cam->rmsa_cg_con), readl(cam->yuva_cg_con),
+			readl(cam->rawb_cg_con), readl(cam->rmsb_cg_con), readl(cam->yuvb_cg_con),
+			readl(cam->rawc_cg_con), readl(cam->rmsc_cg_con), readl(cam->yuvc_cg_con));
 		if (CAM_DEBUG_ENABLED(QOF)) {
 			int i;
 			struct mtk_cam_ctx *ctx = job->src_ctx;
