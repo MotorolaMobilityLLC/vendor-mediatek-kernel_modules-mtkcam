@@ -648,7 +648,7 @@ static void imgsys_cmdq_cb_work_plat8s(struct work_struct *work)
 			cb_param->frm_info->request_no, cb_param->frm_info->request_fd,
 			cb_param->frm_info->frm_owner);
 		cb_param->user_cmdq_cb(user_cb_data, cb_param->frm_idx, isLastTaskInReq,
-			cb_param->batchnum, cb_param->is_capture);
+			cb_param->batchnum, cb_param->memory_mode);
 		IMGSYS_CMDQ_SYSTRACE_END();
 		cb_param->cmdqTs.tsUserCbEnd = ktime_get_boottime_ns()/1000;
 	}
@@ -2049,7 +2049,7 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				struct swfrm_info_t *frm_info,
 				void (*cmdq_cb)(struct cmdq_cb_data data,
 					uint32_t subfidx, bool isLastTaskInReq,
-					uint32_t batchnum, uint32_t is_capture),
+					uint32_t batchnum, uint32_t memory_mode),
 				void (*cmdq_err_cb)(struct cmdq_cb_data data,
 					uint32_t fail_subfidx, bool isHWhang, uint32_t hangEvent),
 				u64 (*imgsys_get_iova)(struct dma_buf *dma_buf, s32 ionFd,
@@ -2451,7 +2451,7 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					cb_param->task_num = 0;
 				}
 				cb_param->batchnum = frm_info->batchnum;
-				cb_param->is_capture = frm_info->is_capture;
+				cb_param->memory_mode = frm_info->memory_mode;
 
 				if (imgsys_cmdq_dbg_enable_plat8s())
 					dev_dbg(imgsys_dev->dev,

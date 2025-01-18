@@ -63,7 +63,7 @@ enum Pseudo_Desc_Extra_Info {
 #define IMGSYS_HW_DIP         (10)
 #define IMGSYS_HW_PQDIP_A     (11)
 #define IMGSYS_HW_PQDIP_B     (12)
-#define IMGSYS_HW_TDR_NUM_MAX (13) /* After porting HW_DEPTH, should be changed to 14 */
+#define IMGSYS_HW_TDR_NUM_MAX (13)
 #define IMGSYS_HW_ME          (IMGSYS_HW_TDR_NUM_MAX)     // 13
 #define IMGSYS_HW_MAE         (IMGSYS_HW_TDR_NUM_MAX + 1) // 14
 #define IMGSYS_HW_DFP         (IMGSYS_HW_TDR_NUM_MAX + 2) // 15
@@ -116,7 +116,6 @@ enum mtk_imgsys_engine {
 	IMGSYS_HW_FLAG_MAE       = 0x00004000,
 	IMGSYS_HW_FLAG_DFP       = 0x00008000,
 	IMGSYS_HW_FLAG_DPE       = 0x00010000,
-	IMGSYS_HW_FLAG_NUM       = IMGSYS_HW_NUM_MAX,
 };
 
 /*TODO: Fill MAE/DFP/DPE/WPE_DEPTH in here */

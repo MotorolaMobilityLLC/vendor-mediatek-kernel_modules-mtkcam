@@ -40,8 +40,11 @@ struct init_info {
 };
 
 struct mem_info {
-	uint8_t  is_smvr;
+	uint64_t hw_comb_to_use;
+	uint32_t batch_num;
+	uint8_t  is_smvr;  /* deprecated */
 	uint8_t  is_capture;
+	uint8_t  rsv[2];
 };
 
 struct mtk_imgsys_fd_info {
@@ -99,6 +102,24 @@ struct mtk_imgsys_ioctl_clear_user_resource_info {
 	uint64_t imgstm_inst;
 };
 
+/*
+ * imgsys_user_param should be same in mtk_imgsys-dev.h
+ */
+#ifndef IMGSYS_USER_PARAM
+#define IMGSYS_USER_PARAM
+struct imgsys_user_param {
+	uint64_t user_id;
+	uint64_t instance;
+	uint64_t hw_comb_to_use;
+	uint32_t sec_tag;
+	uint32_t batch_num;
+	uint32_t is_capture;
+	uint32_t enq_sequentially;
+};
+
+#endif
+
+
 /* ioctl interface for user space*/
 #define MTKDIP_IOC_QBUF \
 	_IOWR('V', BASE_VIDIOC_PRIVATE + 1, struct frame_param_pack)
@@ -127,6 +148,9 @@ struct mtk_imgsys_ioctl_clear_user_resource_info {
 	_IOW('V', BASE_VIDIOC_PRIVATE + 19, struct mtk_imgsys_ioctl_clear_user_resource_info)
 #define MTKDIP_IOC_ACQUIRE_IOVA _IOW('V', BASE_VIDIOC_PRIVATE + 20, struct mtk_imgsys_fd_info_tbl)
 #define MTKDIP_IOC_RELEASE_IOVA _IOW('V', BASE_VIDIOC_PRIVATE + 21, struct mtk_imgsys_fd_info_tbl)
+#define MTKDIP_IOC_ALLOCATE_USER_RESOURCE _IOW('V', BASE_VIDIOC_PRIVATE + 22, struct imgsys_user_param)
+#define MTKDIP_IOC_DEALLOCATE_USER_RESOURCE _IOW('V', BASE_VIDIOC_PRIVATE + 23, struct imgsys_user_param)
+
 #define V4L2_CID_IMGSYS_OFFSET	(0xC000)
 #define V4L2_CID_IMGSYS_BASE    (V4L2_CID_USER_BASE + V4L2_CID_IMGSYS_OFFSET)
 #define V4L2_CID_IMGSYS_APU_DC  (V4L2_CID_IMGSYS_BASE + 1)

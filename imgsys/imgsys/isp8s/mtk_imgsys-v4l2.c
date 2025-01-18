@@ -1839,6 +1839,7 @@ static int mtkdip_ioc_alloc_buffer(struct v4l2_subdev *subdev, void *arg)
 	struct img_init_info working_buf_info;
 	int ret = 0;
 	struct resource *imgsys_resource;
+	unsigned int memory_mode;
 
 #if (IMGSYS_INIT_INFO_VERSION == 1)
 	struct buf_va_info_t *buf;
@@ -1848,11 +1849,26 @@ static int mtkdip_ioc_alloc_buffer(struct v4l2_subdev *subdev, void *arg)
 	pipe = container_of(subdev, struct mtk_imgsys_pipe, subdev);
 	imgsys_resource = pipe->imgsys_dev->imgsys_resource;
 	hcp_ops = mtk_hcp_fetch_ops(pipe->imgsys_dev->scp_pdev);
+	memory_mode = mtkdip_mem_info_to_memory_mode(info);
 
-	if (pipe->streaming) {
+	pr_info("+ [%s] streaming(%d) info(0x%llx/%u/%u) -> mem_mode(%u); user_cnt(%u/%u/%u/%u); total_alloc(%u)\n",
+		__func__,
+		pipe->streaming,
+		(unsigned long long)info->hw_comb_to_use,
+		info->batch_num,
+		info->is_capture,
+		memory_mode,
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_NORMAL_STREAMING],
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_CAPTURE],
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_SMVR],
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_MAE],
+		pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count);
+
+
+	if (likely(pipe->streaming)) {
 		/* IMGSYS HW INIT */
-#if (IMGSYS_INIT_INFO_VERSION == 1)
 		memset(&working_buf_info, 0, sizeof(working_buf_info));
+#if (IMGSYS_INIT_INFO_VERSION == 1)
 		working_buf_info.drv_data = (u64)&pipe->imgsys_dev;
 		working_buf_info.header_version = HEADER_VER;
 		working_buf_info.dip_param_size = sizeof(struct dip_param);
@@ -1869,138 +1885,54 @@ static int mtkdip_ioc_alloc_buffer(struct v4l2_subdev *subdev, void *arg)
 			working_buf_info.hw_buf_fd = buf->buf_fd;
 		}
 #endif
-		pr_info("before-%s working buf is_smvr/is_capture/smvr/capture/streaming/user_count(%d/%d/%d/%d/%d/%d)\n",
-				__func__,
-				info->is_smvr, info->is_capture,
-				pipe->imgsys_dev->imgsys_pipe[0].smvr_alloc,
-				pipe->imgsys_dev->imgsys_pipe[0].capture_alloc,
-				pipe->imgsys_dev->imgsys_pipe[0].streaming_alloc,
-				pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count);
+
 		working_buf_info.sec_tag = pipe->imgsys_dev->imgsys_pipe[0].ini_info.sec_tag;
 		working_buf_info.full_wd = pipe->imgsys_dev->imgsys_pipe[0].ini_info.sensor.full_wd;
 		working_buf_info.full_ht = pipe->imgsys_dev->imgsys_pipe[0].ini_info.sensor.full_ht;
-		if (info->is_capture) {
-			if (!pipe->imgsys_dev->imgsys_pipe[0].capture_alloc) {
-				if (hcp_ops && hcp_ops->allocate_gce_mb)
-					hcp_ops->allocate_gce_mb(
-						pipe->imgsys_dev->scp_pdev, imgsys_capture);
-				if (hcp_ops && hcp_ops->allocate_mod_mbs)
-					hcp_ops->allocate_mod_mbs(
-						pipe->imgsys_dev->scp_pdev, imgsys_capture);
-#if (IMGSYS_INIT_INFO_VERSION == 1)
-				working_buf_info.smvr_mode = 0;
-				working_buf_info.is_capture = info->is_capture;
-#elif (IMGSYS_INIT_INFO_VERSION == 2)
-				working_buf_info.memory_mode = IMGSYS_MEMORY_MODE_CAPTURE;
+#if (IMGSYS_INIT_INFO_VERSION == 2)
+		working_buf_info.memory_mode = memory_mode;
 #endif
-				if (hcp_ops && hcp_ops->fill_init_info)
-					hcp_ops->fill_init_info(
-						pipe->imgsys_dev->scp_pdev, &working_buf_info);
-				ret = imgsys_send(
-					pipe->imgsys_dev->scp_pdev,
-					HCP_IMGSYS_ALLOC_WORKING_BUF_ID,
-					(void *)&working_buf_info,
-					sizeof(working_buf_info),
-					0,
-					1);
-			}
-			pipe->imgsys_dev->imgsys_pipe[0].capture_alloc++;
-			pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count++;
+		if (likely(pipe->imgsys_dev->imgsys_pipe[0].user_cnt[memory_mode] == 0)) {
+			if (likely(hcp_ops && hcp_ops->allocate_gce_mb))
+				hcp_ops->allocate_gce_mb(
+					pipe->imgsys_dev->scp_pdev, memory_mode);
+			if (likely(hcp_ops && hcp_ops->allocate_mod_mbs))
+				hcp_ops->allocate_mod_mbs(
+					pipe->imgsys_dev->scp_pdev, memory_mode);
 #if (IMGSYS_INIT_INFO_VERSION == 1)
-			pr_info("cap buf fd(%d/%d/%d/%d)",
-				working_buf_info.module_info_capture[0].c_wbuf_fd,
-				working_buf_info.module_info_capture[0].t_wbuf_fd,
-				working_buf_info.module_info_capture[3].c_wbuf_fd,
-				working_buf_info.module_info_capture[3].t_wbuf_fd);
+			working_buf_info.smvr_mode = 0;
+			working_buf_info.is_capture = info->is_capture;
 #endif
-		} else {
-			if (info->is_smvr) {
-				if (!pipe->imgsys_dev->imgsys_pipe[0].smvr_alloc) {
-					if (hcp_ops && hcp_ops->allocate_gce_mb)
-						hcp_ops->allocate_gce_mb(
-							pipe->imgsys_dev->scp_pdev, imgsys_smvr);
-					if (hcp_ops && hcp_ops->allocate_mod_mbs)
-						hcp_ops->allocate_mod_mbs(
-							pipe->imgsys_dev->scp_pdev, imgsys_smvr);
-#if (IMGSYS_INIT_INFO_VERSION == 1)
-					working_buf_info.smvr_mode = info->is_smvr;
-					working_buf_info.is_capture = 0;
-#elif (IMGSYS_INIT_INFO_VERSION == 2)
-					working_buf_info.memory_mode = IMGSYS_MEMORY_MODE_SMVR;
-#endif
-
-					if (hcp_ops && hcp_ops->fill_init_info)
-						hcp_ops->fill_init_info(
-							pipe->imgsys_dev->scp_pdev,
-							&working_buf_info);
-					ret = imgsys_send(
-						pipe->imgsys_dev->scp_pdev,
-						HCP_IMGSYS_ALLOC_WORKING_BUF_ID,
-						(void *)&working_buf_info,
-						sizeof(working_buf_info),
-						0,
-						1);
-				}
-				pipe->imgsys_dev->imgsys_pipe[0].smvr_alloc++;
-				pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count++;
-#if (IMGSYS_INIT_INFO_VERSION == 1)
-				pr_info("smvr buf fd(%d/%d/%d/%d)",
-					working_buf_info.module_info_smvr[0].c_wbuf_fd,
-					working_buf_info.module_info_smvr[0].t_wbuf_fd,
-					working_buf_info.module_info_smvr[3].c_wbuf_fd,
-					working_buf_info.module_info_smvr[3].t_wbuf_fd);
-#endif
-			} else {
-				if (!pipe->imgsys_dev->imgsys_pipe[0].streaming_alloc) {
-					if (hcp_ops && hcp_ops->allocate_gce_mb)
-						hcp_ops->allocate_gce_mb(
-							pipe->imgsys_dev->scp_pdev,
-							imgsys_streaming);
-					if (hcp_ops && hcp_ops->allocate_mod_mbs)
-						hcp_ops->allocate_mod_mbs(
-							pipe->imgsys_dev->scp_pdev,
-							imgsys_streaming);
-#if (IMGSYS_INIT_INFO_VERSION == 1)
-					working_buf_info.smvr_mode = 0;
-					working_buf_info.is_capture = 0;
-#elif (IMGSYS_INIT_INFO_VERSION == 2)
-					working_buf_info.memory_mode =
-						IMGSYS_MEMORY_MODE_NORMAL_STREAMING;
-#endif
-
-					if (hcp_ops && hcp_ops->fill_init_info)
-						hcp_ops->fill_init_info(
-							pipe->imgsys_dev->scp_pdev,
-							&working_buf_info);
-					ret = imgsys_send(
-						pipe->imgsys_dev->scp_pdev,
-						HCP_IMGSYS_ALLOC_WORKING_BUF_ID,
-						(void *)&working_buf_info,
-						sizeof(working_buf_info),
-						0,
-						1);
-				}
-				pipe->imgsys_dev->imgsys_pipe[0].streaming_alloc++;
-				pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count++;
-#if (IMGSYS_INIT_INFO_VERSION == 1)
-				pr_info("streaming buf fd(%d/%d/%d/%d)",
-					working_buf_info.module_info_streaming[0].c_wbuf_fd,
-					working_buf_info.module_info_streaming[0].t_wbuf_fd,
-					working_buf_info.module_info_streaming[3].c_wbuf_fd,
-					working_buf_info.module_info_streaming[3].t_wbuf_fd);
-#endif
-			}
+			if (likely(hcp_ops && hcp_ops->fill_init_info))
+				hcp_ops->fill_init_info(
+					pipe->imgsys_dev->scp_pdev, &working_buf_info);
+			ret = imgsys_send(
+				pipe->imgsys_dev->scp_pdev,
+				HCP_IMGSYS_ALLOC_WORKING_BUF_ID,
+				(void *)&working_buf_info,
+				sizeof(working_buf_info),
+				0,
+				1);
 		}
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[memory_mode]++;
+		pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count++;
 	}
+
 	pipe->meminfo = *info;
 	/* TODO: HCP API */
 
-	pr_info("%s working buf is_smvr/is_capture/smvr/capture/streaming/user_count(%d/%d/%d/%d/%d/%d)\n", __func__,
-				info->is_smvr, info->is_capture,
-				pipe->imgsys_dev->imgsys_pipe[0].smvr_alloc,
-				pipe->imgsys_dev->imgsys_pipe[0].capture_alloc,
-				pipe->imgsys_dev->imgsys_pipe[0].streaming_alloc,
-				pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count);
+	pr_info("- [%s] streaming(%d) info(0x%llx/%u/%u) -> mem_mode(%u); user_cnt(%u/%u/%u/%u); total_alloc(%u)\n",
+		__func__,
+		pipe->streaming,
+		(unsigned long long)info->hw_comb_to_use,
+		info->batch_num,
+		info->is_capture,
+		memory_mode,
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_NORMAL_STREAMING],
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_CAPTURE],
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_SMVR],
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_MAE],
+		pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count);
 
 	return ret;
 }
@@ -2013,10 +1945,12 @@ static int mtkdip_ioc_free_buffer(struct v4l2_subdev *subdev, void *arg)
 	struct img_init_info working_buf_info;
 	int ret;
 	struct resource *imgsys_resource;
+	unsigned int memory_mode;
 
 	pipe = container_of(subdev, struct mtk_imgsys_pipe, subdev);
 	imgsys_resource = pipe->imgsys_dev->imgsys_resource;
 	hcp_ops = mtk_hcp_fetch_ops(pipe->imgsys_dev->scp_pdev);
+	memory_mode = mtkdip_mem_info_to_memory_mode(info);
 
 	memset(&working_buf_info, 0, sizeof(working_buf_info));
 #if (IMGSYS_INIT_INFO_VERSION == 1)
@@ -2029,34 +1963,42 @@ static int mtkdip_ioc_free_buffer(struct v4l2_subdev *subdev, void *arg)
 	working_buf_info.reg_range = resource_size(imgsys_resource);
 #endif
 
-	pr_info("%s: before free buf is_smvr/is_capture/smvr/capture//streaming/user_count(%d/%d/%d/%d/%d/%d)",
+	pr_info("+ [%s] streaming(%d) info(0x%llx/%u/%u) -> mem_mode(%u); user_cnt(%u/%u/%u/%u); total_alloc(%u)\n",
 		__func__,
-		info->is_smvr, info->is_capture,
-		pipe->imgsys_dev->imgsys_pipe[0].smvr_alloc,
-		pipe->imgsys_dev->imgsys_pipe[0].capture_alloc,
-		pipe->imgsys_dev->imgsys_pipe[0].streaming_alloc,
+		pipe->streaming,
+		(unsigned long long)info->hw_comb_to_use,
+		info->batch_num,
+		info->is_capture,
+		memory_mode,
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_NORMAL_STREAMING],
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_CAPTURE],
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_SMVR],
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_MAE],
 		pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count);
 
 	if (!pipe->streaming)
-		return 0;
+		goto print_status;
 
-	if ((info->is_capture) && (pipe->imgsys_dev->imgsys_pipe[0].capture_alloc)) {
+	if (pipe->imgsys_dev->imgsys_pipe[0].user_cnt[memory_mode] != 0) {
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[memory_mode]--;
+
 		if (pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count != 0)
 			pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count--;
-		pipe->imgsys_dev->imgsys_pipe[0].capture_alloc--;
-		if (pipe->imgsys_dev->imgsys_pipe[0].capture_alloc == 0) {
+		else
+			pr_info("[%s] total_alloc_count is underflow\n", __func__);
+
+		if (pipe->imgsys_dev->imgsys_pipe[0].user_cnt[memory_mode] == 0) {
 			if (hcp_ops && hcp_ops->free_gce_mb)
 				hcp_ops->free_gce_mb(
-					pipe->imgsys_dev->scp_pdev, imgsys_capture);
+					pipe->imgsys_dev->scp_pdev, memory_mode);
 			if (hcp_ops && hcp_ops->free_mod_mbs)
 				hcp_ops->free_mod_mbs(
-					pipe->imgsys_dev->scp_pdev, imgsys_capture);
+					pipe->imgsys_dev->scp_pdev, memory_mode);
 #if (IMGSYS_INIT_INFO_VERSION == 1)
 			working_buf_info.is_capture = 1;
 			working_buf_info.smvr_mode = 0;
 #elif (IMGSYS_INIT_INFO_VERSION == 2)
-			working_buf_info.memory_mode =
-				IMGSYS_MEMORY_MODE_CAPTURE;
+			working_buf_info.memory_mode = memory_mode;
 #endif
 
 			ret = imgsys_send(
@@ -2068,74 +2010,22 @@ static int mtkdip_ioc_free_buffer(struct v4l2_subdev *subdev, void *arg)
 				1);
 		}
 	} else {
-		if ((info->is_smvr) && (pipe->imgsys_dev->imgsys_pipe[0].smvr_alloc)) {
-			if (pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count != 0)
-				pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count--;
-			pipe->imgsys_dev->imgsys_pipe[0].smvr_alloc--;
-			if (pipe->imgsys_dev->imgsys_pipe[0].smvr_alloc == 0) {
-				if (hcp_ops && hcp_ops->free_gce_mb)
-					hcp_ops->free_gce_mb(
-						pipe->imgsys_dev->scp_pdev, imgsys_smvr);
-				if (hcp_ops && hcp_ops->free_mod_mbs)
-					hcp_ops->free_mod_mbs(
-						pipe->imgsys_dev->scp_pdev, imgsys_smvr);
-#if (IMGSYS_INIT_INFO_VERSION == 1)
-				working_buf_info.smvr_mode = 1;
-				working_buf_info.is_capture = 0;
-#elif (IMGSYS_INIT_INFO_VERSION == 2)
-				working_buf_info.memory_mode =
-					IMGSYS_MEMORY_MODE_SMVR;
-#endif
-				ret = imgsys_send(
-					pipe->imgsys_dev->scp_pdev,
-					HCP_IMGSYS_FREE_WORKING_BUF_ID,
-					(void *)&working_buf_info,
-					 sizeof(working_buf_info),
-					 0,
-					 1);
-			}
-		} else {
-			if (pipe->imgsys_dev->imgsys_pipe[0].streaming_alloc) {
-				if (pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count != 0)
-					pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count--;
-				pipe->imgsys_dev->imgsys_pipe[0].streaming_alloc--;
-				if (pipe->imgsys_dev->imgsys_pipe[0].streaming_alloc == 0) {
-					if (hcp_ops && hcp_ops->free_gce_mb)
-						hcp_ops->free_gce_mb(
-							pipe->imgsys_dev->scp_pdev,
-							imgsys_streaming);
-					if (hcp_ops && hcp_ops->free_mod_mbs)
-						hcp_ops->free_mod_mbs(
-							pipe->imgsys_dev->scp_pdev,
-							imgsys_streaming);
-#if (IMGSYS_INIT_INFO_VERSION == 1)
-					working_buf_info.is_capture = 0;
-					working_buf_info.smvr_mode = 0;
-#elif (IMGSYS_INIT_INFO_VERSION == 2)
-					working_buf_info.memory_mode =
-						IMGSYS_MEMORY_MODE_NORMAL_STREAMING;
-#endif
-
-					ret = imgsys_send(
-						pipe->imgsys_dev->scp_pdev,
-						HCP_IMGSYS_FREE_WORKING_BUF_ID,
-						(void *)&working_buf_info,
-						sizeof(working_buf_info),
-						0,
-						1);
-				}
-			}
-		}
+		pr_info("[%s] user_cnt[%u] is underflow\n", __func__, memory_mode);
 	}
-
-
-	pr_info("%s free working buf is_smvr/is_capture/smvr/capture/streaming/user_count(%d/%d/%d/%d/%d/%d)\n",
+print_status:
+	pr_info("- [%s] streaming(%d) info(0x%llx/%u/%u) -> mem_mode(%u); user_cnt(%u/%u/%u/%u); total_alloc(%u)\n",
 		__func__,
-		info->is_smvr, info->is_capture,
-		pipe->imgsys_dev->imgsys_pipe[0].smvr_alloc,
-		pipe->imgsys_dev->imgsys_pipe[0].capture_alloc,
-		pipe->imgsys_dev->imgsys_pipe[0].streaming_alloc,
+		pipe->streaming,
+		(unsigned long long)info->hw_comb_to_use,
+		info->batch_num,
+		info->is_capture,
+		memory_mode,
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_NORMAL_STREAMING],
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_CAPTURE],
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_SMVR],
+		pipe->imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_MAE],
 		pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count);
+
 	return 0;
 }
 
@@ -2360,7 +2250,12 @@ static int mtkdip_ioc_set_control(struct v4l2_subdev *subdev, void *arg)
 	return ret;
 }
 
-static int mtkdip_ioc_clear_user_resource(struct v4l2_subdev *subdev, void *arg)
+static int mtkdip_ioc_allocate_user_resource(struct v4l2_subdev *subdev, void *arg)
+{
+	return 0;
+}
+
+static int mtkdip_ioc_deallocate_user_resource(struct v4l2_subdev *subdev, void *arg)
 {
 	return 0;
 }
@@ -2389,7 +2284,11 @@ long mtk_imgsys_subdev_ioctl(struct v4l2_subdev *subdev, unsigned int cmd,
 	case MTKDIP_IOC_FREE_BUF:
 		return mtkdip_ioc_free_buffer(subdev, arg);
 	case MTKDIP_IOC_CLEAR_USER_RESOURCE:
-		return mtkdip_ioc_clear_user_resource(subdev, arg);
+		return mtkdip_ioc_deallocate_user_resource(subdev, arg);
+	case MTKDIP_IOC_ALLOCATE_USER_RESOURCE:
+		return mtkdip_ioc_allocate_user_resource(subdev, arg);
+	case MTKDIP_IOC_DEALLOCATE_USER_RESOURCE:
+		return mtkdip_ioc_deallocate_user_resource(subdev, arg);
 	case MTKDIP_IOC_ACQUIRE_IOVA:
 		return mtkdip_ioc_acquire_iova(subdev, arg);
 	case MTKDIP_IOC_RELEASE_IOVA:

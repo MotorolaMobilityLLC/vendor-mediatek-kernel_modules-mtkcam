@@ -38,9 +38,9 @@ typedef int64_t s64;
 #define IMGSYS_MEMORY_MODE_NORMAL_STREAMING (0)
 #define IMGSYS_MEMORY_MODE_CAPTURE          (1)
 #define IMGSYS_MEMORY_MODE_SMVR             (2)
-//#define IMGSYS_MEMORY_MODE_VSDOF            (3)
-#if defined(IMGSYS_MEMORY_MODE_VSDOF)
-#define IMGSYS_MEMORY_MODE_NUM_MAX          (IMGSYS_MEMORY_MODE_VSDOF + 1)
+#define IMGSYS_MEMORY_MODE_MAE              (3)
+#if defined(IMGSYS_MEMORY_MODE_MAE)
+#define IMGSYS_MEMORY_MODE_NUM_MAX          (IMGSYS_MEMORY_MODE_MAE + 1)
 #else
 #define IMGSYS_MEMORY_MODE_NUM_MAX          (IMGSYS_MEMORY_MODE_SMVR + 1)
 #endif
@@ -50,8 +50,8 @@ enum Mem_Mode {
 	imgsys_streaming = IMGSYS_MEMORY_MODE_NORMAL_STREAMING,
 	imgsys_capture   = IMGSYS_MEMORY_MODE_CAPTURE,
 	imgsys_smvr      = IMGSYS_MEMORY_MODE_SMVR,
-#if defined(IMGSYS_MEMORY_MODE_VSDOF)
-	imgsys_vsdof     = IMGSYS_MEMORY_MODE_VSDOF,
+#if defined(IMGSYS_MEMORY_MODE_MAE)
+	imgsys_mae     = IMGSYS_MEMORY_MODE_MAE,
 #endif
 	imgsys_mem_max   = IMGSYS_MEMORY_MODE_NUM_MAX,
 };

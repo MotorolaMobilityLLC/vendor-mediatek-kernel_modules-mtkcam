@@ -86,7 +86,7 @@ struct mtk_imgsys_cb_param {
 	struct cmdq_client *clt;
 	struct task_timestamp taskTs;
 	void (*user_cmdq_cb)(struct cmdq_cb_data data, uint32_t subfidx, bool isLastTaskInReq,
-		uint32_t batchnum, uint32_t is_capture);
+		uint32_t batchnum, uint32_t memory_mode);
 	void (*user_cmdq_err_cb)(struct cmdq_cb_data data, uint32_t fail_subfidx, bool isHWhang,
 		uint32_t hangEvent);
 	int req_fd;
@@ -105,7 +105,7 @@ struct mtk_imgsys_cb_param {
 	u32 task_num;
 	u32 task_cnt;
 	u32 batchnum;
-	u32 is_capture;
+	u32 memory_mode;
 	size_t pkt_ofst[MAX_FRAME_IN_TASK];
 	bool isBlkLast;
 	bool isFrmLast;
@@ -209,7 +209,7 @@ int imgsys_cmdq_sendtask(struct mtk_imgsys_dev *imgsys_dev,
 				struct swfrm_info_t *frm_info,
 				void (*cmdq_cb)(struct cmdq_cb_data data,
 					uint32_t uinfo_idx, bool isLastTaskInReq,
-					uint32_t batchnum, uint32_t is_capture),
+					uint32_t batchnum, uint32_t memory_mode),
 				void (*cmdq_err_cb)(struct cmdq_cb_data data,
 					uint32_t fail_uinfo_idx, bool isHWhang,
 					uint32_t hangEvent),
@@ -222,8 +222,8 @@ int imgsys_cmdq_sendtask(struct mtk_imgsys_dev *imgsys_dev,
 				int (*is_singledev_mode)(struct mtk_imgsys_request *req));
 /*
  * int imgsys_cmdq_parser(struct swfrm_info_t *frm_info, struct cmdq_pkt *pkt,
- *     struct Command *cmd, u32 hw_comb,
- *     dma_addr_t dma_pa, uint32_t *num, u32 thd_idx);
+ *			struct Command *cmd, u32 hw_comb,
+ *			dma_addr_t dma_pa, uint32_t *num, u32 thd_idx);
  * int imgsys_cmdq_sec_sendtask(struct mtk_imgsys_dev *imgsys_dev);
  * void imgsys_cmdq_sec_cmd(struct cmdq_pkt *pkt);
  */
@@ -234,26 +234,24 @@ bool imgsys_cmdq_ftrace_enabled(void);
 #if DVFS_QOS_READY
 void mtk_imgsys_mmdvfs_init(struct mtk_imgsys_dev *imgsys_dev);
 void mtk_imgsys_mmdvfs_uninit(struct mtk_imgsys_dev *imgsys_dev);
-/*
- * void mtk_imgsys_mmdvfs_set(struct mtk_imgsys_dev *imgsys_dev,
- *     struct swfrm_info_t *frm_info,
- *     bool isSet);
+/*void mtk_imgsys_mmdvfs_set(struct mtk_imgsys_dev *imgsys_dev,
+ *			struct swfrm_info_t *frm_info,
+ *			bool isSet);
  */
 void mtk_imgsys_mmqos_init(struct mtk_imgsys_dev *imgsys_dev);
 void mtk_imgsys_mmqos_uninit(struct mtk_imgsys_dev *imgsys_dev);
-/*
- * void mtk_imgsys_mmqos_set_by_scen(struct mtk_imgsys_dev *imgsys_dev,
- * struct swfrm_info_t *frm_info,
- *     bool isSet);
- * void mtk_imgsys_mmqos_reset(struct mtk_imgsys_dev *imgsys_dev);
- * void mtk_imgsys_mmdvfs_mmqos_cal(struct mtk_imgsys_dev *imgsys_dev,
- *     struct swfrm_info_t *frm_info,
- *     bool isSet);
- * void mtk_imgsys_mmqos_bw_cal(struct mtk_imgsys_dev *imgsys_dev,
- *     void *smi_port, uint32_t hw_comb,
- *     uint32_t port_st, uint32_t port_num, uint32_t port_id);
- * void mtk_imgsys_mmqos_ts_cal(struct mtk_imgsys_dev *imgsys_dev,
- *     struct mtk_imgsys_cb_param *cb_param, uint32_t hw_comb);
+/*void mtk_imgsys_mmqos_set_by_scen(struct mtk_imgsys_dev *imgsys_dev,
+ *			struct swfrm_info_t *frm_info,
+ *			bool isSet);
+ *void mtk_imgsys_mmqos_reset(struct mtk_imgsys_dev *imgsys_dev);
+ *void mtk_imgsys_mmdvfs_mmqos_cal(struct mtk_imgsys_dev *imgsys_dev,
+ *			struct swfrm_info_t *frm_info,
+ *			bool isSet);
+ *void mtk_imgsys_mmqos_bw_cal(struct mtk_imgsys_dev *imgsys_dev,
+ *			void *smi_port, uint32_t hw_comb,
+ *			uint32_t port_st, uint32_t port_num, uint32_t port_id);
+ *void mtk_imgsys_mmqos_ts_cal(struct mtk_imgsys_dev *imgsys_dev,
+ *			struct mtk_imgsys_cb_param *cb_param, uint32_t hw_comb);
  */
 void mtk_imgsys_power_ctrl(struct mtk_imgsys_dev *imgsys_dev, bool isPowerOn);
 void mtk_imgsys_main_power_ctrl(struct mtk_imgsys_dev *imgsys_dev, bool isPowerOn);
@@ -285,7 +283,7 @@ struct imgsys_cmdq_cust_data {
 			struct swfrm_info_t *frm_info,
 			void (*cmdq_cb)(struct cmdq_cb_data data,
 			uint32_t uinfo_idx, bool isLastTaskInReq,
-			uint32_t batchnum, uint32_t is_capture),
+			uint32_t batchnum, uint32_t memory_mode),
 			void (*cmdq_err_cb)(struct cmdq_cb_data data,
 			uint32_t fail_uinfo_idx, bool isHWhang, uint32_t hangEvent),
 			u64 (*imgsys_get_iova)(struct dma_buf *dma_buf, s32 ionFd,

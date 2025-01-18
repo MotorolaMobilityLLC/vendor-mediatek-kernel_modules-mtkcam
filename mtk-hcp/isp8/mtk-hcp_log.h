@@ -7,8 +7,9 @@
 
 #define HCP_LOG_LVL_DBG (0)
 #define HCP_LOG_LVL_INF (1)
-#define HCP_LOG_LVL_WRN (2)
-#define HCP_LOG_LVL_ERR (3)
+#define HCP_LOG_LVL_KEY (2)
+#define HCP_LOG_LVL_WRN (3)
+#define HCP_LOG_LVL_ERR (4)
 
 extern int hcp_dbg_en;
 
@@ -27,6 +28,12 @@ static inline int hcp_dbg_enable(void)
 	do { \
 		if (hcp_dbg_en <= HCP_LOG_LVL_INF) \
 			pr_info("[HCP_INF] %s(): " fmt , __func__, ##args); \
+	} while(0)
+
+#define HCP_PRINT_KEY(fmt, args...) \
+	do { \
+		if (hcp_dbg_en <= HCP_LOG_LVL_KEY) \
+			pr_info("[HCP_KEY] %s(): " fmt , __func__, ##args); \
 	} while(0)
 
 #define HCP_PRINT_WRN(fmt, args...) \

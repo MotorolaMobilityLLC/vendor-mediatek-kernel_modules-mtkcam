@@ -232,7 +232,7 @@ int imgsys_cmdq_sendtask(struct mtk_imgsys_dev *imgsys_dev,
 				struct swfrm_info_t *frm_info,
 				void (*cmdq_cb)(struct cmdq_cb_data data,
 					uint32_t subfidx, bool isLastTaskInReq,
-					uint32_t batchnum, uint32_t is_capture),
+					uint32_t batchnum, uint32_t memory_mode),
 				void (*cmdq_err_cb)(struct cmdq_cb_data data,
 					uint32_t fail_subfidx, bool isHWhang, uint32_t hangEvent),
 				u64 (*imgsys_get_iova)(struct dma_buf *dma_buf, s32 ionFd,
@@ -323,8 +323,8 @@ struct platform_device *mtk_imgsys_cmdq_get_plat_dev(struct platform_device *pde
 	struct device_node *cmdq_node;
 	struct platform_device *cmdq_pdev;
 
-    if (imgsys_cmdq_dbg_enable())
-	dev_dbg(&pdev->dev, "- E. imgsys cmdq get platform device.\n");
+	if (imgsys_cmdq_dbg_enable())
+		dev_dbg(&pdev->dev, "- E. imgsys cmdq get platform device.\n");
 
 	cmdq_node = of_parse_phandle(dev->of_node, "mediatek,imgsys-cmdq", 0);
 	if (cmdq_node == NULL) {
@@ -360,19 +360,19 @@ static int mtk_imgsys_cmdq_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, cmdq_dev);
 	dev_set_drvdata(&pdev->dev, cmdq_dev);
 
-    if (imgsys_cmdq_dbg_enable())
-	dev_dbg(&pdev->dev, "- X. imgsys cmdq driver probe success\n");
+	if (imgsys_cmdq_dbg_enable())
+		dev_dbg(&pdev->dev, "- X. imgsys cmdq driver probe success\n");
 	return 0;
 }
 
 
 static void mtk_imgsys_cmdq_remove(struct platform_device *pdev)
 {
-    if (imgsys_cmdq_dbg_enable())
-	dev_dbg(&pdev->dev, "- E. imgsys cmdq driver remove\n");
+	if (imgsys_cmdq_dbg_enable())
+		dev_dbg(&pdev->dev, "- E. imgsys cmdq driver remove\n");
 	devm_kfree(&pdev->dev, imgsys_cmdq_dev);
-    if (imgsys_cmdq_dbg_enable())
-	dev_dbg(&pdev->dev, "- X. imgsys cmdq driver remove success\n");
+	if (imgsys_cmdq_dbg_enable())
+		dev_dbg(&pdev->dev, "- X. imgsys cmdq driver remove success\n");
 }
 
 static const struct of_device_id mtk_imgsys_cmdq_of_match[] = {

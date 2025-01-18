@@ -766,7 +766,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 		{ /* IMGSYS_MOD_DRV_MAE */
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
 				INIT_CQ_RSV_MB(
-					"NS_MAE_CQ",
+					"CAP_MAE_CQ",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -775,7 +775,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
 				INIT_TDR_RSV_MB(
-					"NS_MAE_TDR",
+					"CAP_MAE_TDR",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -784,7 +784,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
 				INIT_C_RSV_MB(
-					"NS_MAE_C",
+					"CAP_MAE_C",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -793,7 +793,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC */
 				INIT_NC_RSV_MB(
-					"NS_MAE_NC",
+					"CAP_MAE_NC",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -804,7 +804,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 		{ /* IMGSYS_MOD_DRV_DFP */
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
 				INIT_CQ_RSV_MB(
-					"NS_DFP_CQ",
+					"CAP_DFP_CQ",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -813,7 +813,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
 				INIT_TDR_RSV_MB(
-					"NS_DFP_TDR",
+					"CAP_DFP_TDR",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -822,7 +822,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
 				INIT_C_RSV_MB(
-					"NS_DFP_C",
+					"CAP_DFP_C",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -842,7 +842,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 		{ /* IMGSYS_MOD_DRV_DPE */
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
 				INIT_CQ_RSV_MB(
-					"NS_DPE_CQ",
+					"CAP_DPE_CQ",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -851,7 +851,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
 				INIT_TDR_RSV_MB(
-					"NS_DPE_TDR",
+					"CAP_DPE_TDR",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -860,7 +860,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
 				INIT_C_RSV_MB(
-					"NS_DPE_C",
+					"CAP_DPE_C",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -869,7 +869,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC */
 				INIT_NC_RSV_MB(
-					"NS_DPE_NC",
+					"CAP_DPE_NC",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -1260,6 +1260,390 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 		},
 	},
+#if defined(IMGSYS_MEMORY_MODE_NORMAL_MAE)
+	{ /* IMGSYS_MEMORY_MODE_NORMAL_MAE */
+		{ /* IMGSYS_MOD_DRV_WPE */
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
+				INIT_CQ_RSV_MB(
+					"M_WPE_CQ",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_WPE,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_CQ))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
+				INIT_TDR_RSV_MB(
+					"M_WPE_TDR",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_WPE,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_TDR))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
+				INIT_C_RSV_MB(
+					"M_WPE_C",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_WPE,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC */
+				INIT_NC_RSV_MB(
+					"M_WPE_NC",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_WPE,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC))
+			},
+		},
+		{ /* IMGSYS_MOD_DRV_OMC */
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
+				INIT_CQ_RSV_MB(
+					"M_OMC_CQ",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_OMC,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_CQ))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
+				INIT_TDR_RSV_MB(
+					"M_OMC_TDR",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_OMC,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_TDR))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
+				INIT_C_RSV_MB(
+					"M_OMC_C",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_OMC,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC */
+				INIT_NC_RSV_MB(
+					"M_OMC_NC",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_OMC,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC))
+			},
+		},
+		{ /* IMGSYS_MOD_DRV_ADL */
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
+				INIT_CQ_RSV_MB(
+					"M_ADL_CQ",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_ADL,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_CQ))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
+				INIT_TDR_RSV_MB(
+					"M_ADL_TDR",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_ADL,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_TDR))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
+				INIT_C_RSV_MB(
+					"M_ADL_C",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_ADL,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC */
+				INIT_NC_RSV_MB(
+					"M_ADL_NC",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_ADL,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC))
+			},
+		},
+		{ /* IMGSYS_MOD_DRV_TRAW */
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
+				INIT_CQ_RSV_MB(
+					"M_TRAW_CQ",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_TRAW,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_CQ))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
+				INIT_TDR_RSV_MB(
+					"M_TRAW_TDR",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_TRAW,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_TDR))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
+				INIT_C_RSV_MB(
+					"M_TRAW_C",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_TRAW,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC */
+				INIT_NC_RSV_MB(
+					"M_TRAW_NC",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_TRAW,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC))
+			},
+		},
+		{ /* IMGSYS_MOD_DRV_DIP */
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
+				INIT_CQ_RSV_MB(
+					"M_DIP_CQ",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_DIP,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_CQ))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
+				INIT_TDR_RSV_MB(
+					"M_DIP_TDR",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_DIP,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_TDR))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
+				INIT_C_RSV_MB(
+					"M_DIP_C",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_DIP,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC */
+				INIT_NC_RSV_MB(
+					"M_DIP_NC",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_DIP,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC))
+			},
+		},
+		{ /* IMGSYS_MOD_DRV_PQDIP */
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
+				INIT_CQ_RSV_MB(
+					"M_PQDIP_CQ",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_PQDIP,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_CQ))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
+				INIT_TDR_RSV_MB(
+					"M_PQDIP_TDR",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_PQDIP,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_TDR))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
+				INIT_C_RSV_MB(
+					"M_PQDIP_C",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_PQDIP,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC */
+				INIT_NC_RSV_MB(
+					"M_PQDIP_NC",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_PQDIP,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC))
+			},
+		},
+		{ /* IMGSYS_MOD_DRV_ME */
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
+				INIT_CQ_RSV_MB(
+					"M_ME_CQ",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_ME,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_CQ))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
+				INIT_TDR_RSV_MB(
+					"M_ME_TDR",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_ME,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_TDR))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
+				INIT_C_RSV_MB(
+					"M_ME_C",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_ME,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC */
+				INIT_NC_RSV_MB(
+					"M_ME_NC",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_ME,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC))
+			},
+		},
+		{ /* IMGSYS_MOD_DRV_MAE */
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
+				INIT_CQ_RSV_MB(
+					"M_MAE_CQ",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_MAE,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_CQ))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
+				INIT_TDR_RSV_MB(
+					"M_MAE_TDR",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_MAE,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_TDR))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
+				INIT_C_RSV_MB(
+					"M_MAE_C",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_MAE,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC */
+				INIT_NC_RSV_MB(
+					"M_MAE_NC",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_MAE,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC))
+			},
+		},
+		{ /* IMGSYS_MOD_DRV_DFP */
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
+				INIT_CQ_RSV_MB(
+					"M_DFP_CQ",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_DFP,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_CQ))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
+				INIT_TDR_RSV_MB(
+					"M_DFP_TDR",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_DFP,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_TDR))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
+				INIT_C_RSV_MB(
+					"M_DFP_C",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_DFP,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC */
+				INIT_NC_RSV_MB(
+					"M_DFP_NC",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_DFP,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC))
+			},
+		},
+		{ /* IMGSYS_MOD_DRV_DPE */
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
+				INIT_CQ_RSV_MB(
+					"M_DPE_CQ",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_DPE,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_CQ))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
+				INIT_TDR_RSV_MB(
+					"M_DPE_TDR",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_DPE,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_TDR))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
+				INIT_C_RSV_MB(
+					"M_DPE_C",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_DPE,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC))
+			},
+			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC */
+				INIT_NC_RSV_MB(
+					"M_DPE_NC",
+					0,
+					GET_MOD_MB_ID(
+						IMGSYS_MEMORY_MODE_NORMAL_MAE,
+						IMGSYS_MOD_DRV_DPE,
+						IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC))
+			},
+		},
+	},
+#endif
 };
 
 static struct mtk_hcp_rsv_mb gce_rsv_mb[IMGSYS_MEMORY_MODE_NUM_MAX] = {
@@ -1284,6 +1668,15 @@ static struct mtk_hcp_rsv_mb gce_rsv_mb[IMGSYS_MEMORY_MODE_NUM_MAX] = {
 			GET_GCE_MB_ID(IMGSYS_MEMORY_MODE_SMVR),
 			HCP_MB_CACHE_ON)
 	},
+#if defined(IMGSYS_MEMORY_MODE_NORMAL_MAE)
+	{
+		INIT_KREF_RSV_MB(
+			"M_IMG_G",
+			0,
+			GET_GCE_MB_ID(IMGSYS_MEMORY_MODE_NORMAL_MAE),
+			HCP_MB_CACHE_ON)
+	},
+#endif
 };
 
 static struct mtk_hcp_rsv_mb gce_clr_token_rsv_mb = {
@@ -1426,7 +1819,7 @@ static int impl_alloc(struct mtk_hcp_rsv_mb *mb)
 
 	if (IS_ERR_OR_NULL(d_buf)) {
 		ret = d_buf ? (int)PTR_ERR(d_buf) : -ENOMEM;
-		HCP_PRINT_ERR("dma_buf(%s) alloc sz(%llu) fail %d\n",
+		HCP_PRINT_ERR("dma_buf(%s) alloc sz(0x%llx) fail %d\n",
 			mb->cfg.name, mb->cfg.size, ret);
 		goto error;
 	}
@@ -1437,7 +1830,7 @@ static int impl_alloc(struct mtk_hcp_rsv_mb *mb)
 	attachment = dma_buf_attach(d_buf, mmu_dev);
 	if (IS_ERR_OR_NULL(attachment)) {
 		ret = attachment ? (int)PTR_ERR(attachment) : -ENOMEM;
-		HCP_PRINT_ERR("dma_buf(%s) sz(%llu) attach fail %d\n",
+		HCP_PRINT_ERR("dma_buf(%s) sz(0x%llx) attach fail %d\n",
 			mb->cfg.name, mb->cfg.size, ret);
 		goto error;
 	}
@@ -1449,7 +1842,7 @@ static int impl_alloc(struct mtk_hcp_rsv_mb *mb)
 #endif
 	if (IS_ERR_OR_NULL(sgt)) {
 		ret = sgt ? (int)PTR_ERR(sgt) : -ENOMEM;
-		HCP_PRINT_ERR("dma_buf(%s) sz(%llu) map_attachment fail %d\n",
+		HCP_PRINT_ERR("dma_buf(%s) sz(0x%llx) map_attachment fail %d\n",
 			mb->cfg.name, mb->cfg.size, ret);
 		goto error;
 	}
@@ -1462,7 +1855,7 @@ static int impl_alloc(struct mtk_hcp_rsv_mb *mb)
 	ret = dma_buf_vmap(d_buf, &map);
 #endif
 	if (unlikely(ret)) {
-		HCP_PRINT_ERR("dma_buf(%s) sz(%llu) vmap fail %d\n",
+		HCP_PRINT_ERR("dma_buf(%s) sz(0x%llx) vmap fail %d\n",
 			mb->cfg.name, mb->cfg.size, ret);
 		goto error;
 	}
@@ -1487,7 +1880,8 @@ error:
 		/* determine whether is a kref_mb */
 		if (unlikely(mb->get_ref && mb->put_ref))
 			kref_init(&mb->kref);
-		HCP_PRINT_INF("mem_mode(%u) dma_buf(%s) fd(%d) sz(%llu)\n",
+
+		HCP_PRINT_INF("mem_mode(%u) dma_buf(%s) fd(%d) sz(0x%llx)\n",
 			GET_MEM_MODE(mb->cfg.id), mb->cfg.name, mb->fd, mb->cfg.size);
 		/* virt and dma only can print at debug lvl */
 		HCP_PRINT_DBG("mb:%p, mem_mode(%u), dma_buf(%s) (%p) virt(%p) dma(0x%llX)\n",

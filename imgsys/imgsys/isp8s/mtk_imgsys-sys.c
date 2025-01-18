@@ -383,7 +383,7 @@ static void cmdq_cb_timeout_worker(struct work_struct *work)
 	struct swfrm_info_t *frm_info = NULL;
 	struct gce_timeout_work *swork = NULL;
 	struct img_sw_buffer swbuf_data = {0};
-	unsigned int mem_mode = 0;
+	unsigned int mem_mode = IMGSYS_MEMORY_MODE_NORMAL_STREAMING;
 
 	swork = container_of(work, struct gce_timeout_work, work);
 	pipe = (struct mtk_imgsys_pipe *)swork->pipe;
@@ -397,18 +397,9 @@ static void cmdq_cb_timeout_worker(struct work_struct *work)
 		goto release_work;
 	}
 
-	if ((swork->is_capture) || (swork->is_time_shared)) {
-		mem_mode = imgsys_capture;
-	} else {
-		if (swork->batchnum)
-			mem_mode = imgsys_smvr;
-		else
-			mem_mode = imgsys_streaming;
-	}
-
 	frm_info = (struct swfrm_info_t *)(swork->req_sbuf_kva);
-
 	if (frm_info) {
+		mem_mode = frm_info->memory_mode;
 		frm_info->fail_uinfo_idx = swork->fail_uinfo_idx;
 		frm_info->fail_isHWhang = swork->fail_isHWhang;
 		frm_info->timeout_event = swork->hang_event;
@@ -425,8 +416,8 @@ static void cmdq_cb_timeout_worker(struct work_struct *work)
 		swbuf_data.scp_addr = mem_mode;
 
 		dev_info(req->imgsys_pipe->imgsys_dev->dev,
-			"%s: is_vss(%d)/is_capture(%d), batchnum(%d) scp_addr(%d)\n",
-			__func__, swork->is_time_shared, swork->is_capture,
+			"%s: is_vss(%d)/memory_mode(%d), batchnum(%d) scp_addr(%d)\n",
+			__func__, swork->is_time_shared, mem_mode,
 			swork->batchnum, swbuf_data.scp_addr);
 
 		if (swork->fail_isHWhang) {
@@ -492,14 +483,7 @@ static void imgsys_cmdq_timeout_cb_func(struct cmdq_cb_data data,
 	imgsys_dev = req->imgsys_pipe->imgsys_dev;
 	hcp_ops = mtk_hcp_fetch_ops(imgsys_dev->scp_pdev);
 
-	if (frm_info_cb->is_capture) {
-		mem_mode = imgsys_capture;
-	} else {
-		if (frm_info_cb->batchnum)
-			mem_mode = imgsys_smvr;
-		else
-			mem_mode = imgsys_streaming;
-	}
+	mem_mode = frm_info_cb->memory_mode;
 
 	if (hcp_ops && hcp_ops->get_gce_mb)
 		hcp_ops->get_gce_mb(imgsys_dev->scp_pdev, mem_mode);
@@ -544,8 +528,8 @@ release_req:
 			hcp_ops->fetch_gce_mb_virt(imgsys_dev->scp_pdev, mem_mode);
 
 	swork->is_time_shared = frm_info_cb->user_info[fail_subfidx].is_time_shared;
-	swork->is_capture = frm_info_cb->is_capture;
 	swork->batchnum = frm_info_cb->batchnum;
+	swork->memory_mode = mem_mode;
 
 #if CMDQ_TIMEOUT_KTHREAD
 	if (1) {
@@ -602,15 +586,7 @@ static void cmdq_cb_done_worker(struct work_struct *work)
 	/* send to HCP after frame done & del node from list */
 	gwfrm_info = (struct swfrm_info_t *)gwork->req_sbuf_kva;
 	swbuf_data.offset = gwfrm_info->req_sbuf_goft;
-
-	if (gwfrm_info->is_capture || (gwfrm_info->user_info[0].is_time_shared)) {
-		swbuf_data.scp_addr = imgsys_capture;
-	} else {
-		if (gwfrm_info->batchnum > 0)
-			swbuf_data.scp_addr = imgsys_smvr;
-		else
-			swbuf_data.scp_addr = imgsys_streaming;
-	}
+	swbuf_data.scp_addr = gwfrm_info->memory_mode;
 
 	/*
 	 * pr_info("%s: is_vss(%d)/is_capture(%d), batchnum(%d) scp_addr(%d)\n", __func__,
@@ -623,7 +599,7 @@ static void cmdq_cb_done_worker(struct work_struct *work)
 		imgsys_send(pipe->imgsys_dev->scp_pdev, HCP_IMGSYS_DEQUE_DUMP_ID,
 			&swbuf_data, sizeof(struct img_sw_buffer),
 			gwork->reqfd, 0);
-	else if (gwfrm_info->is_capture ||
+	else if ((gwfrm_info->memory_mode == IMGSYS_MEMORY_MODE_CAPTURE) ||
 		gwfrm_info->user_info[0].is_time_shared)
 		imgsys_send(pipe->imgsys_dev->scp_pdev, HCP_IMGSYS_ASYNC_DEQUE_DONE_ID,
 			&swbuf_data, sizeof(struct img_sw_buffer),
@@ -642,7 +618,7 @@ release_work:
 /* Maybe in IRQ context of cmdq */
 static void imgsys_mdp_cb_func(struct cmdq_cb_data data,
 					unsigned int subfidx, bool isLastTaskInReq,
-					unsigned int batchnum, unsigned int is_capture)
+					unsigned int batchnum, unsigned int memory_mode)
 {
 	struct mtk_imgsys_pipe *pipe;
 	struct mtk_imgsys_request *req;
@@ -684,7 +660,7 @@ static void imgsys_mdp_cb_func(struct cmdq_cb_data data,
 			swfrminfo_cb->request_no,
 			swfrminfo_cb->frame_no,
 			swfrminfo_cb->swfrminfo_ridx,
-			swfrminfo_cb->is_capture,
+			swfrminfo_cb->memory_mode,
 			swfrminfo_cb->fail_uinfo_idx,
 			swfrminfo_cb->req,
 			swfrminfo_cb->fail_isHWhang,
@@ -693,14 +669,7 @@ static void imgsys_mdp_cb_func(struct cmdq_cb_data data,
 		return;
 	}
 
-	if (is_capture) {
-		mem_mode = imgsys_capture;
-	} else {
-		if (batchnum)
-			mem_mode = imgsys_smvr;
-		else
-			mem_mode = imgsys_streaming;
-	}
+	mem_mode = swfrminfo_cb->memory_mode;
 
 	hcp_ops = mtk_hcp_fetch_ops(pipe->imgsys_dev->scp_pdev);
 
@@ -1486,10 +1455,7 @@ static void imgsys_runner_func(void *data)
 	hcp_ops = mtk_hcp_fetch_ops(imgsys_dev->scp_pdev);
 
 #ifdef MTK_IOVA_SINK2KERNEL
-	if(frm_info->is_capture)
-		mode = imgsys_capture;
-	else
-		mode = (frm_info->batchnum > 0 ? imgsys_smvr : imgsys_streaming);
+	mode = frm_info->memory_mode;
 
 	for (subfidx = 0 ; subfidx < frm_info->total_frmnum ; subfidx++) {
 		iova_addr = transform_tuning_iova(imgsys_dev, req, &module_tuning_info,
@@ -1594,7 +1560,7 @@ static void imgsys_scp_handler(void *data, unsigned int len, void *priv)
 	bool reqfd_find = false;
 	union request_track *req_track = NULL;
 	int total_framenum = 0;
-	unsigned int mode = imgsys_streaming;
+	unsigned int mode = IMGSYS_MEMORY_MODE_NORMAL_STREAMING;
 
 #ifdef MTK_IOVA_SINK2KERNEL
 	struct mtk_imgsys_req_fd_list *fd_list = &imgsys_dev->req_fd_cache;
@@ -1617,20 +1583,7 @@ static void imgsys_scp_handler(void *data, unsigned int len, void *priv)
 		return;
 
 	swbuf_data = (struct img_sw_buffer *)data;
-
-	switch (swbuf_data->scp_addr) {
-	case imgsys_streaming:
-	case imgsys_capture:
-	case imgsys_smvr:
-		mode  = swbuf_data->scp_addr;
-		break;
-	default:
-		dev_warn(imgsys_dev->dev,
-		"%s: unexpected mode (%d/%d)\n",
-		__func__, swbuf_data->scp_addr, mode);
-		break;
-	}
-
+	mode = swbuf_data->scp_addr;
 	/*
 	 * dev_dbg(imgsys_dev->dev,
 	 * "%s: scp_addr/ mode (%d/%d)\n",
@@ -1728,12 +1681,13 @@ static void imgsys_scp_handler(void *data, unsigned int len, void *priv)
 	swfrm_info->chan_id = 0;
 	swfrm_info->fail_isHWhang = -1;
 	total_framenum = swfrm_info->total_frmnum;
-	if (swfrm_info->batchnum > 0) {
+	if (mode == IMGSYS_MEMORY_MODE_SMVR) {
 		if ((total_framenum < 0) || (total_framenum > TIME_MAX)) {
 			dev_info(imgsys_dev->dev,
-				"%s:unexpected total_framenum (%d -> %d), batchnum(%d) MAX (%d/%d)\n",
+				"%s:unexpected total_framenum (%d -> %d), mode(%u), batchnum(%d) MAX (%d/%d)\n",
 				__func__, swfrm_info->total_frmnum,
 				total_framenum,
+				mode,
 				swfrm_info->batchnum,
 				TMAX, TIME_MAX);
 			return;
@@ -1741,9 +1695,10 @@ static void imgsys_scp_handler(void *data, unsigned int len, void *priv)
 	} else {
 		if ((total_framenum < 0) || (total_framenum > TMAX)) {
 			dev_info(imgsys_dev->dev,
-				"%s:unexpected total_framenum (%d -> %d), batchnum(%d) MAX (%d/%d)\n",
+				"%s:unexpected total_framenum (%d -> %d), mode(%u), batchnum(%d) MAX (%d/%d)\n",
 				__func__, swfrm_info->total_frmnum,
 				total_framenum,
+				mode,
 				swfrm_info->batchnum,
 				TMAX, TIME_MAX);
 			return;
@@ -2255,13 +2210,25 @@ static int mtk_imgsys_worker_hcp_init(struct mtk_imgsys_dev *imgsys_dev)
 	struct dma_buf *dbuf;
 	struct resource *imgsys_resource = imgsys_dev->imgsys_resource;
 #endif
-	unsigned int mode = imgsys_streaming;
+	unsigned int memory_mode = mtkdip_mem_info_to_memory_mode(&imgsys_dev->imgsys_pipe[0].meminfo);
 	const struct mtk_hcp_ops *hcp_ops = mtk_hcp_fetch_ops(imgsys_dev->scp_pdev);
+	struct img_init_info info;
+
+
+	pr_info("+ [%s] streaming(%d) info(0x%llx/%u/%u) -> mem_mode(%u); user_cnt(%u/%u/%u/%u); total_alloc(%u)\n",
+		__func__,
+		imgsys_dev->imgsys_pipe[0].streaming,
+		(unsigned long long)imgsys_dev->imgsys_pipe[0].meminfo.hw_comb_to_use,
+		imgsys_dev->imgsys_pipe[0].meminfo.batch_num,
+		imgsys_dev->imgsys_pipe[0].meminfo.is_capture,
+		memory_mode,
+		imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_NORMAL_STREAMING],
+		imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_CAPTURE],
+		imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_SMVR],
+		imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_MAE],
+		imgsys_dev->imgsys_pipe[0].imgsys_user_count);
 
 	{
-		struct img_init_info info;
-
-
 #if IS_ENABLED(CONFIG_MTK_SLBC) && !defined(CONFIG_FPGA_EARLY_PORTING)
 		/*slc init*/
 		if (!imgsys_slc_dbg_enable()) {
@@ -2284,77 +2251,44 @@ static int mtk_imgsys_worker_hcp_init(struct mtk_imgsys_dev *imgsys_dev)
 		mtk_imgsys_hw_working_buf_pool_reinit(imgsys_dev);
 		/* ALLOCATE IMGSYS WORKING BUFFER FIRST */
 
-		if (imgsys_dev->imgsys_pipe[0].imgsys_user_count == 0) {
-			if (hcp_ops && hcp_ops->allocate_gce_clr_token_mb)
+		if (likely(imgsys_dev->imgsys_pipe[0].imgsys_user_count == 0)) {
+			if (likely(hcp_ops && hcp_ops->allocate_gce_clr_token_mb))
 				ret = hcp_ops->allocate_gce_clr_token_mb(
-					imgsys_dev->scp_pdev, mode);
-			if (ret)
+					imgsys_dev->scp_pdev, memory_mode);
+			if (unlikely(ret))
 				dev_info(imgsys_dev->dev, "alloc gce_clr_token_mb failed\n");
 		}
 
-
-		if ((imgsys_dev->imgsys_pipe[0].meminfo.is_capture) &&
-				(!imgsys_dev->imgsys_pipe[0].capture_alloc)) {
-			mode = imgsys_capture;
-			if (hcp_ops && hcp_ops->allocate_gce_mb)
-				ret = hcp_ops->allocate_gce_mb(imgsys_dev->scp_pdev, mode);
-			if (ret)
+		if (likely(imgsys_dev->imgsys_pipe[0].user_cnt[memory_mode] == 0)) {
+			if (likely(hcp_ops && hcp_ops->allocate_gce_mb))
+				ret = hcp_ops->allocate_gce_mb(imgsys_dev->scp_pdev, memory_mode);
+			if (unlikely(ret))
 				dev_info(imgsys_dev->dev,
-					"alloc gce_mb of mode(%u) failed\n", mode);
-
-			if (hcp_ops && hcp_ops->allocate_mod_mbs)
-				ret = hcp_ops->allocate_mod_mbs(imgsys_dev->scp_pdev, mode);
-			if (ret)
+					"alloc gce_mb of mode(%u) failed\n", memory_mode);
+			if (likely(hcp_ops && hcp_ops->allocate_mod_mbs))
+				ret = hcp_ops->allocate_mod_mbs(imgsys_dev->scp_pdev, memory_mode);
+			if (unlikely(ret))
 				dev_info(imgsys_dev->dev,
-					"alloc mod_mb of mode(%u) failed\n", mode);
-			imgsys_dev->imgsys_pipe[0].capture_alloc++;
+					"alloc mod_mb of mode(%u) failed\n", memory_mode);
+			imgsys_dev->imgsys_pipe[0].user_cnt[memory_mode]++;
 			imgsys_dev->imgsys_pipe[0].imgsys_user_count++;
 		} else {
-			if ((imgsys_dev->imgsys_pipe[0].meminfo.is_smvr) &&
-					(!imgsys_dev->imgsys_pipe[0].smvr_alloc)) {
-				mode = imgsys_smvr;
-				if (hcp_ops && hcp_ops->allocate_gce_mb)
-					ret = hcp_ops->allocate_gce_mb(imgsys_dev->scp_pdev, mode);
-				if (ret)
-					dev_info(imgsys_dev->dev,
-						"alloc gce_mb of mode(%u) failed\n", mode);
-
-				if (hcp_ops && hcp_ops->allocate_mod_mbs)
-					ret = hcp_ops->allocate_mod_mbs(imgsys_dev->scp_pdev, mode);
-				if (ret)
-					dev_info(imgsys_dev->dev,
-						"alloc mod_mb of mode(%u) failed\n", mode);
-					imgsys_dev->imgsys_pipe[0].smvr_alloc++;
-					imgsys_dev->imgsys_pipe[0].imgsys_user_count++;
-			} else {
-				if (!imgsys_dev->imgsys_pipe[0].streaming_alloc) {
-					mode = imgsys_streaming;
-					if (hcp_ops && hcp_ops->allocate_gce_mb)
-						ret = hcp_ops->allocate_gce_mb(
-							imgsys_dev->scp_pdev, mode);
-					if (ret)
-						dev_info(imgsys_dev->dev,
-							"alloc gce_mb of mode(%u) failed\n", mode);
-
-					if (hcp_ops && hcp_ops->allocate_mod_mbs)
-						ret = hcp_ops->allocate_mod_mbs(
-							imgsys_dev->scp_pdev, mode);
-					if (ret)
-						dev_info(imgsys_dev->dev,
-							"alloc mod_mb of mode(%u) failed\n", mode);
-
-					imgsys_dev->imgsys_pipe[0].streaming_alloc++;
-					imgsys_dev->imgsys_pipe[0].imgsys_user_count++;
-				}
-			}
+			pr_info("%s user_cnt[%u] will overflow\n", __func__, memory_mode);
 		}
-		pr_info(
-			"imgsys_fw: cap/smvr(%d/%d) hw_connect_mode/cap_count/smvr_count/streaming_count/user_count(%d/%d/%d/%d/%d)",
+
+		pr_info("- [%s] streaming(%d) info(0x%llx/%u/%u) -> mem_mode(%u); user_cnt(%u/%u/%u/%u); total_alloc(%u)\n",
+			__func__,
+			imgsys_dev->imgsys_pipe[0].streaming,
+			(unsigned long long)imgsys_dev->imgsys_pipe[0].meminfo.hw_comb_to_use,
+			imgsys_dev->imgsys_pipe[0].meminfo.batch_num,
 			imgsys_dev->imgsys_pipe[0].meminfo.is_capture,
-			imgsys_dev->imgsys_pipe[0].meminfo.is_smvr,
-			mode,
-			imgsys_dev->imgsys_pipe[0].capture_alloc, imgsys_dev->imgsys_pipe[0].smvr_alloc,
-			imgsys_dev->imgsys_pipe[0].streaming_alloc, imgsys_dev->imgsys_pipe[0].imgsys_user_count);
+			memory_mode,
+			imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_NORMAL_STREAMING],
+			imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_CAPTURE],
+			imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_SMVR],
+			imgsys_dev->imgsys_pipe[0].user_cnt[IMGSYS_MEMORY_MODE_MAE],
+			imgsys_dev->imgsys_pipe[0].imgsys_user_count);
+
 
 		if (ret) {
 			if (imgsys_dbg_enable())
@@ -2389,28 +2323,20 @@ static int mtk_imgsys_worker_hcp_init(struct mtk_imgsys_dev *imgsys_dev)
 		info.smvr_mode = imgsys_dev->imgsys_pipe[0].meminfo.is_smvr;
 		info.is_capture = imgsys_dev->imgsys_pipe[0].meminfo.is_capture;
 #elif (IMGSYS_INIT_INFO_VERSION == 2)
-		if (imgsys_dev->imgsys_pipe[0].meminfo.is_capture) {
-			info.memory_mode = IMGSYS_MEMORY_MODE_CAPTURE;
-		} else {
-			if (imgsys_dev->imgsys_pipe[0].meminfo.is_smvr)
-				info.memory_mode = IMGSYS_MEMORY_MODE_SMVR;
-			else
-				info.memory_mode = IMGSYS_MEMORY_MODE_NORMAL_STREAMING;
-		}
-
+		info.memory_mode = memory_mode;
 #endif
-		if (hcp_ops && hcp_ops->fill_init_info)
+		if (likely(hcp_ops && hcp_ops->fill_init_info))
 			hcp_ops->fill_init_info(imgsys_dev->scp_pdev, &info);
 
 		info.sec_tag = imgsys_dev->imgsys_pipe[0].ini_info.sec_tag;
 		info.full_wd = imgsys_dev->imgsys_pipe[0].ini_info.sensor.full_wd;
 		info.full_ht = imgsys_dev->imgsys_pipe[0].ini_info.sensor.full_ht;
-
+		/* always send init msg due to we assume current user is the first user */
 		ret = imgsys_send(imgsys_dev->scp_pdev, HCP_IMGSYS_INIT_ID,
 			(void *)&info, sizeof(info), 0, 1);
 	}
 
-	if (ret) {
+	if (unlikely(ret)) {
 		if (imgsys_dbg_enable())
 			dev_dbg(imgsys_dev->dev, "%s: send SCP_IPI_DIP_FRAME failed %d\n",
 				__func__, ret);
@@ -2423,7 +2349,7 @@ static int mtk_imgsys_worker_hcp_init(struct mtk_imgsys_dev *imgsys_dev)
 	mutex_init(&imgsys_dev->req_fd_cache.lock);
 
 	ret = gce_work_pool_init(imgsys_dev);
-	if (ret) {
+	if (unlikely(ret)) {
 		dev_info(imgsys_dev->dev, "%s: gce work pool allocate failed %d\n",
 			__func__, ret);
 		return ret;
@@ -2431,7 +2357,7 @@ static int mtk_imgsys_worker_hcp_init(struct mtk_imgsys_dev *imgsys_dev)
 	}
 
 	ret = reqfd_cbinfo_work_pool_init(imgsys_dev);
-	if (ret) {
+	if (unlikely(ret)) {
 		dev_info(imgsys_dev->dev, "%s: reqafd cbinfo work pool allocate failed %d\n",
 			__func__, ret);
 		return ret;
@@ -2447,7 +2373,7 @@ static int mtk_imgsys_worker_hcp_init(struct mtk_imgsys_dev *imgsys_dev)
 	imgsys_queue_enable(&imgsys_dev->runnerque);
 	//mtk_hcp_init_KernelFence();
 
-	if (hcp_ops && hcp_ops->register_cbs) {
+	if (likely(hcp_ops && hcp_ops->register_cbs)) {
 		struct mtk_hcp_module_callbacks hcp_mod_cbs = {
 			.init_done = imgsys_init_handler,
 			.clear_hw_token = imgsys_cleartoken_handler,
@@ -2467,6 +2393,7 @@ static int mtk_imgsys_hw_connect(struct mtk_imgsys_dev *imgsys_dev)
 	u32 user_cnt = 0;
 	struct task_struct *power_task;
 	const struct mtk_hcp_ops *hcp_ops = mtk_hcp_fetch_ops(imgsys_dev->scp_pdev);
+	unsigned int memory_mode;
 
 	IMGSYS_SYSTRACE_BEGIN("imgsys_fw-init:\n");
 	user_cnt = atomic_read(&imgsys_dev->imgsys_user_cnt);
@@ -2518,36 +2445,25 @@ err_power_off:
 	if (hcp_ops && hcp_ops->free_gce_clr_token_mb)
 		hcp_ops->free_gce_clr_token_mb(imgsys_dev->scp_pdev, 0);
 
-	if (imgsys_dev->imgsys_pipe[0].capture_alloc != 0) {
-		if (hcp_ops && hcp_ops->free_gce_mb)
-			ret = hcp_ops->free_gce_mb(imgsys_dev->scp_pdev, imgsys_capture);
-
-		if (hcp_ops && hcp_ops->free_mod_mbs)
-			ret = hcp_ops->free_mod_mbs(imgsys_dev->scp_pdev, imgsys_capture);
-
-		imgsys_dev->imgsys_pipe[0].capture_alloc = 0;
-	}
-	if (imgsys_dev->imgsys_pipe[0].streaming_alloc != 0) {
-		if (hcp_ops && hcp_ops->free_gce_mb)
-			ret = hcp_ops->free_gce_mb(imgsys_dev->scp_pdev, imgsys_streaming);
-
-		if (hcp_ops && hcp_ops->free_mod_mbs)
-			ret = hcp_ops->free_mod_mbs(imgsys_dev->scp_pdev, imgsys_streaming);
-
-		imgsys_dev->imgsys_pipe[0].streaming_alloc = 0;
-	}
-	if (imgsys_dev->imgsys_pipe[0].smvr_alloc != 0) {
-		if (hcp_ops && hcp_ops->free_gce_mb)
-			ret = hcp_ops->free_gce_mb(imgsys_dev->scp_pdev, imgsys_smvr);
-
-		if (hcp_ops && hcp_ops->free_mod_mbs)
-			ret = hcp_ops->free_mod_mbs(imgsys_dev->scp_pdev, imgsys_smvr);
-
-		imgsys_dev->imgsys_pipe[0].smvr_alloc = 0;
+	for (memory_mode = IMGSYS_MEMORY_MODE_NORMAL_STREAMING ;
+			memory_mode < IMGSYS_MEMORY_MODE_NUM_MAX; memory_mode++) {
+		if (unlikely(imgsys_dev->imgsys_pipe[0].user_cnt[memory_mode])) {
+			if (likely(hcp_ops && hcp_ops->free_gce_mb))
+				ret = hcp_ops->free_gce_mb(imgsys_dev->scp_pdev, memory_mode);
+			if (unlikely(ret))
+				dev_info(imgsys_dev->dev,
+					"free gce_mb of mode(%u) failed\n", memory_mode);
+			if (likely(hcp_ops && hcp_ops->free_mod_mbs))
+				ret = hcp_ops->free_mod_mbs(imgsys_dev->scp_pdev, memory_mode);
+			if (unlikely(ret))
+				dev_info(imgsys_dev->dev,
+					"free mod_mbs of mode(%u) failed\n", memory_mode);
+		}
+		/* ensure all memory_mode's user count is zero */
+		imgsys_dev->imgsys_pipe[0].user_cnt[memory_mode] = 0;
 	}
 
-
-	if (ret) {
+	if (unlikely(ret)) {
 		dev_info(imgsys_dev->dev,
 			"%s: mtk_hcp_release_working_buffer failed(%d)\n",
 			__func__, ret);
@@ -2574,11 +2490,13 @@ static void mtk_imgsys_hw_disconnect(struct mtk_imgsys_dev *imgsys_dev)
 	struct img_init_info info = {0};
 	u32 user_cnt = 0;
 	const struct mtk_hcp_ops *hcp_ops = mtk_hcp_fetch_ops(imgsys_dev->scp_pdev);
+	unsigned int memory_mode;
 
 #if (IMGSYS_INIT_INFO_VERSION == 1)
 	info.is_capture = 0;
 	info.smvr_mode = 0;
 #elif (IMGSYS_INIT_INFO_VERSION == 2)
+	/* don't care value of this msg */
 	info.memory_mode = IMGSYS_MEMORY_MODE_NORMAL_STREAMING;
 #endif
 	imgsys_dev->imgsys_pipe[0].imgsys_user_count = 0;
@@ -2615,38 +2533,28 @@ static void mtk_imgsys_hw_disconnect(struct mtk_imgsys_dev *imgsys_dev)
 	if (hcp_ops && hcp_ops->free_gce_clr_token_mb)
 		ret = hcp_ops->free_gce_clr_token_mb(imgsys_dev->scp_pdev, 0);
 
-	if (imgsys_dev->imgsys_pipe[0].capture_alloc != 0) {
-		if (hcp_ops && hcp_ops->free_gce_mb)
-			ret = hcp_ops->free_gce_mb(imgsys_dev->scp_pdev, imgsys_capture);
-
-		if (hcp_ops && hcp_ops->free_mod_mbs)
-			ret = hcp_ops->free_mod_mbs(imgsys_dev->scp_pdev, imgsys_capture);
-
-		imgsys_dev->imgsys_pipe[0].capture_alloc = 0;
-	}
-	if (imgsys_dev->imgsys_pipe[0].streaming_alloc != 0) {
-		if (hcp_ops && hcp_ops->free_gce_mb)
-			ret = hcp_ops->free_gce_mb(imgsys_dev->scp_pdev, imgsys_streaming);
-
-		if (hcp_ops && hcp_ops->free_mod_mbs)
-			ret = hcp_ops->free_mod_mbs(imgsys_dev->scp_pdev, imgsys_streaming);
-
-		imgsys_dev->imgsys_pipe[0].streaming_alloc = 0;
-	}
-	if (imgsys_dev->imgsys_pipe[0].smvr_alloc != 0) {
-		if (hcp_ops && hcp_ops->free_gce_mb)
-			ret = hcp_ops->free_gce_mb(imgsys_dev->scp_pdev, imgsys_smvr);
-
-		if (hcp_ops && hcp_ops->free_mod_mbs)
-			ret = hcp_ops->free_mod_mbs(imgsys_dev->scp_pdev, imgsys_smvr);
-
-		imgsys_dev->imgsys_pipe[0].smvr_alloc = 0;
+	for (memory_mode = IMGSYS_MEMORY_MODE_NORMAL_STREAMING ;
+			memory_mode < IMGSYS_MEMORY_MODE_NUM_MAX; memory_mode++) {
+		if (likely(imgsys_dev->imgsys_pipe[0].user_cnt[memory_mode])) {
+			if (likely(hcp_ops && hcp_ops->free_gce_mb))
+				ret = hcp_ops->free_gce_mb(imgsys_dev->scp_pdev, memory_mode);
+			if (unlikely(ret))
+				dev_info(imgsys_dev->dev,
+					"free gce_mb of mode(%u) failed\n", memory_mode);
+			if (likely(hcp_ops && hcp_ops->free_mod_mbs))
+				ret = hcp_ops->free_mod_mbs(imgsys_dev->scp_pdev, memory_mode);
+			if (unlikely(ret))
+				dev_info(imgsys_dev->dev,
+					"free mod_mbs of mode(%u) failed\n", memory_mode);
+		}
+		/* ensure all memory_mode's user_cnt count is zero */
+		imgsys_dev->imgsys_pipe[0].user_cnt[memory_mode] = 0;
 	}
 
-	if (ret)
+	if (unlikely(ret))
 		dev_info(imgsys_dev->dev, "%s: mtk_hcp_release_working_buffer failed(%d)\n", __func__, ret);
 
-	if (hcp_ops && hcp_ops->purge_msgs)
+	if (likely(hcp_ops && hcp_ops->purge_msgs))
 		hcp_ops->purge_msgs(imgsys_dev->scp_pdev);
 
 	mutex_destroy(&imgsys_dev->req_fd_cache.lock);
@@ -2674,7 +2582,7 @@ static void mtk_imgsys_hw_disconnect(struct mtk_imgsys_dev *imgsys_dev)
 	mtk_imgsys_mod_put(imgsys_dev);
 
 	user_cnt = atomic_read(&imgsys_dev->imgsys_user_cnt);
-	if (user_cnt != 0)
+	if (unlikely(user_cnt != 0))
 		dev_info(imgsys_dev->dev,
 			"%s: [ERROR] imgsys user count is not yet return to zero(%d)\n",
 			__func__, user_cnt);
@@ -2920,3 +2828,22 @@ irqreturn_t mtk_imgsys_isc_thread_irq(int irq, void *data)
 
 #endif
 
+unsigned int mtkdip_mem_info_to_memory_mode(struct mem_info *mem_info)
+{
+	unsigned int memory_mode = IMGSYS_MEMORY_MODE_NORMAL_STREAMING;
+
+	if (unlikely(mem_info)) {
+		if (mem_info->is_capture) {
+			memory_mode = IMGSYS_MEMORY_MODE_CAPTURE;
+		} else if (mem_info->hw_comb_to_use & IMGSYS_HW_FLAG_MAE) {
+			memory_mode = IMGSYS_MEMORY_MODE_MAE;
+		} else {
+			if (mem_info->batch_num > 1)
+				memory_mode = IMGSYS_MEMORY_MODE_SMVR;
+			else
+				memory_mode = IMGSYS_MEMORY_MODE_NORMAL_STREAMING;
+		}
+	}
+
+	return memory_mode;
+}

@@ -49,9 +49,9 @@ int mtk_imgsys_pipe_init(struct mtk_imgsys_dev *imgsys_dev,
 	pipe->desc = setting;
 	pipe->nodes_enabled = 0ULL;
 	pipe->nodes_streaming = 0ULL;
-	pipe->streaming_alloc = 0;
-	pipe->capture_alloc = 0;
-	pipe->smvr_alloc = 0;
+	for (i = 0 ; i < IMGSYS_MEMORY_MODE_NUM_MAX ; i++)
+		pipe->user_cnt[i] = 0;
+
 	pipe->imgsys_user_count = 0;
 
 	atomic_set(&pipe->pipe_job_sequence, 0);

@@ -734,7 +734,7 @@ static int hcp_send_internal(
 		     (len > sizeof(send_obj.share_data)) ||
 		     (!buf))) {
 		HCP_PRINT_ERR(
-			"failed to send hcp message (Invalid arg.), len/sz(%d/%lu)\n",
+			"failed to send hcp message (Invalid arg.), len/sz(0x%x/%lu)\n",
 			len, sizeof(send_obj.share_data));
 		return -EINVAL;
 	}
@@ -803,7 +803,7 @@ static int hcp_send_internal(
 		break;
 	}
 
-	HCP_PRINT_DBG("no(%d) msg_id(%d) sz(%d) send to user space\n", no, id, len);
+	HCP_PRINT_DBG("no(%d) msg_id(%d) sz(0x%x) send to user space\n", no, id, len);
 
 	if (!wait)
 		return 0;
@@ -1254,12 +1254,20 @@ static unsigned int mtk_hcp_poll(struct file *file, poll_table *wait)
 static int mtk_hcp_release(struct inode *inode, struct file *file)
 {
 	struct mtk_hcp *hcp_dev = (struct mtk_hcp *)file->private_data;
+	int i = 0;
 
-	HCP_PRINT_DBG("-s\n");
+	HCP_PRINT_INF("-s\n");
+
+	/* clear waiting msg while hcp will be closed */
+	for (i = 0; i < HCP_MAX_ID; i++)
+		atomic_set(&hcp_dev->hcp_id_ack[i], 1);
+
+	for (i = 0; i < MODULE_MAX_ID; i++)
+		wake_up(&hcp_dev->ack_wq[i]);
 
 	hcp_dev->is_open = false;
 
-	HCP_PRINT_DBG("-e\n");
+	HCP_PRINT_INF("-e\n");
 
 	return 0;
 }
@@ -2294,7 +2302,7 @@ static int mtk_hcp_fill_init_info(
 	info->gce_wb_info.wbuf_dma = mb->start_phys;
 	info->gce_wb_info.wbuf_size = mb->cfg.size;
 
-	HCP_PRINT_DBG("mem_mode(%u) gce_mb fd(%d) sz(%llu)\n",
+	HCP_PRINT_INF("mem_mode(%u) gce_mb fd(%d) sz(0x%llx)\n",
 		mem_mode, mb->fd, mb->cfg.size);
 
 	HCP_PRINT_DBG("mem_mode(%u) gce_mb dma(0x%llx)\n",
@@ -2309,10 +2317,10 @@ static int mtk_hcp_fill_init_info(
 	info->gce_clr_token_wb_info.wbuf_dma = mb->start_phys;
 	info->gce_clr_token_wb_info.wbuf_size = mb->cfg.size;
 
-	HCP_PRINT_INF("mem_mode(%u) gce_clr_token_mb fd(%d) sz(%llu)\n",
+	HCP_PRINT_INF("mem_mode(%u) gce_clr_token_mb fd(%d) sz(0x%llx)\n",
 		mem_mode, mb->fd, mb->cfg.size);
 
-	HCP_PRINT_INF("mem_mode(%u) gce_clr_token_mb dma(0x%llx)\n",
+	HCP_PRINT_DBG("mem_mode(%u) gce_clr_token_mb dma(0x%llx)\n",
 		mem_mode, mb->start_phys);
 
 	for (i = 0; i < IMGSYS_MOD_DRV_NUM_MAX ; i++) {
@@ -2385,7 +2393,7 @@ static int mtk_hcp_fill_init_info(
 			= mb->fd;
 
 		HCP_PRINT_INF(
-			"mem_mode(%u) mod(%u) cq_mb[fd(%d) sz(%u)] tdr_mb[fd(%d) sz(%u)] c_mb[fd(%d) sz(%u)] nc_mb[fd(%d) sz(%u)]\n",
+			"mem_mode(%u) mod(%u) cq_mb[fd(%d) sz(0x%x)] tdr_mb[fd(%d) sz(0x%x)] c_mb[fd(%d) sz(0x%x)] nc_mb[fd(%d) sz(0x%x)]\n",
 			mem_mode,
 			i,
 			info->module_wb_info[i][IMGSYS_MODULE_WORKING_BUF_TYPE_CQ].wbuf_fd,
@@ -2476,10 +2484,6 @@ static const struct mtk_hcp_ops hcp_ops = {
 	MTK_HCP_REG_MOD_W_BUF_OPS_TDR(pqdip)
 	MTK_HCP_REG_MOD_W_BUF_OPS_C_MISC(pqdip)
 	MTK_HCP_REG_MOD_W_BUF_OPS_NC_MISC(pqdip)
-	MTK_HCP_REG_MOD_W_BUF_OPS_CQ(wpe)
-	MTK_HCP_REG_MOD_W_BUF_OPS_TDR(wpe)
-	MTK_HCP_REG_MOD_W_BUF_OPS_C_MISC(wpe)
-	MTK_HCP_REG_MOD_W_BUF_OPS_NC_MISC(wpe)
 	MTK_HCP_REG_MOD_W_BUF_OPS_CQ(me)
 	MTK_HCP_REG_MOD_W_BUF_OPS_TDR(me)
 	MTK_HCP_REG_MOD_W_BUF_OPS_C_MISC(me)

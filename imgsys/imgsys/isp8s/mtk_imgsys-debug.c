@@ -22,7 +22,7 @@
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
 #include <linux/delay.h>
 
-#define DL_CHECK_ENG_NUM IMGSYS_HW_FLAG_NUM
+#define DL_CHECK_ENG_NUM IMGSYS_HW_NUM_MAX
 #define WPE_HW_SET    3
 #define ADL_HW_SET    2
 #define SW_RST   (0x000C)

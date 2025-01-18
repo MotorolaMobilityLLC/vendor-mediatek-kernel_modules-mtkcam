@@ -246,9 +246,7 @@ struct mtk_imgsys_pipe {
 	struct mtk_imgsys_dma_buf_iova_list iova_cache;
 	struct init_info ini_info;
 	struct mem_info meminfo;
-	unsigned int capture_alloc;
-	unsigned int smvr_alloc;
-	unsigned int streaming_alloc;
+	unsigned int user_cnt[IMGSYS_MEMORY_MODE_NUM_MAX];
 	unsigned int imgsys_user_count;
 };
 
@@ -500,7 +498,7 @@ struct gce_timeout_work {
 	int8_t fail_isHWhang;
 	int hang_event;
 	int is_time_shared;
-	int is_capture;
+	u32 memory_mode;
 	int batchnum;
 };
 
@@ -631,6 +629,8 @@ void mtk_imgsys_hw_enqueue(struct mtk_imgsys_dev *imgsys_dev,
 int mtk_imgsys_hw_streamoff(struct mtk_imgsys_pipe *pipe);
 
 int mtk_imgsys_hw_streamon(struct mtk_imgsys_pipe *pipe);
+
+unsigned int mtkdip_mem_info_to_memory_mode(struct mem_info *mem_info);
 
 static inline struct mtk_imgsys_pipe*
 mtk_imgsys_dev_get_pipe(struct mtk_imgsys_dev *imgsys_dev, unsigned int pipe_id)
@@ -831,7 +831,8 @@ struct swfrm_info_t {
 	int chan_id;
 	uint64_t *req_stat;
 	char *hw_ts_log;
-	uint8_t is_capture;
+	uint8_t is_capture;   /* deprecated */
+	uint32_t memory_mode; /* refer to IMGSYS_MEMORY_MODE_XXX */
 	uint8_t is_ndd;
 };
 #define HWTOKEN_MAX 100
@@ -839,6 +840,25 @@ struct cleartoken_info_t {
 	int clearnum;
 	int token[HWTOKEN_MAX];
 };
+
+
+/**
+ * @struct imgsys_user_param
+ * @brief Structure to hold user parameters for imgsys
+ *        This structure should be same in mtk_imgsys.h
+ */
+#ifndef IMGSYS_USER_PARAM
+#define IMGSYS_USER_PARAM
+struct imgsys_user_param {
+	uint64_t user_id;
+	uint64_t instance;
+	uint64_t hw_comb_to_use;
+	uint32_t sec_tag;
+	uint32_t batch_num;
+	uint32_t is_capture;
+	uint32_t enq_sequentially;
+};
+#endif
 
 #define REQ_FD_MAX 65536
 struct reqfd_cbinfo_t {
