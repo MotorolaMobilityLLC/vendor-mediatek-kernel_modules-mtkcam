@@ -1716,6 +1716,28 @@ static void mtk_raw_log_tg_timestamp(struct mtk_raw_device *raw)
 }
 #endif
 
+static void raw_disable_dma_err_en(struct mtk_raw_device *raw)
+{
+	u32 int17_en = raw_readl_relaxed(raw, raw->base, REG_CAMCTL_INT17_EN);
+
+	raw_writel_relaxed((int17_en & ~FBIT(CAMCTL_DMA_ERR_EN)),
+					   raw, raw->base, REG_CAMCTL_INT17_EN);
+
+	dev_info(raw->dev, "%s: int17_en before disable 0x%x",
+			 __func__, int17_en);
+}
+
+static void yuv_disable_dma_err_en(struct mtk_raw_device *raw)
+{
+	u32 int17_en = raw_readl_relaxed(raw, raw->yuv_base, REG_CAMCTL2_INT17_EN);
+
+	raw_writel_relaxed((int17_en & ~FBIT(CAMCTL2_DMA_ERR_EN)),
+					   raw, raw->yuv_base, REG_CAMCTL2_INT17_EN);
+
+	dev_info(raw->dev, "%s: int17_en before disable 0x%x",
+			 __func__, int17_en);
+}
+
 static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 {
 	struct mtk_raw_device *raw = (struct mtk_raw_device *)data;
@@ -1754,6 +1776,9 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 		if (err_status_y)
 			dump_yuv_dma_err_st(yuv);
 
+	if (err_status_y & FBIT(CAMCTL2_DMA_ERR_ST))
+		yuv_disable_dma_err_en(raw);
+
 	/* trace */
 	trace_yuv_irq(yuv->dev, frame_status_y, wdma_done_status_y);
 	trace_raw_dma_status(yuv->dev, frame_status_y, dma_ofl_status_y);
@@ -1786,6 +1811,9 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 			frame_status, err_status, tg1_status, dcif_status, cq_status,
 			dmao_done_status, dmai_done_status, dma_ofl_status, dma_ufl_status,
 			afo_done_status, lock_done_sel, frame_idx_inner);
+
+	if (frame_e_status & FBIT(CAMCTL_DMA_ERR_ST))
+		raw_disable_dma_err_en(raw);
 
 	irq_info.irq_type = 0;
 	irq_info.frame_idx = frame_idx;
