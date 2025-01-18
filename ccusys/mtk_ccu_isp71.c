@@ -1445,7 +1445,7 @@ static int mtk_ccu1_remove(struct platform_device *pdev)
 static int mtk_ccu_get_power(struct mtk_ccu *ccu, struct device *dev)
 {
 	uint8_t *sram_con, *resource_con;
-	int rc, ret;
+	int rc, ret = 0;
 
 	if ((!ccu) || (!dev))
 		return -ENODEV;
