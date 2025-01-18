@@ -25,8 +25,12 @@ endif
 ifneq ($(wildcard $(KO_PATH)/isp_8/pda_mt6899.c),)
 obj-m += pda_drv_mt6899.o
 endif
+ifneq ($(wildcard $(KO_PATH)/isp_8s/pda_mt6993.c),)
+obj-m += pda_drv_mt6993.o
+endif
 obj-m += pda_drv_dummy.o
 
 pda_drv_mt6991-objs := isp_8/camera_pda.o isp_8/pda_mt6991.o
 pda_drv_mt6899-objs := isp_8/camera_pda.o isp_8/pda_mt6899.o
+pda_drv_mt6993-objs := isp_8s/camera_pda.o isp_8s/pda_mt6993.o
 pda_drv_dummy-objs := isp_8/camera_pda.o isp_8/pda_dummy.o
