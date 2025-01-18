@@ -183,12 +183,12 @@ static unsigned int do_2a_gain_s5khp9sp(struct EEPROM_DRV_FD_DATA *pdata,
 		}
 		if (CalGain && CalR && CalG && CalB) {
 			pCamCalData->Single2A.S2aAwb.rGainSetNum++;
-			pCamCalData->Single2A.S2aAwb.rUnitGainu4R =
-					(unsigned int)((tempMax * 512 + (CalR >> 1)) / CalR);
-			pCamCalData->Single2A.S2aAwb.rUnitGainu4G =
-					(unsigned int)((tempMax * 512 + (CalG >> 1)) / CalG);
-			pCamCalData->Single2A.S2aAwb.rUnitGainu4B =
-					(unsigned int)((tempMax * 512 + (CalB >> 1)) / CalB);
+			pCamCalData->Single2A.S2aAwb.rUnitGainu4R = 512;
+					// (unsigned int)((tempMax * 512 + (CalR >> 1)) / CalR);
+			pCamCalData->Single2A.S2aAwb.rUnitGainu4G = 512;
+					// (unsigned int)((tempMax * 512 + (CalG >> 1)) / CalG);
+			pCamCalData->Single2A.S2aAwb.rUnitGainu4B = 512;
+					// (unsigned int)((tempMax * 512 + (CalB >> 1)) / CalB);
 		} else
 			error_log("Something wrong on EEPROM, plz contact module vendor\n");
 		/* AWB Golden Gain (5100K) */
@@ -224,12 +224,12 @@ static unsigned int do_2a_gain_s5khp9sp(struct EEPROM_DRV_FD_DATA *pdata,
 			show_cmd_error_log(pCamCalData->Command);
 		}
 		if (FacGain && FacR && FacG && FacB) {
-			pCamCalData->Single2A.S2aAwb.rGoldGainu4R =
-					(unsigned int)((tempMax * 512 + (FacR >> 1)) / FacR);
-			pCamCalData->Single2A.S2aAwb.rGoldGainu4G =
-					(unsigned int)((tempMax * 512 + (FacG >> 1)) / FacG);
-			pCamCalData->Single2A.S2aAwb.rGoldGainu4B =
-					(unsigned int)((tempMax * 512 + (FacB >> 1)) / FacB);
+			pCamCalData->Single2A.S2aAwb.rGoldGainu4R = 512;
+					// (unsigned int)((tempMax * 512 + (FacR >> 1)) / FacR);
+			pCamCalData->Single2A.S2aAwb.rGoldGainu4G = 512;
+					// (unsigned int)((tempMax * 512 + (FacG >> 1)) / FacG);
+			pCamCalData->Single2A.S2aAwb.rGoldGainu4B = 512;
+					// (unsigned int)((tempMax * 512 + (FacB >> 1)) / FacB);
 		} else
 			error_log("Something wrong on EEPROM, plz contact module vendor\n");
 		/* Set AWB to 3A Layer */
@@ -292,12 +292,12 @@ static unsigned int do_2a_gain_s5khp9sp(struct EEPROM_DRV_FD_DATA *pdata,
 		}
 		if (CalGain && CalR && CalG && CalB) {
 			pCamCalData->Single2A.S2aAwb.rGainSetNum++;
-			pCamCalData->Single2A.S2aAwb.rUnitGainu4R_low =
-				(unsigned int)((tempMax * 512 + (CalR >> 1)) / CalR);
-			pCamCalData->Single2A.S2aAwb.rUnitGainu4G_low =
-				(unsigned int)((tempMax * 512 + (CalG >> 1)) / CalG);
-			pCamCalData->Single2A.S2aAwb.rUnitGainu4B_low =
-				(unsigned int)((tempMax * 512 + (CalB >> 1)) / CalB);
+			pCamCalData->Single2A.S2aAwb.rUnitGainu4R_low = 512;
+				// (unsigned int)((tempMax * 512 + (CalR >> 1)) / CalR);
+			pCamCalData->Single2A.S2aAwb.rUnitGainu4G_low = 512;
+				// (unsigned int)((tempMax * 512 + (CalG >> 1)) / CalG);
+			pCamCalData->Single2A.S2aAwb.rUnitGainu4B_low = 512;
+				// (unsigned int)((tempMax * 512 + (CalB >> 1)) / CalB);
 		} else
 			error_log("Something wrong on EEPROM, plz contact module vendor\n");
 		/* AWB Golden Gain (3100K) */
@@ -335,12 +335,12 @@ static unsigned int do_2a_gain_s5khp9sp(struct EEPROM_DRV_FD_DATA *pdata,
 			show_cmd_error_log(pCamCalData->Command);
 		}
 		if (FacGain && FacR && FacG && FacB) {
-			pCamCalData->Single2A.S2aAwb.rGoldGainu4R_low =
-				(unsigned int)((tempMax * 512 + (FacR >> 1)) / FacR);
-			pCamCalData->Single2A.S2aAwb.rGoldGainu4G_low =
-				(unsigned int)((tempMax * 512 + (FacG >> 1)) / FacG);
-			pCamCalData->Single2A.S2aAwb.rGoldGainu4B_low =
-				(unsigned int)((tempMax * 512 + (FacB >> 1)) / FacB);
+			pCamCalData->Single2A.S2aAwb.rGoldGainu4R_low = 512;
+				// (unsigned int)((tempMax * 512 + (FacR >> 1)) / FacR);
+			pCamCalData->Single2A.S2aAwb.rGoldGainu4G_low = 512;
+				// (unsigned int)((tempMax * 512 + (FacG >> 1)) / FacG);
+			pCamCalData->Single2A.S2aAwb.rGoldGainu4B_low = 512;
+				// (unsigned int)((tempMax * 512 + (FacB >> 1)) / FacB);
 		} else
 			error_log("Something wrong on EEPROM, plz contact module vendor\n");
 
