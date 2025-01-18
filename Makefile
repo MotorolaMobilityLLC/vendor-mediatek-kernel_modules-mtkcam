@@ -16,7 +16,7 @@ obj-$(CONFIG_MTK_CAMERA_DPE_ISP7SP)	 += mtk-dpe/
 obj-$(CONFIG_MTK_CAMERA_ISP_PDA_SUPPORT) += mtk-pda/
 #obj-$(CONFIG_MTK_C2PS) += sched/
 obj-y += imgsensor/
-obj-$(CONFIG_MTK_CCU_RPROC) += ccusys/
+#obj-$(CONFIG_MTK_CCU_RPROC) += ccusys/
 
 ## normal Makefile
 #SUBDIRS := $(wildcard */.)
