@@ -35,15 +35,11 @@ static u16 get_gain2reg(u32 gain);
 static int s5khp9sp_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int s5khp9sp_set_test_pattern_data(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
-static int s5khp9sp_sensor_init(struct subdrv_ctx *ctx);
+static void s5khp9sp_sensor_init(struct subdrv_ctx *ctx);
 static int open(struct subdrv_ctx *ctx);
 static int s5khp9sp_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt, u64 sof_ts);
 static int s5khp9sp_set_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
-static int s5khp9sp_control(struct subdrv_ctx *ctx,
-			enum SENSOR_SCENARIO_ID_ENUM scenario_id,
-			MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
-			MSDK_SENSOR_CONFIG_STRUCT *sensor_config_data);
 
 static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, s5khp9sp_set_test_pattern},
@@ -52,6 +48,127 @@ static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_AWB_GAIN, s5khp9sp_set_awb_gain},
 };
 
+
+static struct mtk_sensor_saturation_info imgsensor_saturation_info_10bit = {
+	.gain_ratio = 1000,
+	.OB_pedestal = 64,
+	.saturation_level = 1023,
+	.adc_bit = 10,
+	.ob_bm = 64,
+};
+
+
+static struct mtk_mbus_frame_desc_entry frame_desc_FCM_28[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0x0,
+			.data_type = 0x2b,
+			.hsize = 4080,
+			.vsize = 2296,
+			.user_data_desc = VC_STAGGER_NE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0x1,
+			.data_type = 0x30, /* 0x2b, */
+			.hsize = 2040,
+			.vsize = 286,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0x2,
+			.data_type = 0x30, /* 0x2b, */
+			.hsize = 504,
+			.vsize = 286,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_2,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+		},
+	},
+};
+
+static struct mtk_mbus_frame_desc_entry frame_desc_FCM_29[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0x0,
+			.data_type = 0x2b,
+			.hsize = 4080,
+			.vsize = 2560,
+			.user_data_desc = VC_STAGGER_NE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0x1,
+			.data_type = 0x2b,
+			.hsize = 4080,
+			.vsize = 2560,
+			.user_data_desc = VC_STAGGER_ME,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
+		},
+	},
+};
+
+static struct mtk_mbus_frame_desc_entry frame_desc_FCM_30[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0x0,
+			.data_type = 0x2b,
+			.hsize = 4080,
+			.vsize = 2560,
+			.user_data_desc = VC_STAGGER_NE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0x1,
+			.data_type = 0x2b,
+			.hsize = 4080,
+			.vsize = 2560,
+			.user_data_desc = VC_STAGGER_ME,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
+		},
+	},
+};
+
+static struct mtk_mbus_frame_desc_entry frame_desc_FCM_1[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0x0,
+			.data_type = 0x2b,
+			.hsize = 16320,
+			.vsize = 12288,
+			.user_data_desc = VC_STAGGER_NE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0x1,
+			.data_type = 0x30, /* 0x2b, */
+			.hsize = 4080,
+			.vsize = 768,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0x2,
+			.data_type = 0x30, /* 0x2b, */
+			.hsize = 1016,
+			.vsize = 768,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_2,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+		},
+	},
+};
 
 static struct mtk_mbus_frame_desc_entry frame_desc_FCM_2[] = {
 	{
@@ -189,7 +306,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_FCM_5[] = {
 	},
 };
 
-static struct mtk_mbus_frame_desc_entry frame_desc_FCM_6[] = {
+static struct mtk_mbus_frame_desc_entry frame_desc_FCM_8_without_AEB[] = {
 	{
 		.bus.csi2 = {
 			.channel = 0x0,
@@ -271,21 +388,19 @@ static struct mtk_mbus_frame_desc_entry frame_desc_FCM_8[] = {
 	{
 		.bus.csi2 = {
 			.channel = 0x1,
-			.data_type = 0x30, /* 0x2b, */
-			.hsize = 1016,
-			.vsize = 192,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.data_type = 0x2b,
+			.hsize = 4080,
+			.vsize = 3072,
+			.user_data_desc = VC_STAGGER_ME,
 		},
 	},
 	{
 		.bus.csi2 = {
-			.channel = 0x2,
-			.data_type = 0x30, /* 0x2b, */
-			.hsize = 248,
+			.channel = 0x4,
+			.data_type = 0x2b,
+			.hsize = 1016,
 			.vsize = 192,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_2,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_ME_PIX_1,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
 		},
 	},
@@ -305,21 +420,19 @@ static struct mtk_mbus_frame_desc_entry frame_desc_FCM_9[] = {
 	{
 		.bus.csi2 = {
 			.channel = 0x1,
-			.data_type = 0x30, /* 0x2b, */
-			.hsize = 2040,
-			.vsize = 384,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.data_type = 0x2b,
+			.hsize = 4080,
+			.vsize = 3072,
+			.user_data_desc = VC_STAGGER_ME,
 		},
 	},
 	{
 		.bus.csi2 = {
-			.channel = 0x2,
-			.data_type = 0x30, /* 0x2b, */
-			.hsize = 504,
+			.channel = 0x4,
+			.data_type = 0x2b,
+			.hsize = 2040,
 			.vsize = 384,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_2,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_ME_PIX_1,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
 		},
 	},
@@ -522,7 +635,6 @@ static struct mtk_mbus_frame_desc_entry frame_desc_FCM_15[] = {
 			.hsize = 4080,
 			.vsize = 640,
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 		},
 	},
 	{
@@ -654,21 +766,19 @@ static struct mtk_mbus_frame_desc_entry frame_desc_FCM_19[] = {
 	{
 		.bus.csi2 = {
 			.channel = 0x1,
-			.data_type = 0x30, /* 0x2b, */
-			.hsize = 1016,
-			.vsize = 160,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.data_type = 0x2b,
+			.hsize = 4080,
+			.vsize = 2560,
+			.user_data_desc = VC_STAGGER_ME,
 		},
 	},
 	{
 		.bus.csi2 = {
-			.channel = 0x2,
-			.data_type = 0x30, /* 0x2b, */
-			.hsize = 248,
+			.channel = 0x4,
+			.data_type = 0x2b,
+			.hsize = 1016,
 			.vsize = 160,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_2,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_ME_PIX_1,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
 		},
 	},
@@ -717,8 +827,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_12_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_12_setting),
 		.seamless_switch_group = 1,
-		.seamless_switch_mode_setting_table = FCM_12_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_12_setting),
+		.seamless_switch_mode_setting_table = FCM_12_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_12_setting_seamless),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -763,8 +873,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_12_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_12_setting),
 		.seamless_switch_group = 1,
-		.seamless_switch_mode_setting_table = FCM_12_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_12_setting),
+		.seamless_switch_mode_setting_table = FCM_12_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_12_setting_seamless),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -809,8 +919,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_14_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_14_setting),
 		.seamless_switch_group = 2,
-		.seamless_switch_mode_setting_table = FCM_14_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_14_setting),
+		.seamless_switch_mode_setting_table = FCM_14_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_14_setting_seamless),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -855,8 +965,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_23_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_23_setting),
 		.seamless_switch_group = 3,
-		.seamless_switch_mode_setting_table = FCM_23_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_23_setting),
+		.seamless_switch_mode_setting_table = FCM_23_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_23_setting_seamless),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -901,8 +1011,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_2_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_2_setting),
 		.seamless_switch_group = 1,
-		.seamless_switch_mode_setting_table = FCM_2_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_2_setting),
+		.seamless_switch_mode_setting_table = FCM_2_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_2_setting_seamless),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -935,7 +1045,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 316,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.ana_gain_max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 	},
@@ -947,8 +1057,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_3_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_3_setting),
 		.seamless_switch_group = 1,
-		.seamless_switch_mode_setting_table = FCM_3_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_3_setting),
+		.seamless_switch_mode_setting_table = FCM_3_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_3_setting_seamless),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -981,11 +1091,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 316,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.ana_gain_max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2, /* tetra */
-		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_Gr,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
 	},
 
@@ -997,8 +1107,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_4_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_4_setting),
 		.seamless_switch_group = 1,
-		.seamless_switch_mode_setting_table = FCM_4_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_4_setting),
+		.seamless_switch_mode_setting_table = FCM_4_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_4_setting_seamless),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -1031,11 +1141,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.ana_gain_max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_4X4, /* hexdeca */
-		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_Gr,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
 	},
 
@@ -1047,8 +1157,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_5_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_5_setting),
 		.seamless_switch_group = 1,
-		.seamless_switch_mode_setting_table = FCM_5_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_5_setting),
+		.seamless_switch_mode_setting_table = FCM_5_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_5_setting_seamless),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -1087,116 +1197,22 @@ static struct subdrv_mode_struct mode_struct[] = {
 	},
 
 
-/* cus4 -> FCM_6 */
+/* cus4 -> FCM_8 without AEB */
 /* 02_Volcano2_HP3_Full_12.5Mp_30FPS_4080x3072_HCGonly.sset */
 	{
-		.frame_desc = frame_desc_FCM_6,
-		.num_entries = ARRAY_SIZE(frame_desc_FCM_6),
-		.mode_setting_table = FCM_6_setting,
-		.mode_setting_len = ARRAY_SIZE(FCM_6_setting),
+		.frame_desc = frame_desc_FCM_8_without_AEB,
+		.num_entries = ARRAY_SIZE(frame_desc_FCM_8_without_AEB),
+		.mode_setting_table = FCM_8_without_AEB_setting,
+		.mode_setting_len = ARRAY_SIZE(FCM_8_without_AEB_setting),
 		.seamless_switch_group = 1,
-		.seamless_switch_mode_setting_table = FCM_6_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_6_setting),
+		.seamless_switch_mode_setting_table = FCM_8_setting_without_AEB_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_8_setting_without_AEB_seamless),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
 		.pclk = 2002000000,
 		.linelength = 20320,
 		.framelength = 3279,
-		.max_framerate = 300,
-		.mipi_pixel_rate = 1842285714,
-		.readout_length = 0,
-		.read_margin = 0,
-		.imgsensor_winsize_info = {
-			.full_w = 16320,
-			.full_h = 12288,
-			.x0_offset = (16320-4080*4)/2,
-			.y0_offset = (12288-3072*4)/2,
-			.w0_size = 4080*4,
-			.h0_size = 3072*4,
-			.scale_w = 4080*2,
-			.scale_h = 3072*2,
-			.x1_offset = 0,
-			.y1_offset = 0,
-			.w1_size = 4080,
-			.h1_size = 3072,
-			.x2_tg_offset = 0,
-			.y2_tg_offset = 0,
-			.w2_tg_size = 4080,
-			.h2_tg_size = 3072,
-		},
-		.ae_binning_ratio = 1000,
-		.fine_integ_line = 360,
-		.delay_frame = 2,
-		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
-		.coarse_integ_step = 8,
-		.framelength_step = 8,
-	},
-
-/* cus5 -> FCM_7 */
-/* 02_Volcano1_HP3_Full_12.5Mp_30FPS_4080x3072_direct.sset */
-	{
-		.frame_desc = frame_desc_FCM_7,
-		.num_entries = ARRAY_SIZE(frame_desc_FCM_7),
-		.mode_setting_table = FCM_7_setting,
-		.mode_setting_len = ARRAY_SIZE(FCM_7_setting),
-		.seamless_switch_group = 1,
-		.seamless_switch_mode_setting_table = FCM_7_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_7_setting),
-		.hdr_mode = HDR_NONE,
-		.raw_cnt = 1,
-		.exp_cnt = 1,
-		.pclk = 2002000000,
-		.linelength = 20320,
-		.framelength = 3279,
-		.max_framerate = 300,
-		.mipi_pixel_rate = 1842285714,
-		.readout_length = 0,
-		.read_margin = 0,
-		.imgsensor_winsize_info = { /* HW RM */
-			.full_w = 16320,
-			.full_h = 12288,
-			.x0_offset = (16320-4080)/2,
-			.y0_offset = (12288-3072)/2,
-			.w0_size = 4080,
-			.h0_size = 3072,
-			.scale_w = 4080,
-			.scale_h = 3072,
-			.x1_offset = 0,
-			.y1_offset = 0,
-			.w1_size = 4080,
-			.h1_size = 3072,
-			.x2_tg_offset = 0,
-			.y2_tg_offset = 0,
-			.w2_tg_size = 4080,
-			.h2_tg_size = 3072,
-		},
-		.ae_binning_ratio = 1000,
-		.fine_integ_line = 360,
-		.delay_frame = 2,
-		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
-		.coarse_integ_step = 8,
-		.framelength_step = 8,
-	},
-
-/* cus6 -> FCM_8 */
-/* 02_Volcano2_HP3_Full_12.5Mp_30FPS_4080x3072_HCGonly.sset */
-	{
-		.frame_desc = frame_desc_FCM_8,
-		.num_entries = ARRAY_SIZE(frame_desc_FCM_8),
-		.mode_setting_table = FCM_8_setting,
-		.mode_setting_len = ARRAY_SIZE(FCM_8_setting),
-		.seamless_switch_group = 1,
-		.seamless_switch_mode_setting_table = FCM_8_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_8_setting),
-		.hdr_mode = HDR_NONE, /* HDR_RAW_LBMF */
-		.raw_cnt = 2,
-		.exp_cnt = 2,
-		.pclk = 2002000000,
-		.linelength = 20320,
-		.framelength = 3272,
 		.max_framerate = 300,
 		.mipi_pixel_rate = 1842285714,
 		.readout_length = 0,
@@ -1223,11 +1239,108 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.ana_gain_max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_4X4, /* hexdeca */
-		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_Gr,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
+		.awb_enabled = 1,
+	},
+
+/* cus5 -> FCM_7 */
+/* 02_Volcano1_HP3_Full_12.5Mp_30FPS_4080x3072_direct.sset */
+	{
+		.frame_desc = frame_desc_FCM_7,
+		.num_entries = ARRAY_SIZE(frame_desc_FCM_7),
+		.mode_setting_table = FCM_7_setting,
+		.mode_setting_len = ARRAY_SIZE(FCM_7_setting),
+		.seamless_switch_group = 1,
+		.seamless_switch_mode_setting_table = FCM_7_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_7_setting_seamless),
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 2002000000,
+		.linelength = 20320,
+		.framelength = 3279,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 1842285714,
+		.readout_length = 0,
+		.read_margin = 0,
+		.imgsensor_winsize_info = { /* HW RM */
+			.full_w = 16320,
+			.full_h = 12288,
+			.x0_offset = (16320-4080)/2,
+			.y0_offset = (12288-3072)/2,
+			.w0_size = 4080,
+			.h0_size = 3072,
+			.scale_w = 4080,
+			.scale_h = 3072,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4080,
+			.h1_size = 3072,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4080,
+			.h2_tg_size = 3072,
+		},
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 360,
+		.delay_frame = 2,
+		.min_exposure_line = 16,
+		.ana_gain_max = BASEGAIN * 64,
+		.coarse_integ_step = 8,
+		.framelength_step = 8,
+	},
+
+/* cus6 -> FCM_8 */
+/* 02_Volcano2_HP3_Full_12.5Mp_30FPS_4080x3072_HCGonly.sset */
+	{
+		.frame_desc = frame_desc_FCM_8,
+		.num_entries = ARRAY_SIZE(frame_desc_FCM_8),
+		.mode_setting_table = FCM_8_setting,
+		.mode_setting_len = ARRAY_SIZE(FCM_8_setting),
+		.seamless_switch_group = 1,
+		.seamless_switch_mode_setting_table = FCM_8_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_8_setting_seamless),
+		.hdr_mode = HDR_RAW_LBMF,
+		.raw_cnt = 2,
+		.exp_cnt = 2,
+		.pclk = 2002000000,
+		.linelength = 20320,
+		.framelength = 3272,
+		.max_framerate = 150,
+		.mipi_pixel_rate = 1842285714,
+		.readout_length = 0,
+		.read_margin = 0,
+		.imgsensor_winsize_info = { /* 16cell */
+			.full_w = 16320,
+			.full_h = 12288,
+			.x0_offset = (16320-4080)/2,
+			.y0_offset = (12288-3072)/2,
+			.w0_size = 4080,
+			.h0_size = 3072,
+			.scale_w = 4080,
+			.scale_h = 3072,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4080,
+			.h1_size = 3072,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4080,
+			.h2_tg_size = 3072,
+		},
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 360,
+		.delay_frame = 2,
+		.min_exposure_line = 16,
+		.ana_gain_max = BASEGAIN * 64,
+		.coarse_integ_step = 8,
+		.framelength_step = 8,
+		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_4X4, /* hexdeca */
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
 		.exposure_order_in_lbmf = IMGSENSOR_LBMF_EXPOSURE_SE_FIRST,
 		.mode_type_in_lbmf = IMGSENSOR_LBMF_MODE_MANUAL,
@@ -1245,15 +1358,15 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_9_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_9_setting),
 		.seamless_switch_group = 1,
-		.seamless_switch_mode_setting_table = FCM_9_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_9_setting),
-		.hdr_mode = HDR_NONE, /* HDR_RAW_LBMF */
+		.seamless_switch_mode_setting_table = FCM_9_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_9_setting_seamless),
+		.hdr_mode = HDR_RAW_LBMF,
 		.raw_cnt = 2,
 		.exp_cnt = 2,
 		.pclk = 1759333333,
 		.linelength = 11562,
 		.framelength = 5072, /* origin: 2796, modify to 30 FPS */
-		.max_framerate = 300, /* origin: 544, modify to 30 FPS */
+		.max_framerate = 150, /* origin: 544, modify to 30 FPS */
 		.mipi_pixel_rate = 1842285714,
 		.readout_length = 0,
 		.read_margin = 0,
@@ -1279,11 +1392,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 316,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.ana_gain_max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2, /* tetra */
-		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_Gr,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
 		.exposure_order_in_lbmf = IMGSENSOR_LBMF_EXPOSURE_SE_FIRST,
 		.mode_type_in_lbmf = IMGSENSOR_LBMF_MODE_MANUAL,
@@ -1301,8 +1414,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_10_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_10_setting),
 		.seamless_switch_group = 1,
-		.seamless_switch_mode_setting_table = FCM_10_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_10_setting),
+		.seamless_switch_mode_setting_table = FCM_10_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_10_setting_seamless),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -1335,7 +1448,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 316,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.ana_gain_max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 	},
@@ -1348,8 +1461,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_11_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_11_setting),
 		.seamless_switch_group = 1,
-		.seamless_switch_mode_setting_table = FCM_11_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_11_setting),
+		.seamless_switch_mode_setting_table = FCM_11_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_11_setting_seamless),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -1382,11 +1495,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 316,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.ana_gain_max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2, /* tetra */
-		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_Gr,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
 	},
 
@@ -1398,8 +1511,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_13_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_13_setting),
 		.seamless_switch_group = 1,
-		.seamless_switch_mode_setting_table = FCM_13_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_13_setting),
+		.seamless_switch_mode_setting_table = FCM_13_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_13_setting_seamless),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -1446,8 +1559,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_15_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_15_setting),
 		.seamless_switch_group = 2,
-		.seamless_switch_mode_setting_table = FCM_15_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_15_setting),
+		.seamless_switch_mode_setting_table = FCM_15_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_15_setting_seamless),
 		.hdr_mode = HDR_RAW_STAGGER,
 		.raw_cnt = 2,
 		.exp_cnt = 2,
@@ -1478,12 +1591,18 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.h2_tg_size = 2560,
 		},
 		.ae_binning_ratio = 1000,
-		.fine_integ_line = 360,
+		.fine_integ_line = 180,
 		.delay_frame = 2,
-		.min_exposure_line = 16,
+		.min_exposure_line = 8,
 		.ana_gain_max = BASEGAIN * 128,
-		.coarse_integ_step = 8,
-		.framelength_step = 8,
+		.framelength_step = 4,
+		.coarse_integ_step = 4,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min =  8,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min =  8,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 128,//8SUM2
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 128,//8SUM2
 	},
 
 /* cus12 -> FCM_16 */
@@ -1494,8 +1613,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_16_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_16_setting),
 		.seamless_switch_group = 2,
-		.seamless_switch_mode_setting_table = FCM_16_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_16_setting),
+		.seamless_switch_mode_setting_table = FCM_16_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_16_setting_seamless),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -1528,11 +1647,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 316,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.ana_gain_max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2, /* tetra */
-		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_Gr,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
 	},
 
@@ -1545,8 +1664,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_17_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_17_setting),
 		.seamless_switch_group = 2,
-		.seamless_switch_mode_setting_table = FCM_17_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_17_setting),
+		.seamless_switch_mode_setting_table = FCM_17_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_17_setting_seamless),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -1592,8 +1711,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_18_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_18_setting),
 		.seamless_switch_group = 2,
-		.seamless_switch_mode_setting_table = FCM_18_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_18_setting),
+		.seamless_switch_mode_setting_table = FCM_18_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_18_setting_seamless),
 		.hdr_mode = HDR_NONE,
 		.raw_cnt = 1,
 		.exp_cnt = 1,
@@ -1626,11 +1745,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.ana_gain_max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_4X4, /* hexdeca */
-		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_Gr,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
 	},
 
@@ -1642,15 +1761,15 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mode_setting_table = FCM_19_setting,
 		.mode_setting_len = ARRAY_SIZE(FCM_19_setting),
 		.seamless_switch_group = 2,
-		.seamless_switch_mode_setting_table = FCM_19_setting,
-		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_19_setting),
-		.hdr_mode = HDR_NONE, /* HDR_RAW_LBMF */
+		.seamless_switch_mode_setting_table = FCM_19_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_19_setting_seamless),
+		.hdr_mode = HDR_RAW_LBMF,
 		.raw_cnt = 2,
 		.exp_cnt = 2,
 		.pclk = 2002000000,
 		.linelength = 20320,
 		.framelength = 3279,
-		.max_framerate = 300,
+		.max_framerate = 150,
 		.mipi_pixel_rate = 1842285714,
 		.readout_length = 0,
 		.read_margin = 0,
@@ -1676,11 +1795,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.ana_gain_max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_4X4, /* hexdeca */
-		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_Gr,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
 		.exposure_order_in_lbmf = IMGSENSOR_LBMF_EXPOSURE_SE_FIRST,
 		.mode_type_in_lbmf = IMGSENSOR_LBMF_MODE_MANUAL,
@@ -1690,6 +1809,233 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = 0xFFFF,
 	},
 
+/* cus16 -> FCM_28 */
+/* 11_Volcano3_HP3_Fdsum_12.5Mp_60FPS_4080x2296_direct.sset */
+	{
+		.frame_desc = frame_desc_FCM_28,
+		.num_entries = ARRAY_SIZE(frame_desc_FCM_28),
+		.mode_setting_table = FCM_28_setting,
+		.mode_setting_len = ARRAY_SIZE(FCM_28_setting),
+		.seamless_switch_group = 3,
+		.seamless_switch_mode_setting_table = FCM_28_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_28_setting_seamless),
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 1759333333,
+		.linelength = 11680,
+		.framelength = 2500, // 2507,
+		.max_framerate = 600,
+		.mipi_pixel_rate = 2359344000,
+		.readout_length = 0,
+		.read_margin = 0,
+		.imgsensor_winsize_info = { /* 4cell */
+			.full_w = 16320,
+			.full_h = 12288,
+			.x0_offset = (16320-4080*2)/2,
+			.y0_offset = (12288-2296*2)/2,
+			.w0_size = 4080*2,
+			.h0_size = 2296*2,
+			.scale_w = 4080,
+			.scale_h = 2296,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4080,
+			.h1_size = 2296,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4080,
+			.h2_tg_size = 2296,
+		},
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 316,
+		.delay_frame = 2,
+		.min_exposure_line = 16,
+		.ana_gain_max = BASEGAIN * 64,
+		.coarse_integ_step = 8,
+		.framelength_step = 8,
+		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2, /* tetra */
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
+		.awb_enabled = 1,
+	},
+
+/* cus17 -> FCM_1 */
+/* 01_Volcano_HP3_Full_200Mp_7.5FPS_16320x12288_direct.sset */
+	{
+		.frame_desc = frame_desc_FCM_1,
+		.num_entries = ARRAY_SIZE(frame_desc_FCM_1),
+		.mode_setting_table = FCM_1_setting_normal,
+		.mode_setting_len = ARRAY_SIZE(FCM_1_setting_normal),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 2002000000,
+		.linelength = 21136,
+		.framelength = 12603,
+		.max_framerate = 75,
+		.mipi_pixel_rate = 1842285714,
+		.readout_length = 0,
+		.read_margin = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 16320,
+			.full_h = 12288,
+			.x0_offset = 0,
+			.y0_offset = 0,
+			.w0_size = 16320,
+			.h0_size = 12288,
+			.scale_w = 16320,
+			.scale_h = 12288,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 16320,
+			.h1_size = 12288,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 16320,
+			.h2_tg_size = 12288,
+		},
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 360,
+		.delay_frame = 2,
+		.min_exposure_line = 16,
+		.ana_gain_max = BASEGAIN * 16, /* full:16, 4Sum:64, 8Sum_2H1V:128, iDCG:16, FHD:128 */
+		.coarse_integ_step = 8,
+		.framelength_step = 8,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min =  8,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,//FULL
+		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_4X4, /* hexdeca */
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
+		.awb_enabled = 1,
+		.exposure_margin = 164, /* full:164, 4Sum:55, 8Sum_2H1V:34 */
+	},
+
+	/* cus18 -> FCM_29 (iDCG1:8) */
+/* 26_Volcano1_HP3_8Fdsum_2H1V_12.5Mp_iDCG_60FPS_4080x2616_direct.sset */
+	{
+		.frame_desc = frame_desc_FCM_29,
+		.num_entries = ARRAY_SIZE(frame_desc_FCM_29),
+		.mode_setting_table = FCM_29_setting,
+		.mode_setting_len = ARRAY_SIZE(FCM_29_setting),
+		.seamless_switch_group = 3,
+		.seamless_switch_mode_setting_table = FCM_29_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_29_setting_seamless),
+		.hdr_mode = HDR_RAW_DCG_RAW,
+		.raw_cnt = 2,
+		.exp_cnt = 2,
+		.pclk = 2002000000,
+		.linelength = 12016,
+		.framelength = 2774,
+		.max_framerate = 600,
+		.mipi_pixel_rate = 2359344000,
+		.readout_length = 0,
+		.read_margin = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 16320,
+			.full_h = 12288,
+			.x0_offset = (16320-4080*4)/2,
+			.y0_offset = (12288-2560*4)/2,
+			.w0_size = 4080*4,
+			.h0_size = 2560*4,
+			.scale_w = 4080*2,
+			.scale_h = 2560*2,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4080,
+			.h1_size = 2560,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4080,
+			.h2_tg_size = 2560,
+		},
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 500,
+		.delay_frame = 2,
+		.min_exposure_line = 8,
+		.ana_gain_max = BASEGAIN * 16,
+		.csi_param = {0},
+		.saturation_info = &imgsensor_saturation_info_10bit,
+		.dcg_info = {
+			.dcg_mode = IMGSENSOR_DCG_RAW,
+			.dcg_gain_mode = IMGSENSOR_DCG_RATIO_MODE,
+			.dcg_gain_base = IMGSENSOR_DCG_GAIN_LCG_BASE,
+			.dcg_gain_ratio_min = 8000,
+			.dcg_gain_ratio_max = 8000,
+			.dcg_gain_ratio_step = 0,
+		},
+		.coarse_integ_step = 2,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min =  8,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min =  8,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 8,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 8,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 1,
+	},
+
+	/* cus19 -> FCM_30 (iDCG1:4) */
+/* 26_Volcano5_HP3_8Fdsum_2H1V_12.5Mp_iDCG_60FPS_4080x2616_direct.sset */
+	{
+		.frame_desc = frame_desc_FCM_30,
+		.num_entries = ARRAY_SIZE(frame_desc_FCM_30),
+		.mode_setting_table = FCM_30_setting,
+		.mode_setting_len = ARRAY_SIZE(FCM_30_setting),
+		.seamless_switch_group = 3,
+		.seamless_switch_mode_setting_table = FCM_30_setting_seamless,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(FCM_30_setting_seamless),
+		.hdr_mode = HDR_RAW_DCG_RAW,
+		.raw_cnt = 2,
+		.exp_cnt = 2,
+		.pclk = 2002000000,
+		.linelength = 12016,
+		.framelength = 2774,
+		.max_framerate = 600,
+		.mipi_pixel_rate = 2359344000,
+		.readout_length = 0,
+		.read_margin = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 16320,
+			.full_h = 12288,
+			.x0_offset = (16320-4080*4)/2,
+			.y0_offset = (12288-2560*4)/2,
+			.w0_size = 4080*4,
+			.h0_size = 2560*4,
+			.scale_w = 4080*2,
+			.scale_h = 2560*2,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4080,
+			.h1_size = 2560,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4080,
+			.h2_tg_size = 2560,
+		},
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 500,
+		.delay_frame = 2,
+		.min_exposure_line = 8,
+		.ana_gain_max = BASEGAIN * 16,
+		.csi_param = {0},
+		.saturation_info = &imgsensor_saturation_info_10bit,
+		.dcg_info = {
+			.dcg_mode = IMGSENSOR_DCG_RAW,
+			.dcg_gain_mode = IMGSENSOR_DCG_RATIO_MODE,
+			.dcg_gain_base = IMGSENSOR_DCG_GAIN_LCG_BASE,
+			.dcg_gain_ratio_min = 4000,
+			.dcg_gain_ratio_max = 4000,
+			.dcg_gain_ratio_step = 0,
+		},
+		.coarse_integ_step = 2,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min =  8,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min =  8,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 4,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 4,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 1,
+	},
 };
 
 struct mtk_sensor_ctle_param static_ctle_param = {
@@ -1735,7 +2081,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.exposure_min = 6,
 	.exposure_max = (0xFFFF - 74) << 7, /* cit_lshift_max = 7 */
 	.exposure_step = 1,
-	.exposure_margin = 74,
+	.exposure_margin = 34,
 	.dig_gain_min = BASE_DGAIN * 1,
 	.dig_gain_max = BASE_DGAIN * 16,
 	.dig_gain_step = 4,
@@ -1778,19 +2124,21 @@ static struct subdrv_static_ctx static_ctx = {
 	.reg_addr_auto_extend = PARAM_UNDEFINED,
 	.reg_addr_frame_count = 0x0005,
 
-	.reg_addr_frame_length_in_lut = {
-			{0x0E16, 0x0E17},  /* LUT_A_FRM_LENGTH_LINES */
-			{0x0E24, 0x0E25},  /* LUT_B_FRM_LENGTH_LINES */
-	},
-
 	.reg_addr_exposure_in_lut = {
 			{0x0E10, 0x0E11}, /* LUT_A_COARSE_INTEG_TIME */
 			{0x0E1E, 0x0E1F}, /* LUT_B_COARSE_INTEG_TIME */
 	},
-
 	.reg_addr_ana_gain_in_lut = {
 			{0x0E12, 0x0E13}, /* LUT_A_ANA_GAIN_GLOBAL */
 			{0x0E20, 0x0E21}, /* LUT_B_ANA_GAIN_GLOBAL */
+	},
+	.reg_addr_dig_gain_in_lut = {
+			{0x0E14, 0x0E15},
+			{0x0E22, 0x0E23},
+	},
+	.reg_addr_frame_length_in_lut = {
+			{0x0E24, 0x0E25},
+			{0x0E16, 0x0E17},
 	},
 
 
@@ -1813,7 +2161,7 @@ static struct subdrv_ops ops = {
 	.open = open,
 	.get_info = common_get_info,
 	.get_resolution = common_get_resolution,
-	.control = s5khp9sp_control,
+	.control = common_control,
 	.feature_control = common_feature_control,
 	.close = common_close,
 	.get_frame_desc = common_get_frame_desc,
@@ -2038,12 +2386,12 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 	return 0;
 }
 
-
-static int s5khp9sp_sensor_init(struct subdrv_ctx *ctx)
+static void s5khp9sp_sensor_init(struct subdrv_ctx *ctx)
 {
-	int rc = 0;
+	u64 time_boot_begin = 0;
+	u64 ixc_time = 0;
 
-	DRV_LOG(ctx, "E\n");
+	DRV_LOG(ctx, " start\n");
 	subdrv_i2c_wr_u16(ctx, 0xFCFC, 0x4000);
 	subdrv_i2c_wr_u16(ctx, 0x0000, 0x0001); /* version */
 	subdrv_i2c_wr_u16(ctx, 0x0000, 0x1B73); /* model ID */
@@ -2051,23 +2399,62 @@ static int s5khp9sp_sensor_init(struct subdrv_ctx *ctx)
 	subdrv_i2c_wr_u16(ctx, 0x7002, 0x0008); /* boot with PLL*/
 	subdrv_i2c_wr_u16(ctx, 0x6014, 0x0001); /* SW load complete*/
 	mdelay(20);
-	i2c_table_write(ctx, s5khp9sp_init_setting, sizeof(s5khp9sp_init_setting)/sizeof(u16));
-	DRV_LOG(ctx, "X\n");
 
-	return rc;
+	/* write init setting */
+	if (ctx->s_ctx.init_setting_table != NULL) {
+		DRV_LOG(ctx, "S: size:%u\n", ctx->s_ctx.init_setting_len);
+		if ((ctx->power_on_profile_en != NULL) &&
+			(*ctx->power_on_profile_en))
+			time_boot_begin = ktime_get_boottime_ns();
+
+		ixc_time = ixc_table_write(ctx, ctx->s_ctx.init_setting_table, ctx->s_ctx.init_setting_len);
+
+		if ((ctx->power_on_profile_en != NULL) &&
+			(*ctx->power_on_profile_en)) {
+			ctx->sensor_pw_on_profile.i2c_init_period =
+				ktime_get_boottime_ns() - time_boot_begin;
+
+			 ctx->sensor_pw_on_profile.i2c_init_table_len =
+							ctx->s_ctx.init_setting_len;
+		}
+		DRV_LOG_MUST(ctx, "X: size:%u, time(us):%lld\n", ctx->s_ctx.init_setting_len,
+			ixc_time);
+	} else {
+		DRV_LOG_MUST(ctx, "please implement initial setting!\n");
+	}
+	/* enable temperature sensor */
+#if IMGSENSOR_AOV_EINT_UT
+#else
+	if (ctx->s_ctx.temperature_support && ctx->s_ctx.reg_addr_temp_en)
+		subdrv_ixc_wr_u8(ctx, ctx->s_ctx.reg_addr_temp_en, 0x01);
+	/* enable mirror or flip */
+	set_mirror_flip(ctx, ctx->mirror);
+#endif
+
+	DRV_LOG(ctx, " end\n");
 }
+
 
 static int open(struct subdrv_ctx *ctx)
 {
 	u32 sensor_id = 0;
 	u32 scenario_id = 0;
+	u32 linetime_in_ns = 0;
 
 	/* get sensor id */
 	if (common_get_imgsensor_id(ctx, &sensor_id) != ERROR_NONE)
 		return ERROR_SENSOR_CONNECT_FAIL;
 
 	/* initail setting */
-	s5khp9sp_sensor_init(ctx);
+	if (ctx->s_ctx.aov_sensor_support && !ctx->s_ctx.init_in_open)
+		DRV_LOG_MUST(ctx, "sensor init not in open stage!\n");
+	else
+		s5khp9sp_sensor_init(ctx);
+
+	if (ctx->s_ctx.s_cali != NULL)
+		ctx->s_ctx.s_cali((void *) ctx);
+	else
+		write_sensor_Cali(ctx);
 
 	memset(ctx->exposure, 0, sizeof(ctx->exposure));
 	memset(ctx->ana_gain, 0, sizeof(ctx->gain));
@@ -2077,7 +2464,16 @@ static int open(struct subdrv_ctx *ctx)
 	ctx->pclk = ctx->s_ctx.mode[scenario_id].pclk;
 	ctx->line_length = ctx->s_ctx.mode[scenario_id].linelength;
 	ctx->frame_length = ctx->s_ctx.mode[scenario_id].framelength;
-	ctx->current_fps = 10 * ctx->pclk / ctx->line_length / ctx->frame_length;
+	ctx->frame_length_rg = ctx->frame_length;
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+		ctx->current_fps = 1000000000 / linetime_in_ns * 10 / ctx->frame_length;
+	} else {
+		ctx->current_fps = ctx->pclk / ctx->line_length * 10 / ctx->frame_length;
+	}
+
 	ctx->readout_length = ctx->s_ctx.mode[scenario_id].readout_length;
 	ctx->read_margin = ctx->s_ctx.mode[scenario_id].read_margin;
 	ctx->min_frame_length = ctx->frame_length;
@@ -2092,9 +2488,32 @@ static int open(struct subdrv_ctx *ctx)
 	ctx->sof_cnt = 0;
 	ctx->ref_sof_cnt = 0;
 	ctx->is_streaming = 0;
+	if (ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_LBMF) {
+		memset(ctx->frame_length_in_lut, 0,
+			sizeof(ctx->frame_length_in_lut));
+
+		switch (ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt) {
+		case 2:
+			ctx->frame_length_in_lut[0] = ctx->readout_length + ctx->read_margin;
+			ctx->frame_length_in_lut[1] = ctx->frame_length -
+				ctx->frame_length_in_lut[0];
+			break;
+		case 3:
+			ctx->frame_length_in_lut[0] = ctx->readout_length + ctx->read_margin;
+			ctx->frame_length_in_lut[1] = ctx->readout_length + ctx->read_margin;
+			ctx->frame_length_in_lut[2] = ctx->frame_length -
+				ctx->frame_length_in_lut[1] - ctx->frame_length_in_lut[0];
+			break;
+		default:
+			break;
+		}
+
+		memcpy(ctx->frame_length_in_lut_rg, ctx->frame_length_in_lut,
+			sizeof(ctx->frame_length_in_lut_rg));
+	}
 
 	return ERROR_NONE;
-} /* open */
+}
 
 static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt, u64 sof_ts)
 {
@@ -2128,138 +2547,4 @@ static int s5khp9sp_set_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	DRV_LOG(ctx, "[test] 0x0D84(green) = (0x%x)", subdrv_i2c_rd_u16(ctx, 0x0D84));
 	DRV_LOG(ctx, "[test] 0x0D86(blue) = (0x%x)", subdrv_i2c_rd_u16(ctx, 0x0D86));
 	return 0;
-}
-
-static int s5khp9sp_control(struct subdrv_ctx *ctx,
-			enum SENSOR_SCENARIO_ID_ENUM scenario_id,
-			MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
-			MSDK_SENSOR_CONFIG_STRUCT *sensor_config_data)
-{
-	int ret = ERROR_NONE;
-	u16 idx = 0;
-	u8 support = FALSE;
-	u8 *pbuf = NULL;
-	u16 size = 0;
-	u16 addr = 0;
-	u64 time_boot_begin = 0;
-	u64 ixc_time = 0;
-	u32 fast_mode_in_lbmf = 0;
-	struct eeprom_info_struct *info = ctx->s_ctx.eeprom_info;
-	struct adaptor_ctx *_adaptor_ctx = NULL;
-	struct v4l2_subdev *sd = NULL;
-
-	u16 *FCM_basic_setting = NULL;
-	u32 FCM_basic_setting_len = 0;
-
-	if (ctx->i2c_client)
-		sd = i2c_get_clientdata(ctx->i2c_client);
-	if (ctx->ixc_client.protocol)
-		sd = adaptor_ixc_get_clientdata(&ctx->ixc_client);
-	if (sd)
-		_adaptor_ctx = to_ctx(sd);
-	if (!_adaptor_ctx) {
-		DRV_LOGE(ctx, "null _adaptor_ctx\n");
-		return -ENODEV;
-	}
-
-	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
-		DRV_LOGE(ctx, "invalid sid:%u, mode_num:%u\n",
-			scenario_id, ctx->s_ctx.sensor_mode_num);
-		scenario_id = SENSOR_SCENARIO_ID_NORMAL_PREVIEW;
-		ret = ERROR_INVALID_SCENARIO_ID;
-	}
-	if (ctx->s_ctx.chk_s_off_sta)
-		check_stream_off(ctx);
-	update_mode_info(ctx, scenario_id);
-
-	if (ctx->s_ctx.mode[scenario_id].mode_setting_table != NULL) {
-		/* FCM_basic_setting */
-		switch (ctx->s_ctx.mode[scenario_id].seamless_switch_group) {
-		case 1:
-			FCM_basic_setting = S1_FCM_basic_setting;
-			FCM_basic_setting_len = ARRAY_SIZE(S1_FCM_basic_setting);
-			break;
-		case 2:
-			FCM_basic_setting = S2_FCM_basic_setting;
-			FCM_basic_setting_len = ARRAY_SIZE(S2_FCM_basic_setting);
-			break;
-		case 3:
-			FCM_basic_setting = S3_FCM_basic_setting;
-			FCM_basic_setting_len = ARRAY_SIZE(S3_FCM_basic_setting);
-			break;
-		default:
-			break;
-		}
-		DRV_LOG(ctx, "E: sid:%u size:%u\n", scenario_id,
-			ctx->s_ctx.mode[scenario_id].mode_setting_len);
-		if ((ctx->power_on_profile_en != NULL) &&
-			(*ctx->power_on_profile_en))
-			time_boot_begin = ktime_get_boottime_ns();
-
-		/* initail setting */
-		if (ctx->s_ctx.aov_sensor_support) {
-			if (ctx->s_ctx.mode[scenario_id].aov_mode &&
-				ctx->s_ctx.s_pwr_seq_reset_view_to_sensing != NULL)
-				ctx->s_ctx.s_pwr_seq_reset_view_to_sensing((void *) ctx);
-
-			if (!ctx->s_ctx.init_in_open)
-				sensor_init(ctx);
-		}
-		switch (ctx->sensor_mode_ops) {
-		case AOV_MODE_CTRL_OPS_SENSING_CTRL:
-		default:
-			if (FCM_basic_setting)
-				ixc_table_write(ctx, FCM_basic_setting, FCM_basic_setting_len);
-
-			ixc_time = ixc_table_write(ctx, ctx->s_ctx.mode[scenario_id].mode_setting_table,
-				ctx->s_ctx.mode[scenario_id].mode_setting_len);
-			break;
-		}
-
-		if ((ctx->power_on_profile_en != NULL) &&
-			(*ctx->power_on_profile_en)) {
-			ctx->sensor_pw_on_profile.i2c_cfg_period =
-					ktime_get_boottime_ns() - time_boot_begin;
-
-			ctx->sensor_pw_on_profile.i2c_cfg_table_len =
-					ctx->s_ctx.mode[scenario_id].mode_setting_len;
-		}
-		DRV_LOG_MUST(ctx, "X: sid:%u size:%u, ixc_time(us): %lld\n", scenario_id,
-			ctx->s_ctx.mode[scenario_id].mode_setting_len,
-			ixc_time);
-	} else {
-		DRV_LOGE(ctx, "please implement mode setting(sid:%u)!\n", scenario_id);
-	}
-
-	if (check_is_no_crop(ctx, scenario_id) && probe_eeprom(ctx)) {
-		idx = ctx->eeprom_index;
-		support = info[idx].xtalk_support;
-		pbuf = info[idx].preload_xtalk_table;
-		size = info[idx].xtalk_size;
-		addr = info[idx].sensor_reg_addr_xtalk;
-		if (support) {
-			if (pbuf != NULL && addr > 0 && size > 0) {
-				subdrv_ixc_wr_seq_p8(ctx, addr, pbuf, size);
-				DRV_LOG(ctx, "set XTALK calibration data done.");
-			}
-		}
-	}
-
-	if (ctx->s_ctx.aov_sensor_support &&
-		ctx->s_ctx.s_data_rate_global_timing_phy_ctrl != NULL)
-		ctx->s_ctx.s_data_rate_global_timing_phy_ctrl((void *) ctx);
-
-	set_mirror_flip(ctx, ctx->s_ctx.mirror);
-
-	if (ctx->s_ctx.reg_addr_fast_mode_in_lbmf &&
-		ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_LBMF) {
-		/* enable bit[2] on lbmf mode */
-		fast_mode_in_lbmf =
-			subdrv_ixc_rd_u8(ctx, ctx->s_ctx.reg_addr_fast_mode_in_lbmf) | 0x4;
-		subdrv_ixc_wr_u8(ctx,
-			ctx->s_ctx.reg_addr_fast_mode_in_lbmf,
-			fast_mode_in_lbmf);
-	}
-
-	return ret;
 }
