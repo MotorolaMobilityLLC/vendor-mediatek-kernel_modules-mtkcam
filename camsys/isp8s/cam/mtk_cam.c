@@ -4079,10 +4079,8 @@ static struct component_match *mtk_cam_match_add(struct device *dev)
 	eng->num_seninf_devices =
 		add_match_by_driver(dev, &match, &seninf_pdrv);
 
-#ifdef SKIP_IN_FPGA_EP
 	if (GET_PLAT_HW(bwr_support))
 		add_match_by_driver(dev, &match, &mtk_cam_bwr_driver);
-#endif
 
 	if (IS_ERR(match) || mtk_cam_alloc_for_engine(dev))
 		mtk_cam_match_remove(dev);
@@ -4569,7 +4567,6 @@ static int register_sub_drivers(struct device *dev)
 		goto REGISTER_RMS_FAIL;
 	}
 
-#ifdef SKIP_IN_FPGA_EP
 	if (GET_PLAT_HW(bwr_support)) {
 		ret = platform_driver_register(&mtk_cam_bwr_driver);
 		if (ret) {
@@ -4577,7 +4574,6 @@ static int register_sub_drivers(struct device *dev)
 			goto REGISTER_BWR_FAIL;
 		}
 	}
-#endif
 
 	match = mtk_cam_match_add(dev);
 	if (IS_ERR(match)) {
@@ -4595,12 +4591,10 @@ MASTER_ADD_MATCH_FAIL:
 	mtk_cam_match_remove(dev);
 
 ADD_MATCH_FAIL:
-#ifdef SKIP_IN_FPGA_EP
 	if (GET_PLAT_HW(bwr_support))
 		platform_driver_unregister(&mtk_cam_bwr_driver);
 
 REGISTER_BWR_FAIL:
-#endif
 	platform_driver_unregister(&mtk_cam_rms_driver);
 
 REGISTER_RMS_FAIL:

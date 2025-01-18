@@ -19,11 +19,11 @@ enum BWR_ENGINE_TYPE {
 	ENGINE_SUB_A = 0,
 	ENGINE_SUB_B,
 	ENGINE_SUB_C,
-	ENGINE_MRAW,
+	ENGINE_MRAW, /* no used */
 	ENGINE_CAM_MAIN,
 	ENGINE_CAMSV_B,
 	ENGINE_CAMSV_A,
-	ENGINE_DPE,
+	ENGINE_CAMSV_C,
 	ENGINE_PDA,
 	ENGINE_CAMSV_OTHER,
 	ENGINE_UISP,
@@ -32,12 +32,14 @@ enum BWR_ENGINE_TYPE {
 
 /* do not modify order */
 enum BWR_AXI_PORT {
-	DISP_PORT = 0,
-	MDP0_PORT,
-	MDP1_PORT,
-	SYS_PORT,
-	NUM_PORT,
+	CAM1_PORT = 0,  /* DISP-0 */
+	CAM2_PORT,      /* MDP-0  */
+	CAM3_PORT,      /* DISP-1 */
+	CAM0_PORT,      /* MDP-1  */
+	CAM6_PORT,      /* CAM2SYS */
+	BWR_AXI_PORT_NUM,
 };
+
 
 struct mtk_bwr_device {
 	struct device *dev;
@@ -53,40 +55,26 @@ static inline int get_axi_port(int raw_id, int is_raw)
 {
 	switch(raw_id) {
 	case 0:
-		return is_raw ? DISP_PORT : MDP0_PORT;
+		return is_raw ? CAM0_PORT : CAM2_PORT;
 	case 1:
-		return is_raw ? MDP0_PORT : DISP_PORT;
+		return is_raw ? CAM1_PORT : CAM0_PORT;
 	case 2:
-		return is_raw ? DISP_PORT : MDP0_PORT;
+		return is_raw ? CAM3_PORT : CAM1_PORT;
 	default:
 		return 0;
 	}
 }
+
+/* todo: need camsv check */
 static inline int get_sv_axi_port(int sv_id)
 {
-	switch(sv_id) {
-	case 0:
-		return MDP1_PORT;
-	case 1:
-		return MDP0_PORT;
-	default:
-		return DISP_PORT;
-	}
+	return 0;
 }
+
+/* Jayer no used */
 static inline int get_mraw_axi_port(int mraw_id)
 {
-	switch(mraw_id) {
-	case 0:
-		return DISP_PORT;
-	case 1:
-		return MDP0_PORT;
-	case 2:
-		return DISP_PORT;
-	case 3:
-		return MDP0_PORT;
-	default:
-		return 0;
-	}
+	return 0;
 }
 
 static inline int get_bwr_engine(int raw_id)
