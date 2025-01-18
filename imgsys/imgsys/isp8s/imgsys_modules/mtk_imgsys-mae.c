@@ -24,7 +24,11 @@ static void __iomem *g_maeRegBA;
 #define MAE_CTRL_CENTER_BASE              (0x1000)
 #define MAE_CTRL_CENTER_LEN               (0x308)
 
-// 0x4200 MAE_RSZ0
+// 0x4000 MAE_COSSIM
+#define MAE_COSSIM_BASE                   (0x4000)
+#define MAE_COSSIM_LEN                    (0x000C)
+
+// 0x4200 MAE_MAISR
 #define MAE_MAISR_BASE                    (0x4200)
 #define MAE_MAISR_LEN                     (0x0600)
 
@@ -32,9 +36,17 @@ static void __iomem *g_maeRegBA;
 #define MAE_RSZ0_BASE                     (0x4800)
 #define MAE_RSZ0_LEN                      (0x01F4)
 
+// 0x4A00 MAE_CMP_2
+#define MAE_CMP_2_BASE                    (0x4A00)
+#define MAE_CMP_2_LEN                     (0x01F4)
+
 // 0x4C00 MAE_UDMA_W
 #define MAE_UDMA_W_BASE                   (0x4C00)
 #define MAE_UDMA_W_LEN                    (0x01FC)
+
+// 0x4E00 MAE_WDMA
+#define MAE_WDMA_BASE                     (0x4E00)
+#define MAE_WDMA_LEN                      (0x01F8)
 
 // 0x5000 MAE_CMP
 #define MAE_CMP_BASE                      (0x5000)
@@ -42,11 +54,23 @@ static void __iomem *g_maeRegBA;
 
 // 0x5200 MAE_UDMA_R
 #define MAE_UDMA_R_BASE                   (0x5200)
-#define MAE_UDMA_R_LEN                    (0x1FC)
+#define MAE_UDMA_R_LEN                    (0x600)
 
 // 0x5800 MAE_RDMA_5
 #define MAE_RDMA_5_BASE                   (0x5800)
 #define MAE_RDMA_5_LEN                    (0x1FC)
+
+// 0x5A00 MAE_RDMA_F
+#define MAE_RDMA_F_BASE                   (0x5C00)
+#define MAE_RDMA_F_LEN                    (0x6C)
+
+// 0x5C00 MAE_CMP_R
+#define MAE_CMP_R_BASE                    (0x5C00)
+#define MAE_CMP_R_LEN                     (0x1FC)
+
+// 0x5E00 MAE_CTRL_CENTER
+#define MAE_5E00_BASE                     (0x5E00)
+#define MAE_5E00_LEN                      (0xFC)
 
 // 0X6000 RSZ1
 #define RSZ1_BASE                         (0x6000)
@@ -60,7 +84,15 @@ static void __iomem *g_maeRegBA;
 #define RSZ3_BASE                         (0x6400)
 #define RSZ3_LEN                          (0x1FC)
 
-// 0X6A04 MAISR_APB_BASE
+// 0X6600 MAE_nve_top_sys
+#define MAE_nve_top_sys_BASE              (0x6600)
+#define MAE_nve_top_sys_LEN               (0x10C)
+
+// 0X6800 MAE_cossim_apb
+#define MAE_cossim_apb_BASE               (0x6800)
+#define MAE_cossim_apb_LEN                (0x4)
+
+// 0X6A00 MAISR_APB_BASE
 #define MAE_MAISR_APB_BASE                (0x6A00)
 #define MAE_MAISR_APB_LEN                 (0x1FC)
 
@@ -95,6 +127,16 @@ static void __iomem *g_maeRegBA;
 #define MAE_maisr_apb_reg_0170_maisr_apb  (0x6b70)
 #define MAE_DRV_R_reg_0178_MAE_DRV_R      (0x7778)
 #define MAE_DRV_R_reg_017C_MAE_DRV_R      (0x777C)
+#define MAE_UDMA_W_Base_reg_01C0_UDMA_W   (0x4DC0)
+#define MAE_UDMA_R_Base_reg_01C0_UDMA_R   (0x53C0)
+#define MAE_CTRL_CENTER_reg_000C_CTRL_CENTER   (0x5E0C)
+#define MAE_nve_top_sys_reg_00E8_nve_top_sys   (0x66FC)
+#define MAE_WDMA_reg_0190_MAE_WDMA        (0x4F90)
+#define MAE_DRV_reg_01C0_MAE_DRV          (0x75C0)
+#define MAE_DRV_reg_01C4_MAE_DRV          (0x75C4)
+#define MAE_UDMA_W_Base_reg_0064_UDMA_W_Base   (0x4C64)
+#define MAE_UDMA_W_Base_reg_0068_UDMA_W_Base   (0x4C68)
+#define MAE_dma_sys_MAE_STATUS            (0x1300)
 
 // module param
 int g_imgsys_debug_opt;
@@ -144,8 +186,97 @@ void mae_reg_dump(void)
 		(unsigned int)(MAE_BASE + MAE_DRV_R_reg_017C_MAE_DRV_R),
 		(unsigned int)ioread32((void *)(maeRegBA + MAE_DRV_R_reg_017C_MAE_DRV_R)));
 
+	val = (unsigned int)ioread32((void *)(maeRegBA + MAE_UDMA_W_Base_reg_01C0_UDMA_W));
+	iowrite32((val & (0xfffffffc)) + 0x1,
+		(void *)(maeRegBA + MAE_UDMA_W_Base_reg_01C0_UDMA_W));
+	pr_info("%s: [0x%08X] %08X", __func__,
+		(unsigned int)(MAE_BASE + MAE_UDMA_W_Base_reg_01C0_UDMA_W),
+		(unsigned int)ioread32((void *)(maeRegBA + MAE_UDMA_W_Base_reg_01C0_UDMA_W)));
+
+	val = (unsigned int)ioread32((void *)(maeRegBA + MAE_UDMA_R_Base_reg_01C0_UDMA_R));
+	iowrite32((val & (0xfffffffc)) + 0x1,
+		(void *)(maeRegBA + MAE_UDMA_R_Base_reg_01C0_UDMA_R));
+	pr_info("%s: [0x%08X] %08X", __func__,
+		(unsigned int)(MAE_BASE + MAE_UDMA_R_Base_reg_01C0_UDMA_R),
+		(unsigned int)ioread32((void *)(maeRegBA + MAE_UDMA_R_Base_reg_01C0_UDMA_R)));
+
+
+	val = (unsigned int)ioread32((void *)(maeRegBA + MAE_dma_sys_MAE_STATUS));
+	iowrite32(0x8000 + (val & 0x00ff),
+		(void *)(maeRegBA + MAE_CTRL_CENTER_reg_000C_CTRL_CENTER));
+	pr_info("%s: [0x%08X] %08X", __func__,
+		(unsigned int)(MAE_BASE + MAE_CTRL_CENTER_reg_000C_CTRL_CENTER),
+		(unsigned int)ioread32((void *)(maeRegBA + MAE_CTRL_CENTER_reg_000C_CTRL_CENTER)));
+
+	val = (unsigned int)ioread32((void *)(maeRegBA + MAE_nve_top_sys_reg_00E8_nve_top_sys));
+	iowrite32((val & (0xfffffffe)) + 0x1,
+		(void *)(maeRegBA + MAE_nve_top_sys_reg_00E8_nve_top_sys));
+	pr_info("%s: [0x%08X] %08X", __func__,
+		(unsigned int)(MAE_BASE + MAE_nve_top_sys_reg_00E8_nve_top_sys),
+		(unsigned int)ioread32((void *)(maeRegBA + MAE_nve_top_sys_reg_00E8_nve_top_sys)));
+
+	val = (unsigned int)ioread32((void *)(maeRegBA + MAE_WDMA_reg_0190_MAE_WDMA));
+	iowrite32((val & (0xfffffffe)) + 0x1,
+		(void *)(maeRegBA + MAE_WDMA_reg_0190_MAE_WDMA));
+	pr_info("%s: [0x%08X] %08X", __func__,
+		(unsigned int)(MAE_BASE + MAE_WDMA_reg_0190_MAE_WDMA),
+		(unsigned int)ioread32((void *)(maeRegBA + MAE_WDMA_reg_0190_MAE_WDMA)));
+
+	val = (unsigned int)ioread32((void *)(maeRegBA + MAE_DRV_reg_01C0_MAE_DRV));
+	iowrite32((val & (0xffffffc0)) + 0x0,
+		(void *)(maeRegBA + MAE_DRV_reg_01C0_MAE_DRV));
+	pr_info("%s: [0x%08X] %08X, sel = 0, [0x%08X] %08X", __func__,
+		(unsigned int)(MAE_BASE + MAE_DRV_reg_01C0_MAE_DRV),
+		(unsigned int)ioread32((void *)(maeRegBA + MAE_DRV_reg_01C0_MAE_DRV)),
+		(unsigned int)(MAE_BASE + MAE_DRV_reg_01C4_MAE_DRV),
+		(unsigned int)ioread32((void *)(maeRegBA + MAE_DRV_reg_01C4_MAE_DRV)));
+
+	val = (unsigned int)ioread32((void *)(maeRegBA + MAE_DRV_reg_01C0_MAE_DRV));
+	iowrite32((val & (0xffffffc0)) + 0x1,
+		(void *)(maeRegBA + MAE_DRV_reg_01C0_MAE_DRV));
+	pr_info("%s: [0x%08X] %08X, sel = 0, [0x%08X] %08X", __func__,
+		(unsigned int)(MAE_BASE + MAE_DRV_reg_01C0_MAE_DRV),
+		(unsigned int)ioread32((void *)(maeRegBA + MAE_DRV_reg_01C0_MAE_DRV)),
+		(unsigned int)(MAE_BASE + MAE_DRV_reg_01C4_MAE_DRV),
+		(unsigned int)ioread32((void *)(maeRegBA + MAE_DRV_reg_01C4_MAE_DRV)));
+
+	val = (unsigned int)ioread32((void *)(maeRegBA + MAE_DRV_reg_01C0_MAE_DRV));
+	iowrite32((val & (0xffffffc0)) + 0x10,
+		(void *)(maeRegBA + MAE_DRV_reg_01C0_MAE_DRV));
+	pr_info("%s: [0x%08X] %08X, sel = 0, [0x%08X] %08X", __func__,
+		(unsigned int)(MAE_BASE + MAE_DRV_reg_01C0_MAE_DRV),
+		(unsigned int)ioread32((void *)(maeRegBA + MAE_DRV_reg_01C0_MAE_DRV)),
+		(unsigned int)(MAE_BASE + MAE_DRV_reg_01C4_MAE_DRV),
+		(unsigned int)ioread32((void *)(maeRegBA + MAE_DRV_reg_01C4_MAE_DRV)));
+
+	val = (unsigned int)ioread32((void *)(maeRegBA + MAE_DRV_reg_01C0_MAE_DRV));
+	iowrite32((val & (0xffffffc0)) + 0x20,
+		(void *)(maeRegBA + MAE_DRV_reg_01C0_MAE_DRV));
+	pr_info("%s: [0x%08X] %08X, sel = 0, [0x%08X] %08X", __func__,
+		(unsigned int)(MAE_BASE + MAE_DRV_reg_01C0_MAE_DRV),
+		(unsigned int)ioread32((void *)(maeRegBA + MAE_DRV_reg_01C0_MAE_DRV)),
+		(unsigned int)(MAE_BASE + MAE_DRV_reg_01C4_MAE_DRV),
+		(unsigned int)ioread32((void *)(maeRegBA + MAE_DRV_reg_01C4_MAE_DRV)));
+
+	// checksum
+	pr_info("%s: checksum [0x%08X] %08X, [0x%08X] %08X", __func__,
+		(unsigned int)(MAE_BASE + MAE_UDMA_W_Base_reg_0064_UDMA_W_Base),
+		(unsigned int)ioread32((void *)(maeRegBA + MAE_UDMA_W_Base_reg_0064_UDMA_W_Base)),
+		(unsigned int)(MAE_BASE + MAE_UDMA_W_Base_reg_0068_UDMA_W_Base),
+		(unsigned int)ioread32((void *)(maeRegBA + MAE_UDMA_W_Base_reg_0068_UDMA_W_Base)));
+
 	// 0x1000 MAE_CTRL_CENTER
 	for (i = MAE_CTRL_CENTER_BASE; i <= MAE_CTRL_CENTER_BASE + MAE_CTRL_CENTER_LEN; i += 0x10) {
+		pr_info("%s: [0x%08X] %08X, %08X, %08X, %08X", __func__,
+			(unsigned int)(MAE_BASE + i),
+			(unsigned int)ioread32((void *)(maeRegBA + i)),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x4))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x8))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0xC))));
+	}
+
+	// 0x4000 MAE_COSSIM
+	for (i = MAE_COSSIM_BASE; i <= MAE_COSSIM_BASE + MAE_COSSIM_LEN; i += 0x10) {
 		pr_info("%s: [0x%08X] %08X, %08X, %08X, %08X", __func__,
 			(unsigned int)(MAE_BASE + i),
 			(unsigned int)ioread32((void *)(maeRegBA + i)),
@@ -174,8 +305,28 @@ void mae_reg_dump(void)
 			(unsigned int)ioread32((void *)(maeRegBA + (i+0xC))));
 	}
 
+	// 0x4A00 MAE_CMP_2
+	for (i = MAE_CMP_2_BASE; i <= MAE_CMP_2_BASE + MAE_CMP_2_LEN; i += 0x10) {
+		pr_info("%s: [0x%08X] %08X, %08X, %08X, %08X", __func__,
+			(unsigned int)(MAE_BASE + i),
+			(unsigned int)ioread32((void *)(maeRegBA + i)),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x4))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x8))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0xC))));
+	}
+
 	// 0x4C00 MAE_UDMA_W
 	for (i = MAE_UDMA_W_BASE; i <= MAE_UDMA_W_BASE + MAE_UDMA_W_LEN; i += 0x10) {
+		pr_info("%s: [0x%08X] %08X, %08X, %08X, %08X", __func__,
+			(unsigned int)(MAE_BASE + i),
+			(unsigned int)ioread32((void *)(maeRegBA + i)),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x4))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x8))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0xC))));
+	}
+
+	// 0x4E00 MAE_WDMA_BASE
+	for (i = MAE_WDMA_BASE; i <= MAE_WDMA_BASE + MAE_WDMA_LEN; i += 0x10) {
 		pr_info("%s: [0x%08X] %08X, %08X, %08X, %08X", __func__,
 			(unsigned int)(MAE_BASE + i),
 			(unsigned int)ioread32((void *)(maeRegBA + i)),
@@ -214,6 +365,36 @@ void mae_reg_dump(void)
 			(unsigned int)ioread32((void *)(maeRegBA + (i+0xC))));
 	}
 
+	// 0x5A00 MAE_RDMA_F
+	for (i = MAE_RDMA_F_BASE; i <= MAE_RDMA_F_BASE + MAE_RDMA_F_LEN; i += 0x10) {
+		pr_info("%s: [0x%08X] %08X, %08X, %08X, %08X", __func__,
+			(unsigned int)(MAE_BASE + i),
+			(unsigned int)ioread32((void *)(maeRegBA + i)),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x4))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x8))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0xC))));
+	}
+
+	// 0x5C00 MAE_CMP_R
+	for (i = MAE_CMP_R_BASE; i <= MAE_CMP_R_BASE + MAE_CMP_R_LEN; i += 0x10) {
+		pr_info("%s: [0x%08X] %08X, %08X, %08X, %08X", __func__,
+			(unsigned int)(MAE_BASE + i),
+			(unsigned int)ioread32((void *)(maeRegBA + i)),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x4))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x8))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0xC))));
+	}
+
+	// 0x5E00 MAE_CTRL_CENTER
+	for (i = MAE_5E00_BASE; i <= MAE_5E00_BASE + MAE_5E00_LEN; i += 0x10) {
+		pr_info("%s: [0x%08X] %08X, %08X, %08X, %08X", __func__,
+			(unsigned int)(MAE_BASE + i),
+			(unsigned int)ioread32((void *)(maeRegBA + i)),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x4))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x8))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0xC))));
+	}
+
 	// 0X6000 RSZ1
 	for (i = RSZ1_BASE; i <= RSZ1_BASE + RSZ1_LEN; i += 0x10) {
 		pr_info("%s: [0x%08X] %08X, %08X, %08X, %08X", __func__,
@@ -244,7 +425,27 @@ void mae_reg_dump(void)
 			(unsigned int)ioread32((void *)(maeRegBA + (i+0xC))));
 	}
 
-	// 0X6A04 MAISR_APB_BASE
+	// 0X6600 MAE_nve_top_sys
+	for (i = MAE_nve_top_sys_BASE; i <= MAE_nve_top_sys_BASE + MAE_nve_top_sys_LEN; i += 0x10) {
+		pr_info("%s: [0x%08X] %08X, %08X, %08X, %08X", __func__,
+			(unsigned int)(MAE_BASE + i),
+			(unsigned int)ioread32((void *)(maeRegBA + i)),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x4))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x8))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0xC))));
+	}
+
+	// 0X6800 MAE_cossim_apb
+	for (i = MAE_cossim_apb_BASE; i <= MAE_cossim_apb_BASE + MAE_cossim_apb_LEN; i += 0x10) {
+		pr_info("%s: [0x%08X] %08X, %08X, %08X, %08X", __func__,
+			(unsigned int)(MAE_BASE + i),
+			(unsigned int)ioread32((void *)(maeRegBA + i)),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x4))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0x8))),
+			(unsigned int)ioread32((void *)(maeRegBA + (i+0xC))));
+	}
+
+	// 0X6A00 MAISR_APB_BASE
 	for (i = MAE_MAISR_APB_BASE; i <= MAE_MAISR_APB_BASE + MAE_MAISR_APB_LEN; i += 0x10) {
 		pr_info("%s: [0x%08X] %08X, %08X, %08X, %08X", __func__,
 			(unsigned int)(MAE_BASE + i),
