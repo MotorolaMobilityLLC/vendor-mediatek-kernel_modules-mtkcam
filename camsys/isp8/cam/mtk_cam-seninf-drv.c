@@ -3312,8 +3312,10 @@ static int seninf_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 		if (ctx->streaming)
 #endif
 			seninf_s_stream(&ctx->subdev, 0);
-		else if (ctx->csi_streaming)
+		else if (ctx->csi_streaming) {
 			seninf_csi_s_stream(&ctx->subdev, 0);
+			stream_sensor(ctx, 0);
+		}
 
 		if (ctx->pid) {
 			put_pid(ctx->pid);
