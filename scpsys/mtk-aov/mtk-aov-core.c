@@ -74,6 +74,7 @@ int aov_ut_for_module_test(struct mtk_aov *aov_dev,
 	dev_info(aov_dev->dev, "%s: aov malloc info buffer+\n", __func__);
 	spin_lock_irqsave(&core_info->buf_lock, flag);
 	buf = tlsf_malloc(&(core_info->alloc), sizeof(struct aov_ut_info));
+	spin_unlock_irqrestore(&core_info->buf_lock, flag);
 	dev_info(aov_dev->dev, "%s: aov malloc info buffer, buf(%p)-\n", __func__, buf);
 	if (buf) {
 		(void)copy_from_user(buf, user_ut_info, sizeof(struct aov_ut_info));
@@ -183,6 +184,7 @@ int aov_ut_for_module_test(struct mtk_aov *aov_dev,
 
 	(void)copy_to_user(user_ut_info, buf, sizeof(struct aov_ut_info));
 	dev_info(aov_dev->dev, "aov free buffer+\n");
+	spin_lock_irqsave(&core_info->buf_lock, flag);
 	tlsf_free(&(core_info->alloc), buf);
 	spin_unlock_irqrestore(&core_info->buf_lock, flag);
 	dev_info(aov_dev->dev, "aov free buffer-\n");
@@ -1788,6 +1790,7 @@ int aov_core_reset(struct mtk_aov *aov_dev)
 				AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag), "aov malloc buffer+\n");
 				spin_lock_irqsave(&core_info->buf_lock, flag);
 				buf = tlsf_malloc(&(core_info->alloc), sizeof(struct close_param));
+				spin_unlock_irqrestore(&core_info->buf_lock, flag);
 				AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag), "aov malloc buffer-\n");
 				if (buf) {
 					memcpy(buf, &close_info, sizeof(struct close_param));
@@ -1807,6 +1810,7 @@ int aov_core_reset(struct mtk_aov *aov_dev)
 				}
 
 				AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag), "aov free buffer+\n");
+				spin_lock_irqsave(&core_info->buf_lock, flag);
 				tlsf_free(&(core_info->alloc), buf);
 				spin_unlock_irqrestore(&core_info->buf_lock, flag);
 				AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag), "aov free buffer-\n");
