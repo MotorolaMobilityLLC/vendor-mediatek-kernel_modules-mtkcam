@@ -44,7 +44,6 @@ struct mtk_raw_device {
 	void __iomem *yuv_base_inner;
 	void __iomem *rms_base;
 	void __iomem *rms_base_inner;
-	void __iomem *larb_vcsel;
 	u64 base_reg_addr;
 	u64 base_inner_reg_addr;
 	unsigned int num_clks;
@@ -114,7 +113,6 @@ struct mtk_yuv_device {
 	void __iomem *base_inner;
 	void __iomem *dmatop_base;
 	void __iomem *dmatop_base_inner;
-	void __iomem *larb_vcsel;
 	unsigned int num_clks;
 	struct clk **clks;
 #ifdef CONFIG_PM_SLEEP
@@ -171,7 +169,7 @@ struct mtk_ae_debug_data {
 /* CQ setting */
 void initialize(struct mtk_raw_device *dev, struct engine_callback *cb,
 			    int is_slave, int is_srt, int frm_time_us);
-void init_camsys_settings(struct mtk_raw_device *dev, bool is_srt, int frm_time_us);
+void init_raw_settings(struct mtk_raw_device *dev, bool is_srt, int frm_time_us);
 void subsample_enable(struct mtk_raw_device *dev, int ratio);
 void stagger_enable(struct mtk_raw_device *dev);
 void stagger_disable(struct mtk_raw_device *dev);

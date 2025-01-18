@@ -25,6 +25,7 @@
 #include "mtk_cam-qof.h"
 #include "mtk_cam-trace.h"
 #include "mtk_cam-raw_ctrl.h"
+#include "mtk_cam-topctrl.h"
 #include "mtk_cam_vb2-dma-contig.h"
 
 // place below all other include
@@ -780,7 +781,6 @@ mtk_cam_job_initialize_engines(struct mtk_cam_ctx *ctx,
 		if (qof_enabled)
 			mtk_cam_sv_set_queue_mode(sv, true);
 		mtk_cam_sv_dev_config(sv, job->sub_ratio - 1, get_sensor_interval_us(job));  /* TODO(AY): remove -1 */
-
 	}
 
 	return 0;
@@ -2598,14 +2598,14 @@ static int job_related_hw_init(struct mtk_cam_job *job)
 	ctx->used_engine = selected;
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		pr_info("%s++:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
-		readl(cam_dev->vcore_cg_con + 0x00),
+		readl(cam_dev->base),
 		readl(cam_dev->base + 0x00),
 		readl(cam_dev->base + 0x4c));
 	mtk_cam_sv_set_fifo_detect_status(&ctx->cam->engines, selected, ctx->enable_hsf_raw);
 	mtk_cam_pm_runtime_engines(&ctx->cam->engines, selected, 1);
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		pr_info("%s--:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
-		readl(cam_dev->vcore_cg_con + 0x00),
+		readl(cam_dev->vcore_base),
 		readl(cam_dev->base + 0x00),
 		readl(cam_dev->base + 0x4c));
 	/* original initialize_engines(), only rename, no change */
@@ -4195,7 +4195,7 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 			struct mtk_raw_device *r = dev_get_drvdata(cam->engines.raw_devs[i]);
 
 			reset(r);
-			init_camsys_settings(r, is_srt, get_sensor_interval_us(job));
+			init_raw_settings(r, is_srt, get_sensor_interval_us(job));
 		}
 	}
 

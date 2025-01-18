@@ -51,6 +51,7 @@
 #include "mtk_cam-qof.h"
 #include "mtk_cam-qof_regs.h"
 #include "mtk_cam-reg_utils.h"
+#include "mtk_cam-topctrl.h"
 #include "iommu_debug.h"
 
 // place below all other include
@@ -1458,30 +1459,6 @@ EXIT:
 	return ret;
 }
 #endif
-
-static void mtk_cam_plat_resource_ctrl(struct mtk_cam_device *cam, int on_off)
-{
-	int ret, ack = 0;
-
-	writel(on_off ? 0x1fd : 0x0, cam->vcore_ddren_en);
-
-	if (on_off) {
-		ret = readx_poll_timeout(readl, cam->vcore_ddren_ack,
-					 ack,
-					 ack & 0x1fc,
-					 1 /* delay, us */,
-					 2000 /* timeout, us */);
-		if (ret < 0) {
-			dev_info(cam->dev, "%s: error: timeout!, (ack 0x%x)\n",
-				__func__, ack);
-			return;
-		}
-	}
-	if (CAM_DEBUG_ENABLED(V4L2_TRY))
-		dev_info(cam->dev, "%s: ddren:0x%x, ack:0x%x", __func__,
-		readl_relaxed(cam->vcore_ddren_en),
-		readl_relaxed(cam->vcore_ddren_ack));
-}
 
 static int mtk_cam_initialize(struct mtk_cam_device *cam)
 {
@@ -3006,14 +2983,14 @@ void mtk_cam_stop_ctx(struct mtk_cam_ctx *ctx, struct media_entity *entity)
 	if (ctx->used_engine) {
 		if (CAM_DEBUG_ENABLED(RAW_CG))
 			pr_info("%s++:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
-		readl(cam->vcore_cg_con + 0x00),
+		readl(cam->vcore_base),
 		readl(cam->base + 0x00),
 		readl(cam->base + 0x4c));
 		mtk_cam_pm_runtime_engines(&cam->engines, ctx->used_engine, 0);
 		mtk_cam_sv_set_fifo_detect_status(&cam->engines, ctx->used_engine, 1);
 		if (CAM_DEBUG_ENABLED(RAW_CG))
 			pr_info("%s--:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
-		readl(cam->vcore_cg_con + 0x00),
+		readl(cam->vcore_base),
 		readl(cam->base + 0x00),
 		readl(cam->base + 0x4c));
 		mtk_cam_release_engine(ctx->cam, ctx->used_engine);
@@ -4929,23 +4906,12 @@ static int mtk_cam_probe(struct platform_device *pdev)
 		cam_dev->qoftop_base = NULL;
 	}
 
-	cam_dev->vcore_ddren_en = ioremap(cam_vcore_base + CAM_VCORE_DDREN_EN, 0x4);
-	if (IS_ERR(cam_dev->vcore_ddren_en)) {
-		dev_err(dev, "%s: failed to map vcore_ddren_en\n", __func__);
-		cam_dev->vcore_ddren_en = NULL;
+	cam_dev->vcore_base = ioremap(cam_vcore_base, 0x36C);
+	if (IS_ERR(cam_dev->vcore_base)) {
+		dev_err(dev, "%s: failed to map vcore_base\n", __func__);
+		cam_dev->vcore_base = NULL;
 	}
 
-	cam_dev->vcore_ddren_ack = ioremap(cam_vcore_base + CAM_VCORE_DDREN_ACK, 0x4);
-	if (IS_ERR(cam_dev->vcore_ddren_ack)) {
-		dev_err(dev, "%s: failed to map vcore_ddren_ack\n", __func__);
-		cam_dev->vcore_ddren_ack = NULL;
-	}
-
-	cam_dev->vcore_cg_con = ioremap(cam_vcore_base + CAM_VCORE_CG_CON_0, 0x4);
-	if (IS_ERR(cam_dev->vcore_cg_con)) {
-		dev_err(dev, "%s: failed to map vcore_cg_con\n", __func__);
-		cam_dev->vcore_cg_con = NULL;
-	}
 	cam_dev->rawa_cg_con = ioremap(cam_main_rawa_base, 0xc);
 	if (IS_ERR(cam_dev->rawa_cg_con)) {
 		dev_err(dev, "%s: failed to map rawa_cg_con\n", __func__);
@@ -5214,11 +5180,11 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 	disable_irq(cam_dev->qoftop_irq);
 #endif
 	mtk_cam_bwr_disable(cam_dev->bwr);
-	mtk_cam_plat_resource_ctrl(cam_dev, 0);
+	mtk_cam_vcore_ddren(cam_dev, false);
 
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		dev_dbg(dev, "%s++:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
-		readl(cam_dev->vcore_cg_con + 0x00),
+		readl(cam_dev->vcore_base),
 		readl(cam_dev->base + 0x00),
 		readl(cam_dev->base + 0x4c));
 	for (i = cam_dev->num_clks - 1; i >= 0; i--)
@@ -5226,7 +5192,7 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		dev_dbg(dev, "%s--:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
-		readl(cam_dev->vcore_cg_con + 0x00),
+		readl(cam_dev->vcore_base),
 		readl(cam_dev->base + 0x00),
 		readl(cam_dev->base + 0x4c));
 
@@ -5260,7 +5226,7 @@ static int mtk_cam_runtime_resume(struct device *dev)
 	dev_info(dev, "%s: resume\n", __func__);
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		dev_dbg(dev, "%s++:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
-		readl(cam_dev->vcore_cg_con + 0x00),
+		readl(cam_dev->vcore_base),
 		readl(cam_dev->base + 0x00),
 		readl(cam_dev->base + 0x4c));
 	for (i = 0; i < cam_dev->num_clks; i++) {
@@ -5270,7 +5236,7 @@ static int mtk_cam_runtime_resume(struct device *dev)
 	}
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		dev_dbg(dev,"%s--:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
-		readl(cam_dev->vcore_cg_con + 0x00),
+		readl(cam_dev->vcore_base),
 		readl(cam_dev->base + 0x00),
 		readl(cam_dev->base + 0x4c));
 
@@ -5279,8 +5245,11 @@ static int mtk_cam_runtime_resume(struct device *dev)
 #endif
 	mtk_cam_timesync_init(true);
 
-	mtk_cam_plat_resource_ctrl(cam_dev, 1);
 	mtk_cam_bwr_enable(cam_dev->bwr);
+	mtk_cam_vcore_ddren(cam_dev, true);
+	mtk_cam_vcore_ccu_qos_remap(cam_dev);
+	mtk_cam_vcore_sv_qos_remap(cam_dev);
+	mtk_cam_main_sv_halt(cam_dev);
 
 	if (GET_PLAT_HW(qof_support))
 		mtk_cam_reset_itc(cam_dev);

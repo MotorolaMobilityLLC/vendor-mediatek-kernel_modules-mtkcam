@@ -64,12 +64,6 @@ struct mtk_ltms_buf_pool;
 #define SENSOR_META_BUF_NUM 8
 //#define RUN_ADL_FRAME_MODE_FROM_RAWI
 
-#ifndef TOBE_TOOL_GENERATE
-#define CAM_VCORE_DDREN_EN		0x30
-#define CAM_VCORE_DDREN_ACK		0x34
-#define CAM_VCORE_CG_CON_0		0x0
-#endif
-
 struct mtk_cam_adl_work {
 	struct work_struct work;
 	struct mtk_raw_device *raw_dev;
@@ -274,9 +268,7 @@ struct mtk_cam_device {
 	void __iomem *adlrd_base;
 #endif
 	void __iomem *qoftop_base;
-	void __iomem *vcore_ddren_en;
-	void __iomem *vcore_ddren_ack;
-	void __iomem *vcore_cg_con;
+	void __iomem *vcore_base;
 	void __iomem *rawa_cg_con;
 	void __iomem *rawb_cg_con;
 	void __iomem *rawc_cg_con;

@@ -27,6 +27,7 @@
 #include "mtk_cam-dvfs_qos.h"
 #include "mtk_cam-raw.h"
 #include "mtk_cam-qof.h"
+#include "mtk_cam-topctrl.h"
 #include "mtk_cam-raw_debug.h"
 #include "mtk_cam-dmadbg.h"
 #include "mtk_cam-raw_regs.h"
@@ -143,21 +144,15 @@ static void init_raw_ddren(struct mtk_raw_device *dev, int is_srt, int frm_time_
 		dev_info(dev->dev, "ddren_sw_mode:%d\n", debug_ddren_sw_mode);
 }
 
-void init_camsys_settings(struct mtk_raw_device *dev, bool is_srt, int frm_time_us)
+// TODO: QOF io ops?
+void init_raw_settings(struct mtk_raw_device *dev, bool is_srt, int frm_time_us)
 {
-	struct mtk_cam_device *cam_dev = dev->cam;
-	struct mtk_yuv_device *yuv_dev = get_yuv_dev(dev);
-	unsigned int reg_raw_urgent, reg_yuv_urgent;
-	unsigned int raw_urgent, yuv_urgent;
-
 	init_raw_ddren(dev, is_srt, frm_time_us);
 
 	//Set rdy/req snapshot
-	// TODO: QOF io ops?
 	set_topdebug_rdyreq(dev, is_srt ? ALL_THE_TIME : TG_OVERRUN);
 
 	//Set CQI sram size
-	// TODO: QOF io ops?
 	set_fifo_threshold(dev->dmatop_base + REG_CQI_R1_BASE, 64);
 	set_fifo_threshold(dev->dmatop_base + REG_CQI_R2_BASE, 64);
 	set_fifo_threshold(dev->dmatop_base + REG_CQI_R3_BASE, 64);
@@ -167,12 +162,8 @@ void init_camsys_settings(struct mtk_raw_device *dev, bool is_srt, int frm_time_
 	set_fifo_threshold(dev->dmatop_base + REG_CQI_R7_BASE, 64);
 	set_fifo_threshold(dev->dmatop_base + REG_CQI_R8_BASE, 64);
 
-	// TODO: move HALT1,2,3,4,13 to camsv/mraw
-	writel_relaxed(HALT1_EN, cam_dev->base + REG_HALT1_EN);
-	writel_relaxed(HALT2_EN, cam_dev->base + REG_HALT2_EN);
-	writel_relaxed(HALT3_EN, cam_dev->base + REG_HALT3_EN);
-	writel_relaxed(HALT4_EN, cam_dev->base + REG_HALT4_EN);
-	writel_relaxed(HALT13_EN, cam_dev->base + REG_HALT13_EN);
+	//Set 16level qos
+	mtk_cam_vcore_qos_remap(dev, is_srt);
 
 #ifdef DISABLE_LOW_LATENCY
 	//Disable low latency
@@ -185,62 +176,12 @@ void init_camsys_settings(struct mtk_raw_device *dev, bool is_srt, int frm_time_
 	raw_writel_relaxed(0xffff,
 		dev, yuv_dev->dmatop_base, REG_CAMYUVDMATOP_LOW_LATENCY_LINE_CNT_DRZS4NO_R1);
 #endif
+
 #ifdef DEBUG_DMA_ENABLE_CRC_EN
 	/* for debug: crc_en */
 	raw_writel(BIT(24), dev, dev->base_dmatop, REG_CAMRAWDMATOP_DMA_DBG_SEL);
 	raw_writel(BIT(24), dev, dev->base_dmatop, REG_CAMYUVDMATOP_DMA_DBG_SEL);
 #endif
-
-	switch (dev->id) {
-	case RAW_A:
-		reg_raw_urgent = REG_HALT5_EN;
-		reg_yuv_urgent = REG_HALT6_EN;
-		raw_urgent = HALT5_EN;
-		yuv_urgent = HALT6_EN;
-		break;
-	case RAW_B:
-		reg_raw_urgent = REG_HALT7_EN;
-		reg_yuv_urgent = REG_HALT8_EN;
-		raw_urgent = HALT7_EN;
-		yuv_urgent = HALT8_EN;
-		break;
-	case RAW_C:
-		reg_raw_urgent = REG_HALT9_EN;
-		reg_yuv_urgent = REG_HALT10_EN;
-		raw_urgent = HALT9_EN;
-		yuv_urgent = HALT10_EN;
-		break;
-	default:
-		dev_info(dev->dev, "%s: unknown raw id %d\n", __func__, dev->id);
-		return;
-	}
-
-	if (is_srt) {
-		writel_relaxed(0x0, cam_dev->base + reg_raw_urgent);
-		writel_relaxed(0x0, cam_dev->base + reg_yuv_urgent);
-		if (dev->larb_vcsel)
-			writel_relaxed(0x0, dev->larb_vcsel);
-		if (yuv_dev->larb_vcsel)
-			writel_relaxed(0x0, yuv_dev->larb_vcsel);
-	} else {
-		writel_relaxed(raw_urgent, cam_dev->base + reg_raw_urgent);
-		writel_relaxed(yuv_urgent, cam_dev->base + reg_yuv_urgent);
-		if (dev->larb_vcsel)
-			writel_relaxed(0x7ffff, dev->larb_vcsel);
-		if (yuv_dev->larb_vcsel)
-			writel_relaxed(0x7f, yuv_dev->larb_vcsel);
-	}
-
-	wmb(); /* TBC */
-
-	dev_info_ratelimited(dev->dev, "%s: is srt:%d halt1~10,13:0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		__func__, is_srt,
-		readl(cam_dev->base + REG_HALT1_EN), readl(cam_dev->base + REG_HALT2_EN),
-		readl(cam_dev->base + REG_HALT3_EN), readl(cam_dev->base + REG_HALT4_EN),
-		readl(cam_dev->base + REG_HALT5_EN), readl(cam_dev->base + REG_HALT6_EN),
-		readl(cam_dev->base + REG_HALT7_EN), readl(cam_dev->base + REG_HALT8_EN),
-		readl(cam_dev->base + REG_HALT9_EN), readl(cam_dev->base + REG_HALT10_EN),
-		readl(cam_dev->base + REG_HALT13_EN));
 }
 
 #define BPC_R2_PCRP				0x41EC
@@ -625,7 +566,7 @@ void initialize(struct mtk_raw_device *dev, struct engine_callback *cb,
 	atomic_set(&dev->vf_en, 0);
 	mtk_cam_raw_reset_msgfifo(dev);
 
-	init_camsys_settings(dev, is_srt, frm_time_us);
+	init_raw_settings(dev, is_srt, frm_time_us);
 #ifdef TO_BE_REMOVE
 	init_ADLWR_settings(dev->cam);
 #endif
@@ -1585,20 +1526,6 @@ static void raw_dump_debug_cqi_status(struct mtk_raw_device *dev)
 			       dbg_CQI_R4, ARRAY_SIZE(dbg_CQI_R4));
 }
 
-static void dump_halt_setting(struct mtk_raw_device *dev)
-{
-	struct mtk_cam_device *cam_dev = dev->cam;
-
-	dev_info_ratelimited(dev->dev, "%s: halt1~10,13:0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		__func__,
-		readl(cam_dev->base + REG_HALT1_EN), readl(cam_dev->base + REG_HALT2_EN),
-		readl(cam_dev->base + REG_HALT3_EN), readl(cam_dev->base + REG_HALT4_EN),
-		readl(cam_dev->base + REG_HALT5_EN), readl(cam_dev->base + REG_HALT6_EN),
-		readl(cam_dev->base + REG_HALT7_EN), readl(cam_dev->base + REG_HALT8_EN),
-		readl(cam_dev->base + REG_HALT9_EN), readl(cam_dev->base + REG_HALT10_EN),
-		readl(cam_dev->base + REG_HALT13_EN));
-}
-
 static void raw_handle_skip_frame(struct mtk_raw_device *raw_dev,
 			     struct mtk_camsys_irq_info *data)
 {
@@ -1609,7 +1536,7 @@ static void raw_handle_skip_frame(struct mtk_raw_device *raw_dev,
 			__func__, err_status, fh_cookie);
 
 	if (err_status & FBIT(CAMCTL_P1_SKIP_FRAME_DC_STAG_INT_ST)) {
-		dump_halt_setting(raw_dev);
+		mtk_cam_main_dbg_dump(raw_dev->cam);
 		mtk_cam_bwr_dbg_dump(raw_dev->cam->bwr);
 #ifdef SKIP_IN_FPGA_EP
 		mmdvfs_debug_status_dump(NULL);
@@ -2185,7 +2112,7 @@ static void raw_handle_tg_overrun_err(struct mtk_raw_device *raw_dev,
 		dump_topdebug_rdyreq_status(raw_dev);
 
 	else if (cnt == (OVERRUN_DUMP_CNT + raw_dev->sub_sensor_ctrl_en * 10)) {
-		dump_halt_setting(raw_dev);
+		mtk_cam_main_dbg_dump(raw_dev->cam);
 		mtk_cam_bwr_dbg_dump(raw_dev->cam->bwr);
 #ifdef SKIP_IN_FPGA_EP
 		mmdvfs_debug_status_dump(NULL);
@@ -2473,16 +2400,6 @@ static int mtk_raw_of_probe(struct platform_device *pdev,
 		dev_dbg(dev, "failed to map register qof_base\n");
 		return PTR_ERR(raw->qof_base);
 	}
-
-	if (GET_PLAT_HW(snoc_support)) {
-		raw->larb_vcsel = ioremap(REG_CAM_RAW_LARB_VCSEL +
-				(phys_addr_t) raw->id * LARB_VCSEL_OFFSET, 0x4);
-		if (IS_ERR(raw->larb_vcsel)) {
-			dev_err(dev, "%s: failed to map larb_vcsel\n", __func__);
-			raw->larb_vcsel = NULL;
-		}
-	} else
-		raw->larb_vcsel = NULL;
 
 	/* will be assigned later */
 	raw->yuv_base = NULL;
@@ -3026,16 +2943,6 @@ static int mtk_yuv_of_probe(struct platform_device *pdev,
 		dev_dbg(dev, "failed to map register dmatop_base_inner\n");
 		return PTR_ERR(drvdata->dmatop_base_inner);
 	}
-
-	if (GET_PLAT_HW(snoc_support)) {
-		drvdata->larb_vcsel = ioremap(REG_CAM_YUV_LARB_VCSEL +
-					(phys_addr_t) drvdata->id * LARB_VCSEL_OFFSET, 0x4);
-		if (IS_ERR(drvdata->larb_vcsel)) {
-			dev_err(dev, "%s: failed to map larb_vcsel\n", __func__);
-			drvdata->larb_vcsel = NULL;
-		}
-	} else
-		drvdata->larb_vcsel = NULL;
 
 	clks = of_count_phandle_with_args(pdev->dev.of_node, "clocks",
 			"#clock-cells");
