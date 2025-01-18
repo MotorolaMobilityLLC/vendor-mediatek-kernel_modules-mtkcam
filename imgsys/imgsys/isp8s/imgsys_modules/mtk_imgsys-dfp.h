@@ -36,7 +36,7 @@
 #define DFP2_TOP_CTL_RANGE       0x200
 
 #define DVGF_CTL_OFFSET      0x0000
-#define DVGF_CTL_RANGE       0x200
+#define DVGF_CTL_RANGE       0x300
 
 #define MMG_CTL_OFFSET      0x0000
 #define MMG_CTL_RANGE       0xA50
