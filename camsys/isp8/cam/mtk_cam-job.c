@@ -6511,6 +6511,7 @@ static int check_req_buffer_valid_for_dump(struct mtk_cam_job *job,
 	int pipe_id;
 	int i;
 
+	spin_lock(&req->buf_lock);
 	list_for_each_entry(buf, &req->buf_list, list) {
 		node = mtk_cam_buf_to_vdev(buf);
 		pipe_id = node->uid.pipe_id;
@@ -6548,6 +6549,7 @@ static int check_req_buffer_valid_for_dump(struct mtk_cam_job *job,
 			}
 		}
 	}
+	spin_unlock(&req->buf_lock);
 
 	return 0;
 }
