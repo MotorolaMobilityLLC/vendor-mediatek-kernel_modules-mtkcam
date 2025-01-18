@@ -60,17 +60,16 @@ void imgsys_me_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			cq_desc = (u64 *)((void *)(cq_base +
 				user_info->priv[IMGSYS_HW_ME].desc_offset));
 			for (i = 0; i < ME_CQ_DESC_NUM; i++) {
-				pr_info("enter for loop\n");
 				dtable = (struct mtk_imgsys_me_dtable *)cq_desc + i;
 				if ((dtable->cmd2 & PSEUDO_DESC_TUNING_ME) == PSEUDO_DESC_TUNING_ME) {
 					tun_ofst = dtable->addr;
 					dtable->addr = (tun_ofst + iova_addr) & 0xFFFFFFFF;
 					dtable->cmd2 = (dtable->cmd2 & 0xFFFFFFF0) |
 							(((tun_ofst + iova_addr) >> 32) & 0xF);
-						pr_info("%s: tuning_buf_iova(0x%llx) des_ofst(0x%08x)",
+					if (imgsys_me_8s_dbg_enable())
+						pr_debug("%s: tuning_buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
 							__func__, iova_addr,
-							user_info->priv[IMGSYS_HW_ME].desc_offset);
-						pr_info("cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
+							user_info->priv[IMGSYS_HW_ME].desc_offset,
 							cq_desc, dtable->cmd1, dtable->addr,
 							dtable->cmd2);
 				}
