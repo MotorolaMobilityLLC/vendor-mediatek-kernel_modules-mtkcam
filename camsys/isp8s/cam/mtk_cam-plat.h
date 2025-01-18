@@ -132,12 +132,12 @@ struct sv_dma_th_setting {
 };
 
 struct sv_dma_bw_setting {
-	u32 urgent_high;
-	u32 urgent_low;
-	u32 ultra_high;
-	u32 ultra_low;
-	u32 pultra_high;
-	u32 pultra_low;
+	int urgent_high;
+	int urgent_low;
+	int ultra_high;
+	int ultra_low;
+	int pultra_high;
+	int pultra_low;
 };
 
 struct mraw_dma_th_setting {
