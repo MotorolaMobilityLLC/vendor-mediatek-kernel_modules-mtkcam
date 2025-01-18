@@ -694,15 +694,20 @@ struct subdrv_ops {
 	int (*i3c_pre_config)(struct subdrv_ctx *ctx);
 };
 
+struct sensor_firmware_res {
+	void *res_ptr;
+	struct list_head list;
+};
+
 struct sensor_firmware {
 	char name[64];
 	struct list_head list;
+	struct list_head res_list;
 };
 
 struct sensor_firmware_loader {
 	bool fw_list_inited;
 	struct list_head fw_list;
-	//TODO: add ext ops here
 };
 
 struct subdrv_entry {
@@ -717,7 +722,6 @@ struct subdrv_entry {
 	unsigned int fw_revision;
 	unsigned long long fw_modified_ts;
 	bool is_fw_support;
-	struct sensor_firmware_loader *fw_loader;
 	const struct subdrv_static_ctx_ext_ops *fw_ext_ops;
 };
 

@@ -22,7 +22,68 @@ MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
 static LIST_HEAD(all_sensor_fw_list);
 static int all_sensor_fw_list_cnt;
 
-static char *get_firmware_path(const char *folder, const char *file_name)
+static inline void *ctx_fw_kcalloc(struct adaptor_ctx *ctx, struct sensor_firmware *fw,
+				size_t n, size_t size, gfp_t flags)
+{
+	struct sensor_firmware_res *res;
+	void *p;
+
+	if (n == 0)
+		return NULL;
+
+	res = devm_kzalloc(ctx->dev, sizeof(struct sensor_firmware_res), GFP_KERNEL);
+	if (!res)
+		return NULL;
+
+	p = devm_kcalloc(ctx->dev, n, size, flags);
+	if (!p) {
+		devm_kfree(ctx->dev, res);
+		return NULL;
+	}
+
+	res->res_ptr = p;
+	list_add(&res->list, &fw->res_list);
+
+	return p;
+}
+
+static inline void *ctx_fw_kzalloc(struct adaptor_ctx *ctx, struct sensor_firmware *fw,
+				size_t size, gfp_t flags)
+{
+	struct sensor_firmware_res *res;
+	void *p;
+
+	res = devm_kzalloc(ctx->dev, sizeof(struct sensor_firmware_res), GFP_KERNEL);
+	if (!res)
+		return NULL;
+
+	p = devm_kzalloc(ctx->dev, size, flags);
+	if (!p) {
+		devm_kfree(ctx->dev, res);
+		return NULL;
+	}
+
+	res->res_ptr = p;
+	list_add(&res->list, &fw->res_list);
+
+	return p;
+}
+
+static inline void ctx_fw_kfree(struct adaptor_ctx *ctx, struct sensor_firmware *fw, const void *p)
+{
+	struct sensor_firmware_res *res = NULL, *r = NULL;
+
+	list_for_each_entry_safe(res, r, &fw->res_list, list) {
+		if (res->res_ptr == p) {
+			devm_kfree(ctx->dev, res->res_ptr);
+			res->res_ptr = NULL;
+			list_del(&res->list);
+			devm_kfree(ctx->dev, res);
+		}
+	}
+}
+
+static char *get_firmware_path(struct adaptor_ctx *ctx, const char *folder, const char *file_name)
 {
 	int num = 0;
 	int full_path_len = 0;
@@ -35,7 +96,7 @@ static char *get_firmware_path(const char *folder, const char *file_name)
 
 	full_path_len = strlen(folder) + strlen(file_name) + 6;
 
-	full_path = kcalloc(full_path_len, sizeof(char), GFP_KERNEL);
+	full_path = devm_kcalloc(ctx->dev, full_path_len, sizeof(char), GFP_KERNEL);
 	if (!full_path)
 		return NULL;
 
@@ -43,7 +104,7 @@ static char *get_firmware_path(const char *folder, const char *file_name)
 		       folder, file_name);
 	if (num < 0) {
 		pr_err("string formating failed\n");
-		kfree(full_path);
+		devm_kfree(ctx->dev, full_path);
 		full_path = NULL;
 		return NULL;
 	}
@@ -70,6 +131,7 @@ static int add_fw_list(struct list_head *list, const char *file_name, const int 
 
 	strncpy(item->name, file_name, buf_sz);
 	item->name[buf_sz] = '\0';  /* ensure null terminated */
+	INIT_LIST_HEAD(&item->res_list);
 	list_add_tail(&item->list, list);
 
 	pr_info("firmware %s has been added.", item->name);
@@ -100,30 +162,29 @@ static int lookup_all_fw_list(struct sensor_firmware_loader * const loader)
 	struct sensor_firmware *firmware;
 	int err;
 
-	if (all_sensor_fw_list_cnt) {
-		pr_info("fw list has been queryed\n");
-		return 0;
-	}
+	if (!all_sensor_fw_list_cnt) {
+		pr_info("imgsensor_firmware: query all fw list\n");
 
-	err = kern_path(IMGSENSOR_FW_PATH, LOOKUP_DIRECTORY, &path);
-	if (err) {
-		pr_err("Error getting path: %d\n", err);
-		return err;
-	}
+		err = kern_path(IMGSENSOR_FW_PATH, LOOKUP_DIRECTORY, &path);
+		if (err) {
+			pr_err("Error getting path: %d\n", err);
+			return err;
+		}
 
-	file = dentry_open(&path, O_RDONLY, current_cred());
-	if (IS_ERR(file)) {
-		pr_err("Error opening directory\n");
-		return PTR_ERR(file);
-	}
+		file = dentry_open(&path, O_RDONLY, current_cred());
+		if (IS_ERR(file)) {
+			pr_err("Error opening directory\n");
+			return PTR_ERR(file);
+		}
 
-	err = iterate_dir(file, &ctx);
-	if (err) {
-		pr_err("Error iterating directory\n");
-		return err;
-	}
+		err = iterate_dir(file, &ctx);
+		if (err) {
+			pr_err("Error iterating directory\n");
+			return err;
+		}
 
-	fput(file);
+		fput(file);
+	}
 
 	list_for_each_entry(firmware, &all_sensor_fw_list, list) {
 		add_fw_list(&loader->fw_list, firmware->name, strlen(firmware->name));
@@ -132,7 +193,7 @@ static int lookup_all_fw_list(struct sensor_firmware_loader * const loader)
 	return 0;
 }
 
-static bool check_firmware_exist(const char *file_name)
+static bool check_firmware_exist(struct adaptor_ctx *ctx, const char *file_name)
 {
 	bool ret = false;
 	struct path path;
@@ -143,7 +204,7 @@ static bool check_firmware_exist(const char *file_name)
 		return ret;
 	}
 
-	full_path = get_firmware_path(IMGSENSOR_FW_PATH, file_name);
+	full_path = get_firmware_path(ctx, IMGSENSOR_FW_PATH, file_name);
 	if (full_path) {
 		if (kern_path(full_path, 0, &path) == 0) {
 			/* file exist */
@@ -152,13 +213,14 @@ static bool check_firmware_exist(const char *file_name)
 		}
 	}
 
-	kfree(full_path);
+	devm_kfree(ctx->dev, full_path);
 	full_path = NULL;
 
 	return ret;
 }
 
-int lookup_firmwares(struct sensor_firmware_loader * const loader,
+int lookup_firmwares(struct adaptor_ctx *ctx,
+		     struct sensor_firmware_loader * const loader,
 		     const char *fw_file_name[], int count)
 {
 	int i;
@@ -185,30 +247,55 @@ int lookup_firmwares(struct sensor_firmware_loader * const loader,
 		return -EINVAL;
 
 	for (i = 0; i < count; i++) {
-		pr_info("autosun lookup firmwares '%s' ret = %d\n",
+		pr_info("imgsensor_fw lookup firmwares '%s' ret = %d\n",
 			fw_file_name[i],
-			check_firmware_exist(fw_file_name[i]));
-		if (check_firmware_exist(fw_file_name[i]))
+			check_firmware_exist(ctx, fw_file_name[i]));
+		if (check_firmware_exist(ctx, fw_file_name[i]))
 			add_fw_list(&loader->fw_list, fw_file_name[i], strlen(fw_file_name[i]));
 	}
 
 	/* print list */
 	i = 0;
 	list_for_each_entry(firmware, &loader->fw_list, list) {
-		pr_info("autosun probe firmware list[%d] = %s\n", i, firmware->name);
+		pr_info("imgsensor_fw probe firmware list[%d] = %s\n", i, firmware->name);
 		i++;
 	}
 
 	return 0;
 }
 
-typedef int (*init_section)(struct adaptor_ctx *ctx,
+int deinit_firmware_loader(struct adaptor_ctx *ctx, struct sensor_firmware_loader *loader)
+{
+	struct sensor_firmware *firmware = NULL, *n = NULL;
+	struct sensor_firmware_res *res = NULL, *r = NULL;
+
+	if (unlikely(loader == NULL))
+		return -EINVAL;
+
+	loader->fw_list_inited = false;
+
+	list_for_each_entry_safe(firmware, n, &loader->fw_list, list) {
+		list_del(&firmware->list);
+
+		list_for_each_entry_safe(res, r, &firmware->res_list, list) {
+			list_del(&res->list);
+			devm_kfree(ctx->dev, res);
+		}
+		kfree(firmware); /* free alloc by kzalloc */
+	}
+
+	return 0;
+}
+
+typedef int (*init_section)(struct adaptor_ctx *ctx, struct sensor_firmware *sensor_fw,
 			const u8 *data, const size_t size,
 			void *dest, size_t dest_sz);
-typedef int (*update_subdrv_entry)(struct adaptor_ctx *ctx,
+typedef int (*update_subdrv_entry)(struct adaptor_ctx *ctx, struct sensor_firmware *sensor_fw,
+			void *dest, size_t dest_sz);
+typedef int (*release_section)(struct adaptor_ctx *ctx, struct sensor_firmware *sensor_fw,
 			void *dest, size_t dest_sz);
 
-static int init_header_section(struct adaptor_ctx *ctx,
+static int init_header_section(struct adaptor_ctx *ctx, struct sensor_firmware *sensor_fw,
 			const u8 *data, const size_t size,
 			void *dest, size_t dest_sz)
 {
@@ -233,6 +320,7 @@ static int init_header_section(struct adaptor_ctx *ctx,
 }
 
 static int update_subdrv_entry_header(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
 			void *dest, size_t dest_sz)
 {
 	int ret = 0;
@@ -247,7 +335,7 @@ static int update_subdrv_entry_header(struct adaptor_ctx *ctx,
 
 	if (ctx->subdrv) {
 		size_t name_sz = sizeof(fw_struct->sensor_name);
-		char *sname = kzalloc(name_sz, GFP_KERNEL);
+		char *sname = ctx_fw_kzalloc(ctx, sensor_fw, name_sz, GFP_KERNEL);
 
 		if (!sname)
 			return -ENOMEM;
@@ -273,7 +361,29 @@ static int update_subdrv_entry_header(struct adaptor_ctx *ctx,
 	return ret;
 }
 
+static int release_header_section(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
+			void *dest, size_t dest_sz)
+{
+	int ret = 0;
+
+	if (unlikely(dest == NULL))
+		return -EINVAL;
+	if (sizeof(struct fw_header) != dest_sz)
+		return -EINVAL;
+
+	/*
+	 * the data struct don't have pointer
+	 * nothing to be released
+	 */
+
+	adaptor_logi(ctx, "resource release done\n");
+
+	return ret;
+}
+
 static int init_pw_seq_section(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
 			const u8 *data, const size_t size,
 			void *dest, size_t dest_sz)
 {
@@ -295,22 +405,24 @@ static int init_pw_seq_section(struct adaptor_ctx *ctx,
 	memcpy(&pdata->pw_seq_cnt, data, sizeof(pdata->pw_seq_cnt));
 	data += sizeof(pdata->pw_seq_cnt);
 
-	pdata->pw_seq = kcalloc(pdata->pw_seq_cnt,
-				sizeof(struct fw_subdrv_pw_seq_entry),
-				GFP_KERNEL);
-	if (!pdata->pw_seq)
-		return -ENOMEM;
+	if (pdata->pw_seq_cnt) {
+		pdata->pw_seq = ctx_fw_kcalloc(ctx, sensor_fw, pdata->pw_seq_cnt,
+					sizeof(struct fw_subdrv_pw_seq_entry),
+					GFP_KERNEL);
+		if (!pdata->pw_seq)
+			return -ENOMEM;
 
-	memcpy(pdata->pw_seq, data,
-	       sizeof(struct fw_subdrv_pw_seq_entry) * pdata->pw_seq_cnt);
-	data += sizeof(struct fw_subdrv_pw_seq_entry) * pdata->pw_seq_cnt;
+		memcpy(pdata->pw_seq, data,
+		       sizeof(struct fw_subdrv_pw_seq_entry) * pdata->pw_seq_cnt);
+		data += sizeof(struct fw_subdrv_pw_seq_entry) * pdata->pw_seq_cnt;
+	}
 
 	/* aov power seq */
 	memcpy(&pdata->aov_pw_seq_cnt, data, sizeof(pdata->aov_pw_seq_cnt));
 	data += sizeof(pdata->aov_pw_seq_cnt);
 
 	if (pdata->aov_pw_seq_cnt) {
-		pdata->aov_pw_seq = kcalloc(pdata->aov_pw_seq_cnt,
+		pdata->aov_pw_seq = ctx_fw_kcalloc(ctx, sensor_fw, pdata->aov_pw_seq_cnt,
 					sizeof(struct fw_subdrv_pw_seq_entry),
 					GFP_KERNEL);
 		if (!pdata->aov_pw_seq)
@@ -324,6 +436,7 @@ static int init_pw_seq_section(struct adaptor_ctx *ctx,
 }
 
 static int update_subdrv_entry_pw_seq(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
 			void *dest, size_t dest_sz)
 {
 	int ret = 0;
@@ -341,7 +454,7 @@ static int update_subdrv_entry_pw_seq(struct adaptor_ctx *ctx,
 
 	if (ctx->subdrv) {
 		/* Normal power seq */
-		struct subdrv_pw_seq_entry *pw_seq = kzalloc(
+		struct subdrv_pw_seq_entry *pw_seq = ctx_fw_kzalloc(ctx, sensor_fw,
 				sizeof(struct subdrv_pw_seq_entry) * fw_struct->pw_seq_cnt,
 				GFP_KERNEL);
 
@@ -362,7 +475,7 @@ static int update_subdrv_entry_pw_seq(struct adaptor_ctx *ctx,
 
 		/* AOV power seq */
 		if (fw_struct->aov_pw_seq_cnt) {
-			struct subdrv_pw_seq_entry *aov_pw_seq = kzalloc(
+			struct subdrv_pw_seq_entry *aov_pw_seq = ctx_fw_kzalloc(ctx, sensor_fw,
 					sizeof(struct subdrv_pw_seq_entry) * fw_struct->aov_pw_seq_cnt,
 					GFP_KERNEL);
 
@@ -386,7 +499,37 @@ static int update_subdrv_entry_pw_seq(struct adaptor_ctx *ctx,
 	return ret;
 }
 
+static int release_pw_seq_section(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
+			void *dest, size_t dest_sz)
+{
+	int ret = 0;
+	struct fw_pw_seq *pdata;
+
+	if (unlikely(dest == NULL))
+		return -EINVAL;
+	if (sizeof(struct fw_pw_seq) != dest_sz)
+		return -EINVAL;
+
+	pdata = (struct fw_pw_seq *)dest;
+
+	/* free resource */
+	if (pdata->pw_seq) {
+		ctx_fw_kfree(ctx, sensor_fw, pdata->pw_seq);
+		pdata->pw_seq = NULL;
+	}
+	if (pdata->aov_pw_seq) {
+		ctx_fw_kfree(ctx, sensor_fw, pdata->aov_pw_seq);
+		pdata->aov_pw_seq = NULL;
+	}
+
+	adaptor_logi(ctx, "resource release done\n");
+
+	return ret;
+}
+
 static int init_eeprom_info_section(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
 			const u8 *data, const size_t size,
 			void *dest, size_t dest_sz)
 {
@@ -413,7 +556,12 @@ static int init_eeprom_info_section(struct adaptor_ctx *ctx,
 
 	offset += sz;
 
-	pdata->eeprom_info_list = kcalloc(pdata->eeprom_info_num, sizeof(struct fw_eeprom_info_struct), GFP_KERNEL);
+	if (!pdata->eeprom_info_num)
+		return ret;
+
+	pdata->eeprom_info_list = ctx_fw_kcalloc(ctx, sensor_fw,
+				pdata->eeprom_info_num,
+				sizeof(struct fw_eeprom_info_struct), GFP_KERNEL);
 
 	if (!pdata->eeprom_info_list)
 		return -ENOMEM;
@@ -427,7 +575,7 @@ static int init_eeprom_info_section(struct adaptor_ctx *ctx,
 
 		if (p->qsc_table_size) {
 			sz = sizeof(u8) * p->qsc_table_size;
-			p->dynamic.qsc_table = kzalloc(sz, GFP_KERNEL);
+			p->dynamic.qsc_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 			if (!p->dynamic.qsc_table)
 				return -ENOMEM;
 
@@ -436,7 +584,7 @@ static int init_eeprom_info_section(struct adaptor_ctx *ctx,
 		}
 		if (p->pdc_table_size) {
 			sz = sizeof(u8) * p->pdc_table_size;
-			p->dynamic.pdc_table = kzalloc(sz, GFP_KERNEL);
+			p->dynamic.pdc_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 			if (!p->dynamic.pdc_table)
 				return -ENOMEM;
 
@@ -445,7 +593,7 @@ static int init_eeprom_info_section(struct adaptor_ctx *ctx,
 		}
 		if (p->lrc_table_size) {
 			sz = sizeof(u8) * p->lrc_table_size;
-			p->dynamic.lrc_table = kzalloc(sz, GFP_KERNEL);
+			p->dynamic.lrc_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 			if (!p->dynamic.lrc_table)
 				return -ENOMEM;
 
@@ -454,7 +602,7 @@ static int init_eeprom_info_section(struct adaptor_ctx *ctx,
 		}
 		if (p->xtalk_table_size) {
 			sz = sizeof(u8) * p->xtalk_table_size;
-			p->dynamic.xtalk_table = kzalloc(sz, GFP_KERNEL);
+			p->dynamic.xtalk_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 			if (!p->dynamic.xtalk_table)
 				return -ENOMEM;
 
@@ -466,7 +614,9 @@ static int init_eeprom_info_section(struct adaptor_ctx *ctx,
 	return ret;
 }
 
-static int update_s_ctx_eeprom_info(struct eeprom_info_struct *pinfo, struct fw_eeprom_info_struct *fw_struct)
+static int update_s_ctx_eeprom_info(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
+			struct eeprom_info_struct *pinfo, struct fw_eeprom_info_struct *fw_struct)
 {
 	size_t sz;
 
@@ -496,7 +646,7 @@ static int update_s_ctx_eeprom_info(struct eeprom_info_struct *pinfo, struct fw_
 
 	if (fw_struct->qsc_table_size) {
 		sz = fw_struct->qsc_table_size * sizeof(u8);
-		pinfo->qsc_table = kzalloc(sz, GFP_KERNEL);
+		pinfo->qsc_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!pinfo->qsc_table)
 			return -ENOMEM;
 		memcpy(pinfo->qsc_table,
@@ -510,7 +660,7 @@ static int update_s_ctx_eeprom_info(struct eeprom_info_struct *pinfo, struct fw_
 
 	if (fw_struct->pdc_table_size) {
 		sz = fw_struct->pdc_table_size * sizeof(u8);
-		pinfo->pdc_table = kzalloc(sz, GFP_KERNEL);
+		pinfo->pdc_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!pinfo->pdc_table)
 			return -ENOMEM;
 		memcpy(pinfo->pdc_table,
@@ -524,7 +674,7 @@ static int update_s_ctx_eeprom_info(struct eeprom_info_struct *pinfo, struct fw_
 
 	if (fw_struct->lrc_table_size) {
 		sz = fw_struct->lrc_table_size * sizeof(u8);
-		pinfo->lrc_table = kzalloc(sz, GFP_KERNEL);
+		pinfo->lrc_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!pinfo->lrc_table)
 			return -ENOMEM;
 		memcpy(pinfo->lrc_table,
@@ -538,7 +688,7 @@ static int update_s_ctx_eeprom_info(struct eeprom_info_struct *pinfo, struct fw_
 
 	if (fw_struct->xtalk_table_size) {
 		sz = fw_struct->xtalk_table_size * sizeof(u8);
-		pinfo->xtalk_table = kzalloc(sz, GFP_KERNEL);
+		pinfo->xtalk_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!pinfo->xtalk_table)
 			return -ENOMEM;
 		memcpy(pinfo->xtalk_table,
@@ -554,6 +704,7 @@ static int update_s_ctx_eeprom_info(struct eeprom_info_struct *pinfo, struct fw_
 }
 
 static int update_subdrv_entry_eeprom_info(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
 			void *dest, size_t dest_sz)
 {
 	int i, ret = 0;
@@ -573,20 +724,69 @@ static int update_subdrv_entry_eeprom_info(struct adaptor_ctx *ctx,
 
 	if (fw_struct->eeprom_info_num) {
 		sz_eeproms = fw_struct->eeprom_info_num * sizeof(struct eeprom_info_struct);
-		ctx->subctx.s_ctx.eeprom_info = kzalloc(sz_eeproms, GFP_KERNEL);
+		ctx->subctx.s_ctx.eeprom_info = ctx_fw_kzalloc(ctx, sensor_fw, sz_eeproms, GFP_KERNEL);
 		if (!ctx->subctx.s_ctx.eeprom_info)
 			return -ENOMEM;
 	}
 
 	for (i = 0; i < fw_struct->eeprom_info_num; i++) {
 		ptr = ctx->subctx.s_ctx.eeprom_info + i;
-		update_s_ctx_eeprom_info(ptr, fw_struct->eeprom_info_list + i);
+		update_s_ctx_eeprom_info(ctx, sensor_fw, ptr, fw_struct->eeprom_info_list + i);
 	}
 
 	return ret;
 }
 
+static int release_eeprom_info_section(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
+			void *dest, size_t dest_sz)
+{
+	int ret = 0;
+	struct fw_eeprom_infos *pdata;
+	struct fw_eeprom_info_struct *p;
+	int i;
+
+	if (unlikely(dest == NULL))
+		return -EINVAL;
+	if (sizeof(struct fw_eeprom_infos) != dest_sz)
+		return -EINVAL;
+
+	pdata = (struct fw_eeprom_infos *)dest;
+
+	/* release resource */
+	if (pdata->eeprom_info_list) {
+		for (i = 0; i < pdata->eeprom_info_num; i++) {
+			p = pdata->eeprom_info_list + i;
+
+			if (p->dynamic.qsc_table) {
+				ctx_fw_kfree(ctx, sensor_fw, p->dynamic.qsc_table);
+				p->dynamic.qsc_table = NULL;
+			}
+			if (p->dynamic.pdc_table) {
+				ctx_fw_kfree(ctx, sensor_fw, p->dynamic.pdc_table);
+				p->dynamic.pdc_table = NULL;
+			}
+			if (p->dynamic.lrc_table) {
+				ctx_fw_kfree(ctx, sensor_fw, p->dynamic.lrc_table);
+				p->dynamic.lrc_table = NULL;
+			}
+			if (p->dynamic.xtalk_table) {
+				ctx_fw_kfree(ctx, sensor_fw, p->dynamic.xtalk_table);
+				p->dynamic.xtalk_table = NULL;
+			}
+		}
+
+		ctx_fw_kfree(ctx, sensor_fw, pdata->eeprom_info_list);
+		pdata->eeprom_info_list = NULL;
+	}
+
+	adaptor_logi(ctx, "resource release done\n");
+
+	return ret;
+}
+
 static int init_sensor_global_info_section(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
 			const u8 *data, const size_t size,
 			void *dest, size_t dest_sz)
 {
@@ -614,7 +814,7 @@ static int init_sensor_global_info_section(struct adaptor_ctx *ctx,
 
 	if (pdata->ana_gain_table_cnt) {
 		sz = sizeof(u32) * pdata->ana_gain_table_cnt;
-		pdata->dynamic.ana_gain_table = kzalloc(sz, GFP_KERNEL);
+		pdata->dynamic.ana_gain_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!pdata->dynamic.ana_gain_table)
 			return -ENOMEM;
 
@@ -623,7 +823,7 @@ static int init_sensor_global_info_section(struct adaptor_ctx *ctx,
 	}
 	if (pdata->has_saturation_info) {
 		sz = sizeof(struct fw_mtk_sensor_saturation_info);
-		pdata->dynamic.saturation_info = kzalloc(sz, GFP_KERNEL);
+		pdata->dynamic.saturation_info = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!pdata->dynamic.saturation_info)
 			return -ENOMEM;
 
@@ -635,7 +835,7 @@ static int init_sensor_global_info_section(struct adaptor_ctx *ctx,
 		u32 sz2, sz3;
 
 		sz = sizeof(struct fw_reg_setting_entry) * pdata->init_setting_table_cnt;
-		pdata->dynamic.init_setting_table = kzalloc(sz, GFP_KERNEL);
+		pdata->dynamic.init_setting_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!pdata->dynamic.init_setting_table)
 			return -ENOMEM;
 
@@ -647,7 +847,7 @@ static int init_sensor_global_info_section(struct adaptor_ctx *ctx,
 
 			sz3 = sizeof(u16) * pdata->dynamic.init_setting_table[i].setting_table_len;
 			pdata->dynamic.init_setting_table[i].reg_addr_value.setting_table =
-				kzalloc(sz3, GFP_KERNEL);
+				ctx_fw_kzalloc(ctx, sensor_fw, sz3, GFP_KERNEL);
 
 			if (!pdata->dynamic.init_setting_table[i].reg_addr_value.setting_table)
 				return -ENOMEM;
@@ -659,7 +859,7 @@ static int init_sensor_global_info_section(struct adaptor_ctx *ctx,
 	}
 	if (pdata->cust_global_data_len) {
 		sz = sizeof(char) * (pdata->cust_global_data_len);
-		pdata->dynamic.cust_global_data = kzalloc(sz + sizeof(char), GFP_KERNEL);
+		pdata->dynamic.cust_global_data = ctx_fw_kzalloc(ctx, sensor_fw, sz + sizeof(char), GFP_KERNEL);
 		if (!pdata->dynamic.cust_global_data)
 			return -ENOMEM;
 
@@ -670,7 +870,9 @@ static int init_sensor_global_info_section(struct adaptor_ctx *ctx,
 	return ret;
 }
 
-static int update_s_ctx(struct subdrv_static_ctx *s_ctx, struct fw_sensor_global_info *fw_struct)
+static int update_s_ctx(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
+			struct subdrv_static_ctx *s_ctx, struct fw_sensor_global_info *fw_struct)
 {
 	int i;
 	size_t sz, sz2;
@@ -805,7 +1007,7 @@ static int update_s_ctx(struct subdrv_static_ctx *s_ctx, struct fw_sensor_global
 	/* ana_gain_table */
 	if (fw_struct->ana_gain_table_cnt) {
 		sz = fw_struct->ana_gain_table_cnt * sizeof(u32);
-		s_ctx->ana_gain_table = kzalloc(sz, GFP_KERNEL);
+		s_ctx->ana_gain_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!s_ctx->ana_gain_table)
 			return -ENOMEM;
 
@@ -818,7 +1020,7 @@ static int update_s_ctx(struct subdrv_static_ctx *s_ctx, struct fw_sensor_global
 	/* saturation_info */
 	if (fw_struct->has_saturation_info) {
 		sz = sizeof(struct mtk_sensor_saturation_info);
-		s_ctx->saturation_info = kzalloc(sz, GFP_KERNEL);
+		s_ctx->saturation_info = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!s_ctx->saturation_info)
 			return -ENOMEM;
 
@@ -843,7 +1045,7 @@ static int update_s_ctx(struct subdrv_static_ctx *s_ctx, struct fw_sensor_global
 	COPY_SPECIFIC_MEMBER(s_ctx, fw_struct, init_setting_table_v2_cnt, init_setting_table_cnt);
 	if (fw_struct->init_setting_table_cnt) {
 		sz = fw_struct->init_setting_table_cnt * sizeof(struct reg_setting_entry);
-		s_ctx->init_setting_table_v2 = kzalloc(sz, GFP_KERNEL);
+		s_ctx->init_setting_table_v2 = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!s_ctx->init_setting_table_v2)
 			return -ENOMEM;
 
@@ -859,7 +1061,7 @@ static int update_s_ctx(struct subdrv_static_ctx *s_ctx, struct fw_sensor_global
 					delay);
 
 			sz2 = fw_struct->dynamic.init_setting_table[i].setting_table_len * sizeof(u16);
-			s_ctx->init_setting_table_v2[i].setting_table = kzalloc(sz2, GFP_KERNEL);
+			s_ctx->init_setting_table_v2[i].setting_table = ctx_fw_kzalloc(ctx, sensor_fw, sz2, GFP_KERNEL);
 			if (!s_ctx->init_setting_table_v2[i].setting_table)
 				return -ENOMEM;
 
@@ -873,7 +1075,7 @@ static int update_s_ctx(struct subdrv_static_ctx *s_ctx, struct fw_sensor_global
 	/* reserved custom field */
 	if (fw_struct->cust_global_data_len && fw_struct->dynamic.cust_global_data) {
 		sz = fw_struct->cust_global_data_len * sizeof(char);
-		s_ctx->cust_global_data = kzalloc(sz + sizeof(char), GFP_KERNEL);
+		s_ctx->cust_global_data = ctx_fw_kzalloc(ctx, sensor_fw, sz + sizeof(char), GFP_KERNEL);
 		if (!s_ctx->cust_global_data)
 			return -ENOMEM;
 
@@ -887,6 +1089,7 @@ static int update_s_ctx(struct subdrv_static_ctx *s_ctx, struct fw_sensor_global
 }
 
 static int update_subdrv_entry_sensor_global(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
 			void *dest, size_t dest_sz)
 {
 	int ret = 0;
@@ -899,12 +1102,55 @@ static int update_subdrv_entry_sensor_global(struct adaptor_ctx *ctx,
 
 	fw_struct = (struct fw_sensor_global_info *)dest;
 
-	update_s_ctx(&ctx->subctx.s_ctx, fw_struct);
+	update_s_ctx(ctx, sensor_fw, &ctx->subctx.s_ctx, fw_struct);
+
+	return ret;
+}
+
+static int release_sensor_global_info_section(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
+			void *dest, size_t dest_sz)
+{
+	int ret = 0;
+	struct fw_sensor_global_info *pdata;
+
+	if (unlikely(dest == NULL))
+		return -EINVAL;
+	if (sizeof(struct fw_sensor_global_info) != dest_sz)
+		return -EINVAL;
+
+	pdata = (struct fw_sensor_global_info *)dest;
+
+	/* release source */
+	if (pdata->dynamic.ana_gain_table) {
+		ctx_fw_kfree(ctx, sensor_fw, pdata->dynamic.ana_gain_table);
+		pdata->dynamic.ana_gain_table = NULL;
+	}
+	if (pdata->dynamic.saturation_info) {
+		ctx_fw_kfree(ctx, sensor_fw, pdata->dynamic.saturation_info);
+		pdata->dynamic.saturation_info = NULL;
+	}
+	if (pdata->dynamic.init_setting_table) {
+		if (pdata->dynamic.init_setting_table->reg_addr_value.setting_table) {
+			ctx_fw_kfree(ctx, sensor_fw, pdata->dynamic.init_setting_table->reg_addr_value.setting_table);
+			pdata->dynamic.init_setting_table->reg_addr_value.setting_table = NULL;
+		}
+
+		ctx_fw_kfree(ctx, sensor_fw, pdata->dynamic.init_setting_table);
+		pdata->dynamic.init_setting_table = NULL;
+	}
+	if (pdata->dynamic.cust_global_data) {
+		ctx_fw_kfree(ctx, sensor_fw, pdata->dynamic.cust_global_data);
+		pdata->dynamic.cust_global_data = NULL;
+	}
+
+	adaptor_logi(ctx, "resource release done\n");
 
 	return ret;
 }
 
 static int init_mode_info_section(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
 			const u8 *data, const size_t size,
 			void *dest, size_t dest_sz)
 {
@@ -931,7 +1177,10 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 
 	offset += sz;
 
-	pdata->mode_list = kcalloc(pdata->mode_num, sizeof(struct fw_mode_info), GFP_KERNEL);
+	if (!pdata->mode_num)
+		return ret;
+
+	pdata->mode_list = ctx_fw_kcalloc(ctx, sensor_fw, pdata->mode_num, sizeof(struct fw_mode_info), GFP_KERNEL);
 
 	if (!pdata->mode_list)
 		return -ENOMEM;
@@ -947,7 +1196,7 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 			u32 sz2;
 
 			sz = sizeof(struct fw_set_pd_block_info_t);
-			p->dynamic.imgsensor_pd_info = kzalloc(sz, GFP_KERNEL);
+			p->dynamic.imgsensor_pd_info = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 			if (!p->dynamic.imgsensor_pd_info)
 				return -ENOMEM;
 
@@ -960,7 +1209,8 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 				sz = (p->dynamic.imgsensor_pd_info->i4PosL_cnt) *
 					sizeof(struct fw_pd_u32_pair);
 
-				p->dynamic.imgsensor_pd_info->dynamic.i4PosL = kzalloc(sz, GFP_KERNEL);
+				p->dynamic.imgsensor_pd_info->dynamic.i4PosL = ctx_fw_kzalloc(ctx, sensor_fw,
+											sz, GFP_KERNEL);
 				if (!p->dynamic.imgsensor_pd_info->dynamic.i4PosL)
 					return -ENOMEM;
 
@@ -971,7 +1221,8 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 				sz = (p->dynamic.imgsensor_pd_info->i4PosR_cnt) *
 					sizeof(struct fw_pd_u32_pair);
 
-				p->dynamic.imgsensor_pd_info->dynamic.i4PosR = kzalloc(sz, GFP_KERNEL);
+				p->dynamic.imgsensor_pd_info->dynamic.i4PosR = ctx_fw_kzalloc(ctx, sensor_fw,
+											sz, GFP_KERNEL);
 				if (!p->dynamic.imgsensor_pd_info->dynamic.i4PosR)
 					return -ENOMEM;
 
@@ -982,7 +1233,8 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 				sz = (p->dynamic.imgsensor_pd_info->i4Crop_cnt) *
 					sizeof(struct fw_pd_u32_pair);
 
-				p->dynamic.imgsensor_pd_info->dynamic.i4Crop = kzalloc(sz, GFP_KERNEL);
+				p->dynamic.imgsensor_pd_info->dynamic.i4Crop = ctx_fw_kzalloc(ctx, sensor_fw,
+											sz, GFP_KERNEL);
 				if (!p->dynamic.imgsensor_pd_info->dynamic.i4Crop)
 					return -ENOMEM;
 
@@ -995,7 +1247,8 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 				sz = (p->dynamic.imgsensor_pd_info->sPDMapInfo_cnt) *
 					sizeof(struct fw_pd_map_info_t);
 
-				p->dynamic.imgsensor_pd_info->dynamic.sPDMapInfo = kzalloc(sz, GFP_KERNEL);
+				p->dynamic.imgsensor_pd_info->dynamic.sPDMapInfo = ctx_fw_kzalloc(ctx, sensor_fw,
+											sz, GFP_KERNEL);
 				if (!p->dynamic.imgsensor_pd_info->dynamic.sPDMapInfo)
 					return -ENOMEM;
 
@@ -1013,7 +1266,7 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 					}
 
 					sz = (map_info->i4PDOrder_cnt) * sizeof(u32);
-					map_info->i4PDOrder = kzalloc(sz, GFP_KERNEL);
+					map_info->i4PDOrder = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 					if (!map_info->i4PDOrder)
 						return -ENOMEM;
 
@@ -1024,7 +1277,7 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 		}
 		if (p->has_saturation_info) {
 			sz = sizeof(struct fw_mtk_sensor_saturation_info);
-			p->dynamic.saturation_info = kzalloc(sz, GFP_KERNEL);
+			p->dynamic.saturation_info = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 			if (!p->dynamic.saturation_info)
 				return -ENOMEM;
 
@@ -1035,7 +1288,7 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 			u32 sz2;
 
 			sz = sizeof(struct fw_dcg_info_struct);
-			p->dynamic.dcg_info = kzalloc(sz, GFP_KERNEL);
+			p->dynamic.dcg_info = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 			if (!p->dynamic.dcg_info)
 				return -ENOMEM;
 
@@ -1046,7 +1299,7 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 
 			if (p->dynamic.dcg_info->dcg_gain_table_cnt) {
 				sz = sizeof(u32) * p->dynamic.dcg_info->dcg_gain_table_cnt;
-				p->dynamic.dcg_info->dcg_gain_table = kzalloc(sz, GFP_KERNEL);
+				p->dynamic.dcg_info->dcg_gain_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 				if (!p->dynamic.dcg_info->dcg_gain_table)
 					return -ENOMEM;
 
@@ -1056,7 +1309,7 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 		}
 		if (p->frame_desc_num) {
 			sz = sizeof(struct fw_mtk_mbus_frame_desc_entry_csi2) * (p->frame_desc_num);
-			p->dynamic.frame_desc = kzalloc(sz, GFP_KERNEL);
+			p->dynamic.frame_desc = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 			if (!p->dynamic.frame_desc)
 				return -ENOMEM;
 
@@ -1065,7 +1318,7 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 		}
 		if (p->mode_setting_len) {
 			sz = sizeof(u16) * p->mode_setting_len;
-			p->dynamic.mode_setting_table = kzalloc(sz, GFP_KERNEL);
+			p->dynamic.mode_setting_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 			if (!p->dynamic.mode_setting_table)
 				return -ENOMEM;
 
@@ -1074,7 +1327,7 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 		}
 		if (p->mode_setting_len_for_md) {
 			sz = sizeof(u16) * p->mode_setting_len_for_md;
-			p->dynamic.mode_setting_table_for_md = kzalloc(sz, GFP_KERNEL);
+			p->dynamic.mode_setting_table_for_md = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 			if (!p->dynamic.mode_setting_table_for_md)
 				return -ENOMEM;
 
@@ -1083,7 +1336,7 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 		}
 		if (p->seamless_switch_mode_setting_len) {
 			sz = sizeof(u16) * p->seamless_switch_mode_setting_len;
-			p->dynamic.seamless_switch_mode_setting_table = kzalloc(sz, GFP_KERNEL);
+			p->dynamic.seamless_switch_mode_setting_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 			if (!p->dynamic.seamless_switch_mode_setting_table)
 				return -ENOMEM;
 
@@ -1092,7 +1345,8 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 		}
 		if (p->cust_sensor_mode_data_len) {
 			sz = sizeof(char) * (p->cust_sensor_mode_data_len);
-			p->dynamic.cust_sensor_mode_data = kzalloc(sz + sizeof(char), GFP_KERNEL);
+			p->dynamic.cust_sensor_mode_data = ctx_fw_kzalloc(ctx, sensor_fw,
+									sz + sizeof(char), GFP_KERNEL);
 			if (!p->dynamic.cust_sensor_mode_data)
 				return -ENOMEM;
 
@@ -1104,7 +1358,9 @@ static int init_mode_info_section(struct adaptor_ctx *ctx,
 	return ret;
 }
 
-static int update_s_ctx_mode(struct subdrv_mode_struct *pmode, struct fw_mode_info *fw_struct)
+static int update_s_ctx_mode(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
+			struct subdrv_mode_struct *pmode, struct fw_mode_info *fw_struct)
 {
 	int i, j;
 	size_t sz;
@@ -1208,7 +1464,7 @@ static int update_s_ctx_mode(struct subdrv_mode_struct *pmode, struct fw_mode_in
 	/* imgsensor_pd_info */
 	if (fw_struct->has_imgsensor_pd_info) {
 		sz = sizeof(struct SET_PD_BLOCK_INFO_T);
-		pmode->imgsensor_pd_info = kzalloc(sz, GFP_KERNEL);
+		pmode->imgsensor_pd_info = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!pmode->imgsensor_pd_info)
 			return -ENOMEM;
 
@@ -1318,7 +1574,7 @@ static int update_s_ctx_mode(struct subdrv_mode_struct *pmode, struct fw_mode_in
 	/* saturation_info */
 	if (fw_struct->has_saturation_info) {
 		sz = sizeof(struct mtk_sensor_saturation_info);
-		pmode->saturation_info = kzalloc(sz, GFP_KERNEL);
+		pmode->saturation_info = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!pmode->saturation_info)
 			return -ENOMEM;
 
@@ -1356,7 +1612,7 @@ static int update_s_ctx_mode(struct subdrv_mode_struct *pmode, struct fw_mode_in
 		if (fw_struct->dynamic.dcg_info->dcg_gain_table_cnt) {
 			sz = sizeof(u32) * fw_struct->dynamic.dcg_info->dcg_gain_table_cnt;
 			dcg_info->dcg_gain_table_size = sz;
-			dcg_info->dcg_gain_table = kzalloc(sz, GFP_KERNEL);
+			dcg_info->dcg_gain_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 			if (!dcg_info->dcg_gain_table)
 				return -ENOMEM;
 
@@ -1369,7 +1625,7 @@ static int update_s_ctx_mode(struct subdrv_mode_struct *pmode, struct fw_mode_in
 	/* frame desc */
 	if (fw_struct->frame_desc_num) {
 		sz = fw_struct->frame_desc_num * sizeof(struct mtk_mbus_frame_desc_entry);
-		pmode->frame_desc = kzalloc(sz, GFP_KERNEL);
+		pmode->frame_desc = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!pmode->frame_desc)
 			return -ENOMEM;
 
@@ -1420,7 +1676,7 @@ static int update_s_ctx_mode(struct subdrv_mode_struct *pmode, struct fw_mode_in
 
 	if (fw_struct->mode_setting_len) {
 		sz = fw_struct->mode_setting_len * sizeof(u16);
-		pmode->mode_setting_table = kzalloc(sz, GFP_KERNEL);
+		pmode->mode_setting_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!pmode->mode_setting_table)
 			return -ENOMEM;
 		memcpy(pmode->mode_setting_table,
@@ -1429,7 +1685,7 @@ static int update_s_ctx_mode(struct subdrv_mode_struct *pmode, struct fw_mode_in
 	}
 	if (fw_struct->mode_setting_len_for_md) {
 		sz = fw_struct->mode_setting_len_for_md * sizeof(u16);
-		pmode->mode_setting_table_for_md = kzalloc(sz, GFP_KERNEL);
+		pmode->mode_setting_table_for_md = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!pmode->mode_setting_table_for_md)
 			return -ENOMEM;
 		memcpy(pmode->mode_setting_table_for_md,
@@ -1438,7 +1694,7 @@ static int update_s_ctx_mode(struct subdrv_mode_struct *pmode, struct fw_mode_in
 	}
 	if (fw_struct->seamless_switch_mode_setting_len) {
 		sz = fw_struct->seamless_switch_mode_setting_len * sizeof(u16);
-		pmode->seamless_switch_mode_setting_table = kzalloc(sz, GFP_KERNEL);
+		pmode->seamless_switch_mode_setting_table = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!pmode->seamless_switch_mode_setting_table)
 			return -ENOMEM;
 		memcpy(pmode->seamless_switch_mode_setting_table,
@@ -1449,7 +1705,7 @@ static int update_s_ctx_mode(struct subdrv_mode_struct *pmode, struct fw_mode_in
 	/* reserved custom field */
 	if (fw_struct->cust_sensor_mode_data_len && fw_struct->dynamic.cust_sensor_mode_data) {
 		sz = fw_struct->cust_sensor_mode_data_len * sizeof(char);
-		pmode->cust_sensor_mode_data = kzalloc(sz + sizeof(char), GFP_KERNEL);
+		pmode->cust_sensor_mode_data = ctx_fw_kzalloc(ctx, sensor_fw, sz + sizeof(char), GFP_KERNEL);
 		if (!pmode->cust_sensor_mode_data)
 			return -ENOMEM;
 
@@ -1463,6 +1719,7 @@ static int update_s_ctx_mode(struct subdrv_mode_struct *pmode, struct fw_mode_in
 }
 
 static int update_subdrv_entry_mode_info(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
 			void *dest, size_t dest_sz)
 {
 	int i, ret = 0;
@@ -1482,20 +1739,113 @@ static int update_subdrv_entry_mode_info(struct adaptor_ctx *ctx,
 
 	if (fw_struct->mode_num) {
 		sz_modes = fw_struct->mode_num * sizeof(struct subdrv_mode_struct);
-		ctx->subctx.s_ctx.mode = kzalloc(sz_modes, GFP_KERNEL);
+		ctx->subctx.s_ctx.mode = ctx_fw_kzalloc(ctx, sensor_fw, sz_modes, GFP_KERNEL);
 		if (!ctx->subctx.s_ctx.mode)
 			return -ENOMEM;
 	}
 
 	for (i = 0; i < fw_struct->mode_num; i++) {
 		ptr = ctx->subctx.s_ctx.mode + i;
-		update_s_ctx_mode(ptr, fw_struct->mode_list + i);
+		update_s_ctx_mode(ctx, sensor_fw, ptr, fw_struct->mode_list + i);
 	}
 
 	return ret;
 }
 
+static int release_mode_info_section(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
+			void *dest, size_t dest_sz)
+{
+	int ret = 0;
+	struct fw_modes *pdata;
+	struct fw_mode_info *p;
+	int i;
+
+	if (unlikely(dest == NULL))
+		return -EINVAL;
+	if (sizeof(struct fw_modes) != dest_sz)
+		return -EINVAL;
+
+	pdata = (struct fw_modes *)dest;
+
+	/* release resource */
+	if (pdata->mode_list) {
+		for (i = 0; i < pdata->mode_num; i++) {
+			p = pdata->mode_list + i;
+
+			if (p->dynamic.imgsensor_pd_info) {
+				if (p->dynamic.imgsensor_pd_info->dynamic.i4PosL) {
+					ctx_fw_kfree(ctx, sensor_fw, p->dynamic.imgsensor_pd_info->dynamic.i4PosL);
+					p->dynamic.imgsensor_pd_info->dynamic.i4PosL = NULL;
+				}
+				if (p->dynamic.imgsensor_pd_info->dynamic.i4PosR) {
+					ctx_fw_kfree(ctx, sensor_fw, p->dynamic.imgsensor_pd_info->dynamic.i4PosR);
+					p->dynamic.imgsensor_pd_info->dynamic.i4PosR = NULL;
+				}
+				if (p->dynamic.imgsensor_pd_info->dynamic.i4Crop) {
+					ctx_fw_kfree(ctx, sensor_fw, p->dynamic.imgsensor_pd_info->dynamic.i4Crop);
+					p->dynamic.imgsensor_pd_info->dynamic.i4Crop = NULL;
+				}
+				if (p->dynamic.imgsensor_pd_info->dynamic.sPDMapInfo) {
+					if (p->dynamic.imgsensor_pd_info->dynamic.sPDMapInfo->i4PDOrder) {
+						ctx_fw_kfree(ctx, sensor_fw,
+							p->dynamic.imgsensor_pd_info->dynamic.sPDMapInfo->i4PDOrder);
+						p->dynamic.imgsensor_pd_info->dynamic.sPDMapInfo->i4PDOrder = NULL;
+					}
+
+					ctx_fw_kfree(ctx, sensor_fw, p->dynamic.imgsensor_pd_info->dynamic.sPDMapInfo);
+					p->dynamic.imgsensor_pd_info->dynamic.sPDMapInfo = NULL;
+				}
+
+				ctx_fw_kfree(ctx, sensor_fw, p->dynamic.imgsensor_pd_info);
+				p->dynamic.imgsensor_pd_info = NULL;
+			}
+			if (p->dynamic.saturation_info) {
+				ctx_fw_kfree(ctx, sensor_fw, p->dynamic.saturation_info);
+				p->dynamic.saturation_info = NULL;
+			}
+			if (p->dynamic.dcg_info) {
+				if (p->dynamic.dcg_info->dcg_gain_table) {
+					ctx_fw_kfree(ctx, sensor_fw, p->dynamic.dcg_info->dcg_gain_table);
+					p->dynamic.dcg_info->dcg_gain_table = NULL;
+				}
+
+				ctx_fw_kfree(ctx, sensor_fw, p->dynamic.dcg_info);
+				p->dynamic.dcg_info = NULL;
+			}
+			if (p->dynamic.frame_desc) {
+				ctx_fw_kfree(ctx, sensor_fw, p->dynamic.frame_desc);
+				p->dynamic.frame_desc = NULL;
+			}
+			if (p->dynamic.mode_setting_table) {
+				ctx_fw_kfree(ctx, sensor_fw, p->dynamic.mode_setting_table);
+				p->dynamic.mode_setting_table = NULL;
+			}
+			if (p->dynamic.mode_setting_table_for_md) {
+				ctx_fw_kfree(ctx, sensor_fw, p->dynamic.mode_setting_table_for_md);
+				p->dynamic.mode_setting_table_for_md = NULL;
+			}
+			if (p->dynamic.seamless_switch_mode_setting_table) {
+				ctx_fw_kfree(ctx, sensor_fw, p->dynamic.seamless_switch_mode_setting_table);
+				p->dynamic.seamless_switch_mode_setting_table = NULL;
+			}
+			if (p->dynamic.cust_sensor_mode_data) {
+				ctx_fw_kfree(ctx, sensor_fw, p->dynamic.cust_sensor_mode_data);
+				p->dynamic.cust_sensor_mode_data = NULL;
+			}
+		}
+
+		ctx_fw_kfree(ctx, sensor_fw, pdata->mode_list);
+		pdata->mode_list = NULL;
+	}
+
+	adaptor_logi(ctx, "resource release done\n");
+
+	return ret;
+}
+
 static int init_embedded_info_section(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
 			const u8 *data, const size_t size,
 			void *dest, size_t dest_sz)
 {
@@ -1521,7 +1871,7 @@ static int init_embedded_info_section(struct adaptor_ctx *ctx,
 
 	if (pdata->has_ebd_info) {
 		sz = sizeof(struct fw_ebd_info_struct);
-		pdata->ebd_info = kzalloc(sz, GFP_KERNEL);
+		pdata->ebd_info = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
 		if (!pdata->ebd_info)
 			return -ENOMEM;
 
@@ -1544,6 +1894,7 @@ static int _update_ebd_loc(struct ebd_loc *target, struct fw_ebd_loc *src)
 }
 
 static int update_subdrv_entry_embedded_info(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
 			void *dest, size_t dest_sz)
 {
 	int i, ret = 0;
@@ -1579,6 +1930,31 @@ static int update_subdrv_entry_embedded_info(struct adaptor_ctx *ctx,
 	return ret;
 }
 
+static int release_embedded_info_section(struct adaptor_ctx *ctx,
+			struct sensor_firmware *sensor_fw,
+			void *dest, size_t dest_sz)
+{
+	int ret = 0;
+	struct fw_ebd *pdata;
+
+	if (unlikely(dest == NULL))
+		return -EINVAL;
+	if (sizeof(struct fw_ebd) != dest_sz)
+		return -EINVAL;
+
+	pdata = (struct fw_ebd *)dest;
+
+	/* release resource */
+	if (pdata->ebd_info) {
+		ctx_fw_kfree(ctx, sensor_fw, pdata->ebd_info);
+		pdata->ebd_info = NULL;
+	}
+
+	adaptor_logi(ctx, "resource release done\n");
+
+	return ret;
+}
+
 static init_section section_fp[SECTION_MAX_NUM] = {
 	[SECTION_HEADER] = init_header_section,
 	[SECTION_PW_SEQ] = init_pw_seq_section,
@@ -1595,12 +1971,21 @@ static update_subdrv_entry update_ctx_fp[SECTION_MAX_NUM] = {
 	[SECTION_MODE_INFO] = update_subdrv_entry_mode_info,
 	[SECTION_EMBEDDED_INFO] = update_subdrv_entry_embedded_info,
 };
+static release_section release_section_fp[SECTION_MAX_NUM] = {
+	[SECTION_HEADER] = release_header_section,
+	[SECTION_PW_SEQ] = release_pw_seq_section,
+	[SECTION_EEPROM_INFO] = release_eeprom_info_section,
+	[SECTION_SENSOR_GLOBAL_INFO] = release_sensor_global_info_section,
+	[SECTION_MODE_INFO] = release_mode_info_section,
+	[SECTION_EMBEDDED_INFO] = release_embedded_info_section,
+};
 
 struct section {
 	bool has_data;
 	struct fw_section fw_sect;
 	init_section init_fp;
 	update_subdrv_entry update_fp;
+	release_section release_fp;
 	void *data;
 	size_t data_sz;
 };
@@ -1637,7 +2022,8 @@ static int parse_section(struct adaptor_ctx *ctx, const u8 *data, const size_t s
 	return 0;
 }
 
-static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const size_t size)
+static int init_with_firmware(struct adaptor_ctx *ctx, struct sensor_firmware *sensor_fw,
+			      const u8 *data, const size_t size)
 {
 	int ret = 0;
 	int i;
@@ -1654,11 +2040,20 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 
 	//adaptor_logi(ctx, "data size is %zu bytes\n", size);
 
+	/* init variable */
+	memset(&header, 0, sizeof(header));
+	memset(&pw_seq, 0, sizeof(pw_seq));
+	memset(&eeprom_infos, 0, sizeof(eeprom_infos));
+	memset(&global_info, 0, sizeof(global_info));
+	memset(&modes, 0, sizeof(modes));
+	memset(&ebd, 0, sizeof(ebd));
+
 	/* init section */
 	memset(sect, 0, sizeof(sect));
 	for (i = 0; i < SECTION_MAX_NUM; i++) {
 		sect[i].init_fp = section_fp[i];
 		sect[i].update_fp = update_ctx_fp[i];
+		sect[i].release_fp = release_section_fp[i];
 		sect[i].fw_sect.flag = i + 1;
 	}
 	sect[SECTION_HEADER].data = &header;
@@ -1681,23 +2076,24 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 
 	for (i = 0; i < SECTION_MAX_NUM; i++) {
 		if (sect[i].init_fp && sect[i].has_data &&
-		    sect[i].init_fp(ctx, data + sect[i].fw_sect.fw_offset, size,
+		    sect[i].init_fp(ctx, sensor_fw, data + sect[i].fw_sect.fw_offset, size,
 				    sect[i].data, sect[i].data_sz) == 0) {
 
 			if (sect[i].update_fp &&
-			    sect[i].update_fp(ctx, sect[i].data, sect[i].data_sz) == 0) {
+			    sect[i].update_fp(ctx, sensor_fw, sect[i].data, sect[i].data_sz) == 0) {
 				adaptor_logi(ctx, "parsing %d success\n", i);
 			} else if (sect[i].update_fp) {
 				/* update fp failed */
 				adaptor_loge(ctx, "update fp[%d] failed\n", i);
-				return -EINVAL;
+				ret = -EINVAL;
+				goto LABEL_INIT_FW_RELEASE;
 			}
 
 #ifdef FW_LOAD_LOG
 			/* print log */
 			switch (i) {
 			case SECTION_HEADER:
-				adaptor_logi(ctx, "autosun size of packed = %zu\n", sizeof(struct fw_header));
+				adaptor_logi(ctx, "header size of packed = %zu\n", sizeof(struct fw_header));
 				adaptor_logi(ctx, "header major version = %u", header.major_version);
 				adaptor_logi(ctx, "header revision = %u", header.major_version);
 				adaptor_logi(ctx, "header last modified ts = %llu", header.last_modified_ts);
@@ -1705,7 +2101,7 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 				adaptor_logi(ctx, "header sensor id = 0x%x", header.sensor_id);
 				break;
 			case SECTION_PW_SEQ:
-				adaptor_logi(ctx, "autosun size of packed = %zu, cnt = %d, aov_cnt = %d\n",
+				adaptor_logi(ctx, "pw_seq size of packed = %zu, cnt = %d, aov_cnt = %d\n",
 					     sizeof(struct fw_pw_seq), pw_seq.pw_seq_cnt, pw_seq.aov_pw_seq_cnt);
 				for (j = 0; j < pw_seq.pw_seq_cnt; j++) {
 					adaptor_logi(ctx, "pw_seq[%d] hw_id(%d), val(%d/%d), delay(%d)\n",
@@ -1725,7 +2121,7 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 				}
 				break;
 			case SECTION_EEPROM_INFO:
-				adaptor_logi(ctx, "autosun size of packed = %zu, eeprom info num = %u\n",
+				adaptor_logi(ctx, "eeprom info size of packed = %zu, eeprom info num = %u\n",
 					     sizeof(struct fw_eeprom_infos), eeprom_infos.eeprom_info_num);
 				for (j = 0; j < eeprom_infos.eeprom_info_num; j++) {
 					adaptor_logi(ctx,
@@ -1773,7 +2169,7 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 				}
 				break;
 			case SECTION_SENSOR_GLOBAL_INFO:
-				adaptor_logi(ctx, "autosun size of packed = %zu\n",
+				adaptor_logi(ctx, "global info size of packed = %zu\n",
 					     sizeof(struct fw_sensor_global_info));
 				adaptor_logi(ctx, "global info match sensor id = 0x%x",
 					     global_info.sensor_id_match);
@@ -1985,7 +2381,7 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 				}
 				break;
 			case SECTION_MODE_INFO:
-				adaptor_logi(ctx, "autosun size of packed = %zu, mode num = %u\n",
+				adaptor_logi(ctx, "mode info size of packed = %zu, mode num = %u\n",
 					     sizeof(struct fw_modes), modes.mode_num);
 				for (j = 0; j < modes.mode_num; j++) {
 					adaptor_logi(ctx,
@@ -2185,8 +2581,15 @@ static int init_with_firmware(struct adaptor_ctx *ctx, const u8 *data, const siz
 		} else if (sect[i].init_fp && sect[i].has_data) {
 			/* init fp failed */
 			adaptor_loge(ctx, "init fp[%d] failed\n", i);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto LABEL_INIT_FW_RELEASE;
 		}
+	}
+
+LABEL_INIT_FW_RELEASE:
+	for (i = 0; i < SECTION_MAX_NUM; i++) {
+		if (sect[i].release_fp)
+			sect[i].release_fp(ctx, sensor_fw, sect[i].data, sect[i].data_sz);
 	}
 
 	return ret;
@@ -2574,37 +2977,38 @@ static int register_ext_ops(struct adaptor_ctx *ctx)
 	return 0;
 }
 
-int loading_firmware(struct adaptor_ctx *ctx, const char * const fw_name)
+int loading_firmware(struct adaptor_ctx *ctx, struct sensor_firmware *sensor_fw)
 {
 	char *fw_path = NULL;
 	const struct firmware *fw = NULL;
 	int ret = 0;
 	struct adaptor_profile_tv tv0, tv1, tv2;
+	const char * const fw_name = sensor_fw->name;
 
 
 	ADAPTOR_PROFILE_BEGIN(&tv0);
-	adaptor_logi(ctx, "autosun fw_name = %s", fw_name);
+	adaptor_logi(ctx, "loading fw_name = %s", fw_name);
 	ADAPTOR_PROFILE_END(&tv0);
 
 	ADAPTOR_PROFILE_BEGIN(&tv1);
-	fw_path = get_firmware_path(IMGSENSOR_FW_SUB_FOLDER, fw_name);
+	fw_path = get_firmware_path(ctx, IMGSENSOR_FW_SUB_FOLDER, fw_name);
 	if (!fw_path)
 		return -ENOMEM;
 
 	ret = request_firmware(&fw, fw_path, ctx->dev);
 	if (ret) {
 		adaptor_loge(ctx, "fail to load firmware %s, ret:%d\n", fw_path, ret);
-		kfree(fw_path);
+		devm_kfree(ctx->dev, fw_path);
 		fw_path = NULL;
 		return ret;
 	}
 	ADAPTOR_PROFILE_END(&tv1);
 
 	ADAPTOR_PROFILE_BEGIN(&tv2);
-	ret = init_with_firmware(ctx, fw->data, fw->size);
+	ret = init_with_firmware(ctx, sensor_fw, fw->data, fw->size);
 
 	release_firmware(fw);
-	kfree(fw_path);
+	devm_kfree(ctx->dev, fw_path);
 	fw_path = NULL;
 
 	ADAPTOR_PROFILE_END(&tv2);
@@ -2621,6 +3025,25 @@ int loading_firmware(struct adaptor_ctx *ctx, const char * const fw_name)
 
 	update_default_i2c_addr_table(ctx);
 	ret = register_ext_ops(ctx);
+
+	return ret;
+}
+
+int release_firmware_resource(struct adaptor_ctx *ctx, struct sensor_firmware *sensor_fw)
+{
+	int ret = 0;
+	struct sensor_firmware_res *res = NULL, *r = NULL;
+
+	/* prevent adaptor_logx use subdrv->name after free */
+	if (ctx && ctx->subdrv)
+		ctx->subdrv->name = NULL;
+
+	list_for_each_entry_safe(res, r, &sensor_fw->res_list, list) {
+		list_del(&res->list);
+		devm_kfree(ctx->dev, res->res_ptr);
+		res->res_ptr = NULL;
+		devm_kfree(ctx->dev, res);
+	}
 
 	return ret;
 }

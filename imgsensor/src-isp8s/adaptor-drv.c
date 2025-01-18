@@ -1519,33 +1519,37 @@ static int search_sensor(struct adaptor_ctx *ctx)
 		if (firmware_support(ctx->subdrv)) {
 			specific_sensor_fw_names[0] = ctx->subdrv->name;
 
-			ctx->subdrv = kzalloc(sizeof(struct subdrv_entry), GFP_KERNEL);
+			ctx->subdrv = devm_kzalloc(ctx->dev, sizeof(struct subdrv_entry), GFP_KERNEL);
 			if (!ctx->subdrv)
 				return -EIO;
 
-			loader = kzalloc(sizeof(struct sensor_firmware_loader), GFP_KERNEL);
+			loader = devm_kzalloc(ctx->dev, sizeof(struct sensor_firmware_loader), GFP_KERNEL);
 			if (!loader) {
-				kfree(ctx->subdrv);
+				devm_kfree(ctx->dev, ctx->subdrv);
 				ctx->subdrv = subdrvs[i];
 				return -EIO;
 			}
 
-			memcpy(ctx->subdrv, subdrvs[i], sizeof(struct subdrv_entry));
-
 			adaptor_logi(ctx, "specific subdrv");
-			lookup_firmwares(loader, specific_sensor_fw_names, ARRAY_SIZE(specific_sensor_fw_names));
-			ctx->subdrv->fw_loader = loader;
+			lookup_firmwares(ctx, loader, specific_sensor_fw_names, ARRAY_SIZE(specific_sensor_fw_names));
 
-			for_each_firmware(firmware, ctx->subdrv) {
-				if (loading_firmware(ctx, firmware->name) == 0 &&
-				    try_probe_subdrv_entry(ctx) == 0)
+			for_each_firmware(firmware, loader) {
+				memcpy(ctx->subdrv, subdrvs[i], sizeof(struct subdrv_entry));
+
+				if (loading_firmware(ctx, firmware) == 0 &&
+				    try_probe_subdrv_entry(ctx) == 0) {
+					deinit_firmware_loader(ctx, loader);
+					devm_kfree(ctx->dev, loader);
+					loader = NULL;
 					return 0;
+				}
+				release_firmware_resource(ctx, firmware);
 			}
 			/* not found */
-			ctx->subdrv->fw_loader = NULL;
-			kfree(loader);
+			deinit_firmware_loader(ctx, loader);
+			devm_kfree(ctx->dev, loader);
 			loader = NULL;
-			kfree(ctx->subdrv);
+			devm_kfree(ctx->dev, ctx->subdrv);
 			ctx->subdrv = subdrvs[i];
 		} else {
 			/* no support firmware */
@@ -1556,28 +1560,33 @@ static int search_sensor(struct adaptor_ctx *ctx)
 	}
 
 	/* try using generic sensor entry */
-	ctx->subdrv = kzalloc(sizeof(struct subdrv_entry), GFP_KERNEL);
+	ctx->subdrv = devm_kzalloc(ctx->dev, sizeof(struct subdrv_entry), GFP_KERNEL);
 	if (ctx->subdrv) {
-		memcpy(ctx->subdrv, &generic_subdrv_entry, sizeof(struct subdrv_entry));
-		loader = kzalloc(sizeof(struct sensor_firmware_loader), GFP_KERNEL);
+		loader = devm_kzalloc(ctx->dev, sizeof(struct sensor_firmware_loader), GFP_KERNEL);
 		if (loader) {
 			adaptor_logi(ctx, "generic subdrv");
-			lookup_firmwares(loader, of_sensor_names, of_sensor_names_cnt);
-			ctx->subdrv->fw_loader = loader;
+			lookup_firmwares(ctx, loader, of_sensor_names, of_sensor_names_cnt);
 
-			for_each_firmware(firmware, ctx->subdrv) {
-				if (loading_firmware(ctx, firmware->name) == 0 &&
-				    try_probe_subdrv_entry(ctx) == 0)
+			for_each_firmware(firmware, loader) {
+				memcpy(ctx->subdrv, &generic_subdrv_entry, sizeof(struct subdrv_entry));
+
+				if (loading_firmware(ctx, firmware) == 0 &&
+				    try_probe_subdrv_entry(ctx) == 0) {
+					deinit_firmware_loader(ctx, loader);
+					devm_kfree(ctx->dev, loader);
+					loader = NULL;
 					return 0;
+				}
+				release_firmware_resource(ctx, firmware);
 			}
 
 			/* not found */
-			ctx->subdrv->fw_loader = loader;
-			kfree(loader);
+			deinit_firmware_loader(ctx, loader);
+			devm_kfree(ctx->dev, loader);
 			loader = NULL;
 		}
 		/* not found */
-		kfree(ctx->subdrv);
+		devm_kfree(ctx->dev, ctx->subdrv);
 		ctx->subdrv = NULL;
 	}
 

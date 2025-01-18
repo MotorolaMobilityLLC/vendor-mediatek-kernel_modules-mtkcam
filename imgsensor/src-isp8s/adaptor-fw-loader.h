@@ -12,7 +12,7 @@
 	((__x__) && (__x__)->is_fw_support)
 
 #define for_each_firmware(__f__, __x__) \
-	list_for_each_entry((__f__), &(__x__)->fw_loader->fw_list, list)
+	list_for_each_entry((__f__), &(__x__)->fw_list, list)
 
 /* Macro to copy a member from one struct to another based on the sam member name */
 #define COPY_COMMON_MEMBER(dest_struct, src_struct, member) \
@@ -77,23 +77,45 @@
 /**
  * Look up firmware list
  *
+ * @param ctx The adaptor context
  * @param loader The firmware loader
  * @param fw_file_name The string array to be check if exist
  * @param count The array element count of {@code fw_file_name}
  *
  * @return zero if successful or negative number if error occurred
  */
-int lookup_firmwares(struct sensor_firmware_loader * const loader,
+int lookup_firmwares(struct adaptor_ctx *ctx,
+		     struct sensor_firmware_loader * const loader,
 		     const char *fw_file_name[], int count);
 
 /**
  * Loading the correspond firmware
  *
  * @param ctx The adaptor context
- * @param fw_name The firmware file path
+ * @param sensor_fw The sensor firmware info
  *
  * @return zero if successful
  */
-int loading_firmware(struct adaptor_ctx *ctx, const char * const fw_name);
+int loading_firmware(struct adaptor_ctx *ctx, struct sensor_firmware *sensor_fw);
+
+/**
+ * Deinit firmware loader, to release the list
+ *
+ * @param ctx The adaptor context
+ * @param loader The firmware loader
+ */
+int deinit_firmware_loader(struct adaptor_ctx *ctx, struct sensor_firmware_loader *loader);
+
+
+/**
+ * Release sensor firmware allocated resources
+ * Please don't release resource if search sensor pass, due to the allocated s_ctx
+ * resource will be free also
+ *
+ * @param ctx The adaptor context
+ * @param sensor_fw The sensor firmware info
+ */
+int release_firmware_resource(struct adaptor_ctx *ctx,
+			      struct sensor_firmware *sensor_fw);
 
 #endif
