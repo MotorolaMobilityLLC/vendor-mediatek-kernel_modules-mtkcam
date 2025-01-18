@@ -12,6 +12,9 @@
 #include <linux/clk.h>
 
 struct clk_bulk_data imgsys_isp8s_clks_mt6993[] = {
+	{  // cksys_mm_clk CKSYS_MM_CAMTM_SEL
+		.id = "CKSYS_MM_CAMTM_SEL",
+	},
 	{  // img_vcore_d1a_clk IMG_VCORE_GALS_DISP_CAM_P2
 		.id = "VCORE_GALS",
 	},
