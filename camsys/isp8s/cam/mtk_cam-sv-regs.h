@@ -158,6 +158,22 @@ union CAMSVCENTRAL_MODULE_DB {
 #define REG_CAMSVCENTRAL_DCIF_SET				0x01D4
 #define REG_CAMSVCENTRAL_DCIF_SEL				0x01D8
 
+#define REG_CAMSVCENTRAL_COH_CFG				0x0280
+union CAMSVCENTRAL_COH_REQ_CFG {
+	struct {
+		unsigned int COH_REQ_TIMER_EN	:  1;
+		unsigned int COH_REQ_OR_CQ_EN	:  1;
+		unsigned int COH_REQ_MODE_SEL	:  2;
+		unsigned int COH_REQ_SET		:  1;
+		unsigned int COH_REQ_CLEAR		:  1;
+		unsigned int rsv_6							: 10;
+		unsigned int COH_REQ_SW_R		:  1;
+		unsigned int rsv_17							: 15;
+	} Bits;
+	unsigned int Raw;
+};
+#define REG_CAMSVCENTRAL_COH_THRESHOLD			0x0284
+
 #define REG_CAMSVCENTRAL_DONE_STATUS_EN			0x0344
 union CAMSVCENTRAL_DONE_STATUS_EN {
 	struct {
