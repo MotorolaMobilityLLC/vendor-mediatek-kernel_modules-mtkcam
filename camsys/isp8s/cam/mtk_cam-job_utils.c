@@ -2475,6 +2475,7 @@ int handle_sv_tag_display_ic(struct mtk_cam_job *job)
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_camsv_device *sv_dev;
 	struct mtk_camsv_pipeline *sv_pipe;
+	struct mtk_camsv_sink_data *sv_sink = NULL;
 	struct mtk_camsv_tag_param tag_param[SVTAG_IMG_END] = {};
 	struct v4l2_format *img_fmt;
 	unsigned int width, height, mbus_code, is_unpack_msb;
@@ -2496,8 +2497,19 @@ int handle_sv_tag_display_ic(struct mtk_cam_job *job)
 
 	sv_pipe_idx = ctx->sv_subdev_idx[0];
 	sv_pipe = &ctx->cam->pipelines.camsv[sv_pipe_idx];
+	sv_sink = &job->req->sv_data[sv_pipe_idx].sink;
 	hw_scen = (1 << MTKCAM_SV_SPECIAL_SCENARIO_DISPLAY_IC);
-	req_amount = 3;
+	img_fmt = &sv_pipe->vdev_nodes[
+		MTK_CAMSV_MAIN_STREAM_OUT - MTK_CAMSV_SINK_NUM].active_fmt;
+	if ((img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV21) ||
+		(img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV12) ||
+		(img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV21_10) ||
+		(img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV12_10) ||
+		(img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_MTISP_NV21_10P) ||
+		(img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_MTISP_NV12_10P))
+		req_amount = 3;
+	else
+		req_amount = 2;
 	ret = mtk_cam_sv_get_tag_param(tag_param, hw_scen, 1, req_amount);
 
 	for (i = 0; i < req_amount; i++) {
@@ -2516,8 +2528,14 @@ int handle_sv_tag_display_ic(struct mtk_cam_job *job)
 					V4L2_PIX_FMT_NV21_10) {
 				mbus_code = MEDIA_BUS_FMT_SBGGR10_1X10;
 				is_unpack_msb = 1;
-			} else {
+			} else if ((img_fmt->fmt.pix_mp.pixelformat ==
+					V4L2_PIX_FMT_MTISP_NV12_10P) ||
+				(img_fmt->fmt.pix_mp.pixelformat ==
+					V4L2_PIX_FMT_MTISP_NV21_10P)) {
 				mbus_code = MEDIA_BUS_FMT_SBGGR10_1X10;
+				is_unpack_msb = 0;
+			} else {
+				mbus_code = sv_sink->mbus_code;
 				is_unpack_msb = 0;
 			}
 		} else if (tag_param[i].tag_idx == SVTAG_1) {
@@ -2525,18 +2543,20 @@ int handle_sv_tag_display_ic(struct mtk_cam_job *job)
 				MTK_CAMSV_MAIN_STREAM_OUT - MTK_CAMSV_SINK_NUM].active_fmt;
 			width = img_fmt->fmt.pix_mp.width;
 			height = img_fmt->fmt.pix_mp.height / 2;
-			if (img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV12 ||
-				img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV21) {
+			if ((img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV21) ||
+				(img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV12)) {
 				mbus_code = MEDIA_BUS_FMT_SBGGR8_1X8;
 				is_unpack_msb = 0;
-			} else if (img_fmt->fmt.pix_mp.pixelformat ==
-					V4L2_PIX_FMT_NV12_10 ||
-				img_fmt->fmt.pix_mp.pixelformat ==
-					V4L2_PIX_FMT_NV21_10) {
+			} else if ((img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV12_10) ||
+				(img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV21_10)) {
 				mbus_code = MEDIA_BUS_FMT_SBGGR10_1X10;
 				is_unpack_msb = 1;
-			} else {
+			} else if ((img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_MTISP_NV12_10P) ||
+				(img_fmt->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_MTISP_NV21_10P)) {
 				mbus_code = MEDIA_BUS_FMT_SBGGR10_1X10;
+				is_unpack_msb = 0;
+			} else {
+				mbus_code = sv_sink->mbus_code;
 				is_unpack_msb = 0;
 			}
 		} else {

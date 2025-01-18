@@ -142,14 +142,14 @@ static const struct mtk_camsv_tag_param sv_tag_param_display_ic[3] = {
 		.is_w = false,
 	},
 	{
-		.tag_idx = SVTAG_1,
-		.seninf_padidx = PAD_SRC_RAW1,
+		.tag_idx = SVTAG_2,
+		.seninf_padidx = PAD_SRC_GENERAL0,
 		.tag_order = MTKCAM_IPI_ORDER_FIRST_TAG,
 		.is_w = false,
 	},
 	{
-		.tag_idx = SVTAG_2,
-		.seninf_padidx = PAD_SRC_GENERAL0,
+		.tag_idx = SVTAG_1,
+		.seninf_padidx = PAD_SRC_RAW1,
 		.tag_order = MTKCAM_IPI_ORDER_FIRST_TAG,
 		.is_w = false,
 	},

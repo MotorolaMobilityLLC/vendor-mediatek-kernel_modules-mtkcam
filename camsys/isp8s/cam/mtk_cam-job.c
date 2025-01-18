@@ -3556,7 +3556,7 @@ static int fill_sv_img_buffer_to_ipi_frame_display_ic(
 	struct mtkcam_ipi_img_output *out;
 	struct mtk_camsv_device *sv_dev;
 	const unsigned int proc_tag[2] = {SVTAG_0, SVTAG_1};
-	unsigned int tag_idx, buf_offset = 0;
+	unsigned int num_plane, ipi_fmt, tag_idx, buf_offset = 0;
 	int i, ret = -1;
 
 	if (ctx->hw_sv == NULL)
@@ -3564,7 +3564,22 @@ static int fill_sv_img_buffer_to_ipi_frame_display_ic(
 
 	sv_dev = dev_get_drvdata(ctx->hw_sv);
 
-	for (i = 0; i < ARRAY_SIZE(proc_tag); i++) {
+	if (node->active_fmt.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV21 ||
+		node->active_fmt.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV12) {
+		num_plane = 2;
+		ipi_fmt = MTKCAM_IPI_IMG_FMT_BAYER8;
+	} else if (node->active_fmt.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV12_10 ||
+		node->active_fmt.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV21_10) {
+		num_plane = 2;
+		ipi_fmt = MTKCAM_IPI_IMG_FMT_BAYER10_UNPACKED;
+	} else if (node->active_fmt.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_MTISP_NV12_10P ||
+		node->active_fmt.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_MTISP_NV21_10P) {
+		num_plane = 2;
+		ipi_fmt = MTKCAM_IPI_IMG_FMT_BAYER10;
+	} else
+		num_plane = 1;
+
+	for (i = 0; i < num_plane; i++) {
 		tag_idx = proc_tag[i];
 
 		out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[0];
@@ -3580,14 +3595,12 @@ static int fill_sv_img_buffer_to_ipi_frame_display_ic(
 			((((buf->daddr + buf_offset) + 15) >> 4) << 4);
 
 		/* override fmt */
-		if (node->active_fmt.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV12 ||
-			node->active_fmt.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_NV21)
-			out->fmt.format = MTKCAM_IPI_IMG_FMT_BAYER8;
-		else if (node->active_fmt.fmt.pix_mp.pixelformat ==
-				V4L2_PIX_FMT_NV12_10 ||
-			node->active_fmt.fmt.pix_mp.pixelformat ==
-				V4L2_PIX_FMT_NV21_10)
-			out->fmt.format = MTKCAM_IPI_IMG_FMT_BAYER10_UNPACKED;
+		if (num_plane == 2) {
+			out->fmt.format = ipi_fmt;
+
+			if (i == (num_plane - 1))
+				out->fmt.s.h = out->fmt.s.h / 2;
+		}
 
 		if (tag_idx == SVTAG_1)
 			out->fmt.s.h = out->fmt.s.h / 2;
