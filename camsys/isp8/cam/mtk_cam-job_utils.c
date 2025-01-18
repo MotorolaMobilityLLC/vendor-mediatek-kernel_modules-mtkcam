@@ -2165,10 +2165,13 @@ bool is_processed_raw_node(struct mtk_cam_job *job,
 struct mtk_raw_ctrl_data *get_raw_ctrl_data(struct mtk_cam_job *job)
 {
 	struct mtk_cam_request *req = job->req;
+	struct media_request *mreq = &req->req;
 	int raw_pipe_idx;
 
 	raw_pipe_idx = get_raw_subdev_idx(job->src_ctx->used_pipe);
 	if (raw_pipe_idx < 0)
+		return NULL;
+	if (!mreq)
 		return NULL;
 
 	return &req->raw_data[raw_pipe_idx].ctrl;
