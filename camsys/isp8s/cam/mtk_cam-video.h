@@ -126,6 +126,8 @@ struct mtk_cam_video_device {
 	struct mtk_cam_dev_node_desc desc;
 	unsigned int enabled;
 
+	atomic_t open_cnt;
+
 	struct vb2_queue vb2_q;
 	struct video_device vdev;
 	struct media_pad pad;
