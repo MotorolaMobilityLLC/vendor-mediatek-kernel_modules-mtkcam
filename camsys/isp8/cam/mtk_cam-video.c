@@ -820,9 +820,8 @@ static int mtk_cam_vb2_fop_release(struct file *file)
 #ifdef MTK_CAM_KTHREAD_PRE_ALLOC
 	int i;
 #endif
-
 	open_cnt = atomic_dec_return(&node->open_cnt);
-	if (cam && node && open_cnt != 0) {
+	if (cam && open_cnt != 0) {
 		dev_info(cam->dev, "%s %s %d", __func__, node->desc.name, open_cnt);
 		return 0;
 	}
