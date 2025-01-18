@@ -22,7 +22,7 @@
  ****************************************************************************/
 #include "imx06cmipiraw_Sensor.h"
 
-#define IMX06C_EMBEDDED_DATA_EN 1
+#define IMX06C_EMBEDDED_DATA_EN 0
 
 #define REG2GAIN_ROUNDUP(_reg) ((16384 * BASEGAIN + (16384 - (_reg) - 1))/ (16384 - (_reg)))
 #define REG2GAIN_ROUNDDOWN(_reg) (16384 * BASEGAIN / (16384 - (_reg)))
@@ -4120,6 +4120,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_B,
 		.imgsensor_pd_info  = &imgsensor_pd_info,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
@@ -7045,25 +7046,6 @@ static int imx06c_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 		u16 rg_gain;
 		bool gph = !ctx->is_seamless && (ctx->s_ctx.s_gph != NULL);
 
-		if(gain>22.5*1024) {
-			set_i2c_buffer(ctx,	0x38D0, 0x01);
-			set_i2c_buffer(ctx,	0x38D1, 0x66);
-			set_i2c_buffer(ctx,	0x38D2, 0x00);
-			set_i2c_buffer(ctx,	0x38D3, 0x00);
-			set_i2c_buffer(ctx,	0x3B00, 0x02);
-			set_i2c_buffer(ctx,	0x3B01, 0xA3);
-			set_i2c_buffer(ctx,	0x3B02, 0x00);
-			set_i2c_buffer(ctx,	0x3B03, 0x00);
-		} else {
-			set_i2c_buffer(ctx,	0x38D0, 0x00);
-			set_i2c_buffer(ctx,	0x38D1, 0x00);
-			set_i2c_buffer(ctx,	0x38D2, 0x00);
-			set_i2c_buffer(ctx,	0x38D3, 0xD2);
-			set_i2c_buffer(ctx,	0x3B00, 0x00);
-			set_i2c_buffer(ctx,	0x3B01, 0x00);
-			set_i2c_buffer(ctx,	0x3B02, 0x01);
-			set_i2c_buffer(ctx,	0x3B03, 0xA4);
-		}
 
 		/* check boundary of gain */
 		gain = max(gain,
