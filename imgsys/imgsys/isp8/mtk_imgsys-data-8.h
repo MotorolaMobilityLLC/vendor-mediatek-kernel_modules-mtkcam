@@ -39,6 +39,26 @@ const struct cust_data imgsys_data_mt6991[] = {
 	},
 };
 
+const struct cust_data imgsys_data_mt6991_swrgo[] = {
+	[0] = {
+	.clks = imgsys_isp8_clks_mt6991_swrgo,
+	.clk_num = MTK_IMGSYS_CLK_NUM_MT6991_SWRGO,
+	.module_pipes = module_pipe_isp8,
+	.mod_num = ARRAY_SIZE(module_pipe_isp8),
+	.pipe_settings = pipe_settings_isp8,
+	.pipe_num = ARRAY_SIZE(pipe_settings_isp8),
+	.imgsys_modules = imgsys_isp8_modules,
+	.imgsys_modules_num = MTK_IMGSYS_MODULE_NUM,
+	.dump = imgsys_debug_dump_routine,
+#ifdef IMGSYS_TF_DUMP_8_L
+	.imgsys_ports = imgsys_dma_port_mt6991,
+	.imgsys_ports_num = ARRAY_SIZE(imgsys_dma_port_mt6991),
+#else
+	.imgsys_ports_num = 0,
+#endif
+	},
+};
+
 const struct cust_data imgsys_data_mt6899[] = {
 	[0] = {
 	.clks = imgsys_isp8_clks_mt6899,
