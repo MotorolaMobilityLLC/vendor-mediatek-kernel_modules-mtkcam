@@ -239,6 +239,9 @@ struct tsrec_n_regs_st {
 	unsigned int exp_vc_dt[TSREC_EXP_MAX_CNT];
 	unsigned int trig_src;
 
+	/* cfg (wclr_en / dl en) */
+	tsrec_atomic_t tsrec_cfg;
+
 	/* interrupt info */
 	tsrec_atomic_t intr_en;
 	tsrec_atomic_t intr_status;
@@ -748,6 +751,24 @@ void notify_tsrec_update_tsrec_n_clk_en_status(const unsigned int tsrec_no,
 	}
 
 	ptr->en = (val) ? 1 : 0;
+}
+
+
+void notify_tsrec_update_tsrec_n_cfg(const unsigned int tsrec_no,
+	const unsigned int val)
+{
+	struct tsrec_n_regs_st *ptr = NULL;
+
+	if (unlikely(g_tsrec_n_regs_st(tsrec_no, &ptr, __func__) != 0))
+		return;
+	if (unlikely(ptr == NULL)) {
+		TSREC_LOG_INF(
+			"ERROR: tsrec_n_regs[%u] is nullptr (%p), return   [tsrec_no:%u, reg_val:%#x]\n",
+			tsrec_no, ptr, tsrec_no, val);
+		return;
+	}
+
+	TSREC_ATOMIC_SET((int)val, &ptr->tsrec_cfg);
 }
 
 
@@ -2225,6 +2246,21 @@ static inline int chk_tsrec_irq_valid(const unsigned int idx,
 }
 
 
+static void tsrec_setup_default_device_irq_sel(const unsigned int flag)
+{
+	const unsigned int val = flag
+		? (0xffffffff & TSREC_BIT_MASK(tsrec_status.tsrec_hw_cnt)) : 0;
+	const unsigned int no = 0;
+
+	/* default select all tsrec IRQ to device 0 */
+	mtk_cam_seninf_tsrec_s_device_irq_sel(no, val);
+
+	TSREC_LOG_INF(
+		"NOTICE: set tsrec device irq sel:(no:%u/val:%#x)\n",
+		no, val);
+}
+
+
 static void tsrec_irq_enable(const unsigned int en, const unsigned int idx)
 {
 	if (unlikely(chk_tsrec_irq_valid(idx, __func__) == 0))
@@ -2258,6 +2294,8 @@ static inline void tsrec_irq_all_enable(const unsigned int en)
 {
 	int i;
 
+	tsrec_setup_default_device_irq_sel(en);
+
 	for (i = 0; i < tsrec_status.irq_cnt; ++i)
 		tsrec_irq_enable(en, i);
 }
@@ -2280,9 +2318,6 @@ static void tsrec_intr_reset(const unsigned int tsrec_no)
 {
 	const unsigned int exp_trig_src = g_tsrec_exp_trig_src();
 	struct tsrec_n_regs_st *p_tsrec_n_regs = NULL;
-
-	/* reset/disable tsrec intr ctrl */
-	mtk_cam_seninf_s_tsrec_intr_wclr_en(0);
 
 	if (unlikely(exp_trig_src != TSREC_EXP_TRIG_SRC_DEF)) {
 		TSREC_LOG_INF(
@@ -2529,9 +2564,6 @@ static void tsrec_intr_ctrl(const unsigned int tsrec_no,
 		return;
 	}
 
-	/* setup tsrec intr ctrl */
-	mtk_cam_seninf_s_tsrec_intr_wclr_en(TSREC_INTR_W_CLR_EN);
-
 	/* check/setup which exp INTR will be enabled */
 	tsrec_intr_ctrl_checker(p_src_cfg, &exp0, &exp1, &exp2);
 
@@ -2687,6 +2719,9 @@ static void tsrec_n_settings_clear(const unsigned int tsrec_no)
 		return;
 	}
 
+	/* !!! set tsrec SW RST !!! */
+	mtk_cam_seninf_s_tsrec_sw_rst(tsrec_no, 1);
+
 	/* first disable/stop this tsrec hw */
 	mtk_cam_seninf_s_tsrec_top_cfg_clk_en_bit(tsrec_no, 0);
 
@@ -2699,8 +2734,14 @@ static void tsrec_n_settings_clear(const unsigned int tsrec_no)
 	/* reset exp vc dt info */
 	tsrec_seninf_exp_vc_dt_reset(tsrec_no);
 
+	/* reset tsrec cfg RG  */
+	mtk_cam_seninf_s_tsrec_n_cfg(tsrec_no, 0, 0, 0);
+
 	/* reset/setup info for debugging */
 	tsrec_n_regs_st_reset(tsrec_no);
+
+	/* !!! unset tsrec SW RST !!! */
+	mtk_cam_seninf_s_tsrec_sw_rst(tsrec_no, 0);
 }
 
 
@@ -2740,6 +2781,9 @@ static void tsrec_n_settings_start(const unsigned int tsrec_no,
 
 	/* INTR disable */
 	tsrec_intr_reset(tsrec_no);
+
+	/* setup tsrec cfg RG  */
+	mtk_cam_seninf_s_tsrec_n_cfg(tsrec_no, TSREC_INTR_W_CLR_EN, 1, 0);
 
 	/* setup exp vc dt info */
 	tsrec_seninf_exp_vc_dt_setup(tsrec_no, seninf_idx);
@@ -3531,12 +3575,12 @@ tsrec_cb_handler_end:
 /*---------------------------------------------------------------------------*/
 // interrupt broadcast to seninf --- at bottom-half
 /*---------------------------------------------------------------------------*/
-static void tsrec_broadcast_info_setup(void *data,
+static void tsrec_broadcast_irq_info(void *data,
 	struct tsrec_irq_info_st *irq_info,
 	const unsigned int tsrec_no, const unsigned int status)
 {
 #ifndef FS_UT
-	const unsigned long long time_th = 50000; // 50 us
+	const unsigned long long time_th = 500000; /* 500 us */
 	const unsigned int mask = TSREC_BIT_MASK(TSREC_EXP_MAX_CNT);
 	struct mtk_cam_seninf_tsrec_irq_notify_info info = {0};
 	struct seninf_ctx *seninf_ctx = NULL;
@@ -3570,7 +3614,7 @@ static void tsrec_broadcast_info_setup(void *data,
 
 	start = ktime_get_boottime_ns();
 
-	/* broadcast info for seninf */
+	/* broadcast irq info for seninf */
 	mtk_cam_seninf_tsrec_irq_notify(&info);
 
 	end = ktime_get_boottime_ns();
@@ -3688,10 +3732,22 @@ static void tsrec_isr_event_handler(int irq, void *data,
 	}
 
 	tsrec_work_setup(irq, data, irq_info, tsrec_no, work_event_info);
-	tsrec_broadcast_info_setup(data, irq_info, tsrec_no, status);
+	tsrec_broadcast_irq_info(data, irq_info, tsrec_no, status);
 }
 
 
+static inline void tsrec_irq_handler(int irq, void *data,
+	struct tsrec_irq_info_st *irq_info)
+{
+	tsrec_isr_event_handler(irq, data, irq_info,
+		irq_info->tsrec_no, irq_info->status);
+}
+/*---------------------------------------------------------------------------*/
+
+
+/*---------------------------------------------------------------------------*/
+/* interrupt handler --- top-half (sub function)                             */
+/*---------------------------------------------------------------------------*/
 static unsigned int tsrec_irq_intr_status_checker(int irq, void *data,
 	const unsigned long long irq_sys_ts,
 	const unsigned long long irq_mono_ts,
@@ -3740,14 +3796,6 @@ static unsigned int tsrec_irq_intr_status_checker(int irq, void *data,
 	}
 
 	return wake_thread_bits;
-}
-
-
-static inline void tsrec_irq_handler(int irq, void *data,
-	struct tsrec_irq_info_st *irq_info)
-{
-	tsrec_isr_event_handler(irq, data, irq_info,
-		irq_info->tsrec_no, irq_info->status);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -3895,7 +3943,7 @@ void mtk_cam_seninf_tsrec_dbg_dump_tsrec_n_regs_info(const char *caller)
 				i);
 		} else {
 			TSREC_SNPRF(log_str_len, log_buf, len,
-				", %u(%u):(%u,(%#x/%#x/%#x),%#x,%u,(%#x/%#x))",
+				", %u(%u):(%u,(%#x/%#x/%#x),%#x,%u,cfg:%#x,(%#x/%#x))",
 				i,
 				p_no_regs_val->en,
 				p_no_regs_val->seninf_idx,
@@ -3904,6 +3952,7 @@ void mtk_cam_seninf_tsrec_dbg_dump_tsrec_n_regs_info(const char *caller)
 				p_no_regs_val->exp_vc_dt[2],
 				p_no_regs_val->trig_src,
 				p_no_regs_val->sensor_hw_pre_latch_exp_num,
+				TSREC_ATOMIC_READ(&p_no_regs_val->tsrec_cfg),
 				TSREC_ATOMIC_READ(&p_no_regs_val->intr_en),
 				TSREC_ATOMIC_READ(&p_no_regs_val->intr_status));
 		}

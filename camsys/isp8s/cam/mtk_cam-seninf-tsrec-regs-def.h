@@ -25,7 +25,7 @@
 /*--------------------------------------------------------------------------*/
 // tsrec_top related address shift define
 /*--------------------------------------------------------------------------*/
-#define TSREC_BASE                        0x3A310000
+#define TSREC_BASE                        0x3A410000
 
 #define TSREC_TIMER_CFG_OFFSET            0x0
 #define TSREC_TOP_CFG_OFFSET              0x4
@@ -35,7 +35,7 @@
 #define TSREC_TIMER_LAT_M_OFFSET          0x14
 #endif
 
-#define TSREC_DEVICE_IRQ_SEL_0_OFFSET     0x20
+#define TSREC_DEVICE_IRQ_SEL_0_OFFSET     0x44
 
 
 /*--------------------------------------------------------------------------*/
@@ -124,7 +124,7 @@
 /******************************************************************************
  * TSREC registers union structure
  *****************************************************************************/
-union REG_TSREC_TIMER_CFG { /* 0x1A024004 or 0x3A310000 */
+union REG_TSREC_TIMER_CFG { /* 0x1A024004 or 0x3A310000 or 0x3A410000 */
 	struct {
 		unsigned int TSREC_TIMER_FIX_CLK_EN      :  1;  /*  0.. 0, 0x00000001 */
 		unsigned int TSREC_TIMER_CK_EN           :  1;  /*  1.. 1, 0x00000002 */
@@ -146,7 +146,19 @@ union REG_TSREC_TIMER_CFG { /* 0x1A024004 or 0x3A310000 */
 /******************************************************************************
  * TSREC registers general union structure / define
  *****************************************************************************/
-#define TSREC_INT_WCLR_EN_BIT             31
+union REG_TSREC_N_CFG { /* 0x3A420000 */
+	struct {
+		unsigned int TSREC_INTR_WCLR_EN          :  1;  /*  0.. 0. 0x00000001 */
+		unsigned int rsv_1                       :  3;  /*  1.. 3. 0x0000000E */
+		unsigned int TSREC_DL_EN                 :  1;  /*  4.. 4. 0x00000010 */
+		unsigned int rsv_5                       :  3;  /*  5.. 7. 0x000000E0 */
+		unsigned int TSREC_EXP0_CNT_CLR          :  1;  /*  8.. 8. 0x00000100 */
+		unsigned int TSREC_EXP1_CNT_CLR          :  1;  /*  9.. 9. 0x00000200 */
+		unsigned int TSREC_EXP2_CNT_CLR          :  1;  /* 10..10. 0x00000400 */
+		unsigned int rsv_11                      : 21;  /* 11..31. 0xFFFFF800 */
+	} bits;
+	unsigned int val;
+};
 
 
 union REG_TSREC_N_TS_CNT {

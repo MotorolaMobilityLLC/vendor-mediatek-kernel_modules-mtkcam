@@ -555,14 +555,6 @@ static int seninf_sentest_ops_after_sensor_seamless(struct seninf_ctx *ctx)
 int notify_sentest_irq(struct seninf_ctx *ctx,
 					const struct mtk_cam_seninf_tsrec_irq_notify_info *p_info)
 {
-	if (unlikely(ctx == NULL)) {
-		pr_info("[Error][%s] ctx is NULL", __func__);
-		return -EFAULT;
-	}
-
-	if (!ctx->sentest_seamless_ut_en)
-		return -EINVAL;
-
 	if (is_target_vsync(ctx, p_info , SENTEST_FIRST_VSYNC))
 		ctx->sentest_irq_counter++;
 

@@ -17,8 +17,9 @@
 #define PFX "UT_FS_TSREC"
 
 
-#define SENINF_BASE                  (0x3A300000)
-#define UT_TSREC_RG_LAST             (0x3A3d0084)   // ISP8
+/* ISP8s ver */
+#define SENINF_BASE                  (0x3A400000)
+#define UT_TSREC_RG_LAST             (0x3A4d0084)
 
 #define TSREC_MAX_CNT                (12)
 #define TSREC_IRQ_MAX_CNT            (4)    /* HW support up to 4 VM devices */
@@ -466,21 +467,37 @@ static void ut_fs_tsrec_device_irq_sel(void)
 
 static void ut_fs_tsrec_n_cfg(void)
 {
+	union REG_TSREC_N_CFG reg;
+	const unsigned int wclr_en = TSREC_INTR_W_CLR_EN, dl_en = 1;
 	unsigned int i = 0, j = 0;
 
 	UT_FUNC_START();
 
 	for (i = 0; i < TSREC_MAX_CNT; ++i) {
-		mtk_cam_seninf_s_tsrec_n_cfg(i, -1);
+		mtk_cam_seninf_s_tsrec_n_cfg(i, wclr_en, dl_en,
+			TSREC_BIT_MASK(TSREC_EXP_MAX_CNT));
 
 		// due to RG is write clr.
-		regs[TSREC_CFG_OFFSET(i)] = 0;
+		reg.val = regs[TSREC_CFG_OFFSET(i)];
+		if (reg.bits.TSREC_INTR_WCLR_EN != wclr_en
+				|| reg.bits.TSREC_DL_EN != dl_en) {
+			UT_ERR(
+				"ERROR: read back tsrec_cfg:%#x does NOT match to UT config:(wclr_en:%u/dl_en:%u)\n",
+				reg.val, wclr_en, dl_en);
+		}
 
 		for (j = 0; j < TSREC_EXP_MAX_CNT; ++j) {
-			mtk_cam_seninf_s_tsrec_n_cfg(i, (int)j);
+			const unsigned int exp_bits = (0x1 << j);
+
+			mtk_cam_seninf_s_tsrec_n_cfg(i, wclr_en, dl_en, exp_bits);
 
 			// due to RG is write clr.
-			regs[TSREC_CFG_OFFSET(i)] = 0;
+			reg.val = regs[TSREC_CFG_OFFSET(i)];
+			if (!((reg.val >> 8) & exp_bits)) {
+				UT_ERR(
+					"ERROR: read back tsrec_cfg:%#x does NOT match to UT config:(j:%u => %#x)\n",
+					reg.val, j, exp_bits);
+			}
 		}
 	}
 
@@ -604,7 +621,7 @@ static void ut_fs_tsrec_n_int_status_proc(const unsigned int n,
 
 	/* test clear status */
 	UT_INF("UT Test => for testing write clear, enable write clear ...\n");
-	mtk_cam_seninf_s_tsrec_intr_wclr_en(1);
+	mtk_cam_seninf_s_tsrec_n_cfg(n, 1, 1, 0);
 	UT_INF("UT Test => write clear, write val:%#x ...\n", val);
 	/* call for write clear */
 	mtk_cam_seninf_clr_tsrec_n_intr_status(n, val);
@@ -622,7 +639,7 @@ static void ut_fs_tsrec_n_int_status_proc(const unsigned int n,
 	/* reset all operations & variables */
 	UT_INF("UT Test => test END, reset all ...\n");
 	mtk_cam_seninf_clr_tsrec_n_intr_status(n, 0);
-	mtk_cam_seninf_s_tsrec_intr_wclr_en(0);
+	mtk_cam_seninf_s_tsrec_n_cfg(n, 0, 0, 0);
 	regs[addr_offset] = 0;
 
 

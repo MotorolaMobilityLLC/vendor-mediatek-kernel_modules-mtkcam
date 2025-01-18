@@ -34,21 +34,17 @@ void mtk_cam_seninf_s_tsrec_timer_cfg(const unsigned int en);
 unsigned long long mtk_cam_seninf_tsrec_latch_time(void);
 
 
-void mtk_cam_seninf_s_tsrec_intr_wclr_en(const unsigned int wclr_en);
-
-
 void mtk_cam_seninf_tsrec_s_device_irq_sel(const unsigned int irq_id,
 	const unsigned int val);
 
 
 /*---------------------------------------------------------------------------*/
 /*
- * TSREC_n_CFG --- tsrec n cnt clear.
- *     @clr_exp_cnt_n:
- *         negative => clear all exp cnt.
+ * TSREC_n_CFG --- tsrec n "wclr EN / DL EN / cnt clear".
  */
 void mtk_cam_seninf_s_tsrec_n_cfg(const unsigned int tsrec_n,
-	const int clr_exp_cnt_n);
+	const unsigned int wclr_en, const unsigned int dl_en,
+	const unsigned int clr_exp_bits);
 
 
 /*

@@ -486,16 +486,6 @@ unsigned long long mtk_cam_seninf_tsrec_latch_time(void)
 }
 
 
-void mtk_cam_seninf_s_tsrec_intr_wclr_en(const unsigned int wclr_en)
-{
-	TSREC_LOG_DBG(
-		"NOTICE: set INTR wclr_en:(%u => %u)\n",
-		tsrec_intr_write_clr, wclr_en);
-
-	tsrec_intr_write_clr = wclr_en;
-}
-
-
 void mtk_cam_seninf_tsrec_s_device_irq_sel(const unsigned int irq_id,
 	const unsigned int val)
 {
@@ -526,43 +516,51 @@ void mtk_cam_seninf_tsrec_s_device_irq_sel(const unsigned int irq_id,
 
 /*---------------------------------------------------------------------------*/
 void mtk_cam_seninf_s_tsrec_n_cfg(const unsigned int tsrec_n,
-	const int clr_exp_cnt_n)
+	const unsigned int wclr_en, const unsigned int dl_en,
+	const unsigned int clr_exp_bits)
 {
 	struct tsrec_w_buffer w_buf = {0};
+	union REG_TSREC_N_CFG reg = {0};
 
 	/* check case / error handling */
-	if (unlikely(!chk_tsrec_no_valid(tsrec_n, __func__)
-		|| clr_exp_cnt_n >= TSREC_EXP_MAX_CNT)) {
-
+	if (unlikely(!chk_tsrec_no_valid(tsrec_n, __func__))) {
 		TSREC_LOG_INF(
-			"ERROR: non-valid input, force return   [tsrec_n:%u, clr_exp_cnt_n:%d(<%u)]\n",
-			tsrec_n,
-			clr_exp_cnt_n,
-			TSREC_EXP_MAX_CNT);
+			"ERROR: get non-valid tsrec_n, force return   [tsrec_n:%u, wclr_en:%u, dl_en:%u, clr_exp_bits:%#x]\n",
+			tsrec_n, wclr_en, dl_en, clr_exp_bits);
 		return;
 	}
+
+	/* sync intr wclr status */
+	tsrec_intr_write_clr = wclr_en;
+
+	/* config reg value */
+	reg.bits.TSREC_INTR_WCLR_EN = wclr_en;
+	reg.bits.TSREC_DL_EN = dl_en;
+	reg.bits.TSREC_EXP0_CNT_CLR = ((clr_exp_bits & 0x1) ? 1 : 0);
+	reg.bits.TSREC_EXP1_CNT_CLR = ((clr_exp_bits & 0x2) ? 1 : 0);
+	reg.bits.TSREC_EXP2_CNT_CLR = ((clr_exp_bits & 0x4) ? 1 : 0);
 
 	/* prepare for write register */
 	w_buf.tsrec_no = tsrec_n;
 	w_buf.base_addr = g_tsrec_no_base_addr(tsrec_n);
 	w_buf.shift = TSREC_CFG_OFFSET(tsrec_n);
-	w_buf.mask = (clr_exp_cnt_n < 0)
-		? TSREC_BIT_MASK(TSREC_EXP_MAX_CNT)
-		: tsrec_get_mask((unsigned int)clr_exp_cnt_n, 1);
-	w_buf.op = 1; // set
+	w_buf.mask = reg.val;
+	w_buf.op = 2; /* overwrite */
 	if (unlikely(!chk_tsrec_w_buffer_valid(&w_buf, __func__)))
 		return;
 
 	tsrec_write_reg(&w_buf, __func__);
+
+	/* sync reg ctrl info to tsrec_status */
+	notify_tsrec_update_tsrec_n_cfg(tsrec_n, w_buf.after);
 
 	if (unlikely(_TSREC_LOG_ENABLED(LOG_TSREC_REG))) {
 		char msg[TSREC_MSG_LOG_STR_LEN] = {0};
 		int len = 0;
 
 		TSREC_SNPRF(TSREC_MSG_LOG_STR_LEN, msg, len,
-			"[tsrec_n:%u, clr_exp_cnt_n:%d]",
-			tsrec_n,
-			clr_exp_cnt_n);
+			"[tsrec_n:%u, wclr_en:%u, dl_en:%u, clr_exp_bits:%#x]",
+			tsrec_n, wclr_en, dl_en, clr_exp_bits);
 		tsrec_dump_w_buf(&w_buf, msg, __func__);
 	}
 }
@@ -595,7 +593,6 @@ void mtk_cam_seninf_s_tsrec_n_intr_en(const unsigned int tsrec_n,
 	const unsigned int exp0, const unsigned int exp1, const unsigned int exp2,
 	const unsigned int trig_src, const unsigned int en)
 {
-	const unsigned int wclr_en = TSREC_INTR_W_CLR_EN;
 	struct tsrec_w_buffer w_buf = {0};
 	unsigned int val = 0;
 
@@ -609,10 +606,6 @@ void mtk_cam_seninf_s_tsrec_n_intr_en(const unsigned int tsrec_n,
 			en);
 		return;
 	}
-
-	/* INTR ctrl */
-	if (wclr_en)
-		val |= (1UL << TSREC_INT_WCLR_EN_BIT);
 
 	/* trig_src: (1 => 1st-Hsync / 0 => Vsync) */
 	if (trig_src) {
@@ -1163,7 +1156,7 @@ static void tsrec_top_regs_iomem_init(struct tsrec_iomem_info_st *p_iomem_info)
 
 	/* 1. find tsrec_top device node */
 	p_dev_node = tsrec_utils_of_find_comp_node(
-		seninf_dev->of_node, TSREC_TOP_COMP_NAME, __func__, 0);
+		NULL, TSREC_TOP_COMP_NAME, __func__, 0);
 	if (unlikely(p_dev_node == NULL))
 		return;
 
@@ -1193,6 +1186,7 @@ static void tsrec_top_regs_iomem_init(struct tsrec_iomem_info_st *p_iomem_info)
 			return;
 		}
 	}
+	of_node_put(p_dev_node);
 #endif
 
 	/* X. end */
@@ -1210,7 +1204,7 @@ static void tsrec_no_regs_iomem_init(const unsigned int target, int *p_result,
 	struct tsrec_iomem_info_st *p_iomem_info)
 {
 #ifndef FS_UT
-	struct device_node *p_dev_node = seninf_dev->of_node;
+	struct device_node *p_dev_node = NULL;
 	unsigned int base_shift = 0, tsrec_no;
 	int ret;
 

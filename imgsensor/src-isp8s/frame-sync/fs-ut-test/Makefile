@@ -20,9 +20,10 @@ ISP7S_CAM_LEGACY = ../../../../../../media/platform/mtk-isp/camsys/isp7s/cam_leg
 ISP7SP_CAM = ../../../../../../media/platform/mtk-isp/camsys/isp7sp/cam
 MTKCAM_ISP7SP_CAM = ../../../../camsys/isp7sp/cam
 MTKCAM_ISP8_CAM = ../../../../camsys/isp8/cam
+MTKCAM_ISP8S_CAM = ../../../../camsys/isp8s/cam
 MTKCAM_ISP8_SENINF_UT = ../../../../camsys/isp8/seninf_ut
 ## Please manually change/set TSREC file path for unit test file building
-TSREC_DIR = $(MTKCAM_ISP8_CAM)
+TSREC_DIR = $(MTKCAM_ISP8S_CAM)
 $(info TSREC_DIR = $(TSREC_DIR))
 $(info $(NEWLINE))
 

@@ -111,6 +111,8 @@ void notify_tsrec_update_intr_status_2(const unsigned int val);
 
 void notify_tsrec_update_tsrec_n_clk_en_status(const unsigned int tsrec_no,
 	const unsigned int val);
+void notify_tsrec_update_tsrec_n_cfg(const unsigned int tsrec_no,
+	const unsigned int val);
 void notify_tsrec_update_tsrec_n_intr_en(const unsigned int tsrec_no,
 	const unsigned int val);
 void notify_tsrec_update_tsrec_n_intr_status(const unsigned int tsrec_no,

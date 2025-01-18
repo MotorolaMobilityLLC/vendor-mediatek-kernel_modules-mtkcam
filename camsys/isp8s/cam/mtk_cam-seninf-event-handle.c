@@ -557,13 +557,7 @@ int notify_mipi_err_detect_handler(struct seninf_ctx *ctx,
 {
 	struct mtk_cam_seninf_vsync_info vsync_info = {0};
 
-	if (unlikely(ctx == NULL)) {
-		pr_info("[Error][%s] ctx is NULL", __func__);
-		return -EFAULT;
-	}
-
-	if (ctx->core->vsync_irq_en_flag || ctx->core->csi_irq_en_flag)
-		g_seninf_ops->_seninf_dump_mipi_err(ctx->core, &vsync_info);
+	g_seninf_ops->_seninf_dump_mipi_err(ctx->core, &vsync_info);
 
 	return 0;
 }
@@ -575,9 +569,24 @@ int notify_mipi_err_detect_handler(struct seninf_ctx *ctx,
 void mtk_cam_seninf_tsrec_irq_notify(
 	const struct mtk_cam_seninf_tsrec_irq_notify_info *p_info)
 {
-	/* Please add your handler function here carefully */
-	notify_sentest_irq(p_info->inf_ctx, p_info);
-	notify_mipi_err_detect_handler(p_info->inf_ctx, p_info);
+	struct seninf_ctx *ctx = p_info->inf_ctx;
+
+	/* error case */
+	if (unlikely(ctx == NULL)) {
+		pr_info("[Error][%s] ctx is NULL", __func__);
+		return;
+	}
+
+	/**
+	 * To prevent too many call stacks / function calls here,
+	 * plz add your function checker before calling handler.
+	 */
+	/* => Please add your handler function here carefully */
+	if (unlikely(ctx->sentest_seamless_ut_en))
+		notify_sentest_irq(ctx, p_info);
+
+	if (unlikely(ctx->core->vsync_irq_en_flag || ctx->core->csi_irq_en_flag))
+		notify_mipi_err_detect_handler(ctx, p_info);
 }
 
 
