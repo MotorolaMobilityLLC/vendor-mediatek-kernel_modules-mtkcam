@@ -1283,6 +1283,17 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 				(unsigned int)ioread32((void *)(dipRegBA + i + 0x4)),
 				(unsigned int)ioread32((void *)(dipRegBA + i + 0x8)),
 				(unsigned int)ioread32((void *)(dipRegBA + i + 0xc)));
+
+			ssize_t written = mtk_img_kernel_write(imgsys_dev->scp_pdev,
+				"[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X\n",
+				(unsigned int)(g_RegBaseAddrTop + i),
+				(unsigned int)ioread32((void *)(dipRegBA + i)),
+				(unsigned int)ioread32((void *)(dipRegBA + i + 0x4)),
+				(unsigned int)ioread32((void *)(dipRegBA + i + 0x8)),
+				(unsigned int)ioread32((void *)(dipRegBA + i + 0xc)));
+
+			if(written < 0)
+				pr_debug("Failed to write DIP register values to AEE buffer\n");
 		}
 	}
 
@@ -1299,6 +1310,17 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 				(unsigned int)ioread32((void *)(dipRegBA + i + 0x4)),
 				(unsigned int)ioread32((void *)(dipRegBA + i + 0x8)),
 				(unsigned int)ioread32((void *)(dipRegBA + i + 0xc)));
+
+			ssize_t written = mtk_img_kernel_write(imgsys_dev->scp_pdev,
+				"[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X\n",
+				(unsigned int)(g_RegBaseAddrNr1 + i),
+				(unsigned int)ioread32((void *)(dipRegBA + i)),
+				(unsigned int)ioread32((void *)(dipRegBA + i + 0x4)),
+				(unsigned int)ioread32((void *)(dipRegBA + i + 0x8)),
+				(unsigned int)ioread32((void *)(dipRegBA + i + 0xc)));
+
+			if(written < 0)
+				pr_debug("Failed to write DIP register values to AEE buffer\n");
 		}
 	}
 
@@ -1315,6 +1337,17 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 				(unsigned int)ioread32((void *)(dipRegBA + i + 0x4)),
 				(unsigned int)ioread32((void *)(dipRegBA + i + 0x8)),
 				(unsigned int)ioread32((void *)(dipRegBA + i + 0xc)));
+
+			ssize_t written = mtk_img_kernel_write(imgsys_dev->scp_pdev,
+				"[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X\n",
+				(unsigned int)(g_RegBaseAddrNr2 + i),
+				(unsigned int)ioread32((void *)(dipRegBA + i)),
+				(unsigned int)ioread32((void *)(dipRegBA + i + 0x4)),
+				(unsigned int)ioread32((void *)(dipRegBA + i + 0x8)),
+				(unsigned int)ioread32((void *)(dipRegBA + i + 0xc)));
+
+			if(written < 0)
+				pr_debug("Failed to write DIP register values to AEE buffer\n");
 		}
 	}
 

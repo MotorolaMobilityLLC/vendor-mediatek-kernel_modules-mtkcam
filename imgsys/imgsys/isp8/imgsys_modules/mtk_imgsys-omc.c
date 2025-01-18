@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0header
 /*
  * Copyright (c) 2020 MediaTek Inc.
  *
@@ -856,6 +856,15 @@ for (i = 0x1d; i <= 0x20; i += 2) {
 		__func__, (OMC_REG_DBG_SET + ofst), (OMC_REG_DBG_PORT + ofst),
 		sel_value[0], debug_value[0], sel_value[1], debug_value[1],
 		sel_value[2], debug_value[2], sel_value[3], debug_value[3]);
+
+	ssize_t written = mtk_img_kernel_write(imgsys_dev->scp_pdev,
+	"%s:[0x%x]dbg_sel,[0x%x]dbg_port, pak_c[0x%x]0x%x, [0x%x]0x%x, pak_y[0x%x]0x%x, [0x%x]0x%x",
+	__func__, (OMC_REG_DBG_SET + ofst), (OMC_REG_DBG_PORT + ofst),
+	sel_value[0], debug_value[0], sel_value[1], debug_value[1],
+	sel_value[2], debug_value[2], sel_value[3], debug_value[3]);
+
+	if(written < 0)
+		pr_debug("Failed to write OMC register values to AEE buffer\n");
 }
 
 void imgsys_omc_debug_cq_dump(struct mtk_imgsys_dev *imgsys_dev,
@@ -901,6 +910,16 @@ void imgsys_omc_debug_cq_dump(struct mtk_imgsys_dev *imgsys_dev,
 		sel_value[0], debug_value[0], sel_value[1], debug_value[1],
 		sel_value[2], debug_value[2], sel_value[3], debug_value[3],
 		sel_value[4], debug_value[4]);
+
+	ssize_t written = mtk_img_kernel_write(imgsys_dev->scp_pdev,
+	"%s:[0x%x]dbg_sel,[0x%x]cq_st[0x%x]0x%x,dma_dbg[0x%x]0x%x,dma_req[0x%x]0x%x,dma_rdy[0x%x]0x%x,dma_valid[0x%x]0x%x",
+	__func__, OMC_REG_DBG_SET, OMC_REG_DBG_PORT,
+	sel_value[0], debug_value[0], sel_value[1], debug_value[1],
+	sel_value[2], debug_value[2], sel_value[3], debug_value[3],
+	sel_value[4], debug_value[4]);
+
+	if(written < 0)
+		pr_debug("Failed to write OMC register values to AEE buffer\n");
 
 }
 
@@ -965,6 +984,17 @@ void imgsys_omc_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			(unsigned int)ioread32((void *)(omcRegBA + i + 0x4)),
 			(unsigned int)ioread32((void *)(omcRegBA + i + 0x8)),
 			(unsigned int)ioread32((void *)(omcRegBA + i + 0xC)));
+
+			ssize_t written = mtk_img_kernel_write(imgsys_dev->scp_pdev,
+			"[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X\n",
+			(unsigned int)(omcBase + i),
+			(unsigned int)ioread32((void *)(omcRegBA + i)),
+			(unsigned int)ioread32((void *)(omcRegBA + i + 0x4)),
+			(unsigned int)ioread32((void *)(omcRegBA + i + 0x8)),
+			(unsigned int)ioread32((void *)(omcRegBA + i + 0xC)));
+
+			if(written < 0)
+				pr_debug("Failed to write OMC register values to AEE buffer\n");
 		}
 	}
 

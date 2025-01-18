@@ -1008,8 +1008,14 @@ void imgsys_traw_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			(unsigned int)ioread32((void *)(trawRegBA + i)),
 			(unsigned int)ioread32((void *)(trawRegBA + i + 4)),
 			(unsigned int)ioread32((void *)(trawRegBA + i + 8)),
-			(unsigned int)ioread32((void *)(trawRegBA + i + 12))) > 0)
+			(unsigned int)ioread32((void *)(trawRegBA + i + 12))) > 0){
 			pr_info("%s\n", DbgStr);
+
+			ssize_t written = mtk_img_kernel_write(imgsys_dev->scp_pdev, "%s\n", DbgStr);
+
+			if(written < 0)
+				pr_debug("Failed to write TRAW register values to AEE buffer\n");
+		}
 	}
 	/* Dma registers */
 	for (i = TRAW_DMA_ADDR_OFST; i <= TRAW_DMA_ADDR_END; i += 16) {
@@ -1018,8 +1024,14 @@ void imgsys_traw_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			(unsigned int)ioread32((void *)(trawRegBA + i)),
 			(unsigned int)ioread32((void *)(trawRegBA + i + 4)),
 			(unsigned int)ioread32((void *)(trawRegBA + i + 8)),
-			(unsigned int)ioread32((void *)(trawRegBA + i + 12))) > 0)
+			(unsigned int)ioread32((void *)(trawRegBA + i + 12))) > 0){
 			pr_info("%s\n", DbgStr);
+
+			ssize_t written = mtk_img_kernel_write(imgsys_dev->scp_pdev, "%s\n", DbgStr);
+
+			if(written < 0)
+				pr_debug("Failed to write TRAW register values to AEE buffer\n");
+		}
 	}
 	/* Data registers */
 	for (i = TRAW_MOD_ADDR_OFST; i <= TRAW_MAX_ADDR_OFST; i += 16) {
@@ -1028,15 +1040,27 @@ void imgsys_traw_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			(unsigned int)ioread32((void *)(trawRegBA + i)),
 			(unsigned int)ioread32((void *)(trawRegBA + i + 4)),
 			(unsigned int)ioread32((void *)(trawRegBA + i + 8)),
-			(unsigned int)ioread32((void *)(trawRegBA + i + 12))) > 0)
+			(unsigned int)ioread32((void *)(trawRegBA + i + 12))) > 0){
 			pr_info("%s\n", DbgStr);
+
+			ssize_t written = mtk_img_kernel_write(imgsys_dev->scp_pdev, "%s\n", DbgStr);
+
+			if(written < 0)
+				pr_debug("Failed to write TRAW register values to AEE buffer\n");
+		}
 	}
 	if (sprintf(DbgStr, "[0x%08X] 0x%08X [0x%08X] 0x%08X\n",
-			(unsigned int)0x15000000,
-			(unsigned int)ioread32((void *)(g_ispMainRegBA)),
-			(unsigned int)0x15001200,
-			(unsigned int)ioread32((void *)(g_ispMainRegBA + 0x1200))) > 0)
-			pr_info("%s\n", DbgStr);
+		0x15000000U,
+		(unsigned int)ioread32((void *)(g_ispMainRegBA)),
+		0x15001200U,
+		(unsigned int)ioread32((void *)(g_ispMainRegBA + 0x1200))) > 0){
+		pr_info("%s\n", DbgStr);
+
+		ssize_t written = mtk_img_kernel_write(imgsys_dev->scp_pdev, "%s\n", DbgStr);
+
+		if(written < 0)
+			pr_debug("Failed to write TRAW register values to AEE buffer\n");
+	}
 #if IF_0_DEFINE //YWTBD K DBG
 	/* Drzh2nt1 debug data */
 	imgsys_traw_dump_drzh2nt1(imgsys_dev, trawRegBA, Drzh2nt1DdbSel, Drzh2nt1DbgOut);

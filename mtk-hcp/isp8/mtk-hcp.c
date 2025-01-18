@@ -945,6 +945,107 @@ static ssize_t mtk_hcp_proc_read(struct file *file, char __user *buf,
 	return len;
 }
 
+int mtk_hcp_kernel_log_clear(struct platform_device *pdev)
+{
+	struct mtk_hcp *hcp_dev = platform_get_drvdata(pdev);
+	struct hcp_aee_info *info;
+	struct hcp_proc_data *data;
+	int ret = 0;
+
+	// error handle for null pointer
+	if (!hcp_dev) {
+		// dev_info(&pdev->dev, "HCP device not initialized\n");
+		HCP_PRINT_DBG("HCP device not initialized\n");
+		return -ENODEV;
+	}
+	info = &hcp_dev->aee_info;
+	data = &info->data[HCP_AEE_PROC_FILE_KERNEL];
+
+	// acquire mutex
+	ret = mutex_lock_killable(&data->mtx);
+	if (ret != 0) {
+		// dev_info(&pdev->dev, "Failed to acquire mutex: %d\n", ret);
+		HCP_PRINT_DBG("Failed to acquire mutex: %d\n", ret);
+		return ret;
+	}
+
+	// check buffer size is valid
+	if (data->sz == 0) {
+		// dev_info(&pdev->dev, "Invalid buffer\n");
+		HCP_PRINT_DBG("Invalid buffer\n");
+		ret = -EINVAL;
+		goto out;
+	}
+
+	// clear the buffer
+	memset(data->buf, 0, data->sz);
+	data->cnt = 0;
+
+	if (hcp_dbg_enable())
+		HCP_PRINT_DBG("HCP IMG_KERNEL cleared\n");
+
+out:
+	mutex_unlock(&data->mtx);
+	return ret;
+}
+EXPORT_SYMBOL(mtk_hcp_kernel_log_clear);
+
+ssize_t mtk_img_kernel_write(struct platform_device *pdev, const char *fmt, ...)
+{
+	struct mtk_hcp *hcp_dev = platform_get_drvdata(pdev);
+	struct hcp_aee_info *info = &hcp_dev->aee_info;
+	struct hcp_proc_data *data = (struct hcp_proc_data *)&info->data[HCP_AEE_PROC_FILE_KERNEL];
+	ssize_t written = 0;
+	va_list args;
+	ssize_t ret;
+	size_t remaining;
+
+	if (mutex_lock_killable(&data->mtx) != 0) { // killable means that can be interrupted by signal
+		HCP_PRINT_DBG("mtx lock failed due to process being killed");
+		return -EINTR;
+	}
+
+	if (hcp_dbg_enable())
+		HCP_PRINT_DBG("==== [IMG_KERNEL] data->cnt = %lu, data->sz = %lu\n", data->cnt, data->sz);
+
+	if (data->cnt >= data->sz) {
+		if (hcp_dbg_enable())
+			HCP_PRINT_DBG("Buffer already full before writing");
+		goto out;
+	}
+
+	remaining = data->sz - data->cnt;
+
+	va_start(args, fmt);
+	ret = vsnprintf(data->buf + data->cnt, remaining, fmt, args);
+	va_end(args);
+
+	if(ret < 0){
+		if (hcp_dbg_enable())
+			HCP_PRINT_DBG("Error formatting string for AEE kernel write");
+		goto out;
+	}
+
+	if (ret >= remaining) {
+		// Buffer size not enough for dumping the whole data
+		if (hcp_dbg_enable())
+			HCP_PRINT_DBG("AEE IMG_KERNEL write truncated, buffer would overflow");
+		data->cnt = data->sz;
+		written = remaining - 1;  // -1 for null terminator
+	} else {
+		// normal case for dumping
+		data->cnt += ret;
+		written = ret;
+	}
+
+out:
+	mutex_unlock(&data->mtx);
+	if (hcp_dbg_enable())
+		HCP_PRINT_DBG("Done hcp write buffer, written %zd bytes\n", written);
+	return written;
+}
+EXPORT_SYMBOL(mtk_img_kernel_write);
+
 static ssize_t mtk_hcp_proc_write(struct file *file, const char __user *buf,
 	size_t lbuf, loff_t *ppos)
 {

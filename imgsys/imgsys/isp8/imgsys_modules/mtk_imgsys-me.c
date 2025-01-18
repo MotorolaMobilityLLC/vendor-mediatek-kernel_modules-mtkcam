@@ -209,6 +209,17 @@ void imgsys_me_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 		(unsigned int)ioread32((void *)(meRegBA + (i+0x4))),
 		(unsigned int)ioread32((void *)(meRegBA + (i+0x8))),
 		(unsigned int)ioread32((void *)(meRegBA + (i+0xC))));
+
+		ssize_t written = mtk_img_kernel_write(imgsys_dev->scp_pdev,
+		"%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
+		(unsigned int)(0x34070000 + i),
+		(unsigned int)ioread32((void *)(meRegBA + i)),
+		(unsigned int)ioread32((void *)(meRegBA + (i+0x4))),
+		(unsigned int)ioread32((void *)(meRegBA + (i+0x8))),
+		(unsigned int)ioread32((void *)(meRegBA + (i+0xC))));
+
+		if(written < 0)
+			pr_debug("Failed to write ME register values to AEE buffer\n");
 	}
 	dev_info(imgsys_dev->dev, "%s: dump mmg regs\n", __func__);
 	for (i = MMG_CTL_OFFSET; i <= MMG_CTL_OFFSET + MMG_CTL_RANGE; i += 0x10) {
@@ -218,6 +229,17 @@ void imgsys_me_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 		(unsigned int)ioread32((void *)(mmgRegBA + (i+0x4))),
 		(unsigned int)ioread32((void *)(mmgRegBA + (i+0x8))),
 		(unsigned int)ioread32((void *)(mmgRegBA + (i+0xC))));
+
+		ssize_t written = mtk_img_kernel_write(imgsys_dev->scp_pdev,
+		"%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
+		(unsigned int)(0x34070000 + i),
+		(unsigned int)ioread32((void *)(meRegBA + i)),
+		(unsigned int)ioread32((void *)(meRegBA + (i+0x4))),
+		(unsigned int)ioread32((void *)(meRegBA + (i+0x8))),
+		(unsigned int)ioread32((void *)(meRegBA + (i+0xC))));
+
+		if(written < 0)
+			pr_debug("Failed to write ME register values to AEE buffer\n");
 	}
 }
 //EXPORT_SYMBOL(ipesys_me_debug_dump);

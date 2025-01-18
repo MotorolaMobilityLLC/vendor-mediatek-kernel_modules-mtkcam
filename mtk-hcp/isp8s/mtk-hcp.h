@@ -47,4 +47,21 @@ struct flush_buf_info {
 	struct dma_buf *dbuf;
 };
 
+/**
+ * mtk_hcp_kernel_log_clear(struct platform_device *pdev)
+ *
+ * This function is used to clear IMG_KERNEL buffer.
+ * Will be invoked everytime streamon.
+ *
+ **/
+int mtk_hcp_kernel_log_clear(struct platform_device *pdev);
+
+/**
+ * ssize_t mtk_img_kernel_write(struct platform_device *pdev, const char *fmt, ...)
+ *
+ * Write log to kernel DB for AEE dump
+ *
+ **/
+ssize_t mtk_img_kernel_write(struct platform_device *pdev, const char *fmt, ...);
+
 #endif /* _MTK_HCP_H */

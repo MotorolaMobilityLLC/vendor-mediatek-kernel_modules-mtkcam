@@ -2619,6 +2619,10 @@ int mtk_imgsys_hw_streamon(struct mtk_imgsys_pipe *pipe)
 			"%s:%s: started stream, id(%d), stream cnt(%d)\n",
 			__func__, pipe->desc->name, pipe->desc->id, count);
 
+	if (mtk_hcp_kernel_log_clear(pipe->imgsys_dev->scp_pdev) != 0)
+		if (imgsys_dbg_enable())
+			dev_dbg(pipe->imgsys_dev->dev, "Failed to clear kernel log\n");
+
 	return 0;
 }
 

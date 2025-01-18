@@ -841,7 +841,6 @@ void imgsys_wpe_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	imgsys_wpe_debug_cq_dump(imgsys_dev, wpeRegBA);
 	imgsys_wpe_debug_module_dump(imgsys_dev, wpeRegBA, 0);
 
-	//
 	for (j = 0; j < WPE_REG_ARRAY_COUNT; j++) {
 		for (i = wpe_regs[j].str; i <= wpe_regs[j].end; i += 0x10) {
 			pr_info("[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X",
@@ -850,6 +849,17 @@ void imgsys_wpe_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			(unsigned int)ioread32((void *)(wpeRegBA + i + 0x4)),
 			(unsigned int)ioread32((void *)(wpeRegBA + i + 0x8)),
 			(unsigned int)ioread32((void *)(wpeRegBA + i + 0xC)));
+
+			ssize_t written = mtk_img_kernel_write(imgsys_dev->scp_pdev,
+			"[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X\n",
+			(unsigned int)(wpeBase + i),
+			(unsigned int)ioread32((void *)(wpeRegBA + i)),
+			(unsigned int)ioread32((void *)(wpeRegBA + i + 0x4)),
+			(unsigned int)ioread32((void *)(wpeRegBA + i + 0x8)),
+			(unsigned int)ioread32((void *)(wpeRegBA + i + 0xC)));
+
+			if(written < 0)
+				pr_debug("Failed to write WPE register values to AEE buffer\n");
 		}
 	}
 
