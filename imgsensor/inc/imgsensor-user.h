@@ -348,6 +348,15 @@ struct mtk_exp_margin {
 	__u32 margin;
 };
 
+struct mtk_current_frame_info {
+	__u32 frametime_in_us;
+};
+
+struct mtk_read_margin {
+	__u32 scenario_id;
+	__u32 margin;
+};
+
 struct mtk_sensor_value {
 	__u32 scenario_id;
 	__u32 value;
@@ -576,6 +585,33 @@ struct mtk_gain_range {
 struct mtk_shutter_range {
 	__u64 min;
 	__u64 max;
+};
+
+struct mtk_gain_step_range {
+	__u32 min;
+	__u32 max;
+	__u32 step;
+};
+
+struct mtk_shutter_step_range {
+	__u64 min;
+	__u64 max;
+	__u32 step;
+};
+
+struct mtk_ae_info {
+	struct mtk_gain_step_range gain;
+	struct mtk_shutter_step_range shutter;
+	__u64 line_time_in_ns;
+	__u32 margin;
+	__u32 binning_ratio;
+	int fine_integ_line;
+};
+
+struct mtk_multi_exp_static_info {
+	struct mtk_ae_info ae_info[5];
+	__u32 scenario_id;
+	__u32 exp_cnt;
 };
 
 struct mtk_multi_exp_gain_range {
@@ -851,6 +887,18 @@ struct mtk_sof_info {
 
 #define VIDIOC_MTK_G_DCG_RATIO_GROUP_BY_SCENARIO \
 	_IOWR('M', BASE_VIDIOC_PRIVATE + 53, struct mtk_dcg_ratio_group_by_scenario)
+
+#define VIDIOC_MTK_G_CURRENT_FRAME_TIME_IN_US \
+	_IOWR('M', BASE_VIDIOC_PRIVATE + 54, struct mtk_current_frame_info)
+
+#define VIDIOC_MTK_G_READ_MARGIN_IN_US_BY_SCENARIO \
+	_IOWR('M', BASE_VIDIOC_PRIVATE + 55, struct mtk_read_margin)
+
+#define VIDIOC_MTK_G_EXPOSURE_MARGIN_IN_US_BY_SCENARIO \
+	_IOWR('M', BASE_VIDIOC_PRIVATE + 56, struct mtk_exp_margin)
+
+#define VIDIOC_MTK_G_MULTI_EXP_STATIC_INFO_BY_SCENARIO \
+	_IOWR('M', BASE_VIDIOC_PRIVATE + 57, struct mtk_multi_exp_static_info)
 
 /* SET */
 

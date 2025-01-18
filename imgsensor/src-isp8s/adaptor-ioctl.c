@@ -1576,6 +1576,121 @@ static int g_dcg_ratio_group_by_scenario(struct adaptor_ctx *ctx, void *arg)
 	return 0;
 }
 
+static int g_current_frame_time_in_us(struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_current_frame_info *info = arg;
+	u32 scenario_id = ctx->subctx.current_scenario_id;
+	u32 linetime_in_ns = 0;
+	u32 get_linetime_type = GET_READOUT_LINETIME;
+
+	if (ctx->subctx.s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->subctx.s_ctx.cust_get_linetime_in_us((void *)&ctx->subctx,
+			scenario_id, (u32 *)&linetime_in_ns,
+			(u32)get_linetime_type);
+	} else {
+		linetime_in_ns = CALC_LINE_TIME_IN_NS(ctx->subctx.s_ctx.mode[scenario_id].pclk,
+			ctx->subctx.s_ctx.mode[scenario_id].linelength);
+	}
+
+	info->frametime_in_us = linetime_in_ns * ctx->subctx.frame_length_rg / 1000;
+	adaptor_logi(ctx, "[%s] scenario(%d) frametime in_line(%d)/in_us(%d)\n",
+		__func__, scenario_id, ctx->subctx.frame_length_rg, info->frametime_in_us);
+
+	return 0;
+}
+
+static int g_read_margin_in_us_by_scenario(struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_read_margin *info = arg;
+	u32 scenario_id = info->scenario_id;
+	u32 linetime_in_ns = 0;
+	u32 get_linetime_type = GET_READOUT_LINETIME;
+
+	if (ctx->subctx.s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->subctx.s_ctx.cust_get_linetime_in_us((void *)&ctx->subctx,
+			scenario_id, (u32 *)&linetime_in_ns,
+			(u32)get_linetime_type);
+	} else {
+		linetime_in_ns = CALC_LINE_TIME_IN_NS(ctx->subctx.s_ctx.mode[scenario_id].pclk,
+			ctx->subctx.s_ctx.mode[scenario_id].linelength);
+	}
+
+	if (ctx->subctx.s_ctx.mode[scenario_id].read_margin) {
+		info->margin = linetime_in_ns *
+			ctx->subctx.s_ctx.mode[scenario_id].read_margin / 1000;
+		adaptor_logi(ctx, "[%s] scenario(%d) read_margin in_line(%d)/in_us(%d)\n",
+			__func__, (u32)info->scenario_id,
+			ctx->subctx.s_ctx.mode[scenario_id].read_margin, info->margin);
+	} else if (ctx->subctx.read_margin) {
+		info->margin = linetime_in_ns *
+			ctx->subctx.read_margin / 1000;
+		adaptor_logi(ctx, "[%s] global read_margin in_line(%d)/in_us(%d)\n",
+			__func__,
+			ctx->subctx.read_margin, info->margin);
+	} else {
+		adaptor_loge(ctx, "[%s] scenario(%d) no read_margin\n",
+			__func__, (u32)info->scenario_id);
+	}
+
+	return 0;
+}
+
+static int g_exposure_margin_in_us_by_scenario(struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_exp_margin *info = arg;
+	u32 scenario_id = info->scenario_id;
+	u32 linetime_in_ns = 0;
+	u32 get_linetime_type = GET_SHUTTER_LINETIME;
+
+	if (ctx->subctx.s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->subctx.s_ctx.cust_get_linetime_in_us((void *)&ctx->subctx,
+			scenario_id, (u32 *)&linetime_in_ns,
+			(u32)get_linetime_type);
+	} else {
+		linetime_in_ns = CALC_LINE_TIME_IN_NS(ctx->subctx.s_ctx.mode[scenario_id].pclk,
+			ctx->subctx.s_ctx.mode[scenario_id].linelength);
+	}
+
+	if (ctx->subctx.s_ctx.mode[scenario_id].exposure_margin) {
+		info->margin = linetime_in_ns *
+			ctx->subctx.s_ctx.mode[scenario_id].exposure_margin / 1000;
+		adaptor_logi(ctx, "[%s] scenario(%d) exp_margin in_line(%d)/in_us(%d)\n",
+			__func__, (u32)info->scenario_id,
+			ctx->subctx.s_ctx.mode[scenario_id].exposure_margin, info->margin);
+	} else if (ctx->subctx.s_ctx.exposure_margin) {
+		info->margin = linetime_in_ns *
+			ctx->subctx.s_ctx.exposure_margin / 1000;
+		adaptor_logi(ctx, "[%s] global exp_margin in_line(%d)/in_us(%d)\n",
+			__func__,
+			ctx->subctx.s_ctx.exposure_margin, info->margin);
+	} else {
+		adaptor_loge(ctx, "[%s] scenario(%d) no exp_margin\n",
+			__func__, (u32)info->scenario_id);
+	}
+
+	return 0;
+}
+
+static int g_multi_exp_static_info_by_scenario(struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_multi_exp_static_info *info = arg;
+	union feature_para para;
+	u32 len;
+
+	para.u64[0] = info->scenario_id;
+	para.u64[1] = (u64)info;
+	para.u64[2] = 0;
+
+	memset(info, 0, sizeof(struct mtk_multi_exp_static_info));
+	info->scenario_id = (u32) para.u64[0];
+
+	subdrv_call(ctx, feature_control,
+		SENSOR_FEATURE_GET_MULTI_EXP_STATIC_INFO_BY_SCENARIO,
+		para.u8, &len);
+
+	return 0;
+}
+
 struct ioctl_entry {
 	unsigned int cmd;
 	int (*func)(struct adaptor_ctx *ctx, void *arg);
@@ -1635,6 +1750,10 @@ static const struct ioctl_entry ioctl_list[] = {
 	{VIDIOC_MTK_G_EXP_LINE_BY_SCENARIO, g_exp_line_by_scenario},
 	{VIDIOC_MTK_G_LINETIME_BY_SCENARIO, g_linetime_by_scenario},
 	{VIDIOC_MTK_G_DCG_RATIO_GROUP_BY_SCENARIO, g_dcg_ratio_group_by_scenario},
+	{VIDIOC_MTK_G_CURRENT_FRAME_TIME_IN_US, g_current_frame_time_in_us},
+	{VIDIOC_MTK_G_READ_MARGIN_IN_US_BY_SCENARIO, g_read_margin_in_us_by_scenario},
+	{VIDIOC_MTK_G_EXPOSURE_MARGIN_IN_US_BY_SCENARIO, g_exposure_margin_in_us_by_scenario},
+	{VIDIOC_MTK_G_MULTI_EXP_STATIC_INFO_BY_SCENARIO, g_multi_exp_static_info_by_scenario},
 	/* SET */
 	{VIDIOC_MTK_S_VIDEO_FRAMERATE, s_video_framerate},
 	{VIDIOC_MTK_S_MAX_FPS_BY_SCENARIO, s_max_fps_by_scenario},
