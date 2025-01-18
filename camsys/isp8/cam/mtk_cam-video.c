@@ -642,8 +642,10 @@ static long _stream_on_handler_locked(struct mtk_cam_ctx *ctx,
 				      struct mtk_cam_video_device *node)
 {
 	long ret = 0;
+	struct mutex *lock = &ctx->cam->ctx_lock[ctx->stream_id];
 
-	mutex_lock(&ctx->ctx_lock);
+	if (lock)
+		mutex_lock(lock);
 
 	if (mtk_cam_ctx_all_nodes_streaming(ctx)) {
 		dev_info(ctx->cam->dev, "%s %s ctx-%u is already on\n",
@@ -675,7 +677,8 @@ EXIT:
 		dev_info(ctx->cam->dev, "%s %s node_cnt:%d\n", __func__,
 			node->desc.name, ctx->streaming_node_cnt);
 
-	mutex_unlock(&ctx->ctx_lock);
+	if (lock)
+		mutex_unlock(lock);
 	return ret;
 }
 
@@ -709,7 +712,10 @@ static void _stream_off_handler_locked(struct mtk_cam_ctx *ctx,
 				       struct mtk_cam_video_device *node,
 				       bool dbg_log, char *prefix)
 {
-	mutex_lock(&ctx->ctx_lock);
+	struct mutex *lock = &ctx->cam->ctx_lock[ctx->stream_id];
+
+	if (lock)
+		mutex_lock(lock);
 
 	if (mtk_cam_ctx_all_nodes_idle(ctx)) {
 		dev_info(ctx->cam->dev, "%s: %s %s ctx-%u is already off\n",
@@ -743,7 +749,8 @@ EXIT:
 			atomic_read(&node->queued_cnt), ctx->streaming_node_cnt);
 	atomic_set(&node->queued_cnt, 0); /* force reset */
 
-	mutex_unlock(&ctx->ctx_lock);
+	if (lock)
+		mutex_unlock(lock);
 }
 
 static long mtk_cam_vidioc_streamoff_handler(struct file *file,

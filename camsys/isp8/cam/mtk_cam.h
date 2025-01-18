@@ -69,6 +69,8 @@ struct mtk_ltms_buf_pool;
 #define CAM_VCORE_DDREN_ACK  0x3c
 #define CAM_VCORE_CG_CON	0xa0
 
+#define CAM_MAX_CTX_NUM 8
+
 struct mtk_cam_adl_work {
 	struct work_struct work;
 	struct mtk_raw_device *raw_dev;
@@ -83,9 +85,6 @@ struct slbc_gid_data;
 struct mtk_cam_ctx {
 	struct mtk_cam_device *cam;
 	unsigned int stream_id;
-
-	/* resource lock */
-	struct mutex ctx_lock;
 
 	/* v4l2 related */
 	unsigned int enabled_node_cnt;
@@ -322,6 +321,7 @@ struct mtk_cam_device {
 
 	unsigned int max_stream_num;
 	struct mtk_cam_ctx *ctxs;
+	struct mutex ctx_lock[CAM_MAX_CTX_NUM];
 
 	spinlock_t streaming_lock;
 	int streaming_ctx;
