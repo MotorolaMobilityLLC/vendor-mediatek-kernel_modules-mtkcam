@@ -56,6 +56,11 @@ struct mtk_rpmsg_device;
 
 struct mtk_ltms_buf_pool;
 
+/* VIP thread */
+extern void set_task_priority_based_vip_and_throttle(int pid, int prio, unsigned int throttle_time);
+extern void unset_task_priority_based_vip(int pid);
+extern void set_task_ls(int pid);
+
 #define CQ_BUF_SIZE  0x14000
 #define CAM_CQ_BUF_NUM \
 			max(JOB_NUM_PER_STREAM * 2, JOB_NUM_PER_STREAM_DISPLAY_IC) /* 2 for mstream */
