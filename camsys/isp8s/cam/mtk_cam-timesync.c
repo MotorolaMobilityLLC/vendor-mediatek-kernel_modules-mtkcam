@@ -34,6 +34,8 @@ static uint64_t arch_counter_to_ns(uint64_t cyc)
 	u32 shift = 21;
 	s64 nsec = 0;
 
+	do_div(cyc, 77); // convert counter back to 13M
+
 	do_div(max, mult);
 	if (cyc > max) {
 		num = div64_u64(cyc, max);
