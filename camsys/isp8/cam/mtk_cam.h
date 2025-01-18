@@ -370,7 +370,7 @@ int mtk_cam_set_dev_mraw(struct device *dev, int idx, struct device *mraw);
  /* special case: larb dev is push back into array */
 int mtk_cam_set_dev_larb(struct device *dev, struct device *larb);
 struct device *mtk_cam_get_larb(struct device *dev, int larb_id);
-
+void dump_pm_status(struct mtk_cam_device *cam);
 bool mtk_cam_is_any_streaming(struct mtk_cam_device *cam);
 bool mtk_cam_are_all_streaming(struct mtk_cam_device *cam,
 			       unsigned long stream_mask);

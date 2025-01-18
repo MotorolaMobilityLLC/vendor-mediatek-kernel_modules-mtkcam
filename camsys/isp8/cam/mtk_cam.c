@@ -4467,6 +4467,54 @@ bool mtk_cam_is_any_streaming(struct mtk_cam_device *cam)
 	return res;
 }
 
+void dump_pm_status(struct mtk_cam_device *cam)
+{
+	int cam_vcore_pm, cam_main_pm;
+	int cam_rawa_pm, cam_rawb_pm, cam_rawc_pm;
+	int cam_rmsa_pm, cam_rmsb_pm, cam_rmsc_pm;
+	void __iomem *cam_vcore, *cam_main;
+	void __iomem *cam_rawa, *cam_rmsa;
+	void __iomem *cam_rawb, *cam_rmsb;
+	void __iomem *cam_rawc, *cam_rmsc;
+
+	if (cur_platform->hw->platform_id != 6991)
+		return;
+	cam_vcore_pm = 0x31ac0254;
+	cam_main_pm = 0x3c811054;
+	cam_rawa_pm = 0x3c813054;
+	cam_rawb_pm = 0x3c814054;
+	cam_rawc_pm = 0x3c815054;
+	cam_rmsa_pm = 0x3c816054;
+	cam_rmsb_pm = 0x3c817054;
+	cam_rmsc_pm = 0x3c818054;
+
+	cam_vcore = ioremap(cam_vcore_pm, 0xc);
+	cam_main = ioremap(cam_main_pm, 0xc);
+	cam_rawa = ioremap(cam_rawa_pm, 0xc);
+	cam_rawb = ioremap(cam_rawb_pm, 0xc);
+	cam_rawc = ioremap(cam_rawc_pm, 0xc);
+	cam_rmsa = ioremap(cam_rmsa_pm, 0xc);
+	cam_rmsb = ioremap(cam_rmsb_pm, 0xc);
+	cam_rmsc = ioremap(cam_rmsc_pm, 0xc);
+
+	dev_info(cam->dev, "CAMVCORE_PM_DEBUG [0][1][2] [0x%08x]/[0x%08x]/[0x%08x]\n",
+		 readl(cam_vcore), readl(cam_vcore + 0x4), readl(cam_vcore + 0x8));
+	dev_info(cam->dev, "CAM_MAIN_PM_DEBUG [0][1][2] [0x%08x]/[0x%08x]/[0x%08x]\n",
+		 readl(cam_main), readl(cam_main + 0x4), readl(cam_main + 0x8));
+	dev_info(cam->dev, "CAM_RAWA_PM_DEBUG [0][1][2] [0x%08x]/[0x%08x]/[0x%08x]\n",
+		 readl(cam_rawa), readl(cam_rawa + 0x4), readl(cam_rawa + 0x8));
+	dev_info(cam->dev, "CAM_RMSA_PM_DEBUG [0][1][2] [0x%08x]/[0x%08x]/[0x%08x]\n",
+		 readl(cam_rmsa), readl(cam_rmsa + 0x4), readl(cam_rmsa + 0x8));
+	dev_info(cam->dev, "CAM_RAWB_PM_DEBUG [0][1][2] [0x%08x]/[0x%08x]/[0x%08x]\n",
+		 readl(cam_rawb), readl(cam_rawb + 0x4), readl(cam_rawb + 0x8));
+	dev_info(cam->dev, "CAM_RMSB_PM_DEBUG [0][1][2] [0x%08x]/[0x%08x]/[0x%08x]\n",
+		 readl(cam_rmsb), readl(cam_rmsb + 0x4), readl(cam_rmsb + 0x8));
+	dev_info(cam->dev, "CAM_RAWC_PM_DEBUG [0][1][2] [0x%08x]/[0x%08x]/[0x%08x]\n",
+		 readl(cam_rawc), readl(cam_rawc + 0x4), readl(cam_rawc + 0x8));
+	dev_info(cam->dev, "CAM_RMSC_PM_DEBUG [0][1][2] [0x%08x]/[0x%08x]/[0x%08x]\n",
+		 readl(cam_rmsc), readl(cam_rmsc + 0x4), readl(cam_rmsc + 0x8));
+}
+
 bool mtk_cam_are_all_streaming(struct mtk_cam_device *cam,
 			       unsigned long stream_mask)
 {

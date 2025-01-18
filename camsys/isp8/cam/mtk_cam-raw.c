@@ -368,6 +368,20 @@ static void dump_rms_reg(struct mtk_raw_device *dev)
 		__func__, dev->id, rms_en, rms_en2, rms_en3,
 		rms_en4, rms_en5, rms_en6,
 		bpc_r2_pcrop, cbm_r1_pcrop);
+	rms_en = raw_readl_relaxed(dev, rms->base, REG_CAMCTL3_MOD_EN);
+	rms_en2 = raw_readl_relaxed(dev, rms->base, REG_CAMCTL3_MOD2_EN);
+	rms_en3 = raw_readl_relaxed(dev, rms->base, REG_CAMCTL3_MOD3_EN);
+	rms_en4 = raw_readl_relaxed(dev, rms->base, REG_CAMCTL3_MOD4_EN);
+	rms_en5 = raw_readl_relaxed(dev, rms->base, REG_CAMCTL3_MOD5_EN);
+	rms_en6 = raw_readl_relaxed(dev, rms->base, REG_CAMCTL3_MOD6_EN);
+	bpc_r2_pcrop = raw_readl_relaxed(dev, rms->base, BPC_R2_PCRP);
+	cbm_r1_pcrop = raw_readl_relaxed(dev, rms->base, CBM_R1_PCRP);
+
+	dev_info(dev->dev,
+		"[%s] raw%d - [out] rms_en/2/3/4/5/6:0x%x/0x%x/0x%x/0x%x/0x%x/0x%x, 0x%x/0x%x\n",
+		__func__, dev->id, rms_en, rms_en2, rms_en3,
+		rms_en4, rms_en5, rms_en6,
+		bpc_r2_pcrop, cbm_r1_pcrop);
 }
 static void init_ADLWR_settings(struct mtk_cam_device *cam)
 {
@@ -3277,6 +3291,37 @@ void print_cq_settings(struct mtk_raw_device *raw, void __iomem *base)
 
 	pr_info("CQ_SUB_THR0_2: inner_addr_msb:0x%x, inner_addr:%08x, size:0x%x\n",
 		inner_addr_msb, inner_addr, size);
+}
+
+void raw_test_int_trig(struct mtk_raw_device *dev)
+{
+	int val_trig, val_int_en, val_misc;
+
+	val_misc = raw_readl_relaxed(dev, dev->base, REG_CAMCTL_MISC);
+	SET_FIELD(&val_misc, CAMCTL_INT_VERIF_EN, 1);
+	raw_writel_relaxed(val_misc, dev, dev->base, REG_CAMCTL_MISC);
+	wmb(); /* TBC */
+
+	val_int_en = raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT18_EN);
+	SET_FIELD(&val_int_en, CAMCTL_TG_SOF_DROP_EN, 1);
+	raw_writel_relaxed(val_int_en, dev, dev->base, REG_CAMCTL_INT18_EN);
+	wmb(); /* TBC */
+
+	val_trig = raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT18_TRIG);
+	SET_FIELD(&val_trig, CAMCTL_TG_SOF_DROP_TRIG, 1);
+	raw_writel_relaxed(val_trig, dev, dev->base, REG_CAMCTL_INT18_TRIG);
+	wmb(); /* TBC */
+	pr_info("[%s] REG_CAMCTL_INT18_TRIG: 0x%x, EN:0x%x, MISC:0x%x\n",
+		__func__, val_trig, val_int_en, val_misc);
+	val_int_en = raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT18_EN);
+	SET_FIELD(&val_int_en, CAMCTL_TG_SOF_DROP_EN, 0);
+	raw_writel_relaxed(val_int_en, dev, dev->base, REG_CAMCTL_INT18_EN);
+	wmb(); /* TBC */
+
+	val_misc = raw_readl_relaxed(dev, dev->base, REG_CAMCTL_MISC);
+	SET_FIELD(&val_misc, CAMCTL_INT_VERIF_EN, 0);
+	raw_writel_relaxed(val_misc, dev, dev->base, REG_CAMCTL_MISC);
+	wmb(); /* TBC */
 }
 
 void print_dma_settings(void __iomem *base, u32 dmao_base)

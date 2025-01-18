@@ -6960,6 +6960,7 @@ int mtk_cam_job_manually_apply_isp(struct mtk_cam_job *job, bool wait_completion
 			readl(cam->rawa_cg_con), readl(cam->rmsa_cg_con), readl(cam->yuva_cg_con),
 			readl(cam->rawb_cg_con), readl(cam->rmsb_cg_con), readl(cam->yuvb_cg_con),
 			readl(cam->rawc_cg_con), readl(cam->rmsc_cg_con), readl(cam->yuvc_cg_con));
+
 	call_jobop(job, apply_isp);
 
 	if (!wait_completion)
@@ -6973,6 +6974,14 @@ int mtk_cam_job_manually_apply_isp(struct mtk_cam_job *job, bool wait_completion
 			readl(cam->rawa_cg_con), readl(cam->rmsa_cg_con), readl(cam->yuva_cg_con),
 			readl(cam->rawb_cg_con), readl(cam->rmsb_cg_con), readl(cam->yuvb_cg_con),
 			readl(cam->rawc_cg_con), readl(cam->rmsc_cg_con), readl(cam->yuvc_cg_con));
+		dump_pm_status(cam);
+		for (int i = 0; i < ARRAY_SIZE(job->src_ctx->hw_raw); i++) {
+			if (job->src_ctx->hw_raw[i]) {
+				struct mtk_raw_device *raw_dev =
+					dev_get_drvdata(job->src_ctx->hw_raw[i]);
+				raw_test_int_trig(raw_dev);
+			}
+		}
 		if (CAM_DEBUG_ENABLED(QOF)) {
 			int i;
 			struct mtk_cam_ctx *ctx = job->src_ctx;

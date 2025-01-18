@@ -210,7 +210,8 @@ struct cmdq_pkt;
 void write_pkt_trigger_apu_dc(struct mtk_raw_device *dev, struct cmdq_pkt *pkt);
 void write_pkt_trigger_apu_frame_mode(struct mtk_raw_device *dev,
 				      struct cmdq_pkt *pkt);
-
+/* debug */
+void raw_test_int_trig(struct mtk_raw_device *dev);
 int raw_dump_debug_status(struct mtk_raw_device *dev, int dma_debug_dump);
 
 /* reset */
