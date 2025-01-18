@@ -1163,7 +1163,7 @@ static void tsrec_top_regs_iomem_init(struct tsrec_iomem_info_st *p_iomem_info)
 
 	/* 1. find tsrec_top device node */
 	p_dev_node = tsrec_utils_of_find_comp_node(
-		seninf_dev->of_node, TSREC_TOP_COMP_NAME, __func__, 0);
+		NULL, TSREC_TOP_COMP_NAME, __func__, 0);
 	if (unlikely(p_dev_node == NULL))
 		return;
 
@@ -1193,6 +1193,7 @@ static void tsrec_top_regs_iomem_init(struct tsrec_iomem_info_st *p_iomem_info)
 			return;
 		}
 	}
+	of_node_put(p_dev_node);
 #endif
 
 	/* X. end */
@@ -1210,7 +1211,7 @@ static void tsrec_no_regs_iomem_init(const unsigned int target, int *p_result,
 	struct tsrec_iomem_info_st *p_iomem_info)
 {
 #ifndef FS_UT
-	struct device_node *p_dev_node = seninf_dev->of_node;
+	struct device_node *p_dev_node = NULL;
 	unsigned int base_shift = 0, tsrec_no;
 	int ret;
 

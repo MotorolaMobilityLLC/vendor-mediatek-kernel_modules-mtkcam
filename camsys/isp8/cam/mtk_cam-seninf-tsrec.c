@@ -673,7 +673,7 @@ int mtk_cam_seninf_g_tsrec_current_time(
 	timer_en_status = get_tsrec_timer_en_status();
 	if (unlikely(timer_en_status == 0)) {
 		TSREC_LOG_INF(
-			"NOTICE: timer_en_status:%u, plz check seninf runtine suspend/resume, return\n",
+			"NOTICE: timer_en_status:%u, plz check seninf runtime suspend/resume, return\n",
 			timer_en_status);
 		return 0;
 	}
@@ -2954,6 +2954,9 @@ static void tsrec_n_settings_clear(const unsigned int tsrec_no)
 		return;
 	}
 
+	/* !!! set tsrec SW RST !!! */
+	mtk_cam_seninf_s_tsrec_sw_rst(tsrec_no, 1);
+
 	/* first disable/stop this tsrec hw */
 	mtk_cam_seninf_s_tsrec_top_cfg_clk_en_bit(tsrec_no, 0);
 
@@ -2968,6 +2971,9 @@ static void tsrec_n_settings_clear(const unsigned int tsrec_no)
 
 	/* reset/setup info for debugging */
 	tsrec_n_regs_st_reset(tsrec_no);
+
+	/* !!! unset tsrec SW RST !!! */
+	mtk_cam_seninf_s_tsrec_sw_rst(tsrec_no, 0);
 }
 
 
@@ -3816,12 +3822,12 @@ tsrec_cb_handler_end:
 /*---------------------------------------------------------------------------*/
 // interrupt broadcast to seninf --- at bottom-half
 /*---------------------------------------------------------------------------*/
-static void tsrec_broadcast_info_setup(void *data,
+static void tsrec_broadcast_irq_info(void *data,
 	struct tsrec_irq_info_st *irq_info,
 	const unsigned int tsrec_no, const unsigned int status)
 {
 #ifndef FS_UT
-	const unsigned long long time_th = 50000; // 50 us
+	const unsigned long long time_th = 500000; /* 500 us */
 	const unsigned int mask = TSREC_BIT_MASK(TSREC_EXP_MAX_CNT);
 	struct mtk_cam_seninf_tsrec_irq_notify_info info = {0};
 	struct seninf_ctx *seninf_ctx = NULL;
@@ -3855,7 +3861,7 @@ static void tsrec_broadcast_info_setup(void *data,
 
 	start = ktime_get_boottime_ns();
 
-	/* broadcast info for seninf */
+	/* broadcast irq info for seninf */
 	mtk_cam_seninf_tsrec_irq_notify(&info);
 
 	end = ktime_get_boottime_ns();
@@ -3973,10 +3979,22 @@ static void tsrec_isr_event_handler(int irq, void *data,
 	}
 
 	tsrec_work_setup(irq, data, irq_info, tsrec_no, work_event_info);
-	tsrec_broadcast_info_setup(data, irq_info, tsrec_no, status);
+	tsrec_broadcast_irq_info(data, irq_info, tsrec_no, status);
 }
 
 
+static inline void tsrec_irq_handler(int irq, void *data,
+	struct tsrec_irq_info_st *irq_info)
+{
+	tsrec_isr_event_handler(irq, data, irq_info,
+		irq_info->tsrec_no, irq_info->status);
+}
+/*---------------------------------------------------------------------------*/
+
+
+/*---------------------------------------------------------------------------*/
+/* interrupt handler --- top-half (sub function)                             */
+/*---------------------------------------------------------------------------*/
 static unsigned int tsrec_irq_intr_status_checker(int irq, void *data,
 	const unsigned long long irq_sys_ts,
 	const unsigned long long irq_mono_ts,
@@ -4025,14 +4043,6 @@ static unsigned int tsrec_irq_intr_status_checker(int irq, void *data,
 	}
 
 	return wake_thread_bits;
-}
-
-
-static inline void tsrec_irq_handler(int irq, void *data,
-	struct tsrec_irq_info_st *irq_info)
-{
-	tsrec_isr_event_handler(irq, data, irq_info,
-		irq_info->tsrec_no, irq_info->status);
 }
 /*---------------------------------------------------------------------------*/
 
