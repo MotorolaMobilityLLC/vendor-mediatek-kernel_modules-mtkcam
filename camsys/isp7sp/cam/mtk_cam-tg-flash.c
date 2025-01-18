@@ -2,6 +2,7 @@
 //
 // Copyright (c) 2021 MediaTek Inc.
 
+#include <linux/io.h>
 #include "mtk_cam-tg-flash.h"
 #include "mtk_cam-raw_regs.h"
 #include "mtk_cam-raw.h"
