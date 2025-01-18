@@ -1018,6 +1018,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.eeprom_info = PARAM_UNDEFINED,
 	.eeprom_num = PARAM_UNDEFINED,
 	.resolution = {8160, 6144},
+	.mirror = IMAGE_NORMAL,
 
 	.mclk = 24,
 	.isp_driving_current = ISP_DRIVING_6MA,
@@ -1083,7 +1084,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.list_len = ARRAY_SIZE(feature_control_list),
 	.chk_s_off_sta = 1,
 	.chk_s_off_end = 0,
-	.checksum_value = 0x1163D60F,
+	.checksum_value = 0xef68f1f2,
 	.aov_sensor_support = TRUE,
 	.init_in_open = TRUE,
 	.streaming_ctrl_imp = FALSE,
