@@ -2157,6 +2157,8 @@ static struct subdrv_static_ctx static_ctx = {
 
 	.checksum_value = 0x8013666a,
 	.ctle_param = &static_ctle_param,
+	.i3c_precfg_setting_table = hp9_i3c_init_global,
+	.i3c_precfg_setting_len = ARRAY_SIZE(hp9_i3c_init_global),
 };
 
 static struct subdrv_ops ops = {
@@ -2172,6 +2174,7 @@ static struct subdrv_ops ops = {
 	.get_csi_param = common_get_csi_param,
 	.update_sof_cnt = common_update_sof_cnt,
 	.vsync_notify = vsync_notify,
+	.i3c_pre_config = common_i3c_pre_config,
 };
 
 static struct subdrv_pw_seq_entry pw_seq[] = {
@@ -2396,13 +2399,6 @@ static void s5khp9sp_sensor_init(struct subdrv_ctx *ctx)
 	u64 ixc_time = 0;
 
 	DRV_LOG(ctx, " start\n");
-	subdrv_i2c_wr_u16(ctx, 0xFCFC, 0x4000);
-	subdrv_i2c_wr_u16(ctx, 0x0000, 0x0001); /* version */
-	subdrv_i2c_wr_u16(ctx, 0x0000, 0x1B73); /* model ID */
-	subdrv_i2c_wr_u16(ctx, 0x6012, 0x0001); /* reset */
-	subdrv_i2c_wr_u16(ctx, 0x7002, 0x0008); /* boot with PLL*/
-	subdrv_i2c_wr_u16(ctx, 0x6014, 0x0001); /* SW load complete*/
-	mdelay(20);
 
 	/* write init setting */
 	if (ctx->s_ctx.init_setting_table != NULL) {
