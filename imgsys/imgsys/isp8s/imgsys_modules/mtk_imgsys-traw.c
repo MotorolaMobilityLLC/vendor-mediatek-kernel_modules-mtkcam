@@ -425,6 +425,38 @@ static void imgsys_traw_dump_drzh2n(struct mtk_imgsys_dev *a_pDev,
 
 }
 
+static void imgsys_traw_dump_module(struct mtk_imgsys_dev *a_pDev,
+				void __iomem *a_pRegBA,
+				unsigned int a_DdbSel,
+				unsigned int a_DbgOut)
+{
+	unsigned int DbgCmd = 0;
+
+
+	pr_info("[modules]\n");
+	DbgCmd = 0x0;
+	ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgCmd = 0x1;
+	ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgCmd = 0x2;
+	ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgCmd = 0x3;
+	ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgCmd = 0x4;
+	ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgCmd = 0x5;
+	ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgCmd = 0x6;
+	ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgCmd = 0x7;
+	ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgCmd = 0x8;
+	ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgCmd = 0x9;
+	ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+
+}
+
 static void imgsys_traw_dump_smto(struct mtk_imgsys_dev *a_pDev,
 				void __iomem *a_pRegBA,
 				unsigned int a_DdbSel,
@@ -497,20 +529,20 @@ static void imgsys_traw_dump_dl(struct mtk_imgsys_dev *a_pDev,
 
 	/* wpe_wif_t1_debug */
 	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
-	DbgCmd = 0x00000106;
+	DbgCmd = 0x00000107;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
 	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
 	pr_info("[wpe_wif_t1_debug]checksum(0x%X),rdy(%d) req(%d)\n",
 		DbgData & 0xFFFF, DbgRdy, DbgReq);
 	/* line_cnt[15:0],  pix_cnt[15:0] */
-	DbgCmd = 0x00000107;
+	DbgCmd = 0x00000108;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCnt = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[wpe_wif_t1_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
 		DbgData & 0xFFFF, DbgLineCnt);
 	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
-	DbgCmd = 0x00000108;
+	DbgCmd = 0x00000109;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCntReg = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[wpe_wif_t1_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
@@ -518,20 +550,20 @@ static void imgsys_traw_dump_dl(struct mtk_imgsys_dev *a_pDev,
 
 	/* wpe_wif_t2_debug */
 	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
-	DbgCmd = 0x00000206;
+	DbgCmd = 0x00000207;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
 	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
 	pr_info("[wpe_wif_t2_debug]checksum(0x%X),rdy(%d) req(%d)\n",
 		DbgData & 0xFFFF, DbgRdy, DbgReq);
 	/* line_cnt[15:0],  pix_cnt[15:0] */
-	DbgCmd = 0x00000207;
+	DbgCmd = 0x00000208;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCnt = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[wpe_wif_t2_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
 		DbgData & 0xFFFF, DbgLineCnt);
 	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
-	DbgCmd = 0x00000208;
+	DbgCmd = 0x00000209;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCntReg = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[wpe_wif_t2_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
@@ -539,20 +571,20 @@ static void imgsys_traw_dump_dl(struct mtk_imgsys_dev *a_pDev,
 
 	/* traw_dip_d1_debug */
 	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
-	DbgCmd = 0x00000006;
+	DbgCmd = 0x00000007;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
 	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
 	pr_info("[traw_dip_d1_debug]checksum(0x%X),rdy(%d) req(%d)\n",
 		DbgData & 0xFFFF, DbgRdy, DbgReq);
 	/* line_cnt[15:0],  pix_cnt[15:0] */
-	DbgCmd = 0x00000007;
+	DbgCmd = 0x00000008;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCnt = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[traw_dip_d1_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
 		DbgData & 0xFFFF, DbgLineCnt);
 	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
-	DbgCmd = 0x00000008;
+	DbgCmd = 0x00000009;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCntReg = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[traw_dip_d1_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
@@ -560,20 +592,20 @@ static void imgsys_traw_dump_dl(struct mtk_imgsys_dev *a_pDev,
 
 	/* wpe_wif_t3_debug */
 	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
-	DbgCmd = 0x00000306;
+	DbgCmd = 0x00000307;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
 	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
 	pr_info("[wpe_wif_t3_debug]checksum(0x%X),rdy(%d) req(%d)\n",
 		DbgData & 0xFFFF, DbgRdy, DbgReq);
 	/* line_cnt[15:0],  pix_cnt[15:0] */
-	DbgCmd = 0x00000307;
+	DbgCmd = 0x00000308;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCnt = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[wpe_wif_t3_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
 		DbgData & 0xFFFF, DbgLineCnt);
 	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
-	DbgCmd = 0x00000308;
+	DbgCmd = 0x00000309;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCntReg = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[wpe_wif_t3_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
@@ -581,20 +613,20 @@ static void imgsys_traw_dump_dl(struct mtk_imgsys_dev *a_pDev,
 
 	/* wpe_wif_t4_debug */
 	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
-	DbgCmd = 0x00000406;
+	DbgCmd = 0x00000407;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
 	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
 	pr_info("[wpe_wif_t4_debug]checksum(0x%X),rdy(%d) req(%d)\n",
 		DbgData & 0xFFFF, DbgRdy, DbgReq);
 	/* line_cnt[15:0],  pix_cnt[15:0] */
-	DbgCmd = 0x00000407;
+	DbgCmd = 0x00000408;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCnt = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[wpe_wif_t4_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
 		DbgData & 0xFFFF, DbgLineCnt);
 	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
-	DbgCmd = 0x00000408;
+	DbgCmd = 0x00000409;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCntReg = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[wpe_wif_t4_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
@@ -602,20 +634,20 @@ static void imgsys_traw_dump_dl(struct mtk_imgsys_dev *a_pDev,
 
 	/* wpe_wif_t4n_debug */
 	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
-	DbgCmd = 0x00000506;
+	DbgCmd = 0x00000507;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
 	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
 	pr_info("[wpe_wif_t4n_debug]checksum(0x%X),rdy(%d) req(%d)\n",
 		DbgData & 0xFFFF, DbgRdy, DbgReq);
 	/* line_cnt[15:0],  pix_cnt[15:0] */
-	DbgCmd = 0x00000507;
+	DbgCmd = 0x00000508;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCnt = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[wpe_wif_t4n_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
 		DbgData & 0xFFFF, DbgLineCnt);
 	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
-	DbgCmd = 0x00000508;
+	DbgCmd = 0x00000509;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCntReg = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[wpe_wif_t4n_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
@@ -623,20 +655,20 @@ static void imgsys_traw_dump_dl(struct mtk_imgsys_dev *a_pDev,
 
 	/* wpe_wif_t5_debug */
 	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
-	DbgCmd = 0x00000606;
+	DbgCmd = 0x00000607;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
 	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
 	pr_info("[wpe_wif_t5_debug]checksum(0x%X),rdy(%d) req(%d)\n",
 		DbgData & 0xFFFF, DbgRdy, DbgReq);
 	/* line_cnt[15:0],  pix_cnt[15:0] */
-	DbgCmd = 0x00000607;
+	DbgCmd = 0x00000608;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCnt = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[wpe_wif_t5_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
 		DbgData & 0xFFFF, DbgLineCnt);
 	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
-	DbgCmd = 0x00000608;
+	DbgCmd = 0x00000609;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCntReg = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[wpe_wif_t5_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
@@ -644,20 +676,20 @@ static void imgsys_traw_dump_dl(struct mtk_imgsys_dev *a_pDev,
 
 	/* wpe_wif_t6_debug */
 	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
-	DbgCmd = 0x00000706;
+	DbgCmd = 0x00000707;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
 	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
 	pr_info("[wpe_wif_t6_debug]checksum(0x%X),rdy(%d) req(%d)\n",
 		DbgData & 0xFFFF, DbgRdy, DbgReq);
 	/* line_cnt[15:0],  pix_cnt[15:0] */
-	DbgCmd = 0x00000707;
+	DbgCmd = 0x00000708;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCnt = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[wpe_wif_t6_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
 		DbgData & 0xFFFF, DbgLineCnt);
 	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
-	DbgCmd = 0x00000708;
+	DbgCmd = 0x00000709;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCntReg = (DbgData & 0xFFFF0000) / 0xFFFF;
 	pr_info("[wpe_wif_t6_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
@@ -1060,6 +1092,9 @@ void imgsys_traw_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	imgsys_traw_dump_smto(imgsys_dev, trawRegBA, CtlDdbSel, CtlDbgOut);
 	/* RGBBIN_T1 debug data */
 	imgsys_traw_dump_rgbbin(imgsys_dev, trawRegBA, CtlDdbSel, CtlDbgOut);
+
+	imgsys_traw_dump_module(imgsys_dev, trawRegBA, TRAW_PAK_T2_SEL, TRAW_PAK_T2_OUT);
+	imgsys_traw_dump_module(imgsys_dev, trawRegBA, TRAW_PLNW_T1_SEL, TRAW_PLNW_T1_OUT);
 #endif
 err_debug_dump:
 	pr_info("%s: -\n", __func__);
