@@ -440,6 +440,11 @@ void imgsys_main_set_init(struct mtk_imgsys_dev *imgsys_dev)
 	pr_debug("%s: +.\n", __func__);
 
 	DdrRegBA = imgsysddrenRegBA;
+
+	/* WLA 2.0 de-bounce */
+	value = 0x80006000;
+	iowrite32(value, (DdrRegBA + 0x9c));
+
 	/* HW DDREN*/
 	value = 0x1fd;
 	iowrite32(value, (DdrRegBA + 0x10));
