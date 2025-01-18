@@ -69,6 +69,8 @@ extern void set_task_ls(int pid);
 #define SENSOR_META_BUF_NUM 8
 //#define RUN_ADL_FRAME_MODE_FROM_RAWI
 
+#define CAM_MAX_CTX_NUM 8
+
 struct mtk_cam_adl_work {
 	struct work_struct work;
 	struct mtk_raw_device *raw_dev;
@@ -317,6 +319,7 @@ struct mtk_cam_device {
 
 	unsigned int max_stream_num;
 	struct mtk_cam_ctx *ctxs;
+	struct mutex ctx_lock[CAM_MAX_CTX_NUM];
 
 	spinlock_t streaming_lock;
 	int streaming_ctx;

@@ -537,8 +537,6 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 	if (!ctx)
 		return -EPIPE;
 
-	++ctx->streaming_node_cnt;
-
 	return 0;
 }
 
@@ -548,18 +546,12 @@ static void mtk_cam_vb2_stop_streaming(struct vb2_queue *vq)
 	struct mtk_cam_video_device *node = mtk_cam_vbq_to_vdev(vq);
 	struct mtk_cam_ctx *ctx;
 
-	ctx = mtk_cam_find_ctx(cam, &node->vdev.entity);
-
-	if (!ctx) {
-		// TODO: clean pending?
-		return;
-	}
 	if (CAM_DEBUG_ENABLED(V4L2))
 		dev_info(cam->dev, "%s: node %s\n", __func__, node->desc.name);
 
-	--ctx->streaming_node_cnt;
-	atomic_set(&node->queued_cnt, 0); /* force reset */
-	// TODO: clean pending req?
+	ctx = mtk_cam_find_ctx(cam, &node->vdev.entity);
+	if (!ctx)
+		return;
 
 	if (!mtk_cam_ctx_all_nodes_idle(ctx))
 		return;
@@ -625,6 +617,44 @@ static int mtk_cam_vb2_buf_out_validate(struct vb2_buffer *vb)
 	return 0;
 }
 
+static long _stream_on_handler_locked(struct mtk_cam_ctx *ctx,
+				      struct mtk_cam_video_device *node)
+{
+	long ret = 0;
+	struct mutex *lock = &ctx->cam->ctx_lock[ctx->stream_id];
+
+	if (lock)
+		mutex_lock(lock);
+
+	if (mtk_cam_ctx_all_nodes_streaming(ctx)) {
+		dev_info(ctx->cam->dev, "%s %s ctx-%u is already on\n",
+			__func__, node->desc.name, ctx->stream_id);
+		goto EXIT;
+	}
+
+	if (mtk_cam_ctx_all_nodes_idle(ctx)) {  /* 1st node */
+		ret = mtk_cam_ctx_prepare(ctx);
+		if(ret) {
+			mtk_cam_stop_ctx(ctx, &node->vdev.entity);
+			goto EXIT;
+		}
+	}
+
+	++ctx->streaming_node_cnt;
+
+	if (mtk_cam_ctx_all_nodes_streaming(ctx))  /* last node */
+		mtk_cam_ctx_stream_on(ctx);
+
+EXIT:
+	if (CAM_DEBUG_ENABLED(V4L2))
+		dev_info(ctx->cam->dev, "%s %s node_cnt:%d\n", __func__,
+			node->desc.name, ctx->streaming_node_cnt);
+
+	if (lock)
+		mutex_unlock(lock);
+	return ret;
+}
+
 static long mtk_cam_vidioc_streamon_handler(struct file *file,
 					    unsigned int cmd,
 					    unsigned long arg)
@@ -636,45 +666,64 @@ static long mtk_cam_vidioc_streamon_handler(struct file *file,
 
 	/* mtk_cam_vb2_start_streaming */
 	ret = video_ioctl2(file, cmd, arg);
+	if (ret)
+		return ret;
 
 	node = file_to_mtk_cam_node(file);
 	cam = vb2_get_drv_priv(&node->vb2_q);
 	ctx = (cam) ? mtk_cam_find_ctx(cam, &node->vdev.entity) : NULL;
 
-	if (ctx && ctx->streaming_node_cnt == 1) {  /* 1st node */
-		if(mtk_cam_ctx_prepare(ctx)) {
-			mtk_cam_stop_ctx(ctx, &node->vdev.entity);
-			ret = -1;
-			goto EXIT;
-		}
-	}
+	if (ctx)
+		ret = _stream_on_handler_locked(ctx, node);
+	else  /* should not happen */
+		WARN(1, "%s: no ctx found for %s\n", __func__, node->desc.name);
 
-	if (ctx && mtk_cam_ctx_all_nodes_streaming(ctx))  /* last node */
-		mtk_cam_ctx_stream_on(ctx);
-
-EXIT:
 	return ret;
 }
 
-static inline void _stream_off_handler_before_ioctl(struct mtk_cam_ctx *ctx,
-						    struct mtk_cam_video_device *node)
+static void _stream_off_handler_locked(struct mtk_cam_ctx *ctx,
+				       struct mtk_cam_video_device *node,
+				       bool dbg_log, char *prefix)
 {
-	if (ctx && atomic_read(&node->queued_cnt))
+	struct mutex *lock = &ctx->cam->ctx_lock[ctx->stream_id];
+
+	if (lock)
+		mutex_lock(lock);
+
+	if (mtk_cam_ctx_all_nodes_idle(ctx)) {
+		dev_info(ctx->cam->dev, "%s: %s %s ctx-%u is already off\n",
+			prefix, __func__, node->desc.name, ctx->stream_id);
+		goto EXIT;
+	}
+
+	--ctx->streaming_node_cnt;
+
+	if (atomic_read(&node->queued_cnt) || mtk_cam_ctx_all_nodes_idle(ctx))
 		mtk_cam_ctx_stream_off(ctx);
 
-	if (ctx && ctx->streaming_node_cnt == 1) {
+	/* TODO: clean pending? */
+
+	if (mtk_cam_ctx_all_nodes_idle(ctx)) {  /* last node */
 		/* last node before mtk_cam_vb2_stop_streaming */
 		/* for no req in driver and stream off case */
-		mtk_cam_ctx_stream_off(ctx);
 		mtk_cam_ctx_unprepare(ctx);
 	}
+
+EXIT:
+	if (CAM_DEBUG_ENABLED(V4L2) || dbg_log)
+		dev_info(ctx->cam->dev, "%s: %s %s queued_cnt:%d  node_cnt:%d\n",
+			prefix, __func__, node->desc.name,
+			atomic_read(&node->queued_cnt), ctx->streaming_node_cnt);
+	atomic_set(&node->queued_cnt, 0); /* force reset */
+
+	if (lock)
+		mutex_unlock(lock);
 }
 
 static long mtk_cam_vidioc_streamoff_handler(struct file *file,
 					     unsigned int cmd,
 					     unsigned long arg)
 {
-	long ret;
 	struct mtk_cam_video_device *node = NULL;
 	struct mtk_cam_device *cam = NULL;
 	struct mtk_cam_ctx *ctx = NULL;
@@ -689,19 +738,17 @@ static long mtk_cam_vidioc_streamoff_handler(struct file *file,
 	 *    (or v4l2 checker warn_on during vb2 queue cancel)
 	 */
 
-	if (CAM_DEBUG_ENABLED(V4L2))
+	if (cam && ctx && CAM_DEBUG_ENABLED(V4L2))
 		dev_info(cam->dev,
 			"%s:streaming_node cnt:%d node_name:%s, queued_cnt:%d",
 			__func__, ctx->streaming_node_cnt, node->desc.name,
 			atomic_read(&node->queued_cnt));
 
-	if (ctx && node)
-		_stream_off_handler_before_ioctl(ctx, node);
+	if (ctx)
+		_stream_off_handler_locked(ctx, node, false, "stream_off");
 
 	/* mtk_cam_vb2_stop_streaming */
-	ret = video_ioctl2(file, cmd, arg);
-
-	return ret;
+	return video_ioctl2(file, cmd, arg);
 }
 
 static long mtk_cam_v4l2_file_ioctl(struct file *file,
@@ -730,7 +777,7 @@ static int mtk_cam_vb2_fop_release(struct file *file)
 	int i;
 #endif
 	open_cnt = atomic_dec_return(&node->open_cnt);
-	if (open_cnt != 0) {
+	if (cam && open_cnt != 0) {
 		dev_info(cam->dev, "%s %s %d", __func__, node->desc.name, open_cnt);
 		return 0;
 	}
@@ -742,14 +789,10 @@ static int mtk_cam_vb2_fop_release(struct file *file)
 
 	if (!vdev->queue->owner || file->private_data == vdev->queue->owner) {
 		if (ctx)
-			_stream_off_handler_before_ioctl(ctx, node);
+			_stream_off_handler_locked(ctx, node, true, "release");
 
 		/* mtk_cam_vb2_stop_streaming */
 		vb2_queue_release(vdev->queue);
-
-		/* power off insurance */
-		if (ctx && mtk_cam_ctx_all_nodes_idle(ctx))
-			mtk_cam_power_ctrl_ccu(ctx->cam->dev, 0);
 
 		vdev->queue->owner = NULL;
 	}
@@ -783,7 +826,7 @@ static int mtk_cam_v4l2_fh_open(struct file *file)
 	}
 
 #ifdef MTK_CAM_KTHREAD_PRE_ALLOC
-	if (cam->ctxs && node->uid.pipe_id == 0 && /* one node only */
+	if (cam && cam->ctxs && node->uid.pipe_id == 0 && /* one node only */
 	    node->desc.id == MTK_RAW_MAIN_STREAM_OUT) {
 		dev_info(cam->dev, "%s, pre-create kthread", __func__);
 		for (i = 0; i < 3 && i < cam->max_stream_num; i++)

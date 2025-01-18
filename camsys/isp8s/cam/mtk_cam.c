@@ -4183,6 +4183,7 @@ static void mtk_cam_ctx_init(struct mtk_cam_ctx *ctx,
 {
 	ctx->cam = cam;
 	ctx->stream_id = stream_id;
+	mutex_init(&cam->ctx_lock[stream_id]);
 }
 
 static int mtk_cam_v4l2_subdev_link_validate(struct v4l2_subdev *sd,
@@ -5095,7 +5096,7 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	dev_set_drvdata(dev, cam_dev);
 
 	/* FIXME: decide max raw stream num by seninf num */
-	cam_dev->max_stream_num = 8; /* TODO: how */
+	cam_dev->max_stream_num = CAM_MAX_CTX_NUM; /* TODO: how */
 	cam_dev->ctxs = devm_kcalloc(dev, cam_dev->max_stream_num,
 				     sizeof(*cam_dev->ctxs), GFP_KERNEL);
 	if (!cam_dev->ctxs) {
