@@ -1161,7 +1161,7 @@ static int get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 			*sensor_id = (subdrv_i2c_rd_u8(ctx, addr_h) << 8) |
 				subdrv_i2c_rd_u8(ctx, addr_l);
 			if (addr_ll)
-				*sensor_id = ((*sensor_id) << 8) | subdrv_i2c_rd_u8(ctx, addr_ll);
+				*sensor_id = (((*sensor_id) & 0xffff) << 8) | subdrv_i2c_rd_u8(ctx, addr_ll);
 			*sensor_id +=1;
 			DRV_LOG_MUST(ctx, "i2c_write_id(0x%x) sensor_id(0x%x/0x%x)\n",
 				ctx->i2c_write_id, *sensor_id, ctx->s_ctx.sensor_id);

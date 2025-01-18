@@ -1300,7 +1300,7 @@ static int open(struct subdrv_ctx *ctx)
 	while (imgsensor_info.i2c_addr_table[i] != 0xff) {
 		ctx->i2c_write_id = imgsensor_info.i2c_addr_table[i];
 		do {
-			sensor_id = return_lot_id_from_otp(ctx);
+			sensor_id = (kal_uint16)(return_lot_id_from_otp(ctx) & 0xFFFF);
 			if (sensor_id == imgsensor_info.sensor_id) {
 				LOG_INF("i2c write id: 0x%x, sensor id: 0x%x\n",
 					ctx->i2c_write_id, sensor_id);

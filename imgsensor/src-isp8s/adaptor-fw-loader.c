@@ -2985,6 +2985,8 @@ int loading_firmware(struct adaptor_ctx *ctx, struct sensor_firmware *sensor_fw)
 	struct adaptor_profile_tv tv0, tv1, tv2;
 	const char * const fw_name = sensor_fw->name;
 
+	if (unlikely(ctx == NULL))
+		return -EINVAL;
 
 	ADAPTOR_PROFILE_BEGIN(&tv0);
 	adaptor_logi(ctx, "loading fw_name = %s", fw_name);
