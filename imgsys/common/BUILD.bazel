@@ -55,7 +55,8 @@ define_mgk_ddk_ko(
     # to include out-of-tree non-DDK modules headers & headers for ko_deps
     header_deps = [
         "//vendor/mediatek/kernel_modules/mtkcam/imgsys/imgsys/isp7sp:ddk_public_headers",
-        # "//kernel_device_modules-{}/drivers/misc/mediatek/iommu:iommu_misc_headers".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/misc/mediatek/iommu:iommu_misc_headers".format(kernel_version),
+        # "//kernel_device_modules-{}/drivers/iommu:iommu_public_headers".format(kernel_version),
         "//kernel_device_modules-{}/drivers/iommu/arm/arm-smmu-v3:smmu_public_headers".format(kernel_version),
     ],
 
@@ -67,7 +68,7 @@ define_mgk_ddk_ko(
         "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/cmdq/mailbox/",
         # "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/mtk-interconnect/",
         "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/smi/",
-        "-I$(DEVICE_MODULES_PATH)/drivers/iommu",
+        # "-I$(DEVICE_MODULES_PATH)/drivers/iommu",
         # "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/iommu", # has become DDK module
         # "-I$(DEVICE_MODULES_PATH)/include/soc/mediatek", # has become DDK module
         "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/",
