@@ -124,7 +124,7 @@ static int set_seninf_tm(struct device *dev, struct mtk_ut_seninf_device *seninf
 							c_clk_div_cnt,
 							c_isp_clk,
 							c_fps);
-	const bool stream_on_en = true;
+	bool stream_on_en = 0;
 
 	width_tm = check_width_tm_limitation(cfg.img_w >> 1);
 	width_tm_bit = width_tm * cfg.bit_depth;
@@ -175,13 +175,21 @@ static int set_seninf_tm(struct device *dev, struct mtk_ut_seninf_device *seninf
 		last_vc = 2;
 	}
 
-
+	stream_on_en = false;
 	/* setting stream on  */
 	writel(	(c_clk_div_cnt << 16) |
 			((HOIZONTAL_COLOR_BAR & 0xF) << 8) |
 			(stream_on_en & 0x1) |
 			(((cfg.exposure_num - 1) & 0x7) << 12),
 			ISP_SENINF_TM_CORE0_CTL(seninf_tm));
+
+
+	stream_on_en = true;
+	writel((stream_on_en & 0x1) |
+			readl(ISP_SENINF_TM_CORE0_CTL(seninf_tm)),
+			ISP_SENINF_TM_CORE0_CTL(seninf_tm));
+
+	dev_info(dev, "%s reg core0 = 0x%x\n", __func__, readl(ISP_SENINF_TM_CORE0_CTL(seninf_tm)));
 
 	return 0;
 }
@@ -331,11 +339,6 @@ static int ut_seninf_set_testmdl(struct device *dev,
 		return -EINVAL;
 	}
 
-	if (set_seninf_tm(dev, seninf, tml_cfg)) {
-		SENINF_LOGE("set_seninf_tm return failed\n");
-		return -EINVAL;
-	}
-
 	if (set_seninf_asnyc(dev, seninf)) {
 		SENINF_LOGE("set_seninf_asnyc return failed\n");
 		return -EINVAL;
@@ -352,6 +355,11 @@ static int ut_seninf_set_testmdl(struct device *dev,
 
 	if (set_out_mux(dev, seninf, out_mux_cfg)) {
 		SENINF_LOGE("set_out_mux return failed\n");
+		return -EINVAL;
+	}
+
+	if (set_seninf_tm(dev, seninf, tml_cfg)) {
+		SENINF_LOGE("set_seninf_tm return failed\n");
 		return -EINVAL;
 	}
 
