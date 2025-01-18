@@ -49,7 +49,7 @@ static void reset_history_info(struct c2ps_task_info *tsk_info)
 	c2ps_info_unlock(&tsk_info->mlock);
 }
 
-int monitor_task_start(int pid, int task_id)
+int __maybe_unused monitor_task_start(int pid, int task_id)
 {
 	struct c2ps_task_info *tsk_info = c2ps_find_task_info_by_tskid(task_id);
 
@@ -116,7 +116,7 @@ int monitor_task_start(int pid, int task_id)
 	return 0;
 }
 
-int monitor_task_end(int pid, int task_id)
+int __maybe_unused monitor_task_end(int pid, int task_id)
 {
 	struct c2ps_task_info *tsk_info = c2ps_find_task_info_by_tskid(task_id);
 

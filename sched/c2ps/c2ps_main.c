@@ -539,35 +539,23 @@ int c2ps_notify_add_task(
 	return 0;
 }
 
-int c2ps_notify_task_start(int pid, int task_id)
+int c2ps_notify_task_start(int pid __maybe_unused, int task_id)
 {
 	C2PS_LOGD("task_id: %d\n", task_id);
 
 	atomic_inc(&processing_count);
 	if (likely(timer_pending(&self_uninit_timer)))
 		mod_timer(&self_uninit_timer, jiffies + 5*HZ);
-	if (unlikely(monitor_task_start(pid, task_id))) {
-		C2PS_LOGW_ONCE("monitor_task_start failed\n");
-		C2PS_LOGW("monitor_task_start failed\n");
-		atomic_dec(&processing_count);
-		return -1;
-	}
 	trigger_bg_policy();
 	atomic_dec(&processing_count);
 	return 0;
 }
 
-int c2ps_notify_task_end(int pid, int task_id)
+int c2ps_notify_task_end(int pid __maybe_unused, int task_id)
 {
 	C2PS_LOGD("task_id: %d\n", task_id);
 
 	atomic_inc(&processing_count);
-	if (unlikely(monitor_task_end(pid, task_id))) {
-		C2PS_LOGW_ONCE("monitor_task_end failed\n");
-		C2PS_LOGW("monitor_task_end failed\n");
-		atomic_dec(&processing_count);
-		return -1;
-	}
 	trigger_bg_policy();
 	atomic_dec(&processing_count);
 	return 0;
