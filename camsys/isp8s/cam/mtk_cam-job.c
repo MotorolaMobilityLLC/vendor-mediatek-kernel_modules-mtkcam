@@ -1155,6 +1155,14 @@ static void toggle_raw_engines_db(struct mtk_cam_job *job)
 	int i;
 
 	subset = bit_map_subset_of(MAP_HW_RAW, job->used_engine);
+
+	for (i = 0; i < cam->engines.num_raw_devices; i++) {
+		if (BIT(i) & subset) {
+			raw_dev = dev_get_drvdata(cam->engines.raw_devs[i]);
+			set_dl_en(raw_dev);
+		}
+	}
+
 	for (i = 0; i < cam->engines.num_raw_devices; i++) {
 		if (BIT(i) & subset) {
 			raw_dev = dev_get_drvdata(cam->engines.raw_devs[i]);
@@ -2048,12 +2056,12 @@ static int _apply_cq_extisp_procraw(struct mtk_cam_job *job)
 	return 0;
 }
 
-static int raw_change_handle_before_cq(struct mtk_cam_job *job)
+static int raw_change_handle_before_cq(struct mtk_cam_job *job, bool force)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	int i;
 
-	if (job->raw_change == JOB_RAW_MASTER_UNCHANGED) {
+	if (job->raw_change == JOB_RAW_MASTER_UNCHANGED || force) {
 		for (i = 0; i < ctx->cam->engines.num_raw_devices; i++) {
 			if (BIT(i) & job->used_engine) {
 				struct mtk_raw_device *raw_dev;
@@ -2067,7 +2075,7 @@ static int raw_change_handle_before_cq(struct mtk_cam_job *job)
 			}
 		}
 	}
-	if (job->raw_change == JOB_RAW_MASTER_CHANGED) {
+	if (job->raw_change == JOB_RAW_MASTER_CHANGED || force) {
 		for (i = 0; i < ctx->cam->engines.num_raw_devices; i++) {
 			if (BIT(i) & job->used_engine) {
 				struct mtk_raw_device *raw_dev;
@@ -2102,7 +2110,8 @@ static int apply_engines_cq(struct mtk_cam_job *job,
 		(get_master_engines(job->used_engine) & 0x7)) == 0)
 		cq_engine = raw_change_cq_engine(job, cq_rst);
 	/*raw change handle to avoid unexpected sof coming */
-	raw_change_handle_before_cq(job);
+
+	raw_change_handle_before_cq(job, false);
 
 	apply_cq_ref_init(&job->cq_ref,
 			  to_fh_cookie(ctx->stream_id, frame_seq_no),
@@ -6641,6 +6650,8 @@ int mtk_cam_job_manually_apply_isp(struct mtk_cam_job *job, bool wait_completion
 		mtk_cam_job_state_set(&job->job_state, ISP_STATE, S_ISP_APPLYING_PROCRAW);
 	else
 		mtk_cam_job_state_set(&job->job_state, ISP_STATE, S_ISP_APPLYING);
+
+	raw_change_handle_before_cq(job, true);
 	call_jobop(job, apply_isp);
 
 	if (!wait_completion)

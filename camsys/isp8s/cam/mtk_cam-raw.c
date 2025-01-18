@@ -915,6 +915,11 @@ void toggle_db(struct mtk_raw_device *dev)
 {
 	u32 val;
 
+	dev_info(dev->dev, "%s: check reg: before: SEP_VSIZE outer 0x%x/ inner: 0x%x\n",
+		__func__,
+		raw_readl_relaxed(dev, dev->base, 0x1308),
+		raw_readl_relaxed(dev, dev->base_inner, 0x1308));
+
 	val = raw_readl(dev, dev->base, REG_CAMCTL_DB_LOAD_CTL1);
 	raw_writel(val & ~FBIT(CAMCTL_DB_EN), dev, dev->base, REG_CAMCTL_DB_LOAD_CTL1);
 
@@ -926,6 +931,11 @@ void toggle_db(struct mtk_raw_device *dev)
 		raw_readl(dev, dev->base, REG_CAMCTL_DB_LOAD_CTL1),
 		raw_readl_relaxed(dev, dev->base, REG_FHG_FHG_SPARE_1),
 		raw_readl_relaxed(dev, dev->base_inner, REG_FHG_FHG_SPARE_1));
+
+	dev_info(dev->dev, "%s: check reg: after: SEP_VSIZE outer 0x%x/ inner: 0x%x\n",
+		__func__,
+		raw_readl_relaxed(dev, dev->base, 0x1308),
+		raw_readl_relaxed(dev, dev->base_inner, 0x1308));
 }
 
 
@@ -1086,6 +1096,48 @@ void check_master_raw_vf_en(struct mtk_raw_device *dev)
 			raw_readl(dev, dev->base_inner, REG_TG_VF_CON),
 			raw_readl_relaxed(dev, dev->base, REG_FHG_FHG_SPARE_1),
 			raw_readl_relaxed(dev, dev->base_inner, REG_FHG_FHG_SPARE_1));
+	}
+}
+
+void set_dl_en(struct mtk_raw_device *dev)
+{
+	struct mtk_yuv_device *yuv = get_yuv_dev(dev);
+	struct mtk_rms_device *rms = get_rms_dev(dev);
+
+	raw_writel(0x7FFF, dev, dev->base, REG_CAMCTL_TIF_DL_EN);
+	raw_writel(0x7FFF, dev, dev->base_inner, REG_CAMCTL_TIF_DL_EN);
+
+	raw_writel(0xFC, dev, dev->base, REG_CAMCTL_OTR_DL_EN);
+	raw_writel(0xFC, dev, dev->base_inner, REG_CAMCTL_OTR_DL_EN);
+
+	raw_writel(0x3F, dev, yuv->base, REG_CAMCTL2_TIF_DL_EN);
+	raw_writel(0x3F, dev, yuv->base_inner, REG_CAMCTL2_TIF_DL_EN);
+
+	raw_writel(0x3, dev, rms->base, REG_CAMCTL3_TIF_DL_EN);
+	raw_writel(0x3, dev, rms->base_inner, REG_CAMCTL3_TIF_DL_EN);
+
+	if (CAM_DEBUG_ENABLED(RAW_INT)) {
+		dev_info(dev->dev, "%s: REG_CAMCTL_TIF_DL_EN 0x%08x/0x%08x",
+				__func__,
+				raw_readl(dev, dev->base, REG_CAMCTL_TIF_DL_EN),
+				raw_readl(dev, dev->base_inner, REG_CAMCTL_TIF_DL_EN));
+		dev_info(dev->dev, "%s: REG_CAMCTL_OTR_DL_EN 0x%08x/0x%08x",
+				__func__,
+				raw_readl(dev, dev->base, REG_CAMCTL_OTR_DL_EN),
+				raw_readl(dev, dev->base_inner, REG_CAMCTL_OTR_DL_EN));
+		dev_info(dev->dev, "%s: REG_CAMCTL2_TIF_DL_EN 0x%08x/0x%08x",
+				__func__,
+				raw_readl(dev, yuv->base, REG_CAMCTL2_TIF_DL_EN),
+				raw_readl(dev, yuv->base_inner, REG_CAMCTL2_TIF_DL_EN));
+		dev_info(dev->dev, "%s: REG_CAMCTL3_TIF_DL_EN 0x%08x/0x%08x",
+				__func__,
+				raw_readl(dev, rms->base, REG_CAMCTL3_TIF_DL_EN),
+				raw_readl(dev, rms->base_inner, REG_CAMCTL3_TIF_DL_EN));
+
+		dev_info(dev->dev, "%s: check reg: before: SEP_VSIZE outer 0x%x/ inner: 0x%x\n",
+			__func__,
+			raw_readl_relaxed(dev, dev->base, 0x1308),
+			raw_readl_relaxed(dev, dev->base_inner, 0x1308));
 	}
 }
 
@@ -1381,6 +1433,7 @@ void reset(struct mtk_raw_device *dev)
 	raw_writel(0, dev, dev->base, REG_CAMCTL_GLOBAL_HW_RST_CTL);
 
 	reset_int_en(dev);
+	set_dl_en(dev);
 
 RESET_FAILURE:
 
