@@ -89,6 +89,7 @@ void mae_reg_dump(void)
 	if (!maeRegBA) {
 		pr_info("%s Unable to ioremap MAE registers\n",
 			__func__);
+		return;
 	}
 
 	// 0x1000 MAE_CTRL_CENTER
