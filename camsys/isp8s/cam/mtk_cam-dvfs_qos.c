@@ -106,14 +106,7 @@ int mtk_cam_dvfs_probe(struct device *dev,
 		dev_info(dev, "[%s] idx=%d, clk=%d volt=%d\n", __func__,
 			 i, dvfs->opp[i].freq_hz, dvfs->opp[i].volt_uv);
 	dvfs->mmdvfs_clk = devm_clk_get(dev,
-#ifdef SKIP_IN_FPGA_EP
-									!mmdvfs_get_version() ?
-#endif
-									"mmdvfs_clk"
-#ifdef SKIP_IN_FPGA_EP
-									 : "mmdvfs_mux"
-#endif
-									);
+					!mmdvfs_get_version() ? "mmdvfs_clk" : "mmdvfs_mux");
 	if (IS_ERR(dvfs->mmdvfs_clk)) {
 		dvfs->mmdvfs_clk = NULL;
 		dev_info(dev, "failed to get mmdvfs_clk\n");
