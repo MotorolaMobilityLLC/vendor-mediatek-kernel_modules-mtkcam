@@ -99,10 +99,12 @@ DECLARE_EVENT_CLASS(imgsys_hwqos_event,
 DEFINE_IMGSYS_HWQOS_EVENT(bwr);
 DEFINE_IMGSYS_HWQOS_EVENT(bls);
 DEFINE_IMGSYS_HWQOS_EVENT(ostdl);
+DEFINE_IMGSYS_HWQOS_EVENT(policy);
 
 void ftrace_imgsys_hwqos_bwr(const char *fmt, ...);
 void ftrace_imgsys_hwqos_bls(const char *fmt, ...);
 void ftrace_imgsys_hwqos_ostdl(const char *fmt, ...);
+void ftrace_imgsys_hwqos_policy(const char *fmt, ...);
 
 TRACE_EVENT(imgsys__hwqos_dbg_reg_read,
 	TP_PROTO(u32 pa, u32 value),

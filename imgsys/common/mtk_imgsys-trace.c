@@ -83,6 +83,9 @@ EXPORT_SYMBOL(ftrace_imgsys_hwqos_bls);
 FTRACE_IMGSYS_HWQOS(ostdl);
 EXPORT_SYMBOL(ftrace_imgsys_hwqos_ostdl);
 
+FTRACE_IMGSYS_HWQOS(policy);
+EXPORT_SYMBOL(ftrace_imgsys_hwqos_policy);
+
 void ftrace_imgsys_hwqos_dbg_reg_read(u32 pa, u32 value)
 {
 	trace_imgsys__hwqos_dbg_reg_read(pa, value);
