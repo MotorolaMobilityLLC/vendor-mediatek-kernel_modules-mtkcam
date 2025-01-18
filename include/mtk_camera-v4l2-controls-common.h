@@ -359,6 +359,9 @@ struct mtk_cam_broadcast_info {
 #define V4L2_CMD_SET_SENSOR_BROADCAST_EVENT \
 	(V4L2_CMD_USER_MTK_SENSOR_BASE + 20)
 
+#define V4L2_CMD_G_SENSOR_CTLE_PARAM \
+	(V4L2_CMD_USER_MTK_SENSOR_BASE + 21)
+
 /**
  * TSREC - notify vsync structure
  *         V4L2_CMD_TSREC_NOTIFY_VSYNC

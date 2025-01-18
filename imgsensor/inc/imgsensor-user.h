@@ -435,6 +435,16 @@ struct mtk_mbus_frame_desc {
 	unsigned short num_entries;
 };
 
+struct mtk_sensor_ctle_param {
+	bool eq_latch_en;
+	bool eq_dg1_en;
+	bool eq_dg0_en;
+	int eq_offset;
+	__u8 cdr_delay;
+	__u8 eq_is;
+	__u8 eq_bw;
+};
+
 struct mtk_csi_param {
 	__u32 dphy_trail;
 	__u32 dphy_data_settle;

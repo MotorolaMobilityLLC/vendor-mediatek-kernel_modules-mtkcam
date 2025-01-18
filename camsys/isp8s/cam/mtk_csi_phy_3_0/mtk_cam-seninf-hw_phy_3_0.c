@@ -8026,6 +8026,211 @@ static int mtk_cam_csi_mac_get_hv_hb(struct seninf_ctx *ctx,
 	return 0;
 }
 
+static int mtk_cam_csi_set_eq_offset(struct seninf_ctx *ctx, int val_signed)
+{
+	u32 i, port;
+	void *base;
+	u32 eq_offset_val;
+	u32 val = (val_signed < 0) ? -val_signed : val_signed;
+
+	if ((val_signed > 31) || (val_signed < -31)) {
+		dev_info(ctx->dev, "[EYE_SCAN FAIL] EQ_OFFSET value(%d) illegal\n", val_signed);
+		return -EINVAL;
+	}
+	eq_offset_val = (val_signed < 0) ? ((0b11111 & val) + 0b100000) : (0b11111 & val);
+
+	for (i = 0; i <= ctx->is_4d1c; i++) {
+		port = i ? ctx->portB : ctx->port;
+		base = ctx->reg_ana_csi_rx[(unsigned int)port];
+		SENINF_BITS(base, CDPHY_RX_ANA_10,
+			RG_CSI0_CDPHY_L0_T0AB_EQ_OS_CAL_FORCE_EN, 0x1);
+		SENINF_BITS(base, CDPHY_RX_ANA_10,
+				RG_CSI0_CDPHY_L0_T0AB_EQ_OS_CAL_FORCE_CODE, eq_offset_val);
+
+		SENINF_BITS(base, CDPHY_RX_ANA_10,
+			RG_CSI0_CDPHY_XX_T0CA_EQ_OS_CAL_FORCE_EN, 0x1);
+		SENINF_BITS(base, CDPHY_RX_ANA_10,
+			RG_CSI0_CDPHY_XX_T0CA_EQ_OS_CAL_FORCE_CODE, eq_offset_val);
+
+		SENINF_BITS(base, CDPHY_RX_ANA_10,
+			RG_CSI0_CDPHY_XX_T0BC_EQ_OS_CAL_FORCE_EN, 0x1);
+		SENINF_BITS(base, CDPHY_RX_ANA_10,
+			RG_CSI0_CDPHY_XX_T0BC_EQ_OS_CAL_FORCE_CODE, eq_offset_val);
+
+		SENINF_BITS(base, CDPHY_RX_ANA_10,
+			RG_CSI0_CDPHY_L1_T1AB_EQ_OS_CAL_FORCE_EN, 0x1);
+		SENINF_BITS(base, CDPHY_RX_ANA_10,
+			RG_CSI0_CDPHY_L1_T1AB_EQ_OS_CAL_FORCE_CODE, eq_offset_val);
+
+		SENINF_BITS(base, CDPHY_RX_ANA_11,
+			RG_CSI0_CDPHY_XX_T1CA_EQ_OS_CAL_FORCE_EN, 0x1);
+		SENINF_BITS(base, CDPHY_RX_ANA_11,
+			RG_CSI0_CDPHY_XX_T1CA_EQ_OS_CAL_FORCE_CODE, eq_offset_val);
+
+		SENINF_BITS(base, CDPHY_RX_ANA_11,
+			RG_CSI0_CDPHY_L2_T1BC_EQ_OS_CAL_FORCE_EN, 0x1);
+		SENINF_BITS(base, CDPHY_RX_ANA_11,
+			RG_CSI0_CDPHY_L2_T1BC_EQ_OS_CAL_FORCE_CODE, eq_offset_val);
+
+		dev_info(ctx->dev,
+			"EYE_SCAN_KEYS_EQ_OFFSET input val_signed=%d, write to reg val=0x%x\n",
+				val_signed, eq_offset_val);
+	}
+
+	return 0;
+}
+
+static int mtk_cam_csi_set_cdr_delay(struct seninf_ctx *ctx, u8 val)
+{
+	u32 i, port;
+	void *base;
+
+	for (i = 0; i <= ctx->is_4d1c; i++) {
+		port = i ? ctx->portB : ctx->port;
+		base = ctx->reg_ana_csi_rx[(unsigned int)port];
+		// L0
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_6,
+				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L0_DELAY_CODE, (val & 0b11111111));
+		mdelay(1);
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_6,
+				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L0_DELAY_APPLY, 0x0);
+		mdelay(1);
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_6,
+				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L0_DELAY_APPLY, 0x1);
+		// L1
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_7,
+				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L1_DELAY_CODE, (val & 0b11111111));
+		mdelay(1);
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_7,
+				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L1_DELAY_APPLY, 0x0);
+		mdelay(1);
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_7,
+				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L1_DELAY_APPLY, 0x1);
+		// L2
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_8,
+				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L2_DELAY_CODE, (val & 0b11111111));
+		mdelay(1);
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_8,
+				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L2_DELAY_APPLY, 0x0);
+		mdelay(1);
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_8,
+				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L2_DELAY_APPLY, 0x1);
+
+
+		dev_info(ctx->dev,"[%s]EYE_SCAN_KEYS_CDR_DELAY input val_signed=%d, write to reg val=0x%x\n",
+					__func__ ,val, (val & 0b11111111));
+	}
+	return 0;
+}
+
+static int mtk_cam_seninf_set_cdr_delay_en(struct seninf_ctx *ctx, bool en)
+{
+	u32 i, port;
+	void *base;
+
+	for (i = 0; i <= ctx->is_4d1c; i++) {
+		port = i ? ctx->portB : ctx->port;
+		base = ctx->reg_ana_csi_rx[(unsigned int)port];
+		// L0
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_6,
+					RG_SW_FORCE_EN_DA_CSI0_DPHY_L0_DELAY_EN, en);
+		mdelay(1);
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_6,
+					RG_SW_FORCE_EN_DA_CSI0_DPHY_L0_DELAY_CODE, en);
+		mdelay(1);
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_6,
+					RG_SW_FORCE_EN_DA_CSI0_DPHY_L0_DELAY_APPLY, en);
+		mdelay(1);
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_6,
+					RG_SW_FORCE_VAL_DA_CSI0_DPHY_L0_DELAY_EN, en);
+		// L1
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_7,
+					RG_SW_FORCE_EN_DA_CSI0_DPHY_L1_DELAY_EN, en);
+		mdelay(1);
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_7,
+					RG_SW_FORCE_EN_DA_CSI0_DPHY_L1_DELAY_CODE, en);
+		mdelay(1);
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_7,
+					RG_SW_FORCE_EN_DA_CSI0_DPHY_L1_DELAY_APPLY, en);
+		mdelay(1);
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_7,
+					RG_SW_FORCE_VAL_DA_CSI0_DPHY_L1_DELAY_EN, en);
+		// L2
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_8,
+					RG_SW_FORCE_EN_DA_CSI0_DPHY_L2_DELAY_EN, en);
+		mdelay(1);
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_8,
+					RG_SW_FORCE_EN_DA_CSI0_DPHY_L2_DELAY_CODE, en);
+		mdelay(1);
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_8,
+					RG_SW_FORCE_EN_DA_CSI0_DPHY_L2_DELAY_APPLY, en);
+		mdelay(1);
+		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_8,
+					RG_SW_FORCE_VAL_DA_CSI0_DPHY_L2_DELAY_EN, en);
+
+		dev_info(ctx->dev, "SENINF_BITS set CDR_DELAY_DPHY_EN = 0x%x\n", en);
+	}
+
+	return 0;
+}
+
+static int mtk_cam_seninf_set_csi_ctle_config(struct seninf_ctx *ctx,
+		struct mtk_sensor_ctle_param *param)
+{
+	int ret = 0;
+	u32 i, port;
+	void *base;
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s]ctx is NULL\n", __func__);
+		return -EFAULT;
+	}
+
+	if (unlikely(param == NULL)) {
+		pr_info("[%s]ctx is NULL\n", __func__);
+		return -EFAULT;
+	}
+
+
+	if (param->eq_offset)
+		ret |= mtk_cam_csi_set_eq_offset(ctx, param->eq_offset);
+
+
+	if (param->cdr_delay) {
+		ret |= mtk_cam_seninf_set_cdr_delay_en(ctx, true);
+		ret |= mtk_cam_csi_set_cdr_delay(ctx, param->cdr_delay);
+	}
+
+	for (i = 0; i <= ctx->is_4d1c; i++) {
+		port = i ? ctx->portB : ctx->port;
+		base = ctx->reg_ana_csi_rx[(unsigned int)port];
+
+		if (param->eq_latch_en)
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_LATCH_EN, param->eq_latch_en);
+
+		if (param->eq_dg1_en)
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, param->eq_dg1_en);
+
+		if (param->eq_dg0_en)
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, param->eq_dg0_en);
+
+		if (param->eq_is)
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_IS, param->eq_is);
+
+		if (param->eq_bw)
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_BW, param->eq_bw);
+
+			dev_info(ctx->dev, "[%s] csi %d port %s CDPHY_RX_ANA_5 0x%x\n",
+						__func__,
+						ctx->port,
+						(i) ? "B" : "A",
+						SENINF_READ_REG(base, CDPHY_RX_ANA_5));
+
+	}
+
+	return ret;
+}
+
 struct mtk_cam_seninf_ops mtk_csi_phy_3_0 = {
 	._init_iomem = mtk_cam_seninf_init_iomem,
 	._init_port = mtk_cam_seninf_init_port,
@@ -8090,4 +8295,5 @@ struct mtk_cam_seninf_ops mtk_csi_phy_3_0 = {
 	._seninf_dump_mipi_err = seninf_dump_vsync_info,
 	._show_mac_chk_status = mtk_cam_show_mac_chk_status,
 	._get_csi_HV_HB_meter = mtk_cam_csi_mac_get_hv_hb,
+	._set_csi_ctle_config = mtk_cam_seninf_set_csi_ctle_config,
 };

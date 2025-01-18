@@ -242,6 +242,7 @@ struct mtk_cam_seninf_ops {
 										  struct mtk_cam_seninf_debug *arg);
 	int (*_get_tsrec_timestamp)(struct seninf_ctx *ctx, void *arg);
 	int (*_eye_scan)(struct seninf_ctx *ctx, u32 key, int val, char *plog, int logbuf_size);
+	int (*_set_csi_ctle_config)(struct seninf_ctx *ctx, struct mtk_sensor_ctle_param *param);
 	int (*_set_reg)(struct seninf_ctx *ctx, u32 key, u64 val);
 	int (*_set_phya_clock_src)(struct seninf_ctx *ctx);
 	ssize_t (*_show_err_status)(struct device *dev, struct device_attribute *attr, char *buf);

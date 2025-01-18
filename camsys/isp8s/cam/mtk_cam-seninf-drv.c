@@ -606,9 +606,9 @@ static ssize_t debug_ops_store(struct device *dev,
 				if (eye_scan_log != NULL) {
 					g_seninf_ops->_eye_scan(ctx, eye_scan_rg_idx, val_signed,
 						eye_scan_log, (int)DEBUG_OPS_SHOW_LOG_SIZE);
-					ret = snprintf(debug_ops_show_log, DEBUG_OPS_SHOW_LOG_SIZE, eye_scan_log);
-					if (ret < 0)
-						dev_info(dev, "failed to snprintf\n");
+				ret = snprintf(debug_ops_show_log, DEBUG_OPS_SHOW_LOG_SIZE, eye_scan_log);
+				if (ret < 0)
+					dev_info(dev, "failed to snprintf\n");
 				}
 				kfree(eye_scan_log);
 
@@ -1817,6 +1817,36 @@ static int set_test_model(struct seninf_ctx *ctx, char enable)
 	return 0;
 }
 
+static int set_ctle_param(struct seninf_ctx *ctx)
+{
+	struct mtk_sensor_ctle_param param;
+	int ret = 0;
+
+	ctx->sensor_sd->ops->core->command(ctx->sensor_sd,
+						V4L2_CMD_G_SENSOR_CTLE_PARAM,
+						&param);
+
+	dev_info(ctx->dev,
+		"[%s] eq_latch_en: 0x%x eq_dg1_en: 0x%x eq_dg0_en: 0x%x eq_offset:%d cdr_delay: 0x%x eq_is: 0x%x eq_bw: 0x%x\n",
+			__func__,
+			param.eq_latch_en,
+			param.eq_dg1_en,
+			param.eq_dg0_en,
+			param.eq_offset,
+			param.cdr_delay,
+			param.eq_is,
+			param.eq_bw);
+
+	ret = g_seninf_ops->_set_csi_ctle_config(ctx, &param);
+
+	if (ret) {
+		dev_info(ctx->dev, "[%s] _set_csi_ctle_config return failed\n", __func__);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
 static int config_hw_csi(struct seninf_ctx *ctx)
 {
 	int intf = ctx->seninfAsyncIdx;
@@ -1871,6 +1901,10 @@ static int config_hw_csi(struct seninf_ctx *ctx)
 
 	if (ctx->fake_sensor_info.is_fake_sensor)
 		g_seninf_ops->_set_test_model_fake_sensor(ctx, ctx->seninfAsyncIdx);
+
+	if (set_ctle_param(ctx))
+		dev_info(ctx->dev, "[%s][Error] set_ctle_param ret(%d)\n", __func__, ret);
+
 
 	return 0;
 }

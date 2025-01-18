@@ -291,6 +291,7 @@ struct subdrv_mode_struct {
 	int fine_integ_line;
 	u8 delay_frame;
 	struct mtk_csi_param csi_param;
+	struct mtk_sensor_ctle_param *ctle_param;
 	struct mtk_mbus_frame_desc_entry *frame_desc;
 	u32 num_entries;
 
@@ -428,6 +429,7 @@ struct subdrv_static_ctx {
 	struct reg_setting_entry *init_setting_table_v2;
 	u32 init_setting_table_v2_cnt;
 	struct subdrv_mode_struct *mode;
+	struct mtk_sensor_ctle_param *ctle_param;
 	u32 sensor_mode_num;
 	struct subdrv_feature_control *list;
 	u32 list_len;

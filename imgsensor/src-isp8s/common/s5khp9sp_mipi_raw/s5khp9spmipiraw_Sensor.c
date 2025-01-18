@@ -1692,7 +1692,15 @@ static struct subdrv_mode_struct mode_struct[] = {
 
 };
 
-
+struct mtk_sensor_ctle_param static_ctle_param = {
+	.eq_latch_en = true,
+	.eq_dg1_en = true,
+	.eq_dg0_en = true,
+	.eq_is = 0x02,
+	.eq_bw = 0x03,
+	.cdr_delay = 14,
+	.eq_offset = -3,
+};
 
 
 static struct subdrv_static_ctx static_ctx = {
@@ -1794,7 +1802,8 @@ static struct subdrv_static_ctx static_ctx = {
 	.chk_s_off_sta = 1,
 	.chk_s_off_end = 0,
 
-	.checksum_value = 0xE4087030,
+	.checksum_value = 0x8013666a,
+	.ctle_param = &static_ctle_param,
 };
 
 static struct subdrv_ops ops = {

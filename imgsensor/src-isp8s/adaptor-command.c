@@ -598,6 +598,35 @@ static int s_cmd_sensor_aov_dualsync(struct adaptor_ctx *ctx, void *arg)
 	return 0;
 }
 
+static int g_cmd_ctle_param(struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_sensor_ctle_param *input_ctle_param = NULL;
+	struct mtk_sensor_ctle_param *sensor_ctle_param = NULL;
+	u32 scenario;
+	int ret = 0;
+
+	/* unexpected case, arg is nullptr */
+	if (unlikely((chk_input_arg(ctx, arg, &ret, __func__)) != 0))
+		return ret;
+
+	input_ctle_param = (struct mtk_sensor_ctle_param *)arg;
+	scenario = ctx->subctx.current_scenario_id;
+
+	if (ctx->subctx.s_ctx.mode[scenario].ctle_param)
+		sensor_ctle_param = ctx->subctx.s_ctx.mode[scenario].ctle_param;
+	else if (ctx->subctx.s_ctx.ctle_param)
+		sensor_ctle_param = ctx->subctx.s_ctx.ctle_param;
+
+
+	if (sensor_ctle_param != NULL)
+		memcpy(input_ctle_param, sensor_ctle_param, sizeof(struct mtk_sensor_ctle_param));
+	else
+		memset(input_ctle_param, 0, sizeof(struct mtk_sensor_ctle_param));
+
+
+	return 0;
+}
+
 /*---------------------------------------------------------------------------*/
 // adaptor command framework/entry
 /*---------------------------------------------------------------------------*/
@@ -620,6 +649,7 @@ static const struct command_entry command_list[] = {
 	{V4L2_CMD_G_SENSOR_VC_INFO_BY_SCENARIO, g_cmd_sensor_vc_info_by_scenario},
 	{V4L2_CMD_G_SENSOR_STREAM_STATUS, g_cmd_g_sensor_stream_status},
 	{V4L2_CMD_G_SENSOR_FAKE_SENSOR_INFO, g_cmd_fake_sensor_info},
+	{V4L2_CMD_G_SENSOR_CTLE_PARAM, g_cmd_ctle_param},
 
 	/* SET */
 	{V4L2_CMD_FSYNC_SYNC_FRAME_START_END, s_cmd_fsync_sync_frame_start_end},
