@@ -780,8 +780,12 @@ void imgsys_traw_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 					if ((dtable->addr_msb & PSEUDO_DESC_TUNING) == PSEUDO_DESC_TUNING) {
 						tun_ofst = dtable->addr;
 						dtable->addr = (tun_ofst + iova_addr) & 0xFFFFFFFF;
-						dtable->addr_msb |=
-							((tun_ofst + iova_addr) >> 32) & 0xF;
+						unsigned int reg_cnt =
+						((dtable->addr_msb & 0xFFFF0000) >> 16);
+
+						dtable->addr_msb =
+				((reg_cnt << 16) | (((tun_ofst + iova_addr) >> 32) & 0xF));
+
 					if (imgsys_traw_8s_dbg_enable()) {
 						pr_debug("%s: tuning_buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
 							__func__, iova_addr,
