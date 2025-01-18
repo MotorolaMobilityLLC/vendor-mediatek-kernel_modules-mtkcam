@@ -2625,18 +2625,44 @@ static int stream_sensor(struct seninf_ctx *ctx, bool enable)
 	return ret;
 }
 
+/**
+ * Stream on csi + seninf async + imgsensor without config outmuxes
+ * For improving pipeline config performance,
+ * User will stream on p1 driver and sensor/csi in parallel, and
+ * this function is used only for user streaming sensor and the outmux
+ * configuration will be configured by camsys driver in `seninf_s_stream`
+ */
+int seninf_s_stream_for_pipe(struct v4l2_subdev *sd, int enable)
+{
+	struct seninf_ctx *ctx = sd_to_ctx(sd);
+
+	dev_info(ctx->dev, "[%s] enable(%d)\n", __func__, enable);
+
+	/* Only config csi and seninf async, always ignore outmux config */
+
+	mutex_lock(&ctx->stream_mutex);
+
+	seninf_csi_s_stream(&ctx->subdev, enable);
+	stream_sensor(ctx, enable);
+
+	mutex_unlock(&ctx->stream_mutex);
+
+	return 0;
+}
+
 int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct seninf_ctx *ctx = sd_to_ctx(sd);
 	struct seninf_core *core = ctx->core;
 	unsigned long flags;
-	int i;
-	bool pad_inited = false;
+	int ret;
 #ifdef INIT_DESKEW_DEBUG
 	int deskew_dump_idx;
 #endif /*INIT_DESKEW_DEBUG*/
 
 	int aov_csi_port = ctx->port;
+
+	mutex_lock(&ctx->stream_mutex);
 
 	/* get current sensor idx by get_sensor_idx */
 	if (!ctx->is_test_model) {
@@ -2645,6 +2671,7 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 			dev_info(ctx->dev,
 				"[%s] get_sensor_idx[%d] fail\n",
 				__func__, ctx->current_sensor_id);
+			mutex_unlock(&ctx->stream_mutex);
 			return ctx->current_sensor_id;
 		}
 	}
@@ -2660,23 +2687,6 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 
 	seninf_csi_s_stream(sd, enable);
 
-	/* avoid stream on when pad2cam is not set, it will cont stream on after set camtg */
-	if (enable && !ctx->is_aov_real_sensor) {
-		for (i = 0; i < PAD_MAXCNT; i++) {
-			if (ctx->pad2cam[i][0] != 0xff) {
-				pad_inited = true;
-				break;
-			}
-		}
-		if (!pad_inited) {
-			dev_info(ctx->dev,
-				 "[%s] pad_inited(%d)\n", __func__, pad_inited);
-			// stream on sensor while csi streamed
-			stream_sensor(ctx, enable);
-			return 0;
-		}
-	}
-
 	if (ctx->streaming == enable) {
 		dev_info(ctx->dev,
 			"[%s] is_ctx_streaming(%d)\n",
@@ -2684,7 +2694,10 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 		if (!enable) {
 			// ensure forget cammux setting
 			mtk_cam_seninf_forget_camtg_setting(ctx);
+			/* make sure stream off sensor called */
+			stream_sensor(ctx, 0);
 		}
+		mutex_unlock(&ctx->stream_mutex);
 		return 0;
 	}
 
@@ -2692,7 +2705,9 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 
 	if (ctx->is_test_model) {
 		set_test_model(ctx, enable);
-		return (enable) ? mtk_cam_seninf_s_stream_mux(ctx) : 0;
+		ret = (enable) ? mtk_cam_seninf_s_stream_mux(ctx) : 0;
+		mutex_unlock(&ctx->stream_mutex);
+		return ret;
 	}
 
 	if (ctx->is_aov_real_sensor && !enable) {
@@ -2704,6 +2719,7 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 			dev_info(ctx->dev,
 				"[%s] streaming off by camsys, but aov real sensor still streaming on scp side\n",
 				__func__);
+			mutex_unlock(&ctx->stream_mutex);
 			return 0;
 		}
 	}
@@ -2774,6 +2790,8 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 	/* reset all sentest flag */
 	seninf_sentest_flag_init(ctx);
 	ctx->set_abort_flag = false;
+
+	mutex_unlock(&ctx->stream_mutex);
 
 	return 0;
 }
@@ -3205,7 +3223,7 @@ static int mtk_cam_seninf_set_ctrl(struct v4l2_ctrl *ctrl)
 			break;
 		case NORMAL_CAMERA:
 		default:
-			ret = seninf_s_stream(&ctx->subdev, s_stream_ctrl->enable);
+			ret = seninf_s_stream_for_pipe(&ctx->subdev, s_stream_ctrl->enable);
 			break;
 		}
 		break;
@@ -3313,8 +3331,10 @@ static int seninf_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 #endif
 			seninf_s_stream(&ctx->subdev, 0);
 		else if (ctx->csi_streaming) {
+			mutex_lock(&ctx->stream_mutex);
 			seninf_csi_s_stream(&ctx->subdev, 0);
 			stream_sensor(ctx, 0);
+			mutex_unlock(&ctx->stream_mutex);
 		}
 
 		if (ctx->pid) {
@@ -3626,6 +3646,7 @@ static int seninf_probe(struct platform_device *pdev)
 	ctx->open_refcnt = 0;
 	ctx->is_aov_enable = 0;
 	mutex_init(&ctx->mutex);
+	mutex_init(&ctx->stream_mutex);
 
 	ret = get_csi_port(dev, &port);
 	if (ret) {

@@ -378,6 +378,7 @@ struct seninf_ctx {
 
 	int open_refcnt;
 	struct mutex mutex;
+	struct mutex stream_mutex;
 
 	/* csi irq */
 	unsigned int data_not_enough_cnt;
