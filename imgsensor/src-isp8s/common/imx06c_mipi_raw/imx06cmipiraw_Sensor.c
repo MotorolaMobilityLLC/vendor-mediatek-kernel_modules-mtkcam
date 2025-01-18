@@ -3525,7 +3525,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.exposure_order_in_lbmf = IMGSENSOR_LBMF_EXPOSURE_LE_FIRST,
+		.exposure_order_in_lbmf = IMGSENSOR_LBMF_EXPOSURE_SE_FIRST,
 		.mode_type_in_lbmf = IMGSENSOR_LBMF_MODE_MANUAL,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 6,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 6,
@@ -3870,7 +3870,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.exposure_order_in_lbmf = IMGSENSOR_LBMF_EXPOSURE_LE_FIRST,
+		.exposure_order_in_lbmf = IMGSENSOR_LBMF_EXPOSURE_SE_FIRST,
 		.mode_type_in_lbmf = IMGSENSOR_LBMF_MODE_MANUAL,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4,
@@ -3939,7 +3939,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(15872),
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = REG2GAIN_ROUNDUP(0),
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = REG2GAIN_ROUNDDOWN(15872),
-		.exposure_order_in_lbmf = IMGSENSOR_LBMF_EXPOSURE_LE_FIRST,
+		.exposure_order_in_lbmf = IMGSENSOR_LBMF_EXPOSURE_SE_FIRST,
 		.mode_type_in_lbmf = IMGSENSOR_LBMF_MODE_MANUAL,
 		.dpc_enabled = true,
 	},
@@ -5128,7 +5128,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.exposure_order_in_lbmf = IMGSENSOR_LBMF_EXPOSURE_LE_FIRST,
+		.exposure_order_in_lbmf = IMGSENSOR_LBMF_EXPOSURE_SE_FIRST,
 		.mode_type_in_lbmf = IMGSENSOR_LBMF_MODE_MANUAL,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4,
@@ -5189,7 +5189,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.exposure_order_in_lbmf = IMGSENSOR_LBMF_EXPOSURE_LE_FIRST,
+		.exposure_order_in_lbmf = IMGSENSOR_LBMF_EXPOSURE_SE_FIRST,
 		.mode_type_in_lbmf = IMGSENSOR_LBMF_MODE_MANUAL,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 6,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 6,

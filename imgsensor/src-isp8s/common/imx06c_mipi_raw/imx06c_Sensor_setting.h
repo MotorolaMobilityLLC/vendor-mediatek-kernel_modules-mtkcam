@@ -229,7 +229,7 @@ static u16 imx06c_init_setting[] = {
 	0x3304, 0x00,
 	/* Register version */
 	0x33F0, 0x07,
-	0x33F1, 0x04,
+	0x33F1, 0x06,
 	/* Signaling mode setting */
 	0x0111, 0x03,
 	/* DS CRC setting */
@@ -245,6 +245,8 @@ static u16 imx06c_init_setting[] = {
 	0xA733, 0x00,
 	0xA744, 0x00,
 	0xA745, 0x00,
+	/* FULL_ROI_DCG_FLARE_CORRECT Setting */
+	0xA747, 0x01,
 	/* MIPI Global Timing control Setting */
 	0x0808, 0x02,
 	/* Global Setting */
