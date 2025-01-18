@@ -1700,6 +1700,7 @@ struct mtk_sensor_ctle_param static_ctle_param = {
 	.eq_bw = 0x03,
 	.cdr_delay = 14,
 	.eq_offset = -3,
+	.eq_sr0 = 0x7,
 };
 
 

@@ -1827,7 +1827,7 @@ static int set_ctle_param(struct seninf_ctx *ctx)
 						&param);
 
 	dev_info(ctx->dev,
-		"[%s] eq_latch_en: 0x%x eq_dg1_en: 0x%x eq_dg0_en: 0x%x eq_offset:%d cdr_delay: 0x%x eq_is: 0x%x eq_bw: 0x%x\n",
+		"[%s] eq_latch_en: 0x%x eq_dg1_en: 0x%x eq_dg0_en: 0x%x eq_offset:%d cdr_delay: 0x%x eq_is: 0x%x eq_bw: 0x%x eq_sr0: 0x%x eq_sr1: 0x%x\n",
 			__func__,
 			param.eq_latch_en,
 			param.eq_dg1_en,
@@ -1835,7 +1835,9 @@ static int set_ctle_param(struct seninf_ctx *ctx)
 			param.eq_offset,
 			param.cdr_delay,
 			param.eq_is,
-			param.eq_bw);
+			param.eq_bw,
+			param.eq_sr0,
+			param.eq_sr1);
 
 	ret = g_seninf_ops->_set_csi_ctle_config(ctx, &param);
 

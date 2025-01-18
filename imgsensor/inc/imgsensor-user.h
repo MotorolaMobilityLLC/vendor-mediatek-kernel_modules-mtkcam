@@ -443,6 +443,8 @@ struct mtk_sensor_ctle_param {
 	__u8 cdr_delay;
 	__u8 eq_is;
 	__u8 eq_bw;
+	__u8 eq_sr0;
+	__u8 eq_sr1;
 };
 
 struct mtk_csi_param {

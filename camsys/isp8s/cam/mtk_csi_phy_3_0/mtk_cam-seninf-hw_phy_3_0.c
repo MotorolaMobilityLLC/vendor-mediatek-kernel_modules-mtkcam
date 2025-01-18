@@ -8220,6 +8220,12 @@ static int mtk_cam_seninf_set_csi_ctle_config(struct seninf_ctx *ctx,
 		if (param->eq_bw)
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_BW, param->eq_bw);
 
+		if (param->eq_sr0)
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, param->eq_sr0);
+
+		if (param->eq_sr1)
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, param->eq_sr1);
+
 			dev_info(ctx->dev, "[%s] csi %d port %s CDPHY_RX_ANA_5 0x%x\n",
 						__func__,
 						ctx->port,
