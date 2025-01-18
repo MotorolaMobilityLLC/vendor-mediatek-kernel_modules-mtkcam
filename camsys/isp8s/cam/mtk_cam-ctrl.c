@@ -245,7 +245,7 @@ static void log_event(const char *func, int ctx_id, struct v4l2_event *e)
 	}
 }
 
-void mtk_cam_event_eos(struct mtk_cam_ctrl *cam_ctrl)
+static void mtk_cam_event_eos(struct mtk_cam_ctrl *cam_ctrl)
 {
 	struct mtk_cam_ctx *ctx = cam_ctrl->ctx;
 	struct v4l2_event event = {
@@ -2405,6 +2405,8 @@ void mtk_cam_ctrl_stop(struct mtk_cam_ctrl *cam_ctrl)
 	mtk_cam_ctx_engine_reset(ctx);
 	/* clear hw some regs */
 	mtk_cam_ctx_engine_clear(ctx);
+
+	mtk_cam_event_eos(cam_ctrl);
 
 	/* await done work finished */
 	kthread_flush_worker(&ctx->kthread_packs[MTK_CAM_KTHREAD_DONE].kworker);

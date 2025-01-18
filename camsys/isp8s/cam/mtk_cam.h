@@ -410,12 +410,13 @@ mtk_cam_is_pad_fmt_enable(struct v4l2_mbus_framefmt *framefmt)
 	return framefmt->flags & V4L2_MBUS_FRAMEFMT_PAD_ENABLE;
 }
 
+int mtk_cam_ctx_prepare(struct mtk_cam_ctx *ctx);
+void mtk_cam_ctx_unprepare(struct mtk_cam_ctx *ctx);
 struct mtk_cam_ctx *mtk_cam_find_ctx(struct mtk_cam_device *cam,
 				     struct media_entity *entity);
 struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 				      struct mtk_cam_video_device *node);
 void mtk_cam_stop_ctx(struct mtk_cam_ctx *ctx, struct media_entity *entity);
-void mtk_cam_ctx_put(struct mtk_cam_ctx *ctx);
 int mtk_cam_sv_set_fifo_detect_status(struct mtk_cam_engines *eng,
 					unsigned long engine_mask, unsigned int is_hsf_enable);
 static inline bool mtk_cam_ctx_is_adl_flow(struct mtk_cam_ctx *ctx)
@@ -470,7 +471,6 @@ int mtk_cam_ctx_flush_session(struct mtk_cam_ctx *ctx);
 int isp_composer_create_session(struct mtk_cam_ctx *ctx);
 void isp_composer_destroy_session(struct mtk_cam_ctx *ctx);
 void isp_composer_flush_session(struct mtk_cam_ctx *ctx);
-int mtk_cam_ctx_unprepare_session(struct mtk_cam_ctx *ctx);
 
 int mtk_cam_call_seninf_set_pixelmode(struct mtk_cam_ctx *ctx,
 				      struct v4l2_subdev *sd,
@@ -568,8 +568,5 @@ void mtk_cam_ctx_destroy_workers(struct mtk_cam_ctx *ctx);
 int mtk_cam_assign_ltms_buffer(struct mtk_cam_ctx *ctx,
 			 struct mtk_cam_pool_buffer *in,
 			 struct mtk_cam_pool_buffer *out);
-
-int mtk_cam_power_rproc(struct mtk_cam_device *cam, int on);
-int mtk_cam_uninitialize(struct mtk_cam_device *cam);
 
 #endif /*__MTK_CAM_H*/

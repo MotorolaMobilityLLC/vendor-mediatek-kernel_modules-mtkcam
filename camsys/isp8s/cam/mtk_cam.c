@@ -1311,7 +1311,7 @@ __maybe_unused static int isp_composer_handle_ack(struct mtk_cam_device *cam,
 	return 0;
 }
 
-int mtk_cam_power_rproc(struct mtk_cam_device *cam, int on)
+static int mtk_cam_power_rproc(struct mtk_cam_device *cam, int on)
 {
 	struct mtk_ccd *ccd;
 	int ret = 0;
@@ -1488,7 +1488,7 @@ static int mtk_cam_initialize(struct mtk_cam_device *cam)
 	return ret;
 }
 
-int mtk_cam_uninitialize(struct mtk_cam_device *cam)
+static int mtk_cam_uninitialize(struct mtk_cam_device *cam)
 {
 	if (!atomic_sub_and_test(1, &cam->initialize_cnt))
 		return 0;
@@ -1620,7 +1620,7 @@ static struct mtk_cam_ctx *mtk_cam_ctx_get(struct mtk_cam_device *cam)
 	return ctx;
 }
 
-void mtk_cam_ctx_put(struct mtk_cam_ctx *ctx)
+static void mtk_cam_ctx_put(struct mtk_cam_ctx *ctx)
 {
 	struct mtk_cam_device *cam = ctx->cam;
 
@@ -2783,7 +2783,7 @@ static int mtk_cam_ctx_prepare_session(struct mtk_cam_ctx *ctx)
 	return ret;
 }
 
-int mtk_cam_ctx_unprepare_session(struct mtk_cam_ctx *ctx)
+static int mtk_cam_ctx_unprepare_session(struct mtk_cam_ctx *ctx)
 {
 	struct device *dev = ctx->cam->dev;
 	int ret;
@@ -2929,6 +2929,53 @@ static int mtk_cam_ctx_init_job_pool(struct mtk_cam_ctx *ctx)
 #else
 #define NO_STOP_THREAD_NUM 0
 #endif
+int mtk_cam_ctx_prepare(struct mtk_cam_ctx *ctx)
+{
+	struct mtk_cam_device *cam = ctx->cam;
+
+	dev_info(cam->dev, "%s:%d", __func__, ctx->stream_id);
+
+	if (mtk_cam_ctx_alloc_workers(ctx))
+		goto fail_return;
+
+	if (mtk_cam_ctx_alloc_pool(ctx))
+		goto fail_destroy_workers;
+
+	/* note: too early. move into mtk_cam_ctx_init_scenario */
+	if (mtk_cam_ctx_alloc_img_pool(ctx, NULL))
+		goto fail_destroy_pools;
+
+	if (mtk_cam_ctx_alloc_sensor_meta_pool(ctx))
+		goto fail_destroy_img_pool;
+
+	if (mtk_cam_ctx_prepare_session(ctx))
+		goto fail_destroy_sensor_meta_pool;
+
+	if (mtk_cam_ctx_init_job_pool(ctx))
+		goto fail_unprepare_session;
+
+	mtk_cam_update_pipe_used(ctx, &cam->pipelines);
+	mtk_cam_ctrl_start(&ctx->cam_ctrl, ctx);
+	mtk_raw_hdr_tsfifo_reset(ctx);
+
+	return 0;
+
+fail_unprepare_session:
+	mtk_cam_ctx_unprepare_session(ctx);
+fail_destroy_sensor_meta_pool:
+	mtk_cam_ctx_destroy_sensor_meta_pool(ctx);
+fail_destroy_img_pool:
+	mtk_cam_ctx_clean_img_pool(ctx);
+fail_destroy_pools:
+	mtk_cam_ctx_destroy_pool(ctx);
+fail_destroy_workers:
+	if (ctx->stream_id >= NO_STOP_THREAD_NUM)
+		mtk_cam_ctx_destroy_workers(ctx);
+fail_return:
+	WARN(1, "%s: failed\n", __func__);
+	return -1;
+}
+
 struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 				      struct mtk_cam_video_device *node)
 {
@@ -2954,44 +3001,8 @@ struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 	if (mtk_cam_ctx_pipeline_start(ctx, entity))
 		goto fail_ctx_put;
 
-	if (mtk_cam_ctx_alloc_workers(ctx))
-		goto fail_pipeline_stop;
-
-	if (mtk_cam_ctx_alloc_pool(ctx))
-		goto fail_destroy_workers;
-
-	/* note: too early. move into mtk_cam_ctx_init_scenario */
-	if (mtk_cam_ctx_alloc_img_pool(ctx, NULL))
-		goto fail_destroy_pools;
-
-	if (mtk_cam_ctx_alloc_sensor_meta_pool(ctx))
-		goto fail_destroy_img_pool;
-
-	if (mtk_cam_ctx_prepare_session(ctx))
-		goto fail_destroy_sensor_meta_pool;
-
-	if (mtk_cam_ctx_init_job_pool(ctx))
-		goto fail_unprepare_session;
-
-	mtk_cam_update_pipe_used(ctx, &cam->pipelines);
-	mtk_cam_ctrl_start(&ctx->cam_ctrl, ctx);
-	mtk_raw_hdr_tsfifo_reset(ctx);
-
 	return ctx;
 
-fail_unprepare_session:
-	mtk_cam_ctx_unprepare_session(ctx);
-fail_destroy_sensor_meta_pool:
-	mtk_cam_ctx_destroy_sensor_meta_pool(ctx);
-fail_destroy_img_pool:
-	mtk_cam_ctx_clean_img_pool(ctx);
-fail_destroy_pools:
-	mtk_cam_ctx_destroy_pool(ctx);
-fail_destroy_workers:
-	if (ctx->stream_id >= NO_STOP_THREAD_NUM)
-		mtk_cam_ctx_destroy_workers(ctx);
-fail_pipeline_stop:
-	mtk_cam_ctx_pipeline_stop(ctx, entity);
 fail_ctx_put:
 	mtk_cam_ctx_put(ctx);
 fail_uninitialze:
@@ -2999,6 +3010,49 @@ fail_uninitialze:
 
 	WARN(1, "%s: failed\n", __func__);
 	return NULL;
+}
+
+static inline void _log_cg(struct mtk_cam_device *cam)
+{
+	if (CAM_DEBUG_ENABLED(RAW_CG))
+		pr_info("%s++:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x",
+			__func__, readl(cam->vcore_base),
+			readl(cam->base + 0x00), readl(cam->base + 0x4c));
+}
+
+void mtk_cam_ctx_unprepare(struct mtk_cam_ctx *ctx)
+{
+	struct mtk_cam_device *cam = ctx->cam;
+
+	dev_info(cam->dev, "%s:%d", __func__, ctx->stream_id);
+
+	if (!atomic_read(&ctx->cam_ctrl.stopped)) {
+		dev_info(cam->dev, "%s: cam_ctrl still started!\n", __func__);
+		mtk_cam_ctrl_stop(&ctx->cam_ctrl);
+	}
+
+	mtk_cam_ctx_unprepare_session(ctx);
+	mtk_cam_ctx_destroy_sensor_meta_pool(ctx);
+	mtk_cam_ctx_destroy_pool(ctx);
+	mtk_cam_ctx_clean_img_pool(ctx);
+	mtk_cam_ctx_clean_rgbw_caci_buf(ctx);
+	mtk_cam_ctx_release_slb(ctx);
+	mtk_cam_ctx_release_slc(ctx);
+
+	if (ctx->stream_id >= NO_STOP_THREAD_NUM)
+		mtk_cam_ctx_destroy_workers(ctx);
+
+	mtk_cam_pool_destroy(&ctx->job_pool);
+
+	if (ctx->used_engine) {
+		_log_cg(cam);
+		mtk_cam_pm_runtime_engines(&cam->engines, ctx->used_engine, 0);
+		mtk_cam_sv_set_fifo_detect_status(&cam->engines, ctx->used_engine, 1);
+		_log_cg(cam);
+		mtk_cam_release_engine(ctx->cam, ctx->used_engine);
+	}
+
+	ctx->used_pipe = 0;
 }
 
 void mtk_cam_stop_ctx(struct mtk_cam_ctx *ctx, struct media_entity *entity)
@@ -3010,41 +3064,8 @@ void mtk_cam_stop_ctx(struct mtk_cam_ctx *ctx, struct media_entity *entity)
 
 	dev_info(cam->dev, "%s: by node %s\n", __func__, entity->name);
 
-	if (!atomic_read(&ctx->cam_ctrl.stopped)) {
-		dev_info(cam->dev, "%s: cam_ctl still started!\n", __func__);
-		mtk_cam_ctrl_stop(&ctx->cam_ctrl);
-	}
-
-	mtk_cam_ctx_destroy_sensor_meta_pool(ctx);
-	mtk_cam_ctx_destroy_pool(ctx);
-	mtk_cam_ctx_clean_img_pool(ctx);
-	mtk_cam_ctx_clean_rgbw_caci_buf(ctx);
-	mtk_cam_ctx_release_slb(ctx);
-	mtk_cam_ctx_release_slc(ctx);
-
-	if (ctx->stream_id >= NO_STOP_THREAD_NUM)
-		mtk_cam_ctx_destroy_workers(ctx);
-
 	mtk_cam_ctx_pipeline_stop(ctx, entity);
-	mtk_cam_pool_destroy(&ctx->job_pool);
-
-	if (ctx->used_engine) {
-		if (CAM_DEBUG_ENABLED(RAW_CG))
-			pr_info("%s++:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
-		readl(cam->vcore_base),
-		readl(cam->base + 0x00),
-		readl(cam->base + 0x4c));
-		mtk_cam_pm_runtime_engines(&cam->engines, ctx->used_engine, 0);
-		mtk_cam_sv_set_fifo_detect_status(&cam->engines, ctx->used_engine, 1);
-		if (CAM_DEBUG_ENABLED(RAW_CG))
-			pr_info("%s--:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
-		readl(cam->vcore_base),
-		readl(cam->base + 0x00),
-		readl(cam->base + 0x4c));
-		mtk_cam_release_engine(ctx->cam, ctx->used_engine);
-	}
-
-	ctx->used_pipe = 0;
+	mtk_cam_ctx_put(ctx);
 }
 
 int mtk_cam_ctx_init_scenario(struct mtk_cam_ctx *ctx)

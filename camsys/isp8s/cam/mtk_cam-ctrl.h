@@ -211,7 +211,6 @@ struct mtk_cam_job *mtk_cam_ctrl_get_job_by_req_id(
 int mtk_cam_watchdog_schedule_job_dump(struct mtk_cam_watchdog *wd,
 						  const char *desc);
 
-void mtk_cam_event_eos(struct mtk_cam_ctrl *cam_ctrl);
 void mtk_cam_event_frame_sync(struct mtk_cam_ctrl *cam_ctrl,
 			      unsigned int frame_seq_no);
 void mtk_cam_event_error(struct mtk_cam_ctrl *cam_ctrl, const char *msg);
