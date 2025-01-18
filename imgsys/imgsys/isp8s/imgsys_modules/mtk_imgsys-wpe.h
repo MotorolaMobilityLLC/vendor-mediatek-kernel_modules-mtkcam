@@ -20,7 +20,7 @@
  ********************************************************************/
 
 #define WPE_UFOD_P2_DESC_OFST 28 // align with userspace's wpe_cq_module_info
-#define WPE_CQ_DESC_NUM	41 // align with userspace's wpe_cq_module_info
+#define WPE_CQ_DESC_NUM	43 // align with userspace's wpe_cq_module_info
 #define WPE_REG_SIZE 4608  // align with userspace's wpe_reg.h. 0x1200
 #define WPE_TDR_BUF_MAXSZ 11264  // align with userspace, 0x2C00
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
