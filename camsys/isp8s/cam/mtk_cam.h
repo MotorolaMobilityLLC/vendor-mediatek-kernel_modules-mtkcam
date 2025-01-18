@@ -263,10 +263,6 @@ struct mtk_cam_device {
 	struct device *smmu_dev;
 	struct device *smmu_dev_acp;
 	void __iomem *base;
-#ifdef TO_BE_REMOVE
-	void __iomem *adlwr_base;
-	void __iomem *adlrd_base;
-#endif
 	void __iomem *qoftop_base;
 	void __iomem *vcore_base;
 	void __iomem *rawa_cg_con;
@@ -298,8 +294,6 @@ struct mtk_cam_device {
 	phandle rproc_ccu_phandle;
 	struct rproc *rproc_ccu_handle;
 	struct platform_device *ccu_pdev;
-
-	struct cmdq_client *cmdq_clt;
 
 	struct mtk_cam_v4l2_pipelines	pipelines;
 	struct mtk_cam_engines		engines;
@@ -347,6 +341,7 @@ static inline struct mtk_cam_device *subdev_to_cam_device(struct v4l2_subdev *sd
 }
 
 struct device *mtk_cam_root_dev(void);
+bool is_hwccf_apply(void);
 
 int mtk_cam_set_dev_raw(struct device *dev, int idx,
 			struct device *raw, struct device *yuv,

@@ -2469,12 +2469,14 @@ static int mtk_raw_of_probe(struct platform_device *pdev,
 		}
 		of_node_put(larb_node);
 
-		link = device_link_add(dev, &larb_pdev->dev,
-						DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
-		if (!link)
-			dev_info(dev, "unable to link smi larb%d\n", i);
-		else
-			raw->larbs[i] = larb_pdev;
+		if (!is_hwccf_apply()) {
+			link = device_link_add(dev, &larb_pdev->dev,
+							DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
+			if (!link)
+				dev_info(dev, "unable to link smi larb%d\n", i);
+		}
+
+		raw->larbs[i] = larb_pdev;
 	}
 
 #ifdef CONFIG_PM_SLEEP
@@ -2641,21 +2643,23 @@ static int mtk_raw_probe(struct platform_device *pdev)
 	if (ret)
 		goto UNREGISTER_PM_NOTIFIER;
 
-	switch (raw_dev->id) {
-	case RAW_A:
-		smi_raw_a_pwr_cb.data = raw_dev;
-		mtk_smi_dbg_register_pwr_ctrl_cb(&smi_raw_a_pwr_cb);
-		break;
-	case RAW_B:
-		smi_raw_b_pwr_cb.data = raw_dev;
-		mtk_smi_dbg_register_pwr_ctrl_cb(&smi_raw_b_pwr_cb);
-		break;
-	case RAW_C:
-		smi_raw_c_pwr_cb.data = raw_dev;
-		mtk_smi_dbg_register_pwr_ctrl_cb(&smi_raw_c_pwr_cb);
-		break;
-	default:
-		break;
+	if (!is_hwccf_apply()) {
+		switch (raw_dev->id) {
+		case RAW_A:
+			smi_raw_a_pwr_cb.data = raw_dev;
+			mtk_smi_dbg_register_pwr_ctrl_cb(&smi_raw_a_pwr_cb);
+			break;
+		case RAW_B:
+			smi_raw_b_pwr_cb.data = raw_dev;
+			mtk_smi_dbg_register_pwr_ctrl_cb(&smi_raw_b_pwr_cb);
+			break;
+		case RAW_C:
+			smi_raw_c_pwr_cb.data = raw_dev;
+			mtk_smi_dbg_register_pwr_ctrl_cb(&smi_raw_c_pwr_cb);
+			break;
+		default:
+			break;
+		}
 	}
 
 	return ret;
@@ -2724,6 +2728,9 @@ int mtk_raw_runtime_suspend(struct device *dev)
 	mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_CAM);
 #endif
 
+	if (is_hwccf_apply())
+		mtk_smi_larb_disable(&drvdata->larbs[0]->dev);
+
 	return 0;
 }
 
@@ -2732,6 +2739,9 @@ int mtk_raw_runtime_resume(struct device *dev)
 	struct mtk_raw_device *drvdata = dev_get_drvdata(dev);
 	int i, ret;
 	unsigned int pr_detect_count;
+
+	if (is_hwccf_apply())
+		mtk_smi_larb_enable(&drvdata->larbs[0]->dev);
 
 	/* reset_msgfifo before enable_irq */
 	ret = mtk_cam_raw_reset_msgfifo(drvdata);
@@ -2994,12 +3004,14 @@ static int mtk_yuv_of_probe(struct platform_device *pdev,
 		}
 		of_node_put(larb_node);
 
-		link = device_link_add(dev, &larb_pdev->dev,
-						DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
-		if (!link)
-			dev_info(dev, "unable to link smi larb%d\n", i);
-		else
-			drvdata->larbs[i] = larb_pdev;
+		if (!is_hwccf_apply()) {
+			link = device_link_add(dev, &larb_pdev->dev,
+							DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
+			if (!link)
+				dev_info(dev, "unable to link smi larb%d\n", i);
+		}
+
+		drvdata->larbs[i] = larb_pdev;
 	}
 
 #ifdef CONFIG_PM_SLEEP
@@ -3112,6 +3124,10 @@ int mtk_yuv_runtime_suspend(struct device *dev)
 		clk_disable_unprepare(drvdata->clks[i]);
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		cg_dump_and_test(dev, CG_YUV, 0);
+
+	if (is_hwccf_apply())
+		mtk_smi_larb_disable(&drvdata->larbs[0]->dev);
+
 	return 0;
 }
 
@@ -3119,6 +3135,9 @@ int mtk_yuv_runtime_resume(struct device *dev)
 {
 	struct mtk_yuv_device *drvdata = dev_get_drvdata(dev);
 	int i, ret;
+
+	if (is_hwccf_apply())
+		mtk_smi_larb_enable(&drvdata->larbs[0]->dev);
 
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		dev_dbg(dev, "%s:enable clock\n", __func__);

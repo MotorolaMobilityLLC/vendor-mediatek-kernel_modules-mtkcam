@@ -112,6 +112,12 @@ struct device *mtk_cam_root_dev(void)
 	return camsys_root_dev;
 }
 
+static int g_hwccf_apply;
+bool is_hwccf_apply(void)
+{
+	return true;
+}
+
 static int mtk_cam_req_try_update_used_ctx(struct media_request *req);
 
 #define LTMSGO_BUF_SZ		(130 * 8)
@@ -2921,13 +2927,6 @@ struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 	mtk_cam_ctrl_start(&ctx->cam_ctrl, ctx);
 	mtk_raw_hdr_tsfifo_reset(ctx);
 
-#ifdef SKIP_IN_FPGA_EP
-	if (cam->cmdq_clt) {
-		cmdq_mbox_enable(cam->cmdq_clt->chan);
-		ctx->cmdq_enabled = 1;
-	}
-#endif
-
 	return ctx;
 
 fail_unprepare_session:
@@ -2971,10 +2970,6 @@ void mtk_cam_stop_ctx(struct mtk_cam_ctx *ctx, struct media_entity *entity)
 	mtk_cam_ctx_clean_rgbw_caci_buf(ctx);
 	mtk_cam_ctx_release_slb(ctx);
 	mtk_cam_ctx_release_slc(ctx);
-#ifdef SKIP_IN_FPGA_EP
-	if (ctx->cmdq_enabled)
-		cmdq_mbox_disable(cam->cmdq_clt->chan);
-#endif
 
 	mtk_cam_ctx_destroy_workers(ctx);
 	mtk_cam_ctx_pipeline_stop(ctx, entity);
@@ -4611,22 +4606,6 @@ REGISTER_LARB_FAIL:
 	return ret;
 }
 
-#ifdef TO_BE_REMOVE
-static irqreturn_t __maybe_unused mtk_irq_adlrd(int irq, void *data)
-{
-	struct mtk_cam_device *drvdata = (struct mtk_cam_device *)data;
-	struct device *dev = drvdata->dev;
-
-	unsigned int irq_status;
-
-	irq_status = readl_relaxed(drvdata->adlrd_base + 0x08a4);
-
-	dev_info(dev, "ADL-INT: INT 0x%x\n", irq_status);
-
-	return IRQ_HANDLED;
-}
-#endif
-
 #ifdef SKIP_IN_FPGA_EP
 static irqreturn_t __maybe_unused mtk_irq_qof(int irq, void *data)
 {
@@ -4748,6 +4727,10 @@ static int mtk_cam_vcore_probe(struct platform_device *pdev)
 
 	drvdata->dev = &pdev->dev;
 	dev_set_drvdata(dev, drvdata);
+
+	/* hwccf */
+	g_hwccf_apply =
+		of_property_read_bool(pdev->dev.of_node, "ccf-apply");
 
 	pm_runtime_enable(dev);
 	return 0;
@@ -4886,20 +4869,6 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	}
 	cam_dev->base_reg_addr = res_base->start;
 
-#ifdef TO_BE_REMOVE
-	cam_dev->adlwr_base = devm_platform_ioremap_resource_byname(pdev, "adlwr");
-	if (IS_ERR(cam_dev->adlwr_base)) {
-		dev_err(dev, "%s: failed to map adlwr_base\n", __func__);
-		cam_dev->adlwr_base = NULL;
-	}
-
-	cam_dev->adlrd_base = devm_platform_ioremap_resource_byname(pdev, "adlrd");
-	if (IS_ERR(cam_dev->adlrd_base)) {
-		dev_err(dev, "%s: failed to map adlrd_base\n", __func__);
-		cam_dev->adlrd_base = NULL;
-	}
-#endif
-
 	cam_dev->qoftop_base = devm_platform_ioremap_resource_byname(pdev, "qof_base");
 	if (IS_ERR(cam_dev->qoftop_base)) {
 		dev_err(dev, "%s: failed to map qoftop_base\n", __func__);
@@ -4966,42 +4935,6 @@ static int mtk_cam_probe(struct platform_device *pdev)
 		cam_dev->yuvc_cg_con = NULL;
 	}
 
-#ifdef TO_BE_REMOVE
-	// adlrd_rdone
-	irq = platform_get_irq_byname(pdev, "adlrd_rdone");
-	if (irq < 0) {
-		dev_err(dev, "%s: failed to get adlrd_rdone irq\n", __func__);
-		goto SKIP_ADLRD_IRQ;
-	}
-
-	ret = devm_request_irq(dev, irq, mtk_irq_adlrd, IRQF_NO_AUTOEN,
-			       dev_name(dev), cam_dev);
-	if (ret) {
-		dev_err(dev, "%s: Request adlrd_rdone failed\n", __func__);
-		WRAP_AEE_EXCEPTION("mtk_cam_probe", "Request IRQF_NO_AUTOEN");
-		return ret;
-	}
-	dev_dbg(dev, "registered adlrd_rdone irq=%d\n", irq);
-	//enable_irq(irq);
-
-	// adlrd
-	irq = platform_get_irq_byname(pdev, "adlrd");
-	if (irq < 0) {
-		dev_err(dev, "%s: failed to get adlrd irq\n", __func__);
-		goto SKIP_ADLRD_IRQ;
-	}
-
-	ret = devm_request_irq(dev, irq, mtk_irq_adlrd, IRQF_NO_AUTOEN,
-			       dev_name(dev), cam_dev);
-	if (ret) {
-		dev_err(dev, "%s: Request adlrd failed\n", __func__);
-		WRAP_AEE_EXCEPTION("mtk_cam_probe", "Request IRQF_NO_AUTOEN");
-		return ret;
-	}
-	dev_dbg(dev, "registered adlrd irq=%d\n", irq);
-	//enable_irq(irq);
-#endif
-
 	// qof
 #ifdef SKIP_IN_FPGA_EP
 	irq = platform_get_irq_byname(pdev, "qoftop");
@@ -5021,13 +4954,6 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	dev_dbg(dev, "registered qoftop irq=%d\n", cam_dev->qoftop_irq);
 #endif
 
-#ifdef TO_BE_REMOVE
-	cam_dev->cmdq_clt = cmdq_mbox_create(dev, 0);
-	if (!cam_dev->cmdq_clt)
-		pr_err("probe cmdq_mbox_create fail\n");
-#endif
-
-#ifdef SKIP_IN_FPGA_EP
 	clks = of_count_phandle_with_args(
 					pdev->dev.of_node, "clocks", "#clock-cells");
 	cam_dev->num_clks = (clks == -ENOENT) ? 0 : clks;
@@ -5075,8 +5001,6 @@ static int mtk_cam_probe(struct platform_device *pdev)
 			__func__, cam_dev->smmu_dev_acp);
 	}
 
-SKIP_ADLRD_IRQ:
-#endif
 	cam_dev->dev = dev;
 	dev_set_drvdata(dev, cam_dev);
 
@@ -5199,25 +5123,6 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 	return 0;
 }
 
-#ifdef TO_BE_REMOVE
-static void init_camsys_main_adl_setting(struct mtk_cam_device *cam_dev)
-{
-	/* CAM_MAIN_ADLWR_CTRL set RAWA/B/C CQ to super priority */
-	writel_relaxed(0xe0, cam_dev->base + 0x328);
-
-	/* CAM_MAIN_DRZB2N_RAW_SEL */
-	writel_relaxed(0, cam_dev->base + 0x3ac);
-
-	/* CAM_MAIN_DRZB2N_HDR_RAW_SEL */
-	writel_relaxed(0, cam_dev->base + 0x3b0);
-
-	/* CAM_MAIN_DRZB2N_SRC[1-3]_SEL */
-	writel_relaxed(0, cam_dev->base + 0x3b4);
-	writel_relaxed(0, cam_dev->base + 0x3b8);
-	writel_relaxed(0, cam_dev->base + 0x3bc);
-}
-#endif
-
 static int mtk_cam_runtime_resume(struct device *dev)
 {
 	struct mtk_cam_device *cam_dev  = dev_get_drvdata(dev);
@@ -5240,9 +5145,6 @@ static int mtk_cam_runtime_resume(struct device *dev)
 		readl(cam_dev->base + 0x00),
 		readl(cam_dev->base + 0x4c));
 
-#ifdef TO_BE_REMOVE
-	init_camsys_main_adl_setting(cam_dev);
-#endif
 	mtk_cam_timesync_init(true);
 
 	mtk_cam_bwr_enable(cam_dev->bwr);
