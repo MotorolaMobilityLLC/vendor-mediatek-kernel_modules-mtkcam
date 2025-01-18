@@ -2568,6 +2568,11 @@ int mtk_cam_seninf_s_aov_param(unsigned int sensor_id,
 			break;
 	}
 
+	if (aov_csi_port >= AOV_SENINF_NUM) {
+		pr_info("[%s] No match sensor_id(%d) in g_aov_ctrl\n", __func__, sensor_id);
+		return -ENODEV;
+	}
+
 	if (g_aov_ctrl[aov_csi_port].aov_param.is_test_model) {
 		real_sensor_id = 5;
 	} else {
