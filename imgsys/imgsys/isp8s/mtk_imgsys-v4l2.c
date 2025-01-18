@@ -44,6 +44,8 @@
 
 static struct device *imgsys_pm_dev;
 
+static int g_imgsys_hwccf_apply;
+
 static int mtk_imgsys_sd_subscribe_event(struct v4l2_subdev *subdev,
 				      struct v4l2_fh *fh,
 				      struct v4l2_event_subscription *sub)
@@ -3447,10 +3449,12 @@ int mtk_imgsys_probe(struct platform_device *pdev)
 		}
 		of_node_put(larb_node);
 
-		link = device_link_add(&pdev->dev, &larb_pdev->dev,
+		if (!g_imgsys_hwccf_apply) {
+			link = device_link_add(&pdev->dev, &larb_pdev->dev,
 				DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
-		if (!link)
-			dev_info(imgsys_dev->dev, "unable to link SMI LARB idx %d\n", i);
+			if (!link)
+				dev_info(imgsys_dev->dev, "unable to link SMI LARB idx %d\n", i);
+		}
 
 		larb_devs[i] = &larb_pdev->dev;
 	}
@@ -3501,6 +3505,12 @@ bypass_larbs:
 	ret = dev_pm_genpd_add_notifier(imgsys_dev->dev, &imgsys_dev->notifier);
 	if (ret)
 		dev_info(imgsys_dev->dev, "imgsys gen pd add notifier fail(%d)\n", ret);
+
+	/* hwccf */
+	g_imgsys_hwccf_apply =
+		of_property_read_bool(imgsys_dev->dev->of_node, "ccf-apply");
+	dev_info(imgsys_dev->dev, "ccf_apply: %s\n", g_imgsys_hwccf_apply ? "true" : "false");
+	imgsys_dev->hwccf_apply = g_imgsys_hwccf_apply;
 
 	//pm_runtime_set_autosuspend_delay(&pdev->dev, 3000);
 	//pm_runtime_use_autosuspend(&pdev->dev);
@@ -3567,12 +3577,25 @@ EXPORT_SYMBOL(mtk_imgsys_shutdown);
 int mtk_imgsys_runtime_suspend(struct device *dev)
 {
 	struct mtk_imgsys_dev *imgsys_dev = dev_get_drvdata(dev);
+	int ret, i;
 
 	clk_bulk_disable_unprepare(imgsys_dev->num_clks,
 				   imgsys_dev->clks);
 
 	if (imgsys_dbg_enable())
 		dev_dbg(dev, "%s: disabled imgsys clks\n", __func__);
+
+	if (g_imgsys_hwccf_apply) {
+		for (i = 0; i < imgsys_dev->larbs_num; i++) {
+			ret = mtk_smi_larb_disable(imgsys_dev->larbs[i]);
+			if (ret) {
+				dev_err(imgsys_dev->dev,
+					"%s: [ERROR] mtk_smi_larb_disable[%d] fail: %d\n",
+					__func__, i, ret);
+				return ret;
+			}
+		}
+	}
 
 	return 0;
 }
@@ -3581,7 +3604,19 @@ EXPORT_SYMBOL(mtk_imgsys_runtime_suspend);
 int mtk_imgsys_runtime_resume(struct device *dev)
 {
 	struct mtk_imgsys_dev *imgsys_dev = dev_get_drvdata(dev);
-	int ret;
+	int ret, i;
+
+	if (g_imgsys_hwccf_apply) {
+		for (i = 0; i < imgsys_dev->larbs_num; i++) {
+			ret = mtk_smi_larb_enable(imgsys_dev->larbs[i]);
+			if (ret) {
+				dev_err(imgsys_dev->dev,
+					"%s: [ERROR] mtk_smi_larb_enable[%d] fail: %d\n",
+					__func__, i, ret);
+				return ret;
+			}
+		}
+	}
 
 	ret = clk_bulk_prepare_enable(imgsys_dev->num_clks,
 				      imgsys_dev->clks);
