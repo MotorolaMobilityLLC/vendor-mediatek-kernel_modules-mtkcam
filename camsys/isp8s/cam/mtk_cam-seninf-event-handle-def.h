@@ -38,6 +38,12 @@ static inline int mtk_cam_seninf_tsrec_irq_notify_chk_users(struct seninf_ctx *c
 {
 	int ret = 0;
 
+	/* case handling */
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s] Noti: seninf_ctx is NULL, ret:0\n", __func__);
+		return 0;
+	}
+
 	if (unlikely(ctx->sentest_seamless_ut_en))
 		ret |= TSREC_IRQ_EVENT_USER_SENTEST;
 
