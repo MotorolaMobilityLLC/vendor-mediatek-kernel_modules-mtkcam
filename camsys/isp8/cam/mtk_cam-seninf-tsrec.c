@@ -2543,6 +2543,32 @@ static inline void tsrec_intr_en_bits_update(const unsigned int idx,
 }
 
 
+static inline void tsrec_force_clr_intr_status(const unsigned int tsrec_no)
+{
+	unsigned int intr_status;
+
+	/* after disable intr en bit, force clr intr status register for */
+	/* preventing irq handler find out intr en is clr and then skip handle */
+	intr_status = mtk_cam_seninf_g_tsrec_n_intr_status(tsrec_no);
+	if (intr_status) {
+		/* please call this API whether write clear is enabled or not */
+		mtk_cam_seninf_clr_tsrec_n_intr_status(tsrec_no, intr_status);
+		TSREC_LOG_INF(
+			"NOTICE: tsrec_no:%u, intr_en_bits:%#x, intr_status:%#x => skip IRQ handle\n",
+			tsrec_no,
+			TSREC_ATOMIC_READ(&tsrec_status.intr_en_bits),
+			intr_status);
+		return;
+	}
+
+	TSREC_LOG_DBG(
+		"tsrec_no:%u, intr_en_bits:%#x, intr_status:%#x\n",
+		tsrec_no,
+		TSREC_ATOMIC_READ(&tsrec_status.intr_en_bits),
+		intr_status);
+}
+
+
 static void tsrec_intr_reset(const unsigned int tsrec_no)
 {
 	const unsigned int exp_trig_src = g_tsrec_exp_trig_src();
@@ -2572,6 +2598,9 @@ static void tsrec_intr_reset(const unsigned int tsrec_no)
 	mtk_cam_seninf_s_tsrec_n_intr_en(tsrec_no,
 		1, 1, 1, 1, 0);
 
+	/* after INTR disable, force clr INTR status */
+	tsrec_force_clr_intr_status(tsrec_no);
+
 	/* last, clear intr_en_bits after interrupt be disabled */
 	tsrec_intr_en_bits_update(tsrec_no, 0);
 
@@ -2583,32 +2612,6 @@ static void tsrec_intr_reset(const unsigned int tsrec_no)
 		TSREC_ATOMIC_READ(&p_tsrec_n_regs->intr_en),
 		0,
 		TSREC_ATOMIC_READ(&tsrec_status.intr_en_bits));
-}
-
-
-static void tsrec_force_clr_intr_status(const unsigned int tsrec_no)
-{
-	unsigned int intr_status;
-
-	/* after disable intr en bit, force clr intr status register for */
-	/* preventing irq handler find out intr en is clr and then skip handle */
-	intr_status = mtk_cam_seninf_g_tsrec_n_intr_status(tsrec_no);
-	if (intr_status) {
-		/* please call this API whether write clear is enabled or not */
-		mtk_cam_seninf_clr_tsrec_n_intr_status(tsrec_no, intr_status);
-		TSREC_LOG_INF(
-			"NOTICE: tsrec_no:%u, intr_en_bits:%#x, intr_status:%#x => skip IRQ handle\n",
-			tsrec_no,
-			TSREC_ATOMIC_READ(&tsrec_status.intr_en_bits),
-			intr_status);
-		return;
-	}
-
-	TSREC_LOG_DBG(
-		"tsrec_no:%u, intr_en_bits:%#x, intr_status:%#x\n",
-		tsrec_no,
-		TSREC_ATOMIC_READ(&tsrec_status.intr_en_bits),
-		intr_status);
 }
 
 
@@ -2962,9 +2965,6 @@ static void tsrec_n_settings_clear(const unsigned int tsrec_no)
 
 	/* INTR disable */
 	tsrec_intr_reset(tsrec_no);
-
-	/* after INTR disable, force clr INTR status */
-	tsrec_force_clr_intr_status(tsrec_no);
 
 	/* reset exp vc dt info */
 	tsrec_seninf_exp_vc_dt_reset(tsrec_no);
