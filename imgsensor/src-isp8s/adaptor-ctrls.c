@@ -1322,7 +1322,8 @@ static int imgsensor_try_ctrl(struct v4l2_ctrl *ctrl)
 						SENSOR_FEATURE_GET_DEFAULT_FRAME_RATE_BY_SCENARIO,
 						para.u8, &len);
 
-			info->fps = val / 10;
+			info->fps = val;
+			info->fps_denominator = 10;
 
 			info->vblank = get_mode_vb(ctx, mode);
 
@@ -1340,8 +1341,8 @@ static int imgsensor_try_ctrl(struct v4l2_ctrl *ctrl)
 		}
 
 		adaptor_logd(ctx,
-			"[scenario %d]:fps: %d vb: %d hb: %d pixelrate: %d cust_pixel_rate: %d, w %d, h %d\n",
-			info->scenario_id, info->fps, info->vblank,
+			"[scenario %d]:fps: %d/%d vb: %d hb: %d pixelrate: %d cust_pixel_rate: %d, w %d, h %d\n",
+			info->scenario_id, info->fps, info->fps_denominator, info->vblank,
 			info->hblank, info->pixelrate, info->cust_pixelrate,
 			info->grab_w, info->grab_h);
 	}

@@ -356,6 +356,7 @@ struct mtk_sensor_value {
 struct mtk_sensor_static_param {
 	__u32 scenario_id;
 	__u32 fps;
+	__u32 fps_denominator;
 	__u32 vblank;
 	__u32 hblank;
 	__u32 pixelrate;
