@@ -1,4 +1,5 @@
 load("//build/bazel_mgk_rules:mgk_ddk_ko.bzl", "define_mgk_ddk_ko")
+load("@mgk_info//:kernel_version.bzl", "kernel_version",)
 
 package(
     default_visibility = [
@@ -22,6 +23,8 @@ define_mgk_ddk_ko(
         "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",
         "//vendor/mediatek/kernel_modules/mtkcam/imgsensor:imgsensor_header",
         "//vendor/mediatek/kernel_modules/mtkcam/imgsensor:imgsensor_spm_isp8_header",
+        "//kernel_device_modules-{}/drivers/i3c/master:i3c_master_api_headers".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/misc/mediatek/i3c_i2c_wrap:i3c_i2c_wrap_headers".format(kernel_version),
     ],
     hdrs = glob([
         "*.h"
@@ -31,8 +34,6 @@ define_mgk_ddk_ko(
         "-Werror",
         "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/imgsensor",
         "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/imgsensor/inc",
-        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/i3c_i2c_wrap",
-        "-I$(DEVICE_MODULES_PATH)/drivers/i3c/master",
     ],
     includes = ["."],
 )
