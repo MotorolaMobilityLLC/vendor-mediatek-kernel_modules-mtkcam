@@ -6,6 +6,8 @@
 #include <linux/component.h>
 #include <linux/interrupt.h>
 #include <linux/iopoll.h>
+#include <linux/irq.h>
+#include <linux/irqdesc.h>
 #include <linux/module.h>
 #include <linux/of_platform.h>
 #include <linux/of.h>
@@ -2837,6 +2839,17 @@ int mtk_raw_runtime_suspend(struct device *dev)
 
 	return 0;
 }
+static void irq_status(unsigned int irq)
+{
+	struct irq_desc *desc = irq_to_desc(irq);
+	bool enabled = false;
+
+	if (!desc)
+		return;
+
+	enabled = !irqd_irq_disabled(&desc->irq_data);
+	pr_info("[mtk-cam] IRQ:%d is %s\n", irq, enabled ? "enabled" : "disabled");
+}
 
 int mtk_raw_runtime_resume(struct device *dev)
 {
@@ -2880,6 +2893,7 @@ int mtk_raw_runtime_resume(struct device *dev)
 	qof_dump_int_en_addr(drvdata);
 
 	enable_irq(drvdata->irq);
+	irq_status(drvdata->irq);
 
 	return 0;
 }
@@ -3291,7 +3305,6 @@ void print_cq_settings(struct mtk_raw_device *raw, void __iomem *base)
 	pr_info("CQ_SUB_THR0_2: inner_addr_msb:0x%x, inner_addr:%08x, size:0x%x\n",
 		inner_addr_msb, inner_addr, size);
 }
-
 void raw_test_int_trig(struct mtk_raw_device *dev)
 {
 	int val_trig, val_int_en, val_misc;
@@ -3306,6 +3319,7 @@ void raw_test_int_trig(struct mtk_raw_device *dev)
 	raw_writel_relaxed(val_int_en, dev, dev->base, REG_CAMCTL_INT18_EN);
 	wmb(); /* TBC */
 
+	irq_status(dev->irq);
 	val_trig = raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT18_TRIG);
 	SET_FIELD(&val_trig, CAMCTL_TG_SOF_DROP_TRIG, 1);
 	raw_writel_relaxed(val_trig, dev, dev->base, REG_CAMCTL_INT18_TRIG);
@@ -3321,6 +3335,13 @@ void raw_test_int_trig(struct mtk_raw_device *dev)
 	SET_FIELD(&val_misc, CAMCTL_INT_VERIF_EN, 0);
 	raw_writel_relaxed(val_misc, dev, dev->base, REG_CAMCTL_MISC);
 	wmb(); /* TBC */
+	pr_info("[%s] STATUSX 17-21: 0x%x/ 0x%x/ 0x%x/ 0x%x/ 0x%x\n",
+		__func__,
+		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT17_STATUSX),
+		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT18_STATUSX),
+		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT19_STATUSX),
+		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT20_STATUSX),
+		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT21_STATUSX));
 }
 
 void print_dma_settings(void __iomem *base, u32 dmao_base)

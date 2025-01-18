@@ -6957,8 +6957,8 @@ int mtk_cam_job_manually_apply_isp(struct mtk_cam_job *job, bool wait_completion
 		mtk_cam_job_state_set(&job->job_state, ISP_STATE, S_ISP_APPLYING_PROCRAW);
 	else
 		mtk_cam_job_state_set(&job->job_state, ISP_STATE, S_ISP_APPLYING);
-	pr_info("[%s] cg: vcore:0x%x, cammain:0x%x, A:0x%x/0x%x/0x%x, B:0x%x/0x%x/0x%x, C:0x%x/0x%x/0x%x",
-			__func__, readl(cam->vcore_cg_con), readl(cam->base),
+	pr_info("[%s] cg: vcore:0x%x, cammain 0/1:0x%x/0x%x, A:0x%x/0x%x/0x%x, B:0x%x/0x%x/0x%x, C:0x%x/0x%x/0x%x",
+			__func__, readl(cam->vcore_cg_con), readl(cam->base), readl(cam->base + 0x4c),
 			readl(cam->rawa_cg_con), readl(cam->rmsa_cg_con), readl(cam->yuva_cg_con),
 			readl(cam->rawb_cg_con), readl(cam->rmsb_cg_con), readl(cam->yuvb_cg_con),
 			readl(cam->rawc_cg_con), readl(cam->rmsc_cg_con), readl(cam->yuvc_cg_con));
@@ -6971,8 +6971,8 @@ int mtk_cam_job_manually_apply_isp(struct mtk_cam_job *job, bool wait_completion
 	if (!wait_for_completion_timeout(&job->cq_exe_completion, timeout)) {
 		pr_info("[%s] error: wait for job cq exe, cq_not_ready:%lx\n", __func__,
 			atomic_long_read(&job->cq_ref.cq_not_ready));
-		pr_info("[%s] cg: vcore:0x%x, cammain:0x%x, A:0x%x/0x%x/0x%x, B:0x%x/0x%x/0x%x, C:0x%x/0x%x/0x%x",
-			__func__, readl(cam->vcore_cg_con), readl(cam->base),
+		pr_info("[%s] cg: vcore:0x%x, cammain 0/1:0x%x/0x%x, A:0x%x/0x%x/0x%x, B:0x%x/0x%x/0x%x, C:0x%x/0x%x/0x%x",
+			__func__, readl(cam->vcore_cg_con), readl(cam->base), readl(cam->base + 0x4c),
 			readl(cam->rawa_cg_con), readl(cam->rmsa_cg_con), readl(cam->yuva_cg_con),
 			readl(cam->rawb_cg_con), readl(cam->rmsb_cg_con), readl(cam->yuvb_cg_con),
 			readl(cam->rawc_cg_con), readl(cam->rmsc_cg_con), readl(cam->yuvc_cg_con));
