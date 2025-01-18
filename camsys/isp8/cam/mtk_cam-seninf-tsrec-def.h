@@ -51,7 +51,7 @@
 
 #if (TSREC_WITH_GLOBAL_TIMER)
 // default do not use global timer
-#define TSREC_USE_GLOBAL_TIMER       (0)
+#define TSREC_USE_GLOBAL_TIMER       (1)
 #else
 #define TSREC_USE_GLOBAL_TIMER       (0)
 #endif
@@ -66,7 +66,11 @@
 /*---------------------------------------------------------------------------*/
 
 
+#if (TSREC_USE_GLOBAL_TIMER)
+#define TSREC_TICK_FACTOR            (13)
+#else
 #define TSREC_TICK_FACTOR            (208)
+#endif
 
 #define TSREC_EXP_MAX_CNT            (3)
 
