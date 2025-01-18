@@ -1359,7 +1359,7 @@ static int seninf_core_probe(struct platform_device *pdev)
 		core->seninf_kworker_task = NULL;
 	} else {
 		dev_info(dev, "[%s] seninf kthread worker set prio to fifo\n", __func__);
-		sched_set_fifo(core->seninf_kworker_task);
+		sched_set_fifo_low(core->seninf_kworker_task);
 	}
 
 	g_seninf_ops->_init_irq_fifo(core);

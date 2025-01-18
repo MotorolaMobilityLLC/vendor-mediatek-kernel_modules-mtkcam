@@ -1555,7 +1555,7 @@ static void tsrec_kthread_init(const unsigned int tsrec_no)
 			return;
 		}
 	}
-	sched_set_fifo(ptr->kthread_task);
+	sched_set_fifo_low(ptr->kthread_task);
 	tsrec_worker.kthreads[tsrec_no] = ptr;
 
 	TSREC_LOG_DBG(
