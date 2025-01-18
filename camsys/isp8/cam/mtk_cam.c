@@ -1839,11 +1839,18 @@ static void mtk_cam_ctx_pipeline_stop(struct mtk_cam_ctx *ctx,
 		ctx->pipe_subdevs[i] = NULL;
 }
 
+enum KTHREAD_PRIO {
+	PRIO_VIP0 = 0,
+	PRIO_VIP1,
+	PRIO_VIP2,
+	PRIO_VIP3,
+	PRIO_RT,
+};
 static struct task_struct *
 mtk_cam_ctx_create_task(struct mtk_cam_ctx *ctx,
 			const char *prefix,
 			struct kthread_worker *worker,
-			bool set_fifo)
+			enum KTHREAD_PRIO prio)
 {
 	struct device *dev = ctx->cam->dev;
 	struct task_struct *task;
@@ -1857,12 +1864,26 @@ mtk_cam_ctx_create_task(struct mtk_cam_ctx *ctx,
 		return NULL;
 	}
 
-	if (set_fifo)
-		sched_set_fifo(task);
-	else
+	if (prio == PRIO_RT) {
+		sched_set_fifo_low(task);
+	} else {
 		sched_set_normal(task, -20);
+		/* VIP thread */
+		set_task_priority_based_vip_and_throttle(task->pid,
+							 (int)prio,
+							 33); /* 30 fps */
+		set_task_ls(task->pid);
+	}
 
 	return task;
+}
+
+static void mtk_cam_ctx_destroy_task(struct task_struct *task,
+				     enum KTHREAD_PRIO prio)
+{
+	if (prio != PRIO_RT)
+		unset_task_priority_based_vip(task->pid);
+	kthread_stop(task);
 }
 
 int mtk_cam_ctx_alloc_workers(struct mtk_cam_ctx *ctx)
@@ -1879,7 +1900,7 @@ int mtk_cam_ctx_alloc_workers(struct mtk_cam_ctx *ctx)
 		kthread_init_worker(&ctx->sensor_worker);
 		ctx->sensor_worker_task =
 			mtk_cam_ctx_create_task(ctx, "sensor_worker",
-						&ctx->sensor_worker, true);
+						&ctx->sensor_worker, PRIO_RT);
 		if (!ctx->sensor_worker_task)
 			return -1;
 	}
@@ -1888,7 +1909,7 @@ int mtk_cam_ctx_alloc_workers(struct mtk_cam_ctx *ctx)
 		kthread_init_worker(&ctx->flow_worker);
 		ctx->flow_task =
 			mtk_cam_ctx_create_task(ctx, "camsys_worker",
-						&ctx->flow_worker, true);
+						&ctx->flow_worker, PRIO_VIP3);
 		if (!ctx->flow_task)
 			goto fail_uninit_sensor_worker_task;
 	}
@@ -1897,7 +1918,7 @@ int mtk_cam_ctx_alloc_workers(struct mtk_cam_ctx *ctx)
 		kthread_init_worker(&ctx->done_worker);
 		ctx->done_task =
 			mtk_cam_ctx_create_task(ctx, "camsys_done",
-						&ctx->done_worker, true);
+						&ctx->done_worker, PRIO_VIP1);
 		if (!ctx->done_task)
 			goto fail_uninit_flow_worker_task;
 	}
@@ -1906,7 +1927,7 @@ int mtk_cam_ctx_alloc_workers(struct mtk_cam_ctx *ctx)
 		kthread_init_worker(&ctx->tuning_worker);
 		ctx->tuning_task =
 			mtk_cam_ctx_create_task(ctx, "camsys_tuning",
-						&ctx->tuning_worker, true);
+						&ctx->tuning_worker, PRIO_RT);
 		if (!ctx->tuning_task)
 			goto fail_uninit_done_worker_task;
 	}
@@ -1914,13 +1935,13 @@ int mtk_cam_ctx_alloc_workers(struct mtk_cam_ctx *ctx)
 	return 0;
 
 fail_uninit_done_worker_task:
-	kthread_stop(ctx->done_task);
+	mtk_cam_ctx_destroy_task(ctx->done_task, PRIO_VIP1);
 	ctx->done_task = NULL;
 fail_uninit_flow_worker_task:
-	kthread_stop(ctx->flow_task);
+	mtk_cam_ctx_destroy_task(ctx->flow_task, PRIO_VIP3);
 	ctx->flow_task = NULL;
 fail_uninit_sensor_worker_task:
-	kthread_stop(ctx->sensor_worker_task);
+	mtk_cam_ctx_destroy_task(ctx->sensor_worker_task, PRIO_RT);
 	ctx->sensor_worker_task = NULL;
 
 	return -1;
@@ -1937,19 +1958,19 @@ void mtk_cam_ctx_destroy_workers(struct mtk_cam_ctx *ctx)
 			ctx->tuning_task);
 
 	if (ctx->sensor_worker_task) {
-		kthread_stop(ctx->sensor_worker_task);
+		mtk_cam_ctx_destroy_task(ctx->sensor_worker_task, PRIO_RT);
 		ctx->sensor_worker_task = NULL;
 	}
 	if (ctx->flow_task) {
-		kthread_stop(ctx->flow_task);
+		mtk_cam_ctx_destroy_task(ctx->flow_task, PRIO_VIP3);
 		ctx->flow_task = NULL;
 	}
 	if (ctx->done_task) {
-		kthread_stop(ctx->done_task);
+		mtk_cam_ctx_destroy_task(ctx->done_task, PRIO_VIP1);
 		ctx->done_task = NULL;
 	}
 	if (ctx->tuning_task) {
-		kthread_stop(ctx->tuning_task);
+		mtk_cam_ctx_destroy_task(ctx->tuning_task, PRIO_RT);
 		ctx->tuning_task = NULL;
 	}
 }
