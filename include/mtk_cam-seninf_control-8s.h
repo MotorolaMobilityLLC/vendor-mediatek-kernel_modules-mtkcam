@@ -98,6 +98,8 @@ struct outmux_debug_result {
 	u32 dt;
 	u32 exp_size_h;
 	u32 exp_size_v;
+	u32 rec_size_h;
+	u32 rec_size_v;
 	u32 outmux_id;
 	u32 done_irq_status;
 	u32 oversize_irq_status;

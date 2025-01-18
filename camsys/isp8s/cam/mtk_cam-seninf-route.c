@@ -41,6 +41,8 @@ static inline size_t seninf_list_count(struct list_head *head)
 	return count;
 }
 
+static struct seninf_vc *mtk_cam_seninf_get_curr_vc_by_pad(struct seninf_ctx *ctx, int idx);
+
 void mtk_cam_seninf_alloc_outmux(struct seninf_ctx *ctx)
 {
 	int i;
@@ -100,6 +102,11 @@ void mtk_cam_seninf_alloc_outmux(struct seninf_ctx *ctx)
 	/* auto allocate outmuxs */
 	for (i = 0; i < vcinfo->cnt; i++) {
 		vc = &vcinfo->vc[i];
+
+		/* check if pad is existed in current mode */
+		if (mtk_cam_seninf_get_curr_vc_by_pad(ctx, vc->out_pad) == NULL)
+			continue;
+
 		if (ctx->pad2cam[vc->out_pad][0] == 0xff) {
 
 			// alloc from core
@@ -810,12 +817,19 @@ int mtk_cam_seninf_fill_outpad_to_vc(struct seninf_ctx *ctx,
 	return ret;
 }
 
-int mtk_cam_seninf_fill_bit_depth_to_vc(struct seninf_vc *vc)
+int mtk_cam_seninf_fill_bit_depth_to_vc(struct seninf_vc *vc,
+	struct mtk_mbus_frame_desc_entry_csi2 *entry_csi2)
 {
 	if (unlikely(vc == NULL)) {
 		pr_info("[%s][err]vc is NULL\n,", __func__);
 		return -EFAULT;
 	}
+
+	if (unlikely(entry_csi2 == NULL)) {
+		pr_info("[%s][err]entry_csi2 is NULL\n,", __func__);
+		return -EFAULT;
+	}
+
 	switch (vc->dt) {
 	/* YUV 0x18~0x1F */
 	case 0x1E:
@@ -868,6 +882,32 @@ int mtk_cam_seninf_fill_bit_depth_to_vc(struct seninf_vc *vc)
 		break;
 	default:
 		break;
+	}
+
+	/* for embedded data */
+	if (entry_csi2->data_type >= 0x10 && entry_csi2->data_type <= 0x17) {
+		switch (entry_csi2->ebd_parsing_type) {
+		case MTK_EBD_PARSING_TYPE_MIPI_RAW8:
+			vc->bit_depth = 8;
+			break;
+
+		case MTK_EBD_PARSING_TYPE_MIPI_RAW10:
+			vc->bit_depth = 10;
+			break;
+
+		case MTK_EBD_PARSING_TYPE_MIPI_RAW12:
+			vc->bit_depth = 12;
+			break;
+
+		case MTK_EBD_PARSING_TYPE_MIPI_RAW14:
+			vc->bit_depth = 14;
+			break;
+
+		default:
+			pr_info("[%s][ERR]unknown entry_csi2.ebd_parsing_type %d\n",
+				__func__, entry_csi2->ebd_parsing_type);
+			return 0;
+		}
 	}
 
 	return 0;
@@ -946,8 +986,7 @@ int mtk_cam_seninf_get_vcinfo(struct seninf_ctx *ctx)
 		case 0x15:
 		case 0x16:
 		case 0x17:
-			vc->exp_hsize = conv_ebd_hsize_raw14(fd.entry[i].bus.csi2.hsize,
-						fd.entry[i].bus.csi2.ebd_parsing_type);
+			vc->exp_hsize = fd.entry[i].bus.csi2.hsize;
 			break;
 		/* YUV 0x18~0x1F */
 		case 0x1E:
@@ -1002,7 +1041,7 @@ int mtk_cam_seninf_get_vcinfo(struct seninf_ctx *ctx)
 
 		vc->exp_vsize = fd.entry[i].bus.csi2.vsize;
 
-		mtk_cam_seninf_fill_bit_depth_to_vc(vc);
+		mtk_cam_seninf_fill_bit_depth_to_vc(vc, &fd.entry[i].bus.csi2);
 
 #ifdef DOUBLE_PIXEL_EN
 		/* double pixel mode */
@@ -2401,12 +2440,6 @@ void mtk_cam_sensor_get_vc_info_by_scenario(struct seninf_ctx *ctx, u32 code)
 		vc->exp_vsize = vc_sid.fd.entry[i].bus.csi2.vsize;
 		vc->dt_remap_to_type = vc_sid.fd.entry[i].bus.csi2.dt_remap_to_type;
 
-		if (vc_sid.fd.entry[i].bus.csi2.data_type >= 0x10 &&
-			vc_sid.fd.entry[i].bus.csi2.data_type <= 0x17)
-			vc->exp_hsize = conv_ebd_hsize_raw14(
-								vc->exp_hsize,
-								vc_sid.fd.entry[i].bus.csi2.ebd_parsing_type);
-
 		if (i == 0)
 			tmp_vc = vc->vc;
 		else if (tmp_vc != vc->vc)
@@ -2431,7 +2464,7 @@ void mtk_cam_sensor_get_vc_info_by_scenario(struct seninf_ctx *ctx, u32 code)
 			}
 			last_vc = vc->vc;
 		}
-		mtk_cam_seninf_fill_bit_depth_to_vc(vc);
+		mtk_cam_seninf_fill_bit_depth_to_vc(vc, &vc_sid.fd.entry[i].bus.csi2);
 		mtk_cam_seninf_fill_outpad_to_vc(ctx, vc, desc, &fsync_ext_vsync_pad_code);
 	}
 	vcinfo->cnt = vc_sid.fd.num_entries;

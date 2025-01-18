@@ -237,6 +237,10 @@ vcinfo_debug->exp_size_h = \
 	SENINF_READ_BITS(outmux, SENINF_OUTMUX_TAG_EXP_SIZE_##tag_id, SENINF_OUTMUX_EXP_HSIZE_##tag_id); \
 vcinfo_debug->exp_size_v =  \
 	SENINF_READ_BITS(outmux, SENINF_OUTMUX_TAG_EXP_SIZE_##tag_id, SENINF_OUTMUX_EXP_VSIZE_##tag_id); \
+vcinfo_debug->rec_size_h = \
+	SENINF_READ_REG(outmux, SENINF_OUTMUX_TAG_DBG_PORT_##tag_id) >> 16 & 0xFFFF; \
+vcinfo_debug->rec_size_v =  \
+	SENINF_READ_REG(outmux, SENINF_OUTMUX_TAG_DBG_PORT_##tag_id) & 0xFFFF; \
 irq_status = SENINF_READ_REG(outmux, SENINF_OUTMUX_IRQ_STATUS); \
 vcinfo_debug->done_irq_status =	0x01 &  (irq_status >> SENINF_OUTMUX_TAG_DONE_IRQ_STATUS_##tag_id##_SHIFT); \
 irq_status = 0x00;\
@@ -4343,6 +4347,22 @@ static int mtk_cam_seninf_debug_core_dump(struct seninf_ctx *ctx,
 				DUMP_DEBUG_REG_INFO_BY_TAG(7);
 				break;
 			}
+
+			if (vc->bit_depth == 0) {
+				seninf_logi(ctx, "[ERR] detect zero divition\n");
+				break;
+			}
+
+			if (vcinfo_debug->exp_size_v)
+				vcinfo_debug->exp_size_v += 1;
+
+			if (vcinfo_debug->exp_size_h)
+				vcinfo_debug->exp_size_h = (vcinfo_debug->exp_size_h + 1) * 8 / vc->bit_depth;
+
+			if (vcinfo_debug->rec_size_h)
+				vcinfo_debug->rec_size_h = (vcinfo_debug->rec_size_h + 1) * 8 / vc->bit_depth;
+
+
 			seninf_logi(ctx, "[%d] vc_feature %d vc 0x%x dt 0x%x outmux %d, tag %d pixmode:0x%08x\n",
 					i,
 					vcinfo_debug->vc_feature,
@@ -4352,10 +4372,12 @@ static int mtk_cam_seninf_debug_core_dump(struct seninf_ctx *ctx,
 					vcinfo_debug->tag_id,
 					SENINF_READ_REG(outmux, SENINF_OUTMUX_PATH_CFG)
 					);
-			seninf_logi(ctx, "done_irq %d, exp %dx%d\n",
+			seninf_logi(ctx, "done_irq %d, exp %dx%d rec size %dx%d\n",
 					vcinfo_debug->done_irq_status,
 					vcinfo_debug->exp_size_h,
-					vcinfo_debug->exp_size_v);
+					vcinfo_debug->exp_size_v,
+					vcinfo_debug->rec_size_h,
+					vcinfo_debug->rec_size_v);
 			vc_vaild_cnt++;
 			debug_result->valid_result_cnt = vc_vaild_cnt;
 			SENINF_WRITE_REG(outmux, SENINF_OUTMUX_IRQ_STATUS, 0x00000002);
@@ -4652,8 +4674,11 @@ static ssize_t mtk_cam_seninf_show_status(struct device *dev,
 					vcinfo_debug->outmux_id,
 					vcinfo_debug->tag_id);
 
-			SHOW(buf, len, "\texp %dx%d\n",
+			SHOW(buf, len, "\texp size %dx%d\n",
 					vcinfo_debug->exp_size_h, vcinfo_debug->exp_size_v);
+
+			SHOW(buf, len, "\trec size %dx%d\n",
+					vcinfo_debug->rec_size_h, vcinfo_debug->rec_size_v);
 
 			SHOW(buf, len, "\tdone_irq 0x%x\n", vcinfo_debug->done_irq_status);
 			SHOW(buf, len, "\tref_vsync_irq 0x%x\n", vcinfo_debug->ref_vsync_irq_status);
@@ -7850,7 +7875,7 @@ static int mtk_cam_csi_mac_hv_hb_config(struct seninf_ctx *ctx,
 		SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT3, RG_CSI2_DT_FOR_MEASURE1,
 					pInfo->target_dt);
 
-		SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT3, RG_CSI2_V_LINE1,
+		SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT9, RG_CSI2_V_LINE1,
 					pInfo->probes[1].measure_line);
 		break;
 
@@ -7861,7 +7886,7 @@ static int mtk_cam_csi_mac_hv_hb_config(struct seninf_ctx *ctx,
 		SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT1, RG_CSI2_DT_FOR_MEASURE0,
 					pInfo->target_dt);
 
-		SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT1, RG_CSI2_V_LINE0,
+		SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT8, RG_CSI2_V_LINE0,
 					pInfo->probes[0].measure_line);
 		break;
 	}
@@ -7950,7 +7975,7 @@ static int mtk_cam_csi_mac_hv_hb_get_result_by_line(struct seninf_ctx *ctx,
 											RO_CSI2_H_VALID_CNT1);
 
 		pInfo->probes[1].measure_HB_cnt = SENINF_READ_BITS(pCsi2_mac,
-											CSIRX_MAC_MIPI_MEASUREMENT4,
+											CSIRX_MAC_MIPI_MEASUREMENT7,
 											RO_CSI2_H_BLANKING_CNT1);
 		break;
 	default:
@@ -7960,7 +7985,7 @@ static int mtk_cam_csi_mac_hv_hb_get_result_by_line(struct seninf_ctx *ctx,
 											RO_CSI2_H_VALID_CNT0);
 
 		pInfo->probes[0].measure_HB_cnt = SENINF_READ_BITS(pCsi2_mac,
-											CSIRX_MAC_MIPI_MEASUREMENT2,
+											CSIRX_MAC_MIPI_MEASUREMENT6,
 											RO_CSI2_H_BLANKING_CNT0);
 		break;
 	}
@@ -7988,8 +8013,8 @@ static int mtk_cam_csi_mac_hv_hb_reset(struct seninf_ctx *ctx)
 	SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT5, RG_CSI2_MIPI_MEASURE_CLR1, false);
 
 	/* set measure line as default line: 0 */
-	SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT1, RG_CSI2_V_LINE0, 0);
-	SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT3, RG_CSI2_V_LINE1, 0);
+	SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT8, RG_CSI2_V_LINE0, 0);
+	SENINF_BITS(pCsi2_mac, CSIRX_MAC_MIPI_MEASUREMENT9, RG_CSI2_V_LINE1, 0);
 
 
 	return 0;

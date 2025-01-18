@@ -182,6 +182,8 @@ int seninf_sentest_get_debug_reg_result(struct seninf_ctx *ctx, void *arg)
 			outmux_result->dt		= vcinfo_debug->dt;
 			outmux_result->exp_size_h	= vcinfo_debug->exp_size_h;
 			outmux_result->exp_size_v	= vcinfo_debug->exp_size_v;
+			outmux_result->rec_size_h	= vcinfo_debug->rec_size_h;
+			outmux_result->rec_size_v	= vcinfo_debug->rec_size_v;
 			outmux_result->outmux_id	= vcinfo_debug->outmux_id;
 
 			outmux_result->done_irq_status		= vcinfo_debug->done_irq_status;
