@@ -109,6 +109,7 @@ struct mtk_raw_ctrl_data_read_clear {
 	u64 ref_sof_ts_ns;
 	u32 fl_low_latency;
 	struct mtk_cam_exp_shutter exp_ns;
+	u64 stable_frm_len_ns;
 };
 
 struct mtk_raw_ctrl_data {

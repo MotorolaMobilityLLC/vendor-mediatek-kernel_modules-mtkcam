@@ -868,6 +868,7 @@ static int mtk_raw_try_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_MTK_CAM_FL_PROLONG:
 	case V4L2_CID_MTK_CAM_REF_SOF_TS:
 	case V4L2_CID_MTK_CAM_EXP_SHUTTER:
+	case V4L2_CID_MTK_CAM_STABLE_FRM_LEN:
 		ret = 0;
 		break;
 	default:
@@ -1077,6 +1078,14 @@ static int mtk_raw_set_ctrl(struct v4l2_ctrl *ctrl)
 					 shutter_ns->me_exp_ns,
 					 shutter_ns->se_exp_ns,
 					 shutter_ns->long_exposure_flow);
+		}
+		break;
+	case V4L2_CID_MTK_CAM_STABLE_FRM_LEN:
+		{
+			ctrl_data->rc_data.stable_frm_len_ns = *ctrl->p_new.p_s64;
+			if (CAM_DEBUG_ENABLED(V4L2))
+				dev_info_ratelimited(dev, "%s: STABLE_FRM_LEN (%llu ns)\n",
+					 __func__, *ctrl->p_new.p_s64);
 		}
 		break;
 	default:
@@ -1367,6 +1376,18 @@ static struct v4l2_ctrl_config cfg_exp_shutter = {
 	.max = 0x1FFFFFFF,
 	.step = 1,
 	.dims = {sizeof(struct mtk_cam_exp_shutter)},
+};
+
+static struct v4l2_ctrl_config cfg_stable_frm_len = {
+	.ops = &cam_ctrl_ops,
+	.id = V4L2_CID_MTK_CAM_STABLE_FRM_LEN,
+	.name = "stable frame length (ns)",
+	.type = V4L2_CTRL_TYPE_INTEGER64,
+	.flags = V4L2_CTRL_FLAG_EXECUTE_ON_WRITE | V4L2_CTRL_FLAG_VOLATILE,
+	.min = -1,
+	.max = 0x7FFFFFFF,
+	.step = 1,
+	.def = -1
 };
 
 struct v4l2_subdev *mtk_cam_find_sensor(struct mtk_cam_ctx *ctx,
@@ -3902,6 +3923,11 @@ static void mtk_raw_pipeline_ctrl_setup(struct mtk_raw_pipeline *pipe)
 			V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
 
 	ctrl = v4l2_ctrl_new_custom(ctrl_hdlr, &cfg_exp_shutter, NULL);
+	if (ctrl)
+		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE |
+			V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
+
+	ctrl = v4l2_ctrl_new_custom(ctrl_hdlr, &cfg_stable_frm_len, NULL);
 	if (ctrl)
 		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE |
 			V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;

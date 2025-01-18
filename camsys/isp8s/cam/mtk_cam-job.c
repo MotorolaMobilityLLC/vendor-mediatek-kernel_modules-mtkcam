@@ -4552,6 +4552,10 @@ static void update_job_state_init_sensor_param(struct mtk_cam_job *job)
 	struct mtk_cam_ctrl *ctrl = &job->src_ctx->cam_ctrl;
 	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
 
+	// NOTE: update FL with 'stable_frm_len_ns' for this sensor request
+	if (ctrl_data->rc_data.stable_frm_len_ns != 0)
+		ctrl->frame_interval_ns = ctrl_data->rc_data.stable_frm_len_ns;
+
 	if (job->src_ctx->last_req_exposue.long_exposure_flow) {
 		u64 frame_time_ns = max(job->src_ctx->last_req_exposue.le_exp_ns,
 								ctrl->frame_interval_ns);
@@ -4577,9 +4581,6 @@ static void update_job_state_init_sensor_param(struct mtk_cam_job *job)
 		MTK_CAM_SEN_APPLY_DIRECT_APPLY) ? 1 : 0;
 
 	if (check_update_mstream_mode(job)) {
-		ctrl->frame_interval_ns =
-			mtk_cam_query_interval_from_sensor(job->src_ctx->sensor);
-
 		// NOTE: due to sensor interval fixed at max framerate
 		ctrl->frame_interval_ns *= ((job_exp_num(job) == 1)? 2:1);
 	}
