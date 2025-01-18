@@ -566,7 +566,7 @@ int notify_mipi_err_detect_handler(struct seninf_ctx *ctx,
 /*----------------------------------------------------------------------------*/
 // => tsrec event/handle
 /*----------------------------------------------------------------------------*/
-void mtk_cam_seninf_tsrec_irq_notify(
+void mtk_cam_seninf_tsrec_irq_notify(const int event_users,
 	const struct mtk_cam_seninf_tsrec_irq_notify_info *p_info)
 {
 	struct seninf_ctx *ctx = p_info->inf_ctx;
@@ -582,10 +582,12 @@ void mtk_cam_seninf_tsrec_irq_notify(
 	 * plz add your function checker before calling handler.
 	 */
 	/* => Please add your handler function here carefully */
-	if (unlikely(ctx->sentest_seamless_ut_en))
+	if (unlikely(chk_user_event(event_users,
+			TSREC_IRQ_EVENT_USER_SENTEST)))
 		notify_sentest_irq(ctx, p_info);
 
-	if (unlikely(ctx->core->vsync_irq_en_flag || ctx->core->csi_irq_en_flag))
+	if (unlikely(chk_user_event(event_users,
+			TSREC_IRQ_EVENT_USER_MIPI_ERR_DETECT)))
 		notify_mipi_err_detect_handler(ctx, p_info);
 }
 

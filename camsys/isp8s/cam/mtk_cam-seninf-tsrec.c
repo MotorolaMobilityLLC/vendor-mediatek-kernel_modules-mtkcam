@@ -13,7 +13,7 @@
 #include <linux/kfifo.h>        /* for kfifo */
 #include <linux/kthread.h>      /* for kthread */
 
-#include "mtk_cam-seninf-event-handle.h"    /* broadcast irq info for seninf */
+#include "mtk_cam-seninf-event-handle-def.h"    /* broadcast irq info for seninf */
 #endif //!FS_UT
 
 #include "mtk_cam-seninf-tsrec.h"
@@ -3586,6 +3586,7 @@ static void tsrec_broadcast_irq_info(void *data,
 	struct seninf_ctx *seninf_ctx = NULL;
 	unsigned long long start, end;
 	unsigned int seninf_idx = SENINF_IDX_NONE;
+	int event_users = 0;
 
 	tsrec_find_seninf_ctx_by_tsrec_no(
 		data, tsrec_no, &seninf_ctx, &seninf_idx, __func__);
@@ -3615,7 +3616,10 @@ static void tsrec_broadcast_irq_info(void *data,
 	start = ktime_get_boottime_ns();
 
 	/* broadcast irq info for seninf */
-	mtk_cam_seninf_tsrec_irq_notify(&info);
+	/* => call inline function to check event users */
+	event_users = mtk_cam_seninf_tsrec_irq_notify_chk_users(seninf_ctx);
+	if (unlikely(event_users != 0))
+		mtk_cam_seninf_tsrec_irq_notify(event_users, &info);
 
 	end = ktime_get_boottime_ns();
 	if (unlikely((end - start) >= time_th)) {

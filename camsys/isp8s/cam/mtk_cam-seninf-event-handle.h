@@ -5,7 +5,7 @@
 #define __MTK_CAM_SENINF_EVENT_HANDLE_H__
 
 #include "mtk_cam-seninf.h"
-#include "mtk_cam-seninf-tsrec.h"
+#include "mtk_cam-seninf-event-handle-def.h"
 
 
 /*----------------------------------------------------------------------------*/
@@ -36,13 +36,6 @@ void chk_is_fsync_vsync_src(struct seninf_ctx *ctx, const int pad_id);
 int notify_fsync_listen_target(struct seninf_ctx *ctx);
 void notify_fsync_listen_target_with_kthread(struct seninf_ctx *ctx,
 	const unsigned int mdelay);
-
-
-/*----------------------------------------------------------------------------*/
-// => tsrec event/handle
-/*----------------------------------------------------------------------------*/
-void mtk_cam_seninf_tsrec_irq_notify(
-	const struct mtk_cam_seninf_tsrec_irq_notify_info *p_info);
 
 
 /*----------------------------------------------------------------------------*/
