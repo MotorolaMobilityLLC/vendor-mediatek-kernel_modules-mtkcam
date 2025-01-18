@@ -469,6 +469,8 @@ int mtk_ccd_channel_init(struct mtk_ccd *ccd,
 	/* start worker */
 	dev_dbg(dev, "%s channel-%d-%d +", __func__, center_id, channel_id);
 
+	mutex_lock(&mtk_subdev->master_listen_lock);
+
 	listen_obj_rdy = atomic_read(&mtk_subdev->listen_obj_rdy);
 	if (listen_obj_rdy == CCD_LISTEN_OBJECT_READY) {
 		mutex_unlock(&mtk_subdev->master_listen_lock);
