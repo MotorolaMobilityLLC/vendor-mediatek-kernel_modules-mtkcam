@@ -1846,8 +1846,8 @@ mtk_cam_ctx_create_task(struct mtk_cam_ctx *ctx,
 			   "%s-%d", prefix, ctx->stream_id);
 
 	if (IS_ERR(task)) {
-		dev_info(dev, "%s: failed. could not create %s-%d\n",
-			 __func__, prefix, ctx->stream_id);
+		dev_info(dev, "%s: failed. could not create %s-%d error %ld\n",
+			 __func__, prefix, ctx->stream_id, PTR_ERR(task));
 		return NULL;
 	}
 
