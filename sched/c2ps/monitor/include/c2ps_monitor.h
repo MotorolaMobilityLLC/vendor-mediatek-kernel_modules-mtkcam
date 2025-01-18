@@ -24,6 +24,7 @@ struct c2ps_reg_check_proxy_task {
 	struct work_struct m_work;
 };
 
+void monitor_module_init(void);
 int monitor_task_start(int pid, int task_id);
 int monitor_task_end(int pid, int task_id);
 int monitor_vsync(u64 ts);

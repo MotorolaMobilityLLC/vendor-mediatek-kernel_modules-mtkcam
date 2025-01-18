@@ -514,7 +514,7 @@ static void c2ps_reg_check_timer_callback(struct timer_list *t)
 	if (atomic_read(&enable_reg_check_timer) > 0)
 		mod_timer(&c2ps_reg_check_timer, jiffies);
 
-	work = kzalloc(sizeof(struct c2ps_reg_check_proxy_task), GFP_KERNEL);
+	work = kzalloc(sizeof(struct c2ps_reg_check_proxy_task), GFP_ATOMIC);
 	if (unlikely(!work)) {
 		C2PS_LOGE("reg check proxy task allocate failed\n");
 		return;
@@ -546,4 +546,9 @@ void c2ps_monitor_uninit(void)
 		destroy_workqueue(proxy_wq);
 		proxy_wq = NULL;
 	}
+}
+
+void monitor_module_init(void)
+{
+	mutex_init(&reg_check_task_list_lock);
 }

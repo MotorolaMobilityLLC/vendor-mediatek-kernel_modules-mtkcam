@@ -898,6 +898,7 @@ static int __init c2ps_init(void)
 	c2ps_notify_anchor_fp = c2ps_notify_anchor;
 
 	c2ps_sysfs_init();
+	monitor_module_init();
 	if (unlikely(regulator_module_init())) {
 		C2PS_LOGD("regulator_module_init failed\n");
 		return -EFAULT;
