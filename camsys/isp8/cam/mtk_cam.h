@@ -84,6 +84,9 @@ struct mtk_cam_ctx {
 	struct mtk_cam_device *cam;
 	unsigned int stream_id;
 
+	/* resource lock */
+	struct mutex ctx_lock;
+
 	/* v4l2 related */
 	unsigned int enabled_node_cnt;
 	unsigned int streaming_node_cnt;

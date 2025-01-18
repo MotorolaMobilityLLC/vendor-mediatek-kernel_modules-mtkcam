@@ -3070,7 +3070,7 @@ void mtk_cam_ctx_unprepare(struct mtk_cam_ctx *ctx)
 	dev_info(cam->dev, "%s:%d", __func__, ctx->stream_id);
 
 	if (!atomic_read(&ctx->cam_ctrl.stopped)) {
-		dev_info(cam->dev, "%s: cam_ctl still started!\n", __func__);
+		dev_info(cam->dev, "%s: cam_ctrl still started!\n", __func__);
 		MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctrl_stop", __func__);
 		mtk_cam_ctrl_stop(&ctx->cam_ctrl);
 		MTK_CAM_TRACE_END(BASIC);
@@ -4326,6 +4326,7 @@ static void mtk_cam_ctx_init(struct mtk_cam_ctx *ctx,
 {
 	ctx->cam = cam;
 	ctx->stream_id = stream_id;
+	mutex_init(&ctx->ctx_lock);
 }
 
 static int mtk_cam_v4l2_subdev_link_validate(struct v4l2_subdev *sd,

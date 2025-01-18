@@ -539,8 +539,6 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 	if (!ctx)
 		return -EPIPE;
 
-	++ctx->streaming_node_cnt;
-
 	return 0;
 }
 
@@ -550,21 +548,16 @@ static void mtk_cam_vb2_stop_streaming(struct vb2_queue *vq)
 	struct mtk_cam_video_device *node = mtk_cam_vbq_to_vdev(vq);
 	struct mtk_cam_ctx *ctx;
 
-	ctx = mtk_cam_find_ctx(cam, &node->vdev.entity);
-
-	if (!ctx) {
-		// TODO: clean pending?
-		return;
-	}
 	if (CAM_DEBUG_ENABLED(V4L2))
 		dev_info(cam->dev, "%s: node %s\n", __func__, node->desc.name);
 
-	--ctx->streaming_node_cnt;
-	atomic_set(&node->queued_cnt, 0); /* force reset */
-	// TODO: clean pending req?
+	ctx = mtk_cam_find_ctx(cam, &node->vdev.entity);
+	if (!ctx)
+		return;
 
 	if (!mtk_cam_ctx_all_nodes_idle(ctx))
 		return;
+
 	MTK_CAM_TRACE_BEGIN(BASIC, "%s->stop_ctx", __func__);
 	mtk_cam_stop_ctx(ctx, &node->vdev.entity);
 	MTK_CAM_TRACE_END(BASIC);
@@ -638,8 +631,51 @@ static inline long video_ioctl2_with_trace(struct file *file,
 
 	MTK_CAM_TRACE_BEGIN(BASIC, "video_ioctl2(%u)", _IOC_NR(cmd));
 	ret = video_ioctl2(file, cmd, arg);
+	if (ret)
+		pr_info("%s failed", __func__);
 	MTK_CAM_TRACE_END(BASIC);
 
+	return ret;
+}
+
+static long _stream_on_handler_locked(struct mtk_cam_ctx *ctx,
+				      struct mtk_cam_video_device *node)
+{
+	long ret = 0;
+
+	mutex_lock(&ctx->ctx_lock);
+
+	if (mtk_cam_ctx_all_nodes_streaming(ctx)) {
+		dev_info(ctx->cam->dev, "%s %s ctx-%u is already on\n",
+			__func__, node->desc.name, ctx->stream_id);
+		goto EXIT;
+	}
+
+	if (mtk_cam_ctx_all_nodes_idle(ctx)) {  /* 1st node */
+		MTK_CAM_TRACE_BEGIN(BASIC, "%s->prepare_ctx", __func__);
+		ret = mtk_cam_ctx_prepare(ctx);
+		if(ret) {
+			mtk_cam_stop_ctx(ctx, &node->vdev.entity);
+			MTK_CAM_TRACE_END(BASIC);
+			goto EXIT;
+		}
+		MTK_CAM_TRACE_END(BASIC);
+	}
+
+	++ctx->streaming_node_cnt;
+
+	if (mtk_cam_ctx_all_nodes_streaming(ctx)) {  /* last node */
+		MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctx_stream_on", __func__);
+		mtk_cam_ctx_stream_on(ctx);
+		MTK_CAM_TRACE_END(BASIC);
+	}
+
+EXIT:
+	if (CAM_DEBUG_ENABLED(V4L2))
+		dev_info(ctx->cam->dev, "%s %s node_cnt:%d\n", __func__,
+			node->desc.name, ctx->streaming_node_cnt);
+
+	mutex_unlock(&ctx->ctx_lock);
 	return ret;
 }
 
@@ -654,58 +690,66 @@ static long mtk_cam_vidioc_streamon_handler(struct file *file,
 
 	/* mtk_cam_vb2_start_streaming */
 	ret = video_ioctl2_with_trace(file, cmd, arg);
+	if (ret)
+		return ret;
 
 	node = file_to_mtk_cam_node(file);
 	cam = vb2_get_drv_priv(&node->vb2_q);
 	ctx = (cam) ? mtk_cam_find_ctx(cam, &node->vdev.entity) : NULL;
 
-	if (ctx && ctx->streaming_node_cnt == 1) {  /* 1st node */
-		MTK_CAM_TRACE_BEGIN(BASIC, "%s->prepare_ctx", __func__);
-		if(mtk_cam_ctx_prepare(ctx)) {
-			mtk_cam_stop_ctx(ctx, &node->vdev.entity);
-			ret = -1;
-			MTK_CAM_TRACE_END(BASIC);
-			goto EXIT;
-		}
-		MTK_CAM_TRACE_END(BASIC);
-	}
+	if (ctx && node)
+		ret = _stream_on_handler_locked(ctx, node);
+	else  /* should not happen */
+		WARN(1, "%s: no ctx found for %s\n", __func__, node->desc.name);
 
-	if (ctx && mtk_cam_ctx_all_nodes_streaming(ctx)) {  /* last node */
-		MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctx_stream_on", __func__);
-		mtk_cam_ctx_stream_on(ctx);
-		MTK_CAM_TRACE_END(BASIC);
-	}
-
-EXIT:
 	return ret;
 }
 
-static inline void _stream_off_handler_before_ioctl(struct mtk_cam_ctx *ctx,
-						    struct mtk_cam_video_device *node)
+static void _stream_off_handler_locked(struct mtk_cam_ctx *ctx,
+				       struct mtk_cam_video_device *node,
+				       bool dbg_log, char *prefix)
 {
-	if (ctx && atomic_read(&node->queued_cnt)) {
+	mutex_lock(&ctx->ctx_lock);
+
+	if (mtk_cam_ctx_all_nodes_idle(ctx)) {
+		dev_info(ctx->cam->dev, "%s: %s %s ctx-%u is already off\n",
+			prefix, __func__, node->desc.name, ctx->stream_id);
+		goto EXIT;
+	}
+
+	--ctx->streaming_node_cnt;
+
+	if (atomic_read(&node->queued_cnt) ||
+	    mtk_cam_ctx_all_nodes_idle(ctx)) {
 		MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctx_stream_off", __func__);
 		mtk_cam_ctx_stream_off(ctx);
 		MTK_CAM_TRACE_END(BASIC);
 	}
 
-	if (ctx && ctx->streaming_node_cnt == 1) {
+	/* TODO: clean pending? */
+
+	if (mtk_cam_ctx_all_nodes_idle(ctx)) {  /* last node */
 		/* last node before mtk_cam_vb2_stop_streaming */
 		/* for no req in driver and stream off case */
-		MTK_CAM_TRACE_BEGIN(BASIC, "%s->ctx_stream_off insurance", __func__);
-		mtk_cam_ctx_stream_off(ctx);
-		MTK_CAM_TRACE_END(BASIC);
 		MTK_CAM_TRACE_BEGIN(BASIC, "%s->prepare_ctx", __func__);
 		mtk_cam_ctx_unprepare(ctx);
 		MTK_CAM_TRACE_END(BASIC);
 	}
+
+EXIT:
+	if (CAM_DEBUG_ENABLED(V4L2) || dbg_log)
+		dev_info(ctx->cam->dev, "%s: %s %s queued_cnt:%d  node_cnt:%d\n",
+			prefix, __func__, node->desc.name,
+			atomic_read(&node->queued_cnt), ctx->streaming_node_cnt);
+	atomic_set(&node->queued_cnt, 0); /* force reset */
+
+	mutex_unlock(&ctx->ctx_lock);
 }
 
 static long mtk_cam_vidioc_streamoff_handler(struct file *file,
 					     unsigned int cmd,
 					     unsigned long arg)
 {
-	long ret;
 	struct mtk_cam_video_device *node = NULL;
 	struct mtk_cam_device *cam = NULL;
 	struct mtk_cam_ctx *ctx = NULL;
@@ -727,19 +771,17 @@ static long mtk_cam_vidioc_streamoff_handler(struct file *file,
 			atomic_read(&node->queued_cnt));
 
 	if (ctx && node)
-		_stream_off_handler_before_ioctl(ctx, node);
+		_stream_off_handler_locked(ctx, node, false, "stream_off");
 
 	/* mtk_cam_vb2_stop_streaming */
-	ret = video_ioctl2_with_trace(file, cmd, arg);
-
-	return ret;
+	return video_ioctl2_with_trace(file, cmd, arg);
 }
 
 static long mtk_cam_v4l2_file_ioctl(struct file *file,
 				    unsigned int cmd,
 				    unsigned long arg)
 {
-	int ret;
+	long ret;
 
 	switch(cmd) {
 	case VIDIOC_STREAMON:
@@ -784,14 +826,10 @@ static int mtk_cam_vb2_fop_release(struct file *file)
 
 	if (!vdev->queue->owner || file->private_data == vdev->queue->owner) {
 		if (ctx && node)
-			_stream_off_handler_before_ioctl(ctx, node);
+			_stream_off_handler_locked(ctx, node, true, "release");
 
 		/* mtk_cam_vb2_stop_streaming */
 		vb2_queue_release(vdev->queue);
-
-		/* power off insurance */
-		if (ctx && mtk_cam_ctx_all_nodes_idle(ctx))
-			mtk_cam_power_ctrl_ccu(ctx->cam->dev, 0);
 
 		vdev->queue->owner = NULL;
 	}
