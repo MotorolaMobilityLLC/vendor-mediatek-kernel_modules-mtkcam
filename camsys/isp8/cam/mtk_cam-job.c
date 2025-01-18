@@ -7075,7 +7075,7 @@ int mtk_cam_job_update_clk_switching(struct mtk_cam_job *job, bool begin)
 	return mtk_cam_dvfs_switch_begin(&cam->dvfs, ctx->stream_id,
 					 freq_hz, boostable);
 }
-#define TIMEOUT_ENQUE_NS 10000000000
+#define TIMEOUT_ENQUE_NS 11000000000
 int mtk_cam_job_is_enque_timeout(struct mtk_cam_job *job)
 {
 	u64 local_job_enque_ts;
@@ -7086,10 +7086,17 @@ int mtk_cam_job_is_enque_timeout(struct mtk_cam_job *job)
 
 	local_ts = local_clock();
 	local_job_enque_ts = job->local_enqueue_isp_ts;
+	/* long exp case if user did handle exp_ns*/
 	if (longest_exp_ns > TIMEOUT_ENQUE_NS)
 		timeout_ns = longest_exp_ns * 2;
-	dev_info(job->src_ctx->cam->dev, "[%s] job #%d (ts/enque:%llu/%llu) to_ns:%llu\n",
-		__func__, job->frame_seq_no, local_ts, local_job_enque_ts, timeout_ns);
+	dev_info(job->src_ctx->cam->dev, "[%s] job 0x%x (ts/enque:%llu/%llu) to_ns:%llu ref_sof:%llu\n",
+		__func__, job->frame_seq_no, local_ts, local_job_enque_ts, timeout_ns,
+		job->job_state.reference_sof_ns);
+	/* another long exp case if user did not handle exp_ns*/
+	if (job->job_state.reference_sof_ns != 0)
+		return 0;
+	if (local_job_enque_ts == 0)
+		return 0;
 	if (local_ts - local_job_enque_ts > timeout_ns)
 		ret = 1;
 
