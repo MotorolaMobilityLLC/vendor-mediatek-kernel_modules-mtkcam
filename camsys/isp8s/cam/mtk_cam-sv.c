@@ -2192,35 +2192,58 @@ void mtk_cam_sv_copy_user_input_param(struct mtk_cam_ctx *ctx, struct mtk_cam_jo
 
 }
 
-void camsv_dump_dma_debug_data(struct mtk_camsv_device *sv_dev)
+void mtk_cam_sv_fifo_dump(struct mtk_camsv_device *sv_dev)
 {
-	u32 smi_crc_address, smi_crc_data, tag1_tag2_crc, len1_len2_crc, smi_cnt;
-	u32 debug_img1, debug_len1, cmd_cnt_img1, cmd_cnt_len1;
+	unsigned int tmp_dbg_sel, dbg_port;
+	unsigned int dbg_port1, dbg_port2, dbg_port3, dbg_port4;
+	unsigned int dbg_port5, dbg_port6, dbg_port7, dbg_port8;
+	unsigned int mask_dbg_port, mask_dma_core, mask_sub_module;
 
-	writel_relaxed(0x00010001, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
-	smi_crc_address = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
-	writel_relaxed(0x00010003, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
-	smi_crc_data = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
-	writel_relaxed(0x00010005, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
-	tag1_tag2_crc = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
-	writel_relaxed(0x00010009, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
-	len1_len2_crc = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
-	writel_relaxed(0x0001000F, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
-	smi_cnt = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
-	writel_relaxed(0x0001010B, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
-	debug_img1 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
-	writel_relaxed(0x0001010C, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
-	debug_len1 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
-	writel_relaxed(0x0001010E, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
-	cmd_cnt_img1 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
-	writel_relaxed(0x0001090E, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
-	cmd_cnt_len1 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
+	for (int dma_core = 0; dma_core < MAX_DMA_CORE; dma_core++) {
 
-	dev_info_ratelimited(sv_dev->dev,
-		"dma_top_debug:0x%x_0x%x_0x%x_0x%x_0x%x_0x%x_0x%x_0x%x_0x%x\n",
-		smi_crc_address, smi_crc_data, tag1_tag2_crc, len1_len2_crc,
-		smi_cnt, debug_img1, debug_len1, cmd_cnt_img1,
-		cmd_cnt_len1);
+		tmp_dbg_sel = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
+		mask_dma_core = 0x30; //[5,4]
+		tmp_dbg_sel &= ~mask_dma_core;
+		tmp_dbg_sel |= (dma_core & 0x3) << 4;
+		writel_relaxed(tmp_dbg_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
+
+		for (int sel = 1; sel < 16; sel++) {
+			tmp_dbg_sel = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
+			mask_dbg_port = 0xf; //[3,2,1,0]
+			tmp_dbg_sel &= ~mask_dbg_port;
+			tmp_dbg_sel |= sel & 0xf;
+			writel_relaxed(tmp_dbg_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
+			if (sel == 4) {
+				for (int sub_module = 0; sub_module < SVTAG_END; sub_module++) {
+					mask_sub_module = 0x700; //[10,9,8]
+					tmp_dbg_sel &= ~mask_sub_module;
+					tmp_dbg_sel |= (sub_module & 0x7) << 8;
+					writel_relaxed(tmp_dbg_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
+					dbg_port = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
+					dev_info(sv_dev->dev, "tag:%d => crc_of_sram = 0x%x\n", sub_module, dbg_port);
+				}
+			} else {
+				dbg_port = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
+				dev_info(sv_dev->dev, "[core%d] dbg_sel:%d => dbg_port = 0x%x\n",
+					dma_core, sel, dbg_port);
+			}
+		}
+
+		dbg_port1 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT1);
+		dbg_port2 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT2);
+		dbg_port3 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT3);
+		dbg_port4 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT4);
+		dbg_port5 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT5);
+		dbg_port6 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT6);
+		dbg_port7 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT7);
+		dbg_port8 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT8);
+
+		dev_info(sv_dev->dev,
+			"[core%d] urg_dur:0x%x glwdata_urg_ult_pult:0x%x_0x%x_0x%x max_fifo 0x%x, dbg_dspch:0x%x dq_img:0x%x dq_len:0x%x\n",
+			dma_core, dbg_port1, dbg_port2, dbg_port3, dbg_port4,
+			dbg_port5, dbg_port6, dbg_port7, dbg_port8);
+	}
+
 }
 
 int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tags)
@@ -2310,9 +2333,6 @@ int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tag
 	dev_info_ratelimited(sv_dev->dev, "first_tag:0x%x last_tag:0x%x\n",
 		first_tag, last_tag);
 
-	/* dump dma debug data */
-	camsv_dump_dma_debug_data(sv_dev);
-
 	if (atomic_read(&sv_dev->is_fifo_full)) {
 		need_smi_dump = true;
 		atomic_set(&sv_dev->is_fifo_full, 0);
@@ -2390,6 +2410,7 @@ void camsv_handle_err(
 
 		if (DISABLE_RECOVER_FLOW) {
 			mtk_cam_bwr_dbg_dump(sv_dev->cam->bwr);
+			mtk_cam_sv_fifo_dump(sv_dev);
 #ifdef SKIP_IN_FPGA_EP
 			mmdvfs_debug_status_dump(NULL);
 #if KERNEL_VERSION(6, 7, 0) >= LINUX_VERSION_CODE

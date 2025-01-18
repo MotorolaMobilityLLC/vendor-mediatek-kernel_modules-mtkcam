@@ -17,6 +17,7 @@
 #define MAX_SV_HW_GROUPS 4
 #define CAMSV_IRQ_NUM 3
 #define MAX_SV_HW_NUM 6
+#define MAX_DMA_CORE 3
 
 enum SV_SMI_PORT_ID {
 	SMI_PORT0_SV_CQI = 0,
@@ -265,6 +266,7 @@ void mtk_cam_sv_copy_user_input_param(struct mtk_cam_ctx *ctx,	struct mtk_cam_jo
 	void *vaddr, struct mtk_mraw_pipeline *mraw_pipe);
 void sv_reset(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_reset_msgfifo(struct mtk_camsv_device *sv_dev);
+void mtk_cam_sv_fifo_dump(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tags);
 int mtk_cam_sv_dev_config(struct mtk_camsv_device *sv_dev, unsigned int sub_ratio,
 	int frm_time_us);
