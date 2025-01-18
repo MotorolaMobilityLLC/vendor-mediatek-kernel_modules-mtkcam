@@ -1272,6 +1272,7 @@ static int scp_state_notify(struct notifier_block *this,
 		}
 
 		// Recovery the interruped session
+		atomic_set(&(core_info->scp_ready), 3);
 		if (atomic_read(&(core_info->aov_ready))) {
 			(void)aov_core_recover(aov_dev);
 		}
