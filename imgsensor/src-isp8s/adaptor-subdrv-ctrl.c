@@ -1132,6 +1132,11 @@ void set_max_framerate_by_scenario(struct subdrv_ctx *ctx,
 			ctx->s_ctx.mode[scenario_id].linelength);
 		return;
 	}
+	if (framerate > ctx->s_ctx.mode[scenario_id].max_framerate) {
+		DRV_LOGE(ctx, "framerate (%u) is greater than max_framerate (%u)\n",
+			framerate, ctx->s_ctx.mode[scenario_id].max_framerate);
+		framerate = ctx->s_ctx.mode[scenario_id].max_framerate;
+	}
 	if (ctx->s_ctx.mode[scenario_id].hdr_mode == HDR_RAW_LBMF) {
 		set_max_framerate_in_lut_by_scenario(ctx, scenario_id, framerate);
 		return;
@@ -1310,7 +1315,9 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 				ctx->current_scenario_id, &linetime_in_ns, 0);
 			ctx->current_fps = 1000000000 / linetime_in_ns / ctx->frame_length * 10;
 		} else {
-			ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+			ctx->current_fps = ctx->s_ctx.mode[scenario_id].pclk /
+							ctx->frame_length * 10 /
+							ctx->s_ctx.mode[scenario_id].linelength;
 		}
 
 		ctx->min_frame_length = ctx->frame_length;
@@ -2636,12 +2643,12 @@ void streaming_control(struct subdrv_ctx *ctx, bool enable)
 		}
 		subdrv_ixc_wr_u8(ctx, ctx->s_ctx.reg_addr_stream, 0x00);
 		if (ctx->s_ctx.reg_addr_fast_mode && ctx->fast_mode_on) {
-			ctx->fast_mode_on = FALSE;
-			ctx->ref_sof_cnt = 0;
 			DRV_LOG(ctx, "seamless_switch disabled.");
 			set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_fast_mode, 0x00);
 			commit_i2c_buffer(ctx);
 		}
+		ctx->fast_mode_on = FALSE;
+		ctx->ref_sof_cnt = 0;
 		memset(ctx->exposure, 0, sizeof(ctx->exposure));
 		memset(ctx->ana_gain, 0, sizeof(ctx->ana_gain));
 		ctx->autoflicker_en = FALSE;
