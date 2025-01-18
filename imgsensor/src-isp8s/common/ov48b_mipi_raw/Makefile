@@ -2,8 +2,8 @@
 # Copyright (C) 2020 MediaTek Inc.
 
 # enable ISF version and ISF dbg
-ISF_DRV := 0
-ISF_DBG := 1
+ISF_DRV := 1
+ISF_DBG := 0
 
 ifeq ($(ISF_DRV),1)
 
