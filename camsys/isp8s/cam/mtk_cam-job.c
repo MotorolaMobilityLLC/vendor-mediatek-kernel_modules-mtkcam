@@ -4566,7 +4566,7 @@ static void update_job_state_init_sensor_param(struct mtk_cam_job *job)
 	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
 
 	// NOTE: update FL with 'stable_frm_len_ns' for this sensor request
-	if (ctrl_data->rc_data.stable_frm_len_ns != 0)
+	if (ctrl_data && ctrl_data->rc_data.stable_frm_len_ns != 0)
 		ctrl->frame_interval_ns = ctrl_data->rc_data.stable_frm_len_ns;
 
 	if (job->src_ctx->last_req_exposue.long_exposure_flow) {
