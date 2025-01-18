@@ -684,7 +684,9 @@ static int mtk_cam_vb2_fop_release(struct file *file)
 	struct mtk_cam_video_device *node = file_to_mtk_cam_node(file);
 	struct mtk_cam_device *cam = vb2_get_drv_priv(&node->vb2_q);
 	struct mtk_cam_ctx *ctx;
-
+#ifdef MTK_CAM_KTHREAD_PRE_ALLOC
+	int i;
+#endif
 	if (lock)
 		mutex_lock(lock);
 
@@ -705,8 +707,33 @@ static int mtk_cam_vb2_fop_release(struct file *file)
 	}
 	if (lock)
 		mutex_unlock(lock);
-
+#ifdef MTK_CAM_KTHREAD_PRE_ALLOC
+	/* check by all pipe (each main-stream), destroy all while all ctxs is stop */
+	if (cam->ctxs && !mtk_cam_is_any_streaming(cam) &&
+	    node->desc.id == MTK_RAW_MAIN_STREAM_OUT) {
+		dev_info(cam->dev, "%s, destroy kthread", __func__);
+		for (i = 0; i < cam->max_stream_num; i++)  /* check all */
+			mtk_cam_ctx_destroy_workers(&cam->ctxs[i]);
+	}
+#endif
 	return v4l2_fh_release(file);
+}
+
+static int mtk_cam_v4l2_fh_open(struct file *file)
+{
+#ifdef MTK_CAM_KTHREAD_PRE_ALLOC
+	struct mtk_cam_video_device *node = file_to_mtk_cam_node(file);
+	struct mtk_cam_device *cam = vb2_get_drv_priv(&node->vb2_q);
+	int i;
+
+	if (cam->ctxs && node->uid.pipe_id == 0 && /* one node only */
+	    node->desc.id == MTK_RAW_MAIN_STREAM_OUT) {
+		dev_info(cam->dev, "%s, pre-create kthread", __func__);
+		for (i = 0; i < 3 && i < cam->max_stream_num; i++)
+			mtk_cam_ctx_alloc_workers(&cam->ctxs[i]);
+	}
+#endif
+	return v4l2_fh_open(file);
 }
 
 static const struct vb2_ops mtk_cam_vb2_ops = {
@@ -730,7 +757,7 @@ static const struct vb2_ops mtk_cam_vb2_ops = {
 
 static const struct v4l2_file_operations mtk_cam_v4l2_fops = {
 	.unlocked_ioctl = mtk_cam_v4l2_file_ioctl,
-	.open = v4l2_fh_open,
+	.open = mtk_cam_v4l2_fh_open,
 	.release = mtk_cam_vb2_fop_release,
 	.poll = vb2_fop_poll,
 	.mmap = vb2_fop_mmap,

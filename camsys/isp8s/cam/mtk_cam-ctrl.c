@@ -2359,7 +2359,7 @@ void mtk_cam_ctrl_stop(struct mtk_cam_ctrl *cam_ctrl)
 #endif
 	}
 	/* should wait stream-on/seamless switch finished before stopping */
-	kthread_flush_worker(&ctx->flow_worker);
+	kthread_flush_worker(&ctx->kthread_packs[MTK_CAM_KTHREAD_FLOW].kworker);
 
 	/* stop procedure
 	 * 1. mark 'stopped' status to skip further processing
@@ -2407,9 +2407,9 @@ void mtk_cam_ctrl_stop(struct mtk_cam_ctrl *cam_ctrl)
 	mtk_cam_ctx_engine_clear(ctx);
 
 	/* await done work finished */
-	kthread_flush_worker(&ctx->done_worker);
-	kthread_flush_worker(&ctx->sensor_worker);
-	kthread_flush_worker(&ctx->tuning_worker);
+	kthread_flush_worker(&ctx->kthread_packs[MTK_CAM_KTHREAD_DONE].kworker);
+	kthread_flush_worker(&ctx->kthread_packs[MTK_CAM_KTHREAD_SENSOR].kworker);
+	kthread_flush_worker(&ctx->kthread_packs[MTK_CAM_KTHREAD_TUNING].kworker);
 
 	INIT_LIST_HEAD(&job_list);
 

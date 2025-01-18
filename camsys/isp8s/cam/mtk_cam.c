@@ -1852,61 +1852,74 @@ mtk_cam_ctx_create_task(struct mtk_cam_ctx *ctx,
 	return task;
 }
 
-static int mtk_cam_ctx_alloc_workers(struct mtk_cam_ctx *ctx)
+int mtk_cam_ctx_alloc_workers(struct mtk_cam_ctx *ctx)
 {
-	kthread_init_worker(&ctx->sensor_worker);
-	ctx->sensor_worker_task =
-		mtk_cam_ctx_create_task(ctx, "sensor_worker",
-					&ctx->sensor_worker, true);
-	if (!ctx->sensor_worker_task)
-		return -1;
+	int i;
+	char *name_table[MTK_CAM_KTHREAD_NUM] = {
+		[MTK_CAM_KTHREAD_SENSOR] = "sensor_worker",
+		[MTK_CAM_KTHREAD_FLOW] = "camsys_worker",
+		[MTK_CAM_KTHREAD_DONE] = "camsys_done",
+		[MTK_CAM_KTHREAD_TUNING] = "camsys_tuning",
+	};
+	bool prio_table[MTK_CAM_KTHREAD_NUM] = {
+		[MTK_CAM_KTHREAD_SENSOR] = true,
+		[MTK_CAM_KTHREAD_FLOW] = true,
+		[MTK_CAM_KTHREAD_DONE] = true,
+		[MTK_CAM_KTHREAD_TUNING] = true,
+	};
 
-	kthread_init_worker(&ctx->flow_worker);
-	ctx->flow_task =
-		mtk_cam_ctx_create_task(ctx, "camsys_worker",
-					&ctx->flow_worker, true);
-	if (!ctx->flow_task)
-		goto fail_uninit_sensor_worker_task;
+	if (CAM_DEBUG_ENABLED(CTRL))
+		dev_info(ctx->cam->dev, "%s:%d: %p/%p/%p/%p\n",
+			__func__, ctx->stream_id,
+			ctx->kthread_packs[MTK_CAM_KTHREAD_SENSOR].worker_task,
+			ctx->kthread_packs[MTK_CAM_KTHREAD_FLOW].worker_task,
+			ctx->kthread_packs[MTK_CAM_KTHREAD_DONE].worker_task,
+			ctx->kthread_packs[MTK_CAM_KTHREAD_TUNING].worker_task);
 
-	kthread_init_worker(&ctx->done_worker);
-	ctx->done_task =
-		mtk_cam_ctx_create_task(ctx, "camsys_done",
-					     &ctx->done_worker, true);
-	if (!ctx->done_task)
-		goto fail_uninit_flow_worker_task;
-
-	kthread_init_worker(&ctx->tuning_worker);
-	ctx->tuning_task =
-		mtk_cam_ctx_create_task(ctx, "camsys_tuning",
-					     &ctx->tuning_worker, true);
-	if (!ctx->tuning_task)
-		goto fail_uninit_done_worker_task;
+	for (i = MTK_CAM_KTHREAD_START; i < MTK_CAM_KTHREAD_NUM; i++) {
+		if (!ctx->kthread_packs[i].worker_task) {
+			kthread_init_worker(&ctx->kthread_packs[i].kworker);
+			ctx->kthread_packs[i].worker_task =
+				mtk_cam_ctx_create_task(ctx,
+							name_table[i],
+							&ctx->kthread_packs[i].kworker,
+							prio_table[i]);
+			if (!ctx->kthread_packs[i].worker_task)
+				goto fail_uninit_worker_task;
+		}
+	}
 
 	return 0;
 
-fail_uninit_done_worker_task:
-	kthread_stop(ctx->done_task);
-	ctx->done_task = NULL;
-fail_uninit_flow_worker_task:
-	kthread_stop(ctx->flow_task);
-	ctx->flow_task = NULL;
-fail_uninit_sensor_worker_task:
-	kthread_stop(ctx->sensor_worker_task);
-	ctx->sensor_worker_task = NULL;
+fail_uninit_worker_task:
+	for (; i >= MTK_CAM_KTHREAD_START; i--) {
+		if (ctx->kthread_packs[i].worker_task) {
+			kthread_stop(ctx->kthread_packs[i].worker_task);
+			ctx->kthread_packs[i].worker_task = NULL;
+		}
+	}
 
 	return -1;
 }
 
-static void mtk_cam_ctx_destroy_workers(struct mtk_cam_ctx *ctx)
+void mtk_cam_ctx_destroy_workers(struct mtk_cam_ctx *ctx)
 {
-	kthread_stop(ctx->sensor_worker_task);
-	ctx->sensor_worker_task = NULL;
-	kthread_stop(ctx->flow_task);
-	ctx->flow_task = NULL;
-	kthread_stop(ctx->done_task);
-	ctx->done_task = NULL;
-	kthread_stop(ctx->tuning_task);
-	ctx->tuning_task = NULL;
+	int i;
+
+	if (CAM_DEBUG_ENABLED(CTRL))
+		dev_info(ctx->cam->dev, "%s:%d: %p/%p/%p/%p\n",
+			__func__, ctx->stream_id,
+			ctx->kthread_packs[MTK_CAM_KTHREAD_SENSOR].worker_task,
+			ctx->kthread_packs[MTK_CAM_KTHREAD_FLOW].worker_task,
+			ctx->kthread_packs[MTK_CAM_KTHREAD_DONE].worker_task,
+			ctx->kthread_packs[MTK_CAM_KTHREAD_TUNING].worker_task);
+
+	for (i = MTK_CAM_KTHREAD_START; i < MTK_CAM_KTHREAD_NUM; i++) {
+		if (ctx->kthread_packs[i].worker_task) {
+			kthread_stop(ctx->kthread_packs[i].worker_task);
+			ctx->kthread_packs[i].worker_task = NULL;
+		}
+	}
 }
 
 static struct dma_buf *_alloc_dma_buf(const char *name,
@@ -2837,12 +2850,20 @@ static void mtk_cam_ctx_reset(struct mtk_cam_ctx *ctx)
 {
 	struct mtk_cam_device *cam = ctx->cam;
 	unsigned int stream_id = ctx->stream_id;
-
+#ifdef MTK_CAM_KTHREAD_PRE_ALLOC
+	struct mtk_cam_kthread_pack cached[MTK_CAM_KTHREAD_NUM];
+	/* cached the pre alloc kthread */
+	memcpy(cached, ctx->kthread_packs, sizeof(cached));
+#endif
 	/* clear all, except cam & stream_id */
 	memset(ctx, 0, sizeof(*ctx));
 	ctx->cam = cam;
 	ctx->stream_id = stream_id;
 	ctx->rms_disable = 0;
+#ifdef MTK_CAM_KTHREAD_PRE_ALLOC
+	/* keep the pre alloc kthread */
+	memcpy(ctx->kthread_packs, cached, sizeof(cached));
+#endif
 }
 
 static void config_pool_job(void *data, int index, void *element)
@@ -2878,7 +2899,11 @@ static int mtk_cam_ctx_init_job_pool(struct mtk_cam_ctx *ctx)
 
 	return mtk_cam_pool_config(&ctx->job_pool, config_pool_job, ctx->jobs);
 }
-
+#ifdef MTK_CAM_KTHREAD_PRE_ALLOC
+#define NO_STOP_THREAD_NUM 3
+#else
+#define NO_STOP_THREAD_NUM 0
+#endif
 struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 				      struct mtk_cam_video_device *node)
 {
@@ -2938,7 +2963,8 @@ fail_destroy_img_pool:
 fail_destroy_pools:
 	mtk_cam_ctx_destroy_pool(ctx);
 fail_destroy_workers:
-	mtk_cam_ctx_destroy_workers(ctx);
+	if (ctx->stream_id >= NO_STOP_THREAD_NUM)
+		mtk_cam_ctx_destroy_workers(ctx);
 fail_pipeline_stop:
 	mtk_cam_ctx_pipeline_stop(ctx, entity);
 fail_ctx_put:
@@ -2971,7 +2997,9 @@ void mtk_cam_stop_ctx(struct mtk_cam_ctx *ctx, struct media_entity *entity)
 	mtk_cam_ctx_release_slb(ctx);
 	mtk_cam_ctx_release_slc(ctx);
 
-	mtk_cam_ctx_destroy_workers(ctx);
+	if (ctx->stream_id >= NO_STOP_THREAD_NUM)
+		mtk_cam_ctx_destroy_workers(ctx);
+
 	mtk_cam_ctx_pipeline_stop(ctx, entity);
 	mtk_cam_pool_destroy(&ctx->job_pool);
 
@@ -3612,25 +3640,29 @@ static int ctx_kthread_queue_work(struct mtk_cam_ctx *ctx,
 int mtk_cam_ctx_queue_sensor_worker(struct mtk_cam_ctx *ctx,
 				    struct kthread_work *work)
 {
-	return ctx_kthread_queue_work(ctx, &ctx->sensor_worker, work, __func__);
+	return ctx_kthread_queue_work(ctx, &ctx->kthread_packs[MTK_CAM_KTHREAD_SENSOR].kworker,
+				      work, __func__);
 }
 
 int mtk_cam_ctx_queue_done_worker(struct mtk_cam_ctx *ctx,
 				  struct kthread_work *work)
 {
-	return ctx_kthread_queue_work(ctx, &ctx->done_worker, work, __func__);
+	return ctx_kthread_queue_work(ctx, &ctx->kthread_packs[MTK_CAM_KTHREAD_DONE].kworker,
+				      work, __func__);
 }
 
 int mtk_cam_ctx_queue_flow_worker(struct mtk_cam_ctx *ctx,
 				  struct kthread_work *work)
 {
-	return ctx_kthread_queue_work(ctx, &ctx->flow_worker, work, __func__);
+	return ctx_kthread_queue_work(ctx, &ctx->kthread_packs[MTK_CAM_KTHREAD_FLOW].kworker,
+				      work, __func__);
 }
 
 int mtk_cam_ctx_queue_tuning_worker(struct mtk_cam_ctx *ctx,
-				  struct kthread_work *work)
+				    struct kthread_work *work)
 {
-	return ctx_kthread_queue_work(ctx, &ctx->tuning_worker, work, __func__);
+	return ctx_kthread_queue_work(ctx, &ctx->kthread_packs[MTK_CAM_KTHREAD_TUNING].kworker,
+				      work, __func__);
 }
 
 /* fetch devs & reset unused elements */

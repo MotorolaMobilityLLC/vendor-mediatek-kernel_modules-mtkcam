@@ -70,6 +70,21 @@ struct mtk_cam_adl_work {
 	bool is_dc;
 };
 
+struct mtk_cam_kthread_pack {
+	char name[32];
+	struct task_struct *worker_task;
+	struct kthread_worker kworker;
+};
+
+enum MTK_CAM_KTHREAD {
+	MTK_CAM_KTHREAD_START = 0,
+	MTK_CAM_KTHREAD_SENSOR = MTK_CAM_KTHREAD_START,
+	MTK_CAM_KTHREAD_DONE,
+	MTK_CAM_KTHREAD_FLOW,
+	MTK_CAM_KTHREAD_TUNING,
+	MTK_CAM_KTHREAD_NUM,
+};
+
 struct mtk_cam_buf_fmt_desc *get_fmt_desc(
 		struct mtk_cam_driver_buf_desc *buf_desc);
 int update_buf_fmt_desc(struct mtk_cam_driver_buf_desc *desc,
@@ -114,14 +129,8 @@ struct mtk_cam_ctx {
 	struct completion session_complete;
 	struct completion session_flush;
 
-	struct task_struct *sensor_worker_task;
-	struct kthread_worker sensor_worker;
-	struct task_struct *flow_task;
-	struct kthread_worker flow_worker;
-	struct task_struct *done_task;
-	struct kthread_worker done_worker;
-	struct task_struct *tuning_task;
-	struct kthread_worker tuning_worker;
+	struct mtk_cam_kthread_pack kthread_packs[MTK_CAM_KTHREAD_NUM];
+
 	char str_ae_data[1024];
 
 	struct mtk_cam_device_buf cq_buffer;
@@ -547,6 +556,9 @@ mtk_cam_device_refcnt_buf_create(struct device *dev_to_attach,
 void mtk_cam_device_refcnt_buf_destroy(struct kref *ref);
 void mtk_cam_device_refcnt_buf_get(struct mtk_cam_device_refcnt_buf *buf);
 void mtk_cam_device_refcnt_buf_put(struct mtk_cam_device_refcnt_buf *buf);
+
+int mtk_cam_ctx_alloc_workers(struct mtk_cam_ctx *ctx);
+void mtk_cam_ctx_destroy_workers(struct mtk_cam_ctx *ctx);
 
 int mtk_cam_assign_ltms_buffer(struct mtk_cam_ctx *ctx,
 			 struct mtk_cam_pool_buffer *in,
