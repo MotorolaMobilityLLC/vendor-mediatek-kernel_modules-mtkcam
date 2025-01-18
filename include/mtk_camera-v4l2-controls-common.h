@@ -362,6 +362,62 @@ struct mtk_cam_broadcast_info {
 #define V4L2_CMD_G_SENSOR_CTLE_PARAM \
 	(V4L2_CMD_USER_MTK_SENSOR_BASE + 21)
 
+#define V4L2_CMD_EINT_NOTIFY_VSYNC \
+	(V4L2_CMD_USER_MTK_SENSOR_BASE + 22)
+
+#define V4L2_CMD_EINT_NOTIFY_IRQ_EN \
+	(V4L2_CMD_USER_MTK_SENSOR_BASE + 23)
+
+#define V4L2_CMD_EINT_SETUP_CB_FUNC_OF_SENSOR \
+	(V4L2_CMD_USER_MTK_SENSOR_BASE + 24)
+
+
+/**
+ * EINT
+ *
+ */
+enum mtk_cam_seninf_eint_cb_cmd {
+	EINT_CB_CMD_NOTIFY_STREAMON,
+	EINT_CB_CMD_NOTIFY_SEAMLESS_SWITCH,
+};
+
+struct mtk_cam_seninf_eint_irq_en_info {
+	__u32 eint_no;
+	__u32 tsrec_idx;
+	__u32 flag;
+};
+
+#define EINT_TS_REC_MAX_CNT 4
+struct mtk_cam_seninf_eint_timestamp_info {
+	/* source info */
+	__u32 eint_no;
+	__u32 tsrec_idx;
+
+	/* basic info */
+	__u64 tick;
+	__u32 tick_factor; // MHz
+
+	int irq_seq_no;
+	/* record when receive a interrupt (top-half) */
+	__u64 irq_sys_time_ns; /* ktime_get_boottime_ns() */
+	__u64 irq_mono_time_ns; /* ktime_get_ns() */
+
+	__u64 ts_us[EINT_TS_REC_MAX_CNT];
+};
+
+/* call back function prototype, see mtk_cam-seninf-eint.c */
+typedef int (*eint_cb_handler_func_ptr)(const int eint_no,
+	const unsigned int cmd,
+	void *arg,
+	const char *caller);
+
+struct mtk_cam_seninf_eint_cb_info {
+	int eint_no;
+	__u32 tsrec_idx;
+	__u32 is_start;
+	eint_cb_handler_func_ptr eint_cb_handler;
+};
+
 /**
  * TSREC - notify vsync structure
  *         V4L2_CMD_TSREC_NOTIFY_VSYNC
@@ -471,6 +527,9 @@ struct mtk_cam_seninf_tsrec_cb_info {
 
 #define V4L2_CID_GET_CSI2_IRQ_STATUS \
 	(V4L2_CID_USER_MTK_SENINF_BASE + 8)
+
+#define V4L2_CID_MTK_SENINF_EINT_IRQ_EN \
+	(V4L2_CID_USER_MTK_SENINF_BASE + 9)
 
 /* C A M S Y S */
 
