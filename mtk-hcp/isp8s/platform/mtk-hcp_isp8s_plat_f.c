@@ -1442,28 +1442,28 @@ error:
 			mb->d_buf, mb->start_virt, mb->start_dma);
 	} else {
 #if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
-		if (d_buf && start_virt)
+		if (!IS_ERR_OR_NULL(d_buf) && start_virt)
 			dma_buf_vunmap_unlocked(d_buf, &map);
 
-		if (attachment && sgt && start_dma)
+		if (!IS_ERR_OR_NULL(attachment) && !IS_ERR_OR_NULL(sgt) && start_dma)
 			dma_buf_unmap_attachment_unlocked(
 				attachment,
 				sgt,
 				DMA_BIDIRECTIONAL);
 
 #else
-		if (d_buf && start_virt)
+		if (!IS_ERR_OR_NULL(d_buf) && start_virt)
 			dma_buf_vunmap(d_buf, &map);
 
-		if (attachment && sgt && start_dma)
+		if (!IS_ERR_OR_NULL(attachment) && !IS_ERR_OR_NULL(sgt) && start_dma)
 			dma_buf_unmap_attachment(
 				attachment,
 				sgt,
 				DMA_BIDIRECTIONAL);
 #endif
-		if (d_buf && attachment)
+		if (!IS_ERR_OR_NULL(d_buf) && !IS_ERR_OR_NULL(attachment))
 			dma_buf_detach(d_buf, attachment);
-		if (d_buf)
+		if (!IS_ERR_OR_NULL(d_buf))
 			dma_buf_put(d_buf);
 	}
 
