@@ -9887,7 +9887,7 @@
 #define REG_LTMSGO_R1_BASE     0x1770
 #define REG_LTMSTO_R1_BASE     0x17c0
 #define REG_LTMSTO_R2_BASE     0x1810
-#define REG_DRZB2NO_R1_BASE    0x1730
+#define REG_DRZB2NO_R1_BASE    0x1860
 #define REG_GMPO_R1_BASE       0x19a0
 #define REG_GRMGO_R1_BASE      0x19f0
 #define REG_STATCOLO_R1_BASE   0x1a40

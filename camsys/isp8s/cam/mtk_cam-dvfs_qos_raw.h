@@ -54,17 +54,25 @@ enum STATS_DMA_PORT {
 	PORT_UNKNOWN = 0,
 	PORT_CQI,
 	//meta-0
-	PORT_AWBO,
+	PORT_AWBO_R1,
 	PORT_AWBO_R2,
 	PORT_AEO,
 	PORT_AEHO,
+	PORT_AEDO,
+	PORT_STATCOLO,
 	PORT_LTMSBO,
 	PORT_LTMSGO,
-	PORT_TSFSO,
-	PORT_AFO,
-	PORT_TCYSO,
 	PORT_FLKO,
+	PORT_DFLKO,
+	PORT_DFLKBO,
+	PORT_TSFSO_R1,
+	PORT_TSFSO_R2,
+	PORT_TSFSO_R3,
+	PORT_TSFSO_R4,
+	PORT_TCYSO,
 	PORT_PDO,
+	//meta-1
+	PORT_AFO,
 	//meta-cfg
 	PORT_CACI,
 	PORT_BPCI,
@@ -158,7 +166,7 @@ static struct qos_dma_desc stats_0_dmas[] = {
 	{
 		.dma_name = "awbo_r1",
 		.domain = RAW_DOMAIN,
-		.src_port = PORT_AWBO,
+		.src_port = PORT_AWBO_R1,
 		.dst_port = SMI_PORT_AWBO_R1,
 	},
 	{
@@ -182,7 +190,7 @@ static struct qos_dma_desc stats_0_dmas[] = {
 	{
 		.dma_name = "tsfso_r1",
 		.domain = RAW_DOMAIN,
-		.src_port = PORT_TSFSO,
+		.src_port = PORT_TSFSO_R1,
 		.dst_port = SMI_PORT_DRZB2NBO_R1,
 	},
 	{
