@@ -512,7 +512,8 @@ void write_frame_length(struct subdrv_ctx *ctx, u32 fll)
 	if (ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_STAGGER)
 		dol_cnt = ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt;
 
-	fll = fll / dol_cnt;
+	if (!(ctx->s_ctx.stagger_fl_type == IMGSENSOR_STAGGER_FL_MANUAL))
+		fll = fll / dol_cnt;
 
 	if (ctx->extend_frame_length_en == FALSE) {
 		if (addr_ll) {
@@ -1747,6 +1748,17 @@ void set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 	u32 cit_step = 0;
 	u32 fll = 0, fll_temp = 0, s_fll;
 
+	if (ctx->s_ctx.stagger_rg_orger == IMGSENSOR_STAGGER_RG_SE_FIRST) {
+		/* swapping for customized sensor */
+		u32 exposure[IMGSENSOR_STAGGER_EXPOSURE_CNT]; /* recover L and S exposure */
+
+		for (i = 0; i < exp_cnt; i++)
+			exposure[exp_cnt -1 - i] = (u32) shutters[i];
+
+		for (i = 0; i < exp_cnt; i++)
+			shutters[i] = exposure[i];
+	}
+
 	fll = frame_length ? frame_length : ctx->min_frame_length;
 	if (exp_cnt > ARRAY_SIZE(ctx->exposure)) {
 		DRV_LOGE(ctx, "invalid exp_cnt:%u>%lu\n", exp_cnt, ARRAY_SIZE(ctx->exposure));
@@ -2245,6 +2257,18 @@ void set_multi_gain(struct subdrv_ctx *ctx, u32 *gains, u16 exp_cnt)
 		DRV_LOGE(ctx, "invalid exp_cnt:%u>%lu\n", exp_cnt, ARRAY_SIZE(ctx->ana_gain));
 		exp_cnt = ARRAY_SIZE(ctx->ana_gain);
 	}
+
+	if (ctx->s_ctx.stagger_rg_orger == IMGSENSOR_STAGGER_RG_SE_FIRST) {
+		/* swapping for customized sensor */
+		u32 ana_gain[IMGSENSOR_STAGGER_EXPOSURE_CNT]; /* recover L and S gain */
+
+		for (i = 0; i < exp_cnt; i++)
+			ana_gain[exp_cnt -1 - i] = (u32) gains[i];
+
+		for (i = 0; i < exp_cnt; i++)
+			gains[i] = ana_gain[i];
+	}
+
 	for (i = 0; i < exp_cnt; i++) {
 		/* check boundary of gain */
 		gains[i] = max(gains[i],

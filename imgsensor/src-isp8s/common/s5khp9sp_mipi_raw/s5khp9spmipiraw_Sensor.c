@@ -2091,6 +2091,10 @@ static struct subdrv_static_ctx static_ctx = {
 	.frame_time_delay_frame = 2,
 	.start_exposure_offset = 3000000,
 
+	/* stagger behavior by vendor type */
+	.stagger_rg_orger = IMGSENSOR_STAGGER_RG_SE_FIRST,
+	.stagger_fl_type = IMGSENSOR_STAGGER_FL_MANUAL,
+
 	.pdaf_type = PDAF_SUPPORT_CAMSV_QPD,
 	.hdr_type = HDR_SUPPORT_STAGGER_DOL,
 	.seamless_switch_support = TRUE,

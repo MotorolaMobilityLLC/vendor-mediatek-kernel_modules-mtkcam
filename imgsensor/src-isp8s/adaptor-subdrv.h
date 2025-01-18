@@ -159,6 +159,19 @@ enum MCLK_SRC_TYPE {
 	MCLK_ULPOSC,
 };
 
+
+enum IMGSENSOR_STAGGER_RG_ORDER {
+	IMGSENSOR_STAGGER_RG_NONE = 0,
+	IMGSENSOR_STAGGER_RG_LE_FIRST = IMGSENSOR_STAGGER_RG_NONE,
+	IMGSENSOR_STAGGER_RG_SE_FIRST = 1,
+};
+
+enum IMGSENSOR_STAGGER_FL_TYPE {
+	IMGSENSOR_STAGGER_FL_NONE = 0,
+	IMGSENSOR_STAGGER_FL_AUTO_MULTIPLY = IMGSENSOR_STAGGER_FL_NONE,
+	IMGSENSOR_STAGGER_FL_MANUAL = 1,
+};
+
 struct subdrv_pw_val {
 	int para1;
 	int para2;
@@ -484,6 +497,10 @@ struct subdrv_static_ctx {
 	/* custom reserved field */
 	u32 cust_global_data_len;
 	char *cust_global_data;
+
+	/* stagger behavior by vendor type */
+	enum IMGSENSOR_STAGGER_RG_ORDER stagger_rg_orger;
+	enum IMGSENSOR_STAGGER_FL_TYPE stagger_fl_type;
 };
 
 struct subdrv_static_ctx_mode_ext_ops {
