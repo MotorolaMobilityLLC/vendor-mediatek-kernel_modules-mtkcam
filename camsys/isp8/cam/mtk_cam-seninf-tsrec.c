@@ -1147,11 +1147,14 @@ static void tsrec_broadcast_work_done_check(struct tsrec_broadcast_work_request 
 	wake_up_time = p_info->wakeup_work_ts_ns - p_info->queue_work_ts_ns;
 	excution_time = p_info->done_work_ts_ns - p_info->wakeup_work_ts_ns;
 
-	if (wake_up_time > MAX_BROADCAST_WAKE_UP_TIME_NS)
+	if ((wake_up_time > MAX_BROADCAST_WAKE_UP_TIME_NS) || (excution_time > MAX_BROADCAST_EXECUTION_TIME_NS))
 		TSREC_LOG_INF(
-			"[%s] WARNING: wakeup duration > thershold:%dms, tsrec_no:%u, bc_info(type:%u(%u), s_idx:%u/inf:%u, req_id:%u, ts(sof:%llu, worker:(%llu(sof:+%llums)/%llu(+%lluus)))), done_ts:%llu(dur:+%lluus)\n",
+			"[%s] WARNING: dur(wake_up:%lluus(th:%dus), exe:%lluus (th:%dus)), no:%u, bc_info(type:%u(%u), s_idx:%u/inf:%u, req_id:%u, ts(sof:%llu, worker:(%llu(sof:+%llums)/%llu(+%lluus)))), done_ts:%llu(dur:+%lluus)\n",
 			__func__,
-			MAX_BROADCAST_WAKE_UP_TIME_NS/1000000,
+			(wake_up_time / 1000),
+			MAX_BROADCAST_WAKE_UP_TIME_NS/1000,
+			(excution_time / 1000),
+			MAX_BROADCAST_EXECUTION_TIME_NS/1000,
 			req->tsrec_no,
 			p_info->type,
 			p_info->need_broadcast_to_itself,
@@ -1162,28 +1165,9 @@ static void tsrec_broadcast_work_done_check(struct tsrec_broadcast_work_request 
 			p_info->queue_work_ts_ns,
 			(p_info->queue_work_ts_ns - p_info->sof_timestamp)/1000000,
 			p_info->wakeup_work_ts_ns,
-			(p_info->wakeup_work_ts_ns - p_info->queue_work_ts_ns)/1000,
+			(wake_up_time / 1000),
 			p_info->done_work_ts_ns,
-			(excution_time)/1000);
-
-	if (excution_time > MAX_BROADCAST_EXECUTION_TIME_NS)
-		TSREC_LOG_INF(
-			"[%s] WARNING: excution duration > thershold:%dms, tsrec_no:%u, bc_info(type:%u(%u), s_idx:%u/inf:%u, req_id:%u, ts(sof:%llu, worker:(%llu(sof:+%llums)/%llu(+%lluus)))), done_ts:%llu(dur:+%lluus)\n",
-			__func__,
-			MAX_BROADCAST_EXECUTION_TIME_NS/1000000,
-			req->tsrec_no,
-			p_info->type,
-			p_info->need_broadcast_to_itself,
-			p_info->sensor_idx,
-			p_info->seninf_idx,
-			p_info->req_id,
-			p_info->sof_timestamp,
-			p_info->queue_work_ts_ns,
-			(p_info->queue_work_ts_ns - p_info->sof_timestamp)/1000000,
-			p_info->wakeup_work_ts_ns,
-			(p_info->wakeup_work_ts_ns - p_info->queue_work_ts_ns)/1000,
-			p_info->done_work_ts_ns,
-			(excution_time)/1000);
+			(excution_time / 1000));
 
 	TSREC_LOG_DBG_CAT(LOG_TSREC_WORK_HANDLE,
 		"tsrec_no:%u, bc_info(type:%u(%u), s_idx:%u/inf:%u, req_id:%u, ts(sof:%llu, worker:(%llu(sof:+%llums)/%llu(+%lluus)))), done_ts:%llu(dur:+%lluus)\n",
@@ -1197,9 +1181,9 @@ static void tsrec_broadcast_work_done_check(struct tsrec_broadcast_work_request 
 		p_info->queue_work_ts_ns,
 		(p_info->queue_work_ts_ns - p_info->sof_timestamp)/1000000,
 		p_info->wakeup_work_ts_ns,
-		(p_info->wakeup_work_ts_ns - p_info->queue_work_ts_ns)/1000,
+		(wake_up_time / 1000),
 		p_info->done_work_ts_ns,
-		(excution_time)/1000);
+		(excution_time / 1000));
 }
 #endif
 
