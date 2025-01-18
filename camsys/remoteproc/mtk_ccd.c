@@ -218,6 +218,9 @@ static long ccd_unlocked_ioctl(struct file *filp, unsigned int cmd,
 			break;
 		}
 
+		if (work_obj.src >= CCD_IPI_MAX)
+			ret = -EFAULT;
+
 		if (ccd_worker_read(ccd, &work_obj)) {
 			ret = -EFAULT;
 			break;
@@ -235,6 +238,9 @@ static long ccd_unlocked_ioctl(struct file *filp, unsigned int cmd,
 			ret = -EFAULT;
 			break;
 		}
+
+		if (work_obj.src >= CCD_IPI_MAX)
+			ret = -EFAULT;
 
 		if (ccd_worker_write(ccd, &work_obj))
 			ret = -EFAULT;

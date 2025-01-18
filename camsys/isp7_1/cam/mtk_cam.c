@@ -6755,7 +6755,8 @@ fail_shutdown:
 	if (is_first_ctx) {
 		pm_runtime_mark_last_busy(cam->dev);
 		pm_runtime_put_sync_autosuspend(cam->dev);
-		mtk_ccd_client_stop(ccd);
+		if (ccd)
+			mtk_ccd_client_stop(ccd);
 		mtk_cam_power_ctrl_ccu(cam->dev, 0);
 		rproc_shutdown(cam->rproc_handle);
 	}

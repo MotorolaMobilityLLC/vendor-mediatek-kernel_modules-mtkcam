@@ -3545,6 +3545,12 @@ int mtk_raw_set_src_pad_selection_default(struct v4l2_subdev *sd,
 
 	pipe = container_of(sd, struct mtk_raw_pipeline, subdev);
 	source_sel = mtk_raw_pipeline_get_selection(pipe, state, pad, which);
+
+	if (!source_sel) {
+		pr_err("[%s] get source selection failed", __func__);
+		return -1;
+	}
+
 	if (source_sel->width > sink_fmt->width) {
 		source_sel->width = sink_fmt->width;
 		/* may need some log */
@@ -6030,7 +6036,7 @@ static int mtk_raw_pipeline_register(unsigned int id, struct device *dev,
 	struct mtk_cam_device *cam = dev_get_drvdata(pipe->raw->cam_dev);
 	struct v4l2_subdev *sd = &pipe->subdev;
 	struct mtk_cam_video_device *video;
-	unsigned int i;
+	int i;
 	int ret;
 
 	pipe->id = id;

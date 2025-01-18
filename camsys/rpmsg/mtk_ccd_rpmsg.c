@@ -372,6 +372,11 @@ int mtk_ccd_get_channel(struct mtk_ccd *ccd, unsigned int center_id,
 
 	/* get channel */
 	channel_id = client_cb->ipi_id;
+	if (channel_id < 0) {
+		dev_info(dev, "%s invalid channel id\n", __func__);
+		return -1;
+	}
+
 	mdev = mtk_subdev->channels[channel_id];
 	if (!mdev) {
 		dev_info(dev, "%s channel-%d-%d is not ready\n", __func__,

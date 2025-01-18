@@ -95,7 +95,7 @@ EXPORT_SYMBOL(mtk_ccd_client_get_channel);
 int mtk_ccd_client_put_channel(struct mtk_ccd *ccd, int id_mask)
 {
 	struct device *dev;
-	int center_id, channel_id;
+	unsigned int center_id, channel_id;
 
 	dev = ccd->dev;
 	center_id = center_id_from_mask(id_mask);
@@ -117,7 +117,7 @@ int mtk_ccd_client_msg_send(struct mtk_ccd *ccd, int id_mask,
 			    void *data, int len)
 {
 	struct device *dev;
-	int center_id, channel_id;
+	unsigned int center_id, channel_id;
 
 	dev = ccd->dev;
 	center_id = center_id_from_mask(id_mask);
