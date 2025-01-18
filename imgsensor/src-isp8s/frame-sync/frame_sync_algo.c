@@ -136,9 +136,11 @@ struct FrameSyncDynamicPara {
 	unsigned int async_m_delta;
 
 	/* timestamp info */
+	enum fs_timestamp_src_type ts_src_type;
 	unsigned long long cur_tick;    // current tick at querying data
 	unsigned long long last_ts;     // last timestamp at querying data
 	unsigned int vsyncs;            // passed vsync counts
+	unsigned int ts_offset;         /* XVS vs Vsync timing offset */
 
 	/* fs SA mode cfg */
 	struct fs_sa_cfg sa_cfg;
@@ -268,6 +270,7 @@ struct FrameSyncInst {
 
 
 	/* frame monitor data */
+	enum fs_timestamp_src_type ts_src_type;
 	unsigned int vsyncs;
 	unsigned long long last_vts;
 	unsigned long long timestamps[VSYNCS_MAX];
@@ -334,41 +337,22 @@ void fs_alg_get_out_fl_info(const unsigned int idx,
  *      "non 0" -> errors. (error case will only appear when using CCU.)
  */
 static unsigned int g_vsync_timestamp_data(const unsigned int idx_arr[],
-	const unsigned int len)
+	const unsigned int len, const enum fs_timestamp_src_type ts_src_type)
 {
 	struct vsync_rec vsync_recs = {0};
-	unsigned int i = 0, j = 0, idx = 0;
+	unsigned int i = 0, j = 0;
 
-#if defined(SUPPORT_USING_CCU)
-	if (frm_get_ts_src_type() == FS_TS_SRC_CCU) {
-		/* ==> timestamp from CCU */
-		unsigned int query_tg_ts[TG_MAX_NUM];
-		int ret = 0;
-
-		/* according to "solve Idx", get correct "TG / sensor_idx" */
-		for (i = 0; i < len; ++i) {
-			idx = idx_arr[i];
-			query_tg_ts[i] = fs_inst[idx].tg;
-		}
-		/* call Frame Monitor API to get vsync data from CCU */
-		ret = frm_query_vsync_data(query_tg_ts, len, &vsync_recs);
-		if (unlikely(ret != 0))
-			return 1;
-	} else {
-		/* ==> timestamp from TSREC */
-		frm_query_vsync_data_by_tsrec(idx_arr, len, &vsync_recs);
-	}
-#else /* ==> using TSREC */
-	/* ==> timestamp from TSREC */
-	frm_query_vsync_data_by_tsrec(idx_arr, len, &vsync_recs);
-#endif
+	/* get timestamp data */
+	if (unlikely(frm_g_vsync_timestamp_data(idx_arr, len,
+			ts_src_type, &vsync_recs)))
+		return 1;
 
 	/* keep cur_tick and tick_factor value */
 	cur_tick = vsync_recs.cur_tick;
 	tick_factor = vsync_recs.tick_factor;
 	/* keep vsync and last_vts data */
 	for (i = 0; i < len; ++i) {
-		idx = idx_arr[i];
+		const unsigned int idx = idx_arr[i];
 
 		if (fs_inst[idx].tg != vsync_recs.recs[i].id) {
 			LOG_PR_WARN(
@@ -392,11 +376,12 @@ static unsigned int g_vsync_timestamp_data(const unsigned int idx_arr[],
 
 		frec_notify_update_timestamp_data(idx,
 			vsync_recs.tick_factor,
-			vsync_recs.recs[i].timestamps, VSYNCS_MAX);
+			vsync_recs.recs[i].timestamps, VSYNCS_MAX,
+			ts_src_type);
 
 #if !defined(REDUCE_FS_ALGO_LOG)
 		LOG_MUST(
-			"[%u] ID:%#x(sidx:%u), tg:%u, vsyncs:%u, last_vts:%llu, cur_tick:%llu, ts(%llu/%llu/%llu/%llu), tick_factor:%u\n",
+			"[%u] ID:%#x(sidx:%u), tg:%u, vsyncs:%u, last_vts:%llu, cur_tick:%llu, ts(type:%u):(%llu/%llu/%llu/%llu), tick_factor:%u\n",
 			idx,
 			fs_inst[idx].sensor_id,
 			fs_inst[idx].sensor_idx,
@@ -404,6 +389,7 @@ static unsigned int g_vsync_timestamp_data(const unsigned int idx_arr[],
 			fs_inst[idx].vsyncs,
 			fs_inst[idx].last_vts,
 			fs_inst[idx].cur_tick,
+			fs_inst[idx].ts_src_type,
 			fs_inst[idx].timestamps[0],
 			fs_inst[idx].timestamps[1],
 			fs_inst[idx].timestamps[2],
@@ -1183,30 +1169,33 @@ void fs_alg_get_fs_inst_ts_data(unsigned int idx,
 	unsigned long long *p_last_vts, unsigned long long *p_time_after_sof,
 	unsigned long long *p_cur_tick, unsigned int *p_vsyncs)
 {
+	const struct FrameSyncInst *p_inst = NULL;
 	unsigned int i = 0;
 
+	p_inst = &fs_inst[idx];
+
 	if (p_tg != NULL)
-		*p_tg = fs_inst[idx].tg;
+		*p_tg = p_inst->tg;
 
 	if (p_last_vts != NULL)
-		*p_last_vts = fs_inst[idx].last_vts;
+		*p_last_vts = p_inst->last_vts;
 
 	if (p_time_after_sof != NULL) {
-		*p_time_after_sof =
-			calc_time_after_sof(
-				fs_inst[idx].last_vts,
-				fs_inst[idx].cur_tick, tick_factor);
+		*p_time_after_sof = (p_inst->cur_tick != 0)
+			? (calc_time_after_sof(
+				p_inst->last_vts, p_inst->cur_tick, tick_factor))
+			: 0;
 	}
 
 	if (p_cur_tick != NULL)
-		*p_cur_tick = fs_inst[idx].cur_tick;
+		*p_cur_tick = p_inst->cur_tick;
 
 	if (p_vsyncs != NULL)
-		*p_vsyncs = fs_inst[idx].vsyncs;
+		*p_vsyncs = p_inst->vsyncs;
 
 	if (ts_arr != NULL) {
 		for (i = 0; i < VSYNCS_MAX; ++i)
-			ts_arr[i] = fs_inst[idx].timestamps[i];
+			ts_arr[i] = p_inst->timestamps[i];
 	}
 }
 
@@ -1315,38 +1304,58 @@ void fs_alg_sa_ts_info_dynamic_msg_connector(const unsigned int idx,
 	const unsigned int log_str_len, char *log_buf, int len,
 	const char *caller)
 {
+	const struct FrameSyncDynamicPara *p_para = NULL;
+	const struct FrameSyncInst *p_inst = NULL;
+	unsigned long long dynamic_after_us = 0, after_us = 0;
 	unsigned int act_fl[(VSYNCS_MAX - 1)] = {0};
 
-	fs_util_calc_act_fl(
-		fs_inst[idx].timestamps, act_fl, VSYNCS_MAX, tick_factor);
+	p_para = &fs_sa_inst.dynamic_paras[idx];
+	p_inst = &fs_inst[idx];
 
-	if (frm_get_ts_src_type() != FS_TS_SRC_TSREC) {
+	fs_util_calc_act_fl(p_inst->timestamps, act_fl, VSYNCS_MAX, tick_factor);
+
+	if (p_para->cur_tick != 0) {
+		dynamic_after_us = calc_time_after_sof(
+			p_para->last_ts, p_para->cur_tick, tick_factor);
+	}
+	if (p_inst->cur_tick != 0) {
+		after_us = calc_time_after_sof(
+			p_inst->last_vts, p_inst->cur_tick, tick_factor);
+	}
+
+	if (p_inst->ts_src_type == FS_TS_SRC_EINT) {
+		/* e.g., MAIN source is TSREC but flow is triggered by EINT */
+		FS_SNPRF(log_str_len, log_buf, len,
+			", ts((%u)%u,%llu(+%u),%u/%u/%u,%llu/%llu/%llu/%llu)",
+			p_para->ts_src_type,
+			frm_get_eint_no(idx),
+			p_para->last_ts,
+			p_para->ts_offset,
+			act_fl[0], act_fl[1], act_fl[2],
+			p_inst->timestamps[0],
+			p_inst->timestamps[1],
+			p_inst->timestamps[2],
+			p_inst->timestamps[3]);
+
+		fs_util_tsrec_dynamic_msg_connector(idx,
+			log_str_len, log_buf, len, __func__);
+	} else if (frm_get_ts_src_type() != FS_TS_SRC_TSREC) {
+		/* e.g., using CCU */
 		FS_SNPRF(log_str_len, log_buf, len,
 			", ts(%u,%llu(+%llu),%u/%u/%u,%llu(+%llu)/%llu/%llu/%llu)",
-			fs_inst[idx].tg,
-			fs_sa_inst.dynamic_paras[idx].last_ts,
-			calc_time_after_sof(
-				fs_sa_inst.dynamic_paras[idx].last_ts,
-				fs_sa_inst.dynamic_paras[idx].cur_tick,
-				tick_factor),
+			p_inst->tg,
+			p_para->last_ts, dynamic_after_us,
 			act_fl[0], act_fl[1], act_fl[2],
-			fs_inst[idx].timestamps[0],
-			calc_time_after_sof(
-				fs_inst[idx].last_vts,
-				fs_inst[idx].cur_tick,
-				tick_factor),
-			fs_inst[idx].timestamps[1],
-			fs_inst[idx].timestamps[2],
-			fs_inst[idx].timestamps[3]);
+			p_inst->timestamps[0], after_us,
+			p_inst->timestamps[1],
+			p_inst->timestamps[2],
+			p_inst->timestamps[3]);
 	} else {
+		/* e.g., using TSREC */
 		FS_SNPRF(log_str_len, log_buf, len,
 			", ts(%u,%llu(+%llu),%u/%u/%u)",
-			fs_inst[idx].tg,
-			fs_sa_inst.dynamic_paras[idx].last_ts,
-			calc_time_after_sof(
-				fs_sa_inst.dynamic_paras[idx].last_ts,
-				fs_sa_inst.dynamic_paras[idx].cur_tick,
-				tick_factor),
+			p_inst->tg,
+			p_para->last_ts, dynamic_after_us,
 			act_fl[0], act_fl[1], act_fl[2]);
 
 		fs_util_tsrec_dynamic_msg_connector(idx,
@@ -1362,47 +1371,87 @@ static void fs_alg_sa_ts_info_m_s_msg_connector(
 	const unsigned int log_str_len, char *log_buf, int len,
 	const char *caller)
 {
+	const struct FrameSyncInst *p_inst_m = NULL, *p_inst_s = NULL;
+	unsigned long long after_us_m = 0, after_us_s = 0;
 	unsigned int act_fl_m[(VSYNCS_MAX - 1)] = {0};
 	unsigned int act_fl_s[(VSYNCS_MAX - 1)] = {0};
+	unsigned int is_trigger_by_eint = 0;
+
+	p_inst_m = &fs_inst[m_idx];
+	p_inst_s = &fs_inst[s_idx];
 
 	fs_util_calc_act_fl(
-		fs_inst[m_idx].timestamps, act_fl_m, VSYNCS_MAX, tick_factor);
+		p_inst_m->timestamps, act_fl_m, VSYNCS_MAX, tick_factor);
 	fs_util_calc_act_fl(
-		fs_inst[s_idx].timestamps, act_fl_s, VSYNCS_MAX, tick_factor);
+		p_inst_s->timestamps, act_fl_s, VSYNCS_MAX, tick_factor);
 
-	if (frm_get_ts_src_type() != FS_TS_SRC_TSREC) {
+	if (p_inst_m->cur_tick != 0) {
+		after_us_m = calc_time_after_sof(
+			p_inst_m->timestamps[0], p_inst_m->cur_tick, tick_factor);
+	}
+	if (p_inst_s->cur_tick != 0) {
+		after_us_s = calc_time_after_sof(
+			p_inst_s->timestamps[0], p_inst_s->cur_tick, tick_factor);
+	}
+	is_trigger_by_eint =
+		(p_inst_m->ts_src_type == FS_TS_SRC_EINT
+			|| p_inst_s->ts_src_type == FS_TS_SRC_EINT)
+		? 1 : 0;
+
+	if (is_trigger_by_eint) {
+		/* e.g., MAIN source is TSREC but flow is triggered by EINT */
+		FS_SNPRF(log_str_len, log_buf, len,
+			", ts((%u)%u,%llu(+%u),%u/%u/%u,%llu/%llu/%llu/%llu, (%u)%u,%llu(+%u),%u/%u/%u,%llu/%llu/%llu/%llu)",
+			p_para_s->ts_src_type,
+			frm_get_eint_no(s_idx),
+			p_para_s->last_ts, /* fs_sa_inst.dynamic_paras[s_idx].last_ts, */
+			p_para_s->ts_offset,
+			act_fl_s[0], act_fl_s[1], act_fl_s[2],
+			p_inst_s->timestamps[0],
+			p_inst_s->timestamps[1],
+			p_inst_s->timestamps[2],
+			p_inst_s->timestamps[3],
+			p_para_m->ts_src_type,
+			frm_get_eint_no(m_idx),
+			p_para_m->last_ts, /* fs_sa_inst.dynamic_paras[m_idx].last_ts, */
+			p_para_m->ts_offset,
+			act_fl_m[0], act_fl_m[1], act_fl_m[2],
+			p_inst_m->timestamps[0],
+			p_inst_m->timestamps[1],
+			p_inst_m->timestamps[2],
+			p_inst_m->timestamps[3]);
+
+		fs_alg_sa_tsrec_m_s_msg_connector(
+			m_idx, s_idx, log_str_len, log_buf, len, caller);
+	} else if (frm_get_ts_src_type() != FS_TS_SRC_TSREC) {
+		/* e.g., using CCU */
 		FS_SNPRF(log_str_len, log_buf, len,
 			", ts(%u,%llu,%u/%u/%u,%llu(+%llu)/%llu/%llu/%llu, %u,%llu,%u/%u/%u,%llu(+%llu)/%llu/%llu/%llu)",
-			fs_inst[s_idx].tg,
+			p_inst_s->tg,
 			p_para_s->last_ts,
 			// fs_sa_inst.dynamic_paras[s_idx].last_ts,
 			act_fl_s[0], act_fl_s[1], act_fl_s[2],
-			fs_inst[s_idx].timestamps[0],
-			calc_time_after_sof(
-				fs_inst[s_idx].timestamps[0],
-				fs_inst[s_idx].cur_tick, tick_factor),
-			fs_inst[s_idx].timestamps[1],
-			fs_inst[s_idx].timestamps[2],
-			fs_inst[s_idx].timestamps[3],
-			fs_inst[m_idx].tg,
+			p_inst_s->timestamps[0], after_us_s,
+			p_inst_s->timestamps[1],
+			p_inst_s->timestamps[2],
+			p_inst_s->timestamps[3],
+			p_inst_m->tg,
 			p_para_m->last_ts,
 			// fs_sa_inst.dynamic_paras[m_idx].last_ts,
 			act_fl_m[0], act_fl_m[1], act_fl_m[2],
-			fs_inst[m_idx].timestamps[0],
-			calc_time_after_sof(
-				fs_inst[m_idx].timestamps[0],
-				fs_inst[m_idx].cur_tick, tick_factor),
-			fs_inst[m_idx].timestamps[1],
-			fs_inst[m_idx].timestamps[2],
-			fs_inst[m_idx].timestamps[3]);
+			p_inst_m->timestamps[0], after_us_m,
+			p_inst_m->timestamps[1],
+			p_inst_m->timestamps[2],
+			p_inst_m->timestamps[3]);
 	} else {
+		/* e.g., using TSREC */
 		FS_SNPRF(log_str_len, log_buf, len,
 			", ts(%u,%llu,%u/%u/%u, %u,%llu,%u/%u/%u)",
-			fs_inst[s_idx].tg,
+			p_inst_s->tg,
 			p_para_s->last_ts,
 			// fs_sa_inst.dynamic_paras[s_idx].last_ts,
 			act_fl_s[0], act_fl_s[1], act_fl_s[2],
-			fs_inst[m_idx].tg,
+			p_inst_m->tg,
 			p_para_m->last_ts,
 			// fs_sa_inst.dynamic_paras[m_idx].last_ts,
 			act_fl_m[0], act_fl_m[1], act_fl_m[2]);
@@ -2563,6 +2612,7 @@ static unsigned int fs_alg_sa_get_last_vts_info(const unsigned int idx,
 	}
 
 	/* write back newest last_ts and cur_tick data */
+	p_para->ts_src_type = fs_inst[idx].ts_src_type;
 	p_para->last_ts = fs_inst[idx].last_vts;
 	p_para->cur_tick = fs_inst[idx].cur_tick;
 	p_para->vsyncs = fs_inst[idx].vsyncs;
@@ -2894,52 +2944,70 @@ static void fs_alg_sa_calc_pr_fl_error(
  */
 static void fs_alg_sa_calc_m_s_ts_diff(
 	const struct FrameSyncDynamicPara *p_para_m,
-	const struct FrameSyncDynamicPara *p_para_s,
+	struct FrameSyncDynamicPara *p_para_s,
 	long long *p_ts_diff_m, long long *p_ts_diff_s)
 {
-	fs_timestamp_t cur_tick = 0;
 	fs_timestamp_t ts_diff_m = 0, ts_diff_s = 0;
 
-
-	if (tick_factor == 0) {
+	/* unexpected case */
+	if (unlikely(tick_factor == 0)) {
 		LOG_INF(
 			"ERROR: tick_factor:%u, all ts calculation will be force to zero\n",
-			tick_factor
-		);
+			tick_factor);
+		goto end_fs_alg_sa_calc_m_s_ts_diff;
 	}
 
-
-	/* find newest ts info */
-	if (check_tick_b_after_a(p_para_m->cur_tick, p_para_s->cur_tick)) {
-		/* case - master is before slave */
-		cur_tick = p_para_s->cur_tick;
-	} else {
-		/* case - master is after slave */
-		cur_tick = p_para_m->cur_tick;
-	}
-
-	/* all operation must be in clock domain */
+	/* !!! all operation must be handle in register/clock domain !!! */
+	/* => prepare lastest timestamp data */
 	ts_diff_m = p_para_m->last_ts * tick_factor;
 	ts_diff_s = p_para_s->last_ts * tick_factor;
 
+	if ((p_para_m->cur_tick != 0) && (p_para_s->cur_tick != 0)) {
+		fs_timestamp_t cur_tick;
 
-	/* normalization/shift (oldest ts => 0) */
-	if ((cur_tick - ts_diff_m) < (cur_tick - ts_diff_s)) {
-		ts_diff_m -= ts_diff_s;
-		ts_diff_s = 0;
+		/* !!! find newest timestamp by cur tick (newest) !!! */
+		if (check_tick_b_after_a(p_para_m->cur_tick, p_para_s->cur_tick)) {
+			/* case - master is before slave */
+			cur_tick = p_para_s->cur_tick;
+		} else {
+			/* case - master is after slave */
+			cur_tick = p_para_m->cur_tick;
+		}
 
-		if (tick_factor != 0)
+		/* normalization/shift (oldest ts => 0) */
+		if ((cur_tick - ts_diff_m) < (cur_tick - ts_diff_s)) {
+			ts_diff_m -= ts_diff_s;
+			ts_diff_s = 0;
 			ts_diff_m /= tick_factor;
-
-	} else {
-		ts_diff_s -= ts_diff_m;
-		ts_diff_m = 0;
-
-		if (tick_factor != 0)
+		} else {
+			ts_diff_s -= ts_diff_m;
+			ts_diff_m = 0;
 			ts_diff_s /= tick_factor;
+		}
+	} else {
+		/* !!! find newest timestamp direct by timestamp !!! */
+		/* find newest ts and normalization/shift (oldest ts => 0) */
+		if (check_tick_b_after_a(ts_diff_s, ts_diff_m)) {
+			ts_diff_m -= ts_diff_s;
+			ts_diff_s = 0;
+			ts_diff_m /= tick_factor;
+		} else {
+			ts_diff_s -= ts_diff_m;
+			ts_diff_m = 0;
+			ts_diff_s /= tick_factor;
+		}
 	}
 
+	/* check if ts data is from EINT (XVS) */
+	if (p_para_s->ts_src_type == FS_TS_SRC_EINT) {
+		p_para_s->ts_offset =
+			frm_g_ts_offset_between_eint_and_tsrec(p_para_s->sa_cfg.idx);
 
+		/* add the XVS <-> Vsync offset to diff result directly */
+		ts_diff_s += (fs_timestamp_t)p_para_s->ts_offset;
+	}
+
+end_fs_alg_sa_calc_m_s_ts_diff:
 	/* sync result out */
 	*p_ts_diff_m = (long long)ts_diff_m;
 	*p_ts_diff_s = (long long)ts_diff_s;
@@ -3685,12 +3753,16 @@ void fs_alg_sa_notify_vsync(const unsigned int idx)
 }
 
 
-void fs_alg_sa_notify_get_ts_info(const unsigned int idx)
+void fs_alg_sa_notify_get_ts_info(const unsigned int idx,
+	const enum fs_timestamp_src_type ts_src_type)
 {
-	unsigned int query_ts_idx[1] = {idx};
+	const unsigned int query_ts_idx[1] = {idx};
+
+	fs_inst[idx].ts_src_type = ts_src_type;
 
 	/* get timestamp info and calibrate frame recorder data */
-	fs_inst[idx].is_nonvalid_ts = g_vsync_timestamp_data(query_ts_idx, 1);
+	fs_inst[idx].is_nonvalid_ts =
+		g_vsync_timestamp_data(query_ts_idx, 1, ts_src_type);
 }
 
 
@@ -4121,7 +4193,7 @@ unsigned int fs_alg_solve_frame_length(
 
 
 	/* 1. get Vsync data by Frame Monitor */
-	if (g_vsync_timestamp_data(solveIdxs, len)) {
+	if (g_vsync_timestamp_data(solveIdxs, len, FS_TS_SRC_CCU)) {
 		LOG_PR_WARN("Get Vsync data ERROR\n");
 		return 1;
 	}

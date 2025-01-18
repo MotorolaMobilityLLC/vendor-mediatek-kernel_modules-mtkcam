@@ -3496,7 +3496,7 @@ static void fs_debug_hw_sync(unsigned int idx)
 
 	fs_alg_setup_frame_monitor_fmeas_data(idx);
 	frec_notify_vsync(idx);
-	fs_alg_sa_notify_get_ts_info(idx);
+	fs_alg_sa_notify_get_ts_info(idx, FS_TS_SRC_CCU);
 	hw_fs_dump_dynamic_para(idx);
 #endif
 }
@@ -3551,13 +3551,15 @@ void fs_notify_vsync(const unsigned int ident)
 #if defined(SUPPORT_USING_CCU) || defined(FS_UT)
 	if (frm_get_ts_src_type() != FS_TS_SRC_CCU)
 		return;
+	if (frm_chk_if_triggered_by_eint(idx) == 1)
+		return;
 
 	/* !!! start here !!! */
 	fs_alg_sa_notify_setup_all_frame_info(idx);
 	frec_notify_vsync(idx);
 	fs_alg_sa_notify_vsync(idx);
 	fs_event_exe_bcast_ctrls_notify_vsync_idx(idx);
-	fs_alg_sa_notify_get_ts_info(idx);
+	fs_alg_sa_notify_get_ts_info(idx, FS_TS_SRC_CCU);
 	frec_chk_fl_pr_match_act(idx);
 
 	if (unlikely(_FS_LOG_ENABLED(LOG_FS_PF)))
@@ -3585,6 +3587,8 @@ void fs_notify_vsync_by_tsrec(const unsigned int ident)
 		return;
 	if (frm_get_ts_src_type() != FS_TS_SRC_TSREC)
 		return;
+	if (frm_chk_if_triggered_by_eint(idx) == 1)
+		return;
 
 
 	/* !!! start here !!! */
@@ -3609,6 +3613,8 @@ void fs_notify_sensor_hw_pre_latch_by_tsrec(const unsigned int ident)
 	if (FS_CHECK_BIT(idx, &fs_mgr.streaming_bits) == 0)
 		return;
 	if (frm_get_ts_src_type() != FS_TS_SRC_TSREC)
+		return;
+	if (frm_chk_if_triggered_by_eint(idx) == 1)
 		return;
 
 
@@ -3643,11 +3649,65 @@ void fs_receive_tsrec_timestamp_info(const unsigned int ident,
 	frm_receive_tsrec_timestamp_info(idx, ts_info);
 	if (frm_get_ts_src_type() != FS_TS_SRC_TSREC)
 		return;
+	if (frm_chk_if_triggered_by_eint(idx) == 1) {
+		frm_update_ts_offset_between_eint_and_tsrec(idx);
+		return;
+	}
 
 
 	/* !!! start here !!! */
 	/* call this function after receive TSREC timestamp info */
-	fs_alg_sa_notify_get_ts_info(idx);
+	fs_alg_sa_notify_get_ts_info(idx, FS_TS_SRC_TSREC);
+	frec_chk_fl_pr_match_act(idx);
+
+	if (unlikely(_FS_LOG_ENABLED(LOG_FS_PF)))
+		if (FS_CHECK_BIT(idx, &fs_mgr.enSync_bits))
+			fs_alg_sa_dump_dynamic_para(idx);
+}
+
+
+void fs_notify_eint_irq_en_status(const unsigned int ident,
+	const unsigned int eint_no, const unsigned int flag)
+{
+	unsigned int idx;
+
+	/* get registered idx and check if it is valid */
+	if (unlikely(fs_g_registered_idx_by_ident(ident, &idx, __func__)))
+		return;
+
+	frm_update_eint_irq_en_status(idx, eint_no, flag);
+}
+
+
+void fs_notify_vsync_by_eint(const unsigned int ident,
+	const struct mtk_cam_seninf_eint_timestamp_info *p_ts_info)
+{
+	unsigned int idx;
+
+	/* get registered idx and check if it is valid */
+	if (unlikely(fs_g_registered_idx_by_ident(ident, &idx, __func__)))
+		return;
+	if (FS_CHECK_BIT(idx, &fs_mgr.streaming_bits) == 0)
+		return;
+	if (frm_chk_if_triggered_by_eint(idx) == 0)
+		return;
+
+
+	/* !!! start here !!! */
+	frec_notify_vsync(idx);
+	fs_alg_sa_notify_vsync(idx);
+	fs_event_exe_bcast_ctrls_notify_vsync_idx(idx);
+
+	fs_do_fl_restore_proc_if_needed(idx);
+
+	/* update ctrl's p1 sof cnt for checking ctrl timing */
+	fs_update_notify_vsync_sof_cnt(idx);
+
+	/* check special ctrl that using p1 sof cnt (e.g., seamless switch) */
+	fs_chk_valid_for_doing_seamless_switch(ident);
+
+	frm_receive_eint_timestamp_info(idx, p_ts_info);
+	fs_alg_sa_notify_get_ts_info(idx, FS_TS_SRC_EINT);
 	frec_chk_fl_pr_match_act(idx);
 
 	if (unlikely(_FS_LOG_ENABLED(LOG_FS_PF)))
@@ -3781,6 +3841,8 @@ static struct FrameSync frameSync = {
 	fs_notify_vsync_by_tsrec,
 	fs_notify_sensor_hw_pre_latch_by_tsrec,
 	fs_receive_tsrec_timestamp_info,
+	fs_notify_eint_irq_en_status,
+	fs_notify_vsync_by_eint,
 	fs_is_set_sync,
 	fs_is_hw_sync,
 	fs_get_fl_record_info,

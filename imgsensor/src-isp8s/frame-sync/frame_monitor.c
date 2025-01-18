@@ -111,7 +111,15 @@ struct FrameMonitorInst {
 
 //----------------------------------------------------------------------------//
 
+	/* MAIN timestamp source provider, e.g., CCU / TSREC */
 	enum fs_timestamp_src_type ts_src_type;
+
+	/* EXT timestamp source provider, e.g., EINT (individual case) */
+	unsigned int eint_no[SENSOR_MAX_NUM];
+	/* => notify EINT IRQ en status */
+	FS_Atomic_T eint_irq_en_bits;
+	/* => ready to trigger by EINT event */
+	FS_Atomic_T rdy_to_trig_by_eint_bits;
 
 	unsigned long long cur_tick;
 	unsigned int tick_factor;
@@ -120,6 +128,10 @@ struct FrameMonitorInst {
 
 	/* TSREC timestamp data */
 	struct mtk_cam_seninf_tsrec_timestamp_info ts_info[SENSOR_MAX_NUM];
+
+	/* EINT timestamp data */
+	struct mtk_cam_seninf_eint_timestamp_info eint_ts_info[SENSOR_MAX_NUM];
+	unsigned int eint_ts_offset[SENSOR_MAX_NUM];
 
 //----------------------------------------------------------------------------//
 
@@ -155,6 +167,21 @@ static const int ut_tg_mapping[FS_UT_TG_MAPPING_SIZE] = {
 int frm_get_ts_src_type(void)
 {
 	return frm_inst.ts_src_type;
+}
+
+
+unsigned int frm_get_eint_no(const unsigned int idx)
+{
+	if (unlikely(!check_idx_valid(idx)))
+		return 0;
+
+	return frm_inst.eint_no[idx];
+}
+
+
+int frm_chk_if_triggered_by_eint(const unsigned int idx)
+{
+	return FS_CHECK_BIT(idx, &frm_inst.rdy_to_trig_by_eint_bits);
 }
 
 
@@ -346,6 +373,13 @@ void frm_dump_measurement_data(const unsigned int idx,
 /******************************************************************************/
 // Frame Monitor static function (private function)
 /******************************************************************************/
+static void frm_init_members(void)
+{
+	FS_ATOMIC_INIT(0, &frm_inst.eint_irq_en_bits);
+	FS_ATOMIC_INIT(0, &frm_inst.rdy_to_trig_by_eint_bits);
+}
+
+
 /*
  * for timestamp source using CCU: plz dts add camera-fsync-ccu node.
  * for timestamp source using TSREC: dts "do NOT" add camera-fsync-ccu node.
@@ -411,7 +445,8 @@ static int get_dts_ccu_device_info(const char *caller)
 #else
 	/* force to choose TSREC */
 	LOG_MUST(
-		"NOTICE: NOT define SUPPORT_USING_CCU => timestamp source set to TSREC, return 1\n");
+		"[%s]: NOTICE: NOT define SUPPORT_USING_CCU => ret:1 for ts_src_type set to TSREC\n",
+		caller);
 	return 1;
 #endif /* SUPPORT_USING_CCU */
 
@@ -419,6 +454,38 @@ static int get_dts_ccu_device_info(const char *caller)
 	/* for FS UT test, direct change return value for testing */
 	return 0;
 #endif /* !FS_UT */
+}
+
+
+static void frm_chk_main_timestamp_src_provider(void)
+{
+	int ret;
+
+	ret = get_dts_ccu_device_info(__func__);
+	switch (ret) {
+	case 1:
+		/* doesn't have camera-fsync-ccu node */
+		frm_inst.ts_src_type = FS_TS_SRC_TSREC;
+		break;
+	case 0:
+		/* has camera-fsync-ccu node and correctly get ccu dev */
+		frm_inst.ts_src_type = FS_TS_SRC_CCU;
+		break;
+	default:
+		/* has camera-fsync-ccu node but get ccu dev failed */
+		frm_inst.ts_src_type = FS_TS_SRC_CCU;
+		LOG_MUST(
+			"ERROR: has camera-fsync-ccu DTS node, but get ccu device failed(ret:%d) => ts_src_type:%d(0:unknown/1:CCU/2:TSREC)\n",
+			ret,
+			frm_inst.ts_src_type);
+		break;
+	}
+
+#ifndef REDUCE_FRM_LOG
+	LOG_MUST(
+		"NOTICE: [get_dts_ccu_device_info]:ret:%d, => ts_src_type:%d(0:unknown/1:CCU/2:TSREC)\n",
+		ret, frm_inst.ts_src_type);
+#endif
 }
 
 
@@ -956,6 +1023,43 @@ unsigned int frm_chk_and_get_tg_value(const unsigned int cammux_id,
 }
 
 
+void frm_update_eint_irq_en_status(const unsigned int idx,
+	const unsigned int eint_no, const unsigned int flag)
+{
+	struct mtk_cam_seninf_eint_timestamp_info *p_clr_st;
+
+	p_clr_st = &frm_inst.eint_ts_info[idx];
+	if (flag > 0) {
+		/* enable flow */
+		frm_inst.eint_no[idx] = eint_no;
+		memset(p_clr_st, 0, sizeof(*p_clr_st));
+		frm_inst.eint_ts_offset[idx] = 0;
+		FS_WRITE_BIT(idx, 1, &frm_inst.eint_irq_en_bits);
+		/* TODO: when dynamic switch ts src, maybe set on other timing */
+		FS_WRITE_BIT(idx, 1, &frm_inst.rdy_to_trig_by_eint_bits);
+	} else {
+		/* disable flow */
+		/* TODO: when dynamic switch ts src, maybe set on other timing */
+		FS_WRITE_BIT(idx, 0, &frm_inst.rdy_to_trig_by_eint_bits);
+		FS_WRITE_BIT(idx, 0, &frm_inst.eint_irq_en_bits);
+		frm_inst.eint_ts_offset[idx] = 0;
+		memset(p_clr_st, 0, sizeof(*p_clr_st));
+		frm_inst.eint_no[idx] = 0;
+	}
+
+	LOG_MUST(
+		"[%u] ID:%#x(sidx:%u), flag:%u, EINT(no:%u(%u)/irq_en:%#x/rdy_to_trig_by:%#x)\n",
+		idx,
+		frm_inst.f_info[idx].sensor_id,
+		frm_inst.f_info[idx].sensor_idx,
+		flag,
+		eint_no,
+		frm_inst.eint_no[idx],
+		FS_ATOMIC_READ(&frm_inst.eint_irq_en_bits),
+		FS_ATOMIC_READ(&frm_inst.rdy_to_trig_by_eint_bits));
+}
+
+
 #ifdef SUPPORT_USING_CCU
 /*
  * This API is ONLY FOR timestamp source from CCU!
@@ -967,7 +1071,7 @@ unsigned int frm_chk_and_get_tg_value(const unsigned int cammux_id,
  *
  * return (0/non 0) for (done/error)
  */
-int frm_query_vsync_data(const unsigned int tgs[], const unsigned int len,
+static int frm_query_vsync_data(const unsigned int tgs[], const unsigned int len
 	struct vsync_rec *pData)
 {
 	struct vsync_rec vsyncs_data = {0};
@@ -1010,10 +1114,25 @@ int frm_query_vsync_data(const unsigned int tgs[], const unsigned int len,
 
 	return 0;
 }
+
+
+static int frm_query_vsync_data_by_ccu(
+	const unsigned int idxs[], const unsigned int len,
+	struct vsync_rec *pData)
+{
+	unsigned int tg_ids[TG_MAX_NUM];
+	unsigned int i;
+
+	/* according to "solve Idx", get correct "TG" */
+	for (i = 0; ((i < len) && (i < TG_MAX_NUM)); ++i)
+		tg_ids[i] = frm_inst.f_info[idxs[i]].tg;
+
+	return frm_query_vsync_data(tg_ids, len, pData);
+}
 #endif /* SUPPORT_USING_CCU */
 
 
-void frm_query_vsync_data_by_tsrec(
+static void frm_query_vsync_data_by_tsrec(
 	const unsigned int idxs[], const unsigned int len,
 	struct vsync_rec *pData)
 {
@@ -1070,11 +1189,54 @@ void frm_query_vsync_data_by_tsrec(
 }
 
 
+static void frm_query_vsync_data_by_eint(
+	const unsigned int idxs[], const unsigned int len,
+	struct vsync_rec *pData)
+{
+	unsigned int tick_factor = 0;
+	unsigned int i, j;
+
+	/* manually copy/setup info for vsync_time struct */
+	for (i = 0; (i < len) && (i < SENSOR_MAX_NUM); ++i) {
+		const struct mtk_cam_seninf_eint_timestamp_info *p_ts_info = NULL;
+		const unsigned int idx = idxs[i];
+
+		p_ts_info = &frm_inst.eint_ts_info[idx];
+
+		/* tick factor (each one must be the same value) */
+		tick_factor = p_ts_info->tick_factor;
+
+		/* setup info to vsync_time struct */
+		/* TODO: !!! FIX ME !!! this is workaround, */
+		/*       using tg number to let sw flow can be run. */
+		/* pData->recs[i].id = p_ts_info->seninf_idx; */
+		pData->recs[i].id = frm_inst.f_info[idx].tg;
+		pData->recs[i].vsyncs = 1; /* for EINT case */
+		for (j = 0; j < VSYNCS_MAX; ++j)
+			pData->recs[i].timestamps[j] = p_ts_info->ts_us[j];
+	}
+
+	/* manually copy/setup info for vsync_rec struct */
+	pData->ids = len;
+	pData->cur_tick = 0;
+	pData->tick_factor = tick_factor;
+
+	/* save data into frame monitor */
+	frm_save_vsync_timestamp(pData);
+
+#if !defined(REDUCE_FRM_LOG)
+	dump_vsync_recs(pData, __func__);
+#endif
+
+	frm_set_wait_for_setting_fmeas_by_idx(idxs, len);
+}
+
+
 void frm_receive_tsrec_timestamp_info(const unsigned int idx,
 	const struct mtk_cam_seninf_tsrec_timestamp_info *ts_info)
 {
 	/* error handling (unexpected case) */
-	if (unlikely(idx >= SENSOR_MAX_NUM)) {
+	if (unlikely(!check_idx_valid(idx))) {
 		LOG_MUST(
 			"ERROR: non-valid idx:%u (SENSOR_MAX_NUM:%u), return\n",
 			idx, SENSOR_MAX_NUM);
@@ -1115,7 +1277,7 @@ const struct mtk_cam_seninf_tsrec_timestamp_info *
 frm_get_tsrec_timestamp_info_ptr(const unsigned int idx)
 {
 	/* error handling (unexpected case) */
-	if (unlikely(idx >= SENSOR_MAX_NUM)) {
+	if (unlikely(!check_idx_valid(idx))) {
 		LOG_MUST(
 			"ERROR: non-valid idx:%u (SENSOR_MAX_NUM:%u), return\n",
 			idx, SENSOR_MAX_NUM);
@@ -1124,6 +1286,142 @@ frm_get_tsrec_timestamp_info_ptr(const unsigned int idx)
 
 	return (const struct mtk_cam_seninf_tsrec_timestamp_info *)
 		&frm_inst.ts_info[idx];
+}
+
+
+void frm_receive_eint_timestamp_info(const unsigned int idx,
+	const struct mtk_cam_seninf_eint_timestamp_info *p_ts_info)
+{
+	/* error handling (unexpected case) */
+	if (unlikely(!check_idx_valid(idx))) {
+		LOG_MUST(
+			"ERROR: non-valid idx:%u (SENSOR_MAX_NUM:%u), return\n",
+			idx, SENSOR_MAX_NUM);
+		return;
+	}
+
+	frm_inst.eint_ts_info[idx] = *p_ts_info;
+}
+
+
+void frm_update_ts_offset_between_eint_and_tsrec(const unsigned int idx)
+{
+	const struct mtk_cam_seninf_tsrec_timestamp_info *p_ts_info = NULL;
+	const struct mtk_cam_seninf_eint_timestamp_info *p_eint_ts_info = NULL;
+	const unsigned int exp_id = TSREC_1ST_EXP_ID;   /* 1st exp => FL exp */
+	const unsigned int valid_th = 3000; /* 3000 us */
+	long long last_tsrec_ts = 0;
+	unsigned int ts_offset = 0;
+	unsigned int i, j;
+
+	p_ts_info = frm_get_tsrec_timestamp_info_ptr(idx);
+	p_eint_ts_info = &frm_inst.eint_ts_info[idx];
+
+	/* !!! check if ts relationship make sense !!! */
+	for (i = 0; i < 2; ++i) {
+		/* prevent any SW IRQ delay, check with first and second ts */
+		last_tsrec_ts = p_ts_info->exp_recs[exp_id].ts_us[i];
+
+		if (unlikely(last_tsrec_ts == 0))
+			continue;
+		/* XVS cames earlier than Vsync */
+		for (j = 0; j < VSYNCS_MAX; ++j) {
+			const long long eint_ts = p_eint_ts_info->ts_us[j];
+
+			if (unlikely(eint_ts == 0))
+				continue;
+			/* check XVS <-> Vsync timing relationship */
+			if (last_tsrec_ts >= eint_ts) {
+				const long long tmp = last_tsrec_ts - eint_ts;
+
+				/* check if ts bias valid */
+				if (tmp <= valid_th) {
+					ts_offset = (unsigned int)tmp;
+					frm_inst.eint_ts_offset[idx] = ts_offset;
+					break;
+				}
+			}
+		}
+		if (ts_offset)
+			break;
+	}
+
+	LOG_INF(
+		"[%u] ID:%#x(sidx:%u), ts_offset:%u(eint_ts_offset:%u), EINT(%llu/%llu/%llu/%llu), TSREC(%llu/%llu/%llu/%llu)\n",
+		idx,
+		frm_inst.f_info[idx].sensor_id,
+		frm_inst.f_info[idx].sensor_idx,
+		ts_offset, frm_inst.eint_ts_offset[idx],
+		p_eint_ts_info->ts_us[0],
+		p_eint_ts_info->ts_us[1],
+		p_eint_ts_info->ts_us[2],
+		p_eint_ts_info->ts_us[3],
+		p_ts_info->exp_recs[exp_id].ts_us[0],
+		p_ts_info->exp_recs[exp_id].ts_us[1],
+		p_ts_info->exp_recs[exp_id].ts_us[2],
+		p_ts_info->exp_recs[exp_id].ts_us[3]);
+}
+
+
+unsigned int frm_g_ts_offset_between_eint_and_tsrec(const unsigned int idx)
+{
+	/* error handling (unexpected case) */
+	if (unlikely(!check_idx_valid(idx))) {
+		LOG_MUST(
+			"ERROR: non-valid idx:%u (SENSOR_MAX_NUM:%u), return\n",
+			idx, SENSOR_MAX_NUM);
+		return 0;
+	}
+
+	return frm_inst.eint_ts_offset[idx];
+}
+
+
+int frm_g_vsync_timestamp_data(const unsigned int idxs[], const unsigned int len,
+	const enum fs_timestamp_src_type ts_src_type,
+	struct vsync_rec *p_vsync_recs)
+{
+	int ret;
+
+	switch (ts_src_type) {
+#if defined(SUPPORT_USING_CCU)
+	case FS_TS_SRC_CCU:
+		/* timestamp data is from CCU */
+		ret = frm_query_vsync_data_by_ccu(idxs, len, p_vsync_recs);
+		break;
+#endif
+	case FS_TS_SRC_TSREC:
+		/* timestamp data is from TSREC */
+		frm_query_vsync_data_by_tsrec(idxs, len, p_vsync_recs);
+		ret = 0;
+		break;
+	case FS_TS_SRC_EINT:
+		/* timestamp data is from EINT */
+		frm_query_vsync_data_by_eint(idxs, len, p_vsync_recs);
+		ret = 0;
+		break;
+	default:
+#ifndef FS_UT
+		LOG_MUST(
+			"ERROR: unexpected case, ts_src_type:%u(unknown:%u/CCU:%u/TSREC:%u/EINT:%u)\n",
+			ts_src_type,
+			FS_TS_SRC_UNKNOWN,
+			FS_TS_SRC_CCU,
+			FS_TS_SRC_TSREC,
+			FS_TS_SRC_EINT);
+#else
+		/**
+		 * when FS_UT, flow is the same as using ccu,
+		 * but option !SUPPORT_USING_CCU, we don't have ccu related function.
+		 * => use other function to query vsync data. => e.g., TSREC
+		 */
+		frm_query_vsync_data_by_tsrec(idxs, len, p_vsync_recs);
+#endif
+		ret = 0;
+		break;
+	}
+
+	return ret;
 }
 /******************************************************************************/
 
@@ -1273,31 +1571,7 @@ void frm_debug_set_last_vsync_data(struct vsync_rec (*pData))
 /******************************************************************************/
 void frm_init(void)
 {
-	int ret;
+	frm_init_members();
 
-	if (likely(frm_inst.ts_src_type == FS_TS_SRC_UNKNOWN)) {
-		ret = get_dts_ccu_device_info(__func__);
-
-		switch (ret) {
-		case 1:
-			/* doesn't have camera-fsync-ccu node */
-			frm_inst.ts_src_type = FS_TS_SRC_TSREC;
-			break;
-		case 0:
-			/* has camera-fsync-ccu node and correctly get ccu dev */
-			frm_inst.ts_src_type = FS_TS_SRC_CCU;
-			break;
-		default:
-			/* has camera-fsync-ccu node but get ccu dev failed */
-			frm_inst.ts_src_type = FS_TS_SRC_CCU;
-			LOG_MUST(
-				"ERROR: dts has camera-fsync-ccu node, but get ccu device failed(ret:%d)\n",
-				ret);
-			break;
-		}
-
-		LOG_MUST(
-			"NOTICE: [get_dts_ccu_device_info]:ret:%d, => ts_src_type:%d(0:unknown/1:CCU/2:TSREC)\n",
-			ret, frm_inst.ts_src_type);
-	}
+	frm_chk_main_timestamp_src_provider();
 }

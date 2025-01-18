@@ -56,6 +56,10 @@ struct vsync_rec {
 // debug/utilities/dump functions
 /******************************************************************************/
 int frm_get_ts_src_type(void);
+
+
+unsigned int frm_get_eint_no(const unsigned int idx);
+int frm_chk_if_triggered_by_eint(const unsigned int idx);
 /******************************************************************************/
 
 
@@ -99,26 +103,33 @@ unsigned int frm_chk_and_get_tg_value(const unsigned int cammux_id,
 	const unsigned int target_tg);
 
 
-/* ==> timestamp data (CCU) */
-/*
- * return: (0/non 0) for (done/error)
- *
- * input:
- *     tgs -> all TG you want to get vsync from CCU;
- *     len -> array length;
- */
-int frm_query_vsync_data(const unsigned int tgs[], const unsigned int len,
-	struct vsync_rec *pData);
+/* notify EINT IRQ enable/disable status */
+void frm_update_eint_irq_en_status(const unsigned int idx,
+	const unsigned int eint_no, const unsigned int flag);
 
 
-/* ==> timestamp data (TSREC) */
-void frm_query_vsync_data_by_tsrec(
-	const unsigned int idxs[], const unsigned int len,
-	struct vsync_rec *pData);
+/* ==> timestamp data using TSREC */
 void frm_receive_tsrec_timestamp_info(const unsigned int idx,
 	const struct mtk_cam_seninf_tsrec_timestamp_info *ts_info);
 const struct mtk_cam_seninf_tsrec_timestamp_info *
 frm_get_tsrec_timestamp_info_ptr(const unsigned int idx);
+
+
+/* ==> timestamp data using EINT */
+void frm_receive_eint_timestamp_info(const unsigned int idx,
+	const struct mtk_cam_seninf_eint_timestamp_info *p_ts_info);
+void frm_update_ts_offset_between_eint_and_tsrec(const unsigned int idx);
+unsigned int frm_g_ts_offset_between_eint_and_tsrec(const unsigned int idx);
+
+
+/**
+ * get vsync timestamp data by ts_src_type
+ *
+ * return: (0/non 0) for (done/error => ONLY possible when using CCU)
+ */
+int frm_g_vsync_timestamp_data(const unsigned int idxs[], const unsigned int len,
+	const enum fs_timestamp_src_type ts_src_type,
+	struct vsync_rec *p_vsync_recs);
 /******************************************************************************/
 
 

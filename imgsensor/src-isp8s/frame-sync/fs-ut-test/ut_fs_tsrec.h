@@ -97,6 +97,24 @@ struct seninf_ctx {
 /*----------------------------------------------------------------------------*/
 /* !!! sync from mtk_camera-v4l2-controls-common.h !!! */
 /*----------------------------------------------------------------------------*/
+#define EINT_TS_REC_MAX_CNT (4)
+struct mtk_cam_seninf_eint_timestamp_info {
+	/* source info */
+	__u32 eint_no;
+	__u32 seninf_idx;
+
+	/* basic info */
+	__u32 tick_factor; /* MHz */
+
+	/* record when receive a interrupt (top-half) */
+	int irq_seq_no;
+	__u64 irq_sys_time_ns; /* ktime_get_boottime_ns() */
+	__u64 irq_mono_time_ns; /* ktime_get_ns() */
+
+	__u64 ts_us[EINT_TS_REC_MAX_CNT];
+};
+
+
 struct mtk_cam_broadcast_info {
 	/* filled by user (caller) */
 	__u32 type;

@@ -47,12 +47,17 @@
 /******************************************************************************/
 /*
  * (choose ONE) timestamp by using bellow method.
- * e.g. CCU / N3D / TSREC (default) / etc.
+ * e.g. CCU / TSREC (default) / EINT (receive Sensor XVS / Vsync-IN)
  */
 enum fs_timestamp_src_type {
 	FS_TS_SRC_UNKNOWN = 0,
+
+	/* MAIN timestamp source provider */
 	FS_TS_SRC_CCU,
 	FS_TS_SRC_TSREC,
+
+	/* EXT timestamp source provider (individual case) */
+	FS_TS_SRC_EINT,
 };
 
 // #define SUPPORT_USING_CCU
@@ -74,7 +79,7 @@ enum fs_timestamp_src_type {
  * ISP7s+ : if use global timer => 64-bits timestamp
  *          if use local timer => 32-bits timestamp
  */
-// #define TS_TICK_64_BITS // for using global timer => 64-bits timestamp
+#define TS_TICK_64_BITS /* for using global timer => 64-bits timestamp */
 #endif
 #define TSREC_1ST_EXP_ID 0
 

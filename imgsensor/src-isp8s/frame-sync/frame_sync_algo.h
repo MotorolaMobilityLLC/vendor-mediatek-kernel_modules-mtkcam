@@ -110,7 +110,8 @@ void fs_alg_seamless_switch(const unsigned int idx,
 
 void fs_alg_sa_notify_setup_all_frame_info(const unsigned int idx);
 void fs_alg_sa_notify_vsync(const unsigned int idx);
-void fs_alg_sa_notify_get_ts_info(const unsigned int idx);
+void fs_alg_sa_notify_get_ts_info(const unsigned int idx,
+	const enum fs_timestamp_src_type ts_src_type);
 
 
 void fs_alg_sa_update_dynamic_infos(const unsigned int idx,

@@ -86,6 +86,7 @@ struct FrameRecorder {
 
 
 	/* timestamp info */
+	enum fs_timestamp_src_type ts_src_type;
 	unsigned int tick_factor;
 	SenRec_TS_T ts_exp_0[VSYNCS_MAX];
 	/* actual frame length (by timestamp diff.) */
@@ -378,7 +379,26 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 			? ((tick_a - tick_b) / (pfrec->tick_factor)) : 0;
 	}
 
-	if (frm_get_ts_src_type() != FS_TS_SRC_TSREC) {
+	if (pfrec->ts_src_type == FS_TS_SRC_EINT) {
+		/* e.g., MAIN source is TSREC but flow is triggered by EINT */
+		FS_SNPRF(log_str_len, log_buf, len,
+#ifdef TS_TICK_64_BITS
+			", ts_eint(%u/%u/%u,%llu/%llu/%llu/%llu)",
+#else
+			", ts_eint(%u/%u/%u,%u/%u/%u/%u)",
+#endif
+			act_fl_arr[0],
+			act_fl_arr[1],
+			act_fl_arr[2],
+			pfrec->ts_exp_0[0],
+			pfrec->ts_exp_0[1],
+			pfrec->ts_exp_0[2],
+			pfrec->ts_exp_0[3]);
+
+		fs_util_tsrec_dynamic_msg_connector(idx,
+			log_str_len, log_buf, len, __func__);
+	} else if (frm_get_ts_src_type() != FS_TS_SRC_TSREC) {
+		/* e.g., using CCU */
 		FS_SNPRF(log_str_len, log_buf, len,
 #ifdef TS_TICK_64_BITS
 			", ts(%u/%u/%u,%llu/%llu/%llu/%llu)",
@@ -393,6 +413,7 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 			pfrec->ts_exp_0[2],
 			pfrec->ts_exp_0[3]);
 	} else {
+		/* e.g., using TSREC */
 		FS_SNPRF(log_str_len, log_buf, len,
 			", ts(%u/%u/%u)",
 			act_fl_arr[0],
@@ -2380,7 +2401,8 @@ void frec_notify_vsync(const unsigned int idx)
 
 void frec_notify_update_timestamp_data(const unsigned int idx,
 	const unsigned int tick_factor,
-	const SenRec_TS_T ts_us[], const unsigned int arr_len)
+	const SenRec_TS_T ts_us[], const unsigned int arr_len,
+	const enum fs_timestamp_src_type ts_src_type)
 {
 	struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
 	SenRec_TS_T tick_a, tick_b;
@@ -2388,6 +2410,9 @@ void frec_notify_update_timestamp_data(const unsigned int idx,
 	/* error handle */
 	if (unlikely(pfrec == NULL))
 		return;
+
+	/* copy timestamp source type */
+	pfrec->ts_src_type = ts_src_type;
 
 	/* copy/update newest timestamp data */
 	memcpy(pfrec->ts_exp_0, ts_us, sizeof(SenRec_TS_T) * arr_len);

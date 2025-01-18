@@ -422,6 +422,12 @@ struct FrameSync {
 	void (*fs_receive_tsrec_timestamp_info)(const unsigned int ident,
 		const struct mtk_cam_seninf_tsrec_timestamp_info *ts_info);
 
+	void (*fs_notify_eint_irq_en_status)(const unsigned int ident,
+		const unsigned int eint_no, const unsigned int flag);
+
+	void (*fs_notify_vsync_by_eint)(const unsigned int ident,
+		const struct mtk_cam_seninf_eint_timestamp_info *p_ts_info);
+
 
 	/**********************************************************************/
 	/* get frame sync status for this sensor_id */
