@@ -3402,6 +3402,88 @@ void get_dcg_ratio_group_by_scenario(struct subdrv_ctx *ctx,
 		sizeof(u32)*IMGSENSOR_EXPOSURE_CNT);
 }
 
+/**
+ * Check the character is a space/tab/newline or not
+ */
+static inline int is_whitespace(char c)
+{
+	return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+}
+
+/**
+ * Trim a string and get the start and end position
+ */
+static void trim_str(const char **start, const char **end)
+{
+	while (*start < *end && is_whitespace(**start))
+		(*start)++;
+
+	while (*end > *start && is_whitespace(*(*end - 1)))
+		(*end)--;
+}
+
+/**
+ * Get the value of key with allocated string
+ * User must free memory after used
+ *
+ * @param str The string of key-value pairs
+ * @param str_len The string length of {@code str}
+ * @param key The key string
+ */
+char *get_string_with_key(const char *str, const size_t str_len, const char *key)
+{
+	const char *current_pos = str;
+	const char *end_pos = str + str_len;
+	size_t key_len;
+
+	/* parameter check */
+	if (!str || !str_len || !key)
+		return NULL;
+
+	key_len = strlen(key);
+
+	/* loop to search key */
+	while (current_pos < end_pos) {
+		const char *key_start = current_pos;
+		const char *sep_pos = strchr(current_pos, '=');
+		const char *value_start;
+		const char *value_end;
+		const char *key_end;
+		size_t trimmed_key_len;
+
+		if (!sep_pos)
+			break;
+
+		value_start = sep_pos + 1;
+		value_end = strchr(value_start, '\n');
+		if (!value_end)
+			value_end = end_pos;
+
+		key_end = sep_pos;
+
+		trim_str(&key_start, &key_end);
+		trim_str(&value_start, &value_end);
+
+		trimmed_key_len = key_end - key_start;
+
+		if (trimmed_key_len == key_len && strncmp(key_start, key, key_len) == 0) {
+			char *value;
+			size_t value_len = value_end - value_start;
+
+			value = kmalloc(value_len + 1, GFP_KERNEL);
+			if (!value)
+				return NULL;
+
+			strncpy(value, value_start, value_len);
+			value[value_len] = '\0';
+			return value;
+		}
+		current_pos = value_end + 1;
+	}
+
+	return NULL;
+}
+
 int common_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 {
 	u8 i = 0;

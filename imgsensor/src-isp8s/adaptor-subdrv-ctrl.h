@@ -216,6 +216,7 @@ void get_exp_line_by_scenario(struct subdrv_ctx *ctx,
 void update_hw_init_time(struct subdrv_ctx *ctx, u64 fisrt_vsync_time);
 void get_dcg_ratio_group_by_scenario(struct subdrv_ctx *ctx,
 		enum SENSOR_SCENARIO_ID_ENUM scenario_id, void *data);
+char *get_string_with_key(const char *str, const size_t str_len, const char *key);
 
 
 int common_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
