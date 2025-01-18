@@ -2150,10 +2150,8 @@ static void module_uninit(struct kref *kref)
 				"%s: [ERROR] mmdvfs_clk is null\n", __func__);
 	}
 #ifndef CONFIG_FPGA_EARLY_PORTING
-	else {
-		mtk_mmdvfs_enable_ccu(false, CCU_PWR_USR_IMG);
+	else
 		mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_IMG);
-	}
 #endif
 }
 
@@ -2190,10 +2188,8 @@ static int mtk_imgsys_worker_power_on(void *data)
 				"%s: [ERROR] mmdvfs_clk is null\n", __func__);
 	}
 #ifndef CONFIG_FPGA_EARLY_PORTING
-	else {
+	else
 		mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_IMG);
-		mtk_mmdvfs_enable_ccu(true, CCU_PWR_USR_IMG);
-	}
 #endif
 	if (IS_ERR_OR_NULL(dvfs_info->reg)) {
 		if (imgsys_dbg_enable())

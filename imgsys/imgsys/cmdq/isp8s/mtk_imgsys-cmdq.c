@@ -173,10 +173,8 @@ static void module_uninit(struct kref *kref)
 				"%s: [ERROR] mmdvfs_clk is null\n", __func__);
 	}
 #ifndef CONFIG_FPGA_EARLY_PORTING
-	else {
-		mtk_mmdvfs_enable_ccu(false, CCU_PWR_USR_IMG);
+	else
 		mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_IMG);
-	}
 #endif
 }
 
