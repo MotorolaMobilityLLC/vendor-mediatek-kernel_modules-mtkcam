@@ -521,14 +521,13 @@ static void dump_dc_setting(struct mtk_raw_device *dev)
 		 raw_readl(dev, dev->base, REG_CAMCTL_DCIF_CHASING_SRC_SEL),
 		 raw_readl(dev, dev->base, REG_TG_DCIF_CTL),
 		 raw_readl(dev, dev->base, REG_CAMCTL_LOCK_DONE_SEL));
-	dev_info_ratelimited(dev->dev, "[inner] CAMCTL_SCENARIO_CTL/MODE 0x%08x/0x%08x DCIF_CTL/2:0x%08x/0x%08x, CHASING_SRC_SEL:0x%08x, TG_DCIF_CTL:0x%08x, LOCK_DONE:0x%08x\n",
+	dev_info_ratelimited(dev->dev, "[inner] CAMCTL_SCENARIO_CTL/MODE 0x%08x/0x%08x DCIF_CTL/2:0x%08x/0x%08x, CHASING_SRC_SEL:0x%08x, TG_DCIF_CTL:0x%08x\n",
 		 raw_readl(dev, dev->base_inner, REG_CAMCTL_SCENARIO_CTL),
 		 raw_readl(dev, dev->base_inner, REG_CAMCTL_SCENARIO_MODE),
 		 raw_readl(dev, dev->base_inner, REG_CAMCTL_DCIF_CTL),
 		 raw_readl(dev, dev->base_inner, REG_CAMCTL_DCIF2_CTL),
 		 raw_readl(dev, dev->base_inner, REG_CAMCTL_DCIF_CHASING_SRC_SEL),
-		 raw_readl(dev, dev->base_inner, REG_TG_DCIF_CTL),
-		 raw_readl(dev, dev->base, REG_CAMCTL_LOCK_DONE_SEL));
+		 raw_readl(dev, dev->base_inner, REG_TG_DCIF_CTL));
 }
 
 
@@ -2529,7 +2528,7 @@ static int mtk_raw_of_probe(struct platform_device *pdev,
 	clks = of_count_phandle_with_args(pdev->dev.of_node, "clocks",
 			"#clock-cells");
 
-	raw->num_clks = (clks == -ENOENT) ? 0:clks;
+	raw->num_clks = (clks <= 0) ? 0:clks;
 	dev_info(dev, "clk_num:%d\n", raw->num_clks);
 
 	if (raw->num_clks) {
@@ -3070,7 +3069,7 @@ static int mtk_yuv_of_probe(struct platform_device *pdev,
 	clks = of_count_phandle_with_args(pdev->dev.of_node, "clocks",
 			"#clock-cells");
 
-	drvdata->num_clks  = (clks == -ENOENT) ? 0:clks;
+	drvdata->num_clks  = (clks <= 0) ? 0:clks;
 	dev_info(dev, "clk_num:%d\n", drvdata->num_clks);
 
 	if (drvdata->num_clks) {
@@ -3670,7 +3669,7 @@ static int mtk_rms_of_probe(struct platform_device *pdev,
 	clks = of_count_phandle_with_args(pdev->dev.of_node, "clocks",
 			"#clock-cells");
 
-	drvdata->num_clks = (clks == -ENOENT) ? 0 : clks;
+	drvdata->num_clks = (clks <= 0) ? 0 : clks;
 	dev_info(dev, "clk_num:%d\n", drvdata->num_clks);
 
 	if (drvdata->num_clks) {

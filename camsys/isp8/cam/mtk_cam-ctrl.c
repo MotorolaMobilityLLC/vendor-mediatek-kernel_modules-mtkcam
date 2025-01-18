@@ -1637,15 +1637,17 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 
 		raw = dev_get_drvdata(cam->engines.raw_devs[i]);
 		ctrl = get_raw_ctrl_data(job);
-
-		res = &ctrl->resource.user_data;
+		if (ctrl)
+			res = &ctrl->resource.user_data;
 		exp = job_exp_num(job);
 		sv_last_tag = (exp == 1) ?
 		get_sv_tag_idx(exp, MTKCAM_IPI_ORDER_FIRST_TAG, false) :
 		get_sv_tag_idx(exp, MTKCAM_IPI_ORDER_LAST_TAG, false);
-
-		qof_sof_src_sel(raw, job_exp_num(job),
+		if (raw && res)
+			qof_sof_src_sel(raw, job_exp_num(job),
 					!res_raw_is_dc_mode(&res->raw_res), sv_last_tag);
+		else
+			dev_info(dev, "[%s] check null at qof_sof_src_sel\n", __func__);
 		qof_setup_hw_timer(raw, get_sensor_interval_us(job));
 		qof_set_cq_start_max(raw, -1);
 		qof_enable_cq_trigger_by_qof(raw, false);
