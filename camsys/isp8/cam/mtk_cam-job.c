@@ -5397,6 +5397,7 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 	update_sensor_fl_low_latency(job);
 	update_sen_expo_diff(job);
 	update_tuning_param(job);
+	update_job_exp_ns(job);
 
 	if (CAM_DEBUG_ENABLED(JOB))
 		pr_info("[%s] ctx:%d|type:%d|%s|exp(cur:%d,prev:%d)|sw/scene:%d/%d, req_id:%d",
@@ -5465,7 +5466,6 @@ static int job_isp_req_pack(struct mtk_cam_job *job)
 	update_job_wbuf_pool_wrapper(job);
 
 	update_reference_sof(job);
-	update_job_exp_ns(job);
 
 	ret = pack_helper->pack_job(job, pack_helper);
 
