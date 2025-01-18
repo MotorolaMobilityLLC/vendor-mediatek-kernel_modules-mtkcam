@@ -754,11 +754,13 @@ void imgsys_cmdq_task_cb_plat8(struct cmdq_cb_data data)
 			addr = &mae_read_back[idx];
 			if (unlikely(addr >= g_pkt_mae_va_end)) {
 				addr = (addr - g_pkt_mae_va_end) + g_pkt_mae_va;
-				pr_debug("%s: [INFO] cpr va rings back to %p at idx(%d)\n", __func__, addr, idx);
+				if (imgsys_cmdq_dbg_enable_plat8())
+					pr_debug("%s: [INFO] cpr va rings back to %p at idx(%d)\n",
+										__func__, addr, idx);
 			}
 			mae_write_back[idx] = *addr;
-
-			pr_debug("%s: [INFO] MAE writebacks regs(0x%x/0x%x/0x%x/0x%x)\n",
+			if (imgsys_cmdq_dbg_enable_plat8())
+				pr_debug("%s: [INFO] MAE writebacks regs(0x%x/0x%x/0x%x/0x%x)\n",
 			__func__, mae_write_back[0], mae_write_back[1],
 			mae_write_back[2], mae_write_back[3]);
 		}
@@ -2596,7 +2598,8 @@ int imgsys_cmdq_parser_plat8(struct mtk_imgsys_dev *imgsys_dev,
 
 				hw_info->write_back_vaddr = (u32 *)(vaddr + cmd->u.ofst);
 				first_read = 0;
-				pr_debug("%s: MAE need to write-back to 0x%p",__func__,
+				if (imgsys_iova_dbg_enable_plat8())
+					pr_debug("%s: MAE need to write-back to 0x%p",__func__,
 									hw_info->write_back_vaddr);
 			}
 			cmdq_pkt_mem_move(pkt, NULL, (dma_addr_t)cmd->u.dma_addr,
