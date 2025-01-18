@@ -405,6 +405,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.aov_mode = 0,
 		.pdaf_cap = TRUE,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_B,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
