@@ -85,7 +85,7 @@
 #define	TRAW_DMA_DRZS4NO_T1_ADDR	(0x5540)
 #define	TRAW_DMA_LTMSO_T1_ADDR		(0x5600)
 
-#define TRAW_CQ_DESC_NUM 173 // align with userspace
+#define TRAW_CQ_DESC_NUM 180 // align with userspace
 #define TRAW_REG_SIZE  (0xEE00) // align with userspace
 #define TRAW_TDR_BUF_MAXSZ 122880 // align with userspace
 /********************************************************************
