@@ -5,7 +5,7 @@
 include $(wildcard $(KERNEL_SRC)/$(DEVICE_MODULES_REL_DIR)/Makefile.include)
 
 EXTRA_SYMBOLS += $(OUT_DIR)/../vendor/mediatek/kernel_modules/mtkcam/mtk-hcp/isp8s/Module.symvers
-EXTRA_SYMBOLS += $(OUT_DIR)/../vendor/mediatek/kernel_modules/mtkcam/imgsys/common/Module.symvers
+EXTRA_SYMBOLS += $(wildcard $(OUT_DIR)/../vendor/mediatek/kernel_modules/mtkcam/imgsys/common/*Module.symvers)
 EXTRA_SYMBOLS += $(OUT_DIR)/../vendor/mediatek/kernel_modules/mtkcam/imgsys/imgsys/cmdq/isp8s/Module.symvers
 EXTRA_SYMBOLS += $(OUT_DIR)/../vendor/mediatek/kernel_modules/mtkcam/mtk-ipesys-me/Module.symvers
 
