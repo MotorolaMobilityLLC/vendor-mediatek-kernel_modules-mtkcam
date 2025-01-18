@@ -312,10 +312,20 @@ static int bwr_start(struct mtk_bwr_device *bwr)
 	writel(0x4, bwr->base + REG_BWR_CAM_SRT_RW_DVFS_FREQ);
 
 	/* emi ratio */
-	writel(to_ratio_csr(1), bwr->base + REG_BWR_CAM_SRT_EMI_ENG_BW_RAT0);
-	writel(to_ratio_csr(1), bwr->base + REG_BWR_CAM_HRT_EMI_ENG_BW_RAT0);
+	for (i = 0 ; i < ENGINE_NUM; ++i) {
+		offset = i * ENGINE_OFFSET;
+		writel(to_ratio_csr(1), bwr->base + REG_BWR_CAM_SRT_EMI_ENG_BW_RAT0 + offset);
+		writel(to_ratio_csr(1), bwr->base + REG_BWR_CAM_HRT_EMI_ENG_BW_RAT0 + offset);
 
-	//default ratio
+		if (debug_bwr_log)
+			pr_info("%s emi ratio 0x%x:0x%x 0x%x:0x%x\n", __func__,
+				REG_BWR_CAM_SRT_EMI_ENG_BW_RAT0 + offset,
+				readl_relaxed(bwr->base + REG_BWR_CAM_SRT_EMI_ENG_BW_RAT0 + offset),
+				REG_BWR_CAM_HRT_EMI_ENG_BW_RAT0 + offset,
+				readl_relaxed(bwr->base + REG_BWR_CAM_HRT_EMI_ENG_BW_RAT0 + offset));
+	}
+
+	/* default ratio */
 	for (i = 0 ; i < BWR_AXI_PORT_NUM + 1; ++i) {
 		for (j = 0 ; j < ENGINE_NUM; ++j) {
 			offset = CHANNEL_OFFSET * i + ENGINE_OFFSET * j;
@@ -325,10 +335,10 @@ static int bwr_start(struct mtk_bwr_device *bwr)
 			writel(to_ratio_csr(1), bwr->base + REG_BWR_CAM_HRT_W0_ENG_BW_RAT0_0 + offset);
 
 			if (debug_bwr_log)
-				pr_info("%s ratio 0x%x:0x%x 0x%x:0x%x 0x%x:0x%x 0x%x:0x%x\n", __func__,
-					REG_BWR_CAM_HRT_EMI_ENG_BW_RAT0 + offset,
-					readl_relaxed(bwr->base + REG_BWR_CAM_HRT_EMI_ENG_BW_RAT0 + offset),
+				pr_info("%s chn ratio: 0x%x:0x%x 0x%x:0x%x 0x%x:0x%x 0x%x:0x%x\n", __func__,
 					REG_BWR_CAM_SRT_R0_ENG_BW_RAT0_0 + offset,
+					readl_relaxed(bwr->base + REG_BWR_CAM_SRT_R0_ENG_BW_RAT0_0 + offset),
+					REG_BWR_CAM_SRT_W0_ENG_BW_RAT0_0 + offset,
 					readl_relaxed(bwr->base + REG_BWR_CAM_SRT_W0_ENG_BW_RAT0_0 + offset),
 					REG_BWR_CAM_HRT_R0_ENG_BW_RAT0_0 + offset,
 					readl_relaxed(bwr->base + REG_BWR_CAM_HRT_R0_ENG_BW_RAT0_0 + offset),
