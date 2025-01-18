@@ -597,7 +597,7 @@ void sv_reset_by_camsys_top(struct mtk_camsv_device *sv_dev)
 	}
 	writel(0, sv_dev->base_scq + REG_CAMSVCQTOP_SW_RST_CTL);
 	writel(0, sv_dev->top + REG_CAM_MAIN_SW_RST_1);
-	writel(3 << ((sv_dev->id) * 2), sv_dev->top + REG_CAM_MAIN_SW_RST_1);
+	writel(3 << ((sv_dev->id) * 2 + 4), sv_dev->top + REG_CAM_MAIN_SW_RST_1);
 	writel(0, sv_dev->top + REG_CAM_MAIN_SW_RST_1);
 	wmb(); /* make sure committed */
 
