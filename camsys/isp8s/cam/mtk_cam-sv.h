@@ -198,7 +198,8 @@ struct mtk_camsv_device {
 	struct notifier_block notifier_blk;
 #endif
 	/* mmqos */
-	struct platform_device *larb_pdev;
+	unsigned int num_larbs;
+	struct platform_device **larb_pdev;
 	struct mtk_camsys_qos qos;
 	unsigned int larb_master_id[MAX_SMI_PORT_NUM];
 
@@ -282,7 +283,6 @@ int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 	unsigned int fifo_img_p1, unsigned int fifo_img_p2,
 	unsigned int fifo_img_p3, unsigned int fifo_len_p1,
 	unsigned int fifo_len_p2, unsigned int fifo_len_p3, unsigned int leading_line_cnt);
-int mtk_cam_sv_smi_path_sel(struct mtk_camsv_device *sv_dev, bool is_two_smi_comm);
 int mtk_cam_sv_toggle_tg_db(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_toggle_db(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_central_common_enable(struct mtk_camsv_device *sv_dev);

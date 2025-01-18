@@ -967,36 +967,6 @@ int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 	return ret;
 }
 
-int mtk_cam_sv_smi_path_sel(struct mtk_camsv_device *sv_dev, bool is_two_smi_comm)
-{
-	int ret = 0;
-
-	switch (sv_dev->id) {
-	case CAMSV_0:
-	case CAMSV_1:
-		smi_sysram_enable(&sv_dev->larb_pdev->dev,
-			sv_dev->larb_master_id[SMI_PORT0_SV_CQI], false, "camsys-camsv");
-		smi_sysram_enable(&sv_dev->larb_pdev->dev,
-			sv_dev->larb_master_id[SMI_PORT1_SV_WDMA], false, "camsys-camsv");
-		smi_sysram_enable(&sv_dev->larb_pdev->dev,
-			sv_dev->larb_master_id[SMI_PORT2_SV_WDMA], false, "camsys-camsv");
-		break;
-	case CAMSV_2:
-	case CAMSV_3:
-	case CAMSV_4:
-	case CAMSV_5:
-		WARN_ON(is_two_smi_comm);
-		/* default disp */
-		smi_sysram_enable(&sv_dev->larb_pdev->dev,
-			sv_dev->larb_master_id[SMI_PORT0_SV_CQI], false, "camsys-camsv");
-		smi_sysram_enable(&sv_dev->larb_pdev->dev,
-			sv_dev->larb_master_id[SMI_PORT1_SV_WDMA], false, "camsys-camsv");
-		break;
-	}
-
-	return ret;
-}
-
 int mtk_cam_sv_toggle_tg_db(struct mtk_camsv_device *sv_dev)
 {
 	int val, val2;
@@ -2834,6 +2804,7 @@ static int mtk_camsv_pm_resume(struct device *dev)
 	ret = pm_runtime_force_resume(dev);
 	if (ret)
 		return ret;
+
 	return 0;
 }
 
@@ -2872,7 +2843,7 @@ static int mtk_camsv_of_probe(struct platform_device *pdev,
 	struct device_link *link;
 	struct resource *res;
 	unsigned int i, j;
-	int ret, num_clks, num_larbs, num_iommus, num_ports, smmus;
+	int ret, num_clks, num_iommus, num_ports, smmus;
 	unsigned int larb_idx = 0;
 	unsigned int raw_lock_sel_addr = 0;
 
@@ -3080,12 +3051,20 @@ static int mtk_camsv_of_probe(struct platform_device *pdev,
 		}
 	}
 
-	num_larbs = of_count_phandle_with_args(
+	sv_dev->num_larbs = of_count_phandle_with_args(
 					pdev->dev.of_node, "mediatek,larbs", NULL);
-	num_larbs = (num_larbs < 0) ? 0 : num_larbs;
-	dev_info(dev, "larb_num:%d\n", num_larbs);
+	sv_dev->num_larbs = (sv_dev->num_larbs < 0) ? 0 : sv_dev->num_larbs;
+	dev_info(dev, "sv_dev larb_num:%d\n", sv_dev->num_larbs);
 
-	for (i = 0; i < num_larbs; i++) {
+	if (sv_dev->num_larbs) {
+		sv_dev->larb_pdev = devm_kcalloc(dev,
+					     sv_dev->num_larbs, sizeof(*sv_dev->larb_pdev),
+					     GFP_KERNEL);
+		if (!sv_dev->larb_pdev)
+			return -ENOMEM;
+	}
+
+	for (i = 0; i < sv_dev->num_larbs; i++) {
 		larb_node = of_parse_phandle(
 					pdev->dev.of_node, "mediatek,larbs", i);
 		if (!larb_node) {
@@ -3105,8 +3084,10 @@ static int mtk_camsv_of_probe(struct platform_device *pdev,
 						DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
 		if (!link)
 			dev_info(dev, "unable to link smi larb%d\n", i);
-		else
-			sv_dev->larb_pdev = larb_pdev;
+		else {
+			sv_dev->larb_pdev[i] = larb_pdev;
+			dev_info(dev, "link smi larb%d\n", i);
+		}
 	}
 
 	num_iommus = of_property_count_strings(
@@ -3317,6 +3298,9 @@ int mtk_camsv_runtime_suspend(struct device *dev)
 	for (i = sv_dev->num_clks - 1; i >= 0; i--)
 		clk_disable_unprepare(sv_dev->clks[i]);
 
+	for (i = sv_dev->num_larbs - 1; i >=0 ; i--)
+		mtk_smi_larb_disable(&sv_dev->larb_pdev[i]->dev);
+
 	return 0;
 }
 
@@ -3324,6 +3308,9 @@ int mtk_camsv_runtime_resume(struct device *dev)
 {
 	struct mtk_camsv_device *sv_dev = dev_get_drvdata(dev);
 	int i, ret;
+
+	for (i = 0; i < sv_dev->num_larbs; i++)
+		mtk_smi_larb_enable(&sv_dev->larb_pdev[i]->dev);
 
 	/* reset_msgfifo before enable_irq */
 	ret = mtk_cam_sv_reset_msgfifo(sv_dev);
