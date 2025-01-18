@@ -4,8 +4,8 @@ subdir-ccflags-y += \
 
 obj-$(CONFIG_MTK_ISP_PSPM) += isp_pspm_ioctl.o
 
-NOTDIR_DEVICE_MODULES_PATH = $(notdir $(DEVICE_MODULES_PATH))
-KERNEL_VERSION = $(patsubst kernel_device_modules-%,%,$(NOTDIR_DEVICE_MODULES_PATH))
-ifeq (6.6,$(word 1,$(sort 6.6 $(KERNEL_VERSION))))
-ccflags-y += -DISP_CSI_PSPM_SUPPORT
-endif
+# NOTDIR_DEVICE_MODULES_PATH = $(notdir $(DEVICE_MODULES_PATH))
+# KERNEL_VERSION = $(patsubst kernel_device_modules-%,%,$(NOTDIR_DEVICE_MODULES_PATH))
+# ifeq (6.6,$(word 1,$(sort 6.6 $(KERNEL_VERSION))))
+# ccflags-y += -DISP_CSI_PSPM_SUPPORT
+# endif

@@ -17,9 +17,7 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/ioctl.h>
-#ifdef ISP_CSI_PSPM_SUPPORT
-#include "swpm_isp_wrapper.h"
-#endif
+#include "subsys/swpm_isp_wrapper.h"
 
 #define MyTag "[ISP_PSPM_IOCTL]"
 #define isp_log_basic(fmt, args...) pr_info(MyTag "[%s] " fmt "\n", __func__, ##args)

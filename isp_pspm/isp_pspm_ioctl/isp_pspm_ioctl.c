@@ -28,7 +28,6 @@ static long device_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	ssize_t ret = 0;
 	// void __user *argp = (void __user *)arg;
-#ifdef ISP_CSI_PSPM_SUPPORT
 	struct ISP_P2 idx;
 
 	switch (cmd) {
@@ -48,8 +47,10 @@ static long device_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	goto ret_ioctl;
 #else
 	case ISP_PSPM_SETPARAM:
-		[[fallthrough]];
-	break;
+		isp_log_basic(" %s %d: cmd %x at unsupport version\n",
+			__FILE__, __LINE__, cmd);
+		ret = -EINVAL;
+		goto ret_ioctl;
 #endif
 
 	default:
@@ -61,9 +62,6 @@ static long device_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 ret_ioctl:
 	return ret;
-#else
-	return ret;
-#endif
 }
 
 static const struct proc_ops Fops = {
