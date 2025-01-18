@@ -11,7 +11,7 @@
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-fwnode.h>
 
-// #include "clk-fmeter.h"
+#include "clk-fmeter.h"
 #include "mtk_cam-seninf-def.h"
 #include "mtk_cam-seninf-rproc-ctrl.h"
 #include "imgsensor-user.h"
@@ -23,7 +23,7 @@
 
 /* def V4L2_MBUS_CSI2_IS_USER_DEFINED_DATA */
 #define SENINF_VC_ROUTING
-#define REDUCE_KO_DEPENDENCY_FOR_SMT
+//#define REDUCE_KO_DEPENDENCY_FOR_SMT
 #define DISABLE_FOR_FPGA_EP
 
 #define CSI_EFUSE_SET
@@ -261,6 +261,9 @@ struct seninf_core {
 	/* dvfs vcore power */
 	struct regulator *dvfsrc_vcore_power;
 	struct mtk_seninf_cdphy_dvfs_step cdphy_dvfs_step[CDPHY_DVFS_STEP_MAX_NUM];
+
+	/* add dts info for hw ccf*/
+	bool hwccf_apply;
 };
 
 struct mtk_cam_sentest_watchdog {

@@ -360,10 +360,14 @@ enum {
 	CLK_TOP_AP_STEP4,				// unknown seninf csi clk on apmcu
 	CLK_TOP_AP_STEP5,				// unknown seninf csi clk on apmcu
 	CLK_TOP_CAMTM_END,
-
 	/*mtk isp clk*/
 	CLK_MMDVFS = CLK_TOP_CAMTM_END,
-	CLK_MAXCNT,
+
+	/*mtk virtual power domain clk */
+	CLK_HW_CCF_CAM_MAIN,
+	CLK_HW_CCF_CSI_BS_RX,
+	CLK_HW_CCF_END,
+	CLK_MAXCNT = CLK_HW_CCF_END,
 };
 
 enum SENTEST_SEAMLESS_STATUS {
@@ -395,6 +399,8 @@ enum SENTEST_SEAMLESS_STATUS {
 	"clk_top_ap_step3", \
 	"clk_top_ap_step4", \
 	"clk_top_ap_step5", \
+	"clk_hw_ccf_cam_main", \
+	"clk_hw_ccf_csi_bs", \
 	"mmdvfs_mux", \
 
 enum {
@@ -419,7 +425,6 @@ enum {
 	"clk-fmeter-csi5", \
 
 #define CLK_FMETER_MAPS \
-	{ \
 	{"FT_NULL", FT_NULL}, \
 	{"ABIST", ABIST}, \
 	{"CKGEN", CKGEN}, \
@@ -428,7 +433,7 @@ enum {
 	{"CKGEN_CK2", CKGEN_CK2}, \
 	{"SUBSYS", SUBSYS}, \
 	{"VLPCK", VLPCK}, \
-	}
+
 
 /* unit: MHz -> Hz */
 #define CSI_CLK_FREQ_MULTIPLIER 1000000

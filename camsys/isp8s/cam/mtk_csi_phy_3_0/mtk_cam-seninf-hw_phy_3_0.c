@@ -4059,32 +4059,31 @@ static int _reset_csi_top(struct seninf_ctx *ctx)
 
 	switch (csi_port) {
 	case 0:
-		csi_top = ctx->reg_csi_top_0;
 		rst_bit_sft = 0;
 		break;
 	case 1:
-		csi_top = ctx->reg_csi_top_0;
 		rst_bit_sft = 4;
 		break;
 	case 2:
-		csi_top = ctx->reg_csi_top_0;
 		rst_bit_sft = 8;
 		break;
 	case 3:
-		csi_top = ctx->reg_csi_top_0;
 		rst_bit_sft = 12;
 		break;
 	case 4:
-		csi_top = ctx->reg_csi_top_0;
 		rst_bit_sft = 16;
 		break;
 	case 5:
-		csi_top = ctx->reg_csi_top_0;
 		rst_bit_sft = 20;
 		break;
 	}
 
 	mutex_lock(&ctx->core->seninf_top_rg_mutex);
+
+	if (csi_top == NULL) {
+		seninf_logi(ctx, "csi_top is NULL\n");
+		return 0;
+	}
 
 	top_ctrl = SENINF_READ_REG(csi_top, CSI_CSR_TOP_SW_RESET_B);
 	rst_val = top_ctrl & (~(0xF << rst_bit_sft));
@@ -4116,7 +4115,7 @@ static int _reset_csi(struct seninf_ctx *ctx)
 	_reset_csi_top(ctx);
 #endif
 
-	/* clear CSI IRQ status */
+		/* clear CSI IRQ status */
 	csi_irq = SENINF_READ_REG(csirx_mac_csi, CSIRX_MAC_CSI2_IRQ_STATUS);
 	if (csi_irq)
 		seninf_logi(ctx, "Current csi irq status(0x%x) non-zero, clear it\n", csi_irq);
