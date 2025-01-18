@@ -334,8 +334,6 @@ struct seninf_vc *mtk_cam_seninf_get_vc_by_pad(struct seninf_ctx *ctx, int idx)
 	// get current scenraio output bit(/data type)
 	format_code = to_std_fmt_code(ctx->fmt[PAD_SRC_RAW0].format.code);
 	cur_dt = get_code2dt(format_code);
-	seninf_logd(ctx, "[%s] pad %u format_code: 0x%x, cur_dt:0x%x\n",
-		__func__, idx, format_code, cur_dt);
 
 	// find vc via vc_dt or dt_remap
 	for (i = 0; i < vcinfo->cnt; i++) {
@@ -353,6 +351,19 @@ struct seninf_vc *mtk_cam_seninf_get_vc_by_pad(struct seninf_ctx *ctx, int idx)
 		if (vcinfo->vc[i].out_pad == idx)
 			return &vcinfo->vc[i];
 	}
+
+	/* if can not target any vc, print vc info */
+	seninf_logi(ctx, "[%s] target_pad %u format_code: 0x%x, cur_dt:0x%x vcinfo->cnt %d\n",
+		__func__, idx, format_code, cur_dt, vcinfo->cnt);
+
+	for (i = 0; i < vcinfo->cnt; i++)
+		seninf_logi(ctx, "[%s] vc[%d],vc[%d] dt 0x%x remap to %d, pad %d\n",
+		__func__, i,
+		vcinfo->vc[i].vc,
+		vcinfo->vc[i].dt,
+		vcinfo->vc[i].dt_remap_to_type,
+		vcinfo->vc[i].out_pad);
+
 	return NULL;
 }
 
@@ -1102,11 +1113,17 @@ int mtk_cam_seninf_get_vcinfo(struct seninf_ctx *ctx)
 		}
 
 		dev_info(ctx->dev,
-			"%s vc[%d],vc:0x%x,dt:0x%x,pad:%d,exp:%dx%d,grp:0x%x,code:0x%x,fsync_ext_vsync_pad_code:%#llx\n",
+			"%s vc[%d],vc:0x%x,dt:0x%x,pad:%d,exp:%dx%d,grp:0x%x,code:0x%x,remap to %d fsync_ext_vsync_pad_code:%#llx\n",
 			__func__,
-			vcinfo->cnt, vc->vc, vc->dt, vc->out_pad,
-			vc->exp_hsize, vc->exp_vsize, vc->group,
+			vcinfo->cnt,
+			vc->vc,
+			vc->dt,
+			vc->out_pad,
+			vc->exp_hsize,
+			vc->exp_vsize,
+			vc->group,
 			ctx->fmt[vc->out_pad].format.code,
+			vc->dt_remap_to_type,
 			fsync_ext_vsync_pad_code);
 
 		/* update final vc dt info to tsrec */
