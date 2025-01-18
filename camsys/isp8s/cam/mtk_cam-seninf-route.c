@@ -809,6 +809,69 @@ int mtk_cam_seninf_fill_outpad_to_vc(struct seninf_ctx *ctx,
 	return ret;
 }
 
+int mtk_cam_seninf_fill_bit_depth_to_vc(struct seninf_vc *vc)
+{
+	if (unlikely(vc == NULL)) {
+		pr_info("[%s][err]vc is NULL\n,", __func__);
+		return -EFAULT;
+	}
+	switch (vc->dt) {
+	/* YUV 0x18~0x1F */
+	case 0x1E:
+		vc->bit_depth = 8;
+		break;
+	case 0x1F:
+		vc->bit_depth = 10;
+		break;
+	/* RGB 0x20~0x27 */
+	case 0x24:
+		vc->bit_depth = 8;
+		break;
+	/* RAW 0x28~0x2F */
+	case 0x2A:
+		vc->bit_depth = 8;
+		break;
+	case 0x2B:
+		vc->bit_depth = 10;
+		break;
+	case 0x2C:
+		vc->bit_depth = 12;
+		break;
+	case 0x2D:
+		vc->bit_depth = 14;
+		break;
+	case 0x2E:
+		vc->bit_depth = 16;
+		break;
+	case 0x2F:
+		vc->bit_depth = 20;
+		break;
+	case 0x27:
+		vc->bit_depth = 24;
+		break;
+	default:
+		vc->bit_depth = 8;
+		break;
+	}
+
+	/* User Defined 0x30~0x37 */
+	switch (vc->dt_remap_to_type) {
+	case MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10:
+		vc->bit_depth = 10;
+		break;
+	case MTK_MBUS_FRAME_DESC_REMAP_TO_RAW12:
+		vc->bit_depth = 12;
+		break;
+	case MTK_MBUS_FRAME_DESC_REMAP_TO_RAW14:
+		vc->bit_depth = 14;
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
 int mtk_cam_seninf_get_vcinfo(struct seninf_ctx *ctx)
 {
 	struct seninf_vcinfo *vcinfo = &ctx->vcinfo;
@@ -938,59 +1001,7 @@ int mtk_cam_seninf_get_vcinfo(struct seninf_ctx *ctx)
 
 		vc->exp_vsize = fd.entry[i].bus.csi2.vsize;
 
-		switch (vc->dt) {
-		/* YUV 0x18~0x1F */
-		case 0x1E:
-			vc->bit_depth = 8;
-			break;
-		case 0x1F:
-			vc->bit_depth = 10;
-			break;
-		/* RGB 0x20~0x27 */
-		case 0x24:
-			vc->bit_depth = 8;
-			break;
-		/* RAW 0x28~0x2F */
-		case 0x2A:
-			vc->bit_depth = 8;
-			break;
-		case 0x2B:
-			vc->bit_depth = 10;
-			break;
-		case 0x2C:
-			vc->bit_depth = 12;
-			break;
-		case 0x2D:
-			vc->bit_depth = 14;
-			break;
-		case 0x2E:
-			vc->bit_depth = 16;
-			break;
-		case 0x2F:
-			vc->bit_depth = 20;
-			break;
-		case 0x27:
-			vc->bit_depth = 24;
-			break;
-		default:
-			vc->bit_depth = 8;
-			break;
-		}
-
-		/* User Defined 0x30~0x37 */
-		switch (vc->dt_remap_to_type) {
-		case MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10:
-			vc->bit_depth = 10;
-			break;
-		case MTK_MBUS_FRAME_DESC_REMAP_TO_RAW12:
-			vc->bit_depth = 12;
-			break;
-		case MTK_MBUS_FRAME_DESC_REMAP_TO_RAW14:
-			vc->bit_depth = 14;
-			break;
-		default:
-			break;
-		}
+		mtk_cam_seninf_fill_bit_depth_to_vc(vc);
 
 #ifdef DOUBLE_PIXEL_EN
 		/* double pixel mode */
@@ -2419,7 +2430,7 @@ void mtk_cam_sensor_get_vc_info_by_scenario(struct seninf_ctx *ctx, u32 code)
 			}
 			last_vc = vc->vc;
 		}
-
+		mtk_cam_seninf_fill_bit_depth_to_vc(vc);
 		mtk_cam_seninf_fill_outpad_to_vc(ctx, vc, desc, &fsync_ext_vsync_pad_code);
 	}
 	vcinfo->cnt = vc_sid.fd.num_entries;
