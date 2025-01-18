@@ -520,14 +520,24 @@ unsigned int mtk_cam_get_img_fmt(unsigned int fourcc)
 		return MTKCAM_IPI_IMG_FMT_UNKNOWN;
 	}
 }
+#define MAX_WIDTH_SUPPORT 32768
+#define MAX_PIXEL_MODE_SHIFT_SUPPORT 16
 
 int mtk_cam_dmao_xsize(int w, unsigned int ipi_fmt, int pixel_mode_shift)
 {
 	const int is_fg		= mtk_cam_is_fullg(ipi_fmt);
 	const int bpp		= mtk_cam_get_pixel_bits(ipi_fmt);
-	const int bytes		= is_fg ?
+	int bytes;
+	int bus_size;
+
+	/* add check for overflow and underflow */
+	if (w > MAX_WIDTH_SUPPORT || w < 0)
+		return 0;
+	if (pixel_mode_shift < 0 || pixel_mode_shift > MAX_PIXEL_MODE_SHIFT_SUPPORT)
+		return 0;
+	bytes		= is_fg ?
 		DIV_ROUND_UP(w * bpp * 3 / 2, 8) : DIV_ROUND_UP(w * bpp, 8);
-	const int bus_size	= mtk_cam_dma_bus_size(bpp, pixel_mode_shift, is_fg);
+	bus_size	= mtk_cam_dma_bus_size(bpp, pixel_mode_shift, is_fg);
 
 	return ALIGN(bytes, bus_size);
 }
