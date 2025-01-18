@@ -135,6 +135,11 @@ static int mtk_aov_open(struct inode *inode, struct file *file)
 		aov_dev->is_open = true;
 		atomic_set(&(core_info->aov_start_in_used[0]), 0);
 		atomic_set(&(core_info->aov_start_in_used[1]), 0);
+		atomic_set(&(core_info->detect_req_in_used[0]), 0);
+		atomic_set(&(core_info->detect_req_in_used[1]), 0);
+		atomic_set(&(core_info->detect_req_in_used[2]), 0);
+		atomic_set(&(core_info->detect_req_in_used[3]), 0);
+		atomic_set(&(core_info->detect_req_in_used[4]), 0);
 	}
 	aov_dev->user_cnt++;
 
@@ -414,6 +419,11 @@ static int mtk_aov_release(struct inode *inode, struct file *file)
 	}
 	atomic_set(&(core_info->aov_start_in_used[0]), 0);
 	atomic_set(&(core_info->aov_start_in_used[1]), 0);
+	atomic_set(&(core_info->detect_req_in_used[0]), 0);
+	atomic_set(&(core_info->detect_req_in_used[1]), 0);
+	atomic_set(&(core_info->detect_req_in_used[2]), 0);
+	atomic_set(&(core_info->detect_req_in_used[3]), 0);
+	atomic_set(&(core_info->detect_req_in_used[4]), 0);
 
 	aov_dev->user_cnt--;
 	if (aov_dev->user_cnt == 0) {

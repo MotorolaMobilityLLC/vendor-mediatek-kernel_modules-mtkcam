@@ -74,7 +74,6 @@ int aov_ut_for_module_test(struct mtk_aov *aov_dev,
 	dev_info(aov_dev->dev, "%s: aov malloc info buffer+\n", __func__);
 	spin_lock_irqsave(&core_info->buf_lock, flag);
 	buf = tlsf_malloc(&(core_info->alloc), sizeof(struct aov_ut_info));
-	spin_unlock_irqrestore(&core_info->buf_lock, flag);
 	dev_info(aov_dev->dev, "%s: aov malloc info buffer, buf(%p)-\n", __func__, buf);
 	if (buf) {
 		(void)copy_from_user(buf, user_ut_info, sizeof(struct aov_ut_info));
@@ -184,7 +183,6 @@ int aov_ut_for_module_test(struct mtk_aov *aov_dev,
 
 	(void)copy_to_user(user_ut_info, buf, sizeof(struct aov_ut_info));
 	dev_info(aov_dev->dev, "aov free buffer+\n");
-	spin_lock_irqsave(&core_info->buf_lock, flag);
 	tlsf_free(&(core_info->alloc), buf);
 	spin_unlock_irqrestore(&core_info->buf_lock, flag);
 	dev_info(aov_dev->dev, "aov free buffer-\n");
@@ -558,6 +556,45 @@ int aov_core_send_cmd(struct mtk_aov *aov_dev, uint32_t cmd,
 		if (user_data_id == -1) {
 			dev_info(aov_dev->dev, "%s: no valid data id, bypass send command(%d)", __func__, cmd);
 			return 0;
+		}
+	} else if (cmd == AOV_SCP_CMD_SET_APU) {
+		struct start_param set_info;
+
+		ret = copy_from_user((void *)&set_info,
+			(void *)data, sizeof(struct start_param));
+		if (ret) {
+			dev_info(aov_dev->dev, "%s: failed to copy aov set info: %d\n",
+				__func__, ret);
+			return -EFAULT;
+		}
+		for (int req_idx = 0; req_idx < MAX_APU_REQUEST_NUM; req_idx++) {
+			if (atomic_read(&(core_info->detect_req_in_used[req_idx])) == 0) {
+				memcpy(&(core_info->detect_req[req_idx]), &set_info, sizeof(struct start_param));
+				atomic_set(&(core_info->detect_req_in_used[req_idx]), 1);
+				dev_info(aov_dev->dev, "%s: set req sensor(%d) req(%d)",
+					__func__, set_info.sensor_id, set_info.reqId);
+				break;
+			}
+		}
+	} else if (cmd == AOV_SCP_CMD_CLEAR_APU) {
+		struct stop_param clear_info;
+
+		ret = copy_from_user((void *)&clear_info,
+			(void *)data, sizeof(struct stop_param));
+		if (ret) {
+			dev_info(aov_dev->dev, "%s: failed to copy aov clear info: %d\n",
+				__func__, ret);
+			return -EFAULT;
+		}
+		for (int req_idx = 0; req_idx < MAX_APU_REQUEST_NUM; req_idx++) {
+			if ((atomic_read(&(core_info->detect_req_in_used[req_idx])) == 1) &&
+				(core_info->detect_req[req_idx].sensor_id == clear_info.sensor_id) &&
+				(core_info->detect_req[req_idx].reqId == clear_info.reqId)) {
+				atomic_set(&(core_info->detect_req_in_used[req_idx]), 0);
+				dev_info(aov_dev->dev, "%s: clear req sensor(%d) req(%d)",
+					__func__, clear_info.sensor_id, clear_info.reqId);
+				break;
+			}
 		}
 	}
 
@@ -1030,6 +1067,32 @@ static int aov_core_recover(struct mtk_aov *aov_dev)
 		}
 	}
 
+	for (int req_idx = 0; req_idx < MAX_APU_REQUEST_NUM; req_idx++) {
+		if ((atomic_read(&(core_info->detect_req_in_used[req_idx])) == 1)) {
+			unsigned long flag;
+
+			spin_lock_irqsave(&core_info->buf_lock, flag);
+			uint8_t *buf = tlsf_malloc(&(core_info->alloc), sizeof(struct start_param));
+
+			spin_unlock_irqrestore(&core_info->buf_lock, flag);
+			if (buf) {
+				memcpy(buf, &(core_info->detect_req[req_idx]), sizeof(struct start_param));
+				buffer = core_info->buf_pa + (buf - core_info->buf_va);
+				length = sizeof(struct start_param);
+				ret = send_cmd_internal(core_info, AOV_SCP_CMD_SET_APU, buffer, length, false, true);
+				if (ret < 0)
+					dev_info(aov_dev->dev, "%s: failed to recover request %d\n", __func__, ret);
+				spin_lock_irqsave(&core_info->buf_lock, flag);
+				tlsf_free(&(core_info->alloc), buf);
+				spin_unlock_irqrestore(&core_info->buf_lock, flag);
+			} else {
+				dev_info(aov_dev->dev, "%s: failed to alloc buffer: %d\n", __func__, ret);
+			}
+			dev_info(aov_dev->dev, "%s: recover req sensor(%d) req(%d)", __func__,
+				core_info->detect_req[req_idx].sensor_id, core_info->detect_req[req_idx].reqId);
+		}
+	}
+
 	pm_relax(aov_dev->dev);
 
 	dev_info(aov_dev->dev, "%s-\n", __func__);
@@ -1137,6 +1200,11 @@ int aov_core_init(struct mtk_aov *aov_dev)
 	}
 	atomic_set(&(core_info->aov_start_in_used[0]), 0);
 	atomic_set(&(core_info->aov_start_in_used[1]), 0);
+	atomic_set(&(core_info->detect_req_in_used[0]), 0);
+	atomic_set(&(core_info->detect_req_in_used[1]), 0);
+	atomic_set(&(core_info->detect_req_in_used[2]), 0);
+	atomic_set(&(core_info->detect_req_in_used[3]), 0);
+	atomic_set(&(core_info->detect_req_in_used[4]), 0);
 
 #ifdef CONFIG_PM_WAKELOCKS
 	event_wake_lock = wakeup_source_register(aov_dev->dev, "aov_event_wakelock");
@@ -1720,7 +1788,6 @@ int aov_core_reset(struct mtk_aov *aov_dev)
 				AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag), "aov malloc buffer+\n");
 				spin_lock_irqsave(&core_info->buf_lock, flag);
 				buf = tlsf_malloc(&(core_info->alloc), sizeof(struct close_param));
-				spin_unlock_irqrestore(&core_info->buf_lock, flag);
 				AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag), "aov malloc buffer-\n");
 				if (buf) {
 					memcpy(buf, &close_info, sizeof(struct close_param));
@@ -1740,7 +1807,6 @@ int aov_core_reset(struct mtk_aov *aov_dev)
 				}
 
 				AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag), "aov free buffer+\n");
-				spin_lock_irqsave(&core_info->buf_lock, flag);
 				tlsf_free(&(core_info->alloc), buf);
 				spin_unlock_irqrestore(&core_info->buf_lock, flag);
 				AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag), "aov free buffer-\n");

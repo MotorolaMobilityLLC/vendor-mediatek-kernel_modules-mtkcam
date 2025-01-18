@@ -50,6 +50,9 @@ struct aov_core {
 	int32_t sensor_id[AOV_MAX_USER_CNT];
 	void *aov_start[AOV_MAX_USER_CNT];
 
+	atomic_t detect_req_in_used[MAX_APU_REQUEST_NUM];
+	struct start_param detect_req[MAX_APU_REQUEST_NUM];
+
 	phys_addr_t buf_pa;
 	uint8_t *buf_va;
 	size_t buf_size;

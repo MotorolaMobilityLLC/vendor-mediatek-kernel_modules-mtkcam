@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2019 MediaTek Inc.
+ * Copyright (c) 2024 MediaTek Inc.
  */
 
 #ifndef MTK_AOV_ULPOSC_H
@@ -8,29 +8,36 @@
 
 #include <linux/regmap.h>
 
-#define CAL_FACTOR1_MIN_VAL	(0)
-#define CAL_FACTOR1_MAX_VAL	(4)
-#define CAL_FACTOR2_MIN_VAL	(0)
-#define CAL_FACTOR2_MAX_VAL	(0x80)
-#define CALI_DIV_VAL	(512)
-#define CALI_FACTOR1_REG_MASK	(0x180)
-#define CALI_FACTOR1_REG_SHIFT	(7)
-#define CALI_FACTOR2_REG_MASK	(0x7f)
-#define CALI_FACTOR2_REG_SHIFT	(0)
+#define KHZ_TO_MHZ(freq)	(freq / 1000)
 #define CALI_MIS_RATE	(2)
+#define ULPOSC_CALI_CONFIG_NUM 3 // CON0/CON1/CON2
+#define CAL_FACTOR1_BITS	(2)
+#define CAL_FACTOR2_BITS	(7)
+
+enum ULPOSC_CONFIG_TYPE {
+	PRE_CONFIG = 0,
+	CALI_CONFIG = 1,
+	INIT_CONFIG = 2,
+	ULPOSC_CONFIG_MAX,
+};
+
+enum ULPOSC_FMETER_TYPE {
+	CALI_FMETER = 0,
+	RESULT_FMETER = 1,
+	ULPOSC_FMETER_MAX,
+};
 
 struct aov_ulposc_info {
 	bool ulposc_support;
 	bool ulposc_cali_done;
-	unsigned int ulposc_cali_config_num;
-	unsigned int ulposc_config_register[3];
-	unsigned int ulposc_cali_config_setting[3];
-	unsigned int ulposc_cali_result[3];
+	unsigned int ulposc_cali_config_setting[ULPOSC_CALI_CONFIG_NUM];
+	unsigned int ulposc_cali_result[ULPOSC_CALI_CONFIG_NUM];
 	unsigned int ulposc_cali_target;
 	unsigned int ulposc_cali_result_target;
 	unsigned int ulposc_cali_fmeter_id;
 	unsigned int ulposc_result_fmeter_id;
-	void __iomem *vlp_base;
+	void __iomem *base;
+	const char *ver;
 };
 
 int aov_ulposc_cali(struct mtk_aov *aov_dev);

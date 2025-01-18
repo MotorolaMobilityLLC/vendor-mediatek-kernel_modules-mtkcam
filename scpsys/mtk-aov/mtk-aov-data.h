@@ -82,6 +82,7 @@
 #define AOV_MAX_NDD_EVENT         (1)
 
 #define AOV_MAX_USER_CNT          (2)
+#define MAX_APU_REQUEST_NUM       (5)
 
 #define AOV_MAX_USER_SIZE         (offsetof(struct aov_user, aaa_size))
 #define AOV_MAX_SENIF_SIZE        (2 * 1024)
@@ -271,7 +272,7 @@ enum aov_log_id {
 };
 
 struct aov_user {
-	uint32_t session;
+	int32_t  session;
 	uint32_t sensor_id;
 	uint32_t sensor_scene;
 	int32_t  sensor_orient;
@@ -287,9 +288,9 @@ struct aov_user {
 	uint32_t sub_height;
 	uint32_t sub_format;
 	uint32_t frame_rate;
-	uint32_t frame_mode;
-	uint32_t power_mode;
-	uint32_t debug_mode;
+	int32_t  frame_mode;
+	int32_t  power_mode;
+	int32_t  debug_mode;
 	uint32_t debug_level[AOV_LOG_ID_MAX];
 	uint32_t trace_perf;
 	uint32_t disable_fusion;
@@ -322,7 +323,7 @@ struct tuning {
 
 struct aov_start {
 	// user parameter
-	uint32_t session;
+	int32_t  session;
 	uint32_t sensor_id;
 	uint32_t sensor_scene;
 	int32_t  sensor_orient;
@@ -338,9 +339,9 @@ struct aov_start {
 	uint32_t sub_height;
 	uint32_t sub_format;
 	uint32_t frame_rate;
-	uint32_t frame_mode;
-	uint32_t power_mode;
-	uint32_t debug_mode;
+	int32_t  frame_mode;
+	int32_t  power_mode;
+	int32_t  debug_mode;
 	uint32_t debug_level[AOV_LOG_ID_MAX];
 	uint32_t trace_perf;
 	uint32_t disable_fusion;

@@ -5119,6 +5119,12 @@ int mtk_cam_seninf_aov_reset_sensor(unsigned int sensor_id)
 }
 EXPORT_SYMBOL(mtk_cam_seninf_aov_reset_sensor);
 
+int mtk_cam_seninf_aov_set_dualsync(unsigned int sensor_id, unsigned int cmd)
+{
+	return 0;
+}
+EXPORT_SYMBOL(mtk_cam_seninf_aov_set_dualsync);
+
 int mtk_cam_seninf_aov_sensor_set_mclk(unsigned int sensor_id, bool enable)
 {
 	struct seninf_ctx *ctx = NULL;
