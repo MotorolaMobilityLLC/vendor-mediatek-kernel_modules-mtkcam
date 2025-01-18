@@ -145,7 +145,7 @@ unsigned int mtk_cam_dvfs_query(struct mtk_camsys_dvfs *dvfs, int opp_idx)
 	return dvfs->opp[idx].freq_hz;
 }
 
-static int freq_to_oppidx(struct mtk_camsys_dvfs *dvfs,
+int freq_to_oppidx(struct mtk_camsys_dvfs *dvfs,
 			  unsigned int freq)
 {
 	int i;
@@ -299,21 +299,7 @@ EXIT_UNLOCK:
 	return ret;
 }
 
-int mtk_cam_dvfs_update(struct mtk_camsys_dvfs *dvfs, int stream_id,
-			unsigned int freq_hz, bool boostable)
-{
-	return dvfs_update(dvfs, stream_id, freq_hz, boostable, false,
-			   __func__);
-}
-
-int mtk_cam_dvfs_switch_begin(struct mtk_camsys_dvfs *dvfs, int stream_id,
-			      unsigned int freq_hz, bool boostable)
-{
-	return dvfs_update(dvfs, stream_id, freq_hz, boostable, true,
-			   __func__);
-}
-
-int mtk_cam_dvfs_switch_end(struct mtk_camsys_dvfs *dvfs, int stream_id)
+static int dvfs_switch_end(struct mtk_camsys_dvfs *dvfs, int stream_id)
 {
 	struct dvfs_stream_info *s_info;
 	int prev_opp_idx;
@@ -344,6 +330,33 @@ int mtk_cam_dvfs_switch_end(struct mtk_camsys_dvfs *dvfs, int stream_id)
 EXIT_UNLOCK:
 	mutex_unlock(&dvfs->dvfs_lock);
 	return ret;
+}
+
+int mtk_cam_dvfs_update(struct mtk_camsys_dvfs *dvfs, int stream_id,
+			unsigned int freq_hz, bool boostable)
+{
+	if (is_dvc_support())
+		return 0;
+	else
+		return dvfs_update(dvfs, stream_id, freq_hz, boostable, false, __func__);
+}
+
+int mtk_cam_dvfs_switch_begin(struct mtk_camsys_dvfs *dvfs, int stream_id, int raw_id,
+			      unsigned int freq_hz, bool boostable)
+{
+	if (is_dvc_support())
+		return mtk_cam_dvc_vote(&dvfs->dvc, raw_id, freq_to_oppidx(dvfs, freq_hz), boostable);
+	else
+		return dvfs_update(dvfs, stream_id, freq_hz, boostable, true,
+		   __func__);
+}
+
+int mtk_cam_dvfs_switch_end(struct mtk_camsys_dvfs *dvfs, int stream_id, int raw_id)
+{
+	if (is_dvc_support())
+		return mtk_cam_dvc_vote(&dvfs->dvc, raw_id, 0, 0);
+	else
+		return dvfs_switch_end(dvfs, stream_id);
 }
 
 /* qos */

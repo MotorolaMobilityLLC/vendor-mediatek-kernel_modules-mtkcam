@@ -281,6 +281,7 @@ struct plat_data_hw {
 	bool bwr_support;
 	bool qof_support;
 	bool qos_remap_support;
+	bool dvc_support;
 };
 
 struct camsys_platform_data {

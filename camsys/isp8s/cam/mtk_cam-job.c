@@ -65,6 +65,8 @@ static int job_debug_dump(struct mtk_cam_job *job, const char *desc,
 			  bool is_exception, int raw_pipe_idx);
 static void job_dump_engines_debug_status(struct mtk_cam_job *job);
 static void set_cq_deadline(struct mtk_cam_job *job, int cq_deadline);
+static int job_fetch_opp_idx(struct mtk_cam_job *job,
+			  int *opp_idx, bool *boostable);
 
 static inline int job_debug_exception_dump(struct mtk_cam_job *job,
 					   const char *desc)
@@ -700,10 +702,11 @@ mtk_cam_job_initialize_engines(struct mtk_cam_ctx *ctx,
 {
 	unsigned long engines;
 	int raw_master_id;
-	int i;
-	bool qof_enabled = false;
+	int i, opp_idx = 0;
+	bool qof_enabled = false, boostable = false;
 
 	engines = ctx->used_engine;
+	job_fetch_opp_idx(job, &opp_idx, &boostable);
 
 	/* raw */
 	raw_master_id = get_master_raw_id(engines);
@@ -743,8 +746,12 @@ mtk_cam_job_initialize_engines(struct mtk_cam_ctx *ctx,
 			initialize(raw, &engine_cb, !is_master, is_srt,
 				get_sensor_interval_us(job));
 
-			if (is_master)
+			if (is_master) {
 				call_init_ops(job, master_raw_init, ctx->hw_raw[i]);
+
+				mtk_cam_dvc_init(&ctx->cam->dvfs.dvc, raw->id, is_dvc_hwmode(job),
+					is_srt, opp_idx, get_sensor_interval_us(job)/1000);
+			}
 
 			if (check_qof_support(job)) {
 				int ret = call_init_ops(job, qof_init, ctx->hw_raw[i]);
@@ -4205,9 +4212,10 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 	struct mtk_camsv_device *sv_dev = NULL;
 	struct mtk_raw_ctrl_data *ctrl_data;
 	int i;
-	int ret = 0;
+	int ret = 0, opp_idx = 0;
 	bool is_srt = is_dc_mode(job) || is_m2m(job);
 	bool is_ois_comp = is_ois_compensation(job);
+	bool boostable = false;
 
 	if (raw_id < 0) {
 		ret = -1;
@@ -4255,6 +4263,11 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 	if (is_ois_comp)
 		mtk_cam_tuning_init(&job->tuning_param);
 	lock_done_ctrl_enable(raw_dev, is_ois_comp);
+
+	job_fetch_opp_idx(job, &opp_idx, &boostable);
+	mtk_cam_dvc_init(&ctx->cam->dvfs.dvc, raw_dev->id,
+		is_dvc_hwmode(job), is_dc_mode(job), opp_idx,
+		get_sensor_interval_us(job)/1000);
 
 	stream_on(raw_dev, 1, false);
 
@@ -6692,7 +6705,6 @@ static int job_fetch_freq(struct mtk_cam_job *job,
 	struct mtk_raw_ctrl_data *ctrl;
 	struct mtk_cam_resource_driver *res;
 	unsigned int freq;
-	bool is_apu;
 
 	if (job->job_type == JOB_TYPE_ONLY_SV) {
 		struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -6716,30 +6728,24 @@ static int job_fetch_freq(struct mtk_cam_job *job,
 	res = &ctrl->resource;
 	freq = res->user_data.raw_res.freq;
 
-#ifdef RUN_ADL_FRAME_MODE_FROM_RAWI
-	is_apu = is_m2m_apu_dc(job);
-#else
-	is_apu = is_m2m_apu(job);
-#endif
-	if (is_apu) {
-		struct mtk_cam_ctx *ctx = job->src_ctx;
-		struct mtk_cam_device *cam = ctx->cam;
-		int opp_idx = ctrl->apu_info.opp_index;
-		unsigned int adj_freq;
-
-		adj_freq = mtk_cam_dvfs_query(&cam->dvfs, opp_idx);
-		if (adj_freq == 0)
-			adj_freq = 1;
-
-		freq = max(freq, adj_freq);
-
-		pr_info("%s: adjust by apu freq max(%u, %u)\n",
-				__func__, freq, adj_freq);
-	}
-
-	*freq_hz = freq;
+	*freq_hz = res->user_data.raw_res.freq;
 	/* boost isp clk during switching */
 	*boostable = res_raw_is_dc_mode(&res->user_data.raw_res);
+
+	return 0;
+}
+
+static int job_fetch_opp_idx(struct mtk_cam_job *job,
+			  int *opp_idx, bool *boostable)
+{
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	struct mtk_cam_device *cam = ctx->cam;
+	unsigned int freq_hz;
+
+	if (job_fetch_freq(job, &freq_hz, boostable))
+		return -1;
+
+	*opp_idx = freq_to_oppidx(&cam->dvfs, freq_hz);
 
 	return 0;
 }
@@ -6762,15 +6768,17 @@ int mtk_cam_job_update_clk_switching(struct mtk_cam_job *job, bool begin)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_cam_device *cam = ctx->cam;
+	int raw_id = get_master_raw_id(job->used_engine);
 	unsigned int freq_hz;
 	bool boostable;
 
 	if (!begin)
-		return mtk_cam_dvfs_switch_end(&cam->dvfs, ctx->stream_id);
+		return mtk_cam_dvfs_switch_end(&cam->dvfs, ctx->stream_id, raw_id);
 
 	if (job_fetch_freq(job, &freq_hz, &boostable))
 		return -1;
 
 	return mtk_cam_dvfs_switch_begin(&cam->dvfs, ctx->stream_id,
-					 freq_hz, boostable);
+					 raw_id, freq_hz, boostable);
 }
+

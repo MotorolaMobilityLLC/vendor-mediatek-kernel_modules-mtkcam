@@ -33,6 +33,7 @@
 #include <uapi/linux/sched/types.h>
 
 #include <soc/mediatek/smi.h>
+#include <soc/mediatek/mmdvfs_v3.h>
 #include <mtk_heap.h>
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
 #include <slbc_ops.h>
@@ -53,6 +54,7 @@
 #include "mtk_cam-reg_utils.h"
 #include "mtk_cam-topctrl.h"
 #include "iommu_debug.h"
+#include "mtk-mmdvfs-debug.h"
 
 // place below all other include
 #include "mtk_cam-virt-isp.h"
@@ -4010,9 +4012,6 @@ static int mtk_cam_master_bind(struct device *dev)
 
 	mutex_init(&cam_dev->ccu_lock);
 
-	mtk_cam_dvfs_probe(cam_dev->dev,
-			   &cam_dev->dvfs, cam_dev->max_stream_num);
-
 	mtk_raw_hdr_tsfifo_init(cam_dev->pipelines.raw,
 					cam_dev->pipelines.num_raw);
 
@@ -5135,6 +5134,9 @@ static int mtk_cam_probe(struct platform_device *pdev)
 
 	mtk_cam_get_chipid(cam_dev);
 	mtk_cam_tuning_probe();
+	mtk_cam_dvfs_probe(&pdev->dev,
+			&cam_dev->dvfs, cam_dev->max_stream_num);
+	mtk_cam_dvc_probe(pdev, &cam_dev->dvfs.dvc);
 
 	return 0;
 
@@ -5200,6 +5202,8 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 #endif
 	mtk_cam_isp8s_bwr_disable(cam_dev->bwr);
 	mtk_cam_vcore_ddren(cam_dev, false);
+	mtk_cam_dvc_top_disable(&cam_dev->dvfs.dvc);
+	mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_CAM);
 
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		dev_dbg(dev, "%s++:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
@@ -5263,6 +5267,8 @@ static int mtk_cam_runtime_resume(struct device *dev)
 	mtk_cam_vcore_ccu_qos_remap(cam_dev);
 	mtk_cam_vcore_sv_qos_remap(cam_dev);
 	mtk_cam_main_sv_halt(cam_dev);
+	mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_CAM);
+	mtk_cam_dvc_top_enable(&cam_dev->dvfs.dvc);
 
 	if (GET_PLAT_HW(qof_support))
 		mtk_cam_reset_itc(cam_dev);

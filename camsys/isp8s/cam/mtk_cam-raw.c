@@ -19,7 +19,6 @@
 #include <mtk_printk_ctrl.h>
 
 #include <soc/mediatek/smi.h>
-#include <soc/mediatek/mmdvfs_v3.h>
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
 
 #include "mtk_cam.h"
@@ -2773,6 +2772,7 @@ int mtk_raw_runtime_suspend(struct device *dev)
 	mtk_cam_reset_qos(dev, &drvdata->qos);
 	mtk_cam_isp8s_bwr_clr_bw(drvdata->cam->bwr,
 		get_bwr_engine(drvdata->id), get_axi_port(drvdata->id, true));
+	mtk_cam_dvc_unint(&drvdata->cam->dvfs.dvc, drvdata->id);
 
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		cg_dump_and_test(dev, CG_RAW, 0);
@@ -2780,9 +2780,6 @@ int mtk_raw_runtime_suspend(struct device *dev)
 		clk_disable_unprepare(drvdata->clks[i]);
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		cg_dump_and_test(dev, CG_RAW, 0);
-#ifdef SKIP_IN_FPGA_EP
-	mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_CAM);
-#endif
 
 	if (is_hwccf_apply())
 		mtk_smi_larb_disable(&drvdata->larbs[0]->dev);
@@ -2808,9 +2805,7 @@ int mtk_raw_runtime_resume(struct device *dev)
 	if (pr_detect_count < KERNEL_LOG_MAX)
 		set_detect_count(KERNEL_LOG_MAX);
 	dev_info(dev, "%s:enable clock\n", __func__);
-#ifdef SKIP_IN_FPGA_EP
-	mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_CAM);
-#endif
+
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		cg_dump_and_test(dev, CG_RAW, 1);
 	for (i = 0; i < drvdata->num_clks; i++) {

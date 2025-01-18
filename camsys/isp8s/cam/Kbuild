@@ -98,6 +98,7 @@ $(CAM_MODULE)-objs := \
     mtk_cam-bwr.o \
     mtk_cam-tuning.o \
     mtk_cam-topctrl.o \
+    mtk_cam-dvc.o \
 
     #mtk_cam-size_assertion.o \
     #mtk_cam-raw_debug.o \

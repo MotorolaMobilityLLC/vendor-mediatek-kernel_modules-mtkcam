@@ -18,6 +18,10 @@ static unsigned int debug_dram_ring_mode;
 module_param(debug_dram_ring_mode, uint, 0644);
 MODULE_PARM_DESC(debug_dram_ring_mode, "enable ringbuffer on dram");
 
+static unsigned int debug_dvc_hwmode = -1;
+module_param(debug_dvc_hwmode, uint, 0644);
+MODULE_PARM_DESC(debug_dvc_hwmode, "enable/disablbe dvc hwmode, 0: sw mode, 1: hw mode");
+
 #define buf_printk(fmt, arg...)					\
 	do {							\
 		if (unlikely(CAM_DEBUG_ENABLED(IPI_BUF)))	\
@@ -1999,6 +2003,21 @@ bool is_ois_compensation(struct mtk_cam_job *job)
 		return false;
 
 	return res_raw_ois_compensation(&res->raw_res);
+}
+
+bool is_dvc_hwmode(struct mtk_cam_job *job)
+{
+	struct mtk_raw_ctrl_data *ctrl;
+
+	ctrl = get_raw_ctrl_data(job);
+
+	if (!ctrl)
+		return 0;
+
+	if (debug_dvc_hwmode == -1)
+		return ctrl->resource.dvc_hwmode;
+	else
+		return debug_dvc_hwmode;
 }
 
 bool is_rgbw(struct mtk_cam_job *job)

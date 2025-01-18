@@ -77,6 +77,7 @@ struct mtk_cam_resource_driver {
 	/* driver internally cached */
 	int tgo_pxl_mode;
 	int tgo_pxl_mode_before_raw;
+	int dvc_hwmode;
 };
 
 static inline int bin_ratio(u8 bin_type)

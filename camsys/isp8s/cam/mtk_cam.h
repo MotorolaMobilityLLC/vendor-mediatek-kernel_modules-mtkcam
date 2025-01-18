@@ -40,6 +40,7 @@
 
 #include "mtk_cam-hsf-def.h"
 #include "mtk_cam-bwr.h"
+#include "mtk_cam-dvc.h"
 #include "mtk_cam-tuning.h"
 
 #define CCD_READY 1
@@ -334,6 +335,7 @@ struct mtk_cam_device {
 	spinlock_t running_job_lock;
 
 	struct mtk_camsys_dvfs dvfs;
+	struct mtk_camsys_dvc dvc;
 
 	struct mtk_cam_debug dbg;
 

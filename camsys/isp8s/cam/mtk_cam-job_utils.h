@@ -151,6 +151,7 @@ int get_exp_order(struct mtk_cam_scen *scen);
 bool is_vhdr(struct mtk_cam_job *job);
 bool is_dc_mode(struct mtk_cam_job *job);
 bool is_ois_compensation(struct mtk_cam_job *job);
+bool is_dvc_hwmode(struct mtk_cam_job *job);
 bool is_sv_pure_raw(struct mtk_cam_job *job);
 bool is_offline_timeshare(struct mtk_cam_job *job);
 bool is_rgbw(struct mtk_cam_job *job);

@@ -8,9 +8,11 @@
 
 #include <linux/clk.h>
 #include <linux/interconnect.h>
+#include <linux/platform_device.h>
 
 #include "mtk_cam-dvfs_qos_raw.h"
 #include "mtk_cam-dvfs_qos_sv.h"
+#include "mtk_cam-dvc.h"
 
 struct device;
 struct regulator;
@@ -27,6 +29,7 @@ struct mtk_camsys_dvfs {
 	} opp[8];
 
 	struct clk *mmdvfs_clk;
+	struct mtk_camsys_dvc dvc;
 
 	int max_stream_num;
 	struct dvfs_stream_info *stream_infos;
@@ -43,12 +46,14 @@ void mtk_cam_dvfs_reset_runtime_info(struct mtk_camsys_dvfs *dvfs);
 
 unsigned int mtk_cam_dvfs_query(struct mtk_camsys_dvfs *dvfs, int opp_idx);
 
+int freq_to_oppidx(struct mtk_camsys_dvfs *dvfs, unsigned int freq);
+
 int mtk_cam_dvfs_update(struct mtk_camsys_dvfs *dvfs, int stream_id,
 			unsigned int target_freq_hz, bool boostable);
 
-int mtk_cam_dvfs_switch_begin(struct mtk_camsys_dvfs *dvfs, int stream_id,
-			      unsigned int target_freq_hz, bool boostable);
-int mtk_cam_dvfs_switch_end(struct mtk_camsys_dvfs *dvfs, int stream_id);
+int mtk_cam_dvfs_switch_begin(struct mtk_camsys_dvfs *dvfs, int stream_id, int raw_id,
+			unsigned int target_freq_hz, bool boostable);
+int mtk_cam_dvfs_switch_end(struct mtk_camsys_dvfs *dvfs, int stream_id, int raw_id);
 
 static inline
 int mtk_cam_dvfs_get_opp_table(struct mtk_camsys_dvfs *dvfs,
