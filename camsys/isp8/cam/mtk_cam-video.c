@@ -700,7 +700,7 @@ static long mtk_cam_vidioc_streamon_handler(struct file *file,
 	cam = vb2_get_drv_priv(&node->vb2_q);
 	ctx = (cam) ? mtk_cam_find_ctx(cam, &node->vdev.entity) : NULL;
 
-	if (ctx && node)
+	if (ctx)
 		ret = _stream_on_handler_locked(ctx, node);
 	else  /* should not happen */
 		WARN(1, "%s: no ctx found for %s\n", __func__, node->desc.name);
@@ -771,13 +771,13 @@ static long mtk_cam_vidioc_streamoff_handler(struct file *file,
 	 *    (or v4l2 checker warn_on during vb2 queue cancel)
 	 */
 
-	if (CAM_DEBUG_ENABLED(V4L2))
+	if (cam && ctx && CAM_DEBUG_ENABLED(V4L2))
 		dev_info(cam->dev,
 			"%s:streaming_node cnt:%d node_name:%s, queued_cnt:%d",
 			__func__, ctx->streaming_node_cnt, node->desc.name,
 			atomic_read(&node->queued_cnt));
 
-	if (ctx && node)
+	if (ctx)
 		_stream_off_handler_locked(ctx, node, false, "stream_off");
 
 	/* mtk_cam_vb2_stop_streaming */
@@ -820,8 +820,9 @@ static int mtk_cam_vb2_fop_release(struct file *file)
 #ifdef MTK_CAM_KTHREAD_PRE_ALLOC
 	int i;
 #endif
+
 	open_cnt = atomic_dec_return(&node->open_cnt);
-	if (open_cnt != 0) {
+	if (cam && node && open_cnt != 0) {
 		dev_info(cam->dev, "%s %s %d", __func__, node->desc.name, open_cnt);
 		return 0;
 	}
@@ -832,7 +833,7 @@ static int mtk_cam_vb2_fop_release(struct file *file)
 	ctx = (cam) ? mtk_cam_find_ctx(cam, &node->vdev.entity) : NULL;
 
 	if (!vdev->queue->owner || file->private_data == vdev->queue->owner) {
-		if (ctx && node)
+		if (ctx)
 			_stream_off_handler_locked(ctx, node, true, "release");
 
 		/* mtk_cam_vb2_stop_streaming */
@@ -844,7 +845,7 @@ static int mtk_cam_vb2_fop_release(struct file *file)
 		mutex_unlock(lock);
 #ifdef MTK_CAM_KTHREAD_PRE_ALLOC
 	/* check by all pipe (each main-stream), destroy all while all ctxs is stop */
-	if (cam->ctxs && !mtk_cam_is_any_streaming(cam) &&
+	if (cam && cam->ctxs && !mtk_cam_is_any_streaming(cam) &&
 	    node->desc.id == MTK_RAW_MAIN_STREAM_OUT) {
 		dev_info(cam->dev, "%s, destroy kthread", __func__);
 		for (i = 0; i < cam->max_stream_num; i++)  /* check all */
@@ -870,7 +871,7 @@ static int mtk_cam_v4l2_fh_open(struct file *file)
 	}
 
 #ifdef MTK_CAM_KTHREAD_PRE_ALLOC
-	if (cam->ctxs && node->uid.pipe_id == 0 && /* one node only */
+	if (cam && cam->ctxs && node->uid.pipe_id == 0 && /* one node only */
 	    node->desc.id == MTK_RAW_MAIN_STREAM_OUT) {
 		dev_info(cam->dev, "%s, pre-create kthread", __func__);
 		for (i = 0; i < 3 && i < cam->max_stream_num; i++)
