@@ -2728,39 +2728,39 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 						(unsigned long)cmd->u.dma_addr);
 
 					switch (dma_addr_msb) {
-					/* TODO */
-					case 0x3410:
-					case 0x3416:
+					case 0x3419:
+					case 0x341a:
+					case 0x341b:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_DIP",
 							"DISPATCH:IMGSYS_DIP map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3470:
+					case 0x3476:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_TRAW",
 							"DISPATCH:IMGSYS_TRAW map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3404:
+					case 0x3405:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_LTRAW",
 							"DISPATCH:IMGSYS_LTRAW map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3420:
+					case 0x3424:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_WPE_EIS",
 							"DISPATCH:IMGSYS_WPE_EIS map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3454:
+					case 0x3453:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_OMC_TNR",
 							"DISPATCH:IMGSYS_OMC_TNR map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3460:
+					case 0x3464:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_WPE_LITE",
 							"DISPATCH:IMGSYS_WPE_LITE map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3464:
+					case 0x3465:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_OMC_LITE",
 							"DISPATCH:IMGSYS_OMC_LITE map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
@@ -2770,27 +2770,28 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 							"DISPATCH:IMGSYS_WPE_DEPTH map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3421:
+					case 0x3425:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_PQDIP_A",
 							"DISPATCH:IMGSYS_PQDIP_A map iova fail, addr:0x%08llx",
 							 (unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3451:
+					case 0x3454:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_PQDIP_B",
 							"DISPATCH:IMGSYS_PQDIP_B map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3407:
+					case 0x3455:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_ME",
 							"DISPATCH:IMGSYS_ME map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3431:
+					case 0x3432:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_MAE",
 							"DISPATCH:IMGSYS_MAE map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3a77:
+					case 0x3467:
+					case 0x3468:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_DFP",
 							"DISPATCH:IMGSYS_DFP map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
@@ -2806,7 +2807,7 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 							"DISPATCH:IMGSYS_ADL map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3408:
+					case 0x3456:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_MMG",
 							"DISPATCH:IMGSYS_MMG map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
@@ -2887,65 +2888,88 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 						(unsigned long)cmd->u.dma_addr);
 
 					switch (dma_addr_msb) {
-					case 0x3410:
-					case 0x3416:
+					case 0x3419:
+					case 0x341a:
+					case 0x341b:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_DIP",
 							"DISPATCH:IMGSYS_DIP map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3470:
+					case 0x3476:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_TRAW",
 							"DISPATCH:IMGSYS_TRAW map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3404:
+					case 0x3405:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_LTRAW",
 							"DISPATCH:IMGSYS_LTRAW map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3420:
+					case 0x3424:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_WPE_EIS",
 							"DISPATCH:IMGSYS_WPE_EIS map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3454:
+					case 0x3453:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_OMC_TNR",
 							"DISPATCH:IMGSYS_OMC_TNR map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3460:
+					case 0x3464:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_WPE_LITE",
 							"DISPATCH:IMGSYS_WPE_LITE map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3464:
+					case 0x3465:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_OMC_LITE",
 							"DISPATCH:IMGSYS_OMC_LITE map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3421:
+					case 0x3469:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_WPE_DEPTH",
+							"DISPATCH:IMGSYS_WPE_DEPTH map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3425:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_PQDIP_A",
 							"DISPATCH:IMGSYS_PQDIP_A map iova fail, addr:0x%08llx",
 							 (unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3451:
+					case 0x3454:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_PQDIP_B",
 							"DISPATCH:IMGSYS_PQDIP_B map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3407:
+					case 0x3455:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_ME",
 							"DISPATCH:IMGSYS_ME map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
-					case 0x3408:
-						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_MMG",
-							"DISPATCH:IMGSYS_MMG map iova fail, addr:0x%08llx",
-							(unsigned long)cmd->u.dma_addr);
-						break;
-					case 0x3431:
+					case 0x3432:
 						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_MAE",
 							"DISPATCH:IMGSYS_MAE map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3467:
+					case 0x3468:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_DFP",
+							"DISPATCH:IMGSYS_DFP map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3a00:
+					case 0x3a7a:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_DPE",
+							"DISPATCH:IMGSYS_DPE map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3401:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_ADL",
+							"DISPATCH:IMGSYS_ADL map iova fail, addr:0x%08llx",
+							(unsigned long)cmd->u.dma_addr);
+						break;
+					case 0x3456:
+						aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_MMG",
+							"DISPATCH:IMGSYS_MMG map iova fail, addr:0x%08llx",
 							(unsigned long)cmd->u.dma_addr);
 						break;
 					default:
@@ -2999,53 +3023,57 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 			u32 gpr_idx = 0;
 
 			switch (addr_msb) {
-			/* TODO */
-			case 0x3410:
-			case 0x3415:
-			case 0x3416:
+			case 0x3419:
+			case 0x341a:
+			case 0x341b:
 				/* DIP */
 				gpr_idx = 0;
 				break;
-			case 0x3470:
+			case 0x3476:
 				/* TRAW */
 				gpr_idx = 1;
 				break;
-			case 0x3404:
+			case 0x3405:
 				/* LTRAW */
 				gpr_idx = 2;
 				break;
-			case 0x3420:
+			case 0x3424:
 				/* WPE_EIS */
 				gpr_idx = 3;
 				break;
-			case 0x3454:
+			case 0x3453:
 				/* OMC_TNR */
 				gpr_idx = 4;
 				break;
-			case 0x3460:
+			case 0x3464:
 				/* WPE_LITE */
 				gpr_idx = 5;
 				break;
-			case 0x3421:
+			case 0x3425:
 				/* PQDIP_A */
 				gpr_idx = 6;
 				break;
-			case 0x3451:
+			case 0x3454:
 				/* PQDIP_B */
 				gpr_idx = 7;
 				break;
-			case 0x3407:
-			case 0x3408:
-				/* ME/MMG */
+			case 0x3455:
+			case 0x3456:
+				/* ME */
 				gpr_idx = 8;
 				break;
-			case 0x3464:
+			case 0x3465:
 				/* OMC_LITE */
 				gpr_idx = 9;
 				break;
-			case 0x3431:
+			case 0x3432:
 				/* MAE */
 				gpr_idx = 11;
+				break;
+			case 0x3467:
+			case 0x3468:
+				/* DFP */
+				gpr_idx = 12;
 				break;
 			default:
 				gpr_idx = thd_idx;
