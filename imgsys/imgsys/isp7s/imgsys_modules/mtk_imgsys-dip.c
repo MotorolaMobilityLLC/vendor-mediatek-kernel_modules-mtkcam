@@ -157,7 +157,7 @@ void imgsys_dip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			#endif
 
 			if (cq_desc == NULL) {
-				pr_debug("%s: cq_desc NULL\n", __func__);
+				//pr_debug("%s: cq_desc NULL\n", __func__);
 				return;
 			}
 

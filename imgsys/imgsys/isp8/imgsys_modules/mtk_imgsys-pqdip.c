@@ -728,7 +728,7 @@ void imgsys_pqdip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 		cq_base = hcp_ops->fetch_pqdip_cq_mb_virt(imgsys_dev->scp_pdev, mode);
 
 	if (cq_base == NULL) {
-		pr_debug("%s: cq_base NULL\n", __func__);
+		//pr_debug("%s: cq_base NULL\n", __func__);
 		return;
 	}
 
