@@ -381,8 +381,8 @@ static unsigned int do_2a_gain_s5khp9sp(struct EEPROM_DRV_FD_DATA *pdata,
 		AFInf  = ((AFInf << 8) & 0xFF00) | ((AFInf >> 8) & 0x00FF);
 		AFMacro  = ((AFMacro << 8) & 0xFF00) | ((AFMacro >> 8) & 0x00FF);
 
-		pCamCalData->Single2A.S2aAf[0] = AFInf;
-		pCamCalData->Single2A.S2aAf[1] = AFMacro;
+		pCamCalData->Single2A.S2aAf[0] = 1710; // AFInf;
+		pCamCalData->Single2A.S2aAf[1] = 14850; // AFMacro;
 
 		debug_log("======================AF CAM_CAL==================\n");
 		debug_log("[AFInf] = %d\n", AFInf);
