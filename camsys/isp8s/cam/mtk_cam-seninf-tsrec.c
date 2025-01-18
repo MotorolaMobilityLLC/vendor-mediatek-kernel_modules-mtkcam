@@ -3365,7 +3365,7 @@ void mtk_cam_seninf_tsrec_query_ts_records(const unsigned int tsrec_no)
 			"ERROR: get non-valid tsrec_no:%u (tsrec_hw_cnt:%u), curr_ts:%llu(%llu), sys_ts_ns:%llu, dump dbg info then return\n",
 			tsrec_no,
 			tsrec_status.tsrec_hw_cnt,
-			curr_tick/TSREC_TICK_FACTOR,
+			TSREC_TICK_TO_US(curr_tick),
 			curr_tick,
 			curr_sys_time_ns);
 		/* for debugging */

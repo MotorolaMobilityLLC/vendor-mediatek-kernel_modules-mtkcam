@@ -385,7 +385,7 @@ void mtk_cam_seninf_s_tsrec_timer_cfg(const unsigned int en)
 		(TSREC_WITH_GLOBAL_TIMER) ? TSREC_USE_GLOBAL_TIMER : 0;
 
 	/* config reg value */
-	reg.bits.TSREC_TIMER_FIX_CLK_EN = 1;
+	reg.bits.TSREC_TIMER_FIX_CLK_EN = (tsrec_using_global_timer) ? 0 : 1;
 	reg.bits.TSREC_TIMER_CK_EN = 1;
 	reg.bits.TSREC_TIMER_CLR = 1; // write clr
 #if (TSREC_WITH_GLOBAL_TIMER)
@@ -1028,7 +1028,12 @@ unsigned long long mtk_cam_seninf_g_tsrec_exp_cnt(const unsigned int tsrec_n,
 	val = r_buf.val;
 
 #if (TSREC_WITH_64_BITS_TIMER_RG)
+	r_buf_M.tsrec_no = tsrec_n;
+	r_buf_M.base_addr = g_tsrec_no_base_addr(tsrec_n);
 	r_buf_M.shift = TSREC_EXP_CNT_M_OFFSET(tsrec_n, exp_n, cnt);
+	if (unlikely(!chk_tsrec_r_buffer_valid(&r_buf_M, __func__)))
+		return 0;
+
 	tsrec_read_reg(&r_buf_M, __func__);
 	val = r_buf_M.val;
 	val = ((val << 32) | (r_buf.val));
