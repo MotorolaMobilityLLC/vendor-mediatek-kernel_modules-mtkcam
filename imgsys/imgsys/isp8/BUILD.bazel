@@ -1,4 +1,4 @@
-
+load("//build/kernel/kleaf:kernel.bzl", "ddk_headers")
 load("//build/bazel_mgk_rules:mgk_ko.bzl", "define_mgk_ko")
 package(
     default_visibility = [
@@ -24,6 +24,12 @@ filegroup(
         "Kbuild",
         "Makefile",
     ],
+)
+
+ddk_headers(
+    name = "ddk_public_headers",
+    includes = ["."],
+    hdrs = glob(["**/*.h"]), # export all headers for other modules to use
 )
 
 # TODO: enable this part later
