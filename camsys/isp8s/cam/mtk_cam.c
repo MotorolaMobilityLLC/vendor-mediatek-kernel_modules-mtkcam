@@ -3121,6 +3121,23 @@ int PipeIDtoTGIDX(int pipe_id)
 }
 #endif
 
+static int mtk_cam_subdev_s_stream(struct v4l2_subdev *sd, int enable)
+{
+	int ret = -1;
+
+#if KERNEL_VERSION(6, 11, 0) <= LINUX_VERSION_CODE
+	if (v4l2_subdev_is_streaming(sd) != enable)
+		ret = v4l2_subdev_call(sd, video, s_stream, enable);
+	else
+		pr_info("%s: warning: '%s' is_streaming %d == enable %d\n",
+				 __func__, sd->name, v4l2_subdev_is_streaming(sd), enable);
+#else
+	ret = v4l2_subdev_call(sd, video, s_stream, enable);
+#endif
+
+	return ret;
+}
+
 int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job,
 				int seninf_pad_bitmask, int raw_tg_idx)
 {
@@ -3241,7 +3258,8 @@ int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job,
 		}
 	}
 
-	ret = v4l2_subdev_call(ctx->seninf, video, s_stream, 1);
+	ret = mtk_cam_subdev_s_stream(ctx->seninf, 1);
+
 	if (ret) {
 		dev_info(cam->dev, "ctx %d failed to stream_on %s %d\n",
 			 ctx->stream_id, seninf->name, ret);
@@ -3267,7 +3285,8 @@ int ctx_stream_off_seninf_sensor(struct mtk_cam_ctx *ctx)
 	if (!ctx->seninf)
 		return ret;
 
-	ret = v4l2_subdev_call(ctx->seninf, video, s_stream, 0);
+	ret = mtk_cam_subdev_s_stream(ctx->seninf, 0);
+
 	if (ret) {
 		dev_info(ctx->cam->dev, "ctx %d failed to stream_off %s %d\n",
 			 ctx->stream_id, ctx->seninf->name, ret);
