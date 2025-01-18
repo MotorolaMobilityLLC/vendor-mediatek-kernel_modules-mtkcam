@@ -79,6 +79,7 @@ define_mgk_ddk_ko(
     ],
     header_deps = [
         "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",
+        "//kernel_device_modules-{}/drivers/misc/mediatek/iommu:iommu_misc_headers".format(kernel_version),
         "//kernel_device_modules-{}/drivers/iommu/arm/arm-smmu-v3:smmu_public_headers".format(kernel_version),
     ],
 )
