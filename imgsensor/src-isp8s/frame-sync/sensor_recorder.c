@@ -1459,7 +1459,13 @@ static unsigned int frec_calc_stg_valid_min_fl_lc_for_shutters(
 	result_2 = frec_chk_stg_fl_rule_2(idx, curr_rec, prev_rec);
 	result_3 = frec_chk_dol_stg_fl_rule(idx, curr_rec,prev_rec);
 
-	min_fl_lc = (min_fl_lc > result_1) ? min_fl_lc : result_1;
+	/**
+	 * Coverity scan...
+	 * The condition 'min_fl_lc > result_1' cannot be true.
+	 * => the value of 'min_fl_lc' is assigned/initialized to zero.
+	 */
+	/* min_fl_lc = (min_fl_lc > result_1) ? min_fl_lc : result_1; */
+	min_fl_lc = result_1;
 	min_fl_lc = (min_fl_lc > result_2) ? min_fl_lc : result_2;
 	min_fl_lc = (min_fl_lc > result_3) ? min_fl_lc : result_3;
 

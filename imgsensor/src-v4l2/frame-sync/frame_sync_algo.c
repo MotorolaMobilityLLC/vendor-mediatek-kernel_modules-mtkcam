@@ -801,7 +801,7 @@ static unsigned int calc_vts_sync_bias_lc(const unsigned int idx)
  *     0: not trigger in ts critical section
  */
 static inline unsigned int check_timing_critical_section(
-	const unsigned int pred_vdiff, const unsigned int target_min_fl_us)
+	const long long pred_vdiff, const unsigned int target_min_fl_us)
 {
 	unsigned int threshold = 0/*, delta = 0*/;
 

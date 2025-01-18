@@ -223,7 +223,13 @@ static unsigned int hw_sync_calc_stg_valid_min_fl_lc_for_shutters(
 	result_1 = hw_sync_chk_stg_fl_rule_1(curr_hdr_exp, prev_hdr_exp);
 	result_2 = hw_sync_chk_stg_fl_rule_2(curr_hdr_exp, prev_hdr_exp);
 
-	min_fl_lc = (min_fl_lc > result_1) ? min_fl_lc : result_1;
+	/**
+	 * Coverity scan...
+	 * The condition 'min_fl_lc > result_1' cannot be true.
+	 * => the value of 'min_fl_lc' is assigned/initialized to zero.
+	 */
+	/* min_fl_lc = (min_fl_lc > result_1) ? min_fl_lc : result_1; */
+	min_fl_lc = result_1;
 	min_fl_lc = (min_fl_lc > result_2) ? min_fl_lc : result_2;
 
 	return min_fl_lc;
