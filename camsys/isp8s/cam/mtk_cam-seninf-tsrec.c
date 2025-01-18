@@ -26,6 +26,7 @@
  * TSREC member structure/variables
  *****************************************************************************/
 struct device *seninf_dev;
+struct seninf_core *seninf_core;
 
 
 #ifndef FS_UT
@@ -133,6 +134,15 @@ enum tsrec_work_event_flag {
 	TSREC_WORK_DBG_DUMP_IRQ_INFO = (1UL << 31),
 };
 
+struct tsrec_broadcast_work_request {
+#ifndef FS_UT
+	struct kthread_work work;
+#endif
+	void *dev_ctx;
+	unsigned int tsrec_no;
+
+	struct mtk_cam_broadcast_info broadcast_info;
+};
 
 struct tsrec_work_request {
 #ifndef FS_UT
@@ -1037,6 +1047,30 @@ static int tsrec_work_chk_status_valid(const unsigned int tsrec_no,
 	return 1;
 }
 
+static int tsrec_broadcast_work_chk_status_valid(const unsigned int tsrec_no,
+	const char *caller)
+{
+	struct tsrec_n_regs_st *ptr = NULL;
+	int ret;
+
+	ret = g_tsrec_n_regs_st(tsrec_no, &ptr, __func__);
+	if (ret != 0)
+		return 0;
+	if (ptr == NULL) {
+		TSREC_LOG_DBG_CAT(LOG_TSREC_WORK_HANDLE,
+			"[%s] ERROR: tsrec_n_regs_st[%u] is nullptr (%p), return\n",
+			caller, tsrec_no, ptr);
+		return 0;
+	}
+	if (ptr->en == 0) {
+		TSREC_LOG_DBG_CAT(LOG_TSREC_WORK_HANDLE,
+			"[%s] NOTICE: tsrec_n_regs_st[%u]:(en:%u), skip works/jobs, return 0\n",
+			caller, tsrec_no, ptr->en);
+		return 0;
+	}
+
+	return 1;
+}
 
 #ifndef FS_UT
 static void tsrec_find_seninf_ctx_by_tsrec_no(void *irq_dev_ctx,
@@ -1125,6 +1159,90 @@ static void tsrec_setup_cb_func_info_of_sensor(struct seninf_ctx *inf_ctx,
 #endif
 }
 
+#ifndef FS_UT
+static void tsrec_broadcast_work_done_check(struct tsrec_broadcast_work_request *req)
+{
+	const struct mtk_cam_broadcast_info *p_info = &req->broadcast_info;
+	u64 wake_up_time = 0, excution_time = 0;
+
+	wake_up_time = p_info->wakeup_work_ts_ns - p_info->queue_work_ts_ns;
+	excution_time = p_info->done_work_ts_ns - p_info->wakeup_work_ts_ns;
+
+	if ((wake_up_time > MAX_BROADCAST_WAKE_UP_TIME_NS) || (excution_time > MAX_BROADCAST_EXECUTION_TIME_NS))
+		TSREC_LOG_INF(
+			"[%s] WARNING: dur(wake_up:%lluus(th:%dus), exe:%lluus (th:%dus)), no:%u, bc_info(type:%u(%u), s_idx:%u/inf:%u, req_id:%u, ts(sof:%llu, worker:(%llu(sof:+%llums)/%llu(+%lluus)))), done_ts:%llu(dur:+%lluus)\n",
+			__func__,
+			(wake_up_time / 1000),
+			MAX_BROADCAST_WAKE_UP_TIME_NS/1000,
+			(excution_time / 1000),
+			MAX_BROADCAST_EXECUTION_TIME_NS/1000,
+			req->tsrec_no,
+			p_info->type,
+			p_info->need_broadcast_to_itself,
+			p_info->sensor_idx,
+			p_info->seninf_idx,
+			p_info->req_id,
+			p_info->sof_timestamp,
+			p_info->queue_work_ts_ns,
+			(p_info->queue_work_ts_ns - p_info->sof_timestamp)/1000000,
+			p_info->wakeup_work_ts_ns,
+			(wake_up_time / 1000),
+			p_info->done_work_ts_ns,
+			(excution_time / 1000));
+
+	TSREC_LOG_DBG_CAT(LOG_TSREC_WORK_HANDLE,
+		"tsrec_no:%u, bc_info(type:%u(%u), s_idx:%u/inf:%u, req_id:%u, ts(sof:%llu, worker:(%llu(sof:+%llums)/%llu(+%lluus)))), done_ts:%llu(dur:+%lluus)\n",
+		req->tsrec_no,
+		p_info->type,
+		p_info->need_broadcast_to_itself,
+		p_info->sensor_idx,
+		p_info->seninf_idx,
+		p_info->req_id,
+		p_info->sof_timestamp,
+		p_info->queue_work_ts_ns,
+		(p_info->queue_work_ts_ns - p_info->sof_timestamp)/1000000,
+		p_info->wakeup_work_ts_ns,
+		(wake_up_time / 1000),
+		p_info->done_work_ts_ns,
+		(excution_time / 1000));
+}
+#endif
+
+static void tsrec_broadcast_work_executor(
+	const unsigned int tsrec_no, struct tsrec_broadcast_work_request *req)
+{
+#ifndef FS_UT
+
+	struct seninf_ctx *seninf_ctx = NULL;
+	unsigned int seninf_idx = SENINF_IDX_NONE;
+
+	/* case check */
+	tsrec_find_seninf_ctx_by_tsrec_no(
+		req->dev_ctx, tsrec_no, &seninf_ctx, &seninf_idx, __func__);
+
+	if (unlikely(seninf_ctx == NULL)) {
+		TSREC_LOG_INF(
+			"ERROR: unlikely(seninf_ctx == NULL)\n");
+		return;
+	}
+
+	if (unlikely(!(seninf_ctx->sensor_sd
+			&& seninf_ctx->sensor_sd->ops
+			&& seninf_ctx->sensor_sd->ops->core
+			&& seninf_ctx->sensor_sd->ops->core->command))) {
+		TSREC_LOG_INF(
+			"ERROR: v4l2_subdev_core_ops command function not found\n");
+		return;
+	}
+
+	/* call v4l2_subdev_core_ops command to sensor adaptor */
+	seninf_ctx->sensor_sd->ops->core->command(
+		seninf_ctx->sensor_sd, V4L2_CMD_SET_SENSOR_BROADCAST_EVENT, &(req->broadcast_info));
+
+	req->broadcast_info.done_work_ts_ns = ktime_get_boottime_ns();
+	tsrec_broadcast_work_done_check(req);
+#endif
+}
 
 static void tsrec_work_executor(
 	const unsigned int tsrec_no, const struct tsrec_work_request *req,
@@ -1225,6 +1343,74 @@ static void tsrec_n_update_irq_info_st(const unsigned int tsrec_no,
 	const struct tsrec_irq_info_st *irq_info);
 
 /*---------------------------------------------------------------------------*/
+
+static inline void tsrec_broadcast_work_free(struct tsrec_broadcast_work_request *req)
+{
+	if (unlikely(req == NULL)) {
+		TSREC_LOG_INF(
+			"ERROR: work request:%p dynamic alloc mem failed, return\n",
+			req);
+		return;
+	}
+
+	/* If there is custom data, free it here */
+
+	TSREC_KFREE(req);
+
+}
+
+#ifndef FS_UT
+static void tsrec_broadcast_work_handler(struct kthread_work *work)
+#else
+static void tsrec_broadcast_work_handler(struct tsrec_broadcast_work_request *req)
+#endif
+{
+#ifndef FS_UT
+	struct tsrec_broadcast_work_request *req = NULL;
+
+	/* error handle (unexpected case) */
+	if (unlikely(work == NULL))
+		return;
+	/* convert/cast work_struct */
+	req = container_of(work, struct tsrec_broadcast_work_request, work);
+	if (unlikely(req == NULL)) {
+		TSREC_LOG_INF(
+			"ERROR: container_of() casting failed, return\n");
+		return;
+	}
+#endif
+
+	if (unlikely(req->dev_ctx == NULL)) {
+		TSREC_LOG_INF(
+			"ERROR: irq_dev_ctx:%p is nullptr, req:(tsrec_no:%u type:%u need_broadcast_to_itself:%u sensor_idx:%u seninf_idx:%u req_id:%u sof_timestamp:%llu worker_ts:(%llu/%llu/%llu))\n",
+			req->dev_ctx,
+			req->tsrec_no,
+			req->broadcast_info.type,
+			req->broadcast_info.need_broadcast_to_itself,
+			req->broadcast_info.sensor_idx,
+			req->broadcast_info.seninf_idx,
+			req->broadcast_info.req_id,
+			req->broadcast_info.sof_timestamp,
+			req->broadcast_info.queue_work_ts_ns,
+			req->broadcast_info.wakeup_work_ts_ns,
+			req->broadcast_info.done_work_ts_ns);
+
+		goto tsrec_broadcast_work_handler_end;
+	}
+	if (unlikely(tsrec_work_chk_status_valid(req->tsrec_no, __func__) == 0)) {
+		TSREC_LOG_INF(
+			"ERROR: tsrec_work_chk_status_valid(req->tsrec_no, __func__) == 0, return\n");
+
+		goto tsrec_broadcast_work_handler_end;
+	}
+
+	req->broadcast_info.wakeup_work_ts_ns = ktime_get_boottime_ns();
+
+	tsrec_broadcast_work_executor(req->tsrec_no, req);
+
+tsrec_broadcast_work_handler_end:
+	tsrec_broadcast_work_free(req);
+}
 
 #ifndef FS_UT
 #if defined(TSREC_WORK_USING_KTHREAD)
@@ -1351,6 +1537,28 @@ static void tsrec_work_handler(struct tsrec_work_request *req)
 	TSREC_KFREE(req);
 }
 
+static void tsrec_broadcast_work_init_and_queue(const unsigned int tsrec_no,
+	struct tsrec_broadcast_work_request *req)
+{
+#ifndef FS_UT
+
+	kthread_init_work(&req->work, tsrec_broadcast_work_handler);
+	if (unlikely(tsrec_worker.kthreads[tsrec_no] == NULL)) {
+		TSREC_LOG_INF(
+			"ERROR: kthreads[%u]:%p is null <= seems due to failed to run/create kthread, return\n",
+			tsrec_no, tsrec_worker.kthreads[tsrec_no]);
+		tsrec_broadcast_work_free(req);
+		return;
+	}
+
+	req->broadcast_info.queue_work_ts_ns = ktime_get_boottime_ns();
+	kthread_queue_work(
+		&tsrec_worker.kthreads[tsrec_no]->kthread, &req->work);
+
+#else
+	tsrec_broadcast_work_handler(req);
+#endif
+}
 
 static void tsrec_work_init_and_queue(const unsigned int tsrec_no,
 	struct tsrec_work_request *req)
@@ -1377,6 +1585,16 @@ static void tsrec_work_init_and_queue(const unsigned int tsrec_no,
 #endif // !FS_UT
 }
 
+static inline void tsrec_broadcast_work_request_info_setup(void *data,
+	const unsigned int tsrec_no,
+	struct mtk_cam_broadcast_info *broadcast_info,
+	struct tsrec_broadcast_work_request *req)
+{
+	/* copy input data/info */
+	req->dev_ctx = data;
+	req->tsrec_no = tsrec_no;
+	memcpy(&req->broadcast_info, broadcast_info, sizeof(*broadcast_info));
+}
 
 static inline void tsrec_work_request_info_setup(void *data,
 	const unsigned int tsrec_no, const unsigned int work_event_info,
@@ -1390,6 +1608,39 @@ static inline void tsrec_work_request_info_setup(void *data,
 	memcpy(&req->irq_info, irq_info, sizeof(*irq_info));
 }
 
+static void tsrec_broadcast_work_setup(const unsigned int tsrec_no,
+	struct mtk_cam_broadcast_info *broadcast_info)
+{
+	const unsigned int tsrec_hw_cnt = tsrec_status.tsrec_hw_cnt;
+	int i;
+
+
+	for (i = 0; i < tsrec_hw_cnt; ++i) {
+		struct tsrec_broadcast_work_request *req = NULL;
+
+		if (!((chk_tsrec_no_valid(i, __func__) == 1) &&
+			(tsrec_broadcast_work_chk_status_valid(i,__func__) == 1)))
+			continue;
+
+		if ((!broadcast_info->need_broadcast_to_itself) && (i == tsrec_no))
+			continue;
+
+
+		req = TSREC_KZALLOC(sizeof(struct tsrec_broadcast_work_request));
+		if (unlikely(req == NULL)) {
+			TSREC_LOG_INF(
+				"ERROR: work request:%p dynamic alloc mem failed, return\n",
+				req);
+			return;
+		}
+
+		tsrec_broadcast_work_request_info_setup(seninf_core, i, broadcast_info, req);
+
+		/* init & queue work */
+		tsrec_broadcast_work_init_and_queue(i, req);
+
+	}
+}
 
 static void tsrec_work_setup(int irq, void *data,
 	const struct tsrec_irq_info_st *irq_info,
@@ -3518,6 +3769,22 @@ static int tsrec_cb_cmd_read_ts_info(const unsigned int seninf_idx,
 	return 0;
 }
 
+static int tsrec_cb_cmd_setup_broadcast_event(const unsigned int seninf_idx,
+	const unsigned int tsrec_no, void *arg, const char *caller)
+{
+	struct mtk_cam_broadcast_info *broadcast_info = NULL;
+
+	if (unlikely(arg == NULL)) {
+		TSREC_LOG_INF(
+			"[%s] ERROR: get invalid arg:(nullptr)\n", caller);
+		return -1;
+	}
+
+	broadcast_info = (struct mtk_cam_broadcast_info *)arg;
+	tsrec_broadcast_work_setup(tsrec_no, broadcast_info);
+
+	return 0;
+}
 
 /*----------------------------------------------------------------------------*/
 // call back handler entry
@@ -3526,6 +3793,8 @@ static const struct tsrec_cb_cmd_entry tsrec_cb_cmd_list[] = {
 	/* user get tsrec information */
 	{TSREC_CB_CMD_READ_CURR_TS, tsrec_cb_cmd_read_curr_ts},
 	{TSREC_CB_CMD_READ_TS_INFO, tsrec_cb_cmd_read_ts_info},
+	/* user request tsrec worker to help to broadcast event */
+	{TSREC_CB_CMD_SETUP_BROADCAST_EVENT, tsrec_cb_cmd_setup_broadcast_event},
 };
 
 
@@ -4403,6 +4672,10 @@ void mtk_cam_seninf_tsrec_init(struct device *dev, void __iomem *p_seninf_base)
 {
 	seninf_dev = dev;
 
+#ifndef FS_UT
+	seninf_core = dev_get_drvdata(seninf_dev);
+#endif
+
 	mtk_cam_seninf_tsrec_get_property(seninf_dev);
 	mtk_cam_seninf_tsrec_regs_iomem_init(p_seninf_base, tsrec_status.tsrec_hw_cnt);
 	mtk_cam_seninf_tsrec_create_sysfs_file(seninf_dev);
@@ -4423,6 +4696,7 @@ void mtk_cam_seninf_tsrec_uninit(void)
 	mtk_cam_seninf_tsrec_regs_iomem_uninit();
 
 	seninf_dev = NULL;
+	seninf_core = NULL;
 
 	/* uninit tsrec data */
 	tsrec_data_uninit();
