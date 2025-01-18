@@ -6,7 +6,10 @@
  *
  */
 
+#include <linux/bitfield.h>
+#include <linux/bits.h>
 #include <linux/device.h>
+#include <linux/moduleparam.h>
 #include <linux/of_address.h>
 #include <linux/pm_runtime.h>
 #include <linux/remoteproc.h>
@@ -40,6 +43,27 @@ const unsigned int g_imgsys_wpe1_dip1_reg_base = (0x34200000);
 const unsigned int g_imgsys_wpe2_dip1_reg_base = (0x34500000);
 const unsigned int g_imgsys_wpe3_dip1_reg_base = (0x34600000);
 const unsigned int g_imgsys_traw_dip1_reg_base = (0x34700000);
+
+#define AW_MMQOS_EN_MASK       GENMASK(28, 28)
+#define AW_MMQOS_NORMAL_MASK   GENMASK(27, 24)
+#define AW_MMQOS_PREULTRA_MASK GENMASK(23, 20)
+#define AW_MMQOS_ULTRA_MASK    GENMASK(19, 16)
+
+#define AR_MMQOS_EN_MASK       GENMASK(12, 12)
+#define AR_MMQOS_NORMAL_MASK   GENMASK(11, 8)
+#define AR_MMQOS_PREULTRA_MASK GENMASK(7, 4)
+#define AR_MMQOS_ULTRA_MASK    GENMASK(3, 0)
+
+#define IMG_VCORE_MMQOS_CTRL_0_OFT          0x100
+#define IMG_VCORE_MMQOS_CTRL_1_OFT          0x104
+#define IMG_VCORE_MMQOS_CTRL_2_OFT          0x108
+
+static uint32_t mmqos_remap_enable_r = 1;
+static uint32_t mmqos_remap_normal_r = 1;
+static uint32_t mmqos_remap_preultra_r = 9;
+static uint32_t mmqos_remap_enable_w = 1;
+static uint32_t mmqos_remap_normal_w;
+static uint32_t mmqos_remap_preultra_w = 9;
 
 bool imgsys_dip_8s_dbg_enable(void)
 {
@@ -128,7 +152,7 @@ void __iomem *dip2RegBA;
 void __iomem *trawRegBA;
 void __iomem *adlARegBA;
 void __iomem *adlBRegBA;
-void __iomem *imgsysddrenRegBA;
+void __iomem *imgsysVcoreRegBA;
 void __iomem *imgsysiscRegBA;
 void __iomem *wpeeispqdipaRegBA;
 void __iomem *wpetnrpqdipbRegBA;
@@ -137,6 +161,59 @@ void __iomem *mainwpe1RegBA;
 void __iomem *mainwpe2RegBA;
 void __iomem *mainomcliteRegBA;
 int imgsys_ddr_en;
+
+void imgsys_mmqos_remap_get_golden(uint32_t *value)
+{
+	*value |= FIELD_PREP(AR_MMQOS_EN_MASK, mmqos_remap_enable_r) |
+			FIELD_PREP(AR_MMQOS_NORMAL_MASK, mmqos_remap_normal_r) |
+			FIELD_PREP(AR_MMQOS_PREULTRA_MASK, mmqos_remap_preultra_r) |
+			FIELD_PREP(AR_MMQOS_ULTRA_MASK, mmqos_remap_preultra_r);
+	*value |= FIELD_PREP(AW_MMQOS_EN_MASK, mmqos_remap_enable_w) |
+			FIELD_PREP(AW_MMQOS_NORMAL_MASK, mmqos_remap_normal_w) |
+			FIELD_PREP(AW_MMQOS_PREULTRA_MASK, mmqos_remap_preultra_w) |
+			FIELD_PREP(AW_MMQOS_ULTRA_MASK, mmqos_remap_preultra_w);
+}
+
+int imgsys_mmqos_remap_get(char *buf, const struct kernel_param *kp)
+{
+	uint32_t value = 0;
+	void __iomem *qosRemapRegBA = imgsysVcoreRegBA;
+
+	if  (!qosRemapRegBA)
+		return snprintf(buf, PAGE_SIZE, "imgsys pipe had been turned off\n");
+
+	imgsys_mmqos_remap_get_golden(&value);
+
+	return snprintf(buf, PAGE_SIZE,
+			"current: 0x%08X 0x%08X 0x%08X\n"
+			"expected: 0x%08X\n",
+			ioread32((void *)(qosRemapRegBA + IMG_VCORE_MMQOS_CTRL_0_OFT)),
+			ioread32((void *)(qosRemapRegBA + IMG_VCORE_MMQOS_CTRL_1_OFT)),
+			ioread32((void *)(qosRemapRegBA + IMG_VCORE_MMQOS_CTRL_2_OFT)),
+			value);
+}
+
+int imgsys_mmqos_remap_set(const char *val, const struct kernel_param *kp)
+{
+	u32 result;
+
+	result = sscanf(val, "%u %u %u %u %u %u",
+		&mmqos_remap_enable_r, &mmqos_remap_normal_r, &mmqos_remap_preultra_r,
+		&mmqos_remap_enable_w, &mmqos_remap_normal_w, &mmqos_remap_preultra_w);
+	if (result != 6) {
+		pr_notice("imgsys mmqos remap set fail\n");
+		return result;
+	}
+
+	return 0;
+}
+
+static const struct kernel_param_ops imgsys_mmqos_remap_ops = {
+	.get = imgsys_mmqos_remap_get,
+	.set = imgsys_mmqos_remap_set,
+};
+module_param_cb(imgsys_mmqos_remap, &imgsys_mmqos_remap_ops, NULL, 0644);
+MODULE_PARM_DESC(imgsys_mmqos_remap, "modify imgsys mmqos remap setting");
 
 void imgsys_main_init(struct mtk_imgsys_dev *imgsys_dev)
 {
@@ -257,8 +334,8 @@ void imgsys_main_init(struct mtk_imgsys_dev *imgsys_dev)
 		dev_info(imgsys_dev->dev, "ddr_en(%d/%d)\n", ddr_en, imgsys_ddr_en);
 	}
 
-	imgsysddrenRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_IMG_VCORE);
-	if (!imgsysddrenRegBA) {
+	imgsysVcoreRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_IMG_VCORE);
+	if (!imgsysVcoreRegBA) {
 		dev_info(imgsys_dev->dev, "%s: Unable to ioremap img_vcore registers\n",
 				__func__);
 		dev_info(imgsys_dev->dev, "%s: of_iomap fail, devnode(%s).\n",
@@ -330,6 +407,23 @@ void imgsys_main_init(struct mtk_imgsys_dev *imgsys_dev)
 	}
 
 	pr_info("%s: -.\n", __func__);
+}
+
+void imgsys_mmqos_remap(void)
+{
+	uint32_t value = 0;
+	void __iomem *qosRemapRegBA = imgsysVcoreRegBA;
+
+	if  (!qosRemapRegBA) {
+		pr_err("[%s][%d] qosRemapRegBA is 0", __func__, __LINE__);
+		return;
+	}
+
+	imgsys_mmqos_remap_get_golden(&value);
+
+	iowrite32(value, (qosRemapRegBA + IMG_VCORE_MMQOS_CTRL_0_OFT));
+	iowrite32(value, (qosRemapRegBA + IMG_VCORE_MMQOS_CTRL_1_OFT));
+	iowrite32(value, (qosRemapRegBA + IMG_VCORE_MMQOS_CTRL_2_OFT));
 }
 
 #define ISC_BASE	(0x34060000)
@@ -503,7 +597,7 @@ void imgsys_main_set_init(struct mtk_imgsys_dev *imgsys_dev)
 
 	pr_debug("%s: +.\n", __func__);
 
-	DdrRegBA = imgsysddrenRegBA;
+	DdrRegBA = imgsysVcoreRegBA;
 
 	/* WLA 2.0 de-bounce */
 	value = 0x80006000;
@@ -531,6 +625,8 @@ void imgsys_main_set_init(struct mtk_imgsys_dev *imgsys_dev)
 		pr_err("[%s][%d] param fatal error!", __func__, __LINE__);
 		return;
 	}
+
+	imgsys_mmqos_remap();
 
 #ifndef CONFIG_FPGA_EARLY_PORTING
 	num = imgsys_dev->larbs_num - 1;
@@ -687,9 +783,9 @@ void imgsys_main_uninit(struct mtk_imgsys_dev *imgsys_dev)
 		adlBRegBA = 0L;
 	}
 
-	if (imgsysddrenRegBA) {
-		iounmap(imgsysddrenRegBA);
-		imgsysddrenRegBA = 0L;
+	if (imgsysVcoreRegBA) {
+		iounmap(imgsysVcoreRegBA);
+		imgsysVcoreRegBA = 0L;
 	}
 
 	if (imgsysiscRegBA) {
