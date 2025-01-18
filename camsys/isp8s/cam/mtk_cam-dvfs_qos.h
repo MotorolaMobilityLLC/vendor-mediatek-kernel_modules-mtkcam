@@ -15,6 +15,7 @@
 struct device;
 struct regulator;
 
+/* dvfs */
 struct dvfs_stream_info;
 struct mtk_camsys_dvfs {
 	struct device *dev;
@@ -57,6 +58,7 @@ int mtk_cam_dvfs_get_opp_table(struct mtk_camsys_dvfs *dvfs,
 	return dvfs->opp_num;
 }
 
+/* qos */
 struct mtk_camsys_qos_path;
 struct mtk_camsys_qos {
 	int n_path;
@@ -79,33 +81,11 @@ static inline u32 KBps_to_bwr(unsigned long KBps)
 
 static inline int is_w_merge_port(int id, enum PORT_DOMAIN domain)
 {
-	if (domain == RAW_DOMAIN) {
-		switch(id) {
-		case SMI_PORT_CQI_R1:
-		case SMI_PORT_CQI_R2:
-		case SMI_PORT_RAWI_R2:
-		case SMI_PORT_RAWI_R3:
-		case SMI_PORT_RAWI_R4:
-		case SMI_PORT_RAWI_R5:
-		case SMI_PORT_BPCI_R1:
-		case SMI_PORT_BPCI_R3:
-		case SMI_PORT_GMGI_R1:
-		case SMI_PORT_LSCI_R1:
-		case SMI_PORT_IPUI_I1:
-			return 0;
-		default:
-			return 1;
-		}
-	} else
-		return 1;
-}
-
-static inline int is_adl_port(int id)
-{
-	if (id >= SMI_PORT_ADL_START)
-		return 1;
-	else
+	if (domain == RAW_DOMAIN &&
+	    id >= SMI_PORT_RAW_R_START &&
+	    id < SMI_PORT_RAW_R_END)
 		return 0;
+	return 1;
 }
 
 struct mtk_cam_job;

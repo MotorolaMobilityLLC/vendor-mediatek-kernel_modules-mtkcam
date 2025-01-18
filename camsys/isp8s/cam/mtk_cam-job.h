@@ -434,7 +434,6 @@ struct mtk_cam_job {
 	u64 (*timestamp_buf)[128];
 	int extisp_data; /* extisp used */
 	struct mmqos_bw raw_mmqos[SMI_PORT_RAW_NUM];
-	struct mmqos_bw raw_w_mmqos[SMI_PORT_RAW_NUM];
 	struct mmqos_bw yuv_mmqos[SMI_PORT_YUV_NUM];
 	struct mmqos_bw sv_mmqos[SMI_PORT_SV_NUM];
 

@@ -12,7 +12,7 @@
 #include "mtk_cam-raw_pads.h"
 
 #define MULTI_SMI_SV_HW_NUM 2
-#define DMA_GROUP_SIZE 5
+#define DMA_GROUP_SIZE 4
 
 enum camsys_module_id {
 	CAM_VCORE = 0,
@@ -267,13 +267,12 @@ struct plat_data_hw {
 
 	int (*query_raw_dma_group)(int m4u_id, struct dma_group *group);
 	int (*query_yuv_dma_group)(int m4u_id, struct dma_group *group);
+	int (*query_raw_dma_list)(size_t *num, struct reg_to_dump **reg_list);
+	int (*query_yuv_dma_list)(size_t *num, struct reg_to_dump **reg_list);
 
 	int (*query_caci_size)(int w, int h, size_t *size);
 	int (*query_max_exp_support)(u32 raw_idx);
 
-	int (*query_icc_path_idx)(int domain, int smi_port);
-
-	int (*query_raw_dma_list)(size_t *num, struct reg_to_dump **reg_list);
 	int (*query_adl_cmdq_worker_param)(struct adl_cmdq_worker_param **param);
 
 	int (*query_module_base)(int module_id, int *module_base_addr);

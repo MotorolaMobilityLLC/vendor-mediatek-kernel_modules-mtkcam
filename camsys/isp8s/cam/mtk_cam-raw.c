@@ -3210,7 +3210,8 @@ int mtk_raw_translation_fault_cb(int port, dma_addr_t mva, void *data)
 	struct dma_group group;
 	int i;
 
-	if (m4u_port == 0 || m4u_port == 1) { /* cq info */
+	/* SMMU_[L16/L43/L45]_P0_CAM2_RAW_R_0_P0_16_U1 */
+	if (m4u_port == 0) { /* cq info */
 		print_cq_settings(raw, raw->dmatop_base_inner);
 	}
 

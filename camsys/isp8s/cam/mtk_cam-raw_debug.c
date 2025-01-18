@@ -91,6 +91,7 @@ void dump_raw_dma_err_st(struct mtk_raw_device *raw)
 	INIT_LOGGER(&log, raw->dev);
 	mtk_cam_log_set_prefix(&log, "%s", "RAW DMA ERR: ");
 	for (i = 0; i < list_size; i++) {
+		// skip 0
 		err_st = readl_relaxed(raw->dmatop_base + raw_dma_list[i].reg);
 		if (err_st & 0xffff) {
 			mtk_cam_log_push(&log, " %s: 0x%08x",
@@ -102,27 +103,17 @@ void dump_raw_dma_err_st(struct mtk_raw_device *raw)
 
 void dump_yuv_dma_err_st(struct mtk_yuv_device *yuv)
 {
-	static const struct reg_to_dump yuv_dma_list[] = {
-		ADD_DMA_ERR(YUVO_R1), ADD_DMA_ERR(YUVBO_R1),
-		ADD_DMA_ERR(YUVCO_R1), ADD_DMA_ERR(YUVDO_R1),
-		ADD_DMA_ERR(YUVO_R3), ADD_DMA_ERR(YUVBO_R3),
-		ADD_DMA_ERR(YUVCO_R3), ADD_DMA_ERR(YUVDO_R3),
-		ADD_DMA_ERR(YUVO_R2), ADD_DMA_ERR(YUVBO_R2),
-		ADD_DMA_ERR(YUVO_R4), ADD_DMA_ERR(YUVBO_R4),
-		ADD_DMA_ERR(TCYSO_R1),
-		ADD_DMA_ERR(RZH1N2TO_R2),
-		ADD_DMA_ERR(DRZH2NO_R1),
-		ADD_DMA_ERR(DRZH2NO_R8),
-		ADD_DMA_ERR(DRZS4NO_R3),
-		ADD_DMA_ERR(DRZH1NO_R1),
-		ADD_DMA_ERR(DRZH1NBO_R1),
-	};
+	size_t list_size = 0;
+	struct reg_to_dump *yuv_dma_list = NULL;
 	struct buffered_logger log;
 	int i = 0, err_st;
 
+	CALL_PLAT_HW(query_yuv_dma_list, &list_size, &yuv_dma_list);
+
 	INIT_LOGGER(&log, yuv->dev);
 	mtk_cam_log_set_prefix(&log, "%s", "YUV DMA ERR: ");
-	for (i = 0; i < ARRAY_SIZE(yuv_dma_list); i++) {
+	for (i = 0; i < list_size; i++) {
+		// skip 0
 		err_st = readl_relaxed(yuv->dmatop_base + yuv_dma_list[i].reg);
 		if (err_st & 0xffff) {
 			mtk_cam_log_push(&log, " %s: 0x%08x",
