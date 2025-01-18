@@ -651,10 +651,21 @@ struct mtk_linetime_by_scenario {
 	__u32 get_linetime_type;
 };
 
+/*
+ * @param `vsync_ts_ns` The latest vsync ts of the ref sensor.
+ * @param `fps` The FPS (10x base) of the ref sensor.
+ * @param `target_timing_us` The target offset relative to ref sensor's vsync.
+ * @param `frame_time_us` The frame interval time (in us) of ref sensor.
+ *  `frame_time_us` is available after isp8s.
+ *  The purpose of `frame_time_us` and `fps` are the same.
+ *  When `frame_time_us` is non-zero, the `fps` will be ignored by driver.
+ *  i.e. `frame_time_us` is prior to `fps`
+ */
 struct mtk_1sof_vsync_ts_info {
 	__u64 vsync_ts_ns; // latest ts from streaming sensor
 	__u32 fps; // 30FPS: 300
 	__u32 target_timing_us;
+	__u32 frame_time_us; // frame interval time in us
 };
 
 struct mtk_fsync_hw_mcss_init_info {

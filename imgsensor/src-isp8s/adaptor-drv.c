@@ -749,8 +749,13 @@ static int imgsensor_streaming_delay(struct adaptor_ctx *ctx)
 		sys_ts = ktime_get_boottime_ns();
 		mono_ts = ktime_get_ns();
 		streaming_sensor_vsync_ts = ctx->streamon_1sof_vsync_ts_info.vsync_ts_ns;
-		streaming_sensor_fl_ns = (ctx->streamon_1sof_vsync_ts_info.fps)
+		/* reference to frame_time_us if non-zero */
+		if (ctx->streamon_1sof_vsync_ts_info.frame_time_us)
+			streaming_sensor_fl_ns = (ctx->streamon_1sof_vsync_ts_info.frame_time_us) * 1000;
+		else {
+			streaming_sensor_fl_ns = (ctx->streamon_1sof_vsync_ts_info.fps)
 				? (10000000000/(ctx->streamon_1sof_vsync_ts_info.fps)) : 0;
+		}
 		hw_reinit_time_ns = ctx->subctx.hw_time_info[ctx->cur_mode->id].init_time_ns;
 		target_timing_ns = (u64)ctx->streamon_1sof_vsync_ts_info.target_timing_us * 1000;
 		if(!hw_reinit_time_ns) {
