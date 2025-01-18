@@ -17,7 +17,7 @@
 #include "imgsensor-user.h"
 #include "mtk_cam-seninf-regs.h"
 #include "mtk_cam-aov.h"
-#include "mtk_cam-aov-data-isp8.h"
+#include "mtk_cam-aov-data-isp8s.h"
 #include <linux/atomic.h>
 #include <linux/kfifo.h>
 
@@ -54,8 +54,7 @@ struct seninf_ctx;
 
 /* aov sensor use */
 #define AOV_SENINF_NUM 6
-extern struct mtk_seninf_aov_param g_aov_param;
-extern struct seninf_ctx *aov_ctx[AOV_SENINF_NUM];
+extern struct mtk_seninf_aov_ctrl g_aov_ctrl[AOV_SENINF_NUM];
 
 struct seninf_struct_pair {
 	u32 first;
@@ -186,7 +185,7 @@ struct seninf_core {
 	struct mutex seninf_top_mux_mutex;
 	void __iomem *reg_seninf_top;
 	void __iomem *reg_seninf_async;
-		void __iomem *reg_seninf_tm;
+	void __iomem *reg_seninf_tm;
 	void __iomem *reg_seninf_outmux[SENINF_OUTMUX_NUM];
 	void __iomem *reg_seninf_outmux_inner[SENINF_OUTMUX_NUM];
 
@@ -292,6 +291,9 @@ struct seninf_ctx {
 	unsigned int is_test_model:4;
 	unsigned int is_aov_test_model;
 	unsigned int is_aov_real_sensor;
+
+	/* record aov_runtime_supend enable or not*/
+	bool is_aov_enable;
 #ifdef SENINF_DEBUG
 	unsigned int is_test_streamon:1;
 #endif

@@ -70,6 +70,27 @@ struct mtk_seninf_sentest_ctrl {
 	void *param_ptr;
 };
 
+enum seninf_aov_sentest_ctrl_id {
+	/* GET CTRL */
+	SENINF_AOV_SENTEST_G_CTRL_ID_MIN,
+	SENINF_AOV_SENTEST_G_APMCU_UT_RESULT = SENINF_AOV_SENTEST_G_CTRL_ID_MIN,
+	SENINF_AOV_SENTEST_G_SCP_UT_RESULT,
+	SENINF_AOV_SENTEST_G_APMCU_SCP_UT_RESULT,
+	SENINF_AOV_SENTEST_G_CTRL_ID_MAX,
+
+	/* SET CTRL */
+	SENINF_AOV_SENTEST_S_CTRL_ID_MIN,
+	SENINF_AOV_SENTEST_S_APMCU_UT = SENINF_AOV_SENTEST_S_CTRL_ID_MIN,
+	SENINF_AOV_SENTEST_S_SCP_UT,
+	SENINF_AOV_SENTEST_S_APMCU_SCP_UT,
+	SENINF_AOV_SENTEST_S_CTRL_ID_MAX,
+};
+
+struct mtk_seninf_aov_sentest_ctrl {
+	enum seninf_aov_sentest_ctrl_id ctrl_id;
+	void *param_ptr;
+};
+
 struct outmux_debug_result {
 	u32 vc_feature;
 	u32 tag_id;
@@ -97,9 +118,31 @@ struct mtk_seninf_debug_result {
 	struct outmux_debug_result outmux_result[MAX_OUTMUX_DEBUG_RESULT];
 };
 
+struct mtk_seninf_aov_streaming_info {
+	__u32 sensor_idx;
+	__u32 enable;
+	__u32 aov_mclk_flag;
+	__u32 aov_pm_runtime_flag;
+	__u32 sensor_on;
+	struct mtk_seninf_aov_param aov_param;
+};
+
+struct mtk_seninf_aov_status_check {
+	__u32 sensor_idx;
+	__u32 aov_csi_port;
+	__u32 frame_cnt;
+	__u32 mclk_reg_val;
+	__u32 height;
+	__u32 width;
+	__u32 ctx_is_null;
+};
+
 /* SET */
 
 #define VIDIOC_MTK_S_SENINF_SENTEST_CTRL \
 	_IOWR('M', BASE_VIDIOC_PRIVATE + 50, struct mtk_seninf_sentest_ctrl)
+
+#define VIDIOC_MTK_S_SENINF_AOV_SENTEST_CTRL \
+	_IOWR('M', BASE_VIDIOC_PRIVATE + 51, struct mtk_seninf_aov_sentest_ctrl)
 
 #endif  // __MTK_CAM_SENINF_CONTROL_8_H__

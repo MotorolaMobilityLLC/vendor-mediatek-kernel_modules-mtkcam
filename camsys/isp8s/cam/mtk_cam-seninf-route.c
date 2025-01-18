@@ -497,6 +497,7 @@ int mtk_cam_seninf_get_csi_param(struct seninf_ctx *ctx)
 #if AOV_GET_PARAM
 	struct seninf_core *core = ctx->core;
 #endif
+	int aov_csi_port = ctx->port;
 
 	if (!ctx->sensor_sd)
 		return -EINVAL;
@@ -562,14 +563,14 @@ int mtk_cam_seninf_get_csi_param(struct seninf_ctx *ctx)
 	if (!(core->aov_sensor_id < 0) &&
 		!(ctx->current_sensor_id < 0) &&
 		(ctx->current_sensor_id == core->aov_sensor_id)) {
-		g_aov_param.cphy_settle = csi_param->cphy_settle;
-		g_aov_param.dphy_clk_settle = csi_param->dphy_clk_settle;
-		g_aov_param.dphy_data_settle = csi_param->dphy_data_settle;
-		g_aov_param.dphy_trail = csi_param->dphy_trail;
-		g_aov_param.legacy_phy = csi_param->legacy_phy;
-		g_aov_param.not_fixed_trail_settle = csi_param->not_fixed_trail_settle;
-		g_aov_param.dphy_csi2_resync_dmy_cycle = csi_param->dphy_csi2_resync_dmy_cycle;
-		g_aov_param.not_fixed_dphy_settle = csi_param->not_fixed_dphy_settle;
+		g_aov_ctrl[aov_csi_port].aov_param.cphy_settle = csi_param->cphy_settle;
+		g_aov_ctrl[aov_csi_port].aov_param.dphy_clk_settle = csi_param->dphy_clk_settle;
+		g_aov_ctrl[aov_csi_port].aov_param.dphy_data_settle = csi_param->dphy_data_settle;
+		g_aov_ctrl[aov_csi_port].aov_param.dphy_trail = csi_param->dphy_trail;
+		g_aov_ctrl[aov_csi_port].aov_param.legacy_phy = csi_param->legacy_phy;
+		g_aov_ctrl[aov_csi_port].aov_param.not_fixed_trail_settle = csi_param->not_fixed_trail_settle;
+		g_aov_ctrl[aov_csi_port].aov_param.dphy_csi2_resync_dmy_cycle = csi_param->dphy_csi2_resync_dmy_cycle;
+		g_aov_ctrl[aov_csi_port].aov_param.not_fixed_dphy_settle = csi_param->not_fixed_dphy_settle;
 	}
 #endif
 
@@ -2590,12 +2591,23 @@ int mtk_cam_seninf_s_aov_param(unsigned int sensor_id,
 	struct seninf_core *core = NULL;
 	struct mtk_seninf_aov_param *aov_seninf_param = (struct mtk_seninf_aov_param *)param;
 	unsigned long flags;
+	int aov_csi_port;
 
-	if (g_aov_param.is_test_model) {
+	for (aov_csi_port = 0; aov_csi_port < AOV_SENINF_NUM; aov_csi_port++) {
+		if (sensor_id == g_aov_ctrl[aov_csi_port].aov_sensor_idx)
+			break;
+	}
+
+	if (aov_csi_port >= AOV_SENINF_NUM) {
+		pr_info("[%s] No match sensor_id(%d) in g_aov_ctrl\n", __func__, sensor_id);
+		return -ENODEV;
+	}
+
+	if (g_aov_ctrl[aov_csi_port].aov_param.is_test_model) {
 		real_sensor_id = 5;
 	} else {
-		if (sensor_id == g_aov_param.sensor_idx) {
-			real_sensor_id = g_aov_param.sensor_idx;
+		if (sensor_id == g_aov_ctrl[aov_csi_port].aov_param.sensor_idx) {
+			real_sensor_id = g_aov_ctrl[aov_csi_port].aov_param.sensor_idx;
 			pr_info("[%s] input sensor id(%u)(success)\n",
 				__func__, real_sensor_id);
 		} else {
@@ -2608,8 +2620,16 @@ int mtk_cam_seninf_s_aov_param(unsigned int sensor_id,
 		}
 	}
 
-	if (aov_ctx[real_sensor_id] != NULL) {
-		ctx = aov_ctx[real_sensor_id];
+	if (g_aov_ctrl[aov_csi_port].aov_ctx != NULL) {
+		pr_info("[%s] aov_csi_port(%u)\n", __func__, aov_csi_port);
+		ctx = g_aov_ctrl[aov_csi_port].aov_ctx;
+	} else {
+		pr_info("[%s] Can't find ctx from input sensor id!\n", __func__);
+		return -ENODEV;
+	}
+
+	if (g_aov_ctrl[aov_csi_port].aov_ctx != NULL) {
+		ctx = g_aov_ctrl[aov_csi_port].aov_ctx;
 		core = ctx->core;
 #ifdef SENSING_MODE_READY
 		switch (aov_seninf_init_type) {
@@ -2632,7 +2652,7 @@ int mtk_cam_seninf_s_aov_param(unsigned int sensor_id,
 				__func__, aov_seninf_init_type);
 			break;
 		}
-		if (!g_aov_param.is_test_model) {
+		if (!g_aov_ctrl[aov_csi_port].aov_param.is_test_model) {
 			/* switch i2c bus scl from apmcu to scp */
 			aov_switch_i2c_bus_scl_aux(ctx, SCL7);
 			/* switch i2c bus sda from apmcu to scp */
@@ -2651,22 +2671,19 @@ int mtk_cam_seninf_s_aov_param(unsigned int sensor_id,
 		return -ENODEV;
 	}
 
-	g_aov_param.vc = *vc;
+	g_aov_ctrl[aov_csi_port].aov_param.vc = *vc;
 	/* workaround */
-	if (!g_aov_param.is_test_model) {
-		g_aov_param.vc.dest_cnt = 1;
-		//g_aov_param.vc.dest[0].mux = 14;
-		//g_aov_param.vc.dest[0].mux_vr = 54;
-		//g_aov_param.vc.dest[0].cam = 44;
-		g_aov_param.vc.dest[0].outmux = 13;
-		g_aov_param.vc.dest[0].pix_mode = 3;
-		g_aov_param.vc.dest[0].tag = 0;
-		g_aov_param.vc.dest[0].cam_type = TYPE_UISP;
-		g_aov_param.camtg = 13;
+	if (!g_aov_ctrl[aov_csi_port].aov_param.is_test_model) {
+		g_aov_ctrl[aov_csi_port].aov_param.vc.dest_cnt = 1;
+		g_aov_ctrl[aov_csi_port].aov_param.vc.dest[0].outmux = 9;
+		g_aov_ctrl[aov_csi_port].aov_param.vc.dest[0].pix_mode = 3;
+		g_aov_ctrl[aov_csi_port].aov_param.vc.dest[0].tag = 0;
+		g_aov_ctrl[aov_csi_port].aov_param.vc.dest[0].cam_type = TYPE_UISP;
+		g_aov_ctrl[aov_csi_port].aov_param.camtg = 9;
 	}
 
 	if (aov_seninf_param != NULL) {
-		memcpy((void *)aov_seninf_param, (void *)&g_aov_param,
+		memcpy((void *)aov_seninf_param, (void *)&g_aov_ctrl[aov_csi_port].aov_param,
 			sizeof(struct mtk_seninf_aov_param));
 		// debug use
 		pr_debug(
