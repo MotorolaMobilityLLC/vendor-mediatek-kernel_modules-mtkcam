@@ -157,6 +157,7 @@ struct mtk_cam_ctrl_runtime_info {
 	int inner_seq_no;
 	int outer_seq_no_ts;
 	int done_seq_no;
+	int done_req_seq;
 
 	u64 sof_ts_ns;
 	u64 sof_ts_mono_ns;
