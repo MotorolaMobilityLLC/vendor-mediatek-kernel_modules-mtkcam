@@ -17,7 +17,7 @@ static int cam_remap_hrt_tbl = 0x66E066E;
 module_param(cam_remap_hrt_tbl, int, 0644);
 MODULE_PARM_DESC(cam_remap_hrt_tbl, "hrt remap lut");
 
-static int cam_remap_srt_tbl = 0x0090119;
+static int cam_remap_srt_tbl = 0x0990199;
 module_param(cam_remap_srt_tbl, int, 0644);
 MODULE_PARM_DESC(cam_remap_srt_tbl, "srt remap lut");
 
