@@ -381,6 +381,16 @@ static u16 imx858dual_init_setting[] = {
 	0xAD01,	0x0A,
 	0xAD02,	0x0A,
 	0xAD0E,	0x02,
+
+	0x3020, 0x01, /* reg_addr_mcss_slave_add_en_2nd */
+	0x3021, 0x01, /* reg_addr_mcss_slave_add_acken_2nd */
+	0x3050, 0x01, /* reg_addr_mcss_controller_target_sel */
+	0x3030, 0x01, /* reg_addr_mcss_xvs_io_ctrl */
+	/* 0x3051, 0x01, // reg_addr_mcss_extout_en */
+	/* 0x3052, 0xFF, // width */
+	0x3053, 0x00, /* polarity high active */
+	0x301C, 0x00, /* reg_addr_mcss_frm_length_reflect_timing */
+	0x306C, 0x00, /* mask_frm = 0 */
 };
 
 

@@ -34,10 +34,7 @@ static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt, u64 sof_ts
 static int imx858dual_check_sensor_id(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
 static int open(struct subdrv_ctx *ctx);
-
-static int imx858dual_mcss_update_subdrv_para(void *arg, int scenario_id);
 static int imx858dual_mcss_init(void *arg);
-static int imx858dual_get_sensor_sync_mode(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int imx858dual_mcss_set_mask_frame(struct subdrv_ctx *ctx, u32 num, u32 is_critical);
 /* STRUCT */
 
@@ -45,7 +42,6 @@ static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, imx858dual_set_test_pattern},
 	{SENSOR_FEATURE_SEAMLESS_SWITCH, imx858dual_seamless_switch},
 	{SENSOR_FEATURE_CHECK_SENSOR_ID, imx858dual_check_sensor_id},
-	{SENSOR_FEATURE_GET_SENSOR_SYNC_MODE, imx858dual_get_sensor_sync_mode},
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = { //mode 0
@@ -247,7 +243,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pdaf_cap = TRUE,
 		.ae_binning_ratio = 1000,  // Outout Pixel Level Ratio
 		.fine_integ_line = 388,
-		.delay_frame = 3,
+		.delay_frame = 2,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_R,
 		.csi_param = {
 			.cphy_settle = 74,
@@ -295,7 +291,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pdaf_cap = TRUE,
 		.ae_binning_ratio = 1000,  // Outout Pixel Level Ratio
 		.fine_integ_line = 388,
-		.delay_frame = 3,
+		.delay_frame = 2,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_R,
 		.csi_param = {
 			.cphy_settle = 74,
@@ -343,7 +339,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pdaf_cap = TRUE,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 826,
-		.delay_frame = 3,
+		.delay_frame = 2,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_R,
 		.csi_param = {
 			.cphy_settle = 74,
@@ -392,7 +388,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pdaf_cap = TRUE,
 		.ae_binning_ratio = 1000,  // Outout Pixel Level Ratio
 		.fine_integ_line = 388,
-		.delay_frame = 3,
+		.delay_frame = 2,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_R,
 		.csi_param = {
 			.cphy_settle = 74,
@@ -440,7 +436,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pdaf_cap = TRUE,
 		.ae_binning_ratio = 1000,  // Outout Pixel Level Ratio
 		.fine_integ_line = 388,
-		.delay_frame = 3,
+		.delay_frame = 2,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_R,
 		.csi_param = {
 			.cphy_settle = 74,
@@ -488,7 +484,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pdaf_cap = TRUE,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 388,
-		.delay_frame = 3,
+		.delay_frame = 2,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_R,
 		.csi_param = {
 			.cphy_settle = 78,
@@ -536,7 +532,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pdaf_cap = TRUE,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 388,
-		.delay_frame = 3,
+		.delay_frame = 2,
 		.csi_param = {
 			.cphy_settle = 78,
 		},
@@ -583,14 +579,14 @@ static struct subdrv_static_ctx static_ctx = {
 
 	.frame_length_max = 0xFFFC,
 	.ae_effective_frame = 2,
-	.frame_time_delay_frame = 3,
+	.frame_time_delay_frame = 2,
 	.start_exposure_offset = 500000, // tuning for sensor fusion
 
 	.pdaf_type = PDAF_SUPPORT_CAMSV_QPD, // ask vendor
 	.hdr_type = HDR_SUPPORT_STAGGER_FDOL,
 	.seamless_switch_support = TRUE,
 	.seamless_switch_type = SEAMLESS_SWITCH_CUT_VB_INIT_SHUT,
-	.seamless_switch_hw_re_init_time_ns = 2750000,
+	.seamless_switch_hw_re_init_time_ns = 2250000,
 	.seamless_switch_prsh_hw_fixed_value = 48,
 	.seamless_switch_prsh_length_lc = 0,
 	.reg_addr_prsh_length_lines = {0x3058, 0x3059, 0x305a, 0x305b},
@@ -651,9 +647,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.reg_addr_mcss_mc_frm_lp_en = 0x306D,
 	.reg_addr_mcss_frm_length_reflect_timing = 0x301C,
 	.reg_addr_mcss_mc_frm_mask_num = 0x306C,
-
 	.mcss_init = imx858dual_mcss_init,
-	.mcss_update_subdrv_para = imx858dual_mcss_update_subdrv_para,
 };
 
 static struct subdrv_ops ops = {
@@ -941,7 +935,6 @@ static int imx858dual_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len
 			set_gain(ctx, ae_ctrl->gain.le_gain);
 			break;
 		}
-		mcss_get_prsh_length_lines(ctx, ae_ctrl, pre_seamless_scenario_id, scenario_id);
 	}
 
 	if (ctx->s_ctx.seamless_switch_prsh_length_lc > 0) {
@@ -1032,157 +1025,25 @@ static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt, u64 sof_ts
 
 static int imx858dual_mcss_init(void *arg)
 {
-	u32 prsh_length_lc = 0;
 	struct subdrv_ctx *ctx = (struct subdrv_ctx *)arg;
 
 	if (!(ctx->mcss_init_info.enable_mcss)) {
-		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_mcss_slave_add_en_2nd, 0x00);
-		// low-power for deep sleep
-		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_mcss_mc_frm_lp_en, 0x00);
-		// FLL N+1/N+2
-		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_mcss_frm_length_reflect_timing, 0x01);  //0:N+1, 1:N+2
-
 		memset(&(ctx->mcss_init_info), 0, sizeof(struct mtk_fsync_hw_mcss_init_info));
-		DRV_LOG_MUST(ctx, "Disable MCSS\n");
+
+		set_i2c_buffer(ctx,
+			ctx->s_ctx.reg_addr_mcss_mc_frm_mask_num, 0X00);
+		subdrv_i2c_wr_u8(ctx,
+			ctx->s_ctx.reg_addr_mcss_extout_en, 0x00);
+		DRV_LOG_MUST(ctx, "disable XVS output and clear MCSS mask frame to 0\n");
 		return ERROR_NONE;
 	}
 
-	// master or slave
 	if (ctx->mcss_init_info.is_mcss_master) {
 		DRV_LOG_MUST(ctx, "common_mcss_init controller (ctx->s_ctx.sensor_id=0x%x)\n",ctx->s_ctx.sensor_id);
 		subdrv_i2c_wr_u8(ctx,
-			ctx->s_ctx.reg_addr_mcss_slave_add_en_2nd, 0x01);
-		subdrv_i2c_wr_u8(ctx,
-			ctx->s_ctx.reg_addr_mcss_slave_add_acken_2nd, 0x01);
-		subdrv_i2c_wr_u8(ctx,
-			ctx->s_ctx.reg_addr_mcss_controller_target_sel, 0x01); // controller mode is default
-		subdrv_i2c_wr_u8(ctx,
-			ctx->s_ctx.reg_addr_mcss_xvs_io_ctrl, 0x01);
-		subdrv_i2c_wr_u8(ctx,
 			ctx->s_ctx.reg_addr_mcss_extout_en, 0x01);
-	} else {
-		DRV_LOG_MUST(ctx, "common_mcss_init target (ctx->s_ctx.sensor_id=0x%x)\n",ctx->s_ctx.sensor_id);
-		subdrv_i2c_wr_u8(ctx,
-			ctx->s_ctx.reg_addr_mcss_slave_add_en_2nd, 0x01);
-		subdrv_i2c_wr_u8(ctx,
-			ctx->s_ctx.reg_addr_mcss_slave_add_acken_2nd, 0x00);
-		subdrv_i2c_wr_u8(ctx,
-			ctx->s_ctx.reg_addr_mcss_controller_target_sel, 0x00);
-		subdrv_i2c_wr_u8(ctx,
-			ctx->s_ctx.reg_addr_mcss_xvs_io_ctrl, 0x00);
-		subdrv_i2c_wr_u8(ctx,
-			ctx->s_ctx.reg_addr_mcss_extout_en, 0x00);
 	}
 
-	// low-power for deep sleep default enable
-	subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_mcss_mc_frm_lp_en, 0x01);
-
-	// FLL N+1/N+2
-	subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_mcss_frm_length_reflect_timing, 0x00);  //0:N+1, 1:N+2
-
-	// pre-shutter
-	/* TODO How to find the pre-shutter length for slave? */
-	prsh_length_lc = ((33000)
-				* ctx->s_ctx.mode[ctx->current_scenario_id].pclk
-				/ ctx->s_ctx.mode[ctx->current_scenario_id].linelength
-				/ 1000000);
-
-	DRV_LOG_MUST(ctx, "mcss slave using pre-shutter %llu/%u/%u\n",
-				ctx->s_ctx.mode[ctx->current_scenario_id].pclk,
-				ctx->s_ctx.mode[ctx->current_scenario_id].linelength,
-				prsh_length_lc);
-
-	subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_prsh_mode, 0x01);
-
-	if (ctx->s_ctx.reg_addr_prsh_length_lines.addr[3]) {
-		subdrv_i2c_wr_u8(ctx,
-				ctx->s_ctx.reg_addr_prsh_length_lines.addr[0],
-				(prsh_length_lc >> 24) & 0x07);
-		subdrv_i2c_wr_u8(ctx,
-				ctx->s_ctx.reg_addr_prsh_length_lines.addr[1],
-				(prsh_length_lc >> 16) & 0xFF);
-		subdrv_i2c_wr_u8(ctx,
-				ctx->s_ctx.reg_addr_prsh_length_lines.addr[2],
-				(prsh_length_lc >> 8)  & 0xFF);
-		subdrv_i2c_wr_u8(ctx,
-				ctx->s_ctx.reg_addr_prsh_length_lines.addr[3],
-				(prsh_length_lc) & 0xFF);
-	} else {
-		subdrv_i2c_wr_u8(ctx,
-			ctx->s_ctx.reg_addr_prsh_length_lines.addr[0],
-			(prsh_length_lc >> 16) & 0xFF);
-		subdrv_i2c_wr_u8(ctx,
-				ctx->s_ctx.reg_addr_prsh_length_lines.addr[1],
-				(prsh_length_lc >> 8)  & 0xFF);
-		subdrv_i2c_wr_u8(ctx,
-				ctx->s_ctx.reg_addr_prsh_length_lines.addr[2],
-				(prsh_length_lc) & 0xFF);
-	}
-
-	DRV_LOG_MUST(ctx, "common_mcss_init pre-shutter set(%u)\n", prsh_length_lc);
-
-
-	return ERROR_NONE;
-}
-
-static int imx858dual_mcss_update_subdrv_para(void *arg, int scenario_id)
-{
-	int i;
-	u32 old_line_length;
-	u64 origin_den;
-	u64 origin_num;
-	u64 new_den;
-	u64 new_num;
-	u64 update_linelength;
-	u64 tmp1,tmp2;
-	struct subdrv_ctx *ctx = (struct subdrv_ctx *)arg;
-	u32 framerate = ctx->s_ctx.mode[scenario_id].max_framerate;
-
-	if (ctx->s_ctx.sensor_mode_num <= scenario_id)
-		return -EINVAL;
-
-	if (!(ctx->mcss_init_info.enable_mcss))
-		return ERROR_NONE;
-
-	old_line_length = ctx->line_length;
-	origin_den = ctx->s_ctx.mode[scenario_id].pclk / 1000000;
-	origin_num = ctx->s_ctx.mode[scenario_id].linelength;
-	tmp1 = (u64)ctx->s_ctx.mode[scenario_id].linelength * (u64)ctx->s_ctx.mclk;
-	tmp2= ctx->s_ctx.mode[scenario_id].pclk / 1000000;
-	new_num = 1+(tmp1/tmp2); // line_length_inck = round_up(tmp1, tmp2)
-	new_den = ctx->s_ctx.mclk;
-	update_linelength =  ctx->s_ctx.mode[scenario_id].linelength * (new_num*origin_den)/(new_den*origin_num);
-
-	ctx->line_length = update_linelength;
-	ctx->frame_length = ctx->s_ctx.mode[scenario_id].pclk / framerate * 10 / ctx->line_length;
-	ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
-	ctx->min_frame_length = ctx->frame_length;
-
-	ctx->s_ctx.frame_time_delay_frame = 2;
-	ctx->frame_time_delay_frame = 2;
-	for (i = 0; i < ctx->s_ctx.sensor_mode_num; i++)
-		ctx->s_ctx.mode[i].delay_frame = 2;
-
-	DRV_LOG_MUST(ctx,
-			"ctx->s_ctx.mode[%d].pclk:%llu ctx->s_ctx.mode[].linelength:%u,%llu/%llu/%llu/%llu, tmp:%llu/%llu, update_linelength:%llu update CALC_LINE_TIME_IN_NS=%u\n",
-					scenario_id,
-					ctx->s_ctx.mode[scenario_id].pclk,ctx->s_ctx.mode[scenario_id].linelength,
-					origin_den, origin_num, new_den, new_num, tmp1,tmp2,update_linelength,
-	CALC_LINE_TIME_IN_NS(ctx->s_ctx.mode[scenario_id].pclk, ctx->s_ctx.mode[scenario_id].linelength) );
-
-	return ERROR_NONE;
-}
-
-static int imx858dual_get_sensor_sync_mode(struct subdrv_ctx *ctx, u8 *para, u32 *len)
-{
-	u32 *feature_data = (u32 *)para;
-
-	if (!(ctx->mcss_init_info.enable_mcss))
-		return ERROR_NONE;
-
-	*feature_data = ctx->mcss_init_info.is_mcss_master? 1 : 2; // sync operate mode. none/master/slave
-	(*(feature_data + 1)) = FS_HW_SYNC_GROUP_ID_MCSS;   // hw sync group ID
-	(*(feature_data + 2)) = 1;     // legacy:0, MCSS:1
 	return ERROR_NONE;
 }
 

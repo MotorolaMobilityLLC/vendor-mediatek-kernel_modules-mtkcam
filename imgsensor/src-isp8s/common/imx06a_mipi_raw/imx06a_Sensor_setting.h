@@ -1654,6 +1654,17 @@ static u16 imx06a_init_setting[] = {
 0x3ECF,  0x14,
 0x2DEB,  0x05,
 0x2DEB,  0x09,
+
+
+0x3024, 0x01, /* reg_addr_mcss_slave_add_en_2nd */
+0x3025, 0x01, /* reg_addr_mcss_slave_add_acken_2nd */
+0x3050, 0x01, /* reg_addr_mcss_controller_target_sel */
+0x3030, 0x01, /* reg_addr_mcss_xvs_io_ctrl */
+/* 0x3051, 0x01, // reg_addr_mcss_extout_en */
+/* 0x3052, 0xFF, // width */
+0x3053, 0x00, /* polarity high active */
+0x3020, 0x00, /* reg_addr_mcss_frm_length_reflect_timing */
+0x306c, 0x00, /* mask_frm = 0 */
 };
 
 // mode 0, Normal Obin_4096_3072_30fps_PD_S2,

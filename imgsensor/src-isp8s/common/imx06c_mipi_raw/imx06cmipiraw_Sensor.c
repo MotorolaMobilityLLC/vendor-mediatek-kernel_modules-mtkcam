@@ -37,6 +37,8 @@ static int imx06c_set_test_pattern_data(struct subdrv_ctx *ctx, u8 *para, u32 *l
 static int imx06c_cphy_lrte_mode(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
 static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt, u64 sof_ts);
+static int imx06c_mcss_init(void *arg);
+static int imx06c_mcss_set_mask_frame(struct subdrv_ctx *ctx, u32 num, u32 is_critical);
 static int imx06c_mcss_update_subdrv_para(void *arg, int scenario_id);
 static int imx06c_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static void imx06c_set_shutter_frame_length(struct subdrv_ctx *ctx, u8 *para, u32 *len);
@@ -6515,6 +6517,16 @@ static struct subdrv_static_ctx static_ctx = {
 	.mcss_update_subdrv_para = imx06c_mcss_update_subdrv_para,
 	.cust_get_linetime_in_us = imx06c_get_linetime_in_ns,
 	.cycle_base_ratio = 16,
+
+	/* MCSS */
+	.use_mcss_gph_sync = 0,
+	.reg_addr_mcss_slave_add_en_2nd = 0x3024,
+	.reg_addr_mcss_slave_add_acken_2nd = 0x3025,
+	.reg_addr_mcss_controller_target_sel = 0x3050,
+	.reg_addr_mcss_xvs_io_ctrl = 0x3030,
+	.reg_addr_mcss_extout_en = 0x3051,
+	.reg_addr_mcss_mc_frm_mask_num = 0x306c,
+	.mcss_init = imx06c_mcss_init,
 };
 
 static int imx06c_get_linetime_in_ns(void *arg,
@@ -6573,6 +6585,7 @@ static struct subdrv_ops ops = {
 	.vsync_notify = vsync_notify,
 	.update_sof_cnt = common_update_sof_cnt,
 	.parse_ebd_line = common_parse_ebd_line,
+	.mcss_set_mask_frame = imx06c_mcss_set_mask_frame,
 };
 
 static struct subdrv_pw_seq_entry pw_seq[] = {
@@ -7079,5 +7092,53 @@ static int imx06c_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 		commit_i2c_buffer(ctx);
 		/* group hold end */
 	}
+	return 0;
+}
+
+static int imx06c_mcss_init(void *arg)
+{
+	struct subdrv_ctx *ctx = (struct subdrv_ctx *)arg;
+
+	if (!(ctx->mcss_init_info.enable_mcss)) {
+		memset(&(ctx->mcss_init_info), 0, sizeof(struct mtk_fsync_hw_mcss_init_info));
+
+		set_i2c_buffer(ctx,
+			ctx->s_ctx.reg_addr_mcss_mc_frm_mask_num, 0X00);
+		subdrv_i2c_wr_u8(ctx,
+			ctx->s_ctx.reg_addr_mcss_extout_en, 0x00);
+		DRV_LOG_MUST(ctx, "disable XVS output and clear MCSS mask frame to 0\n");
+		return ERROR_NONE;
+	}
+
+	if (ctx->mcss_init_info.is_mcss_master) {
+		DRV_LOG_MUST(ctx, "common_mcss_init controller (ctx->s_ctx.sensor_id=0x%x)\n",ctx->s_ctx.sensor_id);
+		subdrv_i2c_wr_u8(ctx,
+			ctx->s_ctx.reg_addr_mcss_slave_add_en_2nd, 0x01);
+		subdrv_i2c_wr_u8(ctx,
+			ctx->s_ctx.reg_addr_mcss_slave_add_acken_2nd, 0x01);
+		subdrv_i2c_wr_u8(ctx,
+			ctx->s_ctx.reg_addr_mcss_controller_target_sel, 0x01);
+		subdrv_i2c_wr_u8(ctx,
+			ctx->s_ctx.reg_addr_mcss_xvs_io_ctrl, 0x01);
+		subdrv_i2c_wr_u8(ctx,
+			ctx->s_ctx.reg_addr_mcss_extout_en, 0x01);
+
+		subdrv_i2c_wr_u8(ctx,
+			ctx->s_ctx.reg_addr_mcss_extout_en, 0x01); /* start to output XVS signal */
+	}
+
+	return ERROR_NONE;
+}
+
+static int imx06c_mcss_set_mask_frame(struct subdrv_ctx *ctx, u32 num, u32 is_critical)
+{
+	ctx->s_ctx.s_gph((void *)ctx, 1);
+	set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_mcss_mc_frm_mask_num,  (0x7f & num));
+	ctx->s_ctx.s_gph((void *)ctx, 0);
+
+	if (is_critical)
+		commit_i2c_buffer(ctx);
+
+	DRV_LOG(ctx, "set mask frame num:%d\n", (0x7f & num));
 	return 0;
 }
