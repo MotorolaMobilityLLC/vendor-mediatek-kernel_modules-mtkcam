@@ -351,6 +351,10 @@ void imgsys_main_slc_init(struct mtk_imgsys_dev *imgsys_dev)
 	unsigned int i = 0, gid8 = 0, bid = 2, entry, val = 0, opt;
 	void *addr = 0, *addr1 = 0;
 
+	if (!imgsysiscRegBA)
+		return;
+
+
 	for (i = 0; i < GID_NUM; i++) {
 		gid8 = (i + GID_START) << 1;
 		entry = i * bid;

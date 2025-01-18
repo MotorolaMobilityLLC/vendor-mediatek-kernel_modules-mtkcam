@@ -79,6 +79,8 @@ static u32 *g_pkt_mae_va_end;
 static struct mutex cpr_lock;
 #endif
 
+static int isc_irq_enabled;
+
 u32 imgsys_cmdq_is_stream_off(void)
 {
 	return is_stream_off;
@@ -300,6 +302,13 @@ void imgsys_cmdq_streamoff_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 		mtk_imgsys_mmqos_reset_plat8s(imgsys_dev);
 		mtk_imgsys_mmqos_monitor_plat8s(imgsys_dev, SMI_MONITOR_STOP_STATE);
 	);
+	#endif
+
+	#ifdef MTK_ISC_SUPPORT
+	if ((imgsys_dev->isc_irq > 0) && isc_irq_enabled) {
+		disable_irq(imgsys_dev->isc_irq);
+		isc_irq_enabled = 0;
+	}
 	#endif
 }
 
@@ -3146,7 +3155,29 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 struct isc_init_info {
 	int isc_cookie;
 	struct mtk_imgsys_dev *imgsys_dev;
+	struct kthread_work work;
+	struct cmdq_pkt *pkt;
 } isc_init_info[2];
+
+void imgsys_cmdq_isc_task_cbbh_plat8s(struct kthread_work *work)
+{
+	struct cmdq_pkt *pkt;
+	struct isc_init_info *isc;
+
+	isc = container_of(work, struct isc_init_info, work);
+	pkt = isc->pkt;
+
+	#if IMGSYS_SECURE_ENABLE
+	if (unlikely(!imgsys_sec_clt[IMGSYS_SEC_ISC]))
+		pr_info("%s: null isc sec thread!\n", __func__);
+	else
+		cmdq_sec_mbox_stop(imgsys_sec_clt[IMGSYS_SEC_ISC]);
+	#endif
+	cmdq_pkt_wait_complete(pkt);
+	cmdq_pkt_destroy_no_wq(pkt);
+	isc->isc_cookie = 0;
+
+}
 
 void imgsys_cmdq_isc_task_cb_plat8s(struct cmdq_cb_data data)
 {
@@ -3158,22 +3189,20 @@ void imgsys_cmdq_isc_task_cb_plat8s(struct cmdq_cb_data data)
 	isc = (struct isc_init_info *)pkt->user_priv;
 	cookie = isc->isc_cookie;
 
-	if (cookie == 1) {
-		if ((isc->imgsys_dev->isc_irq > 0) && (!data.err))
-			enable_irq(isc->imgsys_dev->isc_irq);
-		isc->isc_cookie = 0;
-	}
-
 	if (cookie == 2) {
-	#if IMGSYS_SECURE_ENABLE
-		cmdq_sec_mbox_stop(imgsys_sec_clt[IMGSYS_SEC_ISC]);
-	#endif
-		isc->isc_cookie = 0;
+		if ((isc->imgsys_dev->isc_irq > 0) && (!data.err)) {
+			enable_irq(isc->imgsys_dev->isc_irq);
+			isc_irq_enabled = 1;
+		}
+
+		kthread_init_work(&isc->work, imgsys_cmdq_isc_task_cbbh_plat8s);
+		kthread_queue_work(&imgsys_cmdq_worker, &isc->work);
 	}
 
-	pr_info("%s: isc init(%d) err(%d)\n", __func__, cookie, data.err);
-
-	cmdq_pkt_destroy(pkt);
+	if (cookie == 1) {
+		cmdq_pkt_destroy(pkt);
+		isc->isc_cookie = 0;
+	}
 }
 
 int imgsys_cmdq_sec_isc_init_plat8s(struct mtk_imgsys_dev *imgsys_dev)
@@ -3194,6 +3223,7 @@ int imgsys_cmdq_sec_isc_init_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 
 	cmdq_sec_pkt_set_data(pkt_sec, 0, 0, CMDQ_SEC_DEBUG, CMDQ_METAEX_TZMP);
 	cmdq_sec_pkt_set_mtee(pkt_sec, true);
+	cmdq_pkt_finalize_loop(pkt_sec);
 	cmdq_pkt_flush_threaded(pkt_sec, imgsys_cmdq_isc_task_cb_plat8s, (void *)pkt_sec);
 	#endif
 
@@ -3202,9 +3232,11 @@ int imgsys_cmdq_sec_isc_init_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 	pkt = cmdq_pkt_create(clt);
 	isc_init_info[1].imgsys_dev = imgsys_dev;
 	isc_init_info[1].isc_cookie = 2;
+	isc_init_info[1].pkt = pkt;
 	pkt->user_priv = (void *)&isc_init_info[1];
+	cmdq_pkt_set_event(pkt, imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_TZMP_ISC_WAIT].event);
 	cmdq_pkt_wfe(pkt, imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_TZMP_ISC_SET].event);
-	ret = cmdq_pkt_flush_threaded(pkt, imgsys_cmdq_isc_task_cb_plat8s, (void *)pkt);
+	ret = cmdq_pkt_flush_async(pkt, imgsys_cmdq_isc_task_cb_plat8s, (void *)pkt);
 
 	if (ret < 0)
 		pr_info("%s: cmdq_pkt_flush_async ret(%d)\n", __func__, ret);
