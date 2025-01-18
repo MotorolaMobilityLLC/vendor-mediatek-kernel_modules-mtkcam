@@ -830,15 +830,76 @@ static int seninf_core_pm_runtime_disable(struct seninf_core *core)
 
 static int seninf_core_pm_runtime_get_sync(struct seninf_core *core)
 {
+	int i;
+	int ret = 0;
 
+	if (core->pm_domain_cnt == 1) {
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
+		mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_SENIF);
+#endif
+		ret = pm_runtime_get_sync(core->dev);
+		if (ret < 0) {
+			dev_info(core->dev, "pm_runtime_get_sync(fail),ret(%d)\n", ret);
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
+			return ret;
+#endif
+		}
+	} else if (core->pm_domain_cnt > 1) {
+		if (!core->pm_domain_devs)
+			return -EINVAL;
 
+		for (i = 0; i < core->pm_domain_cnt; i++) {
+			if (core->pm_domain_devs[i] != NULL) {
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
+				mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_SENIF);
+#endif
+				ret = pm_runtime_get_sync(core->pm_domain_devs[i]);
+				if (ret < 0) {
+					dev_info(core->dev,
+						"pm_runtime_get_sync(fail),ret(%d)\n",
+						ret);
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
+					return ret;
+#endif
+				}
+			}
+		}
+	} else
+		dev_info(core->dev, "core->pm_domain_cnt < 0\n");
 
 	return 0;
 }
 
 static int seninf_core_pm_runtime_put(struct seninf_core *core)
 {
+	int i;
+	int ret = 0;
 
+	if (core->pm_domain_cnt == 1) {
+		ret = pm_runtime_put_sync(core->dev);
+		if (ret < 0)
+			dev_info(core->dev, "pm_runtime_put_sync(fail),ret(%d)\n", ret);
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
+		mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_SENIF);
+#endif
+	} else if (core->pm_domain_cnt > 1) {
+		if (!core->pm_domain_devs)
+			return -ENOMEM;
+
+		for (i = core->pm_domain_cnt - 1; i >= 0; i--) {
+			if (core->pm_domain_devs[i] != NULL) {
+				ret = pm_runtime_put_sync(core->pm_domain_devs[i]);
+				if (ret < 0)
+					dev_info(core->dev,
+						"pm_runtime_put_sync(fail),ret(%d)\n",
+						ret);
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
+				mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_SENIF);
+#endif
+			}
+		}
+	} else
+		dev_info(core->dev, "core->pm_domain_cnt < 0\n");
 	return 0;
 }
 
@@ -1008,7 +1069,7 @@ static int seninf_core_probe(struct platform_device *pdev)
 
 	core = devm_kzalloc(&pdev->dev, sizeof(*core), GFP_KERNEL);
 	if (!core) {
-		// WRAP_AEE_EXCEPTION("seninf_core_probe", "Kzalloc");
+		WRAP_AEE_EXCEPTION("seninf_core_probe", "Kzalloc");
 		return -ENOMEM;
 	}
 
@@ -1169,7 +1230,7 @@ static int seninf_core_probe(struct platform_device *pdev)
 		// of_find_compatble_node will call it.
 	}
 
-	// mtk_cam_seninf_tsrec_init(dev, core->reg_seninf_top);
+	mtk_cam_seninf_tsrec_init(dev, core->reg_seninf_top);
 
 	spin_lock_init(&core->spinlock_irq);
 	spin_lock_init(&core->spinlock_aov);
@@ -1226,8 +1287,6 @@ static int seninf_core_probe(struct platform_device *pdev)
 		}
 	}
 
-	dev_err(dev, "[%s] jeff after clk node get\n", __func__);
-
 	// fmeter dbg property
 #ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 	memset(core->fmeter, 0, sizeof(core->fmeter));
@@ -1261,11 +1320,9 @@ static int seninf_core_probe(struct platform_device *pdev)
 	ret = of_platform_populate(dev->of_node, NULL, NULL, dev);
 	if (ret) {
 		dev_err(dev, "[%s] create sub devices failed\n", __func__);
-		// WRAP_AEE_EXCEPTION("seninf_core_probe", "Create Sub Devices");
+		WRAP_AEE_EXCEPTION("seninf_core_probe", "Create Sub Devices");
 		return ret;
 	}
-
-	dev_err(dev, "[%s] jeff after of_platform_populate\n", __func__);
 
 #ifdef SENINF_DVFS_READY
 	ret = seninf_dfs_init(&core->dfs, dev);
@@ -1274,8 +1331,6 @@ static int seninf_core_probe(struct platform_device *pdev)
 		//return ret;
 	}
 #endif
-
-	dev_err(dev, "[%s] jeff after seninf_dfs_init\n", __func__);
 
 	ret = device_create_file(dev, &dev_attr_status);
 	if (ret)
@@ -1293,8 +1348,6 @@ static int seninf_core_probe(struct platform_device *pdev)
 	if (ret)
 		dev_err(dev, "[%s] failed to create sysfs status\n", __func__);
 
-	dev_err(dev, "[%s] jeff after device_create_file\n", __func__);
-
 
 	seninf_core_pm_runtime_enable(core);
 
@@ -1311,8 +1364,6 @@ static int seninf_core_probe(struct platform_device *pdev)
 
 	g_seninf_ops->_init_irq_fifo(core);
 
-	dev_err(dev, "[%s] jeff after _init_irq_fifo\n", __func__);
-
 	pkvm_node = of_find_node_by_name(NULL, "pkvm");
 	if (pkvm_node) {
 		of_property_read_string(pkvm_node, "status", &pkvm_status);
@@ -1320,7 +1371,7 @@ static int seninf_core_probe(struct platform_device *pdev)
 			pkvm_enabled = true;
 	}
 
-	dev_err(dev, "[%s] jeff core probe done\n", __func__);
+	dev_err(dev, "[%s] core probe done\n", __func__);
 
 	return 0;
 }
@@ -2021,7 +2072,6 @@ static int get_buffered_pixel_rate(struct seninf_ctx *ctx,
 					ctx->fps_n, ctx->fps_d, result);
 }
 
-#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 static int get_customized_pixel_rate(struct seninf_ctx *ctx, struct v4l2_subdev *sd,
 			  s64 *result)
 {
@@ -2047,7 +2097,6 @@ static int get_customized_pixel_rate(struct seninf_ctx *ctx, struct v4l2_subdev 
 
 	return 0;
 }
-#endif
 
 static int get_pixel_rate(struct seninf_ctx *ctx, struct v4l2_subdev *sd,
 			  s64 *result)
@@ -2444,8 +2493,6 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 	struct seninf_core *core = ctx->core;
 #endif
 
-	dev_info(ctx->dev, "[%s] jeff enable(%d) ctx->csi_streaming(%d)\n", __func__, enable, ctx->csi_streaming);
-
 	if (ctx->csi_streaming == enable) {
 		dev_info(ctx->dev,
 			"[%s] is_csi_streaming is (%d) already, return\n",
@@ -2454,10 +2501,9 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 	}
 
 	if (ctx->is_test_model) {
-		dev_info(ctx->dev, "[%s] jeff ctx->is_test_model(%d)\n", __func__, ctx->is_test_model);
+		dev_info(ctx->dev, "[%s] ctx->is_test_model(%d) skip function",
+		__func__, ctx->is_test_model);
 		return 0;
-	} else {
-		dev_info(ctx->dev, "[%s] jeff ctx->is_test_model(%d) else\n", __func__, ctx->is_test_model);
 	}
 
 
@@ -2492,17 +2538,18 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 		ctx->buffered_pixel_rate = ctx->mipi_pixel_rate;
 		get_buffered_pixel_rate(ctx, ctx->sensor_sd,
 					ctx->sensor_pad_idx, &ctx->buffered_pixel_rate);
-#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
+
 		get_customized_pixel_rate(ctx, ctx->sensor_sd, &ctx->customized_pixel_rate);
 
 		ret = pm_runtime_get_sync(ctx->dev);
 		if (ret < 0) {
 			dev_info(ctx->dev, "%s pm_runtime_get_sync ret %d\n", __func__, ret);
-
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 			pm_runtime_put_noidle(ctx->dev);
 			return ret;
-		}
 #endif
+		}
+
 
 		update_isp_clk(ctx);
 #if AOV_GET_PARAM
@@ -3947,7 +3994,11 @@ static int data_rate2vcore_voltage(struct seninf_ctx *ctx,
 	return vcore_voltage;
 }
 
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 static int set_vcore_power(struct seninf_ctx *ctx, u64 data_rate)
+#else
+int set_vcore_power(struct seninf_ctx *ctx, u64 data_rate)
+#endif
 {
 	struct seninf_core *core = ctx->core;
 	int ret = 0;
@@ -4131,8 +4182,11 @@ static int runtime_resume(struct device *dev)
 	struct seninf_vc *vc = mtk_cam_seninf_get_vc_by_pad(ctx, PAD_SRC_RAW0);
 	struct seninf_vc *vc1 = mtk_cam_seninf_get_vc_by_pad(ctx, PAD_SRC_RAW_EXT0);
 	int bit_per_pixel = 10;
-	u64 data_rate = 0;
 	unsigned long flags;
+
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
+	u64 data_rate = 0;
+#endif
 
 
 	mutex_lock(&core->mutex);
@@ -4202,6 +4256,8 @@ static int runtime_resume(struct device *dev)
 			seninf_logi(ctx,
 				"multi user(%d),cnt(%d)\n",
 				ctx->current_sensor_id, core->refcnt);
+
+#ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 		/*
 		 * set vcore according to data rate
 		 * set csi clk according to vcore range
@@ -4243,6 +4299,7 @@ static int runtime_resume(struct device *dev)
 
 		/* set phya clk source */
 		set_phya_clk(ctx);
+#endif
 
 		spin_lock_irqsave(&core->spinlock_irq, flags);
 		ctx->power_status_flag = 1;
