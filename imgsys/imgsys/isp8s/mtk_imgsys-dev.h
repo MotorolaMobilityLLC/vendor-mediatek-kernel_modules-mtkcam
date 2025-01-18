@@ -26,6 +26,7 @@
 #include <linux/videodev2.h>
 #include <media/videobuf2-core.h>
 #include <media/videobuf2-v4l2.h>
+#include <mt-plat/mtk-vmm-notifier.h>
 
 #include "iommu_debug.h"
 #include "mtk_imgsys-hw.h"
@@ -79,6 +80,10 @@
 			args \
 		} \
 	} while (0)
+
+#define MTK_IMGSYS_VMM_CVFS_USR_ID		(1)
+#define MTK_IMGSYS_VMM_CVFS_SEL_IMG		(VMM_CVFS_IMG_SEL)
+#define MTK_IMGSYS_VMM_CVFS_SEL_IPE		(VMM_CVFS_IPE_SEL)
 
 enum imgsys_user_state {
 	DIP_STATE_INIT	= 0,

@@ -3478,6 +3478,9 @@ int mtk_imgsys_runtime_suspend(struct device *dev)
 	struct mtk_imgsys_dev *imgsys_dev = dev_get_drvdata(dev);
 	int ret, i;
 
+	vmm_disable_cvfs(MTK_IMGSYS_VMM_CVFS_USR_ID, MTK_IMGSYS_VMM_CVFS_SEL_IPE);
+	vmm_disable_cvfs(MTK_IMGSYS_VMM_CVFS_USR_ID, MTK_IMGSYS_VMM_CVFS_SEL_IMG);
+
 	clk_bulk_disable_unprepare(imgsys_dev->num_clks,
 				   imgsys_dev->clks);
 
@@ -3533,6 +3536,9 @@ int mtk_imgsys_runtime_resume(struct device *dev)
 
 		return ret;
 	}
+
+	vmm_enable_cvfs(MTK_IMGSYS_VMM_CVFS_USR_ID, MTK_IMGSYS_VMM_CVFS_SEL_IMG);
+	vmm_enable_cvfs(MTK_IMGSYS_VMM_CVFS_USR_ID, MTK_IMGSYS_VMM_CVFS_SEL_IPE);
 
 	return 0;
 }
