@@ -1195,7 +1195,6 @@ static int mtk_cam_seninf_en_async_overrun_irq(struct seninf_ctx *ctx, int async
 
 static int mtk_cam_seninf_set_async(struct seninf_ctx *ctx, int async, int split, int tm)
 {
-	void *pSeninf  = ctx->reg_if_top;
 	void *pSeninf_async = ctx->reg_if_async;
 	int val = 0;
 
@@ -1231,27 +1230,27 @@ static int mtk_cam_seninf_set_async(struct seninf_ctx *ctx, int async, int split
 
 	seninf_logd(ctx, "input async:%d, ASYNC_split = 0x%x\n",
 		async,
-		SENINF_READ_REG(pSeninf, SENINF_ASYTOP_MIPI_SPLIT));
+		SENINF_READ_REG(pSeninf_async, SENINF_ASYTOP_MIPI_SPLIT));
 
 
 	/* set if test model */
-	val = SENINF_READ_BITS(pSeninf, SENINF_ASYTOP_SENINF_ASYNC_CFG, SENINF_ASYTOP_TESTMDL_SEL);
+	val = SENINF_READ_BITS(pSeninf_async, SENINF_ASYTOP_SENINF_ASYNC_CFG, SENINF_ASYTOP_TESTMDL_SEL);
 	if (tm)
 		val |= (0x1 << async);
 	else
 		val &= (~(0x1 << async));
 
-	SENINF_BITS(pSeninf, SENINF_ASYTOP_SENINF_ASYNC_CFG,
+	SENINF_BITS(pSeninf_async, SENINF_ASYTOP_SENINF_ASYNC_CFG,
 		    SENINF_ASYTOP_TESTMDL_SEL, val);
 	/* enable debug */
-	val = SENINF_READ_BITS(pSeninf, SENINF_ASYTOP_SENINF_ASYNC_CFG, SENINF_ASYTOP_DEBUG_EN);
+	val = SENINF_READ_BITS(pSeninf_async, SENINF_ASYTOP_SENINF_ASYNC_CFG, SENINF_ASYTOP_DEBUG_EN);
 	val |= (0x1 << async);
-	SENINF_BITS(pSeninf, SENINF_ASYTOP_SENINF_ASYNC_CFG, SENINF_ASYTOP_DEBUG_EN, val);
+	SENINF_BITS(pSeninf_async, SENINF_ASYTOP_SENINF_ASYNC_CFG, SENINF_ASYTOP_DEBUG_EN, val);
 	mutex_unlock(&ctx->core->seninf_top_rg_mutex);
 
 	seninf_logd(ctx, "input async:%d, ASYNC CFG = 0x%x\n",
 		async,
-		SENINF_READ_REG(pSeninf, SENINF_ASYTOP_SENINF_ASYNC_CFG));
+		SENINF_READ_REG(pSeninf_async, SENINF_ASYTOP_SENINF_ASYNC_CFG));
 
 	mtk_cam_seninf_en_async_overrun_irq(ctx, async);
 	return true;
