@@ -27,9 +27,6 @@ struct clk_bulk_data imgsys_isp8s_clks_mt6993[] = {
 	{  // img_vcore_d1a_clk IMG_VCORE_SUB2_CAM_P2
 		.id = "VCORE_SUB2",
 	},
-	{  // img_vcore_d1a_clk IMG_VCORE_IMG_26M_CAM_P2
-		.id = "VCORE_26M",
-	},
 	{  // imgsys_main_clk IMG_FDVT_CAM_P2
 		.id = "IMG_FDVT",
 	},
