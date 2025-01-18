@@ -5116,7 +5116,7 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 #ifdef SKIP_IN_FPGA_EP
 	disable_irq(cam_dev->qoftop_irq);
 #endif
-	mtk_cam_bwr_disable(cam_dev->bwr);
+	mtk_cam_isp8s_bwr_disable(cam_dev->bwr);
 	mtk_cam_vcore_ddren(cam_dev, false);
 
 	if (CAM_DEBUG_ENABLED(RAW_CG))
@@ -5160,7 +5160,7 @@ static int mtk_cam_runtime_resume(struct device *dev)
 
 	mtk_cam_timesync_init(true);
 
-	mtk_cam_bwr_enable(cam_dev->bwr);
+	mtk_cam_isp8s_bwr_enable(cam_dev->bwr);
 	mtk_cam_vcore_ddren(cam_dev, true);
 	mtk_cam_vcore_ccu_qos_remap(cam_dev);
 	mtk_cam_vcore_sv_qos_remap(cam_dev);

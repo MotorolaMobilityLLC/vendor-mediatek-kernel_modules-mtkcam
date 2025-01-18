@@ -1537,7 +1537,7 @@ static void raw_handle_skip_frame(struct mtk_raw_device *raw_dev,
 
 	if (err_status & FBIT(CAMCTL_P1_SKIP_FRAME_DC_STAG_INT_ST)) {
 		mtk_cam_main_dbg_dump(raw_dev->cam);
-		mtk_cam_bwr_dbg_dump(raw_dev->cam->bwr);
+		mtk_cam_isp8s_bwr_dbg_dump(raw_dev->cam->bwr);
 #ifdef SKIP_IN_FPGA_EP
 		mmdvfs_debug_status_dump(NULL);
 #if KERNEL_VERSION(6, 7, 0) >= LINUX_VERSION_CODE
@@ -2112,7 +2112,7 @@ static void raw_handle_tg_overrun_err(struct mtk_raw_device *raw_dev,
 
 	else if (cnt == (OVERRUN_DUMP_CNT + raw_dev->sub_sensor_ctrl_en * 10)) {
 		mtk_cam_main_dbg_dump(raw_dev->cam);
-		mtk_cam_bwr_dbg_dump(raw_dev->cam->bwr);
+		mtk_cam_isp8s_bwr_dbg_dump(raw_dev->cam->bwr);
 #ifdef SKIP_IN_FPGA_EP
 		mmdvfs_debug_status_dump(NULL);
 #if KERNEL_VERSION(6, 7, 0) >= LINUX_VERSION_CODE
@@ -2715,7 +2715,7 @@ int mtk_raw_runtime_suspend(struct device *dev)
 		set_detect_count(drvdata->default_printk_cnt);
 
 	mtk_cam_reset_qos(dev, &drvdata->qos);
-	mtk_cam_bwr_clr_bw(drvdata->cam->bwr,
+	mtk_cam_isp8s_bwr_clr_bw(drvdata->cam->bwr,
 		get_bwr_engine(drvdata->id), get_axi_port(drvdata->id, true));
 
 	if (CAM_DEBUG_ENABLED(RAW_CG))
@@ -3117,7 +3117,7 @@ int mtk_yuv_runtime_suspend(struct device *dev)
 		cg_dump_and_test(dev, CG_YUV, 0);
 
 	mtk_cam_reset_qos(dev, &drvdata->qos);
-	mtk_cam_bwr_clr_bw(drvdata->cam->bwr,
+	mtk_cam_isp8s_bwr_clr_bw(drvdata->cam->bwr,
 		get_bwr_engine(drvdata->id), get_axi_port(drvdata->id, false));
 
 	for (i = drvdata->num_clks - 1; i >= 0; i--)

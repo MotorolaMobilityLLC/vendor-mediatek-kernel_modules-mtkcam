@@ -107,48 +107,48 @@ extern struct platform_driver mtk_cam_bwr_driver;
 
 #ifdef CAMSYS_BWR_SUPPORT
 
-struct mtk_bwr_device *mtk_cam_bwr_get_dev(struct platform_device *pdev);
+struct mtk_bwr_device *mtk_cam_isp8s_bwr_get_dev(struct platform_device *pdev);
 
-void mtk_cam_bwr_enable(struct mtk_bwr_device *bwr);
+void mtk_cam_isp8s_bwr_enable(struct mtk_bwr_device *bwr);
 
-void mtk_cam_bwr_disable(struct mtk_bwr_device *bwr);
+void mtk_cam_isp8s_bwr_disable(struct mtk_bwr_device *bwr);
 
 /* unit : MB/s */
-void mtk_cam_bwr_set_chn_bw(
+void mtk_cam_isp8s_bwr_set_chn_bw(
 		struct mtk_bwr_device *bwr, enum BWR_ENGINE_TYPE engine, enum BWR_AXI_PORT axi,
 		int srt_r_bw, int srt_w_bw, int hrt_r_bw, int hrt_w_bw, bool clear);
 
 /* unit : MB/s */
-void mtk_cam_bwr_set_ttl_bw(
+void mtk_cam_isp8s_bwr_set_ttl_bw(
 		struct mtk_bwr_device *bwr, enum BWR_ENGINE_TYPE engine,
 		int srt_ttl, int hrt_ttl, bool clear);
 
-void mtk_cam_bwr_clr_bw(
+void mtk_cam_isp8s_bwr_clr_bw(
 	struct mtk_bwr_device *bwr, enum BWR_ENGINE_TYPE engine, enum BWR_AXI_PORT axi);
 
-void mtk_cam_bwr_trigger(
+void mtk_cam_isp8s_bwr_trigger(
 	struct mtk_bwr_device *bwr, enum BWR_ENGINE_TYPE engine, enum BWR_AXI_PORT axi);
 
-void mtk_cam_bwr_dbg_dump(struct mtk_bwr_device *bwr);
+void mtk_cam_isp8s_bwr_dbg_dump(struct mtk_bwr_device *bwr);
 
 #else
-static inline struct mtk_bwr_device *mtk_cam_bwr_get_dev(struct platform_device *pdev){ return NULL; }
-static inline void mtk_cam_bwr_enable(struct mtk_bwr_device *bwr){}
-static inline void mtk_cam_bwr_disable(struct mtk_bwr_device *bwr){}
-static inline void mtk_cam_bwr_set_chn_bw(
+static inline struct mtk_bwr_device *mtk_cam_isp8s_bwr_get_dev(struct platform_device *pdev){ return NULL; }
+static inline void mtk_cam_isp8s_bwr_enable(struct mtk_bwr_device *bwr){}
+static inline void mtk_cam_isp8s_bwr_disable(struct mtk_bwr_device *bwr){}
+static inline void mtk_cam_isp8s_bwr_set_chn_bw(
 		struct mtk_bwr_device *bwr, enum BWR_ENGINE_TYPE engine, enum BWR_AXI_PORT axi,
 		int srt_r_bw, int srt_w_bw, int hrt_r_bw, int hrt_w_bw, bool clear){}
-static inline void mtk_cam_bwr_set_ttl_bw(
+static inline void mtk_cam_isp8s_bwr_set_ttl_bw(
 		struct mtk_bwr_device *bwr, enum BWR_ENGINE_TYPE engine,
 		int srt_ttl, int hrt_ttl, bool clear){}
 
-static inline void mtk_cam_bwr_clr_bw(
+static inline void mtk_cam_isp8s_bwr_clr_bw(
 	struct mtk_bwr_device *bwr, enum BWR_ENGINE_TYPE engine, enum BWR_AXI_PORT axi){}
 
-static inline void mtk_cam_bwr_trigger(
+static inline void mtk_cam_isp8s_bwr_trigger(
 	struct mtk_bwr_device *bwr, enum BWR_ENGINE_TYPE engine, enum BWR_AXI_PORT axi){}
 
-static inline void mtk_cam_bwr_dbg_dump(struct mtk_bwr_device *bwr){}
+static inline void mtk_cam_isp8s_bwr_dbg_dump(struct mtk_bwr_device *bwr){}
 #endif
 
 #endif /*__MTK_CAM_BWR_H*/

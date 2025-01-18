@@ -1043,17 +1043,17 @@ static void apply_raw_qos(struct mtk_cam_job *job)
 		}
 
 		if (apply_bwr) {
-			mtk_cam_bwr_set_chn_bw(cam->bwr,
+			mtk_cam_isp8s_bwr_set_chn_bw(cam->bwr,
 				get_bwr_engine(raw_dev->id), get_axi_port(raw_dev->id, true),
 				KBps_to_bwr(raw_avg_bw_r), KBps_to_bwr(raw_avg_bw_w),
 				KBps_to_bwr(raw_peak_bw_r), KBps_to_bwr(raw_peak_bw_w), true);
 
-			mtk_cam_bwr_set_chn_bw(cam->bwr,
+			mtk_cam_isp8s_bwr_set_chn_bw(cam->bwr,
 				get_bwr_engine(yuv_dev->id), get_axi_port(yuv_dev->id, false),
 				KBps_to_bwr(yuv_avg_bw_r), KBps_to_bwr(yuv_avg_bw_w),
 				KBps_to_bwr(yuv_peak_bw_r), KBps_to_bwr(yuv_peak_bw_w), true);
 
-			mtk_cam_bwr_set_ttl_bw(cam->bwr,
+			mtk_cam_isp8s_bwr_set_ttl_bw(cam->bwr,
 				get_bwr_engine(raw_dev->id),
 				KBps_to_bwr(a_bw_ttl), KBps_to_bwr(p_bw_ttl), true);
 
@@ -1127,11 +1127,11 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 			sv_peak_diff_bw_w = p_bw_w_KB - sv_dev->sv_peak_applied_bw_w;
 			sv_dev->sv_avg_applied_bw_w = a_bw_w_KB;
 			sv_dev->sv_peak_applied_bw_w = p_bw_w_KB;
-			mtk_cam_bwr_set_chn_bw(cam->bwr,
+			mtk_cam_isp8s_bwr_set_chn_bw(cam->bwr,
 				get_sv_bwr_engine(sv_dev->id), get_sv_axi_port(sv_dev->id),
 				0, sv_avg_diff_bw_w, 0, sv_peak_diff_bw_w, false);
 
-			mtk_cam_bwr_set_ttl_bw(cam->bwr,
+			mtk_cam_isp8s_bwr_set_ttl_bw(cam->bwr,
 				get_sv_bwr_engine(sv_dev->id), sv_avg_diff_bw_w, sv_peak_diff_bw_w, false);
 
 		}
@@ -1172,7 +1172,7 @@ int mtk_cam_apply_qos(struct mtk_cam_job *job)
 	apply_sv_qos(job);
 
 	if (CAM_DEBUG_ENABLED(MMQOS))
-		mtk_cam_bwr_dbg_dump(cam->bwr);
+		mtk_cam_isp8s_bwr_dbg_dump(cam->bwr);
 
 	/* note: may sleep */
 	mtk_mmqos_wait_throttle_done();

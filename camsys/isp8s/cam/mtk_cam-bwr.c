@@ -272,7 +272,7 @@ static __maybe_unused void bwr_set_test(struct mtk_bwr_device *bwr)
 			BWR_TEST_SRT_R, BWR_TEST_SRT_W, BWR_TEST_HRT_R, BWR_TEST_HRT_W, true);
 	bwr_set_emi_bw(bwr, ENGINE_SUB_C, BWR_TEST_SRT_EMI, BWR_TEST_HRT_EMI, true);
 
-	mtk_cam_bwr_dbg_dump(bwr);
+	mtk_cam_isp8s_bwr_dbg_dump(bwr);
 }
 
 static __maybe_unused void bwr_clr_test(struct mtk_bwr_device *bwr)
@@ -429,7 +429,7 @@ static int bwr_stop(struct mtk_bwr_device *bwr)
 	return 0;
 }
 
-struct mtk_bwr_device *mtk_cam_bwr_get_dev(struct platform_device *pdev)
+struct mtk_bwr_device *mtk_cam_isp8s_bwr_get_dev(struct platform_device *pdev)
 {
 	struct device_node *node;
 	struct platform_device *bwr_pdev;
@@ -456,9 +456,9 @@ struct mtk_bwr_device *mtk_cam_bwr_get_dev(struct platform_device *pdev)
 
 	return bwr;
 }
-EXPORT_SYMBOL_GPL(mtk_cam_bwr_get_dev);
+EXPORT_SYMBOL_GPL(mtk_cam_isp8s_bwr_get_dev);
 
-void mtk_cam_bwr_enable(struct mtk_bwr_device *bwr)
+void mtk_cam_isp8s_bwr_enable(struct mtk_bwr_device *bwr)
 {
 	if (!bwr)
 		return;
@@ -466,18 +466,18 @@ void mtk_cam_bwr_enable(struct mtk_bwr_device *bwr)
 	if (pm_runtime_get_sync(bwr->dev) < 0)
 		pr_info("%s runtime get fail\n", __func__);
 }
-EXPORT_SYMBOL_GPL(mtk_cam_bwr_enable);
+EXPORT_SYMBOL_GPL(mtk_cam_isp8s_bwr_enable);
 
-void mtk_cam_bwr_disable(struct mtk_bwr_device *bwr)
+void mtk_cam_isp8s_bwr_disable(struct mtk_bwr_device *bwr)
 {
 	if (!bwr)
 		return;
 
 	pm_runtime_put_sync(bwr->dev);
 }
-EXPORT_SYMBOL_GPL(mtk_cam_bwr_disable);
+EXPORT_SYMBOL_GPL(mtk_cam_isp8s_bwr_disable);
 
-void mtk_cam_bwr_set_chn_bw(struct mtk_bwr_device *bwr,
+void mtk_cam_isp8s_bwr_set_chn_bw(struct mtk_bwr_device *bwr,
 			  enum BWR_ENGINE_TYPE engine, enum BWR_AXI_PORT axi,
 			  int srt_r_bw, int srt_w_bw, int hrt_r_bw, int hrt_w_bw, bool clear)
 {
@@ -486,9 +486,9 @@ void mtk_cam_bwr_set_chn_bw(struct mtk_bwr_device *bwr,
 
 	bwr_set_chn_bw(bwr, engine, axi, srt_r_bw, srt_w_bw, hrt_r_bw, hrt_w_bw, clear);
 }
-EXPORT_SYMBOL_GPL(mtk_cam_bwr_set_chn_bw);
+EXPORT_SYMBOL_GPL(mtk_cam_isp8s_bwr_set_chn_bw);
 
-void mtk_cam_bwr_set_ttl_bw(struct mtk_bwr_device *bwr,
+void mtk_cam_isp8s_bwr_set_ttl_bw(struct mtk_bwr_device *bwr,
 			  enum BWR_ENGINE_TYPE engine, int srt_emi, int hrt_emi, bool clear)
 {
 	if (!bwr)
@@ -496,9 +496,9 @@ void mtk_cam_bwr_set_ttl_bw(struct mtk_bwr_device *bwr,
 
 	bwr_set_emi_bw(bwr, engine, srt_emi, hrt_emi, clear);
 }
-EXPORT_SYMBOL_GPL(mtk_cam_bwr_set_ttl_bw);
+EXPORT_SYMBOL_GPL(mtk_cam_isp8s_bwr_set_ttl_bw);
 
-void mtk_cam_bwr_clr_bw(
+void mtk_cam_isp8s_bwr_clr_bw(
 	struct mtk_bwr_device *bwr, enum BWR_ENGINE_TYPE engine, enum BWR_AXI_PORT axi)
 {
 	if (!bwr)
@@ -506,10 +506,10 @@ void mtk_cam_bwr_clr_bw(
 
 	bwr_zero_bw(bwr, engine, axi);
 }
-EXPORT_SYMBOL_GPL(mtk_cam_bwr_clr_bw);
+EXPORT_SYMBOL_GPL(mtk_cam_isp8s_bwr_clr_bw);
 
 /* hw mode trigger for HRT/SRT */
-void mtk_cam_bwr_trigger(struct mtk_bwr_device *bwr,
+void mtk_cam_isp8s_bwr_trigger(struct mtk_bwr_device *bwr,
 	enum BWR_ENGINE_TYPE engine, enum BWR_AXI_PORT axi)
 {
 	if (!bwr)
@@ -540,7 +540,7 @@ void mtk_cam_bwr_trigger(struct mtk_bwr_device *bwr,
 	mutex_unlock(&bwr->op_lock);
 }
 
-void mtk_cam_bwr_dbg_dump(struct mtk_bwr_device *bwr)
+void mtk_cam_isp8s_bwr_dbg_dump(struct mtk_bwr_device *bwr)
 {
 	int engine = 0, axi = 0;
 
