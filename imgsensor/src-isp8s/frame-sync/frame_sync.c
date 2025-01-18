@@ -2167,6 +2167,7 @@ static int fs_get_valid_async_master_instance_idx(const unsigned int idx)
 
 
 static inline void fs_sa_setup_perframe_cfg_info(const unsigned int idx,
+	const struct fs_extra_event_notify *p_extra_event,
 	struct fs_sa_cfg *p_sa_cfg)
 {
 	p_sa_cfg->idx = idx;
@@ -2176,10 +2177,14 @@ static inline void fs_sa_setup_perframe_cfg_info(const unsigned int idx,
 	p_sa_cfg->async_m_idx = fs_get_valid_async_master_instance_idx(idx);
 	p_sa_cfg->async_s_bits = FS_READ_BITS(&fs_mgr.async_mode_bits);
 	p_sa_cfg->rout_center_en_bits = FS_READ_BITS(&fs_mgr.rout_center_en_bits);
+
+	if (p_extra_event != NULL)
+		p_sa_cfg->extra_event = *p_extra_event;
 }
 
 
-static void fs_try_trigger_frame_sync_sa(const unsigned int idx)
+static void fs_try_trigger_frame_sync_sa(const unsigned int idx,
+	const struct fs_extra_event_notify *p_extra_event)
 {
 	const unsigned int flag = FS_SYNC_TYPE_AUTO_CLR_ASYNC_BIT;
 	struct fs_sa_cfg sa_cfg = {0};
@@ -2206,7 +2211,7 @@ static void fs_try_trigger_frame_sync_sa(const unsigned int idx)
 	/*    but only set FL to sensor driver if return with no error */
 	fs_mutex_lock(&fs_mgr.solving_fl_mutex);
 
-	fs_sa_setup_perframe_cfg_info(idx, &sa_cfg);
+	fs_sa_setup_perframe_cfg_info(idx, p_extra_event, &sa_cfg);
 	ret = fs_alg_solve_frame_length_sa(&sa_cfg, &fl_lc);
 
 	fs_mutex_unlock(&fs_mgr.solving_fl_mutex);
@@ -2460,7 +2465,7 @@ void fs_chk_valid_for_doing_seamless_switch(const unsigned int ident)
 		}
 
 		/* !!! can do seamless frame-sync flow !!! */
-		fs_sa_setup_perframe_cfg_info(idx, &sa_cfg);
+		fs_sa_setup_perframe_cfg_info(idx, NULL, &sa_cfg);
 
 		LOG_MUST(
 			"NOTICE: [%u] ID:%#x(sidx:%u), seamless_bits:%#x, wait_for_processing:%d, (current sof cnt:%u)/(seamelss sof cnt:%u) is same, SA(idx:%u/m_idx:%d/async_m_idx:%u/async_s:%#x/valid_sync:%#x/method:%u) => do seamless switch process\n",
@@ -2750,7 +2755,8 @@ unsigned int fs_streaming(const unsigned int flag,
 }
 
 int fs_try_trigger_hw_frame_sync(void);
-static void fs_notify_sensor_ctrl_setup_complete(unsigned int idx)
+static void fs_notify_sensor_ctrl_setup_complete(const unsigned int idx,
+	const struct fs_extra_event_notify *p_extra_event)
 {
 	unsigned int hw_sync_group_id = FS_HW_SYNC_GROUP_ID_MIN;
 
@@ -2817,7 +2823,7 @@ static void fs_notify_sensor_ctrl_setup_complete(unsigned int idx)
 	/* setup compeleted => tirgger FS standalone method */
 	if (FS_ATOMIC_READ(&fs_mgr.using_sa_ver)
 		&& !FS_CHECK_BIT(idx, &fs_mgr.hw_sync_bits))
-		fs_try_trigger_frame_sync_sa(idx);
+		fs_try_trigger_frame_sync_sa(idx, p_extra_event);
 #endif // SUPPORT_FS_NEW_METHOD
 }
 
@@ -2867,7 +2873,7 @@ void fs_update_min_fl_lc(const unsigned int ident, const unsigned int min_fl_lc,
 
 #ifndef USING_V4L2_CTRL_REQUEST_SETUP
 	/* if this is the last ctrl needed by FrameSync, notify setup complete */
-	fs_notify_sensor_ctrl_setup_complete(idx);
+	fs_notify_sensor_ctrl_setup_complete(idx, NULL);
 #endif // USING_V4L2_CTRL_REQUEST_SETUP
 }
 
@@ -3334,7 +3340,7 @@ void fs_set_shutter(struct fs_perframe_st (*pf_ctrl))
 
 #ifdef USING_V4L2_CTRL_REQUEST_SETUP
 	/* if this is the last ctrl needed by FrameSync, notify setup complete */
-	fs_notify_sensor_ctrl_setup_complete(idx);
+	fs_notify_sensor_ctrl_setup_complete(idx, &pf_ctrl->extra_event);
 #endif // USING_V4L2_CTRL_REQUEST_SETUP
 }
 

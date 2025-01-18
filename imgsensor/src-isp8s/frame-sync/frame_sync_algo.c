@@ -449,7 +449,7 @@ static inline unsigned int set_and_chk_fl_active_delay(const unsigned int idx,
 
 
 /* return: 1 => mixed together; 0 => same type (e.g., all N+3 or N+2) */
-static int chk_if_fdelay_type_mixed_together(const unsigned int mask)
+/* static */ int chk_if_fdelay_type_mixed_together(const unsigned int mask)
 {
 	unsigned int fdelay_3_cnt = 0, fdelay_2_cnt = 0;
 	unsigned int i;
@@ -1421,7 +1421,7 @@ static inline void fs_alg_sa_adjust_diff_m_s_general_msg_connector(
 	const char *caller)
 {
 	FS_SNPRF(log_str_len, log_buf, len,
-		", [((%u:%u)c:%u/n:%u/o:%u/s:%u/e:%u(%u/%u|m_p:%u)/t:%u(%u/%u),%u(%u->%u))/((%u:%u)c:%u/n:%u/o:%u/s:%u/e:%u(%u/%u)/t:%u(%u/%u),%u(%u->%u))], minFL:%u/%u, lineT:%u/%u, routT(%#x):%u/%u",
+		", [((%u:%u)c:%u/n:%u/o:%u/s:%u/e:%u(%u/%u|m_p:%u)/t:%u(%u/%u),%u(%u->%u))/((%u:%u)c:%u/n:%u/o:%u/s:%u/e:%u(%u/%u)/t:%u(%u/%u),%u(%u->%u))],mFL:%u/%u,lineT:%u/%u,roT(%#x):%u/%u",
 		fs_inst[s_idx].fl_active_delay,
 		p_para_s->delta,
 		p_para_s->pred_fl_us[0],
@@ -4322,16 +4322,16 @@ end_do_fps_sync_sa:
 static unsigned int dynamic_fps_set_out_fl_us(const unsigned int idx,
 	const struct fs_sa_cfg *p_sa_cfg,
 	const struct FrameSyncDynamicPara *p_para,
-	const struct fs_dynamic_fps_record_st *p_fps_info)
+	const unsigned int last_fps_sync_result)
 {
+	/* const unsigned int valid_bits = */
+	/*	(p_sa_cfg->valid_sync_bits ^ p_sa_cfg->async_s_bits); */
 	const unsigned int fdelay = fs_inst[idx].fl_active_delay;
-	const unsigned int valid_bits =
-		(p_sa_cfg->valid_sync_bits ^ p_sa_cfg->async_s_bits);
 	unsigned int out_fl_us;
 
 	/* NOT mixed fdelay type => set out FL to stable FL */
-	if (chk_if_fdelay_type_mixed_together(valid_bits) == 0)
-		return p_para->stable_fl_us;
+	/* if (chk_if_fdelay_type_mixed_together(valid_bits) == 0) */
+		/* return p_para->stable_fl_us; */
 
 	/* Mixed fdelay type => ASSIGN/SETUP out FL by scenario/condition */
 	if (fdelay == 3) {
@@ -4353,7 +4353,10 @@ static unsigned int dynamic_fps_set_out_fl_us(const unsigned int idx,
 			 * so, N+1 sensor should set the output FL value as same as
 			 * the last stable FL result to match N+2 sensor.
 			 */
-			out_fl_us = p_fps_info->stable_fl_us;
+			/* out_fl_us = p_fps_info->stable_fl_us; */
+			/* last_fps_sync_result == 0 => NOT do fps align, e.g., single cam */
+			out_fl_us = (last_fps_sync_result != 0)
+				? last_fps_sync_result : p_para->stable_fl_us;
 			break;
 		/* case FS_DY_FPS_USER_CHG: */
 			/* TBD */
@@ -4434,8 +4437,9 @@ static unsigned int do_fps_sync_sa_v2(const struct fs_sa_cfg *p_sa_cfg,
 	const unsigned int idx = p_sa_cfg->idx;
 	const unsigned int valid_bits =
 		(p_sa_cfg->valid_sync_bits ^ p_sa_cfg->async_s_bits);
-	unsigned int max_pure_min_fl_us = 0, max_cnt = 0;
-	unsigned int fps_sync_fl_result, flk_diff, out_fl_us;
+	unsigned int max_pure_min_fl_us = 0, last_max_min_fl_us = 0;
+	unsigned int fps_sync_fl_result, last_fps_sync_fl_result = 0;
+	unsigned int flk_diff, out_fl_us, max_cnt = 0;
 	unsigned int i, need_to_skip;
 
 	/* TODO: add method for handling user change max FPS */
@@ -4454,6 +4458,7 @@ static unsigned int do_fps_sync_sa_v2(const struct fs_sa_cfg *p_sa_cfg,
 			if (((valid_bits >> i) & 1UL) == 0)
 				continue;
 
+			/* => for current fps alignment */
 			if (fps_info_arr[i].pure_min_fl_us > max_pure_min_fl_us) {
 				max_pure_min_fl_us = fps_info_arr[i].pure_min_fl_us;
 				max_cnt = 1;
@@ -4461,9 +4466,16 @@ static unsigned int do_fps_sync_sa_v2(const struct fs_sa_cfg *p_sa_cfg,
 				/* increase the counter (checking FPS DEC MOST needed) */
 				max_cnt++;
 			}
+			/* => for last/prev fps alignment */
+			if (last_fps_info_arr[i].pure_min_fl_us > last_max_min_fl_us) {
+				last_max_min_fl_us =
+					last_fps_info_arr[i].pure_min_fl_us;
+			}
 		}
 		fps_sync_fl_result = max_pure_min_fl_us;
-		/* update the result(stable FL) of fps alignment */
+		last_fps_sync_fl_result = last_max_min_fl_us;
+
+		/* update the fps alignment result to "stable FL" & "target FL" */
 		g_flk_fl_and_flk_diff(idx,
 			&fps_sync_fl_result, &flk_diff, sync_flk_en);
 		fs_alg_sa_update_target_stable_fl_info(idx,
@@ -4484,7 +4496,7 @@ static unsigned int do_fps_sync_sa_v2(const struct fs_sa_cfg *p_sa_cfg,
 	/* setup the output fl info */
 	out_fl_us =
 		dynamic_fps_set_out_fl_us(idx,
-			p_sa_cfg, p_para, &last_fps_info_arr[idx]);
+			p_sa_cfg, p_para, last_fps_sync_fl_result);
 	fs_alg_setup_basic_out_fl(idx, &out_fl_us, p_para);
 	fs_alg_sa_update_fl_us(idx, out_fl_us, p_para);
 
@@ -4502,7 +4514,7 @@ static unsigned int do_fps_sync_sa_v2(const struct fs_sa_cfg *p_sa_cfg,
 		}
 
 		FS_SNPRF(log_str_len, log_buf, len,
-			"[%u] ID:%#x(sidx:%u), #%u, out_fl:%u(%u), status:(%u=>%u) => target FL:%u(%u)(+%u), fl:(pure:%u(%u)/min:%u/tar:%u/stable:%u,%u), flk_en:[%u/%u/%u/%u/%u], valid:%#x(%#x/%#x), unstable:%#x, ts:%llu",
+			"[%u] ID:%#x(sidx:%u), #%u, out_fl:%u(%u), status:(%u=>%u) => fps sync:(%u(%u)(+%u)/prev:%u(%u)), fl:(pure:%u(%u)/min:%u/tar:%u/stable:%u,%u), flk_en:[%u/%u/%u/%u/%u], valid:%#x(%#x/%#x), unstable:%#x, ts:%llu",
 			idx,
 			fs_get_reg_sensor_id(idx),
 			fs_get_reg_sensor_idx(idx),
@@ -4518,6 +4530,10 @@ static unsigned int do_fps_sync_sa_v2(const struct fs_sa_cfg *p_sa_cfg,
 				fs_inst[idx].lineTimeInNs,
 				fps_sync_fl_result),
 			flk_diff,
+			last_fps_sync_fl_result,
+			convert2LineCount(
+				fs_inst[idx].lineTimeInNs,
+				last_fps_sync_fl_result),
 			p_para->pure_min_fl_us,
 			p_para->pure_min_fl_lc,
 			p_para->min_fl_us,
@@ -4759,9 +4775,8 @@ static unsigned int fps_sync_sa_handler_v2(const struct fs_sa_cfg *p_sa_cfg,
 	}
 
 	FS_SNPRF(log_str_len, log_buf, len,
-		"[%u] ID:%#x(sidx:%u), out_fl:%u(%u) +%lld(%u), flk(%u):+%u, s/m, #%u(%u)/#%u(%u)[%u], req(%d/%d)/f(%u/%u), adj_diff(M:%u/corr:%lld(%u))(%lld(v:%u/chg:%u/sub:%u(min:%u)/ask:%u(%u))/%lld), t(%lld/%lld(+%lld(%#x)))",
+		"[%u][sidx:%u] out:%u(%u) +%lld(%u),flk(%u):+%u, s/m, #%u(%u)/#%u(%u)[%u],r(%d/%d)/f(%u/%u),{M:%u/%lld(%u)}(%lld(%u/chg:%u/-:%u(%u)/%u(%u))/%lld), t(%lld/%lld(+%lld(%#x)))",
 		s_idx,
-		fs_get_reg_sensor_id(s_idx),
 		fs_get_reg_sensor_idx(s_idx),
 		out_fl_us_final,
 		convert2LineCount(fs_inst[s_idx].lineTimeInNs, out_fl_us_final),
@@ -4946,9 +4961,8 @@ end_adjust_vsync_diff_sa_v2:
 	}
 
 	FS_SNPRF(log_str_len, log_buf, len,
-		"[%u] ID:%#x(sidx:%u), out_fl:%u(%u) +%lld(%u), flk(%u):+%u, s/m, #%u(%u)/#%u(%u)[%u], req(%d/%d)/f(%u/%u), adj_diff(M:%u/corr:%lld(%u))(%lld(v:%u/chg:%u/sub:%u(min:%u)/ask:%u(%u))/%lld), t(%lld/%lld(+%lld(%#x)))",
+		"[%u][sidx:%u] out:%u(%u) +%lld(%u),flk(%u):+%u, s/m, #%u(%u)/#%u(%u)[%u],r(%d/%d)/f(%u/%u),{M:%u/%lld(%u)}(%lld(%u/chg:%u/-:%u(%u)/%u(%u))/%lld), t(%lld/%lld(+%lld(%#x)))",
 		s_idx,
-		fs_get_reg_sensor_id(s_idx),
 		fs_get_reg_sensor_idx(s_idx),
 		out_fl_us_final,
 		convert2LineCount(fs_inst[s_idx].lineTimeInNs, out_fl_us_final),
