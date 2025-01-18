@@ -581,6 +581,26 @@ static inline unsigned int g_tsrec_exp_trig_src(void)
 }
 
 
+struct kthread_worker *mtk_cam_seninf_tsrec_g_kthread(
+	const unsigned int tsrec_no, const char *caller)
+{
+	/* check case / error handling */
+	if (unlikely((chk_tsrec_hw_cnt(tsrec_no, caller) != 0)
+			|| (chk_tsrec_n_regs_arr_valid(caller) != 0))) {
+		return NULL;
+	}
+
+	if (unlikely(tsrec_worker.kthreads[tsrec_no] == NULL)) {
+		TSREC_LOG_INF(
+			"NOTICE: kthreads[%u]:%p is null, plz check timing of calling this function, return\n",
+			tsrec_no, tsrec_worker.kthreads[tsrec_no]);
+		return NULL;
+	}
+
+	return &tsrec_worker.kthreads[tsrec_no]->kthread;
+}
+
+
 /*
  * for preventing any unexpected flow when TSREC HW does NOT exist,
  * plz call this function before every APIs that export to user module
