@@ -1979,8 +1979,7 @@ static irqreturn_t mtk_thread_irq_raw(int irq, void *data)
 			str_buf_size = sizeof(raw_dev->str_debug_irq_data);
 			memset(str_buf, 0, str_buf_size);
 
-			if ((irq_info.ts_ns - raw_dev->apply_ts) >= LOG_THREADED_IRQ ||
-				raw_dev->log_en ||
+			if (raw_dev->log_en ||
 				CAM_DEBUG_ENABLED(CTRL))
 				dev_info(raw_dev->dev,
 					"ts=%llu irq %d, req:0x%x/0x%x mod_5:0x%x td:%llu (0x%x/0x%x/0x%x) qof:0x%x\n",
