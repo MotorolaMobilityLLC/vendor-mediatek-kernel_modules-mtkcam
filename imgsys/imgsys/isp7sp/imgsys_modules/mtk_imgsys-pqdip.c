@@ -653,6 +653,12 @@ void imgsys_pqdip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 					mtk_hcp_get_pqdip_mem_virt(imgsys_dev->scp_pdev) +
 					user_info->priv[pq_hw].desc_offset));
 				#endif
+
+			if (cq_desc == NULL) {
+				pr_debug("%s: cq_desc NULL\n", __func__);
+				return;
+			}
+
 			for (i = 0; i < PQDIP_CQ_DESC_NUM; i++) {
 				dtable = (struct mtk_imgsys_pqdip_dtable *)cq_desc + i;
 				if ((dtable->addr_msb & PSEUDO_DESC_TUNING) == PSEUDO_DESC_TUNING) {

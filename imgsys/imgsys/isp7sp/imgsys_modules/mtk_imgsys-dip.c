@@ -368,6 +368,12 @@ void imgsys_dip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			cq_desc = (u64 *)((void *)(mtk_hcp_get_dip_mem_virt(imgsys_dev->scp_pdev) +
 					user_info->priv[IMGSYS_DIP].desc_offset));
 			#endif
+
+			if (cq_desc == NULL) {
+				pr_debug("%s: cq_desc NULL\n", __func__);
+				return;
+			}
+
 			for (i = 0; i < DIP_CQ_DESC_NUM; i++) {
 				dtable = (struct mtk_imgsys_dip_dtable *)cq_desc + i;
 				if ((dtable->addr_msb & PSEUDO_DESC_TUNING) == PSEUDO_DESC_TUNING) {

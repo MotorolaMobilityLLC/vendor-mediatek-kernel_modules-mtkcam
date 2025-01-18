@@ -299,6 +299,11 @@ void imgsys_dip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 	if (hcp_ops && hcp_ops->fetch_dip_cq_mb_virt)
 		cq_base = hcp_ops->fetch_dip_cq_mb_virt(imgsys_dev->scp_pdev, mode);
 
+	if (cq_base == NULL) {
+		pr_debug("%s: cq_base NULL\n", __func__);
+		return;
+	}
+
 	/* HWID defined in hw_definition.h */
 	if (user_info->priv[IMGSYS_HW_DIP].need_update_desc) {
 		if (iova_addr) {

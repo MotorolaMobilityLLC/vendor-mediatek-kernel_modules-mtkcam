@@ -597,6 +597,11 @@ void imgsys_pqdip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 	if (hcp_ops && hcp_ops->fetch_pqdip_cq_mb_virt)
 		cq_base = hcp_ops->fetch_pqdip_cq_mb_virt(imgsys_dev->scp_pdev, mode);
 
+	if (cq_base == NULL) {
+		pr_debug("%s: cq_base NULL\n", __func__);
+		return;
+	}
+
 	/* HWID defined in hw_definition.h */
 	for (pq_hw = IMGSYS_HW_PQDIP_A; pq_hw <= IMGSYS_HW_PQDIP_B; pq_hw++) {
 		if (!user_info->priv[pq_hw].need_update_desc)

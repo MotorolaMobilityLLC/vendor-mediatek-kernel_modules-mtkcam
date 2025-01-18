@@ -27,7 +27,8 @@ const struct mtk_imgsys_init_array mtk_imgsys_dip_init_ary[] = {
 
 static struct DIPRegDumpInfo g_DIPRegDumpTopIfo[] = {
 	{ 0x0000, 0x03E4},
-	{ 0x1070, 0x10C4},
+	{ 0x1010, 0x101C},
+	{ 0x1070, 0x1194},
 	{ 0x1200, 0x138C},
 	{ 0x14A0, 0x1B1C},
 	{ 0x2000, 0x250C},
@@ -57,7 +58,8 @@ static struct DIPRegDumpInfo g_DIPRegDumpNr1Ifo[] = {
 
 static struct DIPRegDumpInfo g_DIPRegDumpNr2Ifo[] = {
 	{ 0x0000, 0x0230},
-	{ 0x1064, 0x10C4},
+	{ 0x1014, 0x1024},
+	{ 0x1064, 0x11B8},
 	{ 0x1200, 0x1DBC},
 	{ 0x2000, 0x224C},
 	{ 0x3000, 0x38F8},
@@ -407,6 +409,11 @@ void imgsys_dip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 	if (hcp_ops && hcp_ops->fetch_dip_cq_mb_virt)
 		cq_base = hcp_ops->fetch_dip_cq_mb_virt(imgsys_dev->scp_pdev, mode);
 
+	if (cq_base == NULL) {
+		pr_debug("%s: cq_base NULL\n", __func__);
+		return;
+	}
+
 	/* HWID defined in hw_definition.h */
 	if (user_info->priv[IMGSYS_HW_DIP].need_update_desc) {
 		if (iova_addr) {
@@ -663,6 +670,58 @@ static void imgsys_dip_dump_dma(struct mtk_imgsys_dev *a_pDev,
 		}
 
 	}
+	/* SMI_STATUS */
+	if (a_DMANrPort == 1) {
+		/* L39R */
+		DbgCmd = 0x2C81005A;
+		for (Idx = 0; Idx <= 10; Idx++) {
+			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+			DbgCmd += 0x100;
+		}
+		/* L15R */
+		DbgCmd = 0x2C81005B;
+		for (Idx = 0; Idx <= 8; Idx++) {
+			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+			DbgCmd += 0x100;
+		}
+		/* L39W */
+		DbgCmd = 0x2C81005C;
+		for (Idx = 0; Idx <= 8; Idx++) {
+			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+			DbgCmd += 0x100;
+		}
+		/* L15W */
+		DbgCmd = 0x2C81005D;
+		for (Idx = 0; Idx <= 6; Idx++) {
+			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+			DbgCmd += 0x100;
+		}
+	} else {
+		/* L38R */
+		DbgCmd = 0x2C810046;
+		for (Idx = 0; Idx <= 9; Idx++) {
+			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+			DbgCmd += 0x100;
+		}
+		/* L10R */
+		DbgCmd = 0x2C810047;
+		for (Idx = 0; Idx <= 5; Idx++) {
+			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+			DbgCmd += 0x100;
+		}
+		/* L38W */
+		DbgCmd = 0x2C810048;
+		for (Idx = 0; Idx <= 9; Idx++) {
+			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+			DbgCmd += 0x100;
+		}
+		/* L10W */
+		DbgCmd = 0x2C810049;
+		for (Idx = 0; Idx <= 4; Idx++) {
+			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+			DbgCmd += 0x100;
+		}
+	}
 }
 
 static void imgsys_dip_dump_dl(struct mtk_imgsys_dev *a_pDev,
@@ -754,20 +813,20 @@ static void imgsys_dip_dump_dl(struct mtk_imgsys_dev *a_pDev,
 
 	/* mcrp_d1_debug */
 	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
-	DbgCmd = 0x00000305;
+	DbgCmd = 0x00000405;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
 	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
 	pr_info("[mcrp_d1_debug]checksum(0x%X),rdy(%d) req(%d)\n",
 		DbgData & 0xFFFF, DbgRdy, DbgReq);
 	/* line_cnt[15:0],  pix_cnt[15:0] */
-	DbgCmd = 0x00000306;
+	DbgCmd = 0x00000406;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCnt = (DbgData & 0xFFFF0000) >> 16;
 	pr_info("[mcrp_d1_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
 		DbgData & 0xFFFF, DbgLineCnt);
 	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
-	DbgCmd = 0x00000307;
+	DbgCmd = 0x00000407;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCntReg = (DbgData & 0xFFFF0000) >> 16;
 	pr_info("[mcrp_d1_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
@@ -775,20 +834,20 @@ static void imgsys_dip_dump_dl(struct mtk_imgsys_dev *a_pDev,
 
 	/* mcrp_d2_debug */
 	/* sot_st,eol_st,eot_st,sof,sot,eol,eot,req,rdy,7b0,checksum_out */
-	DbgCmd = 0x00000405;
+	DbgCmd = 0x00000305;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgRdy = ((DbgData & 0x800000) > 0) ? 1 : 0;
 	DbgReq = ((DbgData & 0x1000000) > 0) ? 1 : 0;
 	pr_info("[mcrp_d2_debug]checksum(0x%X),rdy(%d) req(%d)\n",
 		DbgData & 0xFFFF, DbgRdy, DbgReq);
 	/* line_cnt[15:0],  pix_cnt[15:0] */
-	DbgCmd = 0x00000406;
+	DbgCmd = 0x00000306;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCnt = (DbgData & 0xFFFF0000) >> 16;
 	pr_info("[mcrp_d2_debug]pix_cnt(0x%X),line_cnt(0x%X)\n",
 		DbgData & 0xFFFF, DbgLineCnt);
 	/* line_cnt_reg[15:0], pix_cnt_reg[15:0] */
-	DbgCmd = 0x00000407;
+	DbgCmd = 0x00000307;
 	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 	DbgLineCntReg = (DbgData & 0xFFFF0000) >> 16;
 	pr_info("[mcrp_d2_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
@@ -1306,6 +1365,7 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	imgsys_dip_dump_yufed3(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
 
 	dipRegBA = gdipRegBA[1];
+	g_RegBaseAddr = g_RegBaseAddrNr1;
 	/* URZ6T4T_D1 debug data */
 	imgsys_dip_dump_urz6t4t1d1(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
 	/* EECNR debug data */
@@ -1324,6 +1384,7 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	imgsys_dip_dump_tnc(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
 
 	dipRegBA = gdipRegBA[2];
+	g_RegBaseAddr = g_RegBaseAddrNr2;
 	/* SNR debug data */
 	imgsys_dip_dump_snr(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
 	/* CSMCS_D1 debug data */
@@ -1334,6 +1395,7 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	imgsys_dip_dump_vdce(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
 
 	dipRegBA = gdipRegBA[3];
+	g_RegBaseAddr = g_RegBaseAddrCine;
 	/* BOK_D1 debug data */
 	imgsys_dip_dump_bok(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
 	/* FPNR_D1 debug data */
