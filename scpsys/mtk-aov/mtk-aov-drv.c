@@ -32,16 +32,9 @@
 #include "mtk-smi-dbg.h"
 #include "mtk-smi-user.h"
 
-uint32_t g_frame_mode;
 uint32_t g_aov_start;
 /* smi full dump */
 struct device *uisp_larb_dev;
-
-#ifdef CONFIG_PM_WAKELOCKS
-struct wakeup_source *aov_wake_lock;
-#else
-struct wake_lock aov_wake_lock;
-#endif
 
 static uint32_t bypass_aov_kernel_flag;
 module_param(bypass_aov_kernel_flag, uint, 0644);
@@ -174,28 +167,6 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 			vmm_isp_ctrl_notify(1);
 			mtk_mmdvfs_aov_enable(1);
 		}
-
-		g_frame_mode = 0;
-		if (arg) {
-			struct aov_user user;
-
-			ret = copy_from_user((void *)&user, (void *)arg, sizeof(struct aov_user));
-			if (ret) {
-				dev_info(aov_dev->dev, "%s: failed to copy aov user data: %d\n",
-					__func__, ret);
-				up(&core_info->start_stop_sema);
-				return -EFAULT;
-			}
-			g_frame_mode = user.frame_mode;
-		}
-		if (g_frame_mode & eOBJECT_FACE_RECOGNITION) {
-			dev_info(aov_dev->dev, "AOV enable wake lock, mode(%#x)\n", g_frame_mode);
-#ifdef CONFIG_PM_WAKELOCKS
-			__pm_stay_awake(aov_wake_lock);
-#else
-			wake_lock(&aov_wake_lock);
-#endif
-		}
 		g_aov_start += 1;
 
 		AOV_TRACE_FORCE_BEGIN("AOV start");
@@ -266,15 +237,6 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 			vmm_isp_ctrl_notify(0);
 			mtk_mmdvfs_aov_enable(0);
 			dev_info(aov_dev->dev, "AOV disable vmm-\n");
-		}
-
-		if (g_frame_mode & eOBJECT_FACE_RECOGNITION) {
-			dev_info(aov_dev->dev, "AOV disable wake lock, mode(%#x)\n", g_frame_mode);
-#ifdef CONFIG_PM_WAKELOCKS
-			__pm_relax(aov_wake_lock);
-#else
-			wake_unlock(&aov_wake_lock);
-#endif
 		}
 
 		dev_info(aov_dev->dev, "AOV stop-(%d)\n", ret);
@@ -353,6 +315,69 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 		ret = aov_core_send_cmd(aov_dev, AOV_SCP_CMD_CLEAR_APU, (void *)arg, sizeof(struct stop_param), true);
 		dev_info(aov_dev->dev, "CLEAR APU REQUEST-\n");
 		up(&core_info->start_stop_sema);
+		break;
+	case AOV_DEV_START_SENSOR: {
+		if (*(aov_dev->bypass_aov_kernel_flag)) {
+			dev_info(aov_dev->dev, "skip flow below AOV kernel!\n");
+			break;
+		}
+		if (down_interruptible(&core_info->start_stop_sema)) {
+			dev_info(aov_dev->dev, "%s: failed to acquire semaphore\n", __func__);
+			return -EFAULT;
+		}
+		dev_info(aov_dev->dev, "AOV start+\n");
+		if (g_aov_start == 0) {
+			vmm_isp_ctrl_notify(1);
+			mtk_mmdvfs_aov_enable(1);
+		}
+		g_aov_start += 1;
+
+		AOV_TRACE_FORCE_BEGIN("AOV start");
+		ret = aov_core_send_cmd(aov_dev, AOV_SCP_CMD_START_SENSOR,
+			(void *)arg, sizeof(struct aov_user), true);
+		AOV_TRACE_END();
+		if ((ret < 0) && (g_aov_start == 1)) {
+			vmm_isp_ctrl_notify(0);
+			mtk_mmdvfs_aov_enable(0);
+		}
+
+		dev_info(aov_dev->dev, "AOV start-(%d)\n", ret);
+		up(&core_info->start_stop_sema);
+		break;
+	}
+	case AOV_DEV_STOP_SENSOR:
+		if (*(aov_dev->bypass_aov_kernel_flag)) {
+			dev_info(aov_dev->dev, "skip flow below AOV kernel!\n");
+			break;
+		}
+		/* error handling of SCP rebooting: skip scp stop flow */
+		if (atomic_read(&(core_info->scp_ready)) == 1) {
+			dev_info(aov_dev->dev, "%s: SCP rebooting stop case\n", __func__);
+			stop_w_scp_reboot_flow = true;
+		}
+		if (!stop_w_scp_reboot_flow) {
+			if (down_interruptible(&core_info->start_stop_sema)) {
+				dev_info(aov_dev->dev, "%s: failed to acquire semaphore\n", __func__);
+				return -EFAULT;
+			}
+		}
+		dev_info(aov_dev->dev, "AOV stop+\n");
+
+		g_aov_start -= 1;
+		AOV_TRACE_FORCE_BEGIN("AOV stop");
+		ret = aov_core_send_cmd(aov_dev, AOV_SCP_CMD_STOP_SENSOR, (void *)arg,
+			sizeof(struct close_param), !stop_w_scp_reboot_flow);
+		AOV_TRACE_FORCE_END();
+		if (g_aov_start == 0) {
+			dev_info(aov_dev->dev, "AOV disable vmm+\n");
+			vmm_isp_ctrl_notify(0);
+			mtk_mmdvfs_aov_enable(0);
+			dev_info(aov_dev->dev, "AOV disable vmm-\n");
+		}
+
+		dev_info(aov_dev->dev, "AOV stop-(%d)\n", ret);
+		if (!stop_w_scp_reboot_flow)
+			up(&core_info->start_stop_sema);
 		break;
 	default:
 		dev_info(aov_dev->dev, "unknown AOV control code(%d)\n", cmd);
@@ -487,15 +512,8 @@ static int mtk_aov_probe(struct platform_device *pdev)
 	if (aov_dev == NULL)
 		return -ENOMEM;
 
-	g_frame_mode = 0;
 	g_aov_start = 0;
 	uisp_larb_dev = NULL;
-
-#ifdef CONFIG_PM_WAKELOCKS
-	aov_wake_lock = wakeup_source_register(&pdev->dev, "aov_lock_wakelock");
-#else
-	wake_lock_init(&aov_wake_lock, WAKE_LOCK_SUSPEND, "aov_lock_wakelock");
-#endif
 
 	aov_dev->is_open = false;
 	aov_dev->user_cnt = 0;

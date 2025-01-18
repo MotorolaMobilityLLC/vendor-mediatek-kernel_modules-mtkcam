@@ -27,6 +27,8 @@
 #define AOV_DEV_MODULE_UT         _IOWR('H', 11, struct aov_ut_info)
 #define AOV_DEV_SET_APU_REQ       _IOW('H', 12, struct start_param)
 #define AOV_DEV_CLEAR_APU_REQ     _IOW('H', 13, struct stop_param)
+#define AOV_DEV_START_SENSOR      _IOW('H', 14, struct aov_user)
+#define AOV_DEV_STOP_SENSOR       _IOW('H', 15, struct close_param)
 
 #if IS_ENABLED(CONFIG_COMPAT)
 #define COMPAT_AOV_DEV_START        _IOW('H', 0, struct aov_user)
@@ -43,6 +45,8 @@
 #define COMPAT_AOV_DEV_MODULE_UT       _IOWR('H', 11, struct aov_ut_info)
 #define COMPAT_AOV_DEV_SET_APU_REQ  _IOW('H', 12, struct start_param)
 #define COMPAT_AOV_DEV_CLEAR_APU_REQ _IOW('H', 13, struct stop_param)
+#define COMPAT_AOV_DEV_START_SENSOR  _IOW('H', 14, struct aov_user)
+#define COMPAT_AOV_DEV_STOP_SENSOR   _IOW('H', 15, struct close_param)
 #endif
 
 /*
@@ -69,7 +73,9 @@
 #define AOV_SCP_CMD_SET_APU          (18)
 #define AOV_SCP_CMD_CLEAR_APU        (19)
 #define AOV_SCP_CMD_DAULSYNC         (20)
-#define AOV_SCP_CMD_MAX              (21)
+#define AOV_SCP_CMD_START_SENSOR     (21)
+#define AOV_SCP_CMD_STOP_SENSOR      (22)
+#define AOV_SCP_CMD_MAX              (23)
 #define AOV_SCP_CMD_ACK              (0x8000)
 
 #define AOV_DEBUG_MODE_DUMP       (1)  // General debug
@@ -298,6 +304,7 @@ struct aov_user {
 	uint32_t debug_drv_spm;
 	uint32_t debug_drv_time;
 	uint32_t debug_drv_bypass;
+	bool     is_reopen_from_camera;
 	uint32_t reserved[5];
 
 	uint32_t aaa_size;
@@ -349,6 +356,7 @@ struct aov_start {
 	uint32_t debug_drv_spm;
 	uint32_t debug_drv_time;
 	uint32_t debug_drv_bypass;
+	bool     is_reopen_from_camera;
 	uint32_t reserved[5];
 
 	// display on/off
