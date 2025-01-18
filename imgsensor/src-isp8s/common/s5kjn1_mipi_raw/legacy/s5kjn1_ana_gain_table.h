@@ -501,7 +501,6 @@ static kal_uint32 s5kjn1_ana_gain_table[] = {
 	16288,
 	16320,
 	16352,
-	16384,
 };
 
 #endif

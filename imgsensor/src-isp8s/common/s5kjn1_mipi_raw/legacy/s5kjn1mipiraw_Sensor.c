@@ -90,7 +90,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.channel = 0,
 			.data_type = 0x2b,
 			.hsize = 0x0FF0, //4080
-			.vsize = 0x0BF4, //3060
+			.vsize = 0x09F6, //2550
 			.user_data_desc = VC_STAGGER_NE,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
@@ -100,7 +100,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.channel = 1,
 			.data_type = 0x30,
 			.hsize = 0x01FC, //508
-			.vsize = 0x0BF0, //3056
+			.vsize = 0x09E0, //2528
 			.user_data_desc = VC_PDAF_STATS,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 		},
@@ -365,7 +365,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dpc_enabled = TRUE,
 		.pdc_enabled = TRUE,
 	},
-	/*mode 2: 4080x3060 30fps 2004Mbps/lane*/
+	/*mode 2: 4080x2550 30fps 1656Mbps/lane*/
 	{
 		.frame_desc = frame_desc_vid,
 		.num_entries = ARRAY_SIZE(frame_desc_vid),
@@ -378,10 +378,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.raw_cnt = 1,
 		.exp_cnt = 1,
 		.pclk = 560000000,
-		.linelength = 4240,
-		.framelength = 4400,
+		.linelength = 4584,
+		.framelength = 4054,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 801600000, //DPHY: 2004M*4(lane)/10(raw bit)
+		.mipi_pixel_rate = 662400000, //DPHY: 1656M*4(lane)/10(raw bit)
 		.readout_length = 0,
 		.read_margin = 0,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 3,
@@ -389,19 +389,19 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.full_w = 8160,
 			.full_h = 6144,
 			.x0_offset = 0,
-			.y0_offset = 12,
+			.y0_offset = 520,
 			.w0_size = 8160,
-			.h0_size = 6120,
+			.h0_size = 5104,
 			.scale_w = 4080,
-			.scale_h = 3060,
+			.scale_h = 2552,
 			.x1_offset = 0,
-			.y1_offset = 0,
+			.y1_offset = 1,
 			.w1_size = 4080,
-			.h1_size = 3060,
+			.h1_size = 2550,
 			.x2_tg_offset = 0,
 			.y2_tg_offset = 0,
 			.w2_tg_size = 4080,
-			.h2_tg_size = 3060,
+			.h2_tg_size = 2550,
 		},
 		.aov_mode = 0,
 		.pdaf_cap = TRUE,
@@ -1017,7 +1017,6 @@ static struct subdrv_static_ctx static_ctx = {
 	.eeprom_info = PARAM_UNDEFINED,
 	.eeprom_num = PARAM_UNDEFINED,
 	.resolution = {8160, 6144},
-	.mirror = IMAGE_NORMAL,
 
 	.mclk = 24,
 	.isp_driving_current = ISP_DRIVING_6MA,
@@ -1083,7 +1082,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.list_len = ARRAY_SIZE(feature_control_list),
 	.chk_s_off_sta = 1,
 	.chk_s_off_end = 0,
-	.checksum_value = 0xef68f1f2,
+	.checksum_value = 0x1163D60F,
 	.aov_sensor_support = TRUE,
 	.init_in_open = TRUE,
 	.streaming_ctrl_imp = FALSE,
