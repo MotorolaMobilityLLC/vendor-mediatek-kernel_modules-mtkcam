@@ -4866,7 +4866,6 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	(void) vcore_pdev;
 	(void) cam_vcore_dev;
 	(void) link;
-	(void) clks;
 	(void) node;
 
 	platform_data = of_device_get_match_data(dev);
@@ -5040,7 +5039,7 @@ static int mtk_cam_probe(struct platform_device *pdev)
 		cam_dev->clks[i] = of_clk_get(pdev->dev.of_node, i);
 		if (IS_ERR(cam_dev->clks[i])) {
 			dev_info(dev, "failed to get clk %d\n", i);
-			return -ENODEV;
+			cam_dev->clks[i] = NULL;
 		}
 	}
 
@@ -5166,6 +5165,7 @@ static void mtk_cam_shutdown(struct platform_device *pdev)
 static int mtk_cam_runtime_suspend(struct device *dev)
 {
 	struct mtk_cam_device *cam_dev  = dev_get_drvdata(dev);
+	int clk_num = cam_dev->num_clks;
 	int i;
 
 	dev_info(dev, "%s:suspend\n", __func__);
@@ -5181,8 +5181,16 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 		readl(cam_dev->vcore_base),
 		readl(cam_dev->base + 0x00),
 		readl(cam_dev->base + 0x4c));
-	for (i = cam_dev->num_clks - 1; i >= 0; i--)
+
+	if (cam_dev->dvfs.mmdvfs_clk && clk_num > 0)
+		clk_num--;
+
+	for (i = clk_num - 1; i >= 0; i--) {
+		if (!cam_dev->clks[i])
+			continue;
+
 		clk_disable_unprepare(cam_dev->clks[i]);
+	}
 
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		dev_dbg(dev, "%s--:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
@@ -5196,6 +5204,7 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 static int mtk_cam_runtime_resume(struct device *dev)
 {
 	struct mtk_cam_device *cam_dev  = dev_get_drvdata(dev);
+	int clk_num = cam_dev->num_clks;
 	int i, ret;
 
 	dev_info(dev, "%s: resume\n", __func__);
@@ -5204,7 +5213,14 @@ static int mtk_cam_runtime_resume(struct device *dev)
 		readl(cam_dev->vcore_base),
 		readl(cam_dev->base + 0x00),
 		readl(cam_dev->base + 0x4c));
-	for (i = 0; i < cam_dev->num_clks; i++) {
+
+	if (cam_dev->dvfs.mmdvfs_clk && clk_num > 0)
+		clk_num--;
+
+	for (i = 0; i < clk_num; i++) {
+		if (!cam_dev->clks[i])
+			continue;
+
 		ret = clk_prepare_enable(cam_dev->clks[i]);
 		if (ret)
 			dev_info(dev, "%s:i=%d check this", __func__, i);

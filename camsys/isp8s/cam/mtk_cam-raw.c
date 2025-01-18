@@ -165,6 +165,9 @@ void init_raw_settings(struct mtk_raw_device *dev, bool is_srt, int frm_time_us)
 	//Set 16level qos
 	mtk_cam_vcore_qos_remap(dev, is_srt);
 
+	//Set raw urgent
+	mtk_cam_main_halt(dev, is_srt);
+
 #ifdef DISABLE_LOW_LATENCY
 	//Disable low latency
 	raw_writel_relaxed(0xffff,
