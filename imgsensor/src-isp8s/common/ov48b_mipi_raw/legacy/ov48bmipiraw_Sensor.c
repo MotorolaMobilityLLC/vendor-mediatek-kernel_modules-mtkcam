@@ -1886,7 +1886,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.chk_s_off_sta = 0,
 	.chk_s_off_end = 0,
 
-	.checksum_value = 0x388C7147,
+	.checksum_value = 0x8FDACD1C,
 	.aov_sensor_support = TRUE,
 	.init_in_open = TRUE,
 	.streaming_ctrl_imp = FALSE,
