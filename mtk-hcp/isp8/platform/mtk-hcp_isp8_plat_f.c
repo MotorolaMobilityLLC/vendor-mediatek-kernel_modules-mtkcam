@@ -1305,7 +1305,7 @@ static int free_mb(struct mtk_hcp_rsv_mb *mb)
 			ret = -EINVAL;
 		}
 	} else {
-#ifdef HCP_NEW_DMA_BUF_API
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		dma_buf_vunmap_unlocked(mb->d_buf	, &mb->map);
 		dma_buf_unmap_attachment_unlocked(
 			mb->attach,
