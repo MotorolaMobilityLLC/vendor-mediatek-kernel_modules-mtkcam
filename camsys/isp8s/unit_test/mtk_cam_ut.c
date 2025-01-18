@@ -1947,11 +1947,15 @@ struct mtk_cam_ut_data mt6991_data = {
 struct mtk_cam_ut_data mt6899_data = {
 	.platform = "mt6899",
 };
+struct mtk_cam_ut_data mt6993_data = {
+	.platform = "mt6993",
+};
 
 static const struct of_device_id cam_ut_driver_dt_match[] = {
 	{ .compatible = "mediatek,mt6899-camisp", .data = &mt6899_data },
 	{ .compatible = "mediatek,mt6991-camisp", .data = &mt6991_data },
 	{ .compatible = "mediatek,mt6989-camisp", .data = &mt6989_data },
+	{ .compatible = "mediatek,mt6993-camisp", .data = &mt6993_data },
 	{}
 };
 MODULE_DEVICE_TABLE(of, cam_ut_driver_dt_match);

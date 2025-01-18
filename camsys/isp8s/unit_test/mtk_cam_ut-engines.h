@@ -95,10 +95,10 @@ void raw_disable_tg_vseol_sub_ctl(struct device *dev);
 }
 
 struct ut_yuv_status {
-	/* yuv INT 1/2/4/5 */
+	/* yuv INT 17/2/5 */
 	u32 irq;
 	u32 wdma;
-	u32 drop;
+	/* u32 drop; */
 	u32 ofl;
 };
 

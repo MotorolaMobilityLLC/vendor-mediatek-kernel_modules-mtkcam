@@ -137,6 +137,8 @@ enum topdebug_event {
 #define REG_HALT13_EN					0x00f4
 
 
+#define CAM_REG_CTL_RAW_INT13_EN(regs)			(regs + 0x08c0) //raw afo done
+#define CAM_REG_CTL_RAW_INT13_STATUS(regs)		(regs + 0x08c4)
 #define CAM_REG_CTL_RAW_INT17_EN(regs)			(regs + 0x0900)
 #define CAM_REG_CTL_RAW_INT17_STATUS(regs)		(regs + 0x0904)
 #define CAM_REG_CTL_RAW_INT18_EN(regs)			(regs + 0x0910)
@@ -155,6 +157,7 @@ enum topdebug_event {
 //#define CAM_REG_CTL_RAW_INT7_EN(regs)			(regs +	0x0160)
 //#define CAM_REG_CTL_RAW_INT7_STATUS(regs)		(regs + 0x0164)
 
+#define CAM_REG_CTL_RAW_INT13_STATUSX(regs)		(regs + 0x08c8)
 #define CAM_REG_CTL_RAW_INT17_STATUSX(regs)		(regs + 0x0908)
 #define CAM_REG_CTL_RAW_INT18_STATUSX(regs)		(regs + 0x0918)
 #define CAM_REG_CTL_RAW_INT21_STATUSX(regs)		(regs + 0x0948)
