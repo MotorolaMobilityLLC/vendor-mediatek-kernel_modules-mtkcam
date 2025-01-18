@@ -21,11 +21,8 @@ mgk_camsys_outs = [
     "isp7_1/cam/mtk-cam-isp.ko",
     "isp7s/cam_legacy/mtk-cam-isp7s.ko",
     "isp7sp/cam/mtk-cam-isp7sp.ko",
-    "isp7sp/unit_test/cam-ut.ko",
     "isp8/cam/mtk-cam-isp8.ko",
-    "isp8/unit_test/cam-isp8-ut.ko",
     "isp8s/cam/mtk-cam-isp8s.ko",
-    "isp8s/unit_test/cam-isp8s-ut.ko",
 ]
 
 define_mgk_ko(
@@ -165,3 +162,121 @@ define_mgk_ddk_ko(
     ],
 )
 
+define_mgk_ddk_ko(
+    name = "cam-isp7_1-ut",
+    srcs = [
+        "isp7_1/unit_test/mtk_cam_ut-cam.c",
+        "isp7_1/unit_test/mtk_cam_ut-camsv.c",
+        "isp7_1/unit_test/mtk_cam_ut-seninf.c",
+        "isp7_1/unit_test/mtk_cam_ut.c",
+    ] + glob([
+        "common/mtk_cam-fmt.h",
+        "isp7_1/unit_test/*.h",
+        "isp7_1/cam/mtk_cam-ipi.h",
+        "isp7_1/cam/mtk_cam-defs.h",
+        "isp7_1/cam/mtk_cam-sv-regs.h",
+    ]),
+    ko_deps = [
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:ccd_rpmsg",
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk_ccd_remoteproc",
+    ],
+    header_deps = [
+        "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",
+    ],
+)
+
+define_mgk_ddk_ko(
+    name = "cam-isp7s-ut",
+    srcs = [
+        "isp7s/unit_test/mtk_cam_ut-cam.c",
+        "isp7s/unit_test/mtk_cam_ut-camsv.c",
+        "isp7s/unit_test/mtk_cam_ut-seninf.c",
+        "isp7s/unit_test/mtk_cam_ut.c",
+    ] + glob([
+        "common/mtk_cam-fmt.h",
+        "isp7s/unit_test/*.h",
+        "isp7s/cam_legacy/mtk_cam-ipi.h",
+        "isp7s/cam_legacy/mtk_cam-defs.h",
+        "isp7_1/cam/mtk_cam-sv-regs.h",
+    ]),
+    ko_deps = [
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:ccd_rpmsg",
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk_ccd_remoteproc",
+    ],
+    header_deps = [
+        "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",
+    ],
+)
+
+define_mgk_ddk_ko(
+    name = "cam-isp7sp-ut",
+    srcs = [
+        "isp7sp/unit_test/mtk_cam_ut-cam.c",
+        "isp7sp/unit_test/mtk_cam_ut-camsv.c",
+        "isp7sp/unit_test/mtk_cam_ut-mraw.c",
+        "isp7sp/unit_test/mtk_cam_ut-seninf.c",
+        "isp7sp/unit_test/mtk_cam_ut.c",
+    ] + glob([
+        "common/mtk_cam-fmt.h",
+        "isp7sp/unit_test/*.h",
+        "isp7sp/cam/mtk_cam-ipi.h",
+        "isp7sp/cam/mtk_cam-defs.h",
+        "isp7sp/cam/mtk_cam-sv-regs.h",
+        "isp7sp/cam/mtk_cam-mraw-regs.h",
+    ]),
+    ko_deps = [
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:ccd_rpmsg",
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk_ccd_remoteproc",
+    ],
+    header_deps = [
+        "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",
+    ],
+)
+
+define_mgk_ddk_ko(
+    name = "cam-isp8-ut",
+    srcs = [
+        "isp8/unit_test/mtk_cam_ut-cam.c",
+        "isp8/unit_test/mtk_cam_ut-camsv.c",
+        "isp8/unit_test/mtk_cam_ut-mraw.c",
+        "isp8/unit_test/mtk_cam_ut-seninf.c",
+        "isp8/unit_test/mtk_cam_ut.c",
+    ] + glob([
+        "common/mtk_cam-fmt.h",
+        "isp8/unit_test/*.h",
+        "isp8/cam/mtk_cam-ipi.h",
+        "isp8/cam/mtk_cam-defs.h",
+        "isp8/cam/mtk_cam-sv-regs.h",
+        "isp8/cam/mtk_cam-mraw-regs.h",
+    ]),
+    ko_deps = [
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:ccd_rpmsg",
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk_ccd_remoteproc",
+    ],
+    header_deps = [
+        "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",
+    ],
+)
+
+define_mgk_ddk_ko(
+    name = "cam-isp8s-ut",
+    srcs = [
+        "isp8s/unit_test/mtk_cam_ut-cam.c",
+        "isp8s/unit_test/mtk_cam_ut-camsv.c",
+        "isp8s/unit_test/mtk_cam_ut-seninf.c",
+        "isp8s/unit_test/mtk_cam_ut.c",
+    ] + glob([
+        "common/mtk_cam-fmt.h",
+        "isp8s/unit_test/*.h",
+        "isp8s/cam/mtk_cam-ipi.h",
+        "isp8s/cam/mtk_cam-defs.h",
+        "isp8s/cam/mtk_cam-sv-regs.h",
+    ]),
+    ko_deps = [
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:ccd_rpmsg",
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk_ccd_remoteproc",
+    ],
+    header_deps = [
+        "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",
+    ],
+)

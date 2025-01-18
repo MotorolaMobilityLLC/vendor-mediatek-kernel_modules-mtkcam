@@ -150,7 +150,7 @@ static int apply_next_req(struct mtk_cam_ut *ut)
 	if (!ut->with_testmdl) {
 		spin_lock_irqsave(&ut->spinlock_irq, flags);
 		if (!ut->m2m_available) {
-			dev_info(ut->dev, "%s: m2m not avialable\n");
+			dev_info(ut->dev, "%s: m2m not avialable\n", __func__);
 			spin_unlock_irqrestore(&ut->spinlock_irq, flags);
 			return 0;
 		}
@@ -686,8 +686,8 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		msgbuf->size = IPI_FRAME_BUF_TOTAL_SIZE;
 		msgbuf->ccd_fd = dmabuf_ipi_fd;
 		msgbuf->iova = ut->msg_mem->iova;
-		dev_info(dev, "[CREATE_SESSION] >msg_mem->va 0x%x size %d\n",
-				ut->msg_mem->va, msgbuf->size);
+		dev_info(dev, "[CREATE_SESSION] >msg_mem->va 0x%lx size %d\n",
+				(unsigned long)ut->msg_mem->va, msgbuf->size);
 		/* ipi msg end */
 
 		ut->enque_list.cnt = 0;
@@ -740,7 +740,6 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		smem.iova = ut->mem->iova;
 		smem.len = ut->mem->size;
 		fd = ut->mem->fd;
-		mtk_ccd_put_buffer_fd(ccd, &smem, fd);
 		mtk_ccd_put_buffer(ccd, &smem);
 
 		dev_dbg(dev,
@@ -751,7 +750,6 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		smem.iova = 0;
 		smem.len = ut->msg_mem->size;
 		fd = ut->msg_mem->fd;
-		mtk_ccd_put_buffer_fd(ccd, &smem, fd);
 		mtk_ccd_put_buffer(ccd, &smem);
 		dev_dbg(dev,
 				"%s:ipi msg buffers release, mem(%p), sz(%d)\n",
@@ -807,8 +805,8 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			}
 		}
 		/* ipi msg */
-		dev_info(dev, "[ENQUE] msg_mem->va 0x%x size %d cur_msgbuf_offset 0x%x cur_workbuf_offset 0x%x frame_no %d\n",
-				ut->msg_mem->va, ut->msg_mem->size,
+		dev_info(dev, "[ENQUE] msg_mem->va 0x%lx size %d cur_msgbuf_offset 0x%x cur_workbuf_offset 0x%x frame_no %d\n",
+				(unsigned long)ut->msg_mem->va, ut->msg_mem->size,
 				frame_info->cur_msgbuf_offset,
 				enque.frame_param.cur_workbuf_offset,
 				event.cookie.frame_no);
@@ -938,8 +936,8 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			return -EFAULT;
 		}
 
-		dev_info(dev, "[ALLOC_DMABUF] ccd_fd=%d, kva=0x%x, iova=0x%x, size=%d\n",
-				workbuf.ccd_fd, workbuf.kva, workbuf.iova, workbuf.size);
+		dev_info(dev, "[ALLOC_DMABUF] ccd_fd=%d, kva=0x%lx, iova=0x%lx, size=%d\n",
+				workbuf.ccd_fd, (unsigned long)workbuf.kva, (unsigned long)workbuf.iova, workbuf.size);
 		return 0;
 	}
 	case ISP_UT_IOCTL_FREE_DMABUF: {
@@ -954,19 +952,18 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			return -EFAULT;
 		}
 
-		dev_info(dev, "[ALLOC_DMABUF] kva=0x%x, iova=0x%x, size=%d, ccd_fd=%d\n",
-				workbuf.kva, workbuf.iova, workbuf.size, workbuf.ccd_fd);
+		dev_info(dev, "[ALLOC_DMABUF] kva=0x%lx, iova=0x%lx, size=%d, ccd_fd=%d\n",
+				(unsigned long)workbuf.kva, (unsigned long)workbuf.iova, workbuf.size, workbuf.ccd_fd);
 
 		smem.va = workbuf.kva;
 		smem.iova = workbuf.iova;
 		smem.len = workbuf.size;
 		fd = workbuf.ccd_fd;
-		mtk_ccd_put_buffer_fd(ccd, &smem, fd);
 		mtk_ccd_put_buffer(ccd, &smem);
 
 		dev_dbg(dev,
 				"%s:sw buffers release, mem(%p), sz(%d)\n",
-				__func__, smem.iova, smem.len);
+				__func__, (void *)smem.iova, smem.len);
 
 		return 0;
 	}
@@ -1253,7 +1250,7 @@ static int mtk_cam_ut_master_bind(struct device *dev)
 	}
 #endif
 
-	dev_info(dev, "component_bind_all with data = 0x%llx\n", dev_get_drvdata(dev));
+	dev_info(dev, "component_bind_all with data = 0x%llx\n", (unsigned long long)dev_get_drvdata(dev));
 	ret = component_bind_all(dev, dev_get_drvdata(dev));
 	if (ret) {
 		dev_info(dev, "Failed to bind all component: %d\n", ret);
@@ -1384,9 +1381,7 @@ static int mtk_cam_ut_probe(struct platform_device *pdev)
 	}
 
 	if (dev->dma_parms) {
-		ret = dma_set_max_seg_size(dev, UINT_MAX);
-		if (ret)
-			dev_info(dev, "Failed to set DMA segment size\n");
+		dma_set_max_seg_size(dev, UINT_MAX);
 	}
 
 

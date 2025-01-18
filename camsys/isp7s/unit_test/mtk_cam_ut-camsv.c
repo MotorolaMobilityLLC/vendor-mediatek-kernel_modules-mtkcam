@@ -15,7 +15,7 @@
 
 #include "mtk_cam_ut.h"
 #include "mtk_cam_ut-engines.h"
-#include "../cam/mtk_cam-sv-regs.h"
+#include "../../isp7_1/cam/mtk_cam-sv-regs.h"
 
 #define CAMSV_WRITE_BITS(RegAddr, RegName, FieldName, FieldValue) do {\
 	union RegName reg;\
@@ -921,7 +921,7 @@ static int mtk_ut_camsv_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int mtk_ut_camsv_remove(struct platform_device *pdev)
+static void mtk_ut_camsv_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_ut_camsv_device *camsv = dev_get_drvdata(dev);
@@ -937,7 +937,6 @@ static int mtk_ut_camsv_remove(struct platform_device *pdev)
 	pm_runtime_disable(dev);
 
 	component_del(dev, &mtk_ut_camsv_component_ops);
-	return 0;
 }
 
 static int mtk_ut_camsv_pm_suspend(struct device *dev)

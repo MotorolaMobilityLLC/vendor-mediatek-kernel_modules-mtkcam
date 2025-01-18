@@ -176,7 +176,7 @@ static int mtk_ut_seninf_of_probe(struct platform_device *pdev,
 		dev_info(dev, "failed to map register base\n");
 		return PTR_ERR(seninf->base);
 	}
-	dev_info(dev, "seninf, map_addr=0x%lx\n", seninf->base);
+	dev_info(dev, "seninf, map_addr=0x%lx\n", (unsigned long)seninf->base);
 
 	clks = of_count_phandle_with_args(pdev->dev.of_node,
 				"clocks", "#clock-cells");
@@ -251,7 +251,7 @@ static int mtk_ut_seninf_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int mtk_ut_seninf_remove(struct platform_device *pdev)
+static void mtk_ut_seninf_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_ut_seninf_device *seninf = dev_get_drvdata(dev);
@@ -267,7 +267,6 @@ static int mtk_ut_seninf_remove(struct platform_device *pdev)
 	pm_runtime_disable(dev);
 
 	component_del(dev, &mtk_ut_seninf_component_ops);
-	return 0;
 }
 
 static int mtk_ut_seninf_pm_suspend(struct device *dev)

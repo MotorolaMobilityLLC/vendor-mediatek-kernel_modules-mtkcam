@@ -10,7 +10,7 @@
 #include <linux/rpmsg.h>
 #include <linux/wait.h>
 
-#include "camsys/isp8s/cam/mtk_cam-ipi.h"
+#include "../../isp8s/cam/mtk_cam-ipi.h"
 #include "mtk_cam_ut-event.h"
 #include "mtk_cam_ut-seninf.h"
 #include "mtk_cam_ut-utils.h"

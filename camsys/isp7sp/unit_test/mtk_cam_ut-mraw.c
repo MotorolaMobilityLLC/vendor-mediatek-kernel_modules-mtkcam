@@ -14,7 +14,7 @@
 #include <linux/pm_runtime.h>
 #include "mtk_cam_ut.h"
 #include "mtk_cam_ut-engines.h"
-#include "../cam/mtk_cam-mraw-regs.h"
+#include "../../isp7sp/cam/mtk_cam-mraw-regs.h"
 #define SCQ_DEADLINE_MS  15 // ~1/2 frame length
 #define SCQ_DEFAULT_CLK_RATE 208 // default 208MHz
 #define MRAW_WRITE_BITS(RegAddr, RegName, FieldName, FieldValue) do {\

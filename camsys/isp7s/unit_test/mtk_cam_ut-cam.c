@@ -511,7 +511,7 @@ static irqreturn_t mtk_ut_raw_irq(int irq, void *data)
 		event->mask |= EVENT_CQ_MAIN_TRIG_DLY;
 
 	if (status.irq & INT_ST_MASK_CAM_ERR) {
-		dev_info(raw->dev, "int_err: 0x%x\n",
+		dev_info(raw->dev, "int_err: 0x%lx\n",
 			 status.irq & INT_ST_MASK_CAM_ERR);
 
 		if (status.irq & DMA_ERR_ST)
@@ -616,7 +616,7 @@ static int mtk_ut_raw_of_probe(struct platform_device *pdev,
 		dev_info(dev, "failed to map register base\n");
 		return PTR_ERR(raw->base);
 	}
-	dev_dbg(dev, "raw, map_addr=0x%lx\n", raw->base);
+	dev_dbg(dev, "raw, map_addr=0x%lx\n", (unsigned long)raw->base);
 	/* base inner register */
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "inner_base");
 	if (!res) {
@@ -735,7 +735,7 @@ static int mtk_ut_raw_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int mtk_ut_raw_remove(struct platform_device *pdev)
+static void mtk_ut_raw_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_ut_raw_device *drvdata = dev_get_drvdata(dev);
@@ -750,8 +750,6 @@ static int mtk_ut_raw_remove(struct platform_device *pdev)
 		clk_put(drvdata->clks[i]);
 
 	kfifo_free(&drvdata->msgfifo);
-
-	return 0;
 }
 
 static int mtk_ut_raw_pm_suspend(struct device *dev)
@@ -1110,7 +1108,7 @@ static int mtk_ut_yuv_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int mtk_ut_yuv_remove(struct platform_device *pdev)
+static void mtk_ut_yuv_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_ut_raw_device *drvdata = dev_get_drvdata(dev);
@@ -1124,8 +1122,6 @@ static int mtk_ut_yuv_remove(struct platform_device *pdev)
 
 	for (i = 0; i < drvdata->num_clks; i++)
 		clk_put(drvdata->clks[i]);
-
-	return 0;
 }
 
 
@@ -1266,9 +1262,7 @@ static int mtk_ut_larb_probe(struct platform_device *pdev)
 	}
 
 	if (dev->dma_parms) {
-		ret = dma_set_max_seg_size(dev, UINT_MAX);
-		if (ret)
-			dev_info(dev, "Failed to set DMA segment size\n");
+		dma_set_max_seg_size(dev, UINT_MAX);
 	}
 
 	pm_runtime_enable(dev);
@@ -1281,14 +1275,13 @@ static int mtk_ut_larb_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int mtk_ut_larb_remove(struct platform_device *pdev)
+static void mtk_ut_larb_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 
 	dev_info(dev, "%s disable larb\n", __func__);
 	pm_runtime_put(dev);
 	pm_runtime_disable(dev);
-	return 0;
 }
 
 static const struct of_device_id mtk_ut_larb_of_ids[] = {

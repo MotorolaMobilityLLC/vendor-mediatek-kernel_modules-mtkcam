@@ -14,7 +14,7 @@
  */
 
 #include <linux/types.h>
-#include <camsys/common/mtk_cam-fmt.h>
+#include "../../common/mtk_cam-fmt.h"
 
 /*
  * Note:

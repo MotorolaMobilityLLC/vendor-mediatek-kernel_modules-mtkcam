@@ -7,7 +7,7 @@
 #ifndef __MTK_CAM_UT_UTILS_H__
 #define __MTK_CAM_UT_UTILS_H__
 
-#include "camsys/isp7sp/cam/mtk_cam-defs.h"
+#include "../../isp8s/cam/mtk_cam-defs.h"
 
 static inline int is_on_the_fly(const int hw_scenario);
 static inline int is_direct_couple(const int hw_scenario);

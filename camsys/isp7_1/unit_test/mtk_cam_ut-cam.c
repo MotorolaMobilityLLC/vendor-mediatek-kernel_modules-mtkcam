@@ -487,7 +487,7 @@ static irqreturn_t mtk_ut_raw_irq(int irq, void *data)
 		event->mask |= EVENT_CQ_MAIN_TRIG_DLY;
 
 	if (status.irq & INT_ST_MASK_CAM_ERR) {
-		dev_info(raw->dev, "int_err: 0x%x\n",
+		dev_info(raw->dev, "int_err: 0x%lx\n",
 			 status.irq & INT_ST_MASK_CAM_ERR);
 
 		if (status.irq & DMA_ERR_ST)
@@ -1240,9 +1240,7 @@ static int mtk_ut_larb_probe(struct platform_device *pdev)
 	}
 
 	if (dev->dma_parms) {
-		ret = dma_set_max_seg_size(dev, UINT_MAX);
-		if (ret)
-			dev_info(dev, "Failed to set DMA segment size\n");
+		dma_set_max_seg_size(dev, UINT_MAX);
 	}
 
 	pm_runtime_enable(dev);
