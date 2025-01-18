@@ -289,6 +289,7 @@ struct mtk_imgsys_dvfs {
 	unsigned int vss_task_cnt;
 	unsigned int smvr_task_cnt;
 	unsigned int pix_mode;
+	int mmdvfs_user;
 };
 
 struct mtk_imgsys_qos_path {

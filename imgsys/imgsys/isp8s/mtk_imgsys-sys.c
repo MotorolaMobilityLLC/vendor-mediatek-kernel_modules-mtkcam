@@ -2144,14 +2144,14 @@ static void module_uninit(struct kref *kref)
 
 	mtk_imgsys_power_ctrl_ccu(imgsys_dev, 0);
 
-	if (IS_ERR_OR_NULL(dvfs_info->mmdvfs_clk)) {
+	if (IS_ERR_OR_NULL(dvfs_info->mmdvfs_clk) || (dvfs_info->mmdvfs_user < 0)) {
 		if (imgsys_dbg_enable())
 			dev_dbg(dvfs_info->dev,
 				"%s: [ERROR] mmdvfs_clk is null\n", __func__);
 	}
 #ifndef CONFIG_FPGA_EARLY_PORTING
 	else
-		mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_IMG);
+		mtk_mmdvfs_enable_vcp(false, dvfs_info->mmdvfs_user);
 #endif
 }
 
@@ -2182,14 +2182,14 @@ static int mtk_imgsys_worker_power_on(void *data)
 	imgsys_dev->sw_pm_flow_cnt = 0;
 	dev_info(imgsys_dev->dev, "%s+", __func__);
 		mtk_imgsys_power_ctrl_ccu(imgsys_dev, 1);
-	if (IS_ERR_OR_NULL(dvfs_info->mmdvfs_clk)) {
+	if (IS_ERR_OR_NULL(dvfs_info->mmdvfs_clk) || (dvfs_info->mmdvfs_user < 0)) {
 		if (imgsys_dbg_enable())
 			dev_dbg(dvfs_info->dev,
 				"%s: [ERROR] mmdvfs_clk is null\n", __func__);
 	}
 #ifndef CONFIG_FPGA_EARLY_PORTING
 	else
-		mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_IMG);
+		mtk_mmdvfs_enable_vcp(true, dvfs_info->mmdvfs_user);
 #endif
 	if (IS_ERR_OR_NULL(dvfs_info->reg)) {
 		if (imgsys_dbg_enable())

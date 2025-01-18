@@ -19,6 +19,7 @@ void mtk_imgsys_mmdvfs_init_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 	int ret = 0, opp_num = 0, opp_idx = 0, idx = 0, volt;
 	struct device_node *np, *child_np = NULL;
 	struct of_phandle_iterator it;
+	struct of_phandle_args spec;
 
 	memset((void *)dvfs_info, 0x0, sizeof(struct mtk_imgsys_dvfs));
 	dvfs_info->dev = imgsys_dev->dev;
@@ -155,6 +156,21 @@ void mtk_imgsys_mmdvfs_init_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 	dvfs_info->vss_task_cnt = 0;
 	dvfs_info->smvr_task_cnt = 0;
 	dvfs_info->opp_num = opp_num;
+
+	idx = of_property_match_string(dvfs_info->dev->of_node, "clocks", "mmdvfs_mux");
+	if (idx >= 0) {
+		ret = of_parse_phandle_with_args(dvfs_info->dev->of_node, "clocks", "#clocks-cells",
+											idx, &spec);
+		if (!ret)
+			dvfs_info->mmdvfs_user = spec.args[0];
+		else {
+			dvfs_info->mmdvfs_user = -1;
+			dev_info(dvfs_info->dev, "mmdvfs_user_img not found\n");
+		}
+	} else {
+		dvfs_info->mmdvfs_user = -1;
+		dev_info(dvfs_info->dev, "mmdvfs_mux not found\n");
+	}
 
 }
 
