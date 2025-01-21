@@ -609,7 +609,6 @@ static int qof_smi_isp_module_get_if_in_use(void *data, int module)
 		get_result = -1;
 		goto RETURN_FLOW;
 	} else {
-		imgsys_voter_cnt_locked++;
 		pm_res = pm_runtime_get_if_in_use(g_imgsys_dev->dev);
 		if (pm_res <= 0) {
 			// pm get power fail
@@ -635,12 +634,14 @@ static int qof_smi_isp_module_get_if_in_use(void *data, int module)
 					// qof get power success
 					smi_use_qof = true;
 					get_result = 1;
+					imgsys_voter_cnt_locked++;
 					goto RETURN_FLOW;
 				}
 			} else {
 				// pm get power success
 				smi_use_qof = false;
 				get_result = 1;
+				imgsys_voter_cnt_locked++;
 				goto RETURN_FLOW;
 			}
 		}
