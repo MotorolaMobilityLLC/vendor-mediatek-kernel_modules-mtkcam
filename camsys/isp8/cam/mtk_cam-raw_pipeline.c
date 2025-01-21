@@ -827,6 +827,14 @@ static int mtk_raw_get_ctrl(struct v4l2_ctrl *ctrl)
 
 	if (ctrl->id == V4L2_CID_MTK_CAM_INTERNAL_MEM_CTRL)
 		*((struct mtk_cam_internal_mem *)ctrl->p_new.p) = pipeline->ctrl_data.pre_alloc_mem;
+#ifdef MTK_ISP_DYNAMIC_RAW_SUPPORT
+	else if (ctrl->id == V4L2_CID_MTK_CAM_RAW_AVAILABLE) {
+		struct mtk_cam_device *cam_dev = subdev_to_cam_device(&pipeline->subdev);
+
+		if (cam_dev)
+			ctrl->val = cam_dev->efuse_data;
+	}
+#endif
 	else
 		dev_info(dev, "%s: error. ctrl(\"%s\", id:0x%x) not supported yet\n",
 			 __func__, ctrl->name, ctrl->id);
@@ -1241,7 +1249,18 @@ static struct v4l2_ctrl_config cfg_pre_alloc_mem_ctrl = {
 	.step = 1,
 	.dims = {sizeof(struct mtk_cam_internal_mem)},
 };
-
+#ifdef MTK_ISP_DYNAMIC_RAW_SUPPORT
+static struct v4l2_ctrl_config cfg_get_available_raws_ctrl = {
+	.ops = &cam_ctrl_ops,
+	.id = V4L2_CID_MTK_CAM_RAW_AVAILABLE,
+	.name = "get available raws",
+	.type = V4L2_CTRL_TYPE_INTEGER, /* V4L2_CTRL_TYPE_U32,*/
+	.flags = V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
+	.max = 0xffffffff,
+	.step = 1,
+	.dims = { 0 },
+};
+#endif
 static struct v4l2_ctrl_config cfg_res_ctrl = {
 	.ops = &cam_ctrl_ops,
 	.id = V4L2_CID_MTK_CAM_RAW_RESOURCE_CALC,
@@ -3874,6 +3893,13 @@ static void mtk_raw_pipeline_ctrl_setup(struct mtk_raw_pipeline *pipe)
 	if (ctrl)
 		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE |
 			V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
+
+#ifdef MTK_ISP_DYNAMIC_RAW_SUPPORT
+	ctrl = v4l2_ctrl_new_custom(ctrl_hdlr, &cfg_get_available_raws_ctrl, NULL);
+	if (ctrl)
+		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE |
+			V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
+#endif
 	/* TG flash ctrls */
 	ctrl = v4l2_ctrl_new_custom(ctrl_hdlr, &mtk_cam_tg_flash_enable, NULL);
 	if (ctrl)

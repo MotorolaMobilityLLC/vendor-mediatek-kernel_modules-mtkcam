@@ -345,6 +345,7 @@ struct mtk_cam_device {
 	u32 sw_ver;
 
 	int qoftop_irq;
+	u8 efuse_data;
 };
 
 static inline struct device *subdev_to_cam_dev(struct v4l2_subdev *sd)

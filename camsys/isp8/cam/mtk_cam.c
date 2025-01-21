@@ -53,6 +53,10 @@
 #include "mtk_cam-reg_utils.h"
 #include "iommu_debug.h"
 
+#ifdef MTK_ISP_DYNAMIC_RAW_SUPPORT
+#include <linux/nvmem-consumer.h>
+#endif
+
 static unsigned int debug_sensor_meta_dump = 0;
 module_param(debug_sensor_meta_dump, uint, 0644);
 MODULE_PARM_DESC(debug_sensor_meta_dump, "activates sensor meta dump");
@@ -96,6 +100,7 @@ static int mtk_cam_req_try_update_used_ctx(struct media_request *req);
 
 #define LTMSGO_BUF_SZ		(130 * 8)
 #define LTMSGO_BUF_RESERVE_CNT	2
+#define CAMSYS_RAW_MASK 0x07
 
 struct mtk_ltms_buf_pool {
 	bool flip;
@@ -4853,6 +4858,50 @@ static int mtk_cam_vcore_runtime_resume(struct device *dev)
 	return 0;
 }
 
+#ifdef MTK_ISP_DYNAMIC_RAW_SUPPORT
+static u8 mtk_cam_read_isp_efuse(struct device *dev)
+{
+	struct nvmem_cell *cell;
+	size_t len = 0;
+	u32 *buf;
+	u8 res = 0;
+
+	cell = nvmem_cell_get(dev, "isp-efuse-data");
+	if (IS_ERR(cell)) {
+		dev_err(dev, "read isp efuse returned with error cell %ld\n",
+			PTR_ERR(cell));
+		return 0;
+	}
+
+	buf = (u32 *)nvmem_cell_read(cell, &len);
+	nvmem_cell_put(cell);
+	if (IS_ERR(buf)) {
+		dev_err(dev, "read isp efuse returned with error buf, %ld\n", PTR_ERR(buf));
+		return 0;
+	}
+	/*
+	 * liber(mt6991) isp camsys efuse:
+	 * efuse address: 0x132607d4
+
+	 * efuse data bitmap(uint32_t):
+	 * RAW A NG bit: 0x1000000
+	 * RAW B NG bit: 0x2000000
+	 * RAW C NG bit: 0x4000000
+	*/
+
+	res = (u8)((*buf) >> 24);
+
+	/*
+	 * efuse bits indicate which core cannot be used. Now I perform (~res),
+	 * then the bits in res will indicate which core can be used.
+	 */
+	res = (~res) & CAMSYS_RAW_MASK;
+	kfree(buf);
+	dev_info(dev, "isp Efuse Data: 0x%x\n", (u32)res);
+	return res;
+}
+#endif
+
 static int mtk_cam_probe(struct platform_device *pdev)
 {
 	struct platform_device *vcore_pdev;
@@ -5174,6 +5223,12 @@ SKIP_ADLRD_IRQ:
 	/* after v4l2_device_register to avoid get_sync/put_sync ops */
 	/* for freerun mtcmos/cg check by ccf */
 	pm_runtime_enable(dev);
+
+#ifdef MTK_ISP_DYNAMIC_RAW_SUPPORT
+	cam_dev->efuse_data = mtk_cam_read_isp_efuse(dev);
+#else
+	cam_dev->efuse_data = CAMSYS_RAW_MASK;
+#endif
 
 	mtk_cam_debug_init(&cam_dev->dbg, cam_dev);
 	init_waitqueue_head(&cam_dev->shutdown_wq);
