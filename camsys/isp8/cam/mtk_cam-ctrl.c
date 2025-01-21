@@ -482,7 +482,6 @@ static void mtk_cam_ctrl_wake_up_on_event(struct mtk_cam_ctrl *ctrl, int event)
 #define VALID_SWITCH_PERIOD_60FPS_FROM_VSYNC_MS		11600000
 #define VALID_SWITCH_PERIOD_30FPS_FROM_VSYNC_MS		23000000
 
-
 struct seamless_check_args {
 	int expect_inner;
 	int expect_ack;
@@ -511,10 +510,10 @@ static bool check_for_seamless(struct mtk_cam_ctrl *ctrl, void *arg)
 
 	ts = ktime_get_boottime_ns();
 	frame_interval_ns = ctrl->frame_interval_ns;
-	if (frame_interval_ns < INTERVAL_NS(60))
+	if (frame_interval_ns < INTERVAL_NS(100))
 		ts_margin = VALID_SWITCH_PERIOD_120FPS_FROM_VSYNC_NS;
-	else if (INTERVAL_NS(60) <= frame_interval_ns &&
-		 frame_interval_ns < INTERVAL_NS(30))
+	else if (INTERVAL_NS(100) <= frame_interval_ns &&
+		 frame_interval_ns < INTERVAL_NS(35))
 		ts_margin = VALID_SWITCH_PERIOD_60FPS_FROM_VSYNC_MS;
 	else
 		ts_margin = VALID_SWITCH_PERIOD_30FPS_FROM_VSYNC_MS;
