@@ -1260,7 +1260,16 @@ void set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 		if (cit_step)
 			shutters[i] = roundup(shutters[i], cit_step);
 	}
-
+#ifdef CONFIG_MOTO_IMX896_SHDR
+        /*check   CIT>= CIT_S*/
+        if(exp_cnt == 2)
+        {
+            if(shutters[1] > shutters[0])
+            {
+               shutters[1] = shutters[0];
+            }
+        }
+#endif
 	/* check boundary of framelength */
 	/* - (1) previous se + previous me + current le */
 	calc_fl[0] = (u32) shutters[0];
@@ -1321,6 +1330,30 @@ void set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure_lshift, 0);
 		ctx->l_shift = 0;
 	}
+#ifdef CONFIG_MOTO_IMX896_SHDR
+	for (i = 0; i < 3; i++)
+	{
+		if (rg_shutters[i])
+		{
+			// for 2nd frame exp
+			if (i == 2 && exp_cnt == 2)
+			{
+				// set shutter for 0x0224 0x0225
+				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[1].addr[0],
+							   (rg_shutters[i] >> 8) & 0xFF);
+				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[1].addr[1],
+							   rg_shutters[i] & 0xFC);
+
+			} else {
+				// set shutter for 1st frame exp
+				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[0],
+							   (rg_shutters[i] >> 8) & 0xFF);
+				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[1],
+							   rg_shutters[i] & 0xFC);
+			}
+		}
+	}
+#else
 	for (i = 0; i < 3; i++) {
 		if (rg_shutters[i]) {
 			if (ctx->s_ctx.reg_addr_exposure[i].addr[2]) {
@@ -1338,6 +1371,7 @@ void set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 			}
 		}
 	}
+#endif
 	DRV_LOG(ctx, "exp[0x%x/0x%x/0x%x], fll(input/output):%u/%u, flick_en:%d\n",
 		rg_shutters[0], rg_shutters[1], rg_shutters[2],
 		frame_length, ctx->frame_length, ctx->autoflicker_en);

@@ -390,6 +390,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.seamless_switch_group = 1,
 		.seamless_switch_mode_setting_table = imx896_seamless_preview,
 		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx896_seamless_preview),
+		.hdr_mode = HDR_NONE,
 		.pclk = 1360000000,
 		.linelength = 11904,
 		.framelength = 3791,
@@ -442,6 +443,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
 		.pclk = 1360000000,
 		.linelength = 11904,
 		.framelength = 3791,
@@ -494,6 +496,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.seamless_switch_group = 2,
 		.seamless_switch_mode_setting_table = imx896_seamless_normal_video,
 		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx896_seamless_normal_video),
+		.hdr_mode = HDR_NONE,
 		.pclk = 1360000000,
 		.linelength = 11904,
 		.framelength = 3791,
@@ -546,6 +549,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
 		.pclk = 1360000000,
 		.linelength = 4264,
 		.framelength = 2630,
@@ -598,6 +602,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
 		.pclk = 1360000000,
 		.linelength = 11904,
 		.framelength = 3791,
@@ -757,6 +762,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_cus3),
 		.mode_setting_table = addr_data_pair_custom3,
 		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom3),
+		.hdr_mode = HDR_NONE,
 		.pclk = 1360000000,
 		.linelength = 4264,
 		.framelength = 1314,
@@ -927,14 +933,14 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.raw_cnt = 2,
 		.exp_cnt = 2,
 		.mipi_pixel_rate = 1645710000,
-		.readout_length = 3115 * 2,   //(6144+85)/2
-		.read_margin = 10 * 2,         //10*2
+		.readout_length = 3243 * 2,   //(3200*2+1+85)/2
+		.read_margin = 24 * 2,         //24*2
 		.framelength_step = 4 * 2,		// multiple of 4 for 2DOL
 		.coarse_integ_step = 2 * 2,		// multiple of 4 for 2DOL
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4*2,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4*2,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 0xFFF8*2,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = 0xFFF8*2,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 0x3FFF*2,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = 0x3FFF*2,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -1008,6 +1014,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.frame_length_max = 0xFFFC,
 	.ae_effective_frame = 2,
 	.frame_time_delay_frame = 2,
+	.hdr_type = HDR_SUPPORT_STAGGER_FDOL,
 #ifdef IMGSENSOR_FUSION_TEST_WORKAROUND
 	.start_exposure_offset_custom = 2115600,
 #endif
@@ -1040,7 +1047,7 @@ static struct subdrv_static_ctx static_ctx = {
 			{0x0218, 0x0219},
 	},
 	.reg_addr_frame_length = {0x0340, 0x0341},
-	.reg_addr_auto_extend = 0x0,
+	.reg_addr_auto_extend = 0x0350,
 	.reg_addr_frame_count = 0x0005,
 	.reg_addr_fast_mode = 0x3010,
 
@@ -1354,13 +1361,13 @@ static int imx896_set_multi_gain(struct subdrv_ctx *ctx, u32 *gains, u16 exp_cnt
 			{
 				//set gain for 2nd frame
 				set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[1].addr[0],
-					(rg_gains[i] >> 8) & 0xFF);
+					(rg_gains[i] >> 8) & 0x3F);
 				set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[1].addr[1],
 					rg_gains[i] & 0xFF);
 			}else {
 				// set gain for 1st frame
 				set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[i].addr[0],
-					(rg_gains[i] >> 8) & 0xFF);
+					(rg_gains[i] >> 8) & 0x3F);
 				set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[i].addr[1],
 					rg_gains[i] & 0xFF);
 			}
@@ -1426,6 +1433,15 @@ static int imx896_set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 			shutters[i] = roundup(shutters[i], cit_step);
 	}
 
+        /*check   CIT>= CIT_S*/
+        if(exp_cnt == 2)
+        {
+            if(shutters[1] > rg_shutters[0])
+            {
+               shutters[1] = shutters[0];
+            }
+        }
+
 	/* check boundary of framelength */
 	/* - (1) previous se + previous me + current le */
 	calc_fl[0] = (u32) shutters[0];
@@ -1486,10 +1502,12 @@ static int imx896_set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 	default:
 		break;
 	}
+
 	if (ctx->s_ctx.reg_addr_exposure_lshift != PARAM_UNDEFINED) {
 		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure_lshift, 0);
 		ctx->l_shift = 0;
 	}
+
 	for (i = 0; i < 3; i++)
 	{
 		if (rg_shutters[i])
@@ -1501,13 +1519,14 @@ static int imx896_set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[1].addr[0],
 							   (rg_shutters[i] >> 8) & 0xFF);
 				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[1].addr[1],
-							   rg_shutters[i] & 0xFF);
+							   rg_shutters[i] & 0xFC);
+
 			} else {
 				// set shutter for 1st frame exp
 				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[0],
 							   (rg_shutters[i] >> 8) & 0xFF);
 				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[1],
-							   rg_shutters[i] & 0xFF);
+							   rg_shutters[i] & 0xFC);
 			}
 		}
 	}
