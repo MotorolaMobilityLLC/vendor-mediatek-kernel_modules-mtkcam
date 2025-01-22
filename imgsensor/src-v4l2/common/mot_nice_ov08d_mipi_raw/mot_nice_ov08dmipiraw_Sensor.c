@@ -474,17 +474,18 @@ static void ov08d_set_dummy(struct subdrv_ctx *ctx)
 	write_cmos_sensor_8(ctx, 0x01, 0x01);
 }
 
+static int longexposue = 0;
 static void ov08d_set_long_exposure(struct subdrv_ctx *ctx)
 {
 	u32 shutter = ctx->exposure[0];
 	u32 l_shutter = 0;
-	u16 l_shift = 0;
-	static int longexposue = 0;
+	u16 l_shift = 1;
 	u32 cal_shutter = 0;
 
 	if (shutter > ctx->s_ctx.exposure_max) {
-		DRV_LOGE(ctx, "ov08d enter long exposure!");
+		DRV_LOG(ctx, "ov08d enter long exposure!");
 		longexposue = 1;
+
 		if (ctx->s_ctx.long_exposure_support == FALSE) {
 			DRV_LOGE(ctx, "sensor no support of exposure lshift!\n");
 			return;
@@ -493,6 +494,7 @@ static void ov08d_set_long_exposure(struct subdrv_ctx *ctx)
 			DRV_LOGE(ctx, "please implement lshift register address\n");
 			return;
 		}
+
 		for (l_shift = 1; l_shift < 7; l_shift++) {
 			l_shutter = ((shutter - 1) >> l_shift) + 1;
 			if (l_shutter
@@ -503,16 +505,15 @@ static void ov08d_set_long_exposure(struct subdrv_ctx *ctx)
 			DRV_LOGE(ctx, "unable to set exposure:%u, set to max\n", shutter);
 			l_shift = 7;
 		}
-
 		write_cmos_sensor_8(ctx, 0xfd, 0x01);
 		write_cmos_sensor_8(ctx, 0x24, 0x10);
 		write_cmos_sensor_8(ctx, 0x02, 0x02);
 		write_cmos_sensor_8(ctx, 0x03, 0x63);
 		write_cmos_sensor_8(ctx, 0x04, 0x69);
 
-		write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure_lshift, (shutter*2 >> 16) & 0xFF);
-		write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure_lshift+1, (shutter*2 >> 8) & 0xFF);
-		write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure_lshift+2, (shutter*2) & 0xFF);
+		//write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure_lshift, (shutter*2 >> 16) & 0xFF);
+		//write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure_lshift+1, (shutter*2 >> 8) & 0xFF);
+		//write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure_lshift+2, (shutter*2) & 0xFF);
 
 		write_cmos_sensor_8(ctx, 0x01, 0x01);
 
@@ -521,7 +522,7 @@ static void ov08d_set_long_exposure(struct subdrv_ctx *ctx)
 		ctx->frame_length = shutter + ctx->s_ctx.exposure_margin;
 		ctx->frame_length_rg = ctx->frame_length;
 		ctx->l_shift = l_shift;
-	    DRV_LOGE(ctx, "long exposure mode: lshift %u times, normal shutter=0x%x, long shutter=0x%x\n",
+		DRV_LOG(ctx, "long exposure mode: lshift %u times, normal shutter=0x%x, long shutter=0x%x\n",
 				l_shift,
 				cal_shutter - shutter - 1,
 				cal_shutter);
@@ -532,7 +533,7 @@ static void ov08d_set_long_exposure(struct subdrv_ctx *ctx)
 		ctx->current_ae_effective_frame = 2;
 	} else {
 		if (longexposue == 1) {
-			DRV_LOGE(ctx, "ov08d exit long exposure!");
+			DRV_LOG(ctx, "ov08d exit long exposure!");
 			write_cmos_sensor_8(ctx, 0xfd, 0x00);
 			write_cmos_sensor_8(ctx, 0x24, 0x10);
 			write_cmos_sensor_8(ctx, 0x02, 0x00);
@@ -545,7 +546,6 @@ static void ov08d_set_long_exposure(struct subdrv_ctx *ctx)
 		if (ctx->s_ctx.reg_addr_exposure_lshift != PARAM_UNDEFINED) {
 			ctx->l_shift = l_shift;
 		}
-		shutter = min(shutter, ctx->s_ctx.exposure_max);
 		/* write framelength&shutter */
 		/*if (set_auto_flicker(ctx, 0) || ctx->frame_length) {
 			write_cmos_sensor_8(ctx, 0xfd,0x01);
@@ -559,18 +559,28 @@ static void ov08d_set_long_exposure(struct subdrv_ctx *ctx)
 		{
 			ctx->frame_length = ((ctx->frame_length + 3) >> 2) << 2;// need to set to  multi 4
 			if (ctx->frame_length > static_ctx.frame_length_max) {
-			ctx->frame_length = static_ctx.frame_length_max;
+				ctx->frame_length = static_ctx.frame_length_max;
 			}
+
 			write_cmos_sensor_8(ctx, 0xfd, 0x01);
 			write_cmos_sensor_8(ctx, 0x05, (((ctx->frame_length - vblank_convert)*2) & 0xFF00) >> 8);
 			write_cmos_sensor_8(ctx, 0x06, ((ctx->frame_length - vblank_convert)*2) & 0xFF);
 			write_cmos_sensor_8(ctx, 0x01, 0x01);
 		}
-		write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure[0].addr[0],
+		shutter = min(shutter, ctx->s_ctx.exposure_max);
+		shutter = max(shutter, ctx->s_ctx.exposure_min);
+
+		shutter = (shutter >> 1) << 1;
+		write_cmos_sensor_8(ctx, 0xfd, 0x01);
+		write_cmos_sensor_8(ctx, 0x02, (shutter*2 >> 16) & 0xFF);
+		write_cmos_sensor_8(ctx, 0x03, (shutter*2 >> 8) & 0xFF);
+		write_cmos_sensor_8(ctx, 0x04,  shutter*2  & 0xFF);
+		write_cmos_sensor_8(ctx, 0x01, 0x01);
+		/*write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure[0].addr[0],
 			(ctx->exposure[0] *2 >> 8) & 0xFF);
 		write_cmos_sensor_8(ctx, ctx->s_ctx.reg_addr_exposure[0].addr[1],
 			ctx->exposure[0] *2 & 0xFF);
-		write_cmos_sensor_8(ctx, 0x01,0x01);
+		write_cmos_sensor_8(ctx, 0x01,0x01);*/
 		DRV_LOG(ctx, "normal exposure mode: lshift %u times, normal shutter=0x%x, frame_length=%d\n",
 				l_shift,
 				shutter,
