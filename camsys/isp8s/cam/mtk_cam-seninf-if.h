@@ -29,33 +29,6 @@ struct mtk_cam_seninf_camtg_param {
 };
 
 /**
- * set camtg config
- *
- * @sd: sensor interface's V4L2 subdev
- * @camtg: physical image processing engine's id (e.g. raw's connect outmux id)
- * @params: the parameters of config setting with an struct array
- * @param_cnt: the array size of {@params}
- */
-int mtk_cam_seninf_set_camtg_cfg(struct v4l2_subdev *sd, int camtg,
-				struct mtk_cam_seninf_camtg_param *params,
-				int param_cnt);
-
-/**
- * trigger apply disable outmux
- *
- * @sd: sensor interface's V4L2 subdev
- */
-int mtk_cam_seninf_apply_disable_mux(struct v4l2_subdev *sd);
-
-/**
- * set config ready
- *
- * @sd: sensor interface's V4L2 subdev
- * @camtg: physical image processing engine's id (e.g. raw's connect outmux id)
- */
-int mtk_cam_seninf_set_cfg_rdy(struct v4l2_subdev *sd, int camtg);
-
-/**
  * set camtg pixel mode
  *
  * @sd: sensor interface's V4L2 subdev
@@ -102,15 +75,6 @@ int mtk_cam_seninf_set_pixelmode_camsv(struct v4l2_subdev *sd, int pad_id,
 int mtk_cam_seninf_get_sensor_usage(struct v4l2_subdev *sd);
 
 int mtk_cam_seninf_is_non_comb_ic(struct v4l2_subdev *sd);
-
-/* @Deprecated */
-int mtk_cam_seninf_set_camtg(struct v4l2_subdev *sd, int pad_id, int camtg);
-
-/* @Deprecated */
-int mtk_cam_seninf_set_camtg_camsv(struct v4l2_subdev *sd, int pad_id, int camtg, int tag_id);
-
-int mtk_cam_seninf_set_camtg_multiraw(struct v4l2_subdev *sd, int pad_id, int camtg,
-				      enum seninf_recv_raw_set raw_set);
 
 //////
 
@@ -202,19 +166,6 @@ struct mtk_cam_seninf_mux_param {
 	void *private;
 };
 
-/**
-* struct mtk_cam_seninf_streaming_mux_change - change connection during streaming
- * @param: a new connection from sensor interface to image processing engine
- * @param grp_en: whether using grp rdy or not
- *
- * To be called when camsys driver need to change the connection from sensor
- * interface to image processing engine during streaming. It is a asynchronized
- * call, the sensor interface driver will call back func to notify the caller.
- *
- * Returns true if the mux changes will be applied.
- */
-bool
-mtk_cam_seninf_streaming_mux_change(struct mtk_cam_seninf_mux_param *param, bool grp_en);
 
 /**
  * struct mtk_cam_seninf_mux_setup - changing the out mux connection

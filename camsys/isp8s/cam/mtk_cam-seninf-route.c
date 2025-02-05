@@ -1851,41 +1851,6 @@ bool mtk_cam_seninf_set_mux_cq_en(struct v4l2_subdev *sd, u8 camtg, bool cq_rdy_
 	return ret;
 }
 
-bool mtk_cam_seninf_mux_setup(struct v4l2_subdev *sd, struct mtk_cam_seninf_mux_param *param)
-{
-	struct seninf_ctx *ctx = container_of(sd, struct seninf_ctx, subdev);
-
-	if (unlikely(ctx == NULL)) {
-		pr_info("[%s][Err]ctx is NULL\n", __func__);
-		return -EINVAL;
-	}
-
-	return (ctx->streaming) ?
-			mtk_cam_seninf_streaming_mux_change(param, true) :
-			mtk_cam_seninf_set_camtg_for_stream_mux(param);
-}
-
-int mtk_cam_seninf_set_camtg_camsv(struct v4l2_subdev *sd, int pad_id, int camtg, int tag_id)
-{
-	struct mtk_cam_seninf_set_camtg_cfg cfg;
-
-	cfg.pad_id = pad_id;
-	cfg.camtg = camtg;
-	cfg.tag_id = tag_id;
-	cfg.rdy_msk_cfg.rdy_sw_en = false;
-	cfg.rdy_msk_cfg.rdy_cq_en = false;
-	cfg.rdy_msk_cfg.rdy_grp_en = false;
-
-	return _mtk_cam_seninf_set_camtg(sd, &cfg);
-}
-
-int mtk_cam_seninf_apply_disable_mux(struct v4l2_subdev *sd)
-{
-
-
-	return 0;
-}
-
 int mtk_cam_seninf_get_tag_order(struct v4l2_subdev *sd,
 		__u32 fmt_code, int input_pad_id)
 {
@@ -2146,17 +2111,6 @@ int mtk_cam_seninf_get_sentest_param(struct v4l2_subdev *sd,
 				info.scenario, param->is_lbmf);
 
 	return 0;
-}
-
-int mtk_cam_seninf_set_camtg_multiraw(struct v4l2_subdev *sd, int pad_id, int camtg,
-				      enum seninf_recv_raw_set raw_set)
-{
-	return mtk_cam_seninf_set_camtg_camsv(sd, pad_id, camtg, raw_set);
-}
-
-int mtk_cam_seninf_set_camtg(struct v4l2_subdev *sd, int pad_id, int camtg)
-{
-	return mtk_cam_seninf_set_camtg_multiraw(sd, pad_id, camtg, MTK_SENINF_RAW_SET1);
 }
 
 int mtk_cam_seninf_s_stream_mux(struct seninf_ctx *ctx)
@@ -2525,6 +2479,20 @@ SENINF_MUX_CHANGE_LOG_AND_EXIT:
 	/* show mac chk status and clear it (is_clear = 1) */
 	g_seninf_ops->_show_mac_chk_status(ctx, 1);
 	return false;
+}
+
+bool mtk_cam_seninf_mux_setup(struct v4l2_subdev *sd, struct mtk_cam_seninf_mux_param *param)
+{
+	struct seninf_ctx *ctx = container_of(sd, struct seninf_ctx, subdev);
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s][Err]ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	return (ctx->streaming) ?
+			mtk_cam_seninf_streaming_mux_change(param, true) :
+			mtk_cam_seninf_set_camtg_for_stream_mux(param);
 }
 
 int mtk_cam_seninf_set_cfg_rdy(struct v4l2_subdev *sd, int camtg)

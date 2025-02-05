@@ -423,7 +423,7 @@ static int seninf_sentest_set_camtg_for_seamless(struct seninf_ctx *ctx)
 
 	param.rdy_mask_en = rdy_mask_en;
 	param.settings = settings;
-	ret |= mtk_cam_seninf_streaming_mux_change(&param, false);
+	ret |= mtk_cam_seninf_mux_setup(&ctx->subdev, &param);
 	ret |= mtk_cam_seninf_set_mux_sw_rdy(&ctx->subdev, settings[0].camtg, true);
 
 	return ret;

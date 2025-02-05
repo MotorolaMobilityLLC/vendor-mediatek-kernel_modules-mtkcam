@@ -361,8 +361,12 @@ static void dbg_commit_chmux(struct seninf_ctx *ctx)
 	if (!ctx)
 		return;
 
-	if (ctx->dbg_chmux_param)
-		mtk_cam_seninf_streaming_mux_change(ctx->dbg_chmux_param, false);
+	if (ctx->dbg_chmux_param) {
+		ctx->dbg_chmux_param->rdy_mask_en.rdy_grp_en = false;
+		ctx->dbg_chmux_param->rdy_mask_en.rdy_sw_en = false;
+		ctx->dbg_chmux_param->rdy_mask_en.rdy_cq_en = false;
+		mtk_cam_seninf_mux_setup(&ctx->subdev, ctx->dbg_chmux_param);
+	}
 }
 
 static void dbg_set_camtg(struct seninf_ctx *ctx, int pad_id, int camtg, int tag_id)
@@ -401,8 +405,7 @@ static void dbg_set_camtg(struct seninf_ctx *ctx, int pad_id, int camtg, int tag
 		ctx->dbg_chmux_param->settings = new_settings;
 		ctx->dbg_chmux_param->num += 1;
 	} else {
-		mtk_cam_seninf_set_camtg_camsv(&ctx->subdev,
-					       pad_id, camtg, tag_id);
+		dev_info(ctx->dev, "error: dbg_chmux_param is NULL\n");
 	}
 }
 
