@@ -231,12 +231,12 @@ struct qos_limiter {
 	struct qos_limiter_rw w;
 };
 
-#define OSTDL_R0_RIGHT_SHIFT (6)  /* 64, 1 us delay */
-#define OSTDL_W0_RIGHT_SHIFT (8)  /* 128, 0.5 us delay */
-#define OSTDL_R1_RIGHT_SHIFT (6)  /* 64, 1 us delay */
-#define OSTDL_W1_RIGHT_SHIFT (8)  /* 128, 0.5 us delay */
-#define OSTDL_R2_RIGHT_SHIFT (8)  /* 256, 1 us delay */
-#define OSTDL_W2_RIGHT_SHIFT (9)  /* 512, 0.5 us delay */
+#define OSTDL_R0_RIGHT_SHIFT (6)  /* 64 byte, 1 us delay */
+#define OSTDL_W0_RIGHT_SHIFT (7)  /* 128 byte, 1 us delay */
+#define OSTDL_R1_RIGHT_SHIFT (6)  /* 64 byte, 1 us delay */
+#define OSTDL_W1_RIGHT_SHIFT (7)  /* 128 byte, 1 us delay */
+#define OSTDL_R2_RIGHT_SHIFT (8)  /* 256 byte, 1 us delay */
+#define OSTDL_W2_RIGHT_SHIFT (8)  /* 256 byte, 1 us delay */
 
 #define __LIMITER_REG(x)  \
 	.ostdl_en            = OSTDL_IMG_COMM ## x ## _EN_ADDR, \
