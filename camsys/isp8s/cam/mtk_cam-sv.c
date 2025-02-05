@@ -1603,6 +1603,7 @@ void mtk_cam_update_sensor_resource(struct mtk_cam_ctx *ctx)
 		fi.pad = 0;
 		fi.reserved[0] = V4L2_SUBDEV_FORMAT_ACTIVE;
 #if (KERNEL_VERSION(6, 7, 0) < LINUX_VERSION_CODE)
+		fi.which = V4L2_SUBDEV_FORMAT_ACTIVE;
 		v4l2_subdev_call_state_active(ctx->sensor, pad, get_frame_interval, &fi);
 #else
 		v4l2_subdev_call(ctx->sensor, video, g_frame_interval, &fi);
