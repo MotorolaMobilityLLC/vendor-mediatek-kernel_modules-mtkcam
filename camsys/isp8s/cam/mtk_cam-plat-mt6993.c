@@ -980,7 +980,7 @@ static const struct plat_v4l2_data mt6993_v4l2_data = {
 	.shading_tbl_ofst = 0x4468,
 	.reserved_camsv_dev_id = 3,
 
-	.raw_tg_pixelmode = 3,
+	.raw_tg_pixelmode = 4,
 
 	.vb2_queues_support_list = vb2_queues_support_list,
 	.vb2_queues_support_list_num = ARRAY_SIZE(vb2_queues_support_list),
