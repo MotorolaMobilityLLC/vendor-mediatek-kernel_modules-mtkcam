@@ -1469,6 +1469,7 @@ _apply_sensor(struct mtk_cam_job *job)
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_cam_device *cam = ctx->cam;
 	struct mtk_cam_request *req = job->req;
+	struct v4l2_ctrl *ctrl;
 
 	if (!job->sensor_hdl_obj) {
 		dev_info(cam->dev, "[%s] warn. no sensor_hdl_obj to apply: ctx-%d seq 0x%x\n",
@@ -1489,9 +1490,6 @@ _apply_sensor(struct mtk_cam_job *job)
 	ctx->cam_ctrl.sensor_sync_id= job->req_info_id;
 	ctx->cam_ctrl.sensor_seq = job->req_seq;
 	v4l2_ctrl_request_setup(&req->req, job->sensor->ctrl_handler);
-	if (CAM_DEBUG_ENABLED(JOB_ACTION))
-		dev_info(cam->dev, "[%s] ctx:%d seq 0x%x\n",
-			 __func__, ctx->stream_id, job->frame_seq_no);
 	job->local_apply_sensor_ts = local_clock();
 
 	frame_sync_end(job);
@@ -1502,6 +1500,19 @@ _apply_sensor(struct mtk_cam_job *job)
 	mtk_cam_job_state_set(&job->job_state, SENSOR_STATE, S_SENSOR_APPLIED);
 
 	job_complete_sensor_ctrl_obj(job);
+
+	if (CAM_DEBUG_ENABLED(JOB_ACTION))
+		dev_info(cam->dev, "[%s] ctx:%d seq 0x%x\n",
+			 __func__, ctx->stream_id, job->frame_seq_no);
+
+	if (CAM_DEBUG_ENABLED(SENSOR)) {
+		list_for_each_entry(ctrl, &job->sensor->ctrl_handler->ctrls, node) {
+			dev_info(cam->dev,
+				"[%s] ctx:%d req:%s ctrl_id = %d, ctrl_name = %s, ctrl_val = %d\n",
+				__func__, ctx->stream_id, req->debug_str,
+				ctrl->id, ctrl->name, ctrl->val);
+		}
+	}
 
 	return 0;
 }
