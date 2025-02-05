@@ -5722,11 +5722,6 @@ static int update_pdp_meta_buf_to_ipi_frame(
 				- MTKCAM_IPI_MRAW_ID_START] = buf->daddr;
 			mtk_cam_sv_copy_user_input_param(ctx, job, vaddr, mraw_pipe);
 			atomic_inc(&mraw_pipe->res_config.enque_node_num);
-
-			/*increase enque node num for pda video node*/
-			if (!job->tag_info[tag_idx].is_pda_enable)
-				atomic_inc(&mraw_pipe->res_config.enque_node_num);
-
 		}
 		break;
 	case MTKCAM_IPI_MRAW_META_STATS_0:

@@ -703,6 +703,9 @@ static int set_mraw_meta_stats_info(
 			- (dma_addr_t)pda_stats0;
 		set_payload(&pda_stats0->pda_dc_stats.pda_buf, size, &offset);
 		pda_stats0->pda_dc_status = 1;
+		pda_stats0->pda_dc_stats.stats_src.width = info[pdao_m1].width;
+		pda_stats0->pda_dc_stats.stats_src.height = info[pdao_m1].height;
+		pda_stats0->pda_dc_stats.stride = info[pdao_m1].stride;
 		break;
 	default:
 		pr_info("%s: %s: not supported: %d\n",
@@ -970,6 +973,7 @@ static const struct plat_v4l2_data mt6993_v4l2_data = {
 	.meta_stats1_size = RAW_STATS_1_SIZE,
 	.meta_sv_ext_size = SV_STATS_0_SIZE,
 	.meta_mraw_ext_size = MRAW_STATS_0_SIZE,
+	.meta_pda_ext_size = PDA_STATS_0_SIZE,
 
 	.timestamp_buffer_ofst = offsetof(struct mtk_cam_uapi_meta_raw_stats_0,
 					  timestamp),

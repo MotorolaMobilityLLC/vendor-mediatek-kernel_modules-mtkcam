@@ -1144,16 +1144,21 @@ static int mtk_camsys_event_handle_camsv(struct mtk_cam_ctrl *ctrl,
 	struct mtk_cam_job *job;
 	int seq_no = seq_from_fh_cookie(irq_info->cookie_done);
 
-	job = mtk_cam_ctrl_get_job(ctrl, cond_frame_no_belong, &seq_no);
-
 	/* camsv's SW done */
 	if (irq_info->irq_type & BIT(CAMSYS_IRQ_FRAME_DONE)) {
 		ctrl_p1_done_preprocess(ctrl,
 				  CAMSYS_ENGINE_CAMSV, engine_id, irq_info);
+		job = mtk_cam_ctrl_get_job(ctrl, cond_frame_no_belong, &seq_no);
+		if (job) {
+			mtk_cam_sv_check_pda_status(ctrl, job);
+			mtk_cam_job_put(job);
+		} else {
+			pr_info("%s: warn. job not found seq 0x not check pda status %x\n",
+				__func__, seq_no);
+		}
 		handle_frame_done(ctrl,
 				  CAMSYS_ENGINE_CAMSV, engine_id,
 				  seq_no);
-		mtk_cam_sv_check_pda_status(ctrl, job);
 	}
 
 	/* camsv's SOF (proc engine frame start) */

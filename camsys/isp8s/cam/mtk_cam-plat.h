@@ -219,6 +219,7 @@ struct plat_v4l2_data {
 	int meta_stats1_size;
 	int meta_sv_ext_size;
 	int meta_mraw_ext_size;
+	int meta_pda_ext_size;
 
 	int timestamp_buffer_ofst;
 	int shading_tbl_ofst;

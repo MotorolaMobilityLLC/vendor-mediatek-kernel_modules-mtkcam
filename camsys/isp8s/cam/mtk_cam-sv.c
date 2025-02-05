@@ -2113,7 +2113,7 @@ static void mtk_cam_sv_set_pdp_dense_fmt(
 	struct mraw_stats_cfg_param *param, unsigned int dmao_id)
 {
 	if (dmao_id == imgo_m1) {
-		if (param->mbn_pow < 2 || param->mbn_pow > 4) {
+		if (param->mbn_pow > 4) {
 			dev_info(cam->dev, "%s:Invalid mbn_pow: %d",
 				__func__, param->mbn_pow);
 			return;
@@ -2133,7 +2133,7 @@ static void mtk_cam_sv_set_pdp_dense_fmt(
 		// divided for 2 path from MBN
 		*tg_width_temp /= 2;
 	} else if (dmao_id == cpio_m1) {
-		if (param->cpi_pow < 2 || param->cpi_pow > 4) {
+		if (param->cpi_pow > 4) {
 			dev_info(cam->dev, "Invalid cpi_pow: %d", param->cpi_pow);
 			return;
 		}
@@ -2158,7 +2158,7 @@ static void mtk_cam_sv_set_pdp_concatenation_fmt(
 	struct mraw_stats_cfg_param *param, unsigned int dmao_id)
 {
 	if (dmao_id == imgo_m1) {
-		if (param->mbn_spar_pow < 1 || param->mbn_spar_pow > 6) {
+		if (param->mbn_spar_pow > 4) {
 			dev_info(cam->dev, "%s:Invalid mbn_spar_pow: %d",
 				__func__, param->mbn_spar_pow);
 			return;
@@ -2335,9 +2335,9 @@ static void mtk_cam_sv_set_pdp_dmao_info(
 	struct mraw_stats_cfg_param *param = &pipe->res_config.stats_cfg_param;
 
 	if (!pdp_en) {
-		info[imgo_m1].width = buf->image_info.width;
-		info[imgo_m1].height = buf->image_info.height;
-		info[imgo_m1].stride = buf->image_info.bytesperline[0];
+		info[imgo_m1].width = param->crop_width;
+		info[imgo_m1].height = param->crop_height;
+		info[imgo_m1].stride = param->crop_width * 2;
 	} else {
 		if (param->dbg_en) {
 			mtk_cam_sv_get_pdp_dbg_size(cam, pipe_id, &width_dbg, &height_dbg);
@@ -2411,9 +2411,14 @@ static void mtk_cam_sv_set_pda_frame_param_dmao(
 	struct mtk_mraw_pipeline *pipe =
 		&ctx->cam->pipelines.mraw[pipe_id - MTKCAM_SUBDEV_MRAW_START];
 	unsigned int tag_idx;
+	unsigned long offset;
 
 	if (!pda_en)
 		return;
+
+	offset =
+		(((buf_daddr + GET_PLAT_V4L2(meta_pda_ext_size) + 15) >> 4) << 4) -
+		buf_daddr;
 
 	sv_dev = dev_get_drvdata(ctx->hw_sv);
 	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, pipe_id);
@@ -2428,14 +2433,14 @@ static void mtk_cam_sv_set_pda_frame_param_dmao(
 	out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[pdao_m1];
 	out->uid.id = MTKCAM_IPI_MRAW_PDA_OUT;
 	out->uid.pipe_id = pipe_id;
-	out->buf[0][0].iova = buf_daddr;
+	out->buf[0][0].iova = buf_daddr + offset;
 	out->buf[0][0].size =
 		info[pdao_m1].stride *
 		info[pdao_m1].height;
 
-	dev_info(ctx->cam->dev, "%s:dmao_id:%d iova:0x%llx stride:0x%x height:0x%x\n",
+	dev_info(ctx->cam->dev, "%s:dmao_id:%d iova:0x%llx stride:0x%x height:0x%x\n size:%d offset:%lu",
 		__func__, pdao_m1, out->buf[0][0].iova,
-		info[pdao_m1].stride , info[pdao_m1].height);
+		info[pdao_m1].stride , info[pdao_m1].height, out->buf[0][0].size, offset);
 }
 
 static void mtk_cam_sv_set_pdp_frame_param_dmao(
