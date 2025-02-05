@@ -28,7 +28,7 @@
 #include "mtk_camera-videodev2.h"
 #include "mtk_cam-trace.h"
 
-#include "frame_sync_camsys.h"
+#include "frame-sync/frame_sync_camsys.h"
 
 #define SENSOR_SET_DEADLINE_MS  18
 #define SENSOR_SET_RESERVED_MS  7

@@ -1,3 +1,4 @@
+# TODO: remove deprecated define_mgk_ko() usage after finishing DDK transfer
 load("//build/bazel_mgk_rules:mgk_ko.bzl", "define_mgk_ko")
 
 load("//build/bazel_mgk_rules:mgk_ddk_ko.bzl", "define_mgk_ddk_ko")
@@ -18,7 +19,6 @@ filegroup(
 
 mgk_camsys_outs = [
     # keep sorted
-    "isp7_1/cam/mtk-cam-isp.ko",
     "isp7s/cam_legacy/mtk-cam-isp7s.ko",
     "isp7sp/cam/mtk-cam-isp7sp.ko",
     "isp8/cam/mtk-cam-isp8.ko",
@@ -43,10 +43,8 @@ define_mgk_ko(
         "//vendor/mediatek/kernel_modules/mtkcam/imgsensor/src-v4l2:imgsensor",
         "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-plat-util",
         "//vendor/mediatek/kernel_modules/mtkcam/camsys:ccd_rpmsg",
-        "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk_ccd_remoteproc"] +
-        (["//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-plat-mt6983"] if glob(["isp7_1/cam/mtk_cam-plat-mt6983.c"]) else []) +
-        (["//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-plat-mt6879"] if glob(["isp7_1/cam/mtk_cam-plat-mt6879.c"]) else []) +
-        (["//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-plat-mt6895"] if glob(["isp7_1/cam/mtk_cam-plat-mt6895.c"]) else []),
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk_ccd_remoteproc"
+    ],
     outs = mgk_camsys_outs,
 )
 
@@ -84,6 +82,70 @@ define_mgk_ddk_ko(
         "//kernel_device_modules-{}/drivers/misc/mediatek/iommu:iommu_misc_headers".format(kernel_version),
         "//kernel_device_modules-{}/drivers/iommu/arm/arm-smmu-v3:smmu_public_headers".format(kernel_version),
     ],
+)
+
+define_mgk_ddk_ko(
+    name = "mtk-cam-isp",
+    srcs = glob(
+        include = [
+            "isp7_1/cam/**/*.c",
+            "isp7_1/cam/**/*.h",
+            "common/mtk_cam-fmt.h",
+        ],
+        exclude = [
+            "isp7_1/cam/mtk_cam-plat-*.c",
+            "isp7_1/cam/mtk_cam-trace.c",
+            "isp7_1/cam/mtk_cam-procdbg.c",
+        ]),
+    conditional_srcs = {
+        "CONFIG_TRACING": {
+            True: [
+                "isp7_1/cam/mtk_cam-trace.c",
+            ]
+        },
+    },
+    copts = [
+        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/mt-plat",
+        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/imgsensor/inc",
+    ],
+    ko_deps = [
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-plat-util",
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:ccd_rpmsg",
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk_ccd_remoteproc",
+        "//kernel_device_modules-{}/drivers/misc/mediatek/mtk-interconnect:mtk-icc-core".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/misc/mediatek/aee/aed:aee_aed".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/misc/mediatek/mtprintk:mtk_printk_ctrl".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/misc/mediatek/smi:mtk-smi-dbg".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/dma-buf/heaps:system_heap".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/dma-buf/heaps:mtk_sec_heap".format(kernel_version),
+        "//vendor/mediatek/kernel_modules/mtkcam/imgsensor/src-v4l2:imgsensor",
+        "//kernel_device_modules-{}/drivers/misc/mediatek/geniezone:gz-main".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/misc/mediatek/iommu:mtk_iommu_util".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/misc/mediatek/iommu:iommu_debug".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/memory:mtk-smi".format(kernel_version),
+        "//vendor/mediatek/kernel_modules/mtkcam/ccusys:mtk_ccuv",
+    ] + (
+        ["//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-plat-mt6983"] if glob(["isp7_1/cam/mtk_cam-plat-mt6983.c"]) else []
+    ) + (
+        ["//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-plat-mt6879"] if glob(["isp7_1/cam/mtk_cam-plat-mt6879.c"]) else []
+    ) + (
+        ["//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-plat-mt6895"] if glob(["isp7_1/cam/mtk_cam-plat-mt6895.c"]) else []
+    ),
+    header_deps = [
+        "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",
+        "//vendor/mediatek/kernel_modules/mtkcam/imgsensor:imgsensor_header",
+        "//vendor/mediatek/kernel_modules/mtkcam/imgsensor/src-v4l2:imgsensor_v4l2_header",
+        "//kernel_device_modules-{}/drivers/misc/mediatek/geniezone:gz-public_hdrs".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/misc/mediatek/iommu:iommu_misc_headers".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/iommu/arm/arm-smmu-v3:smmu_public_headers".format(kernel_version),
+    ],
+    includes = [
+        "isp7_1/cam",
+    ],
+    local_defines = [
+        "SENSOR_SECURE_MTEE_SUPPORT"
+    ] +
+    (["CAMSYS_TF_DUMP_71_1"] if glob(["isp7_1/cam/mtk_cam-plat-mt6983.c"]) else []),
 )
 
 define_mgk_ddk_ko(
@@ -283,3 +345,76 @@ define_mgk_ddk_ko(
         "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",
     ],
 )
+
+########################################################################
+############################# non-DDK part #############################
+########################################################################
+#
+# load("//build/bazel_mgk_rules:mgk_ko.bzl", "define_mgk_ko")
+#
+# package(
+#     default_visibility = [
+#         "//visibility:public",
+#     ],
+# )
+#
+# filegroup(
+#     name = "public_headers",
+#     srcs = glob([
+#         "isp8/cam/mtk_cam-bwr.h",
+#     ]),
+# )
+#
+#
+# mt6879_outs = [
+#     "isp7_1/cam/mtk-cam-plat-mt6879.ko",
+# ]
+#
+# mt6895_outs = [
+#     "isp7_1/cam/mtk-cam-plat-mt6895.ko",
+# ]
+#
+# mt6983_outs = [
+#     "isp7_1/cam/mtk-cam-plat-mt6983.ko",
+# ]
+#
+# mgk_camsys_outs = [
+#     # keep sorted
+#     "isp7_1/cam/mtk-cam-isp.ko",
+#     "isp7_1/cam/mtk-cam-plat-util.ko",
+#     "isp7s/cam_legacy/mtk-cam-isp7s.ko",
+#     "isp7sp/cam/mtk-cam-isp7sp.ko",
+#     "isp7sp/unit_test/cam-ut.ko",
+#     "isp8/cam/mtk-cam-isp8.ko",
+#     "isp8/unit_test/cam-isp8-ut.ko",
+#     "isp8s/cam/mtk-cam-isp8s.ko",
+#     "isp8s/unit_test/cam-isp8s-ut.ko",
+#     "remoteproc/mtk_ccd_remoteproc.ko",
+#     "rpmsg/ccd_rpmsg.ko",
+# ]
+#
+# define_mgk_ko(
+#     name = "camsys",
+#     srcs = glob([
+#         "**/*.c",
+#         "**/*.h",
+#         "**/Kbuild",
+#         "**/Makefile",
+#     ]) + [
+#         "//vendor/mediatek/kernel_modules/mtkcam:public_headers",
+#         "//vendor/mediatek/kernel_modules/mtkcam/imgsensor:public_headers",
+#         "//vendor/mediatek/kernel_modules/mtkcam:kbuild_makefiles",
+#     ],
+#     deps = [
+#         "//vendor/mediatek/kernel_modules/mtkcam/imgsensor:mtk_imgsensor",
+#     ],
+#     outs = (
+#         mt6879_outs if glob(["isp7_1/**/mtk_cam-plat-mt6879.c"]) else []
+#     ) + (
+#         mt6895_outs if glob(["isp7_1/**/mtk_cam-plat-mt6895.c"]) else []
+#     ) + (
+#         mt6983_outs if glob(["isp7_1/**/mtk_cam-plat-mt6983.c"]) else []
+#     ) + mgk_camsys_outs,
+# )
+#
+
