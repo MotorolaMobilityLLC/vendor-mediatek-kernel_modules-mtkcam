@@ -1315,10 +1315,14 @@ void frm_update_ts_offset_between_eint_and_tsrec(const unsigned int idx)
 	unsigned int i, j;
 
 	p_ts_info = frm_get_tsrec_timestamp_info_ptr(idx);
+	if (unlikely(p_ts_info == NULL)) {
+		frm_inst.eint_ts_offset[idx] = 0;
+		return;
+	}
 	p_eint_ts_info = &frm_inst.eint_ts_info[idx];
 
 	/* !!! check if ts relationship make sense !!! */
-	for (i = 0; i < 2; ++i) {
+	for (i = 0; (i < 2 && i < TSREC_TS_REC_MAX_CNT); ++i) {
 		/* prevent any SW IRQ delay, check with first and second ts */
 		last_tsrec_ts = p_ts_info->exp_recs[exp_id].ts_us[i];
 
