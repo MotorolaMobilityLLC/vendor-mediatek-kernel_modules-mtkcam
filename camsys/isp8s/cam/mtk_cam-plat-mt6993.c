@@ -273,6 +273,8 @@ static int get_meta_stats0_port_size(
 	struct mtk_cam_uapi_meta_raw_stats_0 *stats_0, int dma_port)
 {
 	switch (dma_port) {
+	case PORT_FHO_R1:
+		return 4096;  /* 128 * 32(subsample) */
 	case PORT_AEO_R1:
 		return stats_0->ae_stats.aeo_buf.size;
 	case PORT_AEHO_R1:

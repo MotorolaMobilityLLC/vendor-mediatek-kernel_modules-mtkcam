@@ -690,7 +690,7 @@ static int fill_raw_stats_qos(struct req_buffer_helper *helper,
 			if (WARN_ON(size > MMQOS_SIZE_WARNING)) {
 				pr_info("%s: %s: req_seq(%d) size too large(%d), please check\n",
 					__func__,
-					qos_desc->dma_desc[i].dma_name,
+					qos_desc->dma_desc[j].dma_name,
 					job->req_seq, size);
 				continue;
 			}
