@@ -533,6 +533,9 @@ struct subdrv_static_ctx_ext_ops {
 	int (*s_pwr_seq_reset_view_to_sensing)(void *arg);
 	int (*mcss_init)(void *arg);
 	int (*mcss_update_subdrv_para)(void *arg, int scenario_id);
+	int (*cust_get_linetime_in_us)(void *arg, u32 scenario_id,
+		u32 *linetime_in_ns, enum GET_LINETIME_ENUM linetime_type);
+	u32 cycle_base_ratio;
 
 	/* customed function pointer by sensor mode */
 	struct subdrv_static_ctx_mode_ext_ops *mode_ext_ops_list;

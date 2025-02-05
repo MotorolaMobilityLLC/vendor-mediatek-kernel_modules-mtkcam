@@ -36,12 +36,11 @@
 #include "kd_imgsensor_define_v4l2.h"
 #include "kd_imgsensor_errcode.h"
 
+#include "imx06c_ana_gain_table.h"
+#include "imx06c_Sensor_setting.h"
+
 #include "adaptor-subdrv-ctrl.h"
 #include "adaptor-i2c.h"
 #include "adaptor.h"
-
-#ifdef IMX06C_ISF_DBG
-extern struct subdrv_static_ctx imx06c_legacy_s_ctx;
-#endif
 
 #endif
