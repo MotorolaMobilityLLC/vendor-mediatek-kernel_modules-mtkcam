@@ -1106,6 +1106,71 @@ static int mtk_cam_seninf_irq_init(struct platform_device *pdev, struct seninf_c
 }
 #endif
 
+static int mtk_cam_seninf_rdy_mask_list_install(struct seninf_core *core)
+{
+	u32 i = 0;
+	struct device *dev = core->dev;
+
+	if (core->rdy_msk_grp_id_end > SENINF_OUTMUX_NUM) {
+		dev_err(dev, "[%s] rdy_msk_grp_id_end(%u) is invalid\n",
+			__func__, core->rdy_msk_grp_id_end);
+		return -EINVAL;
+	}
+
+	for (i = core->rdy_msk_grp_id_start; i <= core->rdy_msk_grp_id_end; i++) {
+		core->rdy_msk_grp_arr[i].grp_id = i;
+		list_add_tail(&core->rdy_msk_grp_arr[i].list, &core->list_rdy_msk_grp_id);
+		dev_info(dev, "[%s] grp_id %u install done\n", __func__, core->rdy_msk_grp_arr[i].grp_id);
+	}
+
+	return 0;
+}
+
+static int mtk_cam_seninf_rdy_mask_probe(struct seninf_core *core)
+{
+	struct device *dev = core->dev;
+	int ret = 0;
+
+	if (of_property_read_u32(dev->of_node, "normal_cam_rdy_msk_grp_id_start",
+		&core->rdy_msk_grp_id_start)) {
+		dev_err(dev, "[%s] get normal_cam_rdy_msk_grp_id_start failed\n", __func__);
+	}
+
+	if (of_property_read_u32(dev->of_node, "normal_cam_rdy_msk_grp_id_end",
+		&core->rdy_msk_grp_id_end)) {
+		dev_err(dev, "[%s] get normal_cam_rdy_msk_grp_id_end failed\n", __func__);
+	}
+
+	if (of_property_read_u32(dev->of_node, "security_cam_rdy_msk_grp_id_start",
+		&core->rdy_msk_sec_cam_grp_id_start)) {
+		dev_err(dev, "[%s] get security_cam_rdy_msk_grp_id_start failed\n", __func__);
+	}
+
+	if (of_property_read_u32(dev->of_node, "security_cam_rdy_msk_grp_id_end",
+		&core->rdy_msk_sec_cam_grp_id_end)) {
+		dev_err(dev, "[%s] get security_cam_rdy_msk_grp_id_end failed\n", __func__);
+	}
+
+	core->rdy_msk_grp_id_start = 0;
+	core->rdy_msk_grp_id_end = 9;
+
+	dev_info(dev, "[%s] rdy_msk_grp_id_start %u\n", __func__, core->rdy_msk_grp_id_start);
+	dev_info(dev, "[%s] rdy_msk_grp_id_end %u\n", __func__, core->rdy_msk_grp_id_end);
+	dev_info(dev, "[%s] rdy_msk_sec_cam_grp_id_start %u\n", __func__, core->rdy_msk_sec_cam_grp_id_start);
+	dev_info(dev, "[%s] rdy_msk_sec_cam_grp_id_end %u\n", __func__, core->rdy_msk_sec_cam_grp_id_end);
+
+	INIT_LIST_HEAD(&core->list_rdy_msk_grp_id);
+
+	mutex_init(&core->rdy_msk_list_mutex);
+
+	if (mtk_cam_seninf_rdy_mask_list_install(core)) {
+		dev_err(dev, "[%s] get security_cam_rdy_msk_grp_id_end failed\n", __func__);
+		ret |= -EINVAL;
+	}
+
+	return ret;
+}
+
 static int seninf_core_probe(struct platform_device *pdev)
 {
 	int i, j, ret;
@@ -1171,6 +1236,12 @@ static int seninf_core_probe(struct platform_device *pdev)
 		return PTR_ERR(core->reg_csi_top_0);
 	}
 #endif
+
+	ret = mtk_cam_seninf_rdy_mask_probe(core);
+	if (ret) {
+		dev_info(dev, "[%s] mtk_cam_seninf_rdy_mask_probe return failed\n", __func__);
+		return ret;
+	}
 
 	ret = get_seninf_ops(dev, core);
 	if (ret) {
@@ -3170,6 +3241,7 @@ static int seninf_test_streamon(struct seninf_ctx *ctx, u32 en)
 		ctx->is_test_streamon = 1;
 		mtk_cam_seninf_alloc_outmux(ctx);
 		seninf_s_stream(&ctx->subdev, 1);
+		mtk_cam_seninf_set_mux_sw_rdy(&ctx->subdev, 0, true);
 	} else {
 		seninf_s_stream(&ctx->subdev, 0);
 		mtk_cam_seninf_release_outmux(ctx);
@@ -3749,6 +3821,7 @@ static int seninf_probe(struct platform_device *pdev)
 	ctx->core = core;
 	list_add(&ctx->list, &core->list);
 	INIT_LIST_HEAD(&ctx->list_outmux);
+	INIT_LIST_HEAD(&ctx->list_using_rdy_msk_grp_id);
 	//memset(ctx->mux_by, 0, sizeof(ctx->mux_by));
 	ctx->dbg_chmux_param = NULL;
 

@@ -135,8 +135,14 @@ struct outmux_tag_cfg {
 	u32 exp_vsize;
 };
 
+struct rdy_msk_grp_id_info {
+	struct list_head list;
+	u8 grp_id;
+};
+
 struct outmux_cfg {
 	struct list_head list;
+	bool is_reset_immedate;
 	u8 outmux_idx;
 	u8 src_mipi;
 	u8 src_sen;
@@ -168,6 +174,20 @@ struct mtk_cam_seninf_spacer_detector {
 	u32 trio;
 };
 
+struct mtk_cam_seninf_rdy_msk_cfg {
+	bool rdy_sw_en;
+	bool rdy_cq_en;
+	bool rdy_grp_en;
+	u32 rdy_grp_id;
+};
+
+struct mtk_cam_seninf_set_camtg_cfg {
+	struct mtk_cam_seninf_rdy_msk_cfg rdy_msk_cfg;
+	u16 pad_id;
+	u16 camtg;
+	u16 tag_id;
+};
+
 struct seninf_core {
 	struct device *dev;
 	int pm_domain_cnt;
@@ -195,6 +215,18 @@ struct seninf_core {
 	//void __iomem *reg_if;
 	//void __iomem *reg_ana;
 	int refcnt;
+
+	/* rdy msk related member */
+
+	unsigned int rdy_msk_grp_id_start;
+	unsigned int rdy_msk_grp_id_end;
+
+	unsigned int rdy_msk_sec_cam_grp_id_start;
+	unsigned int rdy_msk_sec_cam_grp_id_end;
+
+	struct mutex rdy_msk_list_mutex;
+	struct list_head list_rdy_msk_grp_id;
+	struct rdy_msk_grp_id_info rdy_msk_grp_arr[SENINF_OUTMUX_NUM];
 
 	/* CCU rproc ctrl */
 	struct seninf_rproc_ccu_ctrl ccu_rproc_ctrl;
@@ -365,12 +397,15 @@ struct seninf_ctx {
 	/* resources */
 	struct list_head list_outmux;
 	//struct seninf_mux *mux_by[VC_CH_GROUP_MAX_NUM][TYPE_MAX_NUM];
-	bool outmux_disable_list[SENINF_OUTMUX_NUM];
-	bool outmux_disable_list_for_v2[SENINF_OUTMUX_NUM];
+	bool outmux_force_disable_list[SENINF_OUTMUX_NUM];
 
 	/* flags */
 	unsigned int csi_streaming:1;
 	unsigned int streaming:1;
+
+
+
+
 
 	int seninf_dphy_settle_delay_dt;
 	int cphy_settle_delay_dt;
@@ -420,6 +455,10 @@ struct seninf_ctx {
 	struct mtk_seamless_switch_param sentest_seamless_cfg;
 	struct kthread_worker sentest_worker;
 	struct task_struct *sentest_kworker_task;
+
+	/* seninf ctx rdy mask info */
+	struct list_head list_using_rdy_msk_grp_id;
+	struct mtk_cam_seninf_rdy_msk_cfg rdy_msk_config;
 
 	/* cammux switch debug element */
 	struct mtk_cam_seninf_mux_param *dbg_chmux_param;

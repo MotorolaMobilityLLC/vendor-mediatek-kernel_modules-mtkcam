@@ -220,7 +220,10 @@ static void seninf_sentest_watchdog_timer_callback(struct timer_list *t)
 
 	ctx->sentest_seamless_ut_status = SENTEST_SEAMLESS_IS_TIMEOUT;
 	ctx->sentest_seamless_ut_en = false;
-	del_timer_sync(&wd->timer);
+
+	del_timer(&wd->timer);
+
+	g_seninf_ops->_debug_current_status(ctx);
 }
 
 int seninf_sentest_watchingdog_en(struct mtk_cam_sentest_watchdog *wd, bool en)
@@ -308,29 +311,6 @@ static int get_lastest_outmux_id_by_vc_cnt(struct seninf_ctx *ctx, u32 target_co
 	return -EINVAL;
 }
 
-static int seninf_sentest_disable_old_camtg(struct seninf_ctx *ctx)
-{
-	struct seninf_vcinfo *vcinfo = &ctx->vcinfo;
-	int i, out_pad;
-
-	if (ctx == NULL) {
-		pr_info("[Error][%s] ctx is NULL", __func__);
-		return -EFAULT;
-	}
-
-	for (i = 0; i < vcinfo->cnt; i++) {
-		out_pad = vcinfo->vc[i].out_pad;
-		mtk_cam_seninf_set_camtg_camsv(
-				&ctx->subdev,
-				out_pad,
-				0xff,
-				ctx->pad_tag_id[out_pad][0]);
-	}
-
-	mtk_cam_seninf_apply_disable_mux(&ctx->subdev);
-	return 0;
-}
-
 static int seninf_sentest_set_fmt(struct seninf_ctx *ctx)
 {
 	int i;
@@ -368,10 +348,12 @@ static int seninf_sentest_set_fmt(struct seninf_ctx *ctx)
 
 static int seninf_sentest_set_camtg_for_seamless(struct seninf_ctx *ctx)
 {
-	int i, ret = 0;
+	int i, out_pad, ret = 0;
 	int outmux_id = 0;
 	struct seninf_vcinfo *cur_vcinfo = &ctx->cur_vcinfo;
+	struct seninf_vcinfo *vcinfo = &ctx->vcinfo;
 	struct mtk_cam_seninf_mux_param param;
+	struct mtk_cam_seninf_rdy_mask_en rdy_mask_en;
 	struct mtk_cam_seninf_mux_setting settings[12];
 	struct v4l2_ctrl *ctrl;
 
@@ -379,9 +361,17 @@ static int seninf_sentest_set_camtg_for_seamless(struct seninf_ctx *ctx)
 
 	memset(settings, 0, sizeof(struct mtk_cam_seninf_mux_setting) * ARRAY_SIZE(settings));
 
-	if (seninf_sentest_disable_old_camtg(ctx)) {
-		pr_info("[Error][%s] seninf_sentest_disable_old_camtg return failed", __func__);
-		return -EFAULT;
+
+	/* prepared outmux which to be disable */
+	for (i = 0; i < vcinfo->cnt; i++) {
+		out_pad = vcinfo->vc[i].out_pad;
+
+		settings[param.num].seninf = &ctx->subdev;
+		settings[param.num].source = out_pad;
+		settings[param.num].camtg = ctx->pad2cam[out_pad][0];
+		settings[param.num].enable = false;
+		settings[param.num].tag_id = 0;
+		param.num++;
 	}
 
 	if (seninf_sentest_set_fmt(ctx)) {
@@ -402,6 +392,7 @@ static int seninf_sentest_set_camtg_for_seamless(struct seninf_ctx *ctx)
 	v4l2_ctrl_s_ctrl_compound(ctrl, V4L2_CTRL_TYPE_U32, &ctx->sentest_seamless_cfg);
 	seninf_sentest_watchingdog_en(&ctx->sentest_watchdog, true);
 
+	/* prepared outmux which to be enable */
 	for (i = 0; i < cur_vcinfo->cnt; i++) {
 
 		if (get_lastest_outmux_id_by_vc_cnt(ctx, i, &outmux_id)) {
@@ -409,11 +400,11 @@ static int seninf_sentest_set_camtg_for_seamless(struct seninf_ctx *ctx)
 			return -EFAULT;
 		}
 
-		settings[i].seninf = &ctx->subdev;
-		settings[i].source = cur_vcinfo->vc[i].out_pad;
-		settings[i].camtg = i;
-		settings[i].enable = 1;
-		settings[i].tag_id = 0;
+		settings[param.num].seninf = &ctx->subdev;
+		settings[param.num].source = cur_vcinfo->vc[i].out_pad;
+		settings[param.num].camtg = i;
+		settings[param.num].enable = true;
+		settings[param.num].tag_id = 0;
 		param.num++;
 
 		pr_info("[%s]pad %d, camtg %d, en %d tag %d num %d",
@@ -425,8 +416,16 @@ static int seninf_sentest_set_camtg_for_seamless(struct seninf_ctx *ctx)
 				param.num);
 	}
 
+	rdy_mask_en.rdy_sw_en = true;
+	rdy_mask_en.rdy_grp_en = true;
+	rdy_mask_en.rdy_cq_en = false;
+
+
+	param.rdy_mask_en = rdy_mask_en;
 	param.settings = settings;
 	ret |= mtk_cam_seninf_streaming_mux_change(&param, false);
+	ret |= mtk_cam_seninf_set_mux_sw_rdy(&ctx->subdev, settings[0].camtg, true);
+
 	return ret;
 }
 
@@ -549,6 +548,8 @@ static int seninf_sentest_ops_after_sensor_seamless(struct seninf_ctx *ctx)
 	seninf_sentest_watchingdog_en(&ctx->sentest_watchdog, false);
 
 	ctx->sentest_seamless_ut_en = false;
+
+	mtk_cam_seninf_force_disable_out_mux(&ctx->subdev);
 
 	pr_info("[%s] -", __func__);
 	return 0;

@@ -654,14 +654,11 @@ static int mtk_cam_seninf_disable_outmux(struct seninf_ctx *ctx, int outmux, boo
 			SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_SW_RST, SENINF_OUTMUX_LOCAL_SW_RST, 0);
 			/* disable cg */
 			mtk_cam_seninf_set_outmux_cg(ctx, outmux, 0);
-		} else {
-			ctx->outmux_disable_list[outmux] = true;
 		}
 	}
 
-	seninf_logi(ctx, "clear outmux:%d (disable en:%d) immediately(%d),current irq(0x%x)\n",
-		    outmux, ctx->outmux_disable_list[outmux], immed,
-		    outmux_irq);
+	seninf_logi(ctx, "clear outmux:%d immediately(%d),current irq(0x%x)\n",
+		    outmux, immed, outmux_irq);
 
 	return 0;
 }
@@ -1133,7 +1130,8 @@ static int mtk_cam_seninf_set_outmux_pixel_mode(struct seninf_ctx *ctx,
 	void *pSeninf_outmux = NULL;
 
 	if (outmux < 0 || outmux >= _seninf_ops->outmux_num) {
-		seninf_logi(ctx, "err outmux %d invalid (0~SENINF_OUTMUX_NUM:%d)\n", outmux, _seninf_ops->outmux_num);
+		seninf_logi(ctx, "err outmux %d invalid (0~SENINF_OUTMUX_NUM:%d)\n",
+			outmux, _seninf_ops->outmux_num);
 		return 0;
 	}
 	pSeninf_outmux = ctx->reg_if_outmux[outmux];
@@ -1144,39 +1142,102 @@ static int mtk_cam_seninf_set_outmux_pixel_mode(struct seninf_ctx *ctx,
 	return 0;
 }
 
-static int mtk_cam_seninf_set_outmux_grp_en(struct seninf_ctx *ctx,
-					     u8 outmux, bool grp_en)
+static int mtk_cam_seninf_set_outmux_rdy_msk_cfg(struct seninf_ctx *ctx, u8 outmux)
 {
 	void *pSeninf_outmux = NULL;
 
+	if (unlikely(!ctx)) {
+		pr_info("[%s][Err] ctx is NULL", __func__);
+		return -EFAULT;
+	}
+
 	if (outmux >= _seninf_ops->outmux_num) {
-		seninf_logi(ctx, "err outmux %u invalid (0~SENINF_OUTMUX_NUM:%d)\n", outmux, _seninf_ops->outmux_num);
-		return 0;
+		seninf_logi(ctx, "err outmux %u invalid (0~SENINF_OUTMUX_NUM:%d)\n",
+			outmux, _seninf_ops->outmux_num);
+		return -EINVAL;
 	}
 	pSeninf_outmux = ctx->reg_if_outmux[outmux];
 
-	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_CSR_CFG_CTRL, SENINF_OUTMUX_CAM_RDY_GRP_EN,
-		    grp_en);
+	/* write rdy_msk sw is 0 as default */
+	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_CAM_CFG_RDY, SENINF_OUTMUX_CAM_CFG_RDY, false);
 
-	seninf_logd(ctx, "outmux%u, grp_en=%u", outmux, grp_en);
+	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_CSR_CFG_CTRL, SENINF_OUTMUX_CAM_CFG_RDY_EN,
+		    ctx->rdy_msk_config.rdy_sw_en);
+
+	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_CSR_CFG_CTRL3, SENINF_OUTMUX_CAM_CFG_RDY_CQ_EN,
+		    ctx->rdy_msk_config.rdy_cq_en);
+
+	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_CSR_CFG_CTRL, SENINF_OUTMUX_CAM_RDY_GRP_EN,
+		    ctx->rdy_msk_config.rdy_grp_en);
+
+	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_CAM_RDY_GRP_SEL, SENINF_OUTMUX_CAM_RDY_GRP_SEL,
+		    ctx->rdy_msk_config.rdy_grp_id);
+
+
+	seninf_logd(ctx,
+		"outmux%u, rdy_sw_en=%d, rdy_cq_en=%d, rdy_grp_en=%d, rdy_grp_id=%d",
+		outmux,
+		ctx->rdy_msk_config.rdy_sw_en,
+		ctx->rdy_msk_config.rdy_cq_en,
+		ctx->rdy_msk_config.rdy_grp_en,
+		ctx->rdy_msk_config.rdy_grp_id);
 
 	return 0;
 }
 
-static int mtk_cam_seninf_set_outmux_cfg_rdy(struct seninf_ctx *ctx,
-					     u8 outmux, bool cfg_rdy)
+static int mtk_cam_seninf_set_outmux_rdy_msk_sw_rdy_status(
+	struct seninf_ctx *ctx, u8 outmux, bool rdy_status)
 {
 	void *pSeninf_outmux = NULL;
 
-	if (outmux >= _seninf_ops->outmux_num) {
-		seninf_logi(ctx, "err outmux %u invalid (0~SENINF_OUTMUX_NUM:%d)\n", outmux, _seninf_ops->outmux_num);
-		return 0;
+	if (unlikely(outmux >= _seninf_ops->outmux_num)) {
+		seninf_logi(ctx, "err outmux %u invalid (0~SENINF_OUTMUX_NUM:%d)\n",
+			outmux, _seninf_ops->outmux_num);
+		return -EINVAL;
 	}
 	pSeninf_outmux = ctx->reg_if_outmux[outmux];
 
-	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_CAM_CFG_RDY, SENINF_OUTMUX_CAM_CFG_RDY, cfg_rdy);
+	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_CAM_CFG_RDY, SENINF_OUTMUX_CAM_CFG_RDY, rdy_status);
 
-	seninf_logi(ctx, "outmux%u, cfg_rdy=%u", outmux, cfg_rdy);
+	return 0;
+}
+
+static int mtk_cam_seninf_set_outmux_rdy_msk_cq_rdy_en(
+	struct seninf_ctx *ctx, u8 outmux, bool cq_rdy_en)
+{
+	void *pSeninf_outmux = NULL;
+
+	if (unlikely(outmux >= _seninf_ops->outmux_num)) {
+		seninf_logi(ctx, "err outmux %u invalid (0~SENINF_OUTMUX_NUM:%d)\n",
+			outmux, _seninf_ops->outmux_num);
+		return -EINVAL;
+	}
+	pSeninf_outmux = ctx->reg_if_outmux[outmux];
+
+	/* need add lock for register protection */
+
+	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_CSR_CFG_CTRL,
+				SENINF_OUTMUX_CAM_CFG_RDY_EN, cq_rdy_en);
+
+	return 0;
+}
+
+static int mtk_cam_seninf_set_outmux_rdy_msk_grp_en(
+	struct seninf_ctx *ctx, u8 outmux, bool cq_rdy_en)
+{
+	void *pSeninf_outmux = NULL;
+
+	if (unlikely(outmux >= _seninf_ops->outmux_num)) {
+		seninf_logi(ctx, "err outmux %u invalid (0~SENINF_OUTMUX_NUM:%d)\n",
+			outmux, _seninf_ops->outmux_num);
+		return -EINVAL;
+	}
+	pSeninf_outmux = ctx->reg_if_outmux[outmux];
+
+	/* need add lock for register protection */
+
+	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_CSR_CFG_CTRL,
+				SENINF_OUTMUX_CAM_RDY_GRP_EN, cq_rdy_en);
 
 	return 0;
 }
@@ -4168,13 +4229,14 @@ static int mtk_cam_seninf_set_idle(struct seninf_ctx *ctx)
 
 	/* Clear disabled outmux */
 	for (i = 0; i < SENINF_OUTMUX_NUM; i++) {
-		if (ctx->outmux_disable_list[i]) {
-			// disable outmux if already disabled
-			mtk_cam_seninf_disable_outmux(ctx, i, true);
-			ctx->outmux_disable_list[i] = false;
-		}
+		if (ctx->outmux_force_disable_list[i] == false)
+			continue;
+
+		mtk_cam_seninf_disable_outmux(ctx, i, true);
+		dev_info(ctx->dev, "[%s] force reset outmux %d done\n", __func__, i);
 	}
 
+	memset(ctx->outmux_force_disable_list, 0, sizeof(ctx->outmux_force_disable_list));
 	seninf_logi(ctx, "release all outmux set all pd2cam to 0xff\n");
 
 	return 0;
@@ -5057,7 +5119,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		u32 irq_st = mtk_cam_seninf_get_outmux_irq_st(ctx, j, 1);
 
 		rdy = seninf_get_outmux_rg_val(ctx, j, SENINF_OUTMUX_CAM_CFG_RDY);
-		if (ctx->outmux_disable_list[j]) {
+		if (ctx->outmux_force_disable_list[j]) {
 			seninf_logi(ctx,
 				 "outmux%d marked disable but not cfg done: CFG_M/PIX_M/CFG0/CFG1/CFG2/SRC/CFG_DONE/CFG_CTL/CFG_RDY/DBG_PORT0/DBG_PORT1:(0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x),irq=0x%x\n",
 				 j,
@@ -5321,7 +5383,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		u32 irq_st = mtk_cam_seninf_get_outmux_irq_st(ctx, j, 1);
 
 		rdy = seninf_get_outmux_rg_val(ctx, j, SENINF_OUTMUX_CAM_CFG_RDY);
-		if (ctx->outmux_disable_list[j]) {
+		if (ctx->outmux_force_disable_list[j]) {
 			seninf_logi(ctx,
 				 "outmux%d marked disable but not cfg done: CFG_M/PIX_M/CFG0/CFG1/CFG2/SRC/CFG_DONE/CFG_CTL/CFG_RDY/DBG_PORT0/DBG_PORT1:(0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x),irq=0x%x\n",
 				 j,
@@ -7702,6 +7764,17 @@ int mtk_cam_seninf_config_outmux(struct seninf_ctx *ctx, u8 outmux_idx, u8 src_m
 			break;
 		}
 
+		seninf_logi(ctx,
+			"outmux%d tag%d filt_vc 0x%x filt_dt 0x%x hsize %d bit_depth %d exp_img_h_in_bit %d hsize %d",
+		    outmux_idx,
+			i,
+			filt_vc,
+			filt_dt,
+			tag_cfg[i].exp_hsize,
+			tag_cfg[i].bit_depth,
+			exp_img_h_in_bit,
+			exp_img_v);
+
 	}
 
 	return 0;
@@ -8281,8 +8354,10 @@ struct mtk_cam_seninf_ops mtk_csi_phy_3_0 = {
 	._set_outmux_cfg_done = mtk_cam_seninf_set_outmux_cfg_done,
 	._set_outmux_dl_en = mtk_cam_seninf_set_outmux_dl_en,
 	._set_outmux_pixel_mode = mtk_cam_seninf_set_outmux_pixel_mode,
-	._set_outmux_grp_en = mtk_cam_seninf_set_outmux_grp_en,
-	._set_outmux_cfg_rdy = mtk_cam_seninf_set_outmux_cfg_rdy,
+	._set_outmux_rdy_msk_cfg = mtk_cam_seninf_set_outmux_rdy_msk_cfg,
+	._set_outmux_rdy_msk_grp_en = mtk_cam_seninf_set_outmux_rdy_msk_grp_en,
+	._set_outmux_rdy_msk_sw_rdy_status = mtk_cam_seninf_set_outmux_rdy_msk_sw_rdy_status,
+	._set_outmux_rdy_msk_cq_rdy_en = mtk_cam_seninf_set_outmux_rdy_msk_cq_rdy_en,
 	._set_test_model = mtk_cam_seninf_set_test_model,
 	._set_test_model_fake_sensor = mtk_cam_seninf_set_test_model_fake_sensor,
 	._get_async_irq_st = mtk_cam_seninf_get_async_irq_st,
