@@ -535,6 +535,7 @@ static int mtk_cam_job_pack_init(struct mtk_cam_job *job,
 	job->local_ack_isp_ts = 0;
 	job->local_trigger_cq_ts = 0;
 	job->local_ispdone_ts = 0;
+	job->longest_exp_ns = 0;
 
 	if (raw_data &&
 		raw_data->ctrl.req_info.req_type == SENSOR_REQUEST) {
@@ -4910,6 +4911,19 @@ static void update_reference_sof(struct mtk_cam_job *job)
 			job->job_state.reference_sof_ns);
 }
 
+static void update_job_exp_ns(struct mtk_cam_job *job)
+{
+	struct mtk_raw_request_data *raw_data = req_get_raw_data(job->src_ctx, job->req);
+	u64 longest_exp_ns = 10000000;
+
+	if (raw_data) {
+		longest_exp_ns = max3(raw_data->ctrl.rc_data.exp_ns.le_exp_ns,
+			raw_data->ctrl.rc_data.exp_ns.me_exp_ns,
+			raw_data->ctrl.rc_data.exp_ns.se_exp_ns);
+	}
+	job->longest_exp_ns = longest_exp_ns;
+}
+
 static void update_sensor_fl_low_latency(struct mtk_cam_job *job)
 {
 	struct mtk_raw_request_data *raw_data = req_get_raw_data(job->src_ctx, job->req);
@@ -5158,6 +5172,7 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 	update_sensor_fl_low_latency(job);
 	update_sen_expo_diff(job);
 	update_tuning_param(job);
+	update_job_exp_ns(job);
 
 	if (CAM_DEBUG_ENABLED(JOB))
 		pr_info("[%s] ctx:%d|type:%d|%s|exp(cur:%d,prev:%d)|sw/scene:%d/%d, req_id:%d",
@@ -6582,6 +6597,11 @@ static int debug_str_local_ts(struct mtk_cam_job *job,
 		n += print_time(job->local_ispdone_ts,
 				buff + n, size - n);
 	}
+	if (job->longest_exp_ns) {
+		n += scnprintf(buff + n, size - n, " exp@");
+		n += print_time(job->longest_exp_ns,
+				buff + n, size - n);
+	}
 
 	return n;
 }
@@ -6616,7 +6636,7 @@ int job_handle_done(struct mtk_cam_job *job)
 	if (ret) {
 		struct mtk_cam_ctx *ctx = job->src_ctx;
 		unsigned int used_pipe = job->req->used_pipe & ctx->used_pipe;
-		char debug_ts[140];
+		char debug_ts[160];
 
 		debug_ts[0] = '\0';
 		debug_str_local_ts(job, debug_ts, sizeof(debug_ts));
@@ -6803,3 +6823,30 @@ int mtk_cam_job_update_clk_switching(struct mtk_cam_job *job, bool begin)
 					 raw_id, freq_hz, boostable);
 }
 
+#define TIMEOUT_ENQUE_NS 11000000000
+int mtk_cam_job_is_enque_timeout(struct mtk_cam_job *job)
+{
+	u64 local_job_enque_ts;
+	u64 local_ts;
+	u64 timeout_ns = TIMEOUT_ENQUE_NS;
+	u64 longest_exp_ns = job->longest_exp_ns;
+	int ret = 0;
+
+	local_ts = local_clock();
+	local_job_enque_ts = job->local_enqueue_isp_ts;
+	/* long exp case if user did handle exp_ns*/
+	if (longest_exp_ns > TIMEOUT_ENQUE_NS)
+		timeout_ns = longest_exp_ns * 2;
+	dev_info(job->src_ctx->cam->dev, "[%s] job 0x%x (ts/enque:%llu/%llu) to_ns:%llu ref_sof:%llu\n",
+		__func__, job->frame_seq_no, local_ts, local_job_enque_ts, timeout_ns,
+		job->job_state.reference_sof_ns);
+	/* another long exp case if user did not handle exp_ns*/
+	if (job->job_state.reference_sof_ns != 0)
+		return 0;
+	if (local_job_enque_ts == 0)
+		return 0;
+	if (local_ts - local_job_enque_ts > timeout_ns)
+		ret = 1;
+
+	return ret;
+}
