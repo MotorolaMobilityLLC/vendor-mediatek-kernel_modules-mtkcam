@@ -4636,7 +4636,7 @@ static void update_job_state_init_sensor_param(struct mtk_cam_job *job)
 	job->job_state.cq_trigger_thres_ns =
 		(ctrl_data && ctrl_data->trigger_cq_deadline > 0) ?
 		ctrl_data->trigger_cq_deadline :
-		infer_cq_trigger_deadline_ns(job, ctrl->frame_interval_ns);
+		infer_cq_trigger_deadline_ns(job, mtk_cam_query_interval_from_ctrl_data(job->src_ctx));
 
 	job->job_state.s_params.always_allow =
 		(ctrl_data && ctrl_data->resource.user_data.raw_res.sen_apply_ctrl ==

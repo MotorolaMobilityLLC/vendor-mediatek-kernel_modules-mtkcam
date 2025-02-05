@@ -651,6 +651,7 @@ static void handle_frame_done(struct mtk_cam_ctrl *ctrl,
 			      int seq_no)
 {
 	struct mtk_cam_job *job;
+	int req_seq_no;
 
 	job = mtk_cam_ctrl_get_job(ctrl, cond_frame_no_belong, &seq_no);
 
@@ -673,6 +674,7 @@ static void handle_frame_done(struct mtk_cam_ctrl *ctrl,
 		mtk_cam_ctrl_send_event(ctrl, CAMSYS_EVENT_IRQ_EXTMETA_FRAME_DONE);
 		mtk_cam_ctrl_send_event(ctrl, CAMSYS_EVENT_IRQ_TRY_TS_TRIGGER);
 	}
+	req_seq_no = job->req_seq;
 	if (call_jobop(job, mark_engine_done,
 		       engine_type, engine_id, seq_no)) {
 
@@ -680,6 +682,7 @@ static void handle_frame_done(struct mtk_cam_ctrl *ctrl,
 
 		spin_lock(&ctrl->info_lock);
 		ctrl->r_info.done_seq_no = seq_no;
+		ctrl->r_info.done_req_seq = req_seq_no;
 		spin_unlock(&ctrl->info_lock);
 
 		mtk_cam_ctrl_send_event(ctrl, CAMSYS_EVENT_IRQ_FRAME_DONE);
@@ -966,7 +969,7 @@ static int frame_no_to_fs_req_no(struct mtk_cam_ctrl *ctrl, int frame_no,
 		mtk_cam_job_put(job);
 	} else {
 		spin_lock(&ctrl->info_lock);
-		ctrl->frame_sync_event_cnt = ctrl->r_info.done_seq_no;
+		ctrl->frame_sync_event_cnt = ctrl->r_info.done_req_seq;
 		spin_unlock(&ctrl->info_lock);
 	}
 
@@ -2252,6 +2255,7 @@ static void reset_runtime_info(struct mtk_cam_ctrl *ctrl)
 	info->outer_seq_no = -1;
 	info->inner_seq_no = -1;
 	info->done_seq_no = -1;
+	info->done_req_seq = -1;
 	info->ae_wa_enable = false;
 
 	spin_unlock(&ctrl->info_lock);
