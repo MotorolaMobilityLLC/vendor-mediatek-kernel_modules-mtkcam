@@ -545,18 +545,47 @@ static void mtk_cam_vb2_stop_streaming(struct vb2_queue *vq)
 	struct mtk_cam_device *cam = vb2_get_drv_priv(vq);
 	struct mtk_cam_video_device *node = mtk_cam_vbq_to_vdev(vq);
 	struct mtk_cam_ctx *ctx;
+	struct mtk_cam_request *req;
+	int i;
 
 	if (CAM_DEBUG_ENABLED(V4L2))
 		dev_info(cam->dev, "%s: node %s\n", __func__, node->desc.name);
 
 	ctx = mtk_cam_find_ctx(cam, &node->vdev.entity);
 	if (!ctx)
-		return;
+		goto CHECK_EXIT;
 
 	if (!mtk_cam_ctx_all_nodes_idle(ctx))
-		return;
+		goto CHECK_EXIT;
 
 	mtk_cam_stop_ctx(ctx, &node->vdev.entity);
+
+CHECK_EXIT:
+	/* debug only, rm if the root cause is fixed */
+	if (WARN_ON(atomic_read(&vq->owned_by_drv_count))) {
+		for (i = 0; i < vq->max_num_buffers; i++) {
+			struct vb2_buffer *vb = vb2_get_buffer(vq, i);
+
+			if (!vb)
+				continue;
+
+			if (vb->state == VB2_BUF_STATE_ACTIVE) {
+				req = to_mtk_cam_req(vb->request);
+				if (req)
+					dev_info(cam->dev,
+						"%s:%s node %s, buf at %d is active\n",
+						__func__, req->req.debug_str,
+						node->desc.name, vb->index);
+				else
+					dev_info(cam->dev,
+						"%s node %s, buf at %d is active\n",
+						__func__, node->desc.name,
+						vb->index);
+
+				vb2_buffer_done(vb, VB2_BUF_STATE_ERROR);
+			}
+		}
+	}
 }
 
 static void mtk_cam_vb2_buf_queue(struct vb2_buffer *vb)
