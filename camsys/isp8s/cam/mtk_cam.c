@@ -3167,24 +3167,334 @@ fail_pipe_off:
 	return ret;
 }
 
-#ifdef NOT_USE_YET
-int PipeIDtoTGIDX(int pipe_id)
+static inline bool _apply_mux_setting(char *prefix, struct mtk_cam_job *job,
+				      struct mtk_cam_seninf_mux_setting *settings,
+				      unsigned int num, bool cq_en)
 {
-	/* camsv/mraw's cammux id is defined in its own dts */
+	struct mtk_cam_seninf_mux_param param;
 
-	switch (pipe_id) {
-	case MTKCAM_SUBDEV_RAW_0:
-		return 0;
-	case MTKCAM_SUBDEV_RAW_1:
-		return 1;
-	case MTKCAM_SUBDEV_RAW_2:
-		return 2;
-	default:
-		break;
-	}
-	return -1;
+	dev_info(job->src_ctx->cam->dev,
+		"[%s] mux change Req:%d %s eninges:%#x cam_mux[0-8]:[%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d]\n",
+		prefix, job->frame_seq_no, job->scen_str, job->used_engine,
+		settings[0].source, settings[0].camtg, settings[0].enable,
+		settings[1].source, settings[1].camtg, settings[1].enable,
+		settings[2].source, settings[2].camtg, settings[2].enable,
+		settings[3].source, settings[3].camtg, settings[3].enable,
+		settings[4].source, settings[4].camtg, settings[4].enable,
+		settings[5].source, settings[5].camtg, settings[5].enable,
+		settings[6].source, settings[6].camtg, settings[6].enable,
+		settings[7].source, settings[7].camtg, settings[7].enable,
+		settings[8].source, settings[8].camtg, settings[8].enable);
+
+	if (num > MUX_SETTING_NUM)
+		dev_info(job->src_ctx->cam->dev,
+			"%s worng size %d/%d", __func__, num, MUX_SETTING_NUM);
+
+	param.settings = settings;
+	param.num = num;
+
+	param.rdy_mask_en.rdy_sw_en = 1;
+	param.rdy_mask_en.rdy_cq_en = cq_en;
+	param.rdy_mask_en.rdy_grp_en = 1;
+
+	return mtk_cam_seninf_mux_setup(job->src_ctx->seninf, &param);
 }
-#endif
+
+static inline void
+_add_disable_mux_setting(struct mtk_cam_ctx *ctx,
+			 struct mtk_cam_seninf_mux_setting *settings,
+			 unsigned int *cnt)
+{
+	int i;
+
+	for (i = 0; i < ctx->steaming_mux_num; i++) {
+		settings[*cnt].seninf = ctx->seninf;
+		settings[*cnt].source = ctx->steaming_mux_pack[i * 2];
+		settings[*cnt].camtg  = ctx->steaming_mux_pack[i * 2 + 1];
+		settings[*cnt].enable = 0;
+		(*cnt)++;
+	}
+}
+
+static inline void
+_add_sensor_meta_dump_mux_setting(struct mtk_cam_job *job,
+				  struct mtk_cam_seninf_mux_setting *settings,
+				  unsigned int *cnt,
+				  int sv_dev_cammux_id,
+				  unsigned int sv_max_pixel_mode)
+{
+	if (!job->is_sensor_meta_dump)
+		return;
+
+	settings[*cnt].seninf = job->src_ctx->seninf;
+	settings[*cnt].source = PAD_SRC_GENERAL0;
+	settings[*cnt].camtg  = sv_dev_cammux_id;
+	settings[*cnt].tag_id = SVTAG_SENSOR_META;
+	settings[*cnt].pixelmode = sv_max_pixel_mode;
+	settings[*cnt].enable = 1;
+	(*cnt)++;
+}
+
+static inline void
+_add_mraw_mux_setting(struct mtk_cam_job *job,
+		      struct mtk_cam_seninf_mux_setting *settings,
+		      unsigned int *cnt,
+		      int sv_dev_cammux_id,
+		      unsigned int sv_max_pixel_mode)
+{
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	unsigned int mraw_idx, mraw_dev_idx, tag_idx;
+
+	for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
+		mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
+		tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+			ctx->mraw_subdev_idx[mraw_dev_idx] + MTKCAM_SUBDEV_MRAW_START);
+
+		settings[*cnt].seninf = ctx->seninf;
+		settings[*cnt].source = job->tag_info[tag_idx].seninf_padidx;
+		settings[*cnt].camtg  = sv_dev_cammux_id;
+		settings[*cnt].tag_id = tag_idx;
+		settings[*cnt].pixelmode = sv_max_pixel_mode;
+		settings[*cnt].enable = 1;
+		(*cnt)++;
+	}
+}
+
+static inline void
+_add_camsv_mux_setting(struct mtk_cam_job *job,
+		       struct mtk_cam_seninf_mux_setting *settings,
+		       unsigned int *cnt,
+		       int sv_dev_cammux_id,
+		       unsigned int sv_max_pixel_mode)
+{
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	unsigned int sv_idx, tag_idx;
+
+	for (sv_idx = 0; sv_idx < ctx->num_sv_subdevs; sv_idx++) {
+		tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
+			ctx->sv_subdev_idx[sv_idx] + MTKCAM_SUBDEV_CAMSV_START);
+
+		settings[*cnt].seninf = ctx->seninf;
+		settings[*cnt].source = job->tag_info[tag_idx].seninf_padidx;
+		settings[*cnt].camtg  = sv_dev_cammux_id;
+		settings[*cnt].tag_id = tag_idx;
+		settings[*cnt].pixelmode = sv_max_pixel_mode;
+		settings[*cnt].enable = 1;
+		(*cnt)++;
+	}
+}
+
+static void
+_store_mux_settings_to_ctx(struct mtk_cam_ctx *ctx,
+			   struct mtk_cam_seninf_mux_setting *settings,
+			   unsigned int idx_start, unsigned int idx_end)
+{
+	int idx, pack_idx;
+
+	for (idx = idx_start; idx < idx_end; idx++) {
+		pack_idx = (idx - idx_start) * 2;
+		ctx->steaming_mux_pack[pack_idx] = settings[idx].source;
+		ctx->steaming_mux_pack[pack_idx + 1] = settings[idx].camtg;
+	}
+	ctx->steaming_mux_num = idx_end - idx_start;
+}
+
+static int _config_1exp_cam_mux(struct mtk_cam_job *job, bool disable_prev_mux)
+{
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	struct mtk_cam_device *cam = ctx->cam;
+	struct v4l2_subdev *seninf = ctx->seninf;
+	struct mtk_camsv_device *sv_dev = NULL;
+	struct mtk_cam_seninf_mux_setting settings[MUX_SETTING_NUM];
+	int raw_id, raw_tg_idx, raw_set, first_tag_idx, sv_dev_cammux_id;
+	unsigned int cnt, setting_start, sv_max_pixel_mode = 0;
+	bool is_dc, is_offline_ts;
+
+	raw_id = get_master_raw_id(job->used_engine);
+	if (raw_id < 0) {
+		dev_info(cam->dev, "%s: no raw_id %d, used_engine:%#x",
+			__func__, raw_id, job->used_engine);
+		return -1;
+	}
+
+	memset(settings, 0, sizeof(settings));
+	cnt = 0;
+
+	raw_tg_idx = raw_to_tg_idx(raw_id);
+	raw_set = MTK_SENINF_RAW_SET1;
+
+	sv_dev = dev_get_drvdata(cam->engines.sv_devs[raw_id]);
+	first_tag_idx = get_sv_tag_idx(1, MTKCAM_IPI_ORDER_FIRST_TAG, false);
+	sv_dev_cammux_id = sv_dev->cammux_id;
+	CALL_PLAT_V4L2(get_sv_max_pixel_mode, sv_dev->id, &sv_max_pixel_mode);
+
+	is_dc = is_dc_mode(job) ? true : false;
+	is_offline_ts = is_offline_timeshare(job) ? true : false;
+
+	if (disable_prev_mux)
+		_add_disable_mux_setting(ctx, settings, &cnt);
+
+	setting_start = cnt;
+
+	/* 1st exp, PAD_SRC_RAW0 */
+	/* camsv for pure raw and dc */
+	settings[cnt].seninf = seninf;
+	settings[cnt].source = PAD_SRC_RAW0;
+	settings[cnt].camtg  = sv_dev_cammux_id;
+	settings[cnt].tag_id = first_tag_idx;
+	settings[cnt].pixelmode = sv_max_pixel_mode;
+	settings[cnt++].enable = 1;
+
+	/* raw for otf */
+	if (!is_dc && !is_offline_ts) {
+		settings[cnt].seninf = seninf;
+		settings[cnt].source = PAD_SRC_RAW0;
+		settings[cnt].camtg  = raw_tg_idx;
+		settings[cnt].raw_set = raw_set++;
+		settings[cnt].pixelmode = GET_PLAT_V4L2(raw_tg_pixelmode);
+		settings[cnt++].enable = 1;
+	}
+
+	_add_sensor_meta_dump_mux_setting(job, settings, &cnt,
+					  sv_dev_cammux_id, sv_max_pixel_mode);
+
+	_add_mraw_mux_setting(job, settings, &cnt, sv_dev_cammux_id,
+			      sv_max_pixel_mode);
+
+	_add_camsv_mux_setting(job, settings, &cnt, sv_dev_cammux_id,
+			       sv_max_pixel_mode);
+
+	if (_apply_mux_setting("config_1exp", job, &settings[0], cnt, 0)) {
+		dev_info(ctx->cam->dev, "%s, apply mux setup failed, %d/%lu",
+			__func__, cnt, ARRAY_SIZE(settings));
+		return -1;
+	}
+
+	_store_mux_settings_to_ctx(ctx, settings, setting_start, cnt);
+
+	return 0;
+}
+
+static int _config_2exp_cam_mux(struct mtk_cam_job *job, bool disable_prev_mux)
+{
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	struct mtk_cam_device *cam = ctx->cam;
+	struct v4l2_subdev *seninf = ctx->seninf;
+	struct mtk_camsv_device *sv_dev = NULL;
+	struct mtk_cam_seninf_mux_setting settings[MUX_SETTING_NUM];
+	int raw_id, raw_tg_idx, raw_set, first_tag_idx, last_tag_idx;
+	int sv_dev_cammux_id, hw_scen;
+	unsigned int cnt, setting_start , sv_max_pixel_mode = 0;
+	bool is_dc, is_offline_ts;
+
+	raw_id = get_master_raw_id(job->used_engine);
+	if (raw_id < 0) {
+		dev_info(cam->dev, "%s: no raw_id %d, used_engine:%#x",
+			__func__, raw_id, job->used_engine);
+		return -1;
+	}
+
+	memset(settings, 0, sizeof(settings));
+	cnt = 0;
+
+	raw_tg_idx = raw_to_tg_idx(raw_id);
+	raw_set = MTK_SENINF_RAW_SET1;
+
+	sv_dev = dev_get_drvdata(cam->engines.sv_devs[raw_id]);
+	first_tag_idx = get_sv_tag_idx(2, MTKCAM_IPI_ORDER_FIRST_TAG, false);
+	last_tag_idx = get_sv_tag_idx(2, MTKCAM_IPI_ORDER_LAST_TAG, false);
+	sv_dev_cammux_id = sv_dev->cammux_id;
+	CALL_PLAT_V4L2(get_sv_max_pixel_mode, sv_dev->id, &sv_max_pixel_mode);
+
+	is_dc = is_dc_mode(job) ? true : false;
+	is_offline_ts = is_offline_timeshare(job) ? true : false;
+
+	if (disable_prev_mux)
+		_add_disable_mux_setting(ctx, settings, &cnt);
+
+	setting_start = cnt;
+
+	/* 1st exp, PAD_SRC_RAW0 */
+	/* camsv for pure raw and dc */
+	settings[cnt].seninf = seninf;
+	settings[cnt].source = PAD_SRC_RAW0;
+	settings[cnt].camtg  = sv_dev_cammux_id;
+	settings[cnt].tag_id = first_tag_idx;
+	settings[cnt].pixelmode = sv_max_pixel_mode;
+	settings[cnt++].enable = 1;
+	/* for intererlived exposure, all exposure pass the raw tg */
+	hw_scen = get_hw_scenario(job);
+	if (hw_scen == MTKCAM_IPI_HW_PATH_OTF_STAGGER_LN_INTL) {
+		settings[cnt].seninf = seninf;
+		settings[cnt].source = PAD_SRC_RAW0;
+		settings[cnt].camtg  = raw_tg_idx;
+		settings[cnt].raw_set = raw_set++;
+		settings[cnt].pixelmode = GET_PLAT_V4L2(raw_tg_pixelmode);
+		settings[cnt++].enable = 1;
+	}
+
+	/* 2nd exp, PAD_SRC_RAW1 */
+	settings[cnt].seninf = seninf;
+	settings[cnt].source = PAD_SRC_RAW1;
+	settings[cnt].camtg  = sv_dev_cammux_id;
+	settings[cnt].tag_id = last_tag_idx;
+	settings[cnt].pixelmode = sv_max_pixel_mode;
+	settings[cnt++].enable = 1;
+	/* raw for otf */
+	if (!is_dc && !is_offline_ts) {
+		settings[cnt].seninf = seninf;
+		settings[cnt].source = PAD_SRC_RAW1;
+		settings[cnt].camtg  = raw_tg_idx;
+		settings[cnt].raw_set = raw_set++;
+		settings[cnt].pixelmode = GET_PLAT_V4L2(raw_tg_pixelmode);
+		settings[cnt++].enable = 1;
+	}
+
+	_add_sensor_meta_dump_mux_setting(job, settings, &cnt,
+					  sv_dev_cammux_id, sv_max_pixel_mode);
+
+	_add_mraw_mux_setting(job, settings, &cnt, sv_dev_cammux_id,
+			      sv_max_pixel_mode);
+
+	_add_camsv_mux_setting(job, settings, &cnt, sv_dev_cammux_id,
+			       sv_max_pixel_mode);
+
+	if (_apply_mux_setting("config_2exp", job, &settings[0], cnt, 0)) {
+		dev_info(ctx->cam->dev, "%s, apply mux setup failed, %d/%lu",
+			__func__, cnt, ARRAY_SIZE(settings));
+		return -1;
+	}
+
+	_store_mux_settings_to_ctx(ctx, settings, setting_start, cnt);
+
+	return 0;
+}
+
+int apply_cam_mux_switch(struct mtk_cam_job *job, bool disable_prev_mux)
+{
+	int config_exposure_num = job_exp_num(job);
+	int ret = 0;
+
+	/* for mstream => force 1 exp */
+	if (scen_is_mstream(&job->job_scen))
+		config_exposure_num = 1;
+
+	switch(config_exposure_num) {
+	case 1:
+		ret = _config_1exp_cam_mux(job, disable_prev_mux);
+		break;
+	case 2:
+		ret = _config_2exp_cam_mux(job, disable_prev_mux);
+		break;
+	default:  /* TODO: 3exp */
+		dev_info(job->src_ctx->cam->dev, "%s unknown exp %d",
+			__func__, config_exposure_num);
+		ret = -1;
+		break;
+	};
+
+	return ret;
+}
 
 static int mtk_cam_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 {
@@ -3203,16 +3513,16 @@ static int mtk_cam_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 	return ret;
 }
 
-int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job,
-				int seninf_pad_bitmask, int raw_tg_idx)
+int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job, int seninf_pad_bitmask)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_cam_device *cam = ctx->cam;
 	struct v4l2_subdev *seninf = ctx->seninf;
+	struct mtk_camsv_device *sv_dev;
 	unsigned int max_pixel_mode = 0;
 	int cur_exp = job_exp_num(job);
 	int ret;
-	int i;
+	int i, seninf_pad;
 
 	if (!seninf)
 		return -1;
@@ -3240,68 +3550,40 @@ int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job,
 		mtk_cam_seninf_set_secure(seninf, 0, 0);
 	}
 
-	/* raw */
-	if (raw_tg_idx >= 0 && ctx->hw_raw[0]) {
-		int seninf_pad, i;
-		int raw_set = MTK_SENINF_RAW_SET1;
+	/* camtg */
+	apply_cam_mux_switch(job, false);
 
-		for (seninf_pad = PAD_SRC_RAW0, i = 0;
-			  seninf_pad <= PAD_SRC_RAW2; ++seninf_pad, ++i)
-			if (seninf_pad_bitmask & 1 << seninf_pad) {
-				/* To-Do DCG AP merge , TCG case */
-				mtk_cam_seninf_set_camtg_multiraw(
-					seninf, seninf_pad, raw_tg_idx,
-					raw_set++);
-				mtk_cam_seninf_set_pixelmode(seninf, seninf_pad, 3);
-			}
+	/* TODO: merge pixelmode API */
+	/* raw */
+	if (ctx->has_raw_subdev) {
+		for (seninf_pad = PAD_SRC_RAW0;
+		     seninf_pad <= PAD_SRC_RAW2;
+		     seninf_pad++) {
+			if (seninf_pad_bitmask & 1 << seninf_pad)
+				mtk_cam_seninf_set_pixelmode(seninf, seninf_pad,
+							     GET_PLAT_V4L2(raw_tg_pixelmode));
+		}
 	}
 
 	/* camsv */
 	if (ctx->hw_sv) {
-		struct mtk_camsv_device *sv_dev;
-		int tag_idx;
-
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
 		CALL_PLAT_V4L2(get_sv_max_pixel_mode, sv_dev->id, &max_pixel_mode);
 
 		if (ctx->has_raw_subdev &&
-			(scen_is_normal(&job->job_scen)) &&
-			(job_prev_exp_num_seamless(job) != job_exp_num(job))) {
+		    (scen_is_normal(&job->job_scen)) &&
+		    (job_prev_exp_num_seamless(job) != job_exp_num(job))) {
 			/* image */
 			for (i = 0; i < cur_exp; i++) {
-				tag_idx = (cur_exp > 1 && (i + 1) == cur_exp) ?
-					get_sv_tag_idx(cur_exp, MTKCAM_IPI_ORDER_LAST_TAG, false) :
-					get_sv_tag_idx(cur_exp, i, false);
-
-				mtk_cam_seninf_set_camtg_camsv(seninf,
-					PAD_SRC_RAW0 + i,
-					sv_dev->cammux_id, tag_idx);
 				mtk_cam_seninf_set_pixelmode_camsv(seninf,
 					PAD_SRC_RAW0 + i,
 					max_pixel_mode,
 					sv_dev->cammux_id);
-
-				if (is_rgbw(job)) {
-					tag_idx = (cur_exp > 1 && (i + 1) == cur_exp) ?
-						get_sv_tag_idx(cur_exp, MTKCAM_IPI_ORDER_LAST_TAG, true) :
-						get_sv_tag_idx(cur_exp, i, true);
-
-					mtk_cam_seninf_set_camtg_camsv(seninf,
-						PAD_SRC_RAW_W0 + i,
-						sv_dev->cammux_id, tag_idx);
-					mtk_cam_seninf_set_pixelmode_camsv(seninf,
-						PAD_SRC_RAW_W0 + i,
-						max_pixel_mode,
-						sv_dev->cammux_id);
-				}
 			}
 
 			/* meta */
 			for (i = SVTAG_META_START; i < SVTAG_META_END; i++) {
 				if (job->enabled_tags & (1 << i)) {
-					mtk_cam_seninf_set_camtg_camsv(seninf,
-						job->tag_info[i].seninf_padidx,
-						sv_dev->cammux_id, i);
 					mtk_cam_seninf_set_pixelmode_camsv(seninf,
 						job->tag_info[i].seninf_padidx,
 						max_pixel_mode,
@@ -3311,9 +3593,6 @@ int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job,
 		} else {
 			for (i = SVTAG_START; i < SVTAG_END; i++) {
 				if (job->enabled_tags & (1 << i)) {
-					mtk_cam_seninf_set_camtg_camsv(seninf,
-						job->tag_info[i].seninf_padidx,
-						sv_dev->cammux_id, i);
 					mtk_cam_seninf_set_pixelmode_camsv(seninf,
 						job->tag_info[i].seninf_padidx,
 						max_pixel_mode,
@@ -3376,7 +3655,6 @@ int mtk_cam_ctx_stream_on(struct mtk_cam_ctx *ctx)
 
 	mtk_cam_dev_req_try_queue(ctx->cam);
 
-	//ctx_stream_on_seninf_sensor later
 	/* note
 	 * 1. collect 1st request info
 	 * 2. select HW engines

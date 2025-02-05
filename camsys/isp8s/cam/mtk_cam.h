@@ -69,6 +69,8 @@ extern void set_task_ls(int pid);
 
 #define SENSOR_META_BUF_SIZE 0x8000
 #define SENSOR_META_BUF_NUM 8
+#define MUX_SETTING_NUM 9
+#define MUX_SETTING_PACK_NUM (MUX_SETTING_NUM * 2)
 //#define RUN_ADL_FRAME_MODE_FROM_RAWI
 
 #define CAM_MAX_CTX_NUM 8
@@ -115,6 +117,10 @@ struct mtk_cam_ctx {
 	struct v4l2_subdev *seninf;
 	//struct v4l2_subdev *prev_seninf;
 	struct v4l2_subdev *pipe_subdevs[MAX_PIPES_PER_STREAM];
+
+	/* seninf mux setting pack, e.g. src0, tg0, src1, tg1, ... */
+	unsigned int steaming_mux_pack[MUX_SETTING_PACK_NUM];
+	unsigned int steaming_mux_num;
 
 	/* TODO */
 	int raw_subdev_idx;
@@ -241,8 +247,8 @@ struct mtk_cam_v4l2_pipelines {
 	struct mtk_mraw_pipeline *mraw;
 };
 
-int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job,
-			int seninf_pad, int raw_tg_idx);
+int apply_cam_mux_switch(struct mtk_cam_job *job, bool disable_prev_mux);
+int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job, int seninf_pad_bitmask);
 int ctx_stream_off_seninf_sensor(struct mtk_cam_ctx *ctx);
 
 struct mtk_cam_engines {

@@ -216,12 +216,17 @@ struct plat_v4l2_data {
 	int timestamp_buffer_ofst;
 	int shading_tbl_ofst;
 
+	int raw_tg_pixelmode;  /* unit: log2 */
+
 	int reserved_camsv_dev_id;
 	u8 *vb2_queues_support_list;
 	int vb2_queues_support_list_num;
+
+	/* raw */
 	int (*set_meta_stats_info)(int ipi_id, void *addr, size_t size,
 				   const struct set_meta_stats_info_param *p);
 	int (*get_meta_stats_port_size)(int ipi_id, void *addr, int dma_port, int *size);
+	/* camsv */
 	int (*set_sv_meta_stats_info)(int ipi_id, void *addr, struct dma_info *info);
 	int (*get_sv_dma_th_setting)(unsigned int dev_id, unsigned int fifo_img_p1,
 		unsigned int fifo_img_p2, unsigned int fifo_img_p3,unsigned int fifo_len_p1,
@@ -233,6 +238,7 @@ struct plat_v4l2_data {
 	int (*get_is_smmu_enabled)(bool *is_smmu_enabled);
 	int (*get_sv_smi_setting)(unsigned int dev_id, unsigned int *is_two_smi_out);
 	int (*get_single_sv_opp_idx)(unsigned int *opp_idx);
+	/* mraw */
 	int (*get_mraw_dmao_common_setting)(struct mraw_dma_th_setting *mraw_th_setting,
 		struct mraw_cq_th_setting *mraw_cq_setting);
 	int (*set_mraw_meta_stats_info)(int ipi_id, void *addr, struct dma_info *info,

@@ -84,7 +84,6 @@ static inline bool check_qof_support(struct mtk_cam_job *job)
 static struct mtk_raw_request_data *req_get_raw_data(struct mtk_cam_ctx *ctx,
 						     struct mtk_cam_request *req);
 static bool is_sensor_mode_update(struct mtk_cam_job *job);
-static int disable_seninf_cammux(struct mtk_cam_job *job);
 static int job_dump_aa_info(struct mtk_cam_job *job);
 static int job_sw_recovery(struct mtk_cam_job *job);
 
@@ -1189,30 +1188,20 @@ _stream_on(struct mtk_cam_job *job, bool on)
 	struct mtk_camsv_device *sv_dev;
 	struct mtk_fmon_device *fmon = &ctx->cam->fmon;
 	struct mtk_raw_ctrl_data *ctrl_data;
-	int pad_bitmask = get_seninf_pad_bitmask(job);
-	int raw_tg_idx = -1;
-	int i;
+	int i, pad_bitmask;
+	bool is_dc, is_offline_ts;
 
-	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
-		if (ctx->hw_raw[i]) {
-			raw_dev = dev_get_drvdata(ctx->hw_raw[i]);
-			if (raw_tg_idx == -1)
-				raw_tg_idx = raw_to_tg_idx(raw_dev->id);
-		}
-	}
+	is_dc = is_dc_mode(job);
+	is_offline_ts = is_offline_timeshare(job);
 
-	if (is_dc_mode(job)) {
+	if (is_dc) {
 		ctrl_data = get_raw_ctrl_data(job);
-		pad_bitmask = 0;
-		raw_tg_idx = -1;
 		if (ctrl_data != NULL)
 			mtk_cam_ctx_slc_stream(ctx, on, ctrl_data->slc_mode);
 	}
 
-	if (is_offline_timeshare(job)) {
-		pad_bitmask = 0;
-		raw_tg_idx = -1;
-	}
+	pad_bitmask =
+		(is_dc || is_offline_ts) ? 0 : get_seninf_pad_bitmask(job);
 
 	/* ois compensation */
 	if (is_ois_compensation(job))
@@ -1220,12 +1209,8 @@ _stream_on(struct mtk_cam_job *job, bool on)
 
 	/* TODO: separate seninf api to cammux setting and enable */
 	if (job->stream_on_seninf || job->raw_switch)
-		ctx_stream_on_seninf_sensor(job, pad_bitmask, raw_tg_idx);
+		ctx_stream_on_seninf_sensor(job, pad_bitmask);
 
-	if (job->raw_change && !job->seamless_switch) {
-		disable_seninf_cammux(job);
-		apply_cam_mux_switch(job);
-	}
 	if (!job->enable_hsf_raw)
 		toggle_raw_engines_db(job);
 
@@ -1279,7 +1264,7 @@ _stream_on_only_sv(struct mtk_cam_job *job, bool on)
 	}
 
 	if (job->stream_on_seninf)
-		ctx_stream_on_seninf_sensor(job, 0, -1);
+		ctx_stream_on_seninf_sensor(job, 0);
 
 	return 0;
 }
@@ -1588,59 +1573,6 @@ static int update_seninf_fmt(struct mtk_cam_job *job)
 	subdev_set_fmt(job->seninf, PAD_SINK, &sink_mfmt);
 	subdev_set_fmt(job->seninf, PAD_SRC_RAW0, &sink_mfmt);
 
-	return 0;
-}
-
-static int
-disable_seninf_cammux(struct mtk_cam_job *job)
-{
-	struct mtk_cam_ctx *ctx = job->src_ctx;
-	struct v4l2_subdev *seninf = ctx->seninf;
-	struct mtk_camsv_device *sv_dev;
-	int i, max_exp = scen_max_exp_num(&job->job_scen);
-	bool is_w = is_rgbw(job);
-	int tag_idx;
-
-	for (i = 0; i < max_exp; ++i) {
-		mtk_cam_seninf_set_camtg_multiraw(
-			seninf, PAD_SRC_RAW0 + i, 0xFF, 0xFF);
-		if (is_w)
-			mtk_cam_seninf_set_camtg_multiraw(
-				seninf, PAD_SRC_RAW_W0 + i, 0xFF, 0xFF);
-	}
-
-	if (job->is_sensor_meta_dump)
-		mtk_cam_seninf_set_camtg(seninf, PAD_SRC_GENERAL0, 0xFF);
-
-	if (ctx->hw_sv) {
-		sv_dev = dev_get_drvdata(ctx->hw_sv);
-		for (i = 0; i < ctx->num_sv_subdevs; i++) {
-			tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
-				ctx->sv_subdev_idx[i] + MTKCAM_SUBDEV_CAMSV_START);
-
-			if (tag_idx >= 0) {
-				mtk_cam_seninf_set_camtg_camsv(seninf,
-					job->tag_info[tag_idx].seninf_padidx,
-					0xFF, tag_idx);
-			} else {
-				pr_err("[%s] invalid sv tag_idx", __func__);
-			}
-		}
-		for (i = 0; i < ctx->num_mraw_subdevs; i++) {
-			tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
-				ctx->mraw_subdev_idx[i] + MTKCAM_SUBDEV_MRAW_START);
-
-			if (tag_idx >= 0) {
-				mtk_cam_seninf_set_camtg_camsv(seninf,
-					job->tag_info[tag_idx].seninf_padidx,
-					0xFF, tag_idx);
-			} else {
-				pr_err("[%s] invalid mraw tag_idx", __func__);
-			}
-		}
-	}
-
-	pr_info("%s: job type:%d, seq:0x%x\n", __func__, job->job_type, job->frame_seq_no);
 	return 0;
 }
 
@@ -4179,18 +4111,6 @@ static void m2m_on_transit(struct mtk_cam_job_state *s, int state_type,
 }
 
 static int
-unset_cq_threshold_and_cammux(struct mtk_cam_job *job)
-{
-	struct mtk_cam_ctx *ctx = job->src_ctx;
-
-	disable_seninf_cammux(job);
-	if (ctx)
-		mtk_cam_seninf_apply_disable_mux(ctx->seninf);
-
-	return 0;
-}
-
-static int
 _common_seamless_after_frame_done(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -4250,8 +4170,7 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 	if (ctrl_data != NULL)
 		mtk_cam_ctx_slc_stream(ctx, 1, ctrl_data->slc_mode);
 
-	mtk_cam_job_uninit_engine(
-		job, job->raw_change_uninit_engine);
+	mtk_cam_job_uninit_engine(job, uninit_engine);
 
 	if (is_ois_comp)
 		mtk_cam_tuning_init(&job->tuning_param);
@@ -4275,13 +4194,13 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 
 OUT:
 	update_seninf_fmt(job);
-	apply_cam_mux_switch(job);
+	apply_cam_mux_switch(job, true);
 
 	return 0;
 }
 
 static struct mtk_cam_seamless_ops common_seamless = {
-	.before_sensor = unset_cq_threshold_and_cammux,
+	.before_sensor = NULL,
 	.after_sensor = NULL,
 	.after_prev_frame_done = _common_seamless_after_frame_done,
 };

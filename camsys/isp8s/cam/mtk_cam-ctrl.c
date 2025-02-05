@@ -1273,6 +1273,39 @@ int mtk_cam_ctrl_isr_event(struct mtk_cam_device *cam,
 	return ret;
 }
 
+static void set_engines_mux_ready(struct mtk_cam_ctx *ctx,
+				  struct v4l2_subdev *seninf,
+				  unsigned long engines, bool ready)
+{
+	struct mtk_cam_device *cam = ctx->cam;
+	struct mtk_camsv_device *sv_dev;
+	unsigned long mask;
+	int i, raw_id, raw_tg_idx;
+
+	/* raw */
+	mask = bit_map_subset_of(MAP_HW_RAW, engines);
+	for (i = 0; i < cam->engines.num_raw_devices && mask; i++) {
+		if (!(mask & BIT(i)))
+			continue;
+
+		raw_id = get_master_raw_id(BIT(i));  /* get raw itself */
+		raw_tg_idx = raw_to_tg_idx(raw_id);
+		mtk_cam_seninf_set_mux_sw_rdy(seninf, raw_tg_idx, ready);
+	}
+
+	/* camsv */
+	mask = bit_map_subset_of(MAP_HW_CAMSV, engines);
+	for (i = 0; i < cam->engines.num_camsv_devices && mask; i++) {
+		if (!(mask & BIT(i)))
+			continue;
+
+		sv_dev = dev_get_drvdata(cam->engines.sv_devs[i]);
+		mtk_cam_seninf_set_mux_sw_rdy(seninf, sv_dev->cammux_id, ready);
+	}
+
+	dev_info(ctx->cam->dev, "%s %d engines:%#lx", __func__, ready, engines);
+}
+
 /* raw switch also resue it to stream on */
 static int mtk_cam_ctrl_stream_on_job(struct mtk_cam_job *job)
 {
@@ -1305,8 +1338,7 @@ static int mtk_cam_ctrl_stream_on_job(struct mtk_cam_job *job)
 	ctrl->fs_event_subframe_cnt = job->frame_cnt;
 
 	call_jobop(job, stream_on, true);
-	if (ctrl->r_info.extisp_enable ||
-		!ctx->has_raw_subdev)
+	if (ctrl->r_info.extisp_enable || !ctx->has_raw_subdev)
 		mtk_cam_event_extisp_camsys_ready(ctrl);
 	mtk_cam_watchdog_start(&ctrl->watchdog, 1);
 
@@ -1394,6 +1426,8 @@ static void mtk_cam_ctrl_stream_on_flow(struct mtk_cam_job *job)
 	mtk_cam_ctrl_loop_job(ctrl, ctrl_enable_job_fsm_until_switch, NULL);
 
 	trigger_fake_sof_event(ctrl);
+	/* start to wait sof */
+	set_engines_mux_ready(ctx, job->seninf, job->used_engine, true);
 
 	dev_info(dev, "[%s] ctx %d finish\n", __func__, ctrl->ctx->stream_id);
 }
@@ -1439,7 +1473,7 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 	int i;
 	int engine_uninit = job->raw_change_uninit_engine;
 	int raw_after_change = bit_map_subset_of(MAP_HW_RAW, job->used_engine);
-	int raw_uninit = bit_map_subset_of(MAP_HW_RAW, job->raw_change_uninit_engine);
+	int raw_uninit = bit_map_subset_of(MAP_HW_RAW, engine_uninit);
 	int ois_comp = is_ois_compensation(job);
 
 	dev_info(dev, "[%s] begin waiting 1.dynamic raw changes no:%d seq 0x%x cq done\n",
@@ -1470,6 +1504,10 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 	}
 
 	mtk_cam_job_update_clk_switching(job, 1);
+
+	/* no sof for ALL engine */
+	set_engines_mux_ready(ctx, job->seninf,
+			      job->used_engine | engine_uninit, false);
 
 	if (dynamic_raw_change_stream_on(job, engine_uninit))
 		goto SWITCH_FAILURE;
@@ -1514,6 +1552,11 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 		}
 	}
 
+	apply_cam_mux_switch(job, true);  /* change seninf mux */
+	mtk_cam_seninf_force_disable_out_mux(ctx->seninf);  /* after prev p1 done */
+
+	/* start to wait sof */
+	set_engines_mux_ready(ctx, job->seninf, job->used_engine, true);
 	dev_info(dev, "[%s] wait 3.new engines(0x%x) processing seq:0x%x\n",
 			__func__, ctx->used_engine, job->frame_seq_no);
 	check_args.expect_inner = job->frame_seq_no;
@@ -1595,7 +1638,7 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 	int i;
 	int engine_uninit = job->raw_change_uninit_engine;
 	int raw_after_change = bit_map_subset_of(MAP_HW_RAW, job->used_engine);
-	int raw_uninit = bit_map_subset_of(MAP_HW_RAW, job->raw_change_uninit_engine);
+	int raw_uninit = bit_map_subset_of(MAP_HW_RAW, engine_uninit);
 	int raw_all = raw_after_change | raw_uninit;
 
 	dev_info(dev, "[%s] begin waiting switch no:%d seq 0x%x\n",
@@ -1633,14 +1676,20 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 			 __func__,
 			 check_args.expect_inner, check_args.expect_ack,
 			 inner, ack);
-		mtk_cam_job_uninit_engine(job, job->raw_change_uninit_engine);
+		mtk_cam_job_uninit_engine(job, engine_uninit);
 		goto SWITCH_FAILURE;
 	}
+
 	if (atomic_read(&ctx->streaming) == 0) {
-		mtk_cam_job_uninit_engine(job, job->raw_change_uninit_engine);
+		mtk_cam_job_uninit_engine(job, engine_uninit);
 		goto SWITCH_FAILURE;
 	}
+
 	mtk_cam_job_update_clk_switching(job, 1);
+
+	/* no sof for ALL engine */
+	set_engines_mux_ready(ctx, job->seninf,
+			      job->used_engine | engine_uninit, false);
 
 	if (dynamic_raw_change_stream_on(job, engine_uninit))
 		goto SWITCH_FAILURE;
@@ -1688,7 +1737,7 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 	if (mtk_cam_ctrl_wait_event(ctrl, check_done, &prev_seq, 4999)) {
 		dev_info(dev, "[%s] check_done timeout: prev_seq=0x%x\n",
 			 __func__, prev_seq);
-		mtk_cam_job_uninit_engine(job, job->raw_change_uninit_engine);
+		mtk_cam_job_uninit_engine(job, engine_uninit);
 		goto SWITCH_FAILURE;
 	}
 	/* should set ts for next job's apply_sensor */
@@ -1716,7 +1765,8 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 		}
 	}
 
-	call_job_seamless_ops(job, after_prev_frame_done);
+	call_job_seamless_ops(job, after_prev_frame_done);  /* apply_cam_mux_switch */
+	mtk_cam_seninf_force_disable_out_mux(ctx->seninf);  /* after prev p1 done */
 
 	/* uninit_eng in after_prev_frame_done */
 	if (engine_uninit)
@@ -1729,7 +1779,11 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 		qof_mtcmos_voter_handle(&ctx->cam->engines,
 			0, &ctx->DOL_not_support);
 
-	trigger_fake_sof_event(ctrl);
+	trigger_fake_sof_event(ctrl);  /* trigger apply sensor done */
+
+	/* start to wait sof */
+	set_engines_mux_ready(ctx, job->seninf, job->used_engine, true);
+
 	check_args.expect_inner = job->frame_seq_no;
 	dev_info(dev, "[%s] begin waiting check for inner no:%d seq 0x%x\n",
 		__func__, job->req_seq, job->frame_seq_no);
@@ -1808,6 +1862,10 @@ static void mtk_cam_ctrl_raw_switch_flow(struct mtk_cam_job *job)
 		dev_info(dev, "[%s] check_done timeout: prev_seq=0x%x\n",
 			 __func__, prev_seq);
 
+	/* no sof for ALL engine */
+	set_engines_mux_ready(ctx, job->seninf_prev, ctx->used_engine, false);
+	set_engines_mux_ready(ctx, job->seninf, ctx->used_engine, false);
+
 	dev_info(dev, "[%s] begin waiting raw switch no:%d\n",
 		 __func__, job->frame_seq_no);
 
@@ -1863,6 +1921,8 @@ static void mtk_cam_ctrl_raw_switch_flow(struct mtk_cam_job *job)
 	mtk_cam_ctrl_loop_job(ctrl, ctrl_enable_job_fsm_until_switch, job);
 
 	trigger_fake_sof_event(ctrl);
+	/* start to wait sof */
+	set_engines_mux_ready(ctx, job->seninf, job->used_engine, true);
 
 	dev_info(dev, "[%s] finish, used_engine:0x%x\n",
 		 __func__, job->used_engine);
