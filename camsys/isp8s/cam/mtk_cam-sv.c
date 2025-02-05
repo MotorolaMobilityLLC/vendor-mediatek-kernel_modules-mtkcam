@@ -2738,7 +2738,6 @@ void camsv_handle_err(
 
 	/* dump seninf debug data */
 	if (ctx && ctx->seninf) {
-		ctx->is_sv_mraw_error = true;
 		sv_dev->camsv_error_count += 1;
 		if (sv_dev->camsv_error_count >= 2 && !ctx->is_seninf_error_trigger)
 			ctx->is_seninf_error_trigger = mtk_cam_seninf_dump_current_status(ctx->seninf,
@@ -2746,7 +2745,6 @@ void camsv_handle_err(
 		else
 			ctx->is_seninf_error_trigger = mtk_cam_seninf_dump_current_status(ctx->seninf,
 				false);
-
 	}
 
 	/* dump camsv debug data */
@@ -2754,8 +2752,6 @@ void camsv_handle_err(
 
 	/* check dma fifo status */
 	if (!(data->err_tags) && (err_status & CAMSVCENTRAL_DMA_SRAM_FULL_ST)) {
-		/* ensure camsv error db trigger */
-		ctx->is_sv_mraw_error = false;
 		if (camsv_fifo_detect)
 			mtk_cam_sv_execute_fifo_dump(sv_dev, data->ts_ns);
 
