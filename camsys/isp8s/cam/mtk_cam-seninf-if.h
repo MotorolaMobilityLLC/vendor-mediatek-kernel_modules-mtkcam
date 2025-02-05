@@ -160,6 +160,22 @@ struct mtk_cam_seninf_mux_setting {
 	int pixelmode;
 };
 
+
+/**
+ * struct mtk_cam_seninf_rdy_mask_en - mux setting change setting rdy mask setting
+ * @rdy_sw_en: sw ready enable bit for whole ready mask group
+ * @rdy_cq_en: cq ready enable bit for whole ready mask group
+ * @rdy_grp_en: setting for putting all out mux in ready grp control enable
+ *
+ * This structure is adapt for controlling out mux ready mask function on or off
+ * when changing the out mux
+ */
+struct mtk_cam_seninf_rdy_mask_en {
+	bool rdy_sw_en;
+	bool rdy_cq_en;
+	bool rdy_grp_en;
+};
+
 /**
  * typedef mtk_cam_seninf_mux_change_done_fnc - mux change fininshed callback
  *
@@ -180,13 +196,14 @@ typedef bool (*mtk_cam_seninf_mux_change_done_fn)(void *private);
  */
 struct mtk_cam_seninf_mux_param {
 	struct mtk_cam_seninf_mux_setting *settings;
-	int num;
+	struct mtk_cam_seninf_rdy_mask_en rdy_mask_en;
 	mtk_cam_seninf_mux_change_done_fn func;
+	int num;
 	void *private;
 };
 
 /**
- * struct mtk_cam_seninf_streaming_mux_change - change connection during streaming
+* struct mtk_cam_seninf_streaming_mux_change - change connection during streaming
  * @param: a new connection from sensor interface to image processing engine
  * @param grp_en: whether using grp rdy or not
  *
@@ -198,6 +215,64 @@ struct mtk_cam_seninf_mux_param {
  */
 bool
 mtk_cam_seninf_streaming_mux_change(struct mtk_cam_seninf_mux_param *param, bool grp_en);
+
+/**
+ * struct mtk_cam_seninf_mux_setup - changing the out mux connection
+ * when setting up out mux
+ * @sd: V4L2 subdev of seninf
+ * @param: a new connection from sensor interface to image processing engine
+ *
+ * To be called when camsys driver need to change the connection from sensor
+ * interface to image processing engine during streaming. It is a asynchronized
+ * call, the sensor interface driver will call back func to notify the caller.
+ *
+ * Returns true if the mux changes will be applied.
+ */
+bool mtk_cam_seninf_mux_setup(struct v4l2_subdev *sd,
+			struct mtk_cam_seninf_mux_param *param);
+
+
+/**
+ * struct mtk_cam_seninf_set_mux_sw_rdy - changing the sw ready bit status
+ * @sd: V4L2 subdev of seninf
+ * @camtg: a camtg id for the ready mask group that user
+ *         intend to control its sw ready bit
+ * @sw_rdy_status: the sw ready bit status to apply on the specified camtg group
+ *
+ * To be called when camsys driver need to change the connection from sensor
+ * interface to image processing engine. It is a asynchronized
+ * call, the sensor interface driver will call back func to notify the caller.
+ *
+ * Returns true if the mux changes will be applied.
+ */
+bool mtk_cam_seninf_set_mux_sw_rdy(struct v4l2_subdev *sd,
+			u8 camtg, bool sw_rdy_status);
+
+/**
+ * struct mtk_cam_seninf_set_mux_cq_en - changing cq ready function enable control
+ * @sd: V4L2 subdev of seninf
+ * @camtg: a camtg id for the ready mask group that user
+ *         intend to control its sw ready bit
+ * @cq_rdy_en: the cq ready enable to apply on the specified camtg group
+ *
+ * To be called when camsys driver need to change the connection from sensor
+ * interface to image processing engine. It is a asynchronized
+ * call, the sensor interface driver will call back func to notify the caller.
+ *
+ * Returns true if the mux changes will be applied.
+ */
+bool mtk_cam_seninf_set_mux_cq_en(struct v4l2_subdev *sd,
+			u8 camtg, bool cq_rdy_en);
+
+
+/**
+ * struct mtk_cam_seninf_force_disable_out_mux - reset the unsed out mux directly
+ * @sd: V4L2 subdev of seninf
+ *
+ * This function is adopt for disable the unsed outmux when the scenario such as
+ * seamless switch / raw switch for such some out mux may be not to be used
+ */
+bool mtk_cam_seninf_force_disable_out_mux(struct v4l2_subdev *sd);
 
 
 struct mtk_seninf_sof_notify_param {
