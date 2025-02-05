@@ -4183,6 +4183,7 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 
 	mtk_cam_fmon_bind(&cam->fmon,
 		bit_map_subset_of(MAP_HW_RAW, job->used_engine), is_srt);
+	stream_on(raw_dev, 1, false);
 
 	/* sv on */
 	sv_dev = dev_get_drvdata(cam->engines.sv_devs[raw_id]);
