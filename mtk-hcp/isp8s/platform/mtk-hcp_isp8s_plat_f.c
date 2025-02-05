@@ -766,7 +766,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 		{ /* IMGSYS_MOD_DRV_MAE */
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
 				INIT_CQ_RSV_MB(
-					"NS_MAE_CQ",
+					"CAP_MAE_CQ",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -775,7 +775,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
 				INIT_TDR_RSV_MB(
-					"NS_MAE_TDR",
+					"CAP_MAE_TDR",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -784,7 +784,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
 				INIT_C_RSV_MB(
-					"NS_MAE_C",
+					"CAP_MAE_C",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -793,7 +793,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC */
 				INIT_NC_RSV_MB(
-					"NS_MAE_NC",
+					"CAP_MAE_NC",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -804,7 +804,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 		{ /* IMGSYS_MOD_DRV_DFP */
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
 				INIT_CQ_RSV_MB(
-					"NS_DFP_CQ",
+					"CAP_DFP_CQ",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -813,7 +813,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
 				INIT_TDR_RSV_MB(
-					"NS_DFP_TDR",
+					"CAP_DFP_TDR",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -822,7 +822,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
 				INIT_C_RSV_MB(
-					"NS_DFP_C",
+					"CAP_DFP_C",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -842,7 +842,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 		{ /* IMGSYS_MOD_DRV_DPE */
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_CQ */
 				INIT_CQ_RSV_MB(
-					"NS_DPE_CQ",
+					"CAP_DPE_CQ",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -851,7 +851,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_TDR */
 				INIT_TDR_RSV_MB(
-					"NS_DPE_TDR",
+					"CAP_DPE_TDR",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -860,7 +860,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_C_MISC */
 				INIT_C_RSV_MB(
-					"NS_DPE_C",
+					"CAP_DPE_C",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,
@@ -869,7 +869,7 @@ static struct mtk_hcp_rsv_mb mod_rsv_mb
 			},
 			{ /* IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC */
 				INIT_NC_RSV_MB(
-					"NS_DPE_NC",
+					"CAP_DPE_NC",
 					0,
 					GET_MOD_MB_ID(
 						IMGSYS_MEMORY_MODE_CAPTURE,

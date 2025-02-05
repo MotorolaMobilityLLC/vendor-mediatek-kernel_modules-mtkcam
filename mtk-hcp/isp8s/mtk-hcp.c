@@ -1824,7 +1824,7 @@ static int mtk_hcp_allocate_mod_mbs(
 				HCP_PRINT_DBG("alloc fd(%d) mode(%u) mod_id(%u) mb_type(%u)\n",
 					mb->fd, mem_mode, mod_id, mb_type);
 			} else {
-				HCP_PRINT_WRN("alloc failed, mode(%u) mod_id(%u) mb_type(%u)\n",
+				HCP_PRINT_DBG("alloc failed, mode(%u) mod_id(%u) mb_type(%u)\n",
 					mem_mode, mod_id, mb_type);
 			}
 		}
@@ -1858,7 +1858,7 @@ static int mtk_hcp_free_mod_mbs(
 				HCP_PRINT_DBG("free mode(%u) mod_id(%u) mb_type(%u)\n",
 					mem_mode, mod_id, mb_type);
 			} else {
-				HCP_PRINT_WRN("free failed, fd(%d) mode(%u) mod_id(%u) mb_type(%u)\n",
+				HCP_PRINT_DBG("free failed, fd(%d) mode(%u) mod_id(%u) mb_type(%u)\n",
 					mb->fd, mem_mode, mod_id, mb_type);
 			}
 		}
@@ -2418,7 +2418,7 @@ static int mtk_hcp_fill_init_info(
 	info->gce_clr_token_wb_info.wbuf_dma = mb->start_phys;
 	info->gce_clr_token_wb_info.wbuf_size = mb->cfg.size;
 
-	HCP_PRINT_INF("mem_mode(%u) gce_clr_token_mb fd(%d) sz(0x%llx)\n",
+	HCP_PRINT_DBG("mem_mode(%u) gce_clr_token_mb fd(%d) sz(0x%llx)\n",
 		mem_mode, mb->fd, mb->cfg.size);
 
 	HCP_PRINT_DBG("mem_mode(%u) gce_clr_token_mb dma(0x%llx)\n",
@@ -2493,7 +2493,7 @@ static int mtk_hcp_fill_init_info(
 		info->module_wb_info[i][IMGSYS_MODULE_WORKING_BUF_TYPE_NC_MISC].wbuf_fd
 			= mb->fd;
 
-		HCP_PRINT_INF(
+		HCP_PRINT_DBG(
 			"mem_mode(%u) mod(%u) cq_mb[fd(%d) sz(0x%x)] tdr_mb[fd(%d) sz(0x%x)] c_mb[fd(%d) sz(0x%x)] nc_mb[fd(%d) sz(0x%x)]\n",
 			mem_mode,
 			i,
