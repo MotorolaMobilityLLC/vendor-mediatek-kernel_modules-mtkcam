@@ -58,6 +58,186 @@ static struct mtk_sensor_saturation_info imgsensor_saturation_info_10bit = {
 	.ob_bm = 64,
 };
 
+#define pd_i4Crop { \
+	/* pre cap normal_video hs_video slim_video */\
+	{0, 0}, {0, 0}, {0, 256}, {0, 256}, {0, 0},\
+	/* cust1       cust2       cust3      cust4     cust5 */\
+	{0, 0}, {4080, 3072}, {0, 0}, {6120, 4608}, {6120, 4608},\
+	/* cust6        cust7        cust8       cust9     cust10 */\
+	{6120, 4608}, {2040, 1536}, {2040, 1536}, {2040, 1536}, {0, 0},\
+	/* cust11 cust12 cust13 cust14 cust15 */\
+	{0, 256}, {2040, 1792}, {0, 256}, {6120, 4864}, {6120, 4864},\
+	/* cust16 cust17 */\
+	{2040, 1924}, {0, 0},\
+}
+
+static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info_fullsize = {
+	.i4OffsetX = 0,
+	.i4OffsetY = 0,
+	.i4PitchX = 0,
+	.i4PitchY = 0,
+	.i4PairNum = 0,
+	.i4SubBlkW = 0,
+	.i4SubBlkH = 0,
+	.i4PosL = {{0, 0} },
+	.i4PosR = {{0, 0} },
+	.i4BlockNumX = 0,
+	.i4BlockNumY = 0,
+	.i4LeFirst = 0,
+	.i4Crop = pd_i4Crop,
+	.iMirrorFlip = 2,
+	.i4FullRawW = 16320,
+	.i4FullRawH = 12288,
+	.i4ModeIndex = 2,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
+		.i4PDPattern = 1,
+		.i4BinFacX = 8,
+		.i4BinFacY = 16,
+		.i4PDRepetition = 0,
+		.i4PDOrder = {1},
+	},
+	/* VC's PD pattern description */
+	.sPDMapInfo[1] = {
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_2,
+		.i4PDPattern = 1,
+		.i4BinFacX = 32,
+		.i4BinFacY = 16,
+		.i4PDRepetition = 0,
+		.i4PDOrder = {1},
+	},
+	.sPDMapInfo[2] = {
+		.i4VCFeature = VC_PDAF_STATS_ME_PIX_1,
+		.i4PDPattern = 1,
+		.i4BinFacX = 8,
+		.i4BinFacY = 16,
+		.i4PDRepetition = 0,
+		.i4PDOrder = {1},
+	},
+};
+
+static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info_fullsize_fdsum = {
+	.i4OffsetX = 0,
+	.i4OffsetY = 0,
+	.i4PitchX = 0,
+	.i4PitchY = 0,
+	.i4PairNum = 0,
+	.i4SubBlkW = 0,
+	.i4SubBlkH = 0,
+	.i4PosL = {{0, 0} },
+	.i4PosR = {{0, 0} },
+	.i4BlockNumX = 0,
+	.i4BlockNumY = 0,
+	.i4LeFirst = 0,
+	.i4Crop = pd_i4Crop,
+	.iMirrorFlip = 2,
+	.i4FullRawW = 8160,
+	.i4FullRawH = 6144,
+	.i4ModeIndex = 2,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
+		.i4PDPattern = 1,
+		.i4BinFacX = 4,
+		.i4BinFacY = 8,
+		.i4PDRepetition = 0,
+		.i4PDOrder = {1},
+	},
+	/* VC's PD pattern description */
+	.sPDMapInfo[1] = {
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_2,
+		.i4PDPattern = 1,
+		.i4BinFacX = 16,
+		.i4BinFacY = 8,
+		.i4PDRepetition = 0,
+		.i4PDOrder = {1},
+	},
+	.sPDMapInfo[2] = {
+		.i4VCFeature = VC_PDAF_STATS_ME_PIX_1,
+		.i4PDPattern = 1,
+		.i4BinFacX = 4,
+		.i4BinFacY = 8,
+		.i4PDRepetition = 0,
+		.i4PDOrder = {1},
+	},
+};
+
+static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
+	.i4OffsetX = 0,
+	.i4OffsetY = 0,
+	.i4PitchX = 0,
+	.i4PitchY = 0,
+	.i4PairNum = 0,
+	.i4SubBlkW = 0,
+	.i4SubBlkH = 0,
+	.i4PosL = {{0, 0} },
+	.i4PosR = {{0, 0} },
+	.i4BlockNumX = 0,
+	.i4BlockNumY = 0,
+	.i4LeFirst = 0,
+	.i4Crop = pd_i4Crop,
+	.iMirrorFlip = 2,
+	.i4FullRawW = 4080,
+	.i4FullRawH = 3072,
+	.i4ModeIndex = 2,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
+		.i4PDPattern = 1,
+		.i4BinFacX = 2,
+		.i4BinFacY = 4,
+		.i4PDRepetition = 0,
+		.i4PDOrder = {1},
+	},
+	/* VC's PD pattern description */
+	.sPDMapInfo[1] = {
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_2,
+		.i4PDPattern = 1,
+		.i4BinFacX = 8,
+		.i4BinFacY = 4,
+		.i4PDRepetition = 0,
+		.i4PDOrder = {1},
+	},
+};
+
+static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info_8Fdsum_4H2V = {
+	.i4OffsetX = 0,
+	.i4OffsetY = 0,
+	.i4PitchX = 0,
+	.i4PitchY = 0,
+	.i4PairNum = 0,
+	.i4SubBlkW = 0,
+	.i4SubBlkH = 0,
+	.i4PosL = {{0, 0} },
+	.i4PosR = {{0, 0} },
+	.i4BlockNumX = 0,
+	.i4BlockNumY = 0,
+	.i4LeFirst = 0,
+	.i4Crop = pd_i4Crop,
+	.iMirrorFlip = 2,
+	.i4FullRawW = 2040,
+	.i4FullRawH = 1536,
+	.i4ModeIndex = 2,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
+		.i4PDPattern = 1,
+		.i4BinFacX = 2,
+		.i4BinFacY = 4,
+		.i4PDRepetition = 0,
+		.i4PDOrder = {1},
+	},
+	/* VC's PD pattern description */
+	.sPDMapInfo[1] = {
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_2,
+		.i4PDPattern = 1,
+		.i4BinFacX = 8,
+		.i4BinFacY = 4,
+		.i4PDRepetition = 0,
+		.i4PDOrder = {1},
+	},
+};
 
 static struct mtk_mbus_frame_desc_entry frame_desc_FCM_28[] = {
 	{
@@ -865,6 +1045,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ana_gain_max = BASEGAIN * 128,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 	},
 /* cap -> FCM_12 */
 /* 17_Volcano1_HP3_8Fdsum_2H1V_12.5Mp_30FPS_4080x3072_direct.sset */
@@ -911,6 +1093,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ana_gain_max = BASEGAIN * 128,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 	},
 /* video -> FCM_14 */
 /* 17_Volcano4_HP3_8Fdsum_2H1V_12.5Mp_60FPS_4080x2616_direct.sset */
@@ -957,6 +1141,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ana_gain_max = BASEGAIN * 128,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 	},
 /* hs_video -> FCM_23 */
 /* 17_Volcano4_HP3_8Fdsum_2H1V_12.5Mp_60FPS_4080x2616_direct.sset */
@@ -1003,6 +1189,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ana_gain_max = BASEGAIN * 128,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 	},
 /* no FPM filled slim_video -> FCM_2 */
 /* 06_Volcano_HP3_Fdsum_50Mp_24FPS_8160x6144_direct.sset */
@@ -1049,6 +1237,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ana_gain_max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info_fullsize_fdsum,
 	},
 /* cus1 -> FCM_3 */
 /* 07_Volcano_HP3_Fdsum_50Mp_24FPS_8160x6144_direct.sset */
@@ -1098,6 +1288,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2, /* tetra */
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info_fullsize_fdsum,
 	},
 
 /* cus2 -> FCM_4 */
@@ -1148,6 +1340,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_4X4, /* hexdeca */
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info_fullsize,
 	},
 
 /* cus3 -> FCM_5 */
@@ -1195,6 +1389,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ana_gain_max = BASEGAIN * 128,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 	},
 
 
@@ -1246,6 +1442,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_4X4, /* hexdeca */
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info_fullsize,
 	},
 
 /* cus5 -> FCM_7 */
@@ -1293,6 +1491,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ana_gain_max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info_fullsize,
 	},
 
 /* cus6 -> FCM_8 */
@@ -1349,6 +1549,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 0xFFFF,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = 0xFFFF,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info_fullsize,
 	},
 
 /* cus7 -> FCM_9 */
@@ -1405,6 +1607,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 0xFFFF,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = 0xFFFF,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info_fullsize_fdsum,
 	},
 
 /* cus8 -> FCM_10 */
@@ -1452,6 +1656,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ana_gain_max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info_fullsize_fdsum,
 	},
 
 /* cus9 -> FCM_11 */
@@ -1502,6 +1708,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2, /* tetra */
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info_fullsize_fdsum,
 	},
 
 /* cus10 -> FCM_13 */
@@ -1549,6 +1757,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ana_gain_max = BASEGAIN * 128,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info_8Fdsum_4H2V,
 	},
 
 
@@ -1604,6 +1814,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 128,//8SUM2
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 128,//8SUM2
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 	},
 
 /* cus12 -> FCM_16 */
@@ -1654,6 +1866,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2, /* tetra */
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info_fullsize_fdsum,
 	},
 
 
@@ -1702,6 +1916,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ana_gain_max = BASEGAIN * 128,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 	},
 
 /* cus14 -> FCM_18 */
@@ -1752,6 +1968,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_4X4, /* hexdeca */
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info_fullsize,
 	},
 
 /* cus15 -> FCM_19 */
@@ -1808,6 +2026,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 0xFFFF,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = 0xFFFF,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info_fullsize,
 	},
 
 /* cus16 -> FCM_28 */
@@ -1858,6 +2078,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2, /* tetra */
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info_fullsize_fdsum,
 	},
 
 /* cus17 -> FCM_1 */
@@ -1912,6 +2134,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.awb_enabled = 1,
 		.exposure_margin = 164, /* full:164, 4Sum:55, 8Sum_2H1V:34 */
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info_fullsize,
 	},
 
 	/* cus18 -> FCM_29 (iDCG1:8) */

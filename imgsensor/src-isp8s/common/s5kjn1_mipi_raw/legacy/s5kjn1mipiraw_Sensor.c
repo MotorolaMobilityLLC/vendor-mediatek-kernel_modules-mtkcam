@@ -38,6 +38,75 @@ static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN_DATA, s5kjn1_set_test_pattern_data},
 };
 
+#define pd_i4Crop { \
+	/* pre cap normal_video hs_video slim_video */\
+	{0, 6}, {0, 6}, {0, 261}, {120, 456}, {0, 0},\
+	/* cust1 cust2 cust3 cust4 cust5 */\
+	{0, 0}, {204, 156}, {204, 258}, {204, 258}, {0, 0},\
+}
+
+static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
+	.i4OffsetX = 8,
+	.i4OffsetY = 2,
+	.i4PitchX = 8,
+	.i4PitchY = 8,
+	.i4PairNum = 4,
+	.i4SubBlkW = 8,
+	.i4SubBlkH = 2,
+	.i4PosL = {
+		{9, 2}, {11, 5}, {15, 6}, {13, 9}
+	},
+	.i4PosR = {
+		{8, 2}, {10, 5}, {14, 6}, {12, 9}
+	},
+	.i4BlockNumX = 508,
+	.i4BlockNumY = 382,
+	.i4Crop = pd_i4Crop,
+
+	.iMirrorFlip = 0,
+
+	.i4FullRawW = 4080,
+	.i4FullRawH = 3072,
+	.i4ModeIndex = 0,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		.i4PDPattern = 3,
+		.i4PDRepetition = 2,
+		.i4PDOrder = {1, 0},
+	},
+};
+
+static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info_2bin = {
+	.i4OffsetX = 4,
+	.i4OffsetY = 2,
+	.i4PitchX = 4,
+	.i4PitchY = 4,
+	.i4PairNum = 1,
+	.i4SubBlkW = 4,
+	.i4SubBlkH = 4,
+	.i4PosL = {
+		{4, 2},
+	},
+	.i4PosR = {
+		{5, 2},
+	},
+	.i4BlockNumX = 496,
+	.i4BlockNumY = 382,
+	.i4Crop = pd_i4Crop,
+
+	.iMirrorFlip = 0,
+
+	.i4FullRawW = 2040,
+	.i4FullRawH = 1536,
+	.i4ModeIndex = 0,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		.i4PDPattern = 3,
+		.i4PDRepetition = 2,
+		.i4PDOrder = {1, 0},
+	},
+};
+
 static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 	{
 		.bus.csi2 = {
@@ -305,7 +374,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.aov_mode = 0,
 		.pdaf_cap = TRUE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -355,7 +424,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.aov_mode = 0,
 		.pdaf_cap = TRUE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -406,7 +475,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.aov_mode = 0,
 		.pdaf_cap = TRUE,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_B,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -455,7 +524,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.aov_mode = 0,
 		.pdaf_cap = TRUE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -602,7 +671,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.aov_mode = 0,
 		.pdaf_cap = TRUE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.imgsensor_pd_info = &imgsensor_pd_info_2bin,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -651,7 +720,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.aov_mode = 0,
 		.pdaf_cap = TRUE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.imgsensor_pd_info = &imgsensor_pd_info_2bin,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -700,7 +769,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.aov_mode = 0,
 		.pdaf_cap = TRUE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.imgsensor_pd_info = &imgsensor_pd_info_2bin,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,

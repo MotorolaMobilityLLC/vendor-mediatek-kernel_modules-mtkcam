@@ -70,29 +70,63 @@ static struct eeprom_info_struct eeprom_info[] = {
 
 #define pd_i4Crop { \
 		/* pre cap normal_video hs_video(2binning) slim_video(2binning) */\
-		{48, 36}, {0, 0}, {0, 384}, {128, 456}, {64, 228},\
+		{0, 0}, {0, 0}, {0, 256}, {128, 456}, {64, 228},\
 		/* cust1(4k) cust2(4k) cust3 cust4(2binning) cust5(rmsc) */\
-		{128, 456}, {128, 456}, {0, 384}, {384, 408}, {96, 72},\
+		{128, 456}, {128, 456}, {0, 384}, {864, 648}, {64, 228},\
 		/* cust6 cust7(unused) cust8(rmsc) cust9(rmsc) cust10(unused) */\
-		{0, 224}, {64, 48}, {2096, 1572}, {96, 72}, {64, 48},\
+		{384, 408}, {384, 408}, {0, 0}, {2048, 1536}, {2048, 1536},\
 		/* cust11 cust12 cust13(8k) cust14(unused) cust15 */\
-		{0, 224}, {32, 24}, {256, 912}, {0, 0}, {48, 36},\
+		{2048, 1536}, {0, 0}, {0, 0}, {0, 0}, {0, 256},\
 		/* cust16(rmsc) cust17(rmsc) cust18 cust19 cust20(rmsc) */\
-		{0, 384}, {2048, 1920}, {0, 224}, {0, 224}, {2048, 1760},\
+		{2048, 1792}, {0, 256}, {2048, 1792}, {0, 256}, {2048, 1792},\
 		/* cust21   cust22(rmsc)  cust23   cust24      cust25*/\
-		{32, 24}, {0, 0}, {1152, 864}, {2096, 1572}, {48, 36},\
+		{2048, 1920}, {2048, 1792}, {0, 256}, {0, 256}, {0, 256},\
 		/* cust26       cust27       cust28       cust29     cust30*/\
-		{0, 384}, {2048, 1760}, {2048, 1920}, {2048, 1920}, {0, 384},\
+		{0, 256}, {2048, 1792}, {2048, 1792}, {0, 256}, {2048, 1792},\
 		/* cust31      cust32       cust33       cust34      cust35*/\
-		{0, 384}, {2048, 1920}, {2048, 1920}, {2048, 1920}, {2048, 1760},\
+		{0, 256}, {0, 256}, {2048, 1792}, {2048, 1792}, {0, 0},\
 		/* cust36        cust37     cust38        cust39     cust40*/\
-		{0, 224}, {2048, 1920}, {2048, 1920}, {2048, 1920}, {0, 0},\
-		/* cust41 cust42 cust43 cust44*/\
-		{0, 224},{48, 36},{2096, 1572}, {0, 224}\
+		{0, 0}, {2048, 1536}, {0, 0}, {2048, 1536}, {0, 0},\
+		/* cust41 cust42 cust43 cust44 cust45 */\
+		{2048, 1536}, {2048, 1536}, {0, 0}, {0, 0}, {0, 0},\
+		/* cust46 cust47 cust48 cust49 cust50 */\
+		{240, 180}, {240, 276}, {256, 912}, {256, 912}, {256, 912},\
+		/* cust51 cust52 cust53 cust54 cust55 */\
+		{240, 276}, {0, 0}, {0, 0}, {512, 384}, {0, 256},\
+		/* cust56 cust57 cust58 cust59 cust60 */\
+		{0, 256}, {0, 128}, {256, 912}\
 }
 
 /* fullsize <binning> <<2bining>> */
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info_fullsize = {
+	.i4OffsetX = 0,
+	.i4OffsetY = 0,
+	.i4PitchX = 0,
+	.i4PitchY = 0,
+	.i4PairNum = 0,
+	.i4SubBlkW = 0,
+	.i4SubBlkH = 0,
+	.i4PosL = {{0, 0} },
+	.i4PosR = {{0, 0} },
+	.i4BlockNumX = 0,
+	.i4BlockNumY = 0,
+	.i4LeFirst = 0,
+	.i4Crop = pd_i4Crop,
+	.iMirrorFlip = 3,
+	.i4FullRawW = 8192,
+	.i4FullRawH = 6144,
+	.i4ModeIndex = 2,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		// .i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
+		.i4PDPattern = 1,
+		.i4BinFacX = 4,
+		.i4BinFacY = 2,
+		.i4PDRepetition = 0,
+		.i4PDOrder = {1},
+	},
+};
+static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info_fullsize_hbin = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 0,
 	.i4PitchX = 0,
@@ -236,6 +270,37 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info_fullsize_shdr = {
 		.i4PDPattern = 1,
 		.i4BinFacX = 4,
 		.i4BinFacY = 2,
+	},
+};
+static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info_partialpd = {
+	.i4OffsetX = 16,
+	.i4OffsetY = 32,
+	.i4PitchX = 16,
+	.i4PitchY = 16,
+	.i4PairNum = 8,
+	.i4SubBlkW = 8,
+	.i4SubBlkH = 4,
+	.i4PosL = {{18, 33}, {26, 33}, {22, 39}, {30, 39}, {17, 40},
+		{25, 40}, {21, 46}, {29, 46}},
+	.i4PosR = {{16, 35}, {24, 35}, {20, 37}, {28, 37}, {19, 42},
+		{27, 42}, {23, 44}, {31, 44}},
+	.i4BlockNumX = 254,
+	.i4BlockNumY = 160,
+	.i4LeFirst = 0,
+	.i4Crop = pd_i4Crop,
+	.iMirrorFlip = 3,
+	.i4FullRawW = 4096,
+	.i4FullRawH = 3072,
+	.i4ModeIndex = 2,
+	.PDAF_Support = PDAF_SUPPORT_CAMSV,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		// .i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
+		.i4PDPattern = 3,
+		.i4BinFacX = 0,
+		.i4BinFacY = 0,
+		.i4PDRepetition = 8,
+		.i4PDOrder = {1, 0, 0, 1, 1, 0, 0, 1},
 	},
 };
 
@@ -3134,7 +3199,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_ctrl_support = IMGSENSOR_AE_CONTROL_SUPPORT_SENSING_MODE,
 		.pdaf_cap = TRUE,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
-		.imgsensor_pd_info  = &imgsensor_pd_info,
+		.imgsensor_pd_info  = &imgsensor_pd_info_2bin,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -3410,7 +3475,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pdaf_cap = TRUE,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
-		.imgsensor_pd_info  = &imgsensor_pd_info,
+		.imgsensor_pd_info  = &imgsensor_pd_info_fullsize_hbin,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -3465,7 +3530,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
-		.imgsensor_pd_info  = &imgsensor_pd_info,
+		.imgsensor_pd_info  = &imgsensor_pd_info_fullsize_hbin,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -3811,7 +3876,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pdaf_cap = TRUE,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
-		.imgsensor_pd_info  = &imgsensor_pd_info,
+		.imgsensor_pd_info  = &imgsensor_pd_info_fullsize_hbin,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -4121,7 +4186,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pdaf_cap = TRUE,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
-		.imgsensor_pd_info  = &imgsensor_pd_info,
+		.imgsensor_pd_info  = &imgsensor_pd_info_fullsize_hbin,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -4186,7 +4251,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
-		.imgsensor_pd_info  = &imgsensor_pd_info,
+		.imgsensor_pd_info  = &imgsensor_pd_info_fullsize_hbin,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -4506,7 +4571,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pdaf_cap = TRUE,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
-		.imgsensor_pd_info = &imgsensor_pd_info,
+		.imgsensor_pd_info = &imgsensor_pd_info_fullsize_hbin,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -4728,7 +4793,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
-		.imgsensor_pd_info  = &imgsensor_pd_info_fullsize,
+		.imgsensor_pd_info  = &imgsensor_pd_info,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -4783,7 +4848,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
-		.imgsensor_pd_info  = &imgsensor_pd_info_2bin,
+		.imgsensor_pd_info  = &imgsensor_pd_info,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -5068,7 +5133,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pdaf_cap = TRUE,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
-		.imgsensor_pd_info  = &imgsensor_pd_info,
+		.imgsensor_pd_info  = &imgsensor_pd_info_fullsize_hbin,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -5313,7 +5378,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pdaf_cap = TRUE,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
-		.imgsensor_pd_info  = &imgsensor_pd_info,
+		.imgsensor_pd_info  = &imgsensor_pd_info_fullsize_hbin,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -5378,7 +5443,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.pdaf_cap = TRUE,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
-		.imgsensor_pd_info  = &imgsensor_pd_info,
+		.imgsensor_pd_info  = &imgsensor_pd_info_fullsize,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -6133,7 +6198,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pdaf_cap = TRUE,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW12_B,
-		.imgsensor_pd_info  = &imgsensor_pd_info,
+		.imgsensor_pd_info  = &imgsensor_pd_info_partialpd,
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
