@@ -1418,10 +1418,9 @@ static int try_probe_subdrv_entry(struct adaptor_ctx *ctx)
 	ctx->subctx.i2c_vir_client = ctx->i2c_vir_client;
 	ctx->subctx.pre_cfg_addr = ctx->pre_cfg_addr;
 	adaptor_cam_pmic_on(ctx);
-	adaptor_hw_power_on(ctx);
 	subdrv_call(ctx, init_ctx, ctx->i2c_client,
-			ctx->subctx.i2c_write_id);
-	adaptor_i3c_device_prepare(&ctx->ixc_client);
+		ctx->subctx.i2c_write_id);
+	adaptor_hw_power_on(ctx);
 	ret = subdrv_call(ctx, get_id, &sensor_id);
 	adaptor_hw_power_off(ctx);
 	if (!ret) {

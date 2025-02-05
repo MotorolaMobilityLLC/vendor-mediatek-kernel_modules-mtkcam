@@ -40,6 +40,7 @@ static int open(struct subdrv_ctx *ctx);
 static int s5khp9sp_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt, u64 sof_ts);
 static int s5khp9sp_set_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int s5khp9sp_i3c_pre_config(struct subdrv_ctx *ctx);
 
 static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, s5khp9sp_set_test_pattern},
@@ -2174,7 +2175,7 @@ static struct subdrv_ops ops = {
 	.get_csi_param = common_get_csi_param,
 	.update_sof_cnt = common_update_sof_cnt,
 	.vsync_notify = vsync_notify,
-	.i3c_pre_config = common_i3c_pre_config,
+	.i3c_pre_config = s5khp9sp_i3c_pre_config,
 };
 
 static struct subdrv_pw_seq_entry pw_seq[] = {
@@ -2205,7 +2206,7 @@ static int get_sensor_temperature(void *arg)
 	u16 temperature = 0;
 	int temperature_convert = 0;
 
-	temperature = subdrv_i2c_rd_u16(ctx, ctx->s_ctx.reg_addr_temp_read);
+	temperature = subdrv_ixc_rd_u16(ctx, ctx->s_ctx.reg_addr_temp_read);
 
 	temperature_convert = (temperature>>8)&0xFF;
 
@@ -2239,17 +2240,10 @@ static int s5khp9sp_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	enum SENSOR_SCENARIO_ID_ENUM scenario_id;
 	struct mtk_hdr_ae *ae_ctrl = NULL;
-	struct v4l2_subdev *_sd = NULL;
-	struct adaptor_ctx *_adaptor_ctx = NULL;
 	u64 *feature_data = (u64 *)para;
 	u32 frame_length_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT] = {0};
 	u32 exp_cnt = 0;
 	enum SENSOR_SCENARIO_ID_ENUM pre_seamless_scenario_id = ctx->current_scenario_id;
-
-	if (ctx->i2c_client)
-		_sd = i2c_get_clientdata(ctx->i2c_client);
-	if (_sd)
-		_adaptor_ctx = to_ctx(_sd);
 
 	if (feature_data == NULL) {
 		DRV_LOGE(ctx, "input scenario is null!");
@@ -2286,15 +2280,15 @@ static int s5khp9sp_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	exp_cnt = ctx->s_ctx.mode[scenario_id].exp_cnt;
 	ctx->is_seamless = TRUE;
 
-	subdrv_i2c_wr_u8(ctx, 0x0104, 0x01);
+	subdrv_ixc_wr_u8(ctx, 0x0104, 0x01);
 
 	if (ctx->s_ctx.reg_addr_fast_mode_in_lbmf &&
 		(ctx->s_ctx.mode[scenario_id].hdr_mode == HDR_RAW_LBMF ||
 		ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_LBMF))
-		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_fast_mode_in_lbmf, 0x4);
+		subdrv_ixc_wr_u8(ctx, ctx->s_ctx.reg_addr_fast_mode_in_lbmf, 0x4);
 
 	update_mode_info(ctx, scenario_id);
-	i2c_table_write(ctx,
+	ixc_table_write(ctx,
 		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_table,
 		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_len);
 
@@ -2323,7 +2317,7 @@ static int s5khp9sp_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 			break;
 		}
 	}
-	subdrv_i2c_wr_u8(ctx, 0x0104, 0x00);
+	subdrv_ixc_wr_u8(ctx, 0x0104, 0x00);
 
 	ctx->fast_mode_on = TRUE;
 	ctx->ref_sof_cnt = ctx->sof_cnt;
@@ -2356,9 +2350,9 @@ static int s5khp9sp_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 		DRV_LOG(ctx, "mode(%u->%u)\n", ctx->test_pattern, mode);
 	/* 1:Solid Color 2:Color Bar 5:Black */
 	if (mode)
-		subdrv_i2c_wr_u16(ctx, 0x0600, mode); /*100% Color bar*/
+		subdrv_ixc_wr_u16(ctx, 0x0600, mode); /*100% Color bar*/
 	else if (ctx->test_pattern)
-		subdrv_i2c_wr_u16(ctx, 0x0600, 0x0000); /*No pattern*/
+		subdrv_ixc_wr_u16(ctx, 0x0600, 0x0000); /*No pattern*/
 
 	ctx->test_pattern = mode;
 	return ERROR_NONE;
@@ -2372,10 +2366,10 @@ static int s5khp9sp_set_test_pattern_data(struct subdrv_ctx *ctx, u8 *para, u32 
 	u16 Gb = (data->Channel_Gb >> 22) & 0x3ff;
 	u16 B = (data->Channel_B >> 22) & 0x3ff;
 
-	subdrv_i2c_wr_u16(ctx, 0x0602, R);
-	subdrv_i2c_wr_u16(ctx, 0x0604, Gr);
-	subdrv_i2c_wr_u16(ctx, 0x0606, B);
-	subdrv_i2c_wr_u16(ctx, 0x0608, Gb);
+	subdrv_ixc_wr_u16(ctx, 0x0602, R);
+	subdrv_ixc_wr_u16(ctx, 0x0604, Gr);
+	subdrv_ixc_wr_u16(ctx, 0x0606, B);
+	subdrv_ixc_wr_u16(ctx, 0x0608, Gb);
 
 	DRV_LOG(ctx, "mode(%u) R/Gr/Gb/B = 0x%04x/0x%04x/0x%04x/0x%04x\n",
 		ctx->test_pattern, R, Gr, Gb, B);
@@ -2533,18 +2527,53 @@ static int s5khp9sp_set_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	struct SET_SENSOR_AWB_GAIN *awb_gain = (struct SET_SENSOR_AWB_GAIN *)para;
 
-	adaptor_i2c_wr_u16(ctx->i2c_client, ctx->i2c_write_id >> 1,
-		0x0D82, awb_gain->ABS_GAIN_R * 2); /* red 1024(1x) */
-	adaptor_i2c_wr_u16(ctx->i2c_client, ctx->i2c_write_id >> 1,
-		0x0D86, awb_gain->ABS_GAIN_B * 2); /* blue */
+	subdrv_ixc_wr_u16(ctx, 0x0D82,
+		awb_gain->ABS_GAIN_R * 2); /* red 1024(1x) */
+	subdrv_ixc_wr_u16(ctx, 0x0D86,
+		awb_gain->ABS_GAIN_B * 2); /* blue */
 
 	DRV_LOG(ctx, "[test] ABS_GAIN_GR(%d) ABS_GAIN_R(%d) ABS_GAIN_B(%d) ABS_GAIN_GB(%d)",
 			awb_gain->ABS_GAIN_GR,
 			awb_gain->ABS_GAIN_R,
 			awb_gain->ABS_GAIN_B,
 			awb_gain->ABS_GAIN_GB);
-	DRV_LOG(ctx, "[test] 0x0D82(red) = (0x%x)", subdrv_i2c_rd_u16(ctx, 0x0D82));
-	DRV_LOG(ctx, "[test] 0x0D84(green) = (0x%x)", subdrv_i2c_rd_u16(ctx, 0x0D84));
-	DRV_LOG(ctx, "[test] 0x0D86(blue) = (0x%x)", subdrv_i2c_rd_u16(ctx, 0x0D86));
+	DRV_LOG(ctx, "[test] 0x0D82(red) = (0x%x)", subdrv_ixc_rd_u16(ctx, 0x0D82));
+	DRV_LOG(ctx, "[test] 0x0D84(green) = (0x%x)", subdrv_ixc_rd_u16(ctx, 0x0D84));
+	DRV_LOG(ctx, "[test] 0x0D86(blue) = (0x%x)", subdrv_ixc_rd_u16(ctx, 0x0D86));
 	return 0;
 }
+
+static int s5khp9sp_i3c_pre_config(struct subdrv_ctx *ctx)
+{
+	int ret = 0;
+
+	if ((ctx->ixc_client.protocol == I3C_PROTOCOL)
+		&& (ctx->i2c_vir_client.i2c_dev)) {
+		ret |= adaptor_ixc_wr_u16(&ctx->i2c_vir_client, ctx->pre_cfg_addr,
+				0xFCFC, 0x4000);
+		ret |= adaptor_ixc_wr_u16(&ctx->i2c_vir_client, ctx->pre_cfg_addr,
+				0x0000, 0x0001);
+		ret |= adaptor_ixc_wr_u16(&ctx->i2c_vir_client, ctx->pre_cfg_addr,
+				0x0000, 0x1B73);
+		ret |= adaptor_ixc_wr_u16(&ctx->i2c_vir_client, ctx->pre_cfg_addr,
+				0x6012, 0x0001);
+		ret |= adaptor_ixc_wr_u16(&ctx->i2c_vir_client, ctx->pre_cfg_addr,
+				0x7002, 0x1008);
+		ret |= adaptor_ixc_wr_u16(&ctx->i2c_vir_client, ctx->pre_cfg_addr,
+				0x6066, 0x0216);
+		ret |= adaptor_ixc_wr_u16(&ctx->i2c_vir_client, ctx->pre_cfg_addr,
+				0x6068, 0x1B73);
+		ret |= adaptor_ixc_wr_u16(&ctx->i2c_vir_client, ctx->pre_cfg_addr,
+				0x6014, 0x0001);
+		ret |= adaptor_ixc_wr_u16(&ctx->i2c_vir_client, ctx->pre_cfg_addr,
+				0x6094, 0x0000);
+		if (ret) {
+			DRV_LOGE(ctx, "fail. ret=%d\n", ret);
+			return ERROR_SENSOR_CONNECT_FAIL;
+		}
+		DRV_LOG_MUST(ctx, "success. ret=%d, setting_len: %d\n",
+				ret, ctx->s_ctx.i3c_precfg_setting_len);
+		mdelay(20);
+	}
+	return ERROR_NONE;
+} /* pre_config */
