@@ -23,11 +23,23 @@
 #include "mtk_imgsys-v4l2-debug.h"
 #include "mtk-hcp.h"
 
+// GCE header
+#include <linux/soc/mediatek/mtk-cmdq-ext.h>
+
+#include "../../cmdq/isp8s/mtk_imgsys-cmdq-qof.h"
 
 struct mtk_imgsys_dfp_dtable {
 	uint32_t empty;
 	uint32_t addr;
 	uint32_t addr_msb;
+};
+
+const struct mtk_imgsys_init_array mtk_imgsys_dfp1_init_ary[] = {
+	{0x158, 0x80000000}, /* FE FM DDREN */
+};
+
+const struct mtk_imgsys_init_array mtk_imgsys_dfp2_init_ary[] = {
+	{0x158, 0x80000000}, /* DVGF DDREN */
 };
 
 //static struct ipesys_dfp_device *me_dev;
@@ -38,13 +50,21 @@ static void __iomem *g_fmRegBA;
 static void __iomem *g_dfp2topRegBA;
 static void __iomem *g_dvgfRegBA;
 
-int DFP_TranslationFault_callback(int port, dma_addr_t mva, void *data)
+int imgsys_dfp_tfault_callback(int port, dma_addr_t mva, void *data)
 {
 
 	void __iomem *feRegBA = 0L;
 	void __iomem *fmRegBA = 0L;
 	void __iomem *dvgfRegBA = 0L;
 	unsigned int i;
+	int ret = 0;
+	bool is_qof = false;
+
+	ret = smi_isp_wpe3_lite_get_if_in_use((void *)&is_qof);
+	if (ret == -1) {
+		pr_info("smi_isp_wpe3_lite_get_if_in_use = -1.stop dump. return\n");
+		return 1;
+	}
 
 	/* iomap registers */
 	feRegBA = g_feRegBA;
@@ -85,6 +105,7 @@ int DFP_TranslationFault_callback(int port, dma_addr_t mva, void *data)
 		(unsigned int)ioread32((void *)(dvgfRegBA + (i+0xC))));
 	}
 
+	smi_isp_wpe3_lite_put((void *)&is_qof);
 
 	return 1;
 }
@@ -320,6 +341,38 @@ void imgsys_dfp_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 	iowrite32(0x80000000, (void *)(dfp2topRegBA + 0x158));
 
 }
+
+void imgsys_dfp_cmdq_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev, void *pkt, int hw_idx)
+{
+	struct cmdq_pkt *package = NULL;
+
+	package = (struct cmdq_pkt *)pkt;
+
+	unsigned int ofset;
+	unsigned int i;
+	unsigned int dfp_base = DFP_TOP_BASE;
+	unsigned int dfp2_base = DFP2_TOP_BASE;
+
+	if (imgsys_dev == NULL || pkt == NULL) {
+		dump_stack();
+		pr_err("[%s][%d] param fatal error!", __func__, __LINE__);
+		return;
+	}
+
+	/* init registers */
+	for (i = 0; i < ARRAY_SIZE(mtk_imgsys_dfp1_init_ary); i++) {
+		ofset = dfp_base + mtk_imgsys_dfp1_init_ary[i].ofset;
+		cmdq_pkt_write(package, NULL, ofset /*address*/,
+				mtk_imgsys_dfp1_init_ary[i].val, 0xffffffff);
+	}
+
+	for (i = 0; i < ARRAY_SIZE(mtk_imgsys_dfp2_init_ary); i++) {
+		ofset = dfp2_base + mtk_imgsys_dfp2_init_ary[i].ofset;
+		cmdq_pkt_write(package, NULL, ofset /*address*/,
+				mtk_imgsys_dfp2_init_ary[i].val, 0xffffffff);
+	}
+}
+
 
 bool imgsys_dfp_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine)
 {

@@ -12,7 +12,8 @@
 #include "./../mtk_imgsys-dev.h"
 #include "./../mtk_imgsys-debug.h"
 
-#define ME_BASE 0x34070000
+#define ME_BASE 0x34550000
+#define MMG_BASE 0x34560000
 
 #define ME_CTL_OFFSET      0x0000
 #define ME_CTL_RANGE       0xE50
@@ -32,8 +33,9 @@ void imgsys_me_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 							unsigned int engine);
 void imgsys_me_uninit(struct mtk_imgsys_dev *imgsys_dev);
 void imgsys_me_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev);
-int ME_TranslationFault_callback(int port, dma_addr_t mva, void *data);
-int MMG_TranslationFault_callback(int port, dma_addr_t mva, void *data);
+void imgsys_me_cmdq_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev, void *pkt, int hw_idx);
+int imgsys_me_tfault_callback(int port, dma_addr_t mva, void *data);
+int imgsys_mmg_tfault_callback(int port, dma_addr_t mva, void *data);
 bool imgsys_me_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine);
 void imgsys_me_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			struct img_swfrm_info *user_info, int req_fd, u64 tuning_iova,

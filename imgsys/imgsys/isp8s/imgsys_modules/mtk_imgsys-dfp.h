@@ -49,10 +49,11 @@ void imgsys_dfp_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 							unsigned int engine);
 void imgsys_dfp_uninit(struct mtk_imgsys_dev *imgsys_dev);
 void imgsys_dfp_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev);
+void imgsys_dfp_cmdq_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev, void *pkt, int hw_idx);
 bool imgsys_dfp_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine);
 void imgsys_dfp_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			struct img_swfrm_info *user_info, int req_fd, u64 tuning_iova,
 			unsigned int mode);
-int DFP_TranslationFault_callback(int port, dma_addr_t mva, void *data);
+int imgsys_dfp_tfault_callback(int port, dma_addr_t mva, void *data);
 
 #endif /* _MTK_IMGSYS_DFP_H_ */

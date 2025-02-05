@@ -23,6 +23,11 @@
 #include "mtk_imgsys-v4l2-debug.h"
 #include "mtk-hcp.h"
 
+// GCE header
+#include <linux/soc/mediatek/mtk-cmdq-ext.h>
+
+#include "../../cmdq/isp8s/mtk_imgsys-cmdq-qof.h"
+
 
 #define PSEUDO_DESC_TUNING_ME 0xf
 
@@ -38,6 +43,15 @@ struct mtk_imgsys_me_dtable {
 	uint32_t addr;
 	uint32_t cmd2; // it contains addr_msb at the endianness 4 bit
 };
+
+const struct mtk_imgsys_init_array mtk_imgsys_me_init_ary[] = {
+	{0x198, 0x00000001}, /* ME_DDREN */
+};
+
+const struct mtk_imgsys_init_array mtk_imgsys_mmg_init_ary[] = {
+	{0x74, 0x00000001}, /* MMG_DDREN */
+};
+
 
 void imgsys_me_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			struct img_swfrm_info *user_info, int req_fd, u64 tuning_iova,
@@ -101,16 +115,31 @@ void imgsys_me_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 static void __iomem *g_meRegBA;
 static void __iomem *g_mmgRegBA;
 
-int ME_TranslationFault_callback(int port, dma_addr_t mva, void *data)
+int imgsys_me_tfault_callback(int port, dma_addr_t mva, void *data)
 {
 
 	void __iomem *meRegBA = 0L;
+	void __iomem *mmgRegBA = 0L;
 	unsigned int i;
+	int ret = 0;
+	bool is_qof = false;
+
+	ret = smi_isp_wpe2_tnr_get_if_in_use((void *)&is_qof);
+	if (ret == -1) {
+		pr_info("smi_isp_wpe2_tnr_get_if_in_use = -1.stop dump. return\n");
+		return 1;
+	}
 
 	/* iomap registers */
 	meRegBA = g_meRegBA;
 	if (!meRegBA) {
 		pr_info("%s Unable to ioremap me registers\n",
+		__func__);
+	}
+	/* iomap registers */
+	mmgRegBA = g_mmgRegBA;
+	if (!mmgRegBA) {
+		pr_info("%s Unable to ioremap mmg registers\n",
 		__func__);
 	}
 
@@ -123,14 +152,33 @@ int ME_TranslationFault_callback(int port, dma_addr_t mva, void *data)
 		(unsigned int)ioread32((void *)(meRegBA + (i+0xC))));
 	}
 
+	for (i = MMG_CTL_OFFSET; i <= MMG_CTL_OFFSET + MMG_CTL_RANGE_TF; i += 0x10) {
+		pr_info("%s: 0x%08X %08X, %08X, %08X, %08X", __func__,
+		(unsigned int)(0x34560000 + i),
+		(unsigned int)ioread32((void *)(mmgRegBA + i)),
+		(unsigned int)ioread32((void *)(mmgRegBA + (i+0x4))),
+		(unsigned int)ioread32((void *)(mmgRegBA + (i+0x8))),
+		(unsigned int)ioread32((void *)(mmgRegBA + (i+0xC))));
+	}
+
+	smi_isp_wpe2_tnr_put((void *)&is_qof);
+
 	return 1;
 }
 
-int MMG_TranslationFault_callback(int port, dma_addr_t mva, void *data)
+int imgsys_mmg_tfault_callback(int port, dma_addr_t mva, void *data)
 {
 
 	void __iomem *mmgRegBA = 0L;
 	unsigned int i;
+	int ret = 0;
+	bool is_qof = false;
+
+	ret = smi_isp_wpe2_tnr_get_if_in_use((void *)&is_qof);
+	if (ret == -1) {
+		pr_info("smi_isp_wpe2_tnr_get_if_in_use = -1.stop dump. return\n");
+		return 1;
+	}
 
 	/* iomap registers */
 	mmgRegBA = g_mmgRegBA;
@@ -147,6 +195,8 @@ int MMG_TranslationFault_callback(int port, dma_addr_t mva, void *data)
 		(unsigned int)ioread32((void *)(mmgRegBA + (i+0x8))),
 		(unsigned int)ioread32((void *)(mmgRegBA + (i+0xC))));
 	}
+
+	smi_isp_wpe2_tnr_put((void *)&is_qof);
 
 	return 1;
 }
@@ -284,7 +334,6 @@ void ipesys_me_debug_dump_local(void)
 }
 //EXPORT_SYMBOL(ipesys_me_debug_dump_local);
 
-
 void imgsys_me_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 {
 
@@ -309,6 +358,39 @@ void imgsys_me_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 		iowrite32(0x00000001, (void *)(mmgRegBA + 0x00000074));
 
 }
+
+void imgsys_me_cmdq_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev, void *pkt, int hw_idx)
+{
+	struct cmdq_pkt *package = NULL;
+
+	package = (struct cmdq_pkt *)pkt;
+
+	unsigned int ofset;
+	unsigned int i;
+	unsigned int me_base = ME_BASE;
+	unsigned int mmg_base = MMG_BASE;
+
+	if (imgsys_dev == NULL || pkt == NULL) {
+		dump_stack();
+		pr_err("[%s][%d] param fatal error!", __func__, __LINE__);
+		return;
+	}
+
+	/* init registers */
+	for (i = 0; i < ARRAY_SIZE(mtk_imgsys_me_init_ary); i++) {
+		ofset = me_base + mtk_imgsys_me_init_ary[i].ofset;
+		cmdq_pkt_write(package, NULL, ofset /*address*/,
+				mtk_imgsys_me_init_ary[i].val, 0xffffffff);
+	}
+
+	/* init registers */
+	for (i = 0; i < ARRAY_SIZE(mtk_imgsys_mmg_init_ary); i++) {
+		ofset = mmg_base + mtk_imgsys_mmg_init_ary[i].ofset;
+		cmdq_pkt_write(package, NULL, ofset /*address*/,
+				mtk_imgsys_mmg_init_ary[i].val, 0xffffffff);
+	}
+}
+
 
 bool imgsys_me_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine)
 {
