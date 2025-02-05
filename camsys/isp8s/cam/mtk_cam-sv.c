@@ -2392,8 +2392,8 @@ static void mtk_cam_sv_set_pdp_dmao_info(
 	}
 
 	for (i = 0; i < pdp_support_dmao_num; i++) {
-		dev_dbg(cam->dev, "pdp_en %d dma_id:%d, w:%d s:%d xsize:%d stride:%d\n",
-			pdp_en, i, info[i].width, info[i].height, info[i].xsize, info[i].stride);
+		dev_dbg(cam->dev, "pdp_en %d dma_id:%d, w:%d s:%d xsize:%d stride:%d fmt:%d\n",
+			pdp_en, i, info[i].width, info[i].height, info[i].xsize, info[i].stride, imgo_fmt);
 	}
 }
 static void mtk_cam_sv_set_pdp_frame_param_dmao(
@@ -2402,6 +2402,7 @@ static void mtk_cam_sv_set_pdp_frame_param_dmao(
 	struct mtkcam_ipi_frame_param *fp,
 	struct dma_info *info, int pipe_id,
 	dma_addr_t buf_daddr,
+	unsigned int imgo_fmt,
 	bool pdp_en)
 {
 	struct mtkcam_ipi_img_output *out;
@@ -2431,6 +2432,7 @@ static void mtk_cam_sv_set_pdp_frame_param_dmao(
 		out->uid.id = MTKCAM_IPI_MRAW_META_STATS_0;
 		out->uid.pipe_id = pipe_id;
 
+		out->fmt.format = imgo_fmt;
 		out->fmt.stride[0] = info[i].stride;
 		out->fmt.s.w = info[i].width;
 		out->fmt.s.h = info[i].height;
@@ -2447,10 +2449,10 @@ static void mtk_cam_sv_set_pdp_frame_param_dmao(
 		offset = offset + (((pipe->res_config.mraw_dma_size[i] + 15) >> 4) << 4);
 
 
-		dev_dbg(ctx->cam->dev, "%s:dmao_id:%d iova:0x%llx stride:0x%x height:0x%x size:%d offset:%lu\n",
+		dev_dbg(ctx->cam->dev, "%s:dmao_id:%d iova:0x%llx stride:0x%x height:0x%x size:%d imgo fmt:%d offset:%lu\n",
 			__func__, i, out->buf[0][0].iova,
 			out->fmt.stride[0], out->fmt.s.h,
-			pipe->res_config.mraw_dma_size[i], offset);
+			pipe->res_config.mraw_dma_size[i], imgo_fmt, offset);
 	}
 }
 
@@ -2487,7 +2489,7 @@ int mtk_cam_sv_cal_cfg_info(struct mtk_cam_ctx *ctx, struct mtk_cam_buffer *buf,
 	mtk_cam_sv_set_pdp_frame_param_dmao(ctx, job, fp,
 		info, pipe_id,
 		pipe->res_config.daddr[MTKCAM_IPI_MRAW_META_STATS_0
-			- MTKCAM_IPI_MRAW_ID_START], pdp_fun_support);
+			- MTKCAM_IPI_MRAW_ID_START], imgo_fmt, pdp_fun_support);
 	mtk_cam_sv_set_meta_stats_info(
 		pipe->res_config.vaddr[MTKCAM_IPI_MRAW_META_STATS_0
 			- MTKCAM_IPI_MRAW_ID_START], info, pdp_fun_support);

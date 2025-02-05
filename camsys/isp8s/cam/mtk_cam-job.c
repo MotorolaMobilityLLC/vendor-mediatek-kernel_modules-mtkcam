@@ -5360,6 +5360,7 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 					get_sv_smi_setting, sv_dev->id, &is_two_smi_out);
 				sv_input->is_two_smi_out = (is_two_smi_out) ? 1 : 0;
 				sv_input->is_queue_mode = atomic_read(&sv_dev->is_queue_mode);
+				sv_input->is_unpack_msb = job->ipi_config.sv_input[0][i].is_unpack_msb;
 				if (job->tag_info[i].is_meta_tag) {
 					struct mtk_mraw_pipeline *pipe = job->tag_info[i].mraw_pipe;
 					unsigned int mraw_subdev_idx = pipe->id - MTKCAM_SUBDEV_MRAW_START;

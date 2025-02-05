@@ -637,6 +637,7 @@ static int set_mraw_meta_stats_info(
 	switch (ipi_id) {
 	case MTKCAM_IPI_MRAW_META_STATS_0:
 		mraw_stats0 = (struct mtk_cam_uapi_meta_mraw_stats_0 *)addr;
+		mraw_stats0->pdp_en_status = pdp_support ? 1 : 0;
 		/* imgo */
 		size = info[imgo_m1].stride * info[imgo_m1].height;
 		/* calculate offset for 16-alignment limitation */
@@ -647,6 +648,8 @@ static int set_mraw_meta_stats_info(
 		mraw_stats0->pdp_0_stats.stats_src.width = info[imgo_m1].width;
 		mraw_stats0->pdp_0_stats.stats_src.height = info[imgo_m1].height;
 		mraw_stats0->pdp_0_stats.stride = info[imgo_m1].stride;
+		if (!pdp_support)
+			return 0;
 		/* imgbo */
 		size = info[imgbo_m1].stride * info[imgbo_m1].height;
 		/* calculate offset for 16-alignment limitation */
@@ -657,6 +660,26 @@ static int set_mraw_meta_stats_info(
 		mraw_stats0->pdp_1_stats.stats_src.width = info[imgbo_m1].width;
 		mraw_stats0->pdp_1_stats.stats_src.height = info[imgbo_m1].height;
 		mraw_stats0->pdp_1_stats.stride = info[imgbo_m1].stride;
+		/* cpio m1*/
+		size = info[cpio_m1].stride * info[cpio_m1].height;
+		/* calculate offset for 16-alignment limitation */
+		offset = ((((dma_addr_t)mraw_stats0 + offset + 15) >> 4) << 4)
+			- (dma_addr_t)mraw_stats0;
+		set_payload(&mraw_stats0->cpi_0_stats.cpio_buf, size, &offset);
+		mraw_stats0->cpi_0_stats_enabled = 1;
+		mraw_stats0->cpi_0_stats.stats_src.width = info[cpio_m1].width;
+		mraw_stats0->cpi_0_stats.stats_src.height = info[cpio_m1].height;
+		mraw_stats0->cpi_0_stats.stride = info[cpio_m1].stride;
+		/* cpio m2*/
+		size = info[cpio_m2].stride * info[cpio_m2].height;
+		/* calculate offset for 16-alignment limitation */
+		offset = ((((dma_addr_t)mraw_stats0 + offset + 15) >> 4) << 4)
+			- (dma_addr_t)mraw_stats0;
+		set_payload(&mraw_stats0->cpi_1_stats.cpio_buf, size, &offset);
+		mraw_stats0->cpi_1_stats_enabled = 1;
+		mraw_stats0->cpi_1_stats.stats_src.width = info[cpio_m2].width;
+		mraw_stats0->cpi_1_stats.stats_src.height = info[cpio_m2].height;
+		mraw_stats0->cpi_1_stats.stride = info[cpio_m2].stride;
 		break;
 	default:
 		pr_info("%s: %s: not supported: %d\n",
@@ -672,6 +695,8 @@ static int get_mraw_stats_cfg_param(
 {
 	struct mtk_cam_uapi_meta_mraw_stats_cfg *stats_cfg =
 		(struct mtk_cam_uapi_meta_mraw_stats_cfg *)addr;
+
+	param->pdp_en = stats_cfg->pdp_enable;
 
 	param->mqe_en = stats_cfg->mqe_enable;
 	param->mobc_en = stats_cfg->mobc_enable;
