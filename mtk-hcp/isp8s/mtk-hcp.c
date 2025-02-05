@@ -2783,9 +2783,16 @@ static int mtk_hcp_probe(struct platform_device *pdev)
 	spin_lock_init(&hcp_dev->msglock);
 	init_waitqueue_head(&hcp_dev->msg_wq);
 	INIT_LIST_HEAD(&hcp_dev->msg_list);
+
 	msgs = devm_kzalloc(hcp_dev->dev, sizeof(*msgs) * HCP_MSG_NUM_MAX, GFP_KERNEL);
-	for (i = 0; i < HCP_MSG_NUM_MAX; i++)
-		list_add_tail(&msgs[i].entry, &hcp_dev->msg_list);
+
+	if (msgs) {
+		for (i = 0; i < HCP_MSG_NUM_MAX; i++)
+			list_add_tail(&msgs[i].entry, &hcp_dev->msg_list);
+	} else {
+		ret = -ENOMEM;
+		goto error;
+	}
 
 	hcp_aee_init(hcp_mtkdev);
 	hcp_dev->is_open = false;
@@ -2812,8 +2819,6 @@ error:
 				unregister_chrdev_region(hcp_dev->dev_no, 1);
 
 			if (hcp_dev->dev) {
-				if (msgs)
-					devm_kfree(hcp_dev->dev, msgs);
 				if (hcp_dev->dev->dma_parms)
 					devm_kfree(hcp_dev->dev, hcp_dev->dev->dma_parms);
 			}
