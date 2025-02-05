@@ -1889,9 +1889,6 @@ error:
 			mb->d_buf, mb->start_virt, mb->start_dma);
 	} else {
 #if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
-		if (!IS_ERR_OR_NULL(d_buf) && start_virt)
-			dma_buf_vunmap_unlocked(d_buf, &map);
-
 		if (!IS_ERR_OR_NULL(attachment) && !IS_ERR_OR_NULL(sgt) && start_dma)
 			dma_buf_unmap_attachment_unlocked(
 				attachment,
@@ -1899,9 +1896,6 @@ error:
 				DMA_BIDIRECTIONAL);
 
 #else
-		if (!IS_ERR_OR_NULL(d_buf) && start_virt)
-			dma_buf_vunmap(d_buf, &map);
-
 		if (!IS_ERR_OR_NULL(attachment) && !IS_ERR_OR_NULL(sgt) && start_dma)
 			dma_buf_unmap_attachment(
 				attachment,
