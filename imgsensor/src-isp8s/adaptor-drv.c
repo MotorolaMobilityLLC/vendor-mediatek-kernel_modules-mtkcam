@@ -1687,10 +1687,10 @@ static int imgsensor_probe(struct i3c_i2c_device *client)
 		adaptor_logi(ctx, "get i3c pre_cfg_addr:0x%x\n", ctx->pre_cfg_addr);
 		if (ctx->pre_cfg_addr) {
 			memset(&ctx->i2c_vir_client, 0, sizeof(ctx->i2c_vir_client));
-			ctx->i2c_vir_client = mtk_i3c_i2c_new_client_device(
-				&ctx->ixc_client, ctx->pre_cfg_addr, 0);
-			if (!ctx->i2c_vir_client.i2c_dev) {
-				adaptor_loge(ctx, "ctx->i2c_vir_client is NULL.\n");
+			ret = mtk_i3c_i2c_new_client_device(
+				&ctx->ixc_client, ctx->pre_cfg_addr, 0, &ctx->i2c_vir_client);
+			if (ret) {
+				adaptor_loge(ctx, "ctx->i2c_vir_client is NULL.ret=%d.\n", ret);
 				return -ENODEV;
 			}
 			adaptor_logi(ctx, "ctx->i2c_vir_client.i2c_dev=%p,protocol=%u.\n",
