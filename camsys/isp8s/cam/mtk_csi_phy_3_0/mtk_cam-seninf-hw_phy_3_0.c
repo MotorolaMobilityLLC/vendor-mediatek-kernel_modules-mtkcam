@@ -4217,11 +4217,9 @@ static int mtk_cam_seninf_set_idle(struct seninf_ctx *ctx)
 
 	for (i = 0; i < vcinfo->cnt; i++) {
 		vc = &vcinfo->vc[i];
-		if (vc->enable) {
-			for (j = 0; j < vc->dest_cnt; j++)
-				mtk_cam_seninf_disable_outmux(ctx, vc->dest[j].outmux, true);
-			vc->dest_cnt = 0;
-		}
+		for (j = 0; j < vc->dest_cnt; j++)
+			mtk_cam_seninf_disable_outmux(ctx, vc->dest[j].outmux, true);
+		vc->dest_cnt = 0;
 	}
 	for (i = 0; i < PAD_MAXCNT; i++)
 		for (j = 0; j < MAX_DEST_NUM; j++)

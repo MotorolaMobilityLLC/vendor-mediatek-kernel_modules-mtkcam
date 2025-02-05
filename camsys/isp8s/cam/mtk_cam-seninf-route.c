@@ -1687,13 +1687,20 @@ int _mtk_cam_seninf_set_camtg(struct v4l2_subdev *sd,
 
 	/* check if camtg already exists in dest[] */
 	for (i = 0; i < vc->dest_cnt; i++) {
-		if (vc->dest[i].outmux == camtg_cfg->camtg) {
-			seninf_logi(ctx,
-				"camtg == vc->dest[%d].outmux:%u,redundantly manipulated!\n",
-				i, vc->dest[i].outmux);
-			mutex_unlock(&core->cammux_page_ctrl_mutex);
-			return 0;
-		}
+		if (vc->dest[i].outmux != camtg_cfg->camtg)
+			continue;
+
+		if (vc->dest[i].tag != camtg_cfg->tag_id)
+			continue;
+
+		seninf_logi(ctx,
+			"camtg == vc->dest[%d].outmux:%u, tag %u redundantly manipulated!\n",
+			i,
+			vc->dest[i].outmux,
+			vc->dest[i].tag);
+
+		mutex_unlock(&core->cammux_page_ctrl_mutex);
+		return 0;
 	}
 
 	if (set >= MAX_DEST_NUM) {
