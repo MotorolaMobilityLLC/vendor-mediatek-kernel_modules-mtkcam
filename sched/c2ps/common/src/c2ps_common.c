@@ -67,7 +67,7 @@ module_param(enable_app_vip, bool, 0644);
 
 /**************************************************************************/
 // c2ps cpu isolation
-bool enable_dyna_isolation;
+bool enable_dyna_isolation = true;
 int cpu_idlerate_thres_to_isolation = 15;
 int c2ps_set_m_core_cpus;
 int c2ps_set_b_core_cpus;
@@ -1340,12 +1340,12 @@ void reset_task_uclamp(int pid)
 
 inline int refine_uclamp(struct global_info *g_info, int ori_uclamp)
 {
-	int action_clamp = 0;
+	int action_uclamp = 0;
 
 	if (!g_info)
 		return ori_uclamp;
 	#if KERNEL_VERSION(6, 12, 0) <= LINUX_VERSION_CODE
-		action_clamp = ori_uclamp;
+		action_uclamp = ori_uclamp;
 	#else
 		if (g_info->has_anchor_spec && g_info->curr_um > 0)
 			action_uclamp = ori_uclamp * 100 / g_info->curr_um;
@@ -1353,7 +1353,7 @@ inline int refine_uclamp(struct global_info *g_info, int ori_uclamp)
 			action_uclamp = ori_uclamp * 100 / g_info->curr_um_idle;
 	#endif
 
-	return action_clamp;
+	return action_uclamp;
 }
 
 inline bool need_update_single_shot_uclamp_max(int *uclamp_max)
