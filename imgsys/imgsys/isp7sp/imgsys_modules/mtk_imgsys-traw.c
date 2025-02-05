@@ -702,6 +702,12 @@ void imgsys_traw_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			if (iova_addr) {
 				cq_desc = (u64 *)
 					((void *)(virt_mem_base + user_info->priv[i].desc_offset));
+
+				if (cq_desc == NULL) {
+					pr_err("%s: cq_desc = NULL\n", __func__);
+					return;
+				}
+
 				for (j = 0; j < TRAW_CQ_DESC_NUM; j++) {
 					dtable = (struct mtk_imgsys_traw_dtable *)cq_desc + j;
 					if ((dtable->addr_msb & PSEUDO_DESC_TUNING) ==
