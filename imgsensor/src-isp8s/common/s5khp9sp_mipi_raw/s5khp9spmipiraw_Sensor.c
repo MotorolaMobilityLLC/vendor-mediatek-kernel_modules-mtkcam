@@ -2156,7 +2156,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.chk_s_off_sta = 1,
 	.chk_s_off_end = 0,
 
-	.checksum_value = 0x8013666a,
+	.checksum_value = 0xc88841a,
 	.ctle_param = &static_ctle_param,
 	.i3c_precfg_setting_table = hp9_i3c_init_global,
 	.i3c_precfg_setting_len = ARRAY_SIZE(hp9_i3c_init_global),
