@@ -31,7 +31,7 @@ define_mgk_ko(
         "//vendor/mediatek/kernel_modules/mtkcam/cam_cal/src_v4l2:public_headers",
     ],
     deps = [
-        "//vendor/mediatek/kernel_modules/mtkcam/cam_cal/src_v4l2/custom:mtk_cam_cal",
+        "//vendor/mediatek/kernel_modules/mtkcam/cam_cal/src_v4l2:mtk_cam_cal",
         "//vendor/mediatek/kernel_modules/mtkcam/imgsensor/src-v4l2/imgsensor-glue:imgsensor-glue",
         "//vendor/mediatek/kernel_modules/mtkcam/imgsensor/src-isp8/imgsensor-glue:imgsensor-glue_isp8",
         "//vendor/mediatek/kernel_modules/mtkcam/imgsensor/src_spm-isp8/imgsensor-glue:imgsensor-glue_spm_isp8",
