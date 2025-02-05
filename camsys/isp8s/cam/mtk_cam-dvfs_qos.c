@@ -1103,10 +1103,9 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 	unsigned int fifo_len_p1, fifo_len_p2, fifo_len_p3 = 0;
 	u32 a_bw, p_bw;
 	int i, port_num = 0;
-	unsigned int leading_line_cnt, raw_id;
+	unsigned int raw_id;
 	bool apply, apply_sv_th = false, apply_bwr = false;
 	int sv_avg_bw_w = 0, sv_peak_bw_w = 0, sv_avg_diff_bw_w = 0, sv_peak_diff_bw_w = 0;
-	u64 avg_linet;
 	unsigned int sv_output_port;
 
 	if (ctx->has_raw_subdev) {
@@ -1175,12 +1174,10 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 				job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw * 64 * 12 / 1000000;
 			fifo_len_p1 = fifo_img_p1 / 80;
 			fifo_len_p2 = fifo_img_p2 / 80;
-			avg_linet = ctx->act_line_info.avg_linetime_in_ns ? : get_line_time(job);
-			leading_line_cnt = (avg_linet && avg_linet < 12500) ? 12500 / avg_linet : 1;
-			if (leading_line_cnt > 8)
-				pr_info("%s: unexpected leading_line_cnt:%d", __func__, leading_line_cnt);
+
 			mtk_cam_sv_dmao_common_config(sv_dev, fifo_img_p1, fifo_img_p2, fifo_img_p3,
-				fifo_len_p1, fifo_len_p2, fifo_len_p3, (leading_line_cnt - 1) & 0x7);
+				fifo_len_p1, fifo_len_p2, fifo_len_p3, get_sensor_fps(job), sv_peak_bw_w,
+				get_sensor_w(job), get_sensor_h(job), job->enabled_tags);
 
 			/* apply golden setting */
 			mtk_cam_sv_golden_set(sv_dev, is_dc_mode(job) ? true : false);

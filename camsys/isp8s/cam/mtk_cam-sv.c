@@ -35,6 +35,8 @@
 #define MTK_CAMSV_STOP_HW_TIMEOUT			(33 * USEC_PER_MSEC)
 #define CAMSV_DEBUG 0
 
+#define ceil(n, d) (((n) < 0) ? (-((-(n))/(d))) : (n)/(d) + ((n)%(d) != 0))
+
 static int debug_cam_sv;
 module_param(debug_cam_sv, int, 0644);
 
@@ -789,11 +791,345 @@ int mtk_cam_sv_fifo_config(struct mtk_camsv_device *sv_dev, unsigned int fifo_co
 		CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE3_THD));
 	return 0;
 }
+
+static unsigned int map_to_camsv_bit_depth(unsigned int sv_fmt)
+{
+	switch (sv_fmt) {
+	case SV_FMT_RAW8:
+	case SV_FMT_YUV422_8:
+	case SV_FMT_YUV420_8:
+		return 8;
+	case SV_FMT_RAW10:
+	case SV_FMT_MIPI_RAW10:
+	case SV_FMT_YUV420_10:
+		return 10;
+	case SV_FMT_RAW12:
+	case SV_FMT_MIPI_RAW12:
+	case SV_FMT_YUV420_12:
+	case SV_FMT_YUV422_12:
+		return 12;
+	case SV_FMT_RAW14:
+	case SV_FMT_MIPI_RAW14:
+		return 14;
+	case SV_FMT_RAW16:
+		return 16;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+int mtk_cam_sv_stg_settings(struct mtk_camsv_device *sv_dev,
+	unsigned int fps, unsigned int bw, unsigned int w, unsigned int h,
+	unsigned int sv_enabled_tags)
+{
+
+	if (fps == 0 || bw == 0) {
+		pr_info("%s: fps (%d) or bw (%d) is zero", __func__, fps, bw);
+		return -1;
+	}
+	dev_info(sv_dev->dev, "%s: en_tags:0x%x, fps %u, bw %u, w %u, h %u",
+		__func__, sv_enabled_tags, fps, bw, w, h);
+	unsigned int leading_least_us = 8;
+	unsigned int leading_most_us = 20;
+	unsigned int img_dist;
+	unsigned int img_min_dist;
+	unsigned int init_num;
+	unsigned int len_addr_offst;
+
+	unsigned int imgo_addr_msb, imgo_addr_lsb;
+	unsigned int ufeo_addr_msb, ufeo_addr_lsb;
+	unsigned int imgo_addr_end_msb, imgo_addr_end_lsb;
+	unsigned int ufeo_addr_end_msb, ufeo_addr_end_lsb;
+	uint64_t imgo_addr_end, ufeo_addr_end;
+	unsigned int imgo_stride, len_stride;
+	unsigned int throughput;
+	unsigned int fmt, bit_depth, pxl_mode;
+
+	bool is_ufe, is_unpak;
+	bool is_twin_mode, is_triple_mode;
+
+	for (int i = SVTAG_START; i < SVTAG_END; i++) {
+		if (!(sv_enabled_tags & (1 << i)))
+			continue;
+
+		fmt = readl_relaxed(sv_dev->base +
+			REG_CAMSVCENTRAL_FORMAT_TAG1 +
+			CAMSVCENTRAL_FORMAT_TAG_SHIFT * i);
+
+		is_ufe = fmt & 0x4000000; // 26 bit
+
+		is_unpak = fmt & 0x40; // 6th bit
+
+		is_twin_mode = readl_relaxed(sv_dev->base +
+			REG_CAMSVCENTRAL_CONFIG_TAG1 +
+			CAMSVCENTRAL_CONFIG_TAG_SHIFT * i) & 0x400000; //22 bit
+		is_triple_mode = readl_relaxed(sv_dev->base +
+			REG_CAMSVCENTRAL_CONFIG_TAG1 +
+			CAMSVCENTRAL_CONFIG_TAG_SHIFT * i) & 0x800000; //23 bit
+
+		pxl_mode = CAMSV_READ_BITS(sv_dev->base + REG_CAMSVCENTRAL_SEN_MODE,
+			CAMSVCENTRAL_SEN_MODE, SENINF_PIX_MODE);
+
+		bit_depth = map_to_camsv_bit_depth(fmt & 0x1f);
+
+		dev_info(sv_dev->dev, "tag:%d,fmt:0x%x,ufe:%d,2_3:%d_%d,pxlmod:%d,bitfmt:%d\n",
+			i, fmt, is_ufe, is_twin_mode, is_triple_mode, pxl_mode, bit_depth);
+		imgo_addr_msb = readl_relaxed(sv_dev->base_dma +
+			REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG1_A +
+			CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG_SHIFT * i);
+
+		imgo_addr_lsb = readl_relaxed(sv_dev->base_dma +
+			REG_CAMSVDMATOP_WDMA_BASE_ADDR_IMG1_A +
+			CAMSVDMATOP_WDMA_BASE_ADDR_IMG_SHIFT * i);
+
+		imgo_addr_end = ((uint64_t)imgo_addr_msb << 32 | imgo_addr_lsb) + (w * h * bit_depth / 8);
+		imgo_addr_end_msb = imgo_addr_end >> 32;
+		imgo_addr_end_lsb = imgo_addr_end & 0xFFFFFFFF;
+
+		imgo_stride = readl_relaxed(sv_dev->base_dma +
+				REG_CAMSVDMATOP_WDMA_BASIC_IMG1_A +
+				CAMSVDMATOP_WDMA_BASIC_IMG_SHIFT * i) >> 16;
+
+		img_dist = leading_most_us * bw / 1000;
+		img_min_dist = leading_least_us * bw /1000;
+		init_num = ceil(img_min_dist, 4096);
+
+		if (is_unpak) {
+			if (pxl_mode == 0)
+				throughput = 8 * 2;
+			else if (pxl_mode == 1)
+				throughput = 16 * 2;
+		} else {
+			if (pxl_mode == 0)
+				throughput = 8 * bit_depth / 8;
+			else if (pxl_mode == 1)
+				throughput = 16 * bit_depth / 8;
+		}
+		dev_info(sv_dev->dev, "is_unpak%d, pxl_mode %d, throughput %d\n", is_unpak, pxl_mode, throughput);
+
+		dev_info(sv_dev->dev, "[A] img_dist:0x%x img_min_dist:0x%x, stride:%d | init_num %d = 0x%x, init_delay:0x%x, imgo_addr_msb:0x%x, imgo_addr_lsb:0x%x, add buffer: %d, imgo_addr_end_msb:0x%x, imgo_addr_end_lsb:0x%x",
+			img_dist, img_min_dist, imgo_stride, init_num, imgo_stride | init_num << 16,
+			4096 / throughput, imgo_addr_msb, imgo_addr_lsb, (w * h * bit_depth / 8),
+			imgo_addr_end_msb, imgo_addr_end_lsb);
+
+		CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL0 +
+			CAMSVSTG_TAG_SHIFT * i, 0x1); // IMG_EN, IMG_OFST, IGM_SIDE_BY_SIDE
+		CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL1 +
+			CAMSVSTG_TAG_SHIFT * i, img_dist); //IMG_DIST = 63360 byte, 0xF780 (12us)
+		CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL2 +
+			CAMSVSTG_TAG_SHIFT * i, img_min_dist); //IMG_MIN_DIST = 52800 byte, 0xCE40 (10us)
+		CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL3 +
+			CAMSVSTG_TAG_SHIFT * i, imgo_stride | init_num << 16); // stride[15:0], init_num[23:16]
+		CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL4 +
+			CAMSVSTG_TAG_SHIFT * i,  4096 / throughput); // init delay = (bytePpage)/ throughput(byte/cycle)
+		CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL5 +
+			CAMSVSTG_TAG_SHIFT * i, imgo_addr_msb); // img base msb
+		CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL6 +
+			CAMSVSTG_TAG_SHIFT * i, imgo_addr_lsb); // img base
+		CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL7 +
+			CAMSVSTG_TAG_SHIFT * i, imgo_addr_end_msb); // img end msb
+		CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL8 +
+			CAMSVSTG_TAG_SHIFT * i, imgo_addr_end_lsb); // img end
+		if (is_ufe) {
+			ufeo_addr_msb = readl_relaxed(sv_dev->base_dma +
+				REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_LEN1_A +
+				CAMSVDMATOP_WDMA_BASE_ADDR_MSB_LEN_SHIFT * i);
+
+			ufeo_addr_lsb = readl_relaxed(sv_dev->base_dma +
+				REG_CAMSVDMATOP_WDMA_BASE_ADDR_LEN1_A +
+				CAMSVDMATOP_WDMA_BASE_ADDR_LEN_SHIFT * i);
+
+			ufeo_addr_end = ((uint64_t)ufeo_addr_msb << 32 | ufeo_addr_lsb) +
+				(w * h * bit_depth / 8 / 64);
+			ufeo_addr_end_msb = ufeo_addr_end >> 32;
+			ufeo_addr_end_lsb = ufeo_addr_end & 0xFFFFFFFF;
+
+			len_stride = readl_relaxed(sv_dev->base_dma +
+				REG_CAMSVDMATOP_WDMA_BASIC_LEN1_A +
+				CAMSVDMATOP_WDMA_BASIC_LEN_SHIFT * i) >> 16;
+
+			len_addr_offst = 4096 - leading_most_us * bw / 1000 / 64;
+			dev_info(sv_dev->dev, "[A] len_addr_offst %d| len_stride:%d = 0x%x, ufeo_addr_msb:0x%x, ufeo_addr_lsb:0x%x, add buffer: %d, ufeo_addr_end_msb:0x%x, ufeo_addr_end_lsb:0x%x",
+				len_addr_offst, len_stride, len_addr_offst | len_stride << 16,
+				ufeo_addr_msb, ufeo_addr_lsb,(w * h * bit_depth / 8 / 64),
+				ufeo_addr_end_msb, ufeo_addr_end_lsb);
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL0 +
+				CAMSVSTG_TAG_SHIFT * i, 0x1); // LEN_EN, LEN_LINE, LEN_SIDE_BY_SIDE
+			// LEN_ADDR_OFST [0:11], LEN_STRIDE[16:31]
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL1 +
+				CAMSVSTG_TAG_SHIFT * i, len_addr_offst | len_stride << 16);
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL2 +
+				CAMSVSTG_TAG_SHIFT * i, ufeo_addr_msb); // LEN_BASE_MSB
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL3 +
+				CAMSVSTG_TAG_SHIFT * i, ufeo_addr_lsb); // LEN_BASE
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL4 +
+				CAMSVSTG_TAG_SHIFT * i, ufeo_addr_end_msb); // LEN_END_MSB
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL5 +
+				CAMSVSTG_TAG_SHIFT * i, ufeo_addr_end_lsb); // LEN_END
+		}
+		if (is_twin_mode || is_triple_mode) {
+			imgo_addr_msb = readl_relaxed(sv_dev->base_dma +
+				REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG1_B +
+				CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG_SHIFT * i);
+
+			imgo_addr_lsb = readl_relaxed(sv_dev->base_dma +
+				REG_CAMSVDMATOP_WDMA_BASE_ADDR_IMG1_B +
+				CAMSVDMATOP_WDMA_BASE_ADDR_IMG_SHIFT * i);
+
+			imgo_addr_end = ((uint64_t)imgo_addr_msb << 32 | imgo_addr_lsb) +
+				(w * h * bit_depth / 8);
+			imgo_addr_end_msb = imgo_addr_end >> 32;
+			imgo_addr_end_lsb = imgo_addr_end & 0xFFFFFFFF;
+
+			imgo_stride = readl_relaxed(sv_dev->base_dma +
+				REG_CAMSVDMATOP_WDMA_BASIC_IMG1_B +
+				CAMSVDMATOP_WDMA_BASIC_IMG_SHIFT * i) >> 16;
+			dev_info(sv_dev->dev, "[B] img_dist:0x%x img_min_dist:0x%x, stride:%d | init_num %d = 0x%x, init_delay:0x%x, imgo_addr_msb:0x%x, imgo_addr_lsb:0x%x, add buffer: %d, imgo_addr_end_msb:0x%x, imgo_addr_end_lsb:0x%x",
+				img_dist, img_min_dist, imgo_stride, init_num, imgo_stride | init_num << 16,
+				4096 / throughput, imgo_addr_msb, imgo_addr_lsb, (w * h * bit_depth / 8),
+				imgo_addr_end_msb, imgo_addr_end_lsb);
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL0 +
+				CAMSVSTG_TAG_SHIFT * i, 0x1); // IMG_EN, IMG_OFST, IGM_SIDE_BY_SIDE
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL1 +
+				CAMSVSTG_TAG_SHIFT * i, img_dist); //IMG_DIST = 63360 byte (12us)
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL2 +
+				CAMSVSTG_TAG_SHIFT * i, img_min_dist); //IMG_MIN_DIST = 52800 byte (10us)
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL3 +
+				CAMSVSTG_TAG_SHIFT * i, imgo_stride | init_num << 16); // stride[15:0], init_num[23:16]
+			// init delay = (bytePpage)/ throughput(byte/cycle)
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL4 +
+				CAMSVSTG_TAG_SHIFT * i,  4096 / throughput);
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL5 +
+				CAMSVSTG_TAG_SHIFT * i, imgo_addr_msb); // img base msb
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL6 +
+				CAMSVSTG_TAG_SHIFT * i, imgo_addr_lsb); // img base
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL7 +
+				CAMSVSTG_TAG_SHIFT * i, imgo_addr_end_msb); // img end msb
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL8 +
+				CAMSVSTG_TAG_SHIFT * i, imgo_addr_end_lsb); // img end
+			if (is_ufe) {
+				ufeo_addr_msb = readl_relaxed(sv_dev->base_dma +
+					REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_LEN1_B +
+					CAMSVDMATOP_WDMA_BASE_ADDR_MSB_LEN_SHIFT * i);
+
+				ufeo_addr_lsb = readl_relaxed(sv_dev->base_dma +
+					REG_CAMSVDMATOP_WDMA_BASE_ADDR_LEN1_B +
+					CAMSVDMATOP_WDMA_BASE_ADDR_LEN_SHIFT * i);
+
+				ufeo_addr_end = ((uint64_t)ufeo_addr_msb << 32 | ufeo_addr_lsb) +
+					(w * h * bit_depth / 8 / 64);
+				ufeo_addr_end_msb = ufeo_addr_end >> 32;
+				ufeo_addr_end_lsb = ufeo_addr_end & 0xFFFFFFFF;
+
+				len_stride = readl_relaxed(sv_dev->base_dma +
+					REG_CAMSVDMATOP_WDMA_BASIC_LEN1_B +
+					CAMSVDMATOP_WDMA_BASIC_LEN_SHIFT * i) >> 16;
+				dev_info(sv_dev->dev, "[B] len_addr_offst %d| len_stride:%d = 0x%x, ufeo_addr_msb:0x%x, ufeo_addr_lsb:0x%x, add buffer: %d, ufeo_addr_end_msb:0x%x, ufeo_addr_end_lsb:0x%x",
+					len_addr_offst, len_stride, len_addr_offst | len_stride << 16,
+					ufeo_addr_msb, ufeo_addr_lsb,(w * h * bit_depth / 8 / 64),
+					ufeo_addr_end_msb, ufeo_addr_end_lsb);
+				CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1B_CTL0 +
+					CAMSVSTG_TAG_SHIFT * i, 0x1); // LEN_EN, LEN_LINE, LEN_SIDE_BY_SIDE
+				// LEN_ADDR_OFST, LEN_STRIDE
+				CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1B_CTL1 +
+					CAMSVSTG_TAG_SHIFT * i, len_addr_offst | len_stride << 16);
+				CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1B_CTL2 +
+					CAMSVSTG_TAG_SHIFT * i, ufeo_addr_msb); // LEN_BASE_MSB
+				CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1B_CTL3 +
+					CAMSVSTG_TAG_SHIFT * i, ufeo_addr_lsb); // LEN_BASE
+				CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1B_CTL4 +
+					CAMSVSTG_TAG_SHIFT * i, ufeo_addr_end_msb); // LEN_END_MSB
+				CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1B_CTL5 +
+					CAMSVSTG_TAG_SHIFT * i, ufeo_addr_end_lsb); // LEN_END
+			}
+		}
+		if (is_triple_mode) {
+			imgo_addr_msb = readl_relaxed(sv_dev->base_dma +
+				REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG1_C +
+				CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG_SHIFT * i);
+
+			imgo_addr_lsb = readl_relaxed(sv_dev->base_dma +
+				REG_CAMSVDMATOP_WDMA_BASE_ADDR_IMG1_C +
+				CAMSVDMATOP_WDMA_BASE_ADDR_IMG_SHIFT * i);
+
+			imgo_addr_end = ((uint64_t)imgo_addr_msb << 32 | imgo_addr_lsb) + (w * h * bit_depth / 8);
+			imgo_addr_end_msb = imgo_addr_end >> 32;
+			imgo_addr_end_lsb = imgo_addr_end & 0xFFFFFFFF;
+
+			imgo_stride = readl_relaxed(sv_dev->base_dma +
+				REG_CAMSVDMATOP_WDMA_BASIC_IMG1_C +
+				CAMSVDMATOP_WDMA_BASIC_IMG_SHIFT * i) >> 16;
+			dev_info(sv_dev->dev, "[C] img_dist:0x%x img_min_dist:0x%x, stride:%d | init_num %d = 0x%x, init_delay:0x%x, imgo_addr_msb:0x%x, imgo_addr_lsb:0x%x, add buffer: %d, imgo_addr_end_msb:0x%x, imgo_addr_end_lsb:0x%x",
+				img_dist, img_min_dist, imgo_stride, init_num, imgo_stride | init_num << 16,
+				4096 / throughput, imgo_addr_msb, imgo_addr_lsb, (w * h * bit_depth / 8),
+				imgo_addr_end_msb, imgo_addr_end_lsb);
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL0 +
+				CAMSVSTG_TAG_SHIFT * i, 0x1); // IMG_EN, IMG_OFST, IGM_SIDE_BY_SIDE
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL1 +
+				CAMSVSTG_TAG_SHIFT * i, img_dist); //IMG_DIST = 63360 byte (12us)
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL2 +
+				CAMSVSTG_TAG_SHIFT * i, img_min_dist); //IMG_MIN_DIST = 52800 byte (10us)
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL3 +
+				CAMSVSTG_TAG_SHIFT * i, imgo_stride | init_num << 16); // stride[15:0], init_num[23:16]
+			// init delay = (bytePpage)/ throughput(byte/cycle)
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL4 +
+				CAMSVSTG_TAG_SHIFT * i,  4096 / throughput);
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL5 +
+				CAMSVSTG_TAG_SHIFT * i, imgo_addr_msb); // img base msb
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL6 +
+				CAMSVSTG_TAG_SHIFT * i, imgo_addr_lsb); // img base
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL7 +
+				CAMSVSTG_TAG_SHIFT * i, imgo_addr_end_msb); // img end msb
+			CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL8 +
+				CAMSVSTG_TAG_SHIFT * i, imgo_addr_end_lsb); // img end
+			if (is_ufe) {
+				ufeo_addr_msb = readl_relaxed(sv_dev->base_dma +
+					REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_LEN1_C +
+					CAMSVDMATOP_WDMA_BASE_ADDR_MSB_LEN_SHIFT * i);
+
+				ufeo_addr_lsb = readl_relaxed(sv_dev->base_dma +
+					REG_CAMSVDMATOP_WDMA_BASE_ADDR_LEN1_C +
+					CAMSVDMATOP_WDMA_BASE_ADDR_LEN_SHIFT * i);
+
+				ufeo_addr_end = ((uint64_t)ufeo_addr_msb << 32 | ufeo_addr_lsb) +
+					(w * h * bit_depth / 8 / 64);
+				ufeo_addr_end_msb = ufeo_addr_end >> 32;
+				ufeo_addr_end_lsb = ufeo_addr_end & 0xFFFFFFFF;
+
+				len_stride = readl_relaxed(sv_dev->base_dma +
+					REG_CAMSVDMATOP_WDMA_BASIC_LEN1_C +
+					CAMSVDMATOP_WDMA_BASIC_LEN_SHIFT * i) >> 16;
+				dev_info(sv_dev->dev, "[C] len_addr_offst %d| len_stride:%d = 0x%x, ufeo_addr_msb:0x%x, ufeo_addr_lsb:0x%x, add buffer: %d, ufeo_addr_end_msb:0x%x, ufeo_addr_end_lsb:0x%x",
+					len_addr_offst, len_stride, len_addr_offst | len_stride << 16,
+					ufeo_addr_msb, ufeo_addr_lsb,(w * h * bit_depth / 8 / 64),
+					ufeo_addr_end_msb, ufeo_addr_end_lsb);
+				CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1C_CTL0 +
+					CAMSVSTG_TAG_SHIFT * i, 0x1); // LEN_EN, LEN_LINE, LEN_SIDE_BY_SIDE
+				// LEN_ADDR_OFST[0:11], LEN_STRIDE[16:31]
+				CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1C_CTL1 +
+					CAMSVSTG_TAG_SHIFT * i, len_addr_offst | len_stride << 16);
+				CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1C_CTL2 +
+					CAMSVSTG_TAG_SHIFT * i, ufeo_addr_msb); // LEN_BASE_MSB
+				CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1C_CTL3 +
+					CAMSVSTG_TAG_SHIFT * i, ufeo_addr_lsb); // LEN_BASE
+				CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1C_CTL4 +
+					CAMSVSTG_TAG_SHIFT * i, ufeo_addr_end_msb); // LEN_END_MSB
+				CAMSV_WRITE_REG(sv_dev->base_stg + REG_CAMSVSTG_LEN_1C_CTL5 +
+					CAMSVSTG_TAG_SHIFT * i, ufeo_addr_end_lsb); // LEN_END
+			}
+		}
+	}
+	return 0;
+}
+
 int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 	unsigned int fifo_img_p1, unsigned int fifo_img_p2,
 	unsigned int fifo_img_p3, unsigned int fifo_len_p1,
 	unsigned int fifo_len_p2, unsigned int fifo_len_p3,
-	unsigned int leading_line_cnt)
+	unsigned int fps, unsigned int bw,
+	unsigned int w, unsigned int h, unsigned int sv_enabled_tags)
 {
 	int ret = 0;
 	struct sv_dma_th_setting th_setting;
@@ -880,6 +1216,9 @@ int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 			th_setting.pultra_len1_th);
 		CAMSV_WRITE_REG(sv_dev->base_dma + REG_CAMSVDMATOP_CON4_LEN_3,
 			th_setting.dvfs_len1_th);
+
+		/* stg */
+		ret = mtk_cam_sv_stg_settings(sv_dev, fps, bw, w, h, sv_enabled_tags);
 		break;
 
 	case CAMSV_3:
@@ -920,6 +1259,9 @@ int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 			th_setting.pultra_len1_th);
 		CAMSV_WRITE_REG(sv_dev->base_dma + REG_CAMSVDMATOP_CON4_LEN_2,
 			th_setting.dvfs_len1_th);
+
+		/* stg */
+		ret = mtk_cam_sv_stg_settings(sv_dev, fps, bw, w, h, sv_enabled_tags);
 		break;
 	case CAMSV_4:
 	case CAMSV_5:
@@ -931,6 +1273,9 @@ int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 			th_setting.pultra_th);
 		CAMSV_WRITE_REG(sv_dev->base_dma + REG_CAMSVDMATOP_CON4_IMG_1,
 			th_setting.dvfs_th);
+
+		/* stg */
+		ret = mtk_cam_sv_stg_settings(sv_dev, fps, bw, w, h, sv_enabled_tags);
 		break;
 	}
 
@@ -1400,7 +1745,7 @@ int mtk_cam_sv_dev_config(struct mtk_camsv_device *sv_dev,
 	atomic_set(&sv_dev->is_fifo_full, 0);
 	atomic_set(&sv_dev->is_sub_en, 0);
 
-	mtk_cam_sv_dmao_common_config(sv_dev, 0, 0, 0, 0, 0, 0, 0);
+	mtk_cam_sv_dmao_common_config(sv_dev, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 	mtk_cam_sv_cq_config(sv_dev, sub_ratio);
 	mtk_cam_sv_ddren_qos_coh_config(sv_dev, frm_time_us);
 
@@ -2960,6 +3305,20 @@ static int mtk_camsv_of_probe(struct platform_device *pdev,
 	}
 	dev_dbg(dev, "camsv, map_pdp_addr=0x%pK\n", sv_dev->base_pdp);
 
+	/* base stg outer register */
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "base_stg");
+	if (!res) {
+		dev_info(dev, "failed to get mem\n");
+		return -ENODEV;
+	}
+
+	sv_dev->base_stg = devm_ioremap_resource(dev, res);
+	if (IS_ERR(sv_dev->base_stg)) {
+		dev_dbg(dev, "failed to map register base stg\n");
+		return PTR_ERR(sv_dev->base_stg);
+	}
+	dev_dbg(dev, "camsv, map_stg_addr=0x%pK\n", sv_dev->base_stg);
+
 	/* base inner register */
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "inner_base");
 	if (!res) {
@@ -3017,6 +3376,20 @@ static int mtk_camsv_of_probe(struct platform_device *pdev,
 		return PTR_ERR(sv_dev->base_scq_inner);
 	}
 	dev_dbg(dev, "camsv, map_addr(inner pdp)=0x%pK\n", sv_dev->base_pdp_inner);
+
+	/* base inner stg register */
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "inner_base_stg");
+	if (!res) {
+		dev_dbg(dev, "failed to get mem\n");
+		return -ENODEV;
+	}
+
+	sv_dev->base_stg_inner = devm_ioremap_resource(dev, res);
+	if (IS_ERR(sv_dev->base_stg_inner)) {
+		dev_dbg(dev, "failed to map register inner base stg\n");
+		return PTR_ERR(sv_dev->base_scq_inner);
+	}
+	dev_dbg(dev, "camsv, map_addr(inner stg)=0x%pK\n", sv_dev->base_stg_inner);
 
 	sv_dev->top = ioremap(REG_CAMSYS_MRAW, 0x1000);
 

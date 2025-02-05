@@ -128,6 +128,29 @@ enum camsv_tag_idx {
 	SVTAG_END = SVTAG_META_END,
 };
 
+enum camsv_fmt {
+	SV_FMT_RAW8       = 0,
+	SV_FMT_RAW10      = 1,
+	SV_FMT_RAW12      = 2,
+	SV_FMT_YUV422_8   = 3,
+	SV_FMT_RAW14      = 4,
+	SV_FMT_RGB888     = 5,
+	SV_FMT_RGB565     = 6,
+	SV_FMT_JPEG       = 7,
+	SV_FMT_MIPI_RAW10 = 8,
+	SV_FMT_MIPI_RAW12 = 9,
+	SV_FMT_MIPI_RAW14 = 10,
+	SV_FMT_YUV420_8   = 11,
+	SV_FMT_YUV420_10  = 12,
+	SV_FMT_YUV420_12  = 13,
+	SV_FMT_YUV422_12  = 14,
+	SV_FMT_RAW16      = 15,
+	SV_FMT_RAW18      = 16,
+	SV_FMT_RAW24      = 17,
+	SV_FMT_RAW20      = 18,
+	SV_FMT_YUV422_10  = 19,
+};
+
 struct mtk_camsv_tag_param {
 	unsigned int tag_idx;
 	unsigned int seninf_padidx;
@@ -166,6 +189,8 @@ struct mtk_camsv_device {
 	void __iomem *base_scq_inner;
 	void __iomem *base_pdp;
 	void __iomem *base_pdp_inner;
+	void __iomem *base_stg;
+	void __iomem *base_stg_inner;
 	void __iomem *top;
 	unsigned int num_clks;
 	struct clk **clks;
@@ -279,10 +304,15 @@ int mtk_cam_sv_dev_pertag_stream_on(
 	struct mtk_camsv_device *sv_dev, unsigned int tag_idx, bool on);
 int mtk_cam_sv_dev_stream_on(struct mtk_camsv_device *sv_dev, bool on,
 	unsigned int enabled_tags, unsigned int used_tag_cnt);
+int mtk_cam_sv_stg_settings(struct mtk_camsv_device *sv_dev,
+	unsigned int fps, unsigned int bw, unsigned int w, unsigned int h,
+	unsigned int sv_enabled_tags);
 int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 	unsigned int fifo_img_p1, unsigned int fifo_img_p2,
 	unsigned int fifo_img_p3, unsigned int fifo_len_p1,
-	unsigned int fifo_len_p2, unsigned int fifo_len_p3, unsigned int leading_line_cnt);
+	unsigned int fifo_len_p2, unsigned int fifo_len_p3,
+	unsigned int fps, unsigned int bw,
+	unsigned int w, unsigned int h, unsigned int sv_enabled_tags);
 int mtk_cam_sv_toggle_tg_db(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_toggle_db(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_central_common_enable(struct mtk_camsv_device *sv_dev);
