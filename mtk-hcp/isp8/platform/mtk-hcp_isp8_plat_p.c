@@ -1694,7 +1694,7 @@ static int free_mb(struct mtk_hcp_rsv_mb *mb)
 		     IS_ERR_OR_NULL(mb->sgt) ||
 		     (-1 == mb->fd)) {
 		if (mb->cfg.size != 0) {
-			HCP_PRINT_WRN(" %s mb->d_buf or mb->sgt is NULL\n", mb->cfg.name);
+			HCP_PRINT_WRN(" %s mb haven't been allocated before?\n", mb->cfg.name);
 			ret = -EINVAL;
 		}
 	} else {
@@ -1957,6 +1957,16 @@ static int impl_put_ref(struct mtk_hcp_rsv_mb *mb)
 	if (unlikely(mb == NULL))
 		return -EFAULT;
 
+	/* To avoid ref_count saturation */
+	if (unlikely(mb->fd == -1)) {
+		if (mb->cfg.size) {
+			HCP_PRINT_WRN("%s haven't been allocated\n", mb->cfg.name);
+			return -EFAULT;
+		} else {
+			return ret;
+		}
+	}
+
 	/* determine whether is a kref_mb */
 	if (likely(kref_put(&mb->kref, release_mb) == 0)) {
 		if (GET_MEM_MODE(mb->cfg.id) == IMGSYS_MEMORY_MODE_SMVR)
@@ -1975,7 +1985,7 @@ static int impl_free(struct mtk_hcp_rsv_mb *mb)
 
 	/* determine whether is a kref_mb */
 	if (unlikely(mb->put_ref))
-		impl_put_ref(mb);
+		ret = impl_put_ref(mb);
 	else
 		ret = free_mb(mb);
 
