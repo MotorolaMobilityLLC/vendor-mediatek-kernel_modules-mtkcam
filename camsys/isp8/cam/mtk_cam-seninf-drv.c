@@ -1653,6 +1653,7 @@ static void update_cfg_done_max_wait_time(struct seninf_ctx *ctx)
 	if (!ctx->is_test_model) {
 		frame_time = mtk_cam_seninf_get_frame_time(&ctx->subdev, 0 /* seq, unused */);
 		frame_time = frame_time + (frame_time / 10);  /* 110 percent frame time */
+		frame_time = frame_time/1000; /* convert to micro second */
 	}
 
 	seninf_logd(ctx, "The frame time is %llu us\n", frame_time);
@@ -3322,7 +3323,6 @@ static int seninf_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 
 	mutex_lock(&ctx->mutex);
 	ctx->open_refcnt--;
-	ctx->is_aov_real_sensor = 0;
 
 	if (!ctx->open_refcnt) {
 		dev_info(ctx->dev, "%s open_refcnt %d\n", __func__, ctx->open_refcnt);
@@ -3356,6 +3356,8 @@ static int seninf_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 			ctx->pid = NULL;
 		}
 	}
+
+	ctx->is_aov_real_sensor = 0;
 
 	mutex_unlock(&ctx->mutex);
 
