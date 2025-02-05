@@ -69,8 +69,6 @@ static int picked_wl_table = 0;
 static unsigned int background_monitor_duration = BACKGROUND_MONITOR_DURATION;
 static unsigned int c2ps_vip_throttle_time = 12;
 static atomic_t processing_count = ATOMIC_INIT(0);
-static int cam_hal_pid;
-static char cam_hal_name[TASK_COMM_LEN + 1];
 
 unsigned int c2ps_nr_clusters;
 struct timer_list background_info_update_timer;
@@ -82,9 +80,7 @@ module_param(c2ps_vip_throttle_time, int, 0644);
 
 static void trigger_bg_policy(void)
 {
-	C2PS_LOGD("trigger bg policy");
 	if (need_update_background()) {
-		C2PS_LOGD("trigger bg policy: update background");
 		signal_regulator_req();
 		reset_need_update_status();
 	}
@@ -125,22 +121,14 @@ static void background_info_update_timer_callback(struct timer_list *t)
 	update_available_cpus();
 }
 
-static inline void save_cam_hal_info(void)
-{
-	cam_hal_pid = READ_ONCE(current->tgid);
-	C2PS_LOGD("camera hal pid: %d, %s", cam_hal_pid, current->group_leader->comm);
-	strscpy(cam_hal_name, current->group_leader->comm, TASK_COMM_LEN);
-}
-
 static void c2ps_notifier_init(int cfg_camfps)
 {
 	if (unlikely(init_c2ps_common(cfg_camfps))) {
 		C2PS_LOGD("init_c2ps_common failed\n");
 		return;
 	}
-	save_cam_hal_info();
 
-	self_uninit_timer.expires = jiffies + 5*HZ;
+	self_uninit_timer.expires = jiffies + 8*HZ;
 	timer_setup(&self_uninit_timer, self_uninit_timer_callback, 0);
 	add_timer(&self_uninit_timer);
 
@@ -629,10 +617,8 @@ int c2ps_notify_vsync(void)
 int c2ps_notify_camfps(int camfps)
 {
 	C2PS_LOGD("camfps: %d\n", camfps);
-	if (unlikely(monitor_camfps(camfps))) {
-		C2PS_LOGE("monitor_camfps failed\n");
-		return -1;
-	}
+	if (likely(timer_pending(&self_uninit_timer)))
+		mod_timer(&self_uninit_timer, jiffies + 5*HZ);
 	return 0;
 }
 
@@ -767,35 +753,10 @@ out:
 	return ret;
 }
 
-static bool is_task_terminated(pid_t pid)
-{
-	struct task_struct *p;
-	bool terminated = false;
-
-	rcu_read_lock();
-	p = find_task_by_vpid(pid);
-	if (p) {
-		get_task_struct(p);
-		if (strcmp(p->comm, cam_hal_name))
-			terminated = true;
-		put_task_struct(p);
-	} else {
-		terminated = true;
-	}
-	rcu_read_unlock();
-
-	return terminated;
-}
-
 static void self_uninit_timer_callback(struct timer_list *t)
 {
 	C2PS_LOGD("uninit expired");
-	if (is_task_terminated(cam_hal_pid)) {
-		C2PS_LOGD("camera hal terminated");
-		c2ps_uninit_wo_lock();
-	} else {
-		mod_timer(&self_uninit_timer, jiffies + 5*HZ);
-	}
+	c2ps_uninit_wo_lock();
 }
 
 static ssize_t um_placeholder_store(struct kobject *kobj,
