@@ -773,9 +773,9 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 
 		if (i < SVTAG_IMG_END) {
 			avg_bw =
-				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb) * 5;
+				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb);
 			peak_bw =
-				calc_bw(x_size * img_h, linet, sensor_h) * 5;
+				calc_bw(x_size * img_h, linet, sensor_h);
 			if (ipifmt_is_raw_ufo(in->fmt.format)) {
 				/* compression ratio: 0.7x */
 				avg_bw = avg_bw * 7 / 10;
@@ -792,9 +792,9 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 
 		} else {
 			avg_bw =
-				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb) * 5;
+				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb);
 			peak_bw =
-				calc_bw(x_size * img_h, linet, sensor_h) * 5;
+				calc_bw(x_size * img_h, linet, sensor_h);
 			/* camsv stash fixed at 5ostdl = 5mb */
 			if (avg_bw || peak_bw)
 				stash_peak_bw = stash_avg_bw = to_qos_icc(2097152);
