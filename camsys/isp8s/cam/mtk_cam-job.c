@@ -4190,34 +4190,6 @@ unset_cq_threshold_and_cammux(struct mtk_cam_job *job)
 	return 0;
 }
 
-#define LEGACY_SWITCH	0
-#if LEGACY_SWITCH
-/* kthread context */
-static int
-_apply_switch(struct mtk_cam_job *job)
-{
-	set_cq_deadline(job, -1);
-	if (mtk_cam_job_manually_apply_isp_sync(job)) {
-		set_cq_deadline(job, job->scq_period);
-		return -1;
-	}
-
-	update_seninf_fmt(job);
-	apply_cam_mux_switch(job);
-	set_cq_deadline(job, job->scq_period);
-	apply_camcq_stagger_en(job);
-	pr_info("%s: job type:%d, seq:0x%x\n", __func__, job->job_type, job->frame_seq_no);
-	return 0;
-}
-
-static struct mtk_cam_seamless_ops legacy_seamless = {
-	.before_sensor = unset_cq_threshold_and_cammux,
-	.after_sensor = _apply_switch,
-	.after_prev_frame_done = NULL,
-};
-
-#else
-
 static int
 _common_seamless_after_frame_done(struct mtk_cam_job *job)
 {
@@ -4314,8 +4286,6 @@ static struct mtk_cam_seamless_ops common_seamless = {
 	.after_prev_frame_done = _common_seamless_after_frame_done,
 };
 
-#endif
-
 int mtk_cam_job_uninit_engine(struct mtk_cam_job *job, int unit_engs)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -4376,11 +4346,7 @@ static struct mtk_cam_job_ops basic_job_ops = {
 	.mark_engine_done = job_mark_engine_done,
 	.dump_aa_info = job_dump_aa_info,
 	.sw_recovery = job_sw_recovery,
-#if LEGACY_SWITCH
-	.seamless_ops = &legacy_seamless,
-#else
 	.seamless_ops = &common_seamless,
-#endif
 };
 
 static struct mtk_cam_job_ops stagger_job_ops = {
@@ -4397,11 +4363,7 @@ static struct mtk_cam_job_ops stagger_job_ops = {
 	.mark_engine_done = job_mark_engine_done,
 	.dump_aa_info = job_dump_aa_info,
 	.sw_recovery = job_sw_recovery,
-#if LEGACY_SWITCH
-	.seamless_ops = &legacy_seamless,
-#else
 	.seamless_ops = &common_seamless,
-#endif
 };
 
 static struct mtk_cam_job_ops m2m_job_ops = {
@@ -4463,11 +4425,7 @@ static struct mtk_cam_job_ops extisp_job_ops = {
 //	.apply_switch = _apply_switch,
 	.apply_extisp_meta_pd = _apply_cq_extisp_metapd,
 	.apply_extisp_procraw = _apply_cq_extisp_procraw,
-#if LEGACY_SWITCH
-	.seamless_ops = &legacy_seamless,
-#else
 	.seamless_ops = &common_seamless,
-#endif
 };
 static struct mtk_cam_job_ops timeshare_job_ops = {
 	.cancel = job_cancel,
@@ -4483,11 +4441,7 @@ static struct mtk_cam_job_ops timeshare_job_ops = {
 	.mark_engine_done = job_mark_engine_done,
 	.apply_extisp_procraw = _ts_m2m_apply_cq,
 	.trigger_isp = trigger_ts_m2m,
-#if LEGACY_SWITCH
-	.seamless_ops = &legacy_seamless,
-#else
 	.seamless_ops = &common_seamless,
-#endif
 };
 
 static struct mtk_cam_job_state_cb timeshare_state_cb = {
