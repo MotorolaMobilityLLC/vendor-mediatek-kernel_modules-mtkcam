@@ -2826,8 +2826,6 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 
 	mutex_lock(&ctx->stream_mutex);
 
-	core_common_reg_setup(ctx);
-
 	/* get current sensor idx by get_sensor_idx */
 	if (!ctx->is_test_model) {
 		ctx->current_sensor_id = get_sensor_idx(ctx);
