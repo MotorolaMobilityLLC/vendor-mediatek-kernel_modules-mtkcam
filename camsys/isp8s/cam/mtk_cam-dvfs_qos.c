@@ -740,6 +740,7 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 	u64 avg_bw, peak_bw, stash_avg_bw, stash_peak_bw;
 	unsigned int sv_port_num = 0;
 	bool is_smmu_enabled = true;
+	unsigned int strideLCM;
 
 	/* cqi */
 	avg_bw = peak_bw = to_qos_icc(CQ_BUF_SIZE * sensor_fps);
@@ -784,10 +785,13 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 					calc_bw(DIV_ROUND_UP(in->fmt.s.w, 64) * img_h,
 						linet, img_h + sensor_vb);
 			}
-			/* camsv stash fixed at 5ostdl = 5mb */
 			if (is_smmu_enabled) {
-				if (avg_bw || peak_bw)
-					stash_peak_bw = stash_avg_bw = to_qos_icc(2097152);
+				if (avg_bw || peak_bw) {
+					/* stash */
+					strideLCM = LCM(x_size, 4096);
+					stash_peak_bw = stash_avg_bw = img_h / (strideLCM/x_size) * 16 * sensor_fps;
+					stash_peak_bw = stash_avg_bw = to_qos_icc(stash_avg_bw);
+				}
 			}
 
 		} else {
@@ -795,9 +799,13 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb);
 			peak_bw =
 				calc_bw(x_size * img_h, linet, sensor_h);
-			/* camsv stash fixed at 5ostdl = 5mb */
-			if (avg_bw || peak_bw)
-				stash_peak_bw = stash_avg_bw = to_qos_icc(2097152);
+			if (avg_bw || peak_bw) {
+				/* stash */
+				strideLCM = LCM(x_size, 4096);
+				stash_peak_bw = stash_avg_bw = img_h / (strideLCM/x_size) * 16 * sensor_fps;
+				stash_peak_bw = stash_avg_bw = to_qos_icc(stash_avg_bw);
+			}
+
 		}
 
 		if (sv_port_num == SMI_PORT_SV_TYPE0_NUM) {
