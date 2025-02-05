@@ -18,6 +18,10 @@
 
 #include "iommu_debug.h"
 
+#ifdef CFG_MTK_VMM_NOTIFIER_SUPPORT
+#include "mtk-vmm-notifier.h"
+#endif
+
 #if IS_ENABLED(CONFIG_MTK_AEE_FEATURE)
 #include <aee.h>
 #endif
@@ -83,7 +87,6 @@ struct device *g_dev1, *g_dev2;
 struct device *g_smmu_dev1;
 
 static unsigned int g_u4pm_cnt;
-bool is_ccf_apply;
 
 static spinlock_t g_PDA_SpinLock;
 
@@ -175,7 +178,7 @@ static void pda_reset_nocheckclk(unsigned int PDA_Index)
 {
 	unsigned long end = 0;
 
-	if (!is_ccf_apply && g_u4pm_cnt == 0) {
+	if (g_u4pm_cnt == 0) {
 		LOG_INF("Cannot process without enable pda clock, pm:%d\n", g_u4pm_cnt);
 		return;
 	}
@@ -225,7 +228,7 @@ static void pda_nontransaction_reset_nocheckclk(unsigned int PDA_Index)
 	unsigned int MRAW_reset_value = 0;
 	unsigned int Reset_Bitmask = 0;
 
-	if (!is_ccf_apply && g_u4pm_cnt == 0) {
+	if (g_u4pm_cnt == 0) {
 		LOG_INF("Cannot process without enable pda clock, pm:%d\n", g_u4pm_cnt);
 		return;
 	}
@@ -259,13 +262,29 @@ static inline void PDA_Prepare_Enable_ccf_clock(void)
 
 	mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_PDA);
 
-	if (is_ccf_apply) {
+	if (g_PDA_quantity > 0) {
+		/* consumer device starting work*/
+		ret = pm_runtime_get_sync(g_dev1);
+		if (ret) {
+			LOG_INF("pm_runtime_get_sync dev1 failed:(%d)\n", ret);
+			return;
+		}
+
 		ret = mtk_smi_larb_enable(larb1);
 		if (ret) {
 			LOG_INF("cannot enable pda larb1\n");
 			return;
 		}
-		LOG_INF("mtk_smi_larb_enable pda larb1 done\n");
+			LOG_INF("mtk_smi_larb_enable pda larb1 done\n");
+	}
+	if (g_PDA_quantity > 1) {
+		/* consumer device starting work*/
+		ret = pm_runtime_get_sync(g_dev2);
+		if (ret) {
+			LOG_INF("pm_runtime_get_sync dev2 failed:(%d)\n", ret);
+			pm_runtime_put_sync(g_dev1);
+			return;
+		}
 
 		ret = mtk_smi_larb_enable(larb2);
 		if (ret) {
@@ -273,69 +292,60 @@ static inline void PDA_Prepare_Enable_ccf_clock(void)
 			return;
 		}
 		LOG_INF("mtk_smi_larb_enable pda larb2 done\n");
-	} else {
-		/* consumer device starting work*/
-		if (g_PDA_quantity > 0) {
-			ret = pm_runtime_get_sync(g_dev1); //Note: It‘s not larb's device.
-			if (ret) {
-				LOG_INF("pm_runtime_get_sync dev1 failed:(%d)\n", ret);
-				return;
-			}
-		}
-		if (g_PDA_quantity > 1) {
-			ret = pm_runtime_get_sync(g_dev2); //Note: It‘s not larb's device.
-			if (ret) {
-				LOG_INF("pm_runtime_get_sync dev2 failed:(%d)\n", ret);
-				pm_runtime_put_sync(g_dev1);
-				return;
-			}
-		}
-		g_u4pm_cnt++;
-		if (pda_log_dbg_en == 1)
-			LOG_INF("pm_runtime_get_sync done\n");
 	}
 
+	g_u4pm_cnt++;
+	if (pda_log_dbg_en == 1)
+		LOG_INF("pm_runtime_get_sync done\n");
+
 	pda_clk_prepare_enable();
+
+#ifdef CFG_MTK_VMM_NOTIFIER_SUPPORT
+	vmm_enable_cvfs(VMM_CVFS_USR_PDA, VMM_CVFS_CAM_SEL);
+#endif
 }
 
 static inline void PDA_Disable_Unprepare_ccf_clock(void)
 {
 	int ret = 0;
 
-	if (!is_ccf_apply && !g_u4pm_cnt) {
+	if (!g_u4pm_cnt) {
 		LOG_INF("The power on flow is abnormal, no need to do power off flow\n");
 		return;
 	}
 
+#ifdef CFG_MTK_VMM_NOTIFIER_SUPPORT
+	vmm_disable_cvfs(VMM_CVFS_USR_PDA, VMM_CVFS_CAM_SEL);
+#endif
+
 	pda_clk_disable_unprepare();
 
-	if (is_ccf_apply) {
+	if (g_PDA_quantity > 1) {
 		ret = mtk_smi_larb_disable(larb2);
 		if (ret)
 			LOG_INF("cannot disable pda larb2\n");
 		else
 			LOG_INF("mtk_smi_larb_disable pda larb2 done\n");
 
+		ret = pm_runtime_put_sync(g_dev2);
+		if (ret)
+			LOG_INF("pm_runtime_put_sync dev2 failed:(%d)\n", ret);
+	}
+	if (g_PDA_quantity > 0) {
 		ret = mtk_smi_larb_disable(larb1);
 		if (ret)
 			LOG_INF("cannot disable pda larb1\n");
 		else
 			LOG_INF("mtk_smi_larb_disable pda larb1 done\n");
-	} else {
-		if (g_PDA_quantity > 1) {
-			ret = pm_runtime_put_sync(g_dev2);
-			if (ret)
-				LOG_INF("pm_runtime_put_sync dev2 failed:(%d)\n", ret);
-		}
-		if (g_PDA_quantity > 0) {
-			ret = pm_runtime_put_sync(g_dev1);
-			if (ret)
-				LOG_INF("pm_runtime_put_sync dev1 failed:(%d)\n", ret);
-		}
-		g_u4pm_cnt--;
-		if (pda_log_dbg_en == 1)
-			LOG_INF("pm_runtime_put_sync done\n");
+
+		ret = pm_runtime_put_sync(g_dev1);
+		if (ret)
+			LOG_INF("pm_runtime_put_sync dev1 failed:(%d)\n", ret);
 	}
+
+	g_u4pm_cnt--;
+	if (pda_log_dbg_en == 1)
+		LOG_INF("pm_runtime_put_sync done\n");
 
 	mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_PDA);
 }
@@ -460,20 +470,11 @@ static void pda_reset(unsigned int PDA_Index)
 	unsigned long end = 0;
 
 	spin_lock(&g_PDA_SpinLock);
-	if (is_ccf_apply) {
-		if (g_u4EnableClockCount == 0) {
-			LOG_INF("Cannot process without enable pda clock, clk:%d\n",
-				g_u4EnableClockCount);
-			spin_unlock(&g_PDA_SpinLock);
-			return;
-		}
-	} else {
-		if (g_u4EnableClockCount == 0 || g_u4pm_cnt == 0) {
-			LOG_INF("Cannot process without enable pda clock, clk/pm:%d/%d\n",
-				g_u4EnableClockCount, g_u4pm_cnt);
-			spin_unlock(&g_PDA_SpinLock);
-			return;
-		}
+	if (g_u4EnableClockCount == 0 || g_u4pm_cnt == 0) {
+		LOG_INF("Cannot process without enable pda clock, clk/pm:%d/%d\n",
+			g_u4EnableClockCount, g_u4pm_cnt);
+		spin_unlock(&g_PDA_SpinLock);
+		return;
 	}
 	spin_unlock(&g_PDA_SpinLock);
 
@@ -523,20 +524,11 @@ static void pda_nontransaction_reset(unsigned int PDA_Index)
 	unsigned int Reset_Bitmask = 0;
 
 	spin_lock(&g_PDA_SpinLock);
-	if (is_ccf_apply) {
-		if (g_u4EnableClockCount == 0) {
-			LOG_INF("Cannot process without enable pda clock, clk:%d\n",
-				g_u4EnableClockCount);
-			spin_unlock(&g_PDA_SpinLock);
-			return;
-		}
-	} else {
-		if (g_u4EnableClockCount == 0 || g_u4pm_cnt == 0) {
-			LOG_INF("Cannot process without enable pda clock, clk/pm:%d/%d\n",
-				g_u4EnableClockCount, g_u4pm_cnt);
-			spin_unlock(&g_PDA_SpinLock);
-			return;
-		}
+	if (g_u4EnableClockCount == 0 || g_u4pm_cnt == 0) {
+		LOG_INF("Cannot process without enable pda clock, clk/pm:%d/%d\n",
+			g_u4EnableClockCount, g_u4pm_cnt);
+		spin_unlock(&g_PDA_SpinLock);
+		return;
 	}
 	spin_unlock(&g_PDA_SpinLock);
 
@@ -1349,6 +1341,10 @@ static void TF_dump_log(unsigned int hw_trigger_num)
 	mtk_smi_dbg_hang_detect("PDA device");
 #endif
 
+#ifdef CFG_MTK_VMM_NOTIFIER_SUPPORT
+	vmm_cvfs_dump();
+#endif
+
 	// check debug data
 	for (i = 0; i < hw_trigger_num; i++) {
 		for (sel_index = 0; sel_index < Length_Arr; ++sel_index) {
@@ -1552,18 +1548,10 @@ static irqreturn_t pda_irqhandle(signed int Irq, void *DeviceId)
 {
 	unsigned int nPdaStatus = 0;
 
-	if (is_ccf_apply) {
-		if (g_u4EnableClockCount > 0) {
-			// read pda status
-			nPdaStatus = PDA_RD32(PDA_devs[0].m_pda_base + PDA_PDA_ERR_STAT_REG) &
-				PDA_STATUS_REG;
-		}
-	} else {
-		if (g_u4EnableClockCount > 0 && g_u4pm_cnt > 0) {
-			// read pda status
-			nPdaStatus = PDA_RD32(PDA_devs[0].m_pda_base + PDA_PDA_ERR_STAT_REG) &
-				PDA_STATUS_REG;
-		}
+	if (g_u4EnableClockCount > 0 && g_u4pm_cnt > 0) {
+		// read pda status
+		nPdaStatus = PDA_RD32(PDA_devs[0].m_pda_base + PDA_PDA_ERR_STAT_REG) &
+			PDA_STATUS_REG;
 	}
 
 	if (!nPdaStatus) {
@@ -1584,13 +1572,14 @@ static irqreturn_t pda_irqhandle(signed int Irq, void *DeviceId)
 	++g_PDA0_IRQCount;
 	if (g_PDA0_IRQCount > g_reasonable_IRQCount) {
 		PDA_devs[0].HWstatus = -29;
-		LOG_INF("Irq abnormal, rsn: %d, pda0: %d, roi/stat/stat_rg/clk: %d/%d/%d/%d\n",
+		LOG_INF("Irq abnormal, rsn: %d, pda0: %d, roi/stat/stat_rg/clk/pm: %d/%d/%d/%d/%d\n",
 			g_reasonable_IRQCount,
 			g_PDA0_IRQCount,
 			g_pda_Pdadata.roi_num,
 			g_pda_Pdadata.status,
 			nPdaStatus,
-			g_u4EnableClockCount);
+			g_u4EnableClockCount,
+			g_u4pm_cnt);
 		pda_nontransaction_reset(0);
 	}
 #endif
@@ -1604,18 +1593,10 @@ static irqreturn_t pda2_irqhandle(signed int Irq, void *DeviceId)
 {
 	unsigned int nPdaStatus = 0;
 
-	if (is_ccf_apply) {
-		if (g_u4EnableClockCount > 0) {
-			// read pda status
-			nPdaStatus = PDA_RD32(PDA_devs[1].m_pda_base + PDA_PDA_ERR_STAT_REG) &
-				PDA_STATUS_REG;
-		}
-	} else {
-		if (g_u4EnableClockCount > 0 && g_u4pm_cnt > 0) {
-			// read pda status
-			nPdaStatus = PDA_RD32(PDA_devs[1].m_pda_base + PDA_PDA_ERR_STAT_REG) &
-				PDA_STATUS_REG;
-		}
+	if (g_u4EnableClockCount > 0 && g_u4pm_cnt > 0) {
+		// read pda status
+		nPdaStatus = PDA_RD32(PDA_devs[1].m_pda_base + PDA_PDA_ERR_STAT_REG) &
+			PDA_STATUS_REG;
 	}
 
 	if (!nPdaStatus) {
@@ -1636,13 +1617,14 @@ static irqreturn_t pda2_irqhandle(signed int Irq, void *DeviceId)
 	++g_PDA1_IRQCount;
 	if (g_PDA1_IRQCount > g_reasonable_IRQCount) {
 		PDA_devs[1].HWstatus = -29;
-		LOG_INF("Irq abnormal, rsn: %d, pda1: %d, roi/stat/stat_rg/clk: %d/%d/%d/%d\n",
+		LOG_INF("Irq abnormal, rsn: %d, pda1: %d, roi/stat/stat_rg/clk/pm: %d/%d/%d/%d/%d\n",
 			g_reasonable_IRQCount,
 			g_PDA1_IRQCount,
 			g_pda_Pdadata.roi_num,
 			g_pda_Pdadata.status,
 			nPdaStatus,
-			g_u4EnableClockCount);
+			g_u4EnableClockCount,
+			g_u4pm_cnt);
 		pda_nontransaction_reset(1);
 	}
 #endif
@@ -2909,6 +2891,9 @@ static int PDA_probe(struct platform_device *pdev)
 	unsigned int irq_info[3];	/* Record interrupts info from device tree */
 	struct device_node *node;
 	int i, larbs;
+	struct device_node *vcore_node;
+	struct platform_device *vcore_pdev;
+	struct device_link *vcore_link;
 
 	LOG_INF("probe Start\n");
 
@@ -2938,9 +2923,6 @@ static int PDA_probe(struct platform_device *pdev)
 	}
 	LOG_INF("find camera-pda node done\n");
 
-	is_ccf_apply = of_property_read_bool(pdev->dev.of_node, "ccf-apply");
-	LOG_INF("ccf_apply: 0x%x", is_ccf_apply);
-
 	// must porting in dts
 	larbs = of_count_phandle_with_args(
 				pdev->dev.of_node, "mediatek,larbs", NULL);
@@ -2951,6 +2933,27 @@ static int PDA_probe(struct platform_device *pdev)
 			LOG_INF("larb%d is NULL\n", i);
 	}
 
+	// device link with camisp_vcore
+	vcore_node = of_parse_phandle(pdev->dev.of_node, "mediatek,camisp-vcore", 0);
+	if (!vcore_node) {
+		LOG_INF("failed to get camisp vcore phandle\n");
+		return -ENODEV;
+	}
+	vcore_pdev = of_find_device_by_node(vcore_node);
+	if (WARN_ON(!vcore_pdev)) {
+		of_node_put(vcore_node);
+		LOG_INF("failed to get camisp vcore pdev\n");
+		return -ENODEV;
+	}
+	of_node_put(vcore_node);
+
+	vcore_link = device_link_add(&pdev->dev, &vcore_pdev->dev,
+					DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
+	if (!vcore_link)
+		LOG_INF("unable to link vcore\n");
+
+	LOG_INF("vcore pdev %p\n", pdev);
+
 #if IS_ENABLED(CONFIG_OF)
 	g_dev1 = &pdev->dev;
 
@@ -2959,10 +2962,8 @@ static int PDA_probe(struct platform_device *pdev)
 
 	//power on smi
 	/* consumer driver probe*/
-	if (!is_ccf_apply) {
-		pm_runtime_enable(g_dev1); //Note: It‘s not larb's device.
-		LOG_INF("pm_runtime_enable pda1 done\n");
-	}
+	pm_runtime_enable(g_dev1); //Note: It‘s not larb's device.
+	LOG_INF("pm_runtime_enable pda1 done\n");
 #endif
 
 	if (pda_devm_clk_get(pdev))
@@ -3079,8 +3080,7 @@ err_create_pda_class:
 static void PDA_remove(struct platform_device *pdev)
 {
 	PDA_UnRegCharDev();
-	if (!is_ccf_apply)
-		pm_runtime_disable(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
 }
 
 static int PDA_suspend(struct platform_device *pdev, pm_message_t mesg)
@@ -3100,8 +3100,8 @@ static void PDA_shutdown(struct platform_device *pdev)
 	spin_lock(&g_PDA_SpinLock);
 	LOG_INF("PDA shutdown g_u4EnableClockCount: %d", g_u4EnableClockCount);
 	spin_unlock(&g_PDA_SpinLock);
-	if (!is_ccf_apply)
-		pm_runtime_disable(&pdev->dev);
+
+	pm_runtime_disable(&pdev->dev);
 }
 
 static int PDA2_probe(struct platform_device *pdev)
@@ -3139,10 +3139,8 @@ static int PDA2_probe(struct platform_device *pdev)
 
 	//power on smi
 	// consumer driver probe
-	if (!is_ccf_apply) {
-		pm_runtime_enable(g_dev2); //Note: It‘s not larb's device.
-		LOG_INF("pm_runtime_enable pda2 done\n");
-	}
+	pm_runtime_enable(g_dev2); //Note: It‘s not larb's device.
+	LOG_INF("pm_runtime_enable pda2 done\n");
 #endif
 
 	// get PDA address, and PDA quantity
@@ -3196,8 +3194,7 @@ static int PDA2_probe(struct platform_device *pdev)
 
 static void PDA2_remove(struct platform_device *pdev)
 {
-	if (!is_ccf_apply)
-		pm_runtime_disable(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
 }
 
 //////////////////////////////////////// PDA driver //////////////////////////
