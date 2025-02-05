@@ -18,6 +18,7 @@ struct workqueue_struct *proxy_wq;
 static atomic_t enable_reg_check_timer = ATOMIC_INIT(0);
 static DEFINE_HASHTABLE(reg_check_task_list, 3);
 static DEFINE_MUTEX(reg_check_task_list_lock);
+static struct c2ps_reg_check_proxy_task proxy_work;
 
 static void update_reg_check_timer(void)
 {
@@ -483,10 +484,6 @@ static void c2ps_proxy_wq_process(struct work_struct *work)
 		return;
 	}
 
-	struct c2ps_reg_check_proxy_task *w = NULL;
-
-	w = container_of(work, struct c2ps_reg_check_proxy_task, m_work);
-
 	{
 		struct reg_check_task *tsk = NULL;
 		u32 tmp = 0;
@@ -503,26 +500,15 @@ static void c2ps_proxy_wq_process(struct work_struct *work)
 		}
 		mutex_unlock(&reg_check_task_list_lock);
 	}
-
-	kfree(w);
 }
 
 static void c2ps_reg_check_timer_callback(struct timer_list *t)
 {
-	struct c2ps_reg_check_proxy_task *work = NULL;
-
 	if (atomic_read(&enable_reg_check_timer) > 0)
 		mod_timer(&c2ps_reg_check_timer, jiffies);
 
-	work = kzalloc(sizeof(struct c2ps_reg_check_proxy_task), GFP_ATOMIC);
-	if (unlikely(!work)) {
-		C2PS_LOGE("reg check proxy task allocate failed\n");
-		return;
-	}
-
 	c2ps_main_systrace("reg check timer callback");
-	INIT_WORK(&work->m_work, c2ps_proxy_wq_process);
-	queue_work(proxy_wq, &work->m_work);
+	queue_work(proxy_wq, &proxy_work.m_work);
 }
 
 void c2ps_monitor_init(void)
@@ -551,4 +537,5 @@ void c2ps_monitor_uninit(void)
 void monitor_module_init(void)
 {
 	mutex_init(&reg_check_task_list_lock);
+	INIT_WORK(&proxy_work.m_work, c2ps_proxy_wq_process);
 }
