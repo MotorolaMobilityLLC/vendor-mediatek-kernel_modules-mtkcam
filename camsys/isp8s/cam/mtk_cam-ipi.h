@@ -258,6 +258,7 @@ struct mtkcam_ipi_config_param {
 	__u32	vsync_order : 4;
 	__u8	line_interleave;
 	__u8	ois_compensation;
+	__u8	all_exp_in_slc;
 	struct mtkcam_ipi_buffer w_cac_table; /* for rgbw's empty cac table */
 } __packed;
 

@@ -2020,6 +2020,14 @@ bool is_dvc_hwmode(struct mtk_cam_job *job)
 		return debug_dvc_hwmode;
 }
 
+bool is_all_exp_in_slc(struct mtk_cam_job *job)
+{
+	if (is_dcg_ap_merge(job))
+		return true;
+
+	return false;
+}
+
 bool is_rgbw(struct mtk_cam_job *job)
 {
 	return scen_is_rgbw(&job->job_scen);

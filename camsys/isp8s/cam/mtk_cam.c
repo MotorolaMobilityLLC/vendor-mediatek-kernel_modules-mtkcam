@@ -1445,6 +1445,7 @@ int mtk_cam_power_ctrl_ccu(struct device *dev, int on_off)
 
 		if (!cam->rproc_ccu_handle)
 			goto EXIT;
+
 #ifdef SKIP_IN_FPGA_EP
 #if IS_ENABLED(CONFIG_MTK_CCU_DEBUG)
 		rproc_shutdownx(cam->rproc_ccu_handle, RPROC_UID_CAM);
@@ -1452,7 +1453,6 @@ int mtk_cam_power_ctrl_ccu(struct device *dev, int on_off)
 		rproc_shutdown(cam->rproc_ccu_handle);
 #endif
 #endif
-
 		rproc_put(cam->rproc_ccu_handle);
 		platform_device_put(cam->ccu_pdev);
 
@@ -2078,12 +2078,8 @@ static int mtk_cam_ctx_request_slb(struct mtk_cam_ctx *ctx, int uid,
 		slb.uid = uid;
 		slb.type = TP_BUFFER;
 
-#ifdef SKIP_IN_FPGA_EP
 		ret = slbc_request(&slb);
-#else
-		slb.paddr = NULL;
-		slb.size = 0;
-#endif
+
 		if (ret < 0) {
 			dev_info(dev, "%s: allocate slb fail\n", __func__);
 			return -1;
@@ -2143,21 +2139,19 @@ static void mtk_cam_ctx_release_slb(struct mtk_cam_ctx *ctx)
 	slb.uid = ctx->slb_uid;
 	slb.type = TP_BUFFER;
 
-#ifdef SKIP_IN_FPGA_EP
 	ret = slbc_release(&slb);
 	if (ret < 0)
 		dev_info(dev, "failed to release slb buffer\n");
-#endif
 
 	mtk_cam_ctx_reset_slb(ctx);
 
 	/* reset aid: not necessary */
 }
+
 static int mtk_cam_ctx_request_slc(struct mtk_cam_ctx *ctx, u8 slc_mode)
 {
 	int ret = 0;
 
-#ifdef SKIP_IN_FPGA_EP
 #if IS_ENABLED(CONFIG_MTK_SLBC)
 	ctx->slc_data.sign = SLC_DATA_MAGIC;
 	ctx->slc_data.flag = (slc_mode == SLC_WITH_DISCARD) ? (GS_RD | GS_M) : GS_M;
@@ -2167,14 +2161,12 @@ static int mtk_cam_ctx_request_slc(struct mtk_cam_ctx *ctx, u8 slc_mode)
 		ctx->slc_gid, ctx->slc_data.bw, ctx->slc_data.flag, ctx->slc_data.dma_size);
 	ctx->slc_data_valid = true;
 #endif
-#endif
 	return ret;
 }
 
 static int mtk_cam_ctx_release_slc(struct mtk_cam_ctx *ctx)
 {
 	int ret = 0;
-#ifdef SKIP_IN_FPGA_EP
 #if IS_ENABLED(CONFIG_MTK_SLBC)
 	if (ctx->slc_data_valid) {
 		ret = slbc_gid_release(ID_CAM, ctx->slc_gid);
@@ -2183,13 +2175,11 @@ static int mtk_cam_ctx_release_slc(struct mtk_cam_ctx *ctx)
 		ctx->slc_data_valid = false;
 	}
 #endif
-#endif
 	return ret;
 }
 static int mtk_cam_ctx_validate_slc(struct mtk_cam_ctx *ctx)
 {
 	int ret = 0;
-#ifdef SKIP_IN_FPGA_EP
 #if IS_ENABLED(CONFIG_MTK_SLBC)
 	if (ctx->slc_validated == false) {
 		ret = slbc_validate(ID_CAM, ctx->slc_gid);
@@ -2198,7 +2188,6 @@ static int mtk_cam_ctx_validate_slc(struct mtk_cam_ctx *ctx)
 		ctx->slc_validated = true;
 	}
 #endif
-#endif
 	return ret;
 }
 
@@ -2206,7 +2195,6 @@ static int mtk_cam_ctx_invalidate_slc(struct mtk_cam_ctx *ctx)
 {
 	int ret = 0;
 
-#ifdef SKIP_IN_FPGA_EP
 #if IS_ENABLED(CONFIG_MTK_SLBC)
 	if (ctx->slc_validated) {
 		ret = slbc_invalidate(ID_CAM, ctx->slc_gid);
@@ -2215,19 +2203,16 @@ static int mtk_cam_ctx_invalidate_slc(struct mtk_cam_ctx *ctx)
 		ctx->slc_validated = false;
 	}
 #endif
-#endif
 	return ret;
 }
 static int mtk_cam_ctx_slc_read_invalidate(struct mtk_cam_ctx *ctx, bool en)
 {
 	int ret = 0;
 
-#ifdef SKIP_IN_FPGA_EP
 #if IS_ENABLED(CONFIG_MTK_SLBC)
 	ret = slbc_read_invalidate(ID_CAM, ctx->slc_gid, en);
 	dev_info(ctx->cam->dev, "%s: en:%d gid:%d slc_data bw/dma size:%d/%d\n", __func__,
 		en, ctx->slc_gid, ctx->slc_data.bw, ctx->slc_data.dma_size);
-#endif
 #endif
 	return ret;
 }

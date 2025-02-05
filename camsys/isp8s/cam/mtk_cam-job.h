@@ -732,4 +732,6 @@ bool mtk_cam_job_is_dcif_required(struct mtk_cam_job *job);
 int mtk_cam_job_uninit_engine(
 	struct mtk_cam_job *job, int unit_engs);
 
+int mtk_cam_job_config_raw_slc(struct mtk_cam_job *job, int enable);
+
 #endif //__MTK_CAM_JOB_H

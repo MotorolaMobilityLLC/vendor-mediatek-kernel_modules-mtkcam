@@ -190,7 +190,6 @@ void set_sig_sel_slave(struct mtk_raw_device *dev);
 void set_dcif_en_slave(struct mtk_raw_device *dev);
 void check_master_raw_vf_en(struct mtk_raw_device *dev);
 
-
 /* trigger */
 void stream_on(struct mtk_raw_device *dev, int on, bool reset_at_off);
 void immediate_stream_off(struct mtk_raw_device *dev);
@@ -230,7 +229,6 @@ int mtk_yuv_runtime_resume(struct device *dev);
 int mtk_rms_runtime_suspend(struct device *dev);
 int mtk_rms_runtime_resume(struct device *dev);
 
-
 /* aa debug info */
 void fill_aa_info(struct mtk_raw_device *raw_dev,
 				  struct mtk_ae_debug_data *ae_info);
@@ -266,5 +264,8 @@ void diable_rms_pcrp(struct mtk_raw_device *raw);
 void set_dl_en(struct mtk_raw_device *dev);
 
 int mtk_cam_raw_reset_msgfifo(struct mtk_raw_device *dev);
+
+int rawi_r2_slc_config(struct mtk_raw_device *raw_dev, int gid, int bid);
+int rawi_r5_slc_config(struct mtk_raw_device *raw_dev, int gid, int bid);
 
 #endif /*__MTK_CAM_RAW_H*/

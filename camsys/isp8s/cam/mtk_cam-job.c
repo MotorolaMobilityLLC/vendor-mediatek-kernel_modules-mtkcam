@@ -780,7 +780,7 @@ mtk_cam_job_initialize_engines(struct mtk_cam_ctx *ctx,
 				mtk_cam_hsf_aid(ctx, 1, AID_CAM_DC, engines);
 #else
 			if (is_dc_mode(job) && ctx->slc_data_valid)
-				mtk_cam_hsf_aid(ctx, 1, AID_CAM_DC, engines);
+				mtk_cam_job_config_raw_slc(job, true);
 #endif
 		} else {
 			job->do_pending_aid_config = true;
@@ -2733,7 +2733,7 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job)
 			if (is_dc_mode(job) && ctx->slb_addr)
 				mtk_cam_hsf_aid(ctx, 1, AID_CAM_DC, selected);
 			if (is_dc_mode(job) && ctx->slc_data_valid)
-				mtk_cam_hsf_aid(ctx, 1, AID_CAM_DC, selected);
+				mtk_cam_job_config_raw_slc(job, true);
 			if (qof_enabled && ctx->hw_sv) {
 				struct mtk_camsv_device *sv;
 
@@ -5447,6 +5447,7 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 		config->line_interleave =
 			ctrl->resource.user_data.sensor_res.line_interleave;
 		config->ois_compensation = is_ois_compensation(job);
+		config->all_exp_in_slc = is_all_exp_in_slc(job);
 
 		if (scen_support_rgbw(&job->job_scen)) {
 			if (WARN_ON(!job->w_caci_buf))
@@ -6851,4 +6852,33 @@ int mtk_cam_job_is_enque_timeout(struct mtk_cam_job *job)
 		ret = 1;
 
 	return ret;
+}
+
+#define CAM_SLC_GID		44
+int mtk_cam_job_config_raw_slc(struct mtk_cam_job *job, int enable)
+{
+	struct mtk_cam_device *cam = job->src_ctx->cam;
+	struct mtk_raw_device *raw_dev;
+	unsigned int subset;
+	int i;
+	int bid = (job->src_ctx->ctrldata.slc_mode == SLC_WITH_DISCARD) ?
+				1 : 0;
+
+	subset = bit_map_subset_of(MAP_HW_RAW, job->used_engine);
+	for (i = 0; i < cam->engines.num_raw_devices; i++) {
+		if (BIT(i) & subset) {
+			raw_dev = dev_get_drvdata(cam->engines.raw_devs[i]);
+			if (enable) {
+				rawi_r5_slc_config(raw_dev, CAM_SLC_GID, bid);
+
+				if (is_all_exp_in_slc(job))
+					rawi_r2_slc_config(raw_dev, CAM_SLC_GID, bid);
+			} else {
+				rawi_r5_slc_config(raw_dev, 0, 0);
+				rawi_r2_slc_config(raw_dev, 0, 0);
+			}
+		}
+	}
+
+	return 0;
 }

@@ -739,6 +739,9 @@ static void reset_reg(struct mtk_raw_device *dev)
 
 	reset_int_en(dev);
 
+	rawi_r2_slc_config(dev, 0, 0);
+	rawi_r5_slc_config(dev, 0, 0);
+
 	wmb(); /* make sure committed */
 	reset_error_handling(dev);
 	if (CAM_DEBUG_ENABLED(RAW_INT))
@@ -1157,6 +1160,74 @@ void stream_on(struct mtk_raw_device *dev, int on, bool reset_at_off)
 			reset_reg(dev);
 	}
 	//dev_info(dev->dev, "%s: %d\n", __func__, on);
+}
+
+static void dump_dmatop_slc(struct mtk_raw_device *dev, bool force)
+{
+	if (CAM_DEBUG_ENABLED(RAW_INT) || force) {
+		dev_info(dev->dev,
+			 "[%s] raw%d - [in] AXSLC_2/AXSLC_3/GID9_2/GID9_3/GID9_4:0x%x/0x%x/0x%x/0x%x/0x%x\n",
+			 __func__, dev->id,
+			 raw_readl_relaxed(dev, dev->dmatop_base_inner, REG_CAMRAWDMATOP_AXSLC_REGISTER_2),
+			 raw_readl_relaxed(dev, dev->dmatop_base_inner, REG_CAMRAWDMATOP_AXSLC_REGISTER_3),
+			 raw_readl_relaxed(dev, dev->dmatop_base_inner, REG_CAMRAWDMATOP_ISC_GID9_REGISTER_2),
+			 raw_readl_relaxed(dev, dev->dmatop_base_inner, REG_CAMRAWDMATOP_ISC_GID9_REGISTER_3),
+			 raw_readl_relaxed(dev, dev->dmatop_base_inner, REG_CAMRAWDMATOP_ISC_GID9_REGISTER_4));
+
+		dev_info(dev->dev,
+			 "[%s] raw%d - [out] AXSLC_2/AXSLC_3/GID9_2/GID9_3/GID9_4:0x%x/0x%x/0x%x/0x%x/0x%x\n",
+			 __func__, dev->id,
+			 raw_readl_relaxed(dev, dev->dmatop_base, REG_CAMRAWDMATOP_AXSLC_REGISTER_2),
+			 raw_readl_relaxed(dev, dev->dmatop_base, REG_CAMRAWDMATOP_AXSLC_REGISTER_3),
+			 raw_readl_relaxed(dev, dev->dmatop_base, REG_CAMRAWDMATOP_ISC_GID9_REGISTER_2),
+			 raw_readl_relaxed(dev, dev->dmatop_base, REG_CAMRAWDMATOP_ISC_GID9_REGISTER_3),
+			 raw_readl_relaxed(dev, dev->dmatop_base, REG_CAMRAWDMATOP_ISC_GID9_REGISTER_4));
+	}
+}
+
+int rawi_r2_slc_config(struct mtk_raw_device *raw_dev, int gid, int bid)
+{
+	u32 val;
+
+	val = 0;
+
+	SET_FIELD(&val, CAMRAWDMATOP_RAWI_R2_SLC_GID, gid);
+	SET_FIELD(&val, CAMRAWDMATOP_RAWI_R2_SLC_BID, bid);
+	raw_writel(val, raw_dev, raw_dev->dmatop_base,
+			   REG_CAMRAWDMATOP_ISC_GID9_REGISTER_3);
+
+	/* RI = BIT(4) exclusive | BIT(1) cacheable */
+	val = 0;
+	SET_FIELD(&val, CAMRAWDMATOP_RAWI_R2_AXSLC, BIT(4) | BIT(1));
+
+	raw_writel(val, raw_dev, raw_dev->dmatop_base,
+			   REG_CAMRAWDMATOP_AXSLC_REGISTER_2);
+
+	dump_dmatop_slc(raw_dev, false);
+
+	return 0;
+}
+
+int rawi_r5_slc_config(struct mtk_raw_device *raw_dev, int gid, int bid)
+{
+	u32 val;
+
+	SET_FIELD(&val, CAMRAWDMATOP_RAWI_R5_SLC_GID, gid);
+	SET_FIELD(&val, CAMRAWDMATOP_RAWI_R5_SLC_BID, bid);
+
+	raw_writel(val, raw_dev, raw_dev->dmatop_base,
+			   REG_CAMRAWDMATOP_ISC_GID9_REGISTER_4);
+
+	/* RI = BIT(4) exclusive | BIT(1) cacheable */
+	val = 0;
+	SET_FIELD(&val, CAMRAWDMATOP_RAWI_R5_AXSLC, BIT(4) | BIT(1));
+
+	raw_writel(val, raw_dev, raw_dev->dmatop_base,
+			   REG_CAMRAWDMATOP_AXSLC_REGISTER_3);
+
+	dump_dmatop_slc(raw_dev, false);
+
+	return 0;
 }
 
 void immediate_stream_off(struct mtk_raw_device *dev)
@@ -3748,6 +3819,7 @@ int raw_dump_debug_status(struct mtk_raw_device *dev, int dma_debug_dump)
 	dump_ae_reg(dev, 1);
 	dump_awb_reg(dev, 1);
 	dump_af_reg(dev, 1);
+	dump_dmatop_slc(dev, 1);
 	qof_force_dump_all(dev);
 
 	if (dma_debug_dump) {
