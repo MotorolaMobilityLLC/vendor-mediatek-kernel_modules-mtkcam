@@ -166,6 +166,14 @@ int mtk_cam_set_dev_sv(struct device *dev, int idx, struct device *sv)
 	return set_dev_to_arr(eng->sv_devs, eng->num_camsv_devices, idx, sv);
 }
 
+int mtk_cam_set_dev_pda(struct device *dev, int idx, struct device *pda)
+{
+	struct mtk_cam_device *cam_dev = dev_get_drvdata(dev);
+	struct mtk_cam_engines *eng = &cam_dev->engines;
+
+	return set_dev_to_arr(eng->pda_devs, eng->num_pda_devices, idx, pda);
+}
+
 static DEFINE_SPINLOCK(larb_probe_lock);
 int mtk_cam_set_dev_larb(struct device *dev, struct device *larb)
 {
@@ -3720,6 +3728,7 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 {
 	struct mtk_raw_device *raw_dev;
 	struct mtk_camsv_device *sv_dev;
+	struct mtk_pda_device *pda_dev;
 	int i;
 
 	dev_info(ctx->cam->dev, "%s: ctx-%d pipe 0x%x engine 0x%x\n",
@@ -3727,6 +3736,13 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 		 ctx->used_pipe, ctx->used_engine);
 
 	qof_mtcmos_voter(&ctx->cam->engines, ctx->used_engine, true);
+
+	for (i = 0; i < ARRAY_SIZE(ctx->hw_pda); i++) {
+		if (ctx->hw_pda[i]) {
+			pda_dev = dev_get_drvdata(ctx->hw_pda[i]);
+			pda_reset(pda_dev);
+		}
+	}
 
 	if (ctx->hw_sv) {
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
@@ -3773,6 +3789,7 @@ void mtk_cam_ctx_engine_enable_irq(struct mtk_cam_ctx *ctx)
 {
 	struct mtk_raw_device *raw_dev;
 	struct mtk_camsv_device *sv_dev;
+	struct mtk_pda_device *pda_dev;
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
@@ -3787,12 +3804,21 @@ void mtk_cam_ctx_engine_enable_irq(struct mtk_cam_ctx *ctx)
 		for (i = 0; i < ARRAY_SIZE(sv_dev->irq); i++)
 			enable_irq(sv_dev->irq[i]);
 	}
+
+	for (i = 0; i < ARRAY_SIZE(ctx->hw_pda); i++) {
+		if (ctx->hw_pda[i]) {
+			pda_dev = dev_get_drvdata(ctx->hw_pda[i]);
+			for (i = 0; i < ARRAY_SIZE(pda_dev->irq); i++)
+				enable_irq(pda_dev->irq[i]);
+		}
+	}
 }
 
 void mtk_cam_ctx_engine_disable_irq(struct mtk_cam_ctx *ctx)
 {
 	struct mtk_raw_device *raw_dev;
 	struct mtk_camsv_device *sv_dev;
+	struct mtk_pda_device *pda_dev;
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
@@ -3806,6 +3832,14 @@ void mtk_cam_ctx_engine_disable_irq(struct mtk_cam_ctx *ctx)
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
 		for (i = 0; i < ARRAY_SIZE(sv_dev->irq); i++)
 			disable_irq(sv_dev->irq[i]);
+	}
+
+	for (i = 0; i < ARRAY_SIZE(ctx->hw_pda); i++) {
+		if (ctx->hw_pda[i]) {
+			pda_dev = dev_get_drvdata(ctx->hw_pda[i]);
+			for (i = 0; i < ARRAY_SIZE(pda_dev->irq); i++)
+				disable_irq(pda_dev->irq[i]);
+		}
 	}
 }
 
@@ -3846,6 +3880,7 @@ void mtk_cam_ctx_engine_reset(struct mtk_cam_ctx *ctx)
 {
 	struct mtk_raw_device *raw_dev;
 	struct mtk_camsv_device *sv_dev;
+	struct mtk_pda_device *pda_dev;
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
@@ -3858,6 +3893,13 @@ void mtk_cam_ctx_engine_reset(struct mtk_cam_ctx *ctx)
 	if (ctx->hw_sv) {
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
 		sv_reset(sv_dev);
+	}
+
+	for (i = 0; i < ARRAY_SIZE(ctx->hw_pda); i++) {
+		if (ctx->hw_pda[i]) {
+			pda_dev = dev_get_drvdata(ctx->hw_pda[i]);
+			pda_reset(pda_dev);
+		}
 	}
 }
 
@@ -4008,6 +4050,24 @@ static int fill_devs(struct device **arr_dev, int arr_dev_size,
 
 	return 0;
 }
+int mtk_cam_ctx_fetch_pda_devices(struct mtk_cam_ctx *ctx, unsigned long engines)
+{
+	struct mtk_cam_device *cam = ctx->cam;
+	int ret;
+
+
+	dev_info(cam->dev, "%s: engines: 0x%lx\n", __func__, engines);
+
+	ret = fill_devs(ctx->hw_pda, ARRAY_SIZE(ctx->hw_pda),
+			cam->engines.pda_devs,
+			cam->engines.num_pda_devices,
+			bit_map_subset_of(MAP_HW_PDA, engines));
+
+	if (ret)
+		dev_info(cam->dev, "%s: failed. engines = %lx\n",
+			 __func__, engines);
+	return ret;
+}
 
 int mtk_cam_ctx_fetch_devices(struct mtk_cam_ctx *ctx, unsigned long engines)
 {
@@ -4023,9 +4083,9 @@ int mtk_cam_ctx_fetch_devices(struct mtk_cam_ctx *ctx, unsigned long engines)
 			bit_map_subset_of(MAP_HW_RAW, engines));
 
 	ret = ret || fill_devs(&ctx->hw_sv, 1,
-			       cam->engines.sv_devs,
-			       cam->engines.num_camsv_devices,
-			       bit_map_subset_of(MAP_HW_CAMSV, engines));
+			cam->engines.sv_devs,
+			cam->engines.num_camsv_devices,
+			bit_map_subset_of(MAP_HW_CAMSV, engines));
 
 	if (ret)
 		dev_info(cam->dev, "%s: failed. engines = %lx\n",
@@ -4375,6 +4435,7 @@ static int mtk_cam_alloc_for_engine(struct device *dev)
 	struct device **dev_arr;
 	int num = eng->num_raw_devices * 3 /* raw + yuv + rms */
 		+ eng->num_camsv_devices
+		+ eng->num_pda_devices
 		+ eng->num_larb_devices;
 
 	dev_arr = devm_kzalloc(dev, sizeof(*dev) * num, GFP_KERNEL);
@@ -4392,6 +4453,9 @@ static int mtk_cam_alloc_for_engine(struct device *dev)
 
 	eng->sv_devs = dev_arr;
 	dev_arr += eng->num_camsv_devices;
+
+	eng->pda_devs = dev_arr;
+	dev_arr += eng->num_pda_devices;
 
 	eng->larb_devs = dev_arr;
 	dev_arr += eng->num_larb_devices;
@@ -4423,6 +4487,9 @@ static struct component_match *mtk_cam_match_add(struct device *dev)
 
 	eng->num_camsv_devices = MAX_SV_HW_NUM;
 
+	eng->num_pda_devices =
+		add_match_by_driver(dev, &match, &mtk_cam_pda_driver);
+
 	eng->num_seninf_devices =
 		add_match_by_driver(dev, &match, &seninf_pdrv);
 
@@ -4432,10 +4499,11 @@ static struct component_match *mtk_cam_match_add(struct device *dev)
 	if (IS_ERR(match) || mtk_cam_alloc_for_engine(dev))
 		mtk_cam_match_remove(dev);
 
-	dev_info(dev, "#: raw %d yuv %d rms %d larb %d, sv %d, seninf %d\n",
+	dev_info(dev, "#: raw %d yuv %d rms %d larb %d, sv %d, pda %d, seninf %d\n",
 		 eng->num_raw_devices, yuv_num, rms_num,
 		 eng->num_larb_devices,
 		 camsv_real_hw_num,
+		 eng->num_pda_devices,
 		 eng->num_seninf_devices);
 
 	return match ? match : ERR_PTR(-ENODEV);
@@ -4623,6 +4691,9 @@ static unsigned long get_engine_full_set(struct mtk_cam_engines *engines)
 	for (i = 0; i < engines->num_camsv_devices; i++)
 		set |= bit_map_bit(MAP_HW_CAMSV, i);
 
+	for (i = 0; i < engines->num_pda_devices; i++)
+		set |= bit_map_bit(MAP_HW_PDA, i);
+
 	return set;
 }
 
@@ -4728,10 +4799,8 @@ static int loop_each_engine(struct mtk_cam_engines *eng,
 			    unsigned long engine_mask,
 			    int (*func)(struct device *dev), int enable)
 {
-
 	unsigned long submask;
 	int i;
-
 
 	submask = bit_map_subset_of(MAP_HW_RAW, engine_mask);
 	for (i = 0; i < eng->num_raw_devices && submask; i++, submask >>= 1) {
@@ -4745,6 +4814,13 @@ static int loop_each_engine(struct mtk_cam_engines *eng,
 		if (!(submask & 0x1))
 			continue;
 		func(eng->sv_devs[i]);
+	}
+
+	submask = bit_map_subset_of(MAP_HW_PDA, engine_mask);
+	for (i = 0; i < eng->num_pda_devices && submask; i++, submask >>= 1) {
+		if (!(submask & 0x1))
+			continue;
+		func(eng->pda_devs[i]);
 	}
 
 	return 0;
@@ -4897,6 +4973,12 @@ static int register_sub_drivers(struct device *dev)
 		goto REGISTER_CAMSV_FAIL;
 	}
 
+	ret = platform_driver_register(&mtk_cam_pda_driver);
+	if (ret) {
+		dev_err(dev, "%s mtk_cam_pda_driver fail\n", __func__);
+		goto REGISTER_PDA_FAIL;
+	}
+
 	ret = platform_driver_register(&mtk_cam_raw_driver);
 	if (ret) {
 		dev_err(dev, "%s mtk_cam_raw_driver fail\n", __func__);
@@ -4952,6 +5034,9 @@ REGISTER_YUV_FAIL:
 	platform_driver_unregister(&mtk_cam_raw_driver);
 
 REGISTER_RAW_FAIL:
+	platform_driver_unregister(&mtk_cam_pda_driver);
+
+REGISTER_PDA_FAIL:
 	platform_driver_unregister(&mtk_cam_sv_driver);
 
 REGISTER_CAMSV_FAIL:
@@ -5427,6 +5512,7 @@ static void mtk_cam_remove(struct platform_device *pdev)
 
 	mtk_cam_debug_deinit(&cam_dev->dbg);
 
+	platform_driver_unregister(&mtk_cam_pda_driver);
 	platform_driver_unregister(&mtk_cam_sv_driver);
 	platform_driver_unregister(&mtk_cam_raw_driver);
 	platform_driver_unregister(&mtk_cam_larb_driver);

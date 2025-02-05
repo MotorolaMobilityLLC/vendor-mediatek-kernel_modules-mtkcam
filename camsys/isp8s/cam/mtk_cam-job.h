@@ -27,6 +27,7 @@
 			 JOB_NUM_PER_STREAM : JOB_NUM_PER_STREAM_DISPLAY_IC)
 #define MAX_PIPES_PER_STREAM 5
 #define MAX_RAW_PER_STREAM 3 // twin, 3raw
+#define MAX_PDA_PER_STREAM 2
 #define MAX_SV_PIPES_PER_STREAM (MAX_PIPES_PER_STREAM - 1)
 #define MAX_MRAW_PIPES_PER_STREAM (MAX_PIPES_PER_STREAM - 1)
 
@@ -102,6 +103,7 @@ struct mtk_camsv_tag_info {
 	unsigned int pixel_mode;
 	bool is_meta_tag;
 	bool is_pdp_enable;
+	bool is_pda_enable;
 };
 
 static inline bool isp_in_done_state(int state)
@@ -166,6 +168,8 @@ struct mtk_cam_ctrl_runtime_info {
 	u64 sof_ts_mono_ns;
 	u64 sof_l_ts_ns;
 	u64 sof_l_ts_mono_ns;
+	u64 sv_p1_done_ts_ns;
+	u64 pda_p1_done_ts_ns;
 	bool ae_wa_enable;
 	int timeshare_enable; /* timeshare used */
 	int extisp_enable; /* extisp used */
@@ -437,6 +441,7 @@ struct mtk_cam_job {
 	struct mmqos_bw raw_mmqos[SMI_PORT_RAW_NUM];
 	struct mmqos_bw yuv_mmqos[SMI_PORT_YUV_NUM];
 	struct mmqos_bw sv_mmqos[SMI_PORT_SV_NUM];
+	struct mmqos_bw pda_mmqos[SMI_PORT_PDA_NUM];
 
 	/* sensor meta dump */
 	bool is_sensor_meta_dump;
@@ -480,6 +485,9 @@ struct mtk_cam_job {
 	struct kthread_work tuning_work;
 	struct mtk_cam_tuning tuning_param;
 	atomic_t tuning_work_queued;
+
+	/* pda status */
+	bool pda_status;
 };
 
 static inline struct mtk_cam_job *mtk_cam_job_get(struct mtk_cam_job *job)

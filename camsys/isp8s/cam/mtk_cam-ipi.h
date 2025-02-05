@@ -186,12 +186,14 @@ struct cam_camsv_params {
 	int dummy;
 };
 
-#define CAMSV_MAX_IMAGE_OUTPUT (4)
+#define CAMSV_MAX_IMAGE_OUTPUT (5)
 
 struct mtkcam_ipi_camsv_frame_param {
 	__u32	dev_id;
 	__u8	tag_id;
 	__u8	pdp_enable;
+	__u8	pda_enable;
+	__u32	pda_idx;
 	struct mtkcam_ipi_meta_input pdp_meta_inputs;
 	struct mtkcam_ipi_img_output camsv_img_outputs[CAMSV_MAX_IMAGE_OUTPUT];
 } __packed;

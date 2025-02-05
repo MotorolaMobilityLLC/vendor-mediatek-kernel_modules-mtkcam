@@ -12,7 +12,7 @@
 #include "mtk_cam-fmt_utils.h"
 
 #define MTK_MRAW_TOTAL_OUTPUT_QUEUES 1
-#define MTK_MRAW_TOTAL_CAPTURE_QUEUES 1
+#define MTK_MRAW_TOTAL_CAPTURE_QUEUES 2
 
 static const struct v4l2_mbus_framefmt mraw_mfmt_default = {
 	.code = MEDIA_BUS_FMT_SBGGR10_1X10,
@@ -379,19 +379,33 @@ mtk_cam_dev_node_desc mraw_capture_queues[] = {
 		.default_fmt_idx = 1,
 		.max_buf_count = 16,
 		.ioctl_ops = &mtk_mraw_v4l2_meta_cap_ioctl_ops,
+	},
+	{
+		.id = MTK_MRAW_PDA_OUT,
+		.name = "pda output",
+		.cap = V4L2_CAP_META_CAPTURE,
+		.buf_type = V4L2_BUF_TYPE_META_CAPTURE,
+		.link_flags = MEDIA_LNK_FL_ENABLED |  MEDIA_LNK_FL_IMMUTABLE,
+		.image = false,
+		.smem_alloc = false,
+		.dma_port = MTKCAM_IPI_MRAW_PDA_OUT,
+		.fmts = meta_fmts,
+		.default_fmt_idx = 1,
+		.max_buf_count = 16,
+		.ioctl_ops = &mtk_mraw_v4l2_meta_cap_ioctl_ops,
 	}
 };
 
 static const char *mraw_capture_queue_names[MRAW_PIPELINE_NUM]
 	[MTK_MRAW_TOTAL_CAPTURE_QUEUES] = {
-	{"mtk-cam mraw-0 partial-meta-0"},
-	{"mtk-cam mraw-1 partial-meta-0"},
-	{"mtk-cam mraw-2 partial-meta-0"},
-	{"mtk-cam mraw-3 partial-meta-0"},
-	{"mtk-cam mraw-4 partial-meta-0"},
-	{"mtk-cam mraw-5 partial-meta-0"},
-	{"mtk-cam mraw-6 partial-meta-0"},
-	{"mtk-cam mraw-7 partial-meta-0"}
+	{"mtk-cam mraw-0 partial-meta-0", "mtk-cam mraw-0 pda-output"},
+	{"mtk-cam mraw-1 partial-meta-0", "mtk-cam mraw-1 pda-output"},
+	{"mtk-cam mraw-2 partial-meta-0", "mtk-cam mraw-2 pda-output"},
+	{"mtk-cam mraw-3 partial-meta-0", "mtk-cam mraw-3 pda-output"},
+	{"mtk-cam mraw-4 partial-meta-0", "mtk-cam mraw-4 pda-output"},
+	{"mtk-cam mraw-5 partial-meta-0", "mtk-cam mraw-5 pda-output"},
+	{"mtk-cam mraw-6 partial-meta-0", "mtk-cam mraw-6 pda-output"},
+	{"mtk-cam mraw-7 partial-meta-0", "mtk-cam mraw-7 pda-output"}
 };
 
 static void mtk_mraw_pipeline_queue_setup(

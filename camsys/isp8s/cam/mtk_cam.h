@@ -28,6 +28,7 @@
 
 #include "mtk_cam-dvfs_qos.h"
 #include "mtk_cam-larb.h"
+#include "mtk_cam-pda.h"
 #include "mtk_cam-raw.h"
 #include "mtk_cam-seninf-drv.h"
 #include "mtk_cam-seninf-if.h"
@@ -198,7 +199,7 @@ struct mtk_cam_ctx {
 
 	struct device *hw_raw[MAX_RAW_PER_STREAM];
 	struct device *hw_sv;
-	struct device *hw_mraw[MAX_MRAW_PIPES_PER_STREAM];
+	struct device *hw_pda[MAX_PDA_PER_STREAM];
 	//struct mtk_raw_pipeline *pipe;
 	//struct mtk_camsv_pipeline *sv_pipe[MAX_SV_PIPES_PER_STREAM];
 	//struct mtk_mraw_pipeline *mraw_pipe[MAX_MRAW_PIPES_PER_STREAM];
@@ -256,6 +257,7 @@ struct mtk_cam_engines {
 
 	int num_raw_devices;
 	int num_camsv_devices;
+	int num_pda_devices;
 	int num_larb_devices;
 
 	/* raw */
@@ -265,6 +267,9 @@ struct mtk_cam_engines {
 
 	/* camsv */
 	struct device **sv_devs;
+
+	/* pda */
+	struct device **pda_devs;
 
 	/* larb */
 	struct device **larb_devs;
@@ -374,6 +379,7 @@ int mtk_cam_set_dev_raw(struct device *dev, int idx,
 			struct device *raw, struct device *yuv,
 			struct device *rms);
 int mtk_cam_set_dev_sv(struct device *dev, int idx, struct device *sv);
+int mtk_cam_set_dev_pda(struct device *dev, int idx, struct device *pda);
  /* special case: larb dev is push back into array */
 int mtk_cam_set_dev_larb(struct device *dev, struct device *larb);
 struct device *mtk_cam_get_larb(struct device *dev, int larb_id);
@@ -472,7 +478,7 @@ int mtk_cam_ctx_queue_done_worker(struct mtk_cam_ctx *ctx,
 				  struct kthread_work *work);
 int mtk_cam_ctx_queue_tuning_worker(struct mtk_cam_ctx *ctx,
 				  struct kthread_work *work);
-
+int mtk_cam_ctx_fetch_pda_devices(struct mtk_cam_ctx *ctx, unsigned long engines);
 int mtk_cam_ctx_fetch_devices(struct mtk_cam_ctx *ctx, unsigned long engines);
 void mtk_cam_ctx_clean_img_pool(struct mtk_cam_ctx *ctx);
 

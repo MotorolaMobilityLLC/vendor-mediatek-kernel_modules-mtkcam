@@ -33,7 +33,9 @@ enum mraw_dmao_id {
 	imgbo_m1 = pdp_not_support_dmao_num,
 	cpio_m1,
 	cpio_m2,
-	pdp_support_dmao_num
+	pdp_support_dmao_num,
+	pdao_m1 = pdp_support_dmao_num,
+	pda_support_dmao_num,
 };
 
 enum camsv_module_id {
@@ -49,7 +51,7 @@ enum camsv_module_id {
 
 struct mraw_stats_cfg_param {
 
-	s8 dc_en;
+	s8 pda_dc_en;
 	s8 pdp_en;
 
 	s8  mqe_en;
@@ -57,6 +59,11 @@ struct mraw_stats_cfg_param {
 	s8  plsc_en;
 	s8  lm_en;
 	s8  dbg_en;
+
+	u32 pda_idx;
+	u32 pda_width;
+	u32 pda_height;
+	u32 pda_stride;
 
 	u32 crop_width;
 	u32 crop_height;
@@ -242,7 +249,9 @@ struct plat_v4l2_data {
 	int (*get_mraw_dmao_common_setting)(struct mraw_dma_th_setting *mraw_th_setting,
 		struct mraw_cq_th_setting *mraw_cq_setting);
 	int (*set_mraw_meta_stats_info)(int ipi_id, void *addr, struct dma_info *info,
-		bool pdp_support);
+		bool pdp_support, bool pda_support);
+	int (*get_pda_idx)(void *addr, int *pda_idx);
+	int (*set_pda_status)(void *addr, bool pda_support);
 	int (*get_mraw_stats_cfg_param)(void *addr, struct mraw_stats_cfg_param *param);
 	int (*get_ltmsgo_freerun_need_copy)(const struct set_meta_stats_info_param *p);
 	int (*ltmsgo_buffer_ofst)(void *addr);

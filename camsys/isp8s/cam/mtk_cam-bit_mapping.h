@@ -49,6 +49,8 @@ static inline int find_first_bit_set(unsigned long set)
 					MTKCAM_SUBDEV_CAMSV_NUM)
 #define MAP_SUBDEV_MRAW		BIT_MAP(MTKCAM_SUBDEV_MRAW_START, \
 					MTKCAM_SUBDEV_MRAW_NUM)
+#define MAP_SUBDEV_PDA		BIT_MAP(MTKCAM_SUBDEV_PDA_START, \
+					MTKCAM_SUBDEV_PDA_NUM)
 static inline unsigned long ipi_pipe_id_to_bit(int ipi_pipe_id)
 {
 	return BIT(ipi_pipe_id);
@@ -65,7 +67,7 @@ static inline unsigned long ipi_pipe_id_to_bit(int ipi_pipe_id)
 					MTKCAM_SUBDEV_RAW_NUM)
 #define MAP_HW_CAMSV		BIT_MAP(MTKCAM_SUBDEV_CAMSV_START, \
 					MTKCAM_SUBDEV_CAMSV_NUM)
-#define MAP_HW_MRAW		BIT_MAP(MTKCAM_SUBDEV_MRAW_START, \
-					MTKCAM_SUBDEV_MRAW_NUM)
+#define MAP_HW_PDA		BIT_MAP(MTKCAM_SUBDEV_PDA_START, \
+					MTKCAM_SUBDEV_PDA_NUM)
 
 #endif //__MTK_CAM_BIT_MAPPING_H

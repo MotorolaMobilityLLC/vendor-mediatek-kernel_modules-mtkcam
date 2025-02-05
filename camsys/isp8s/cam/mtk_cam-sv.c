@@ -34,6 +34,7 @@
 
 #define MTK_CAMSV_STOP_HW_TIMEOUT			(33 * USEC_PER_MSEC)
 #define CAMSV_DEBUG 0
+#define FRAME_TIME 33000000
 
 #define ceil(n, d) (((n) < 0) ? (-((-(n))/(d))) : (n)/(d) + ((n)%(d) != 0))
 
@@ -2396,6 +2397,47 @@ static void mtk_cam_sv_set_pdp_dmao_info(
 			pdp_en, i, info[i].width, info[i].height, info[i].xsize, info[i].stride, imgo_fmt);
 	}
 }
+
+static void mtk_cam_sv_set_pda_frame_param_dmao(
+	struct mtk_cam_ctx *ctx,
+	struct mtk_cam_job *job,
+	struct mtkcam_ipi_frame_param *fp,
+	struct dma_info *info, int pipe_id,
+	dma_addr_t buf_daddr,
+	bool pda_en)
+{
+	struct mtkcam_ipi_img_output *out;
+	struct mtk_camsv_device *sv_dev;
+	struct mtk_mraw_pipeline *pipe =
+		&ctx->cam->pipelines.mraw[pipe_id - MTKCAM_SUBDEV_MRAW_START];
+	unsigned int tag_idx;
+
+	if (!pda_en)
+		return;
+
+	sv_dev = dev_get_drvdata(ctx->hw_sv);
+	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, pipe_id);
+	fp->camsv_param[0][tag_idx].pda_enable = pda_en;
+	fp->camsv_param[0][tag_idx].pda_idx = pipe->res_config.stats_cfg_param.pda_idx;
+
+	info[pdao_m1].width = pipe->res_config.stats_cfg_param.pda_width;
+	info[pdao_m1].height = pipe->res_config.stats_cfg_param.pda_height;
+	info[pdao_m1].stride = pipe->res_config.stats_cfg_param.pda_stride;
+
+	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, pipe_id);
+	out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[pdao_m1];
+	out->uid.id = MTKCAM_IPI_MRAW_PDA_OUT;
+	out->uid.pipe_id = pipe_id;
+	out->buf[0][0].iova = buf_daddr;
+	out->buf[0][0].size =
+		info[pdao_m1].stride *
+		info[pdao_m1].height;
+
+	dev_info(ctx->cam->dev, "%s:dmao_id:%d iova:0x%llx stride:0x%x height:0x%x\n",
+		__func__, pdao_m1, out->buf[0][0].iova,
+		info[pdao_m1].stride , info[pdao_m1].height);
+}
+
 static void mtk_cam_sv_set_pdp_frame_param_dmao(
 	struct mtk_cam_ctx *ctx,
 	struct mtk_cam_job *job,
@@ -2419,6 +2461,7 @@ static void mtk_cam_sv_set_pdp_frame_param_dmao(
 	fp->camsv_param[0][tag_idx].dev_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
 	fp->camsv_param[0][tag_idx].tag_id = tag_idx;
 	fp->camsv_param[0][tag_idx].pdp_enable = pdp_en;
+
 
 	offset =
 		(((buf_daddr + GET_PLAT_V4L2(meta_mraw_ext_size) + 15) >> 4) << 4) -
@@ -2456,23 +2499,50 @@ static void mtk_cam_sv_set_pdp_frame_param_dmao(
 	}
 }
 
+int mtk_cam_sv_check_pda_status(struct mtk_cam_ctrl *ctrl, struct mtk_cam_job *job)
+{
+	spin_lock(&ctrl->info_lock);
+
+	if (ctrl->r_info.sv_p1_done_ts_ns > ctrl->r_info.pda_p1_done_ts_ns &&
+		(ctrl->r_info.sv_p1_done_ts_ns - ctrl->r_info.pda_p1_done_ts_ns) < FRAME_TIME)
+		job->pda_status = true;
+	else
+		job->pda_status = false;
+
+	spin_unlock(&ctrl->info_lock);
+
+	return 0;
+}
+
+void mtk_cam_sv_set_pda_status(void *vaddr, bool pda_support)
+{
+	if (pda_support)
+		CALL_PLAT_V4L2(
+			set_pda_status, vaddr, pda_support);
+}
 
 static void mtk_cam_sv_set_meta_stats_info(
-	void *vaddr, struct dma_info *info, bool pdp_fun_support)
+	void *pdp_header, void *pda_header, struct dma_info *info,
+	bool pdp_support, bool pda_support)
 {
-	CALL_PLAT_V4L2(
-		set_mraw_meta_stats_info, MTKCAM_IPI_MRAW_META_STATS_0, vaddr, info,
-		pdp_fun_support);
+	if (pdp_support)
+		CALL_PLAT_V4L2(
+				set_mraw_meta_stats_info, MTKCAM_IPI_MRAW_META_STATS_0, pdp_header, info,
+				pdp_support, pda_support);
+	if (pda_support)
+		CALL_PLAT_V4L2(
+			set_mraw_meta_stats_info, MTKCAM_IPI_MRAW_PDA_OUT, pda_header, info,
+			pdp_support, pda_support);
 }
 
 int mtk_cam_sv_cal_cfg_info(struct mtk_cam_ctx *ctx, struct mtk_cam_buffer *buf,
 	struct mtk_cam_job *job, unsigned int pipe_id, struct mtkcam_ipi_frame_param *fp,
 	unsigned int imgo_fmt)
 {
-	struct dma_info info[pdp_support_dmao_num];
+	struct dma_info info[pda_support_dmao_num];
 	struct mtk_mraw_pipeline *pipe =
 		&ctx->cam->pipelines.mraw[pipe_id - MTKCAM_SUBDEV_MRAW_START];
-	bool pdp_fun_support;
+	bool pdp_support, pda_support;
 	int tag_idx;
 
 	if (ctx->hw_sv == NULL)
@@ -2480,19 +2550,32 @@ int mtk_cam_sv_cal_cfg_info(struct mtk_cam_ctx *ctx, struct mtk_cam_buffer *buf,
 
 	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, pipe_id);
 	if (job->tag_info[tag_idx].is_pdp_enable)
-		pdp_fun_support = true;
+		pdp_support = true;
 	else
-		pdp_fun_support = false;
+		pdp_support = false;
+
+	if (job->tag_info[tag_idx].is_pda_enable)
+		pda_support = true;
+	else
+		pda_support = false;
 
 	mtk_cam_sv_set_pdp_dmao_info(ctx->cam, buf, pipe_id, info, imgo_fmt,
-		pdp_fun_support);
+		pdp_support);
 	mtk_cam_sv_set_pdp_frame_param_dmao(ctx, job, fp,
 		info, pipe_id,
 		pipe->res_config.daddr[MTKCAM_IPI_MRAW_META_STATS_0
-			- MTKCAM_IPI_MRAW_ID_START], imgo_fmt, pdp_fun_support);
+			- MTKCAM_IPI_MRAW_ID_START], imgo_fmt, pdp_support);
+	mtk_cam_sv_set_pda_frame_param_dmao(ctx, job, fp,
+		info, pipe_id,
+		pipe->res_config.daddr[MTKCAM_IPI_MRAW_PDA_OUT
+				- MTKCAM_IPI_MRAW_ID_START], pda_support);
 	mtk_cam_sv_set_meta_stats_info(
 		pipe->res_config.vaddr[MTKCAM_IPI_MRAW_META_STATS_0
-			- MTKCAM_IPI_MRAW_ID_START], info, pdp_fun_support);
+			- MTKCAM_IPI_MRAW_ID_START],
+		pipe->res_config.vaddr[MTKCAM_IPI_MRAW_PDA_OUT
+			- MTKCAM_IPI_MRAW_ID_START],
+		info, pdp_support, pda_support);
+
 	return 0;
 }
 
@@ -2501,6 +2584,7 @@ void mtk_cam_sv_copy_user_input_param(struct mtk_cam_ctx *ctx, struct mtk_cam_jo
 {
 	struct mraw_stats_cfg_param *param =
 		&mraw_pipe->res_config.stats_cfg_param;
+	struct mtk_camsv_device *sv_dev;
 	unsigned int tag_idx;
 
 	CALL_PLAT_V4L2(
@@ -2509,9 +2593,13 @@ void mtk_cam_sv_copy_user_input_param(struct mtk_cam_ctx *ctx, struct mtk_cam_jo
 	if (mraw_pipe->res_config.tg_crop.s.w < param->crop_width ||
 		mraw_pipe->res_config.tg_crop.s.h < param->crop_height)
 		dev_info(ctx->cam->dev, "%s tg size smaller than crop size", __func__);
-	dev_dbg(ctx->cam->dev, "%s:enable:(%d,%d,%d,%d,%d,%d,%d) crop:(%d,%d) mqe:%d mbn:0x%x_%x_%x_%x_%x_%x_%x_%x cpi:0x%x_%x_%x_%x_%x_%x_%x_%x sel:0x%x_%x lm_ctl:%d\n",
+	dev_dbg(ctx->cam->dev, "%s: pda (idx:%d stride:%d width:%d height:%d) enable:(%d,%d,%d,%d,%d,%d,%d) crop:(%d,%d) mqe:%d mbn:0x%x_%x_%x_%x_%x_%x_%x_%x cpi:0x%x_%x_%x_%x_%x_%x_%x_%x sel:0x%x_%x lm_ctl:%d\n",
 		__func__,
-		param->dc_en,
+		param->pda_idx,
+		param->pda_stride,
+		param->pda_width,
+		param->pda_height,
+		param->pda_dc_en,
 		param->pdp_en,
 		param->mqe_en,
 		param->mobc_en,
@@ -2542,11 +2630,22 @@ void mtk_cam_sv_copy_user_input_param(struct mtk_cam_ctx *ctx, struct mtk_cam_jo
 		param->lm_mode_ctrl);
 
 	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, mraw_pipe->id);
+	sv_dev = dev_get_drvdata(ctx->hw_sv);
 
 	if (param->pdp_en)
 		job->tag_info[tag_idx].is_pdp_enable = true;
 	else
 		job->tag_info[tag_idx].is_pdp_enable = false;
+
+	if (param->pda_dc_en)
+		job->tag_info[tag_idx].is_pda_enable = true;
+	else
+		job->tag_info[tag_idx].is_pda_enable = false;
+
+	if (sv_dev->id == 2 && tag_idx == SVTAG_5) {
+		job->tag_info[tag_idx].is_pdp_enable = false;
+		job->tag_info[tag_idx].is_pda_enable = false;
+	}
 
 }
 
@@ -2716,7 +2815,7 @@ void camsv_handle_cq_err(
 
 	/* dump seninf debug data */
 	if (ctx && ctx->seninf)
-		mtk_cam_seninf_dump_current_status(ctx->seninf, false);
+		//mtk_cam_seninf_dump_current_status(ctx->seninf, false);
 
 	/* dump camsv debug data */
 	mtk_cam_sv_debug_dump(sv_dev, 0);
@@ -2779,7 +2878,6 @@ void camsv_handle_err(
 				mtk_cam_ctrl_dump_request(sv_dev->cam, CAMSYS_ENGINE_CAMSV, sv_dev->id,
 					frame_idx_inner, MSG_CAMSV_ERROR);
 		}
-
 
 		mtk_cam_ctrl_notify_hw_hang(sv_dev->cam,
 			CAMSYS_ENGINE_CAMSV, sv_dev->id, frame_idx_inner);
@@ -2879,6 +2977,7 @@ static irqreturn_t mtk_irq_camsv_hybrid(int irq, void *data)
 		dev_dbg(sv_dev->dev, "camsv-%d: done status:0x%x seq_no:0x%x_0x%x",
 			sv_dev->id, done_status, frm_seq_no_inner, frm_seq_no);
 		sv_dev->camsv_error_count = 0;
+		irq_info.ts_ns = ktime_get_boottime_ns();
 		irq_info.irq_type |= (1 << CAMSYS_IRQ_FRAME_DONE);
 		if (done_status & CAMSVCENTRAL_SW_GP_PASS1_DONE_0_ST)
 			irq_info.done_tags |= sv_dev->active_group_info[0];

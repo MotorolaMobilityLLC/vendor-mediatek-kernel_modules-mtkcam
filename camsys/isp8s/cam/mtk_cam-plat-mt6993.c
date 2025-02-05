@@ -49,6 +49,9 @@
 #define MRAW_STATS_0_SIZE \
 	sizeof(struct mtk_cam_uapi_meta_mraw_stats_0)
 
+#define PDA_STATS_0_SIZE \
+	sizeof(struct mtk_cam_uapi_meta_pda_dc_stats_0)
+
 #define DYNAMIC_SIZE
 
 #define DMA_SIZE_ALIGNMENT		32
@@ -627,10 +630,20 @@ static int get_mraw_dmao_common_setting(struct mraw_dma_th_setting *mraw_th_sett
 	return 0;
 }
 
+static int set_pda_status(void *addr, bool pda_support)
+{
+	struct mtk_cam_uapi_meta_pda_dc_stats_0 *pda_stats0;
+
+	pda_stats0 = (struct mtk_cam_uapi_meta_pda_dc_stats_0 *)addr;
+	pda_stats0->pda_dc_status = pda_support ? 1 : 0;
+	return 0;
+}
+
 static int set_mraw_meta_stats_info(
-	int ipi_id, void *addr, struct dma_info *info, bool pdp_support)
+	int ipi_id, void *addr, struct dma_info *info, bool pdp_support, bool pda_support)
 {
 	struct mtk_cam_uapi_meta_mraw_stats_0 *mraw_stats0;
+	struct mtk_cam_uapi_meta_pda_dc_stats_0 *pda_stats0;
 	unsigned long offset;
 	unsigned int size;
 
@@ -670,7 +683,7 @@ static int set_mraw_meta_stats_info(
 		mraw_stats0->cpi_0_stats.stats_src.width = info[cpio_m1].width;
 		mraw_stats0->cpi_0_stats.stats_src.height = info[cpio_m1].height;
 		mraw_stats0->cpi_0_stats.stride = info[cpio_m1].stride;
-		/* cpio m2*/
+		/* cpio_m2*/
 		size = info[cpio_m2].stride * info[cpio_m2].height;
 		/* calculate offset for 16-alignment limitation */
 		offset = ((((dma_addr_t)mraw_stats0 + offset + 15) >> 4) << 4)
@@ -681,6 +694,16 @@ static int set_mraw_meta_stats_info(
 		mraw_stats0->cpi_1_stats.stats_src.height = info[cpio_m2].height;
 		mraw_stats0->cpi_1_stats.stride = info[cpio_m2].stride;
 		break;
+	case MTKCAM_IPI_MRAW_PDA_OUT:
+		pda_stats0 = (struct mtk_cam_uapi_meta_pda_dc_stats_0 *)addr;
+		pda_stats0->pda_dc_stats_enabled = pda_support ? 1 : 0;
+		size = info[pdao_m1].stride * info[pdao_m1].height;
+		/* calculate offset for 16-alignment limitation */
+		offset = ((((dma_addr_t)pda_stats0 + PDA_STATS_0_SIZE + 15) >> 4) << 4)
+			- (dma_addr_t)pda_stats0;
+		set_payload(&pda_stats0->pda_dc_stats.pda_buf, size, &offset);
+		pda_stats0->pda_dc_status = 1;
+		break;
 	default:
 		pr_info("%s: %s: not supported: %d\n",
 			__FILE__, __func__, ipi_id);
@@ -690,13 +713,30 @@ static int set_mraw_meta_stats_info(
 	return 0;
 }
 
+static int get_pda_idx(
+	void *addr, int *pda_idx)
+{
+	struct mtk_cam_uapi_meta_mraw_stats_cfg *stats_cfg =
+		(struct mtk_cam_uapi_meta_mraw_stats_cfg *)addr;
+	if (stats_cfg->pda_dc_enable)
+		*pda_idx = stats_cfg->pda_dc_param.pda_index;
+	else
+		*pda_idx = -1;
+
+	return 0;
+}
 static int get_mraw_stats_cfg_param(
 	void *addr, struct mraw_stats_cfg_param *param)
 {
 	struct mtk_cam_uapi_meta_mraw_stats_cfg *stats_cfg =
 		(struct mtk_cam_uapi_meta_mraw_stats_cfg *)addr;
 
+	param->pda_dc_en = stats_cfg->pda_dc_enable;
 	param->pdp_en = stats_cfg->pdp_enable;
+	param->pda_idx = stats_cfg->pda_dc_param.pda_index;
+	param->pda_stride = stats_cfg->pda_dc_param.stride;
+	param->pda_width = stats_cfg->pda_dc_param.width;
+	param->pda_height = stats_cfg->pda_dc_param.height;
 
 	param->mqe_en = stats_cfg->mqe_enable;
 	param->mobc_en = stats_cfg->mobc_enable;
@@ -919,8 +959,8 @@ static u8 vb2_queues_support_list[] = {
 
 static const struct plat_v4l2_data mt6993_v4l2_data = {
 	.raw_pipeline_num = 3,
-	.camsv_pipeline_num = 8,
-	.mraw_pipeline_num = 4,
+	.camsv_pipeline_num = 4,
+	.mraw_pipeline_num = 6,
 
 	.meta_major = MTK_CAM_META_VERSION_MAJOR,
 	.meta_minor = MTK_CAM_META_VERSION_MINOR,
@@ -954,6 +994,8 @@ static const struct plat_v4l2_data mt6993_v4l2_data = {
 	.get_single_sv_opp_idx = get_single_sv_opp_idx,
 	.get_mraw_dmao_common_setting = get_mraw_dmao_common_setting,
 	.set_mraw_meta_stats_info = set_mraw_meta_stats_info,
+	.set_pda_status = set_pda_status,
+	.get_pda_idx = get_pda_idx,
 	.get_mraw_stats_cfg_param = get_mraw_stats_cfg_param,
 	.get_raw_lock_sel_addr = get_raw_lock_sel_addr,
 };

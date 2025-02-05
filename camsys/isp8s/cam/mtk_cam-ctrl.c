@@ -868,6 +868,18 @@ static void ctrl_vsync_preprocess_extisp(struct mtk_cam_ctrl *ctrl,
 		pr_info("%s: warn. inner not updated to 0x%x, cq not ready: 0x%lx engine not ready: 0x%lx\n",
 			__func__, cookie, cq_not_ready, inner_not_ready);
 }
+static void ctrl_p1_done_preprocess(struct mtk_cam_ctrl *ctrl,
+				  enum MTK_CAMSYS_ENGINE_TYPE engine_type,
+				  unsigned int engine_id,
+				  struct mtk_camsys_irq_info *irq_info)
+{
+	spin_lock(&ctrl->info_lock);
+	if (engine_type == CAMSYS_ENGINE_CAMSV)
+		ctrl->r_info.sv_p1_done_ts_ns = irq_info->ts_ns;
+	if (engine_type == CAMSYS_ENGINE_PDA)
+		ctrl->r_info.pda_p1_done_ts_ns = irq_info->ts_ns;
+	spin_unlock(&ctrl->info_lock);
+}
 
 static void ctrl_vsync_preprocess(struct mtk_cam_ctrl *ctrl,
 				  enum MTK_CAMSYS_ENGINE_TYPE engine_type,
@@ -1114,16 +1126,35 @@ static int mtk_cam_event_handle_raw(struct mtk_cam_ctrl *ctrl,
 	return 0;
 }
 
+static int mtk_camsys_event_handle_pda(struct mtk_cam_ctrl *ctrl,
+				       unsigned int engine_id,
+				       struct mtk_camsys_irq_info *irq_info)
+{
+	/* pda's SW done */
+	if (irq_info->irq_type & BIT(CAMSYS_IRQ_FRAME_DONE))
+		ctrl_p1_done_preprocess(ctrl,
+				  CAMSYS_ENGINE_PDA, engine_id, irq_info);
+	return 0;
+
+}
 static int mtk_camsys_event_handle_camsv(struct mtk_cam_ctrl *ctrl,
 				       unsigned int engine_id,
 				       struct mtk_camsys_irq_info *irq_info)
 {
+	struct mtk_cam_job *job;
+	int seq_no = seq_from_fh_cookie(irq_info->cookie_done);
+
+	job = mtk_cam_ctrl_get_job(ctrl, cond_frame_no_belong, &seq_no);
 
 	/* camsv's SW done */
-	if (irq_info->irq_type & BIT(CAMSYS_IRQ_FRAME_DONE))
+	if (irq_info->irq_type & BIT(CAMSYS_IRQ_FRAME_DONE)) {
+		ctrl_p1_done_preprocess(ctrl,
+				  CAMSYS_ENGINE_CAMSV, engine_id, irq_info);
 		handle_frame_done(ctrl,
 				  CAMSYS_ENGINE_CAMSV, engine_id,
-				  seq_from_fh_cookie(irq_info->cookie_done));
+				  seq_no);
+		mtk_cam_sv_check_pda_status(ctrl, job);
+	}
 
 	/* camsv's SOF (proc engine frame start) */
 	if (irq_info->irq_type & BIT(CAMSYS_IRQ_FRAME_START) ||
@@ -1255,6 +1286,9 @@ int mtk_cam_ctrl_isr_event(struct mtk_cam_device *cam,
 		break;
 	case CAMSYS_ENGINE_CAMSV:
 		ret = mtk_camsys_event_handle_camsv(cam_ctrl, engine_id, irq_info);
+		break;
+	case CAMSYS_ENGINE_PDA:
+		ret = mtk_camsys_event_handle_pda(cam_ctrl, engine_id, irq_info);
 		break;
 	case CAMSYS_ENGINE_SENINF:
 		/* ToDo - cam mux setting delay handling */

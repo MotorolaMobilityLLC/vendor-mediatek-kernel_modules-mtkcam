@@ -277,6 +277,8 @@ enum cpi_dir {
 	CPI_POW_SPARSE_CONCATENATION,
 	CPI_POW_SPARSE_INTERLEVING,
 };
+int mtk_cam_sv_check_pda_status(struct mtk_cam_ctrl *ctrl, struct mtk_cam_job *job);
+void mtk_cam_sv_set_pda_status(void *vaddr, bool pda_support);
 int mtk_cam_sv_cal_cfg_info(struct mtk_cam_ctx *ctx, struct mtk_cam_buffer *buf,
 	struct mtk_cam_job *job, unsigned int pipe_id, struct mtkcam_ipi_frame_param *fp,
 	unsigned int imgo_fmt);
