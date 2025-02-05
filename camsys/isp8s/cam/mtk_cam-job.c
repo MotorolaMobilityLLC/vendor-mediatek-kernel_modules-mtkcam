@@ -23,6 +23,7 @@
 #include "mtk_cam-timesync.h"
 #include "mtk_cam-hsf.h"
 #include "mtk_cam-qof.h"
+#include "mtk_cam-fmon.h"
 #include "mtk_cam-trace.h"
 #include "mtk_cam-raw_ctrl.h"
 #include "mtk_cam-topctrl.h"
@@ -1185,6 +1186,7 @@ _stream_on(struct mtk_cam_job *job, bool on)
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_raw_device *raw_dev;
 	struct mtk_camsv_device *sv_dev;
+	struct mtk_fmon_device *fmon = &ctx->cam->fmon;
 	struct mtk_raw_ctrl_data *ctrl_data;
 	int pad_bitmask = get_seninf_pad_bitmask(job);
 	int raw_tg_idx = -1;
@@ -1225,6 +1227,11 @@ _stream_on(struct mtk_cam_job *job, bool on)
 	}
 	if (!job->enable_hsf_raw)
 		toggle_raw_engines_db(job);
+
+	/* fifo monitor bind */
+	if (on)
+		mtk_cam_fmon_bind(fmon,
+			bit_map_subset_of(MAP_HW_RAW, job->used_engine), is_dc_mode(job));
 
 	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
 		if (ctx->hw_raw[i]) {
@@ -4237,6 +4244,8 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 	mtk_cam_ctx_slc_stream(ctx, 0, 0xFF);
 	raw_dev = dev_get_drvdata(cam->engines.raw_devs[uninit_raw_id]);
 	stream_on(raw_dev, 0, false);
+	mtk_cam_fmon_unbind(&cam->fmon, bit_map_subset_of(MAP_HW_RAW, all_engine));
+
 	for (i = 0; i < cam->engines.num_raw_devices; ++i) {
 		if (BIT(i) & bit_map_subset_of(MAP_HW_RAW, all_engine)) {
 			struct mtk_raw_device *r = dev_get_drvdata(cam->engines.raw_devs[i]);
@@ -4269,7 +4278,8 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 		is_dvc_hwmode(job), is_dc_mode(job), opp_idx,
 		get_sensor_interval_us(job)/1000);
 
-	stream_on(raw_dev, 1, false);
+	mtk_cam_fmon_bind(&cam->fmon,
+		bit_map_subset_of(MAP_HW_RAW, job->used_engine), is_srt);
 
 	/* sv on */
 	sv_dev = dev_get_drvdata(cam->engines.sv_devs[raw_id]);

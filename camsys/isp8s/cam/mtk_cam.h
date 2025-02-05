@@ -41,6 +41,7 @@
 #include "mtk_cam-hsf-def.h"
 #include "mtk_cam-bwr.h"
 #include "mtk_cam-dvc.h"
+#include "mtk_cam-fmon.h"
 #include "mtk_cam-tuning.h"
 
 #define CCD_READY 1
@@ -340,6 +341,7 @@ struct mtk_cam_device {
 	struct mtk_cam_debug dbg;
 
 	struct mtk_bwr_device *bwr;
+	struct mtk_fmon_device fmon;
 
 	/* shutdown flow */
 	wait_queue_head_t shutdown_wq;

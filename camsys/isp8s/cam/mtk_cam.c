@@ -3499,6 +3499,9 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 		mtk_cam_hsf_aid(ctx, 0, AID_VAINR, ctx->used_engine);
 		ctx->set_adl_aid = 0;
 	}
+
+	mtk_cam_fmon_unbind(&ctx->cam->fmon,
+			bit_map_subset_of(MAP_HW_RAW, ctx->used_engine));
 }
 
 /* note: only raw switch using */
@@ -5137,6 +5140,7 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	mtk_cam_dvfs_probe(&pdev->dev,
 			&cam_dev->dvfs, cam_dev->max_stream_num);
 	mtk_cam_dvc_probe(pdev, &cam_dev->dvfs.dvc);
+	mtk_cam_fmon_probe(pdev, cam_dev);
 
 	return 0;
 
@@ -5204,6 +5208,7 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 	mtk_cam_vcore_ddren(cam_dev, false);
 	mtk_cam_dvc_top_disable(&cam_dev->dvfs.dvc);
 	mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_CAM);
+	mtk_cam_fmon_disable(&cam_dev->fmon);
 
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		dev_dbg(dev, "%s++:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
@@ -5269,6 +5274,7 @@ static int mtk_cam_runtime_resume(struct device *dev)
 	mtk_cam_main_sv_halt(cam_dev);
 	mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_CAM);
 	mtk_cam_dvc_top_enable(&cam_dev->dvfs.dvc);
+	mtk_cam_fmon_enable(&cam_dev->fmon);
 
 	if (GET_PLAT_HW(qof_support))
 		mtk_cam_reset_itc(cam_dev);

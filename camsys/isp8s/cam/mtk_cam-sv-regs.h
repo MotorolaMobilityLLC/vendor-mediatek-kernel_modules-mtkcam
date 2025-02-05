@@ -340,6 +340,28 @@ union CAMSVCENTRAL_FBC1_TAG1 {
 
 #define REG_CAMSVDMATOP_AXSLC_CMD				0x002C
 
+/* fifo core */
+#define REG_CAMSVDMATOP_DMA_INT_FIFO_EN			0x0048
+union CAMSVDMATOP_DMA_INT_FIFO_EN {
+	struct {
+		unsigned int FIFO_CORE1_1_EN			:  1;
+		unsigned int FIFO_CORE1_2_EN			:  1;
+		unsigned int rsv_1						:  2;
+		unsigned int FIFO_CORE2_1_EN			:  1;
+		unsigned int FIFO_CORE2_2_EN			:  1;
+		unsigned int rsv_2						:  2;
+		unsigned int FIFO_CORE3_1_EN			:  1;
+		unsigned int FIFO_CORE3_2_EN			:  1;
+		unsigned int rsv_3						:  22;
+	} Bits;
+	unsigned int Raw;
+};
+#define REG_CAMSVDMATOP_DMA_INT_FIFO_STAT		0x004C
+#define REG_CAMSVDMATOP_FIFO_INT_CORE1_THD		0x00C4
+#define REG_CAMSVDMATOP_FIFO_INT_CORE2_THD		0x00C8
+#define REG_CAMSVDMATOP_FIFO_INT_CORE3_THD		0x00CC
+
+
 #define REG_CAMSVDMATOP_DMA_DEBUG_SEL			0x0090
 #define REG_CAMSVDMATOP_DMA_DEBUG_PORT			0x0094
 #define REG_CAMSVDMATOP_DBG_PORT1				0x0098

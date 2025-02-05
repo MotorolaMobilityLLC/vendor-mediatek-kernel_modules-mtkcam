@@ -439,6 +439,32 @@ static int get_single_sv_opp_idx(unsigned int *opp_idx)
 	return 0;
 }
 
+static int get_sv_fifo_core_setting(unsigned int dev_id, unsigned int *fifo_core1_thd,
+unsigned int *fifo_core2_thd, unsigned int *fifo_core3_thd)
+{
+	switch (dev_id) {
+	case CAMSV_0:
+	case CAMSV_1:
+	case CAMSV_2:
+		*fifo_core1_thd = 1380;
+		*fifo_core2_thd = 1380;
+		*fifo_core3_thd = 1380;
+		break;
+	case CAMSV_3:
+		*fifo_core1_thd = 920;
+		*fifo_core2_thd = 920;
+		*fifo_core3_thd = 920;
+		break;
+	case CAMSV_4:
+	case CAMSV_5:
+		*fifo_core1_thd = 460;
+		*fifo_core2_thd = 460;
+		*fifo_core3_thd = 460;
+		break;
+	}
+	return 0;
+}
+
 static int get_sv_dma_th_setting(unsigned int dev_id, unsigned int fifo_img_p1,
 	unsigned int fifo_img_p2, unsigned int fifo_img_p3, unsigned int fifo_len_p1,
 	unsigned int fifo_len_p2, unsigned int fifo_len_p3,
@@ -892,6 +918,7 @@ static const struct plat_v4l2_data mt6993_v4l2_data = {
 	.ltmsgo_buffer_ofst = get_ltmsgo_offset,
 	.set_sv_meta_stats_info = set_sv_meta_stats_info,
 	.get_sv_dma_th_setting = get_sv_dma_th_setting,
+	.get_sv_fifo_core_setting = get_sv_fifo_core_setting,
 	.get_sv_max_pixel_mode = get_sv_max_pixel_mode,
 	.get_is_smmu_enabled = get_is_smmu_enabled,
 	.get_sv_smi_setting = get_sv_smi_setting,
@@ -922,6 +949,7 @@ static const struct plat_data_hw mt6993_hw_data = {
 	.qof_support = false,
 	.qos_remap_support = true,
 	.dvc_support = true,
+	.fmon_support = true,
 	.max_main_pipe_w = 6632,
 	.max_main_pipe_twin_w = 6200,
 	.pixel_mode_max = 2,

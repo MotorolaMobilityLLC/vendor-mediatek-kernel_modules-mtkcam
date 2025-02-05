@@ -227,6 +227,8 @@ struct plat_v4l2_data {
 		unsigned int fifo_img_p2, unsigned int fifo_img_p3,unsigned int fifo_len_p1,
 		unsigned int fifo_len_p2, unsigned int fifo_len_p3,
 		struct sv_dma_th_setting *th_setting, struct sv_dma_bw_setting *bw_setting);
+	int (*get_sv_fifo_core_setting)(unsigned int dev_id, unsigned int *fifo_core1_thd,
+		unsigned int *fifo_core2_thd, unsigned int *fifo_core3_thd);
 	int (*get_sv_max_pixel_mode)(unsigned int dev_id, unsigned int *max_pixel_mode);
 	int (*get_is_smmu_enabled)(bool *is_smmu_enabled);
 	int (*get_sv_smi_setting)(unsigned int dev_id, unsigned int *is_two_smi_out);
@@ -282,6 +284,7 @@ struct plat_data_hw {
 	bool qof_support;
 	bool qos_remap_support;
 	bool dvc_support;
+	bool fmon_support;
 };
 
 struct camsys_platform_data {

@@ -23,6 +23,7 @@
 #include "mtk_cam-fmt_utils.h"
 #include "mtk_cam-trace.h"
 #include "mtk_cam-hsf.h"
+#include "mtk_cam-fmon.h"
 
 #include "mmqos-mtk.h"
 #include "iommu_debug.h"
@@ -761,7 +762,33 @@ void sv_reset(struct mtk_camsv_device *sv_dev)
 RESET_FAILURE:
 	return;
 }
+int mtk_cam_sv_fifo_config(struct mtk_camsv_device *sv_dev, unsigned int fifo_core1_thd2,
+	unsigned int fifo_core2_thd2, unsigned int fifo_core3_thd2)
+{
+	if (!is_fmon_support())
+		return 0;
 
+	CAMSV_WRITE_BITS(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_INT_FIFO_EN,
+		CAMSVDMATOP_DMA_INT_FIFO_EN, FIFO_CORE1_2_EN, 1);
+	CAMSV_WRITE_BITS(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_INT_FIFO_EN,
+		CAMSVDMATOP_DMA_INT_FIFO_EN, FIFO_CORE2_2_EN, 1);
+	CAMSV_WRITE_BITS(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_INT_FIFO_EN,
+		CAMSVDMATOP_DMA_INT_FIFO_EN ,FIFO_CORE3_2_EN, 1);
+
+	CAMSV_WRITE_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE1_THD,
+		fifo_core1_thd2 << 16);
+	CAMSV_WRITE_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE2_THD,
+		fifo_core2_thd2 << 16);
+	CAMSV_WRITE_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE3_THD,
+		fifo_core3_thd2 << 16);
+	pr_info("%s int_en 0x%x fifo_core 0x%x_%x_%x",
+		__func__,
+		CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_INT_FIFO_EN),
+		CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE1_THD),
+		CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE2_THD),
+		CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE3_THD));
+	return 0;
+}
 int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 	unsigned int fifo_img_p1, unsigned int fifo_img_p2,
 	unsigned int fifo_img_p3, unsigned int fifo_len_p1,
@@ -771,7 +798,7 @@ int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 	int ret = 0;
 	struct sv_dma_th_setting th_setting;
 	struct sv_dma_bw_setting bw_setting;
-
+	unsigned int fifo_core1_thd = 0, fifo_core2_thd = 0, fifo_core3_thd = 0;
 	memset(&th_setting, 0, sizeof(struct sv_dma_th_setting));
 	memset(&bw_setting, 0, sizeof(struct sv_dma_bw_setting));
 
@@ -786,6 +813,12 @@ int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 		get_sv_dma_th_setting, sv_dev->id, fifo_img_p1, fifo_img_p2,
 		fifo_img_p3, fifo_len_p1, fifo_len_p2, fifo_len_p3,
 		&th_setting, &bw_setting);
+
+	CALL_PLAT_V4L2(
+		get_sv_fifo_core_setting, sv_dev->id, &fifo_core1_thd, &fifo_core2_thd,
+		&fifo_core3_thd);
+
+	mtk_cam_sv_fifo_config(sv_dev, fifo_core1_thd, fifo_core2_thd, fifo_core3_thd);
 
 	switch (sv_dev->id) {
 	case CAMSV_0:
@@ -2651,7 +2684,7 @@ static irqreturn_t mtk_irq_camsv_debug(int irq, void *data)
 	struct mtk_camsv_device *sv_dev = (struct mtk_camsv_device *)data;
 	struct mtk_camsys_irq_info irq_info;
 	unsigned int frm_seq_no, frm_seq_no_inner;
-	unsigned int i, first_tag, common_status;
+	unsigned int i, first_tag, common_status, fifo_status;
 	unsigned int exp_0_bid = 0, exp_1_bid = 0;
 	unsigned int addr_frm_seq_no = REG_CAMSVCENTRAL_FH_SPARE_TAG_1;
 	bool wake_thread = false;
@@ -2679,10 +2712,12 @@ static irqreturn_t mtk_irq_camsv_debug(int irq, void *data)
 
 	common_status =
 		readl_relaxed(sv_dev->base + REG_CAMSVCENTRAL_COMMON_STATUS);
+	fifo_status =
+		readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_INT_FIFO_STAT);
 
 	if (CAM_DEBUG_ENABLED(RAW_INT))
-		dev_info(sv_dev->dev, "camsv-%d: common_status:0x%x, frm_seq_no:0x%x/0x%x, ts:%llu\n",
-			sv_dev->id, common_status, frm_seq_no, frm_seq_no_inner, irq_info.ts_ns);
+		dev_info(sv_dev->dev, "camsv-%d: common_status:0x%x, fifo_status:0x%x, frm_seq_no:0x%x/0x%x, ts:%llu\n",
+			sv_dev->id, common_status, fifo_status, frm_seq_no, frm_seq_no_inner, irq_info.ts_ns);
 
 	if (first_tag) {
 		exp_1_bid = CAMSVCENTRAL_DBG_INT_BIT_START +
