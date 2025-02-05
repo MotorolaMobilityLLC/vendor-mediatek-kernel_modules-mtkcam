@@ -158,6 +158,46 @@ static unsigned int flk_en_table_idx;
 static unsigned int simulation_passed_vsyncs;
 static unsigned int passed_vsyncs_ratio;
 static unsigned int max_pass_cnt;
+
+
+/* simulate user change switch max FPS */
+#define USR_CHG_CFG_SETS    10
+#define USR_CHG_MIN_FL_US_0 33334
+#define USR_CHG_MIN_FL_US_1 41667
+static unsigned int g_en_user_chg_min_fl_by_fdelay;
+static const unsigned int user_chg_min_fl_us_cfg[2][USR_CHG_CFG_SETS] = {
+	/* [0][x] => for fdelay 2 <-> N+1 */
+	{
+		USR_CHG_MIN_FL_US_0,	/* 0 */
+		USR_CHG_MIN_FL_US_0,	/* 1 */
+		USR_CHG_MIN_FL_US_0,	/* 2 */
+		USR_CHG_MIN_FL_US_0,	/* 3 */
+		USR_CHG_MIN_FL_US_0,	/* 4 */
+		USR_CHG_MIN_FL_US_0,	/* 5 */
+		USR_CHG_MIN_FL_US_0,	/* 6 */
+		USR_CHG_MIN_FL_US_0,	/* 7 */
+		USR_CHG_MIN_FL_US_0,	/* 8 */
+		USR_CHG_MIN_FL_US_0,	/* 9 */
+	},
+	/* [1][x] => for fdelay 3 <-> N+2 */
+	{
+		USR_CHG_MIN_FL_US_0,	/* 0 */
+		USR_CHG_MIN_FL_US_0,	/* 1 */
+		USR_CHG_MIN_FL_US_0,	/* 2 */
+		USR_CHG_MIN_FL_US_0,	/* 3 */
+		USR_CHG_MIN_FL_US_1,	/* 4 */
+		USR_CHG_MIN_FL_US_1,	/* 5 */
+		USR_CHG_MIN_FL_US_1,	/* 6 */
+		USR_CHG_MIN_FL_US_1,	/* 7 */
+		USR_CHG_MIN_FL_US_0,	/* 8 */
+		USR_CHG_MIN_FL_US_0,	/* 9 */
+	},
+};
+
+
+/* add random value into test */
+static unsigned int g_en_rand_bias_to_ts;
+static unsigned int g_en_rand_bias_to_trigger;
 /******************************************************************************/
 
 
@@ -946,7 +986,7 @@ static void ut_gen_timestamps_data(
 	unsigned int fl_us[2] = {0}, sensor_curr_fl_us = 0;
 	unsigned int ref_idx = 0, ref_idx_next = 0;
 	unsigned int trigger_timing_bias = UT_SENSOR_TRIGGER_BIAS;
-
+	unsigned int rand_bias_ts = 0, rand_bias_trigger = 0;
 
 	if (p_v_rec->recs[idx].id == 0)
 		return;
@@ -973,16 +1013,19 @@ static void ut_gen_timestamps_data(
 	for (i = 0; i < vsyncs; ++i) {
 		ref_idx = g_ut_vts[idx].idx;
 		ref_idx_next = (ref_idx + 1) % VSYNCS_MAX;
+		rand_bias_ts = (g_en_rand_bias_to_ts) ? (rand() % 10) : 0;
 
 		if (i < 2) {
 			choose = (i > 0) ? 1 : 0;
 			g_ut_vts[idx].timestamp[ref_idx_next] =
 				g_ut_vts[idx].timestamp[ref_idx] +
-				fl_us[choose];
+				fl_us[choose] +
+				rand_bias_ts;
 		} else {
 			g_ut_vts[idx].timestamp[ref_idx_next] =
 				g_ut_vts[idx].timestamp[ref_idx] +
-				sensor_curr_fl_us;
+				sensor_curr_fl_us +
+				rand_bias_ts;
 		}
 
 		g_ut_vts[idx].target_ts[ref_idx_next] =
@@ -994,9 +1037,11 @@ static void ut_gen_timestamps_data(
 
 
 	/* calculate trigger timimg for UT cross trigger frame-sync using */
+	rand_bias_trigger = (g_en_rand_bias_to_trigger) ? (rand() % 10) : 0;
 	g_ut_vts[idx].be_triggered_at_ts =
 		g_ut_vts[idx].timestamp[g_ut_vts[idx].idx] +
-		trigger_timing_bias;
+		trigger_timing_bias +
+		rand_bias_trigger;
 
 	if (vsyncs > 1) {
 		g_ut_vts[idx].should_be_triggered_before =
@@ -1026,9 +1071,9 @@ static void ut_gen_timestamps_data(
 #if defined(REDUCE_UT_DEBUG_PRINTF)
 	printf(LIGHT_CYAN
 #if defined(TS_TICK_64_BITS)
-		"[UT][gen_timestamps_data] [%u] FRM pr_fl(c:%u, n:%u)/vts_bias(c:%u, n:%u), g_ut_vts[%u]:(idx:%u, ts:(%llu/%llu/%llu/%llu), target_ts:(%llu/%llu/%llu/%llu)), vsyncs:%u, cur_tick:%llu, be_triggered:(at:%llu, before:%llu, bias:%u)  [p_v_rec->recs[%u].id:%u (TG)]\n"
+		"[UT][gen_timestamps_data] [%u] FRM pr_fl(c:%u, n:%u)/vts_bias(c:%u, n:%u), g_ut_vts[%u]:(idx:%u, ts:(%llu/%llu/%llu/%llu), target_ts:(%llu/%llu/%llu/%llu)), vsyncs:%u, cur_tick:%llu, be_triggered:(at:%llu, before:%llu, bias:%u)  [p_v_rec->recs[%u].id:%u (TG), rand(ts:%u/trig:%u)]\n"
 #else
-		"[UT][gen_timestamps_data] [%u] FRM pr_fl(c:%u, n:%u)/vts_bias(c:%u, n:%u), g_ut_vts[%u]:(idx:%u, ts:(%llu/%llu/%llu/%llu), target_ts:(%llu/%llu/%llu/%llu)), vsyncs:%u, cur_tick:%u, be_triggered:(at:%llu, before:%llu, bias:%u)  [p_v_rec->recs[%u].id:%u (TG)]\n"
+		"[UT][gen_timestamps_data] [%u] FRM pr_fl(c:%u, n:%u)/vts_bias(c:%u, n:%u), g_ut_vts[%u]:(idx:%u, ts:(%llu/%llu/%llu/%llu), target_ts:(%llu/%llu/%llu/%llu)), vsyncs:%u, cur_tick:%u, be_triggered:(at:%llu, before:%llu, bias:%u)  [p_v_rec->recs[%u].id:%u (TG), rand(ts:%u/trig:%u)]\n"
 #endif
 		NONE,
 		idx,
@@ -1050,7 +1095,9 @@ static void ut_gen_timestamps_data(
 		g_ut_vts[idx].should_be_triggered_before,
 		trigger_timing_bias,
 		idx,
-		p_v_rec->recs[idx].id);
+		p_v_rec->recs[idx].id,
+		rand_bias_ts,
+		rand_bias_trigger);
 #endif
 
 
@@ -2675,6 +2722,8 @@ static void ut_fs_ctrl_request_setup_max_frame_rate(
 		p_pf_ctrl->out_fl_lc = p_pf_ctrl->min_fl_lc;
 
 	} else {
+		unsigned int trig_cnt = g_sensor_exp_triggered_cnt[p_pf_ctrl->sensor_idx];
+
 		/* TODO: change max frame rate => is it well for checking at this API */
 		if ((g_n_1_status[idx] == 1) || (g_n_1_status[idx] == 2)) {
 			p_pf_ctrl->min_fl_lc =
@@ -2684,10 +2733,34 @@ static void ut_fs_ctrl_request_setup_max_frame_rate(
 			/* default using ctx->subctx.frame_length => sensor current fl_lc */
 			p_pf_ctrl->out_fl_lc = p_pf_ctrl->min_fl_lc;
 		} else {
-			p_pf_ctrl->min_fl_lc =
-				g_streaming_sensors_modes_list[idx]
-					.mode_list[g_sensor_mode[idx]]
-					.min_fl_lc;
+			if (trig_cnt > 10 && g_en_user_chg_min_fl_by_fdelay) {
+				const unsigned int index = trig_cnt % USR_CHG_CFG_SETS;
+				const unsigned int s_fdelay =
+					g_streaming_sensors[idx].sensor->fl_active_delay;
+				const unsigned int user_chg_min_fl_us = (s_fdelay == 2)
+					? user_chg_min_fl_us_cfg[0][index]
+					: user_chg_min_fl_us_cfg[1][index];
+
+				p_pf_ctrl->min_fl_lc =
+					US_TO_LC(user_chg_min_fl_us,
+						p_pf_ctrl->lineTimeInNs);
+				printf(LIGHT_CYAN
+					"[UT ctrl_request_setup_max_fps][%u] trig_cnt:%u, sidx:(g:%u)(pf:%u), fdelay:%u, min_fl_us_cfg[%u]:%u(%u)\n"
+					NONE,
+					idx,
+					trig_cnt,
+					g_streaming_sensors[idx].sensor_idx,
+					p_pf_ctrl->sensor_idx,
+					s_fdelay,
+					index,
+					user_chg_min_fl_us,
+					p_pf_ctrl->min_fl_lc);
+			} else {
+				p_pf_ctrl->min_fl_lc =
+					g_streaming_sensors_modes_list[idx]
+						.mode_list[g_sensor_mode[idx]]
+						.min_fl_lc;
+			}
 
 			/* default using ctx->subctx.frame_length => sensor current fl_lc */
 			p_pf_ctrl->out_fl_lc = p_pf_ctrl->min_fl_lc;
