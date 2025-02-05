@@ -2114,8 +2114,10 @@ static void _assign_sv_cq_ref(struct mtk_cam_job *job,
 
 	sv_dev = dev_get_drvdata(cam->engines.sv_devs[sv_id]);
 
-	if (WARN_ON(assign_apply_cq_ref(&sv_dev->cq_ref, &job->cq_ref)))
+	if (assign_apply_cq_ref(&sv_dev->cq_ref, &job->cq_ref)) {
+		pr_info("%s fail", __func__);
 		return;
+	}
 }
 
 static void _assign_mraw_cq_ref(struct mtk_cam_job *job,
