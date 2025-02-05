@@ -81,7 +81,7 @@ static void *mtk_cam_vb2_vaddr(struct vb2_buffer *vb, void *buf_priv)
 	int ret = 0;
 
 	MTK_CAM_TRACE_FUNC_BEGIN(BUFFER);
-	if (!buf->vaddr && buf->db_attach) {
+	if (!buf->vaddr && buf->db_attach && buf->db_attach->dmabuf) {
 #if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		ret = dma_buf_vmap_unlocked(buf->db_attach->dmabuf, &buf->map);
 #else
@@ -94,8 +94,9 @@ static void *mtk_cam_vb2_vaddr(struct vb2_buffer *vb, void *buf_priv)
 		buf->vaddr = buf->map.vaddr;
 	MTK_CAM_TRACE_END(BUFFER);
 
-	if (ret)
-		pr_info("%s warning ret=0x%x", __func__, ret);
+	if (ret || buf->vaddr)
+		pr_info("%s warning ret=%#x or no vaddr %p",
+			__func__, ret, buf->vaddr);
 
 	return buf->vaddr;
 }
