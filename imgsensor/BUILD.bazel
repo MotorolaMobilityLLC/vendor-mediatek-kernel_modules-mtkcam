@@ -1,4 +1,4 @@
-load("//build/bazel_mgk_rules:mgk_ko.bzl", "define_mgk_ko")
+#load("//build/bazel_mgk_rules:mgk_ko.bzl", "define_mgk_ko")
 load("//build/kernel/kleaf:kernel.bzl", "ddk_headers")
 
 package(
@@ -11,12 +11,11 @@ filegroup(
     name = "public_headers",
     srcs = glob([
         "inc/*.h",
-        "src-v4l2/frame-sync/frame_sync_camsys.h",
+#        "src-v4l2/frame-sync/frame_sync_camsys.h",
     ]),
 )
 
-
-
+"""
 define_mgk_ko(
     name = "mtk_imgsensor",
     srcs = glob([
@@ -38,60 +37,25 @@ define_mgk_ko(
         "//vendor/mediatek/kernel_modules/mtkcam/imgsensor/src-isp8s/imgsensor-glue:imgsensor-glue_isp8s",
     ],
     outs = [
-#        "src-v4l2/imgsensor-glue/imgsensor-glue.ko",
+        "src-v4l2/imgsensor-glue/imgsensor-glue.ko",
         "src-v4l2/imgsensor.ko",
-#        "src-isp8/imgsensor-glue/imgsensor-glue_isp8.ko",
+        "src-isp8/imgsensor-glue/imgsensor-glue_isp8.ko",
         "src-isp8/imgsensor_isp8.ko",
-#        "src_spm-isp8/imgsensor-glue/imgsensor-glue_spm_isp8.ko",
+        "src_spm-isp8/imgsensor-glue/imgsensor-glue_spm_isp8.ko",
         "src_spm-isp8/imgsensor_spm_isp8.ko",
-#        "src-isp8s/imgsensor-glue/imgsensor-glue_isp8s.ko",
+        "src-isp8s/imgsensor-glue/imgsensor-glue_isp8s.ko",
         "src-isp8s/imgsensor_isp8s.ko",
     ],
 )
+"""
 
 ## ddk headers
 ddk_headers(
     name = "imgsensor_header",
     hdrs = glob([
-        "**/*.h"
+        "inc/*.h"
     ]),
     includes = ["inc"],
-    visibility = ["//visibility:public"],
-)
-
-ddk_headers(
-    name = "imgsensor_v4l2_header",
-    hdrs = glob([
-        "**/*.h"
-    ]),
-    includes = ["src-v4l2"],
-    visibility = ["//visibility:public"],
-)
-
-ddk_headers(
-    name = "imgsensor_isp8_header",
-    hdrs = glob([
-        "**/*.h"
-    ]),
-    includes = ["src-isp8"],
-    visibility = ["//visibility:public"],
-)
-
-ddk_headers(
-    name = "imgsensor_spm_isp8_header",
-    hdrs = glob([
-        "**/*.h"
-    ]),
-    includes = ["src_spm-isp8"],
-    visibility = ["//visibility:public"],
-)
-
-ddk_headers(
-    name = "imgsensor_isp8s_header",
-    hdrs = glob([
-        "**/*.h"
-    ]),
-    includes = ["src-isp8s"],
     visibility = ["//visibility:public"],
 )
 
