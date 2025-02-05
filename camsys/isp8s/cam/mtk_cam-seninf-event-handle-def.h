@@ -22,6 +22,11 @@ static inline int chk_user_event(const int events, const unsigned int user)
 {
 	return ((events >> user) & 0x1);
 }
+
+static inline void set_user_event(int *p_event, const unsigned int user)
+{
+	*p_event |= (1UL << user);
+}
 /*----------------------------------------------------------------------------*/
 
 
@@ -45,10 +50,10 @@ static inline int mtk_cam_seninf_tsrec_irq_notify_chk_users(struct seninf_ctx *c
 	}
 
 	if (unlikely(ctx->sentest_seamless_ut_en))
-		ret |= TSREC_IRQ_EVENT_USER_SENTEST;
+		set_user_event(&ret, TSREC_IRQ_EVENT_USER_SENTEST);
 
 	if (unlikely(ctx->core->vsync_irq_en_flag || ctx->core->csi_irq_en_flag))
-		ret |= TSREC_IRQ_EVENT_USER_MIPI_ERR_DETECT;
+		set_user_event(&ret, TSREC_IRQ_EVENT_USER_MIPI_ERR_DETECT);
 
 	return ret;
 }
