@@ -3071,6 +3071,7 @@ void mtk_cam_stop_ctx(struct mtk_cam_ctx *ctx, struct media_entity *entity)
 
 	mtk_cam_ctx_pipeline_stop(ctx, entity);
 	mtk_cam_ctx_put(ctx);
+	mtk_cam_uninitialize(cam);
 }
 
 int mtk_cam_ctx_init_scenario(struct mtk_cam_ctx *ctx)
