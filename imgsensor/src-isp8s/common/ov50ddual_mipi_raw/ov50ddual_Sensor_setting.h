@@ -1901,6 +1901,16 @@ u16 addr_data_pair_preview_ov50ddual2q[] = {
 	0x3758,	0x0e,
 	0x3759,	0x01,
 	//0x0100, 0x01, //stream on
+	/* D-Phy init setting */
+	0x4826, 0x54,//DPHY HS_Prepare = 86 ns
+	0x4831, 0x04,//DPHY HS_Prepare
+	0x482a, 0x06,//DPHY HS_Zero = 115 ns
+	0x4819, 0x70,//DPHY HS_Zero
+	0x482b, 0x04,//DPHY HS_Trail = 62 ns
+	0x481b, 0x3c,//DPHY HS_Trail
+	0x4829, 0x66,//DPHY HS_Exit = 102 ns
+	0x482e, 0x34,//DPHY CLK_Post = 90 ns
+	0x4821, 0x49,//DPHY CLK_Post
 };
 /*mode 01 - 4000x3000@30fps 1902Mbps (AG64x,no PD)*/
 u16 addr_data_pair_capture_ov50ddual2q[] = {
@@ -2129,6 +2139,16 @@ u16 addr_data_pair_capture_ov50ddual2q[] = {
 	0x3758,	0x0e,
 	0x3759,	0x01,
 	//0x0100, 0x01, //stream on
+	/* D-Phy init setting */
+	0x4826, 0x54,//DPHY HS_Prepare = 86 ns
+	0x4831, 0x04,//DPHY HS_Prepare
+	0x482a, 0x06,//DPHY HS_Zero = 115 ns
+	0x4819, 0x70,//DPHY HS_Zero
+	0x482b, 0x04,//DPHY HS_Trail = 62 ns
+	0x481b, 0x3c,//DPHY HS_Trail
+	0x4829, 0x66,//DPHY HS_Exit = 102 ns
+	0x482e, 0x34,//DPHY CLK_Post = 90 ns
+	0x4821, 0x49,//DPHY CLK_Post
 };
 /*mode 02 - 4000x2600@30fps 1902Mbps (AG64x,no PD)*/
 u16 addr_data_pair_video_ov50ddual2q[] = {
@@ -2357,6 +2377,16 @@ u16 addr_data_pair_video_ov50ddual2q[] = {
 	0x3758,	0x0e,
 	0x3759,	0x01,
 	//0x0100, 0x01, //stream on
+	/* D-Phy init setting */
+	0x4826, 0x54,//DPHY HS_Prepare = 86 ns
+	0x4831, 0x04,//DPHY HS_Prepare
+	0x482a, 0x06,//DPHY HS_Zero = 115 ns
+	0x4819, 0x70,//DPHY HS_Zero
+	0x482b, 0x04,//DPHY HS_Trail = 62 ns
+	0x481b, 0x3c,//DPHY HS_Trail
+	0x4829, 0x66,//DPHY HS_Exit = 102 ns
+	0x482e, 0x34,//DPHY CLK_Post = 90 ns
+	0x4821, 0x49,//DPHY CLK_Post
 };
 /*mode 03 - 4000x2600@30fps 1902Mbps (AG64x,no PD)*/
 u16 addr_data_pair_hs_video_ov50ddual2q[] = {
@@ -2585,6 +2615,16 @@ u16 addr_data_pair_hs_video_ov50ddual2q[] = {
 	0x3758, 0x0e,
 	0x3759, 0x01,
 	//0x0100, 0x01, //stream on
+	/* D-Phy init setting */
+	0x4826, 0x54,//DPHY HS_Prepare = 86 ns
+	0x4831, 0x04,//DPHY HS_Prepare
+	0x482a, 0x06,//DPHY HS_Zero = 115 ns
+	0x4819, 0x70,//DPHY HS_Zero
+	0x482b, 0x04,//DPHY HS_Trail = 62 ns
+	0x481b, 0x3c,//DPHY HS_Trail
+	0x4829, 0x66,//DPHY HS_Exit = 102 ns
+	0x482e, 0x34,//DPHY CLK_Post = 90 ns
+	0x4821, 0x49,//DPHY CLK_Post
 };
 /*mode 04 - 1280x720@30fps 1902Mbps (AG16x)*/
 u16 addr_data_pair_slim_video_ov50ddual2q[] = {
@@ -2813,6 +2853,16 @@ u16 addr_data_pair_slim_video_ov50ddual2q[] = {
 	0x3758, 0x0e,
 	0x3759, 0x01,
 	//0x0100, 0x01, //stream on
+	/* D-Phy init setting */
+	0x4826, 0x54,//DPHY HS_Prepare = 86 ns
+	0x4831, 0x04,//DPHY HS_Prepare
+	0x482a, 0x06,//DPHY HS_Zero = 115 ns
+	0x4819, 0x70,//DPHY HS_Zero
+	0x482b, 0x04,//DPHY HS_Trail = 62 ns
+	0x481b, 0x3c,//DPHY HS_Trail
+	0x4829, 0x66,//DPHY HS_Exit = 102 ns
+	0x482e, 0x34,//DPHY CLK_Post = 90 ns
+	0x4821, 0x49,//DPHY CLK_Post
 };
 /*mode 05 - 640x480@10fps 1902Mbps (AG16x)*/
 u16 addr_data_pair_custom1_ov50ddual2q[] = {
@@ -3041,6 +3091,16 @@ u16 addr_data_pair_custom1_ov50ddual2q[] = {
 	0x3758, 0x0e,
 	0x3759, 0x01,
 	//0x0100, 0x01, //stream on
+	/* D-Phy init setting */
+	0x4826, 0x54,//DPHY HS_Prepare = 86 ns
+	0x4831, 0x04,//DPHY HS_Prepare
+	0x482a, 0x06,//DPHY HS_Zero = 115 ns
+	0x4819, 0x70,//DPHY HS_Zero
+	0x482b, 0x04,//DPHY HS_Trail = 62 ns
+	0x481b, 0x3c,//DPHY HS_Trail
+	0x4829, 0x66,//DPHY HS_Exit = 102 ns
+	0x482e, 0x34,//DPHY CLK_Post = 90 ns
+	0x4821, 0x49,//DPHY CLK_Post
 };
 /*mode 06 - 640x480@5fps 1902Mbps (AG16x)*/
 u16 addr_data_pair_custom2_ov50ddual2q[] = {
@@ -3269,6 +3329,16 @@ u16 addr_data_pair_custom2_ov50ddual2q[] = {
 	0x3758, 0x0e,
 	0x3759, 0x01,
 	//0x0100, 0x01, //stream on
+	/* D-Phy init setting */
+	0x4826, 0x54,//DPHY HS_Prepare = 86 ns
+	0x4831, 0x04,//DPHY HS_Prepare
+	0x482a, 0x06,//DPHY HS_Zero = 115 ns
+	0x4819, 0x70,//DPHY HS_Zero
+	0x482b, 0x04,//DPHY HS_Trail = 62 ns
+	0x481b, 0x3c,//DPHY HS_Trail
+	0x4829, 0x66,//DPHY HS_Exit = 102 ns
+	0x482e, 0x34,//DPHY CLK_Post = 90 ns
+	0x4821, 0x49,//DPHY CLK_Post
 };
 /*mode 07 - 640x480@2fps 1902Mbps (AG16x)*/
 u16 addr_data_pair_custom3_ov50ddual2q[] = {
@@ -3497,6 +3567,16 @@ u16 addr_data_pair_custom3_ov50ddual2q[] = {
 	0x3758, 0x0e,
 	0x3759, 0x01,
 	//0x0100, 0x01, //stream on
+	/* D-Phy init setting */
+	0x4826, 0x54,//DPHY HS_Prepare = 86 ns
+	0x4831, 0x04,//DPHY HS_Prepare
+	0x482a, 0x06,//DPHY HS_Zero = 115 ns
+	0x4819, 0x70,//DPHY HS_Zero
+	0x482b, 0x04,//DPHY HS_Trail = 62 ns
+	0x481b, 0x3c,//DPHY HS_Trail
+	0x4829, 0x66,//DPHY HS_Exit = 102 ns
+	0x482e, 0x34,//DPHY CLK_Post = 90 ns
+	0x4821, 0x49,//DPHY CLK_Post
 };
 /*mode 08 ULP(AOV) - 320x240@10fps 2047.5Mbps (AG16x)*/
 u16 addr_data_pair_custom4_ov50ddual2q[] = {
@@ -3726,6 +3806,16 @@ u16 addr_data_pair_custom4_ov50ddual2q[] = {
 	0x3758, 0x0e,
 	0x3759, 0x01,
 	//0x0100, 0x01, //stream on
+	/* D-Phy init setting */
+	0x4826, 0x54,//DPHY HS_Prepare = 86 ns
+	0x4831, 0x04,//DPHY HS_Prepare
+	0x482a, 0x06,//DPHY HS_Zero = 115 ns
+	0x4819, 0x70,//DPHY HS_Zero
+	0x482b, 0x04,//DPHY HS_Trail = 62 ns
+	0x481b, 0x3c,//DPHY HS_Trail
+	0x4829, 0x66,//DPHY HS_Exit = 102 ns
+	0x482e, 0x34,//DPHY CLK_Post = 90 ns
+	0x4821, 0x49,//DPHY CLK_Post
 };
 /*mode 09 ULP(AOV) - 320x240@5fps 2047.5Mbps (AG16x)*/
 u16 addr_data_pair_custom5_ov50ddual2q[] = {
@@ -3955,6 +4045,16 @@ u16 addr_data_pair_custom5_ov50ddual2q[] = {
 	0x3758, 0x0e,
 	0x3759, 0x01,
 	//0x0100, 0x01, //stream on
+	/* D-Phy init setting */
+	0x4826, 0x54,//DPHY HS_Prepare = 86 ns
+	0x4831, 0x04,//DPHY HS_Prepare
+	0x482a, 0x06,//DPHY HS_Zero = 115 ns
+	0x4819, 0x70,//DPHY HS_Zero
+	0x482b, 0x04,//DPHY HS_Trail = 62 ns
+	0x481b, 0x3c,//DPHY HS_Trail
+	0x4829, 0x66,//DPHY HS_Exit = 102 ns
+	0x482e, 0x34,//DPHY CLK_Post = 90 ns
+	0x4821, 0x49,//DPHY CLK_Post
 };
 /*mode 10 ULP(AOV) - 320x240@2fps 2047.5Mbps (AG16x)*/
 u16 addr_data_pair_custom6_ov50ddual2q[] = {
@@ -4184,5 +4284,15 @@ u16 addr_data_pair_custom6_ov50ddual2q[] = {
 	0x3758, 0x0e,
 	0x3759, 0x01,
 	//0x0100, 0x01, //stream on
+	/* D-Phy init setting */
+	0x4826, 0x54,//DPHY HS_Prepare = 86 ns
+	0x4831, 0x04,//DPHY HS_Prepare
+	0x482a, 0x06,//DPHY HS_Zero = 115 ns
+	0x4819, 0x70,//DPHY HS_Zero
+	0x482b, 0x04,//DPHY HS_Trail = 62 ns
+	0x481b, 0x3c,//DPHY HS_Trail
+	0x4829, 0x66,//DPHY HS_Exit = 102 ns
+	0x482e, 0x34,//DPHY CLK_Post = 90 ns
+	0x4821, 0x49,//DPHY CLK_Post
 };
 #endif
