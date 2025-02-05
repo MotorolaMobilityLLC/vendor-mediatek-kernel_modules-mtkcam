@@ -123,7 +123,7 @@ struct buf_info {
 #define IMGSYS_HW_DMAS_NUM_MAX       IMG_MAX_HW_DMAS
 #define FRAME_BUF_MAX                (1)
 #define TIME_MAX                     (144)
-#define TMAX                         (18)
+#define TMAX                         (22)
 
 #if defined (IMGSYS_SINGLE_NODE_DESC_V2)
 /* Max number of enabled dma per frame */
