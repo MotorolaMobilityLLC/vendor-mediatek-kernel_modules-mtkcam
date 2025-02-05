@@ -2425,8 +2425,10 @@ static int mtk_hcp_probe(struct platform_device *pdev)
 	init_waitqueue_head(&hcp_dev->msg_wq);
 	INIT_LIST_HEAD(&hcp_dev->msg_list);
 	msgs = devm_kzalloc(hcp_dev->dev, sizeof(*msgs) * MSG_NR, GFP_KERNEL);
-	for (i = 0; i < MSG_NR; i++)
-		list_add_tail(&msgs[i].entry, &hcp_dev->msg_list);
+	if (msgs) {
+		for (i = 0; i < MSG_NR; i++)
+			list_add_tail(&msgs[i].entry, &hcp_dev->msg_list);
+	}
 
 	/* init character device */
 
