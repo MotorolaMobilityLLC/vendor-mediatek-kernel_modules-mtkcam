@@ -112,6 +112,7 @@ define_mgk_ddk_ko(
         "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-plat-util",
         "//vendor/mediatek/kernel_modules/mtkcam/camsys:ccd_rpmsg",
         "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk_ccd_remoteproc",
+        "//kernel_device_modules-{}/drivers/interconnect/mediatek:mmqos-common".format(kernel_version),
         "//kernel_device_modules-{}/drivers/misc/mediatek/mtk-interconnect:mtk-icc-core".format(kernel_version),
         "//kernel_device_modules-{}/drivers/misc/mediatek/aee/aed:aee_aed".format(kernel_version),
         "//kernel_device_modules-{}/drivers/misc/mediatek/mtprintk:mtk_printk_ctrl".format(kernel_version),
