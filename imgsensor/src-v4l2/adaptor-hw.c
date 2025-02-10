@@ -461,7 +461,7 @@ int do_hw_power_off(struct adaptor_ctx *ctx)
 		if (!op->unset)
 			continue;
 		op->unset(ctx, op->data, ent->val);
-		//msleep(ent->delay);
+		msleep(ent->delay);
 	}
 
 	op = &ctx->hw_ops[HW_ID_MIPI_SWITCH];
