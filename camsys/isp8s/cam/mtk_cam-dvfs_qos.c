@@ -448,18 +448,12 @@ static inline u32 calc_bw(u32 size, u64 linet, u32 active_h)
 	return to_qos_icc((1000000000L*size)/(linet * active_h));
 }
 
-static struct mtkcam_qos_desc *
-find_qos_desc_by_uid(struct mtkcam_qos_desc *mmqos_table, int tbl_size, int uid)
+static struct mtkcam_qos_desc *get_qos_desc_by_uid(int uid)
 {
-	int i = 0;
+	if (uid >= QOS_DESC_TABLE_SIZE || uid < 0)
+		return NULL;
 
-	/* TODO: opt the search to O(1) */
-	for (i = 0; i < tbl_size; i++) {
-		if (uid == mmqos_table[i].id)
-			return &mmqos_table[i];
-	}
-
-	return NULL;
+	return &mmqos_table[uid];
 }
 
 static int get_ufbc_size(int ipi_fmt, int ufbc_type, int img_w, int img_h)
@@ -509,8 +503,7 @@ static int fill_raw_out_qos(struct mtk_cam_job *job,
 	u32 peak_bw, avg_bw, active_h;
 	int i, dst_port;
 
-	qos_desc = find_qos_desc_by_uid(
-			mmqos_img_table, ARRAY_SIZE(mmqos_img_table), out->uid.id);
+	qos_desc = get_qos_desc_by_uid(out->uid.id);
 	if (!qos_desc) {
 		if (CAM_DEBUG_ENABLED(MMQOS))
 			pr_info("%s: can't find qos desc in table uid:%d", __func__, out->uid.id);
@@ -580,8 +573,7 @@ static int fill_raw_in_qos(struct mtk_cam_job *job,
 	u32 peak_bw, avg_bw;
 	int i, dst_port;
 
-	qos_desc = find_qos_desc_by_uid(
-			mmqos_img_table, ARRAY_SIZE(mmqos_img_table), in->uid.id);
+	qos_desc = get_qos_desc_by_uid(in->uid.id);
 	if (!qos_desc) {
 		pr_info("%s: can't find qos desc in table uid:%d", __func__, in->uid.id);
 		return 0;
@@ -590,8 +582,7 @@ static int fill_raw_in_qos(struct mtk_cam_job *job,
 	/* for mstream 1st ipi update */
 	if (job->job_type == JOB_TYPE_MSTREAM &&
 	    in->uid.id == MTKCAM_IPI_RAW_RAWI_2) {
-		imgo_qos_desc = find_qos_desc_by_uid(
-			mmqos_img_table, ARRAY_SIZE(mmqos_img_table), MTKCAM_IPI_RAW_IMGO);
+		imgo_qos_desc = get_qos_desc_by_uid(MTKCAM_IPI_RAW_IMGO);
 	}
 
 	for (i = 0; i < qos_desc->desc_size && i < ARRAY_SIZE(in->fmt.stride); i++) {
@@ -660,21 +651,27 @@ static int fill_raw_stats_qos(struct req_buffer_helper *helper,
 	unsigned int size = 0;
 	void *meta_va = NULL;
 	u32 peak_bw, avg_bw;
-	int i, j, dst_port;
+	int table_idx, ipi_id, j, dst_port;
+	int stats_ipi_id_table[] = {
+		MTKCAM_IPI_RAW_META_STATS_CFG,
+		MTKCAM_IPI_RAW_META_STATS_0,
+		MTKCAM_IPI_RAW_META_STATS_1,
+	};
 
-	for (i = 0; i < ARRAY_SIZE(mmqos_stats_table); i++) {
-		qos_desc = &mmqos_stats_table[i];
+	for (table_idx = 0; table_idx < ARRAY_SIZE(stats_ipi_id_table); table_idx++) {
+		ipi_id = stats_ipi_id_table[table_idx];
+		qos_desc = get_qos_desc_by_uid(ipi_id);
 
-		if (qos_desc->id == MTKCAM_IPI_RAW_META_STATS_CFG)
+		if (ipi_id == MTKCAM_IPI_RAW_META_STATS_CFG)
 			meta_va = helper->meta_cfg_buf_va;
-		else if (qos_desc->id == MTKCAM_IPI_RAW_META_STATS_0)
+		else if (ipi_id == MTKCAM_IPI_RAW_META_STATS_0)
 			meta_va = helper->meta_stats0_buf_va;
-		else if (qos_desc->id == MTKCAM_IPI_RAW_META_STATS_1)
+		else if (ipi_id == MTKCAM_IPI_RAW_META_STATS_1)
 			meta_va = helper->meta_stats1_buf_va;
 		else
 			continue;
 
-		if (!meta_va)
+		if (!meta_va || !qos_desc)
 			continue;
 
 		for (j = 0; j < qos_desc->desc_size; j++) {
@@ -682,8 +679,8 @@ static int fill_raw_stats_qos(struct req_buffer_helper *helper,
 			if (qos_desc->dma_desc[j].exp_num > job_exp_num(job))
 				continue;
 
-			CALL_PLAT_V4L2(get_meta_stats_port_size,
-				qos_desc->id, meta_va, qos_desc->dma_desc[j].src_port, &size);
+			CALL_PLAT_V4L2(get_meta_stats_port_size, ipi_id, meta_va,
+				       qos_desc->dma_desc[j].src_port, &size);
 			if (!size)
 				continue;  // no used port, the define in desc could be removed
 

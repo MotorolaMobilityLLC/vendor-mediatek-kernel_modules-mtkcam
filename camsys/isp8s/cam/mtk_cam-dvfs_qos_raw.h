@@ -119,13 +119,11 @@ struct qos_dma_desc {
 	},
 
 struct mtkcam_qos_desc {
-	u8 id;  /* ipi id */
 	u8 desc_size;
 	struct qos_dma_desc *dma_desc;
 };
 #define ADD_QOS_DESC(ipi_id, desc_arr)			\
-	{						\
-		.id = ipi_id,				\
+	[ipi_id] = {					\
 		.dma_desc = desc_arr,			\
 		.desc_size = ARRAY_SIZE(desc_arr),	\
 	},
@@ -196,12 +194,6 @@ static struct qos_dma_desc stats_0_dmas[] = {
 static struct qos_dma_desc stats_1_dmas[] = {
 	/* RAW_W_1 */
 	ADD_STATS_PORT(AFO_R1, RAW_DOMAIN, SMI_PORT_RAW_W_1)
-};
-
-static  struct mtkcam_qos_desc mmqos_stats_table[] = {
-	ADD_QOS_DESC(MTKCAM_IPI_RAW_META_STATS_CFG, stats_cfg_dmas)
-	ADD_QOS_DESC(MTKCAM_IPI_RAW_META_STATS_0, stats_0_dmas)
-	ADD_QOS_DESC(MTKCAM_IPI_RAW_META_STATS_1, stats_1_dmas)
 };
 
 /* img */
@@ -296,16 +288,14 @@ static struct qos_dma_desc drzs4no_3_dmas[] = {
 /* rawi_5_dmas_2 */
 /* imgo_dmas_2 */
 
-/**
- * TODO: order in IPI_ID to reduce search cost
- * e.g.
- * static struct mtkcam_qos_desc mmqos_raw_table[MTKCAM_IPI_RAW_ID_MAX] = {
- *     [MTKCAM_IPI_RAW_RAWI_2] = {
- *         .id = ...
- *     }
- * }
- */
-static struct mtkcam_qos_desc mmqos_img_table[] = {
+/* desc table */
+#define QOS_DESC_TABLE_SIZE (MTKCAM_IPI_RAW_ID_MAX - MTKCAM_IPI_RAW_RAWI_2)
+static struct mtkcam_qos_desc mmqos_table[QOS_DESC_TABLE_SIZE] = {
+	/* stats */
+	ADD_QOS_DESC(MTKCAM_IPI_RAW_META_STATS_CFG, stats_cfg_dmas)
+	ADD_QOS_DESC(MTKCAM_IPI_RAW_META_STATS_0, stats_0_dmas)
+	ADD_QOS_DESC(MTKCAM_IPI_RAW_META_STATS_1, stats_1_dmas)
+	/* img */
 	ADD_QOS_DESC(MTKCAM_IPI_RAW_RAWI_2, rawi_2_dmas)
 	ADD_QOS_DESC(MTKCAM_IPI_RAW_RAWI_3, rawi_3_dmas)
 	ADD_QOS_DESC(MTKCAM_IPI_RAW_RAWI_5, rawi_5_dmas)
@@ -325,9 +315,7 @@ static struct mtkcam_qos_desc mmqos_img_table[] = {
 
 	ADD_QOS_DESC(MTKCAM_IPI_RAW_GMPO, gmpo_1_dmas)
 	ADD_QOS_DESC(MTKCAM_IPI_RAW_GRMGO, grmgo_1_dmas)
+	/* 2 raw */
 };
-
-/* 2 raw flow */
-/* static struct mtkcam_qos_desc mmqos_img_table_2[] = {} */
 
 #endif /* __MTK_CAM_DVFS_QOS_RAW_H */
