@@ -22,6 +22,7 @@
  ****************************************************************************/
 #include "imx06amipiraw_Sensor.h"
 
+#define FOR_DCG_VS 1
 
 static void set_sensor_cali(void *arg);
 static int get_sensor_temperature(void *arg);
@@ -44,6 +45,117 @@ static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SEAMLESS_SWITCH, imx06a_seamless_switch},
 };
 
+#ifdef FOR_DCG_VS
+/* 1000 base for dcg gain ratio */
+static u32 imx06a_dcg_ratio_table_ratio16[] = {16000};
+
+static struct mtk_sensor_saturation_info imgsensor_saturation_info_14bit = {
+	.OB_pedestal = 64,
+	.adc_bit = 10,
+	.ob_bm = 64,
+};
+
+static struct mtk_sensor_saturation_info imgsensor_saturation_info_for_dcg_compose = {
+	.OB_pedestal = 64,
+	.adc_bit = 10,
+	.ob_bm = 64,
+	.bit_depth = 14,
+	.valid_bit = 14,
+	.dummy_padding = NONE_PADDING,
+};
+
+static struct mtk_sensor_saturation_info imgsensor_saturation_info_for_vs = {
+	.OB_pedestal = 64,
+	.adc_bit = 10,
+	.ob_bm = 64,
+	.bit_depth = 14,
+	.valid_bit = 10,
+	.dummy_padding = LSB_PADDING,
+};
+
+static struct mtk_mbus_frame_desc_entry frame_desc_regA[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2d,
+			.hsize = 0x1000, /* 4096 */
+			.vsize = 0x0900, /* 2304 */
+			.user_data_desc = VC_STAGGER_NE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST,
+			.saturation_info = &imgsensor_saturation_info_for_dcg_compose,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 1,
+			.data_type = 0x2d,
+			.hsize = 0x1000, /* 4096 */
+			.vsize = 0x0900, /* 2304 */
+			.user_data_desc = VC_STAGGER_ME,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
+			.saturation_info = &imgsensor_saturation_info_for_vs,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x1000, /* 4096 */
+			.vsize = 0x240, /* 576 */
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+		},
+	},
+};
+
+static struct mtk_mbus_frame_desc_entry frame_desc_regB[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2b,
+			.hsize = 0x1000, /* 4096 */
+			.vsize = 0x0900, /* 2304 */
+			.user_data_desc = VC_STAGGER_NE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x1000, /* 4096 */
+			.vsize = 0x240, /* 576 */
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+		},
+	},
+};
+
+static struct mtk_mbus_frame_desc_entry frame_desc_regC[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2d,
+			.hsize = 0x1000, /* 4096 */
+			.vsize = 0x0900, /* 2304 */
+			.user_data_desc = VC_STAGGER_NE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
+			.valid_bit = 10,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x1000, /* 4096 */
+			.vsize = 0x240, /* 576 */
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+		},
+	},
+};
+
+#else
 
 static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = { //mode 0
 	{
@@ -219,9 +331,11 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = { //mode 2
 		},
 	},
 };
+#endif
 
 
 static struct subdrv_mode_struct mode_struct[] = {
+#ifndef FOR_DCG_VS
 	{// mode 0, Normal Obin_4096_3072_30fps_PD_S2,
 // reg12 IMX06A_MTK-CPHY-1.8V-24M_RegisterSetting_ver5.00-7.00_231221_test.xlsx,
 		.frame_desc = frame_desc_prev,
@@ -566,6 +680,251 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.support_mcss = 1,
 	},
+#else
+/* DCG VS */
+	{
+		.frame_desc = frame_desc_regB,
+		.num_entries = ARRAY_SIZE(frame_desc_regB),
+		.mode_setting_table = imx06a_dcg_vs_regB,
+		.mode_setting_len = ARRAY_SIZE(imx06a_dcg_vs_regB),
+		.seamless_switch_group = 1,
+		.seamless_switch_mode_setting_table = imx06a_dcg_vs_regB,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx06a_dcg_vs_regB),
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 2803200000,// VTPXCK system pixel rate
+		.linelength = 8832,//line_length_pck
+		.framelength = 10576,//frame_length_lines
+		.max_framerate = 300,
+		.mipi_pixel_rate = 2445940000,// OPSYCK system pixel rate
+		.readout_length = 3142, // normal mode no need
+		.read_margin = 32,  // normal mode no need
+		.framelength_step = 1,  // no need
+		.coarse_integ_step = 1,  // no need
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 768,
+			.w0_size = 8192,
+			.h0_size = 4608,
+			.scale_w = 4096,
+			.scale_h = 2304,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2304,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2304,
+		},
+		.pdaf_cap = TRUE,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 6326,//TBD
+		.delay_frame = 3,
+	},
+	{
+		.frame_desc = frame_desc_regB,
+		.num_entries = ARRAY_SIZE(frame_desc_regB),
+		.mode_setting_table = imx06a_dcg_vs_regB,
+		.mode_setting_len = ARRAY_SIZE(imx06a_dcg_vs_regB),
+		.seamless_switch_group = 1,
+		.seamless_switch_mode_setting_table = imx06a_dcg_vs_regB,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx06a_dcg_vs_regB),
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 2803200000,// VTPXCK system pixel rate
+		.linelength = 8832,//line_length_pck
+		.framelength = 10576,//frame_length_lines
+		.max_framerate = 300,
+		.mipi_pixel_rate = 2445940000,// OPSYCK system pixel rate
+		.readout_length = 3142, // normal mode no need
+		.read_margin = 32,  // normal mode no need
+		.framelength_step = 1,  // no need
+		.coarse_integ_step = 1,  // no need
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 768,
+			.w0_size = 8192,
+			.h0_size = 4608,
+			.scale_w = 4096,
+			.scale_h = 2304,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2304,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2304,
+		},
+		.pdaf_cap = TRUE,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 6326,//TBD
+		.delay_frame = 3,
+	},
+	{
+		.frame_desc = frame_desc_regB,
+		.num_entries = ARRAY_SIZE(frame_desc_regB),
+		.mode_setting_table = imx06a_dcg_vs_regB,
+		.mode_setting_len = ARRAY_SIZE(imx06a_dcg_vs_regB),
+		.seamless_switch_group = 1,
+		.seamless_switch_mode_setting_table = imx06a_dcg_vs_regB,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx06a_dcg_vs_regB),
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 2803200000,// VTPXCK system pixel rate
+		.linelength = 8832,//line_length_pck
+		.framelength = 10576,//frame_length_lines
+		.max_framerate = 300,
+		.mipi_pixel_rate = 2445940000,// OPSYCK system pixel rate
+		.readout_length = 3142, // normal mode no need
+		.read_margin = 32,  // normal mode no need
+		.framelength_step = 1,  // no need
+		.coarse_integ_step = 1,  // no need
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 768,
+			.w0_size = 8192,
+			.h0_size = 4608,
+			.scale_w = 4096,
+			.scale_h = 2304,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2304,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2304,
+		},
+		.pdaf_cap = TRUE,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 6326,//TBD
+		.delay_frame = 3,
+	},
+	{
+		.frame_desc = frame_desc_regA,
+		.num_entries = ARRAY_SIZE(frame_desc_regA),
+		.mode_setting_table = imx06a_dcg_vs_regA,
+		.mode_setting_len = ARRAY_SIZE(imx06a_dcg_vs_regA),
+		.seamless_switch_group = 1,
+		.seamless_switch_mode_setting_table = imx06a_dcg_vs_regA,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx06a_dcg_vs_regA),
+		.hdr_mode = HDR_RAW_DCG_COMPOSE_VS,
+		.raw_cnt = 2,
+		.exp_cnt = 3,
+		.pclk = 2803200000,// VTPXCK system pixel rate
+		.linelength = 16096,//line_length_pck
+		.framelength = 2744 * 2,//frame_length_lines
+		.max_framerate = 300,
+		.mipi_pixel_rate = 1747100000,
+		.readout_length = 0,
+		.read_margin = 64,
+		.framelength_step = 8,
+		.coarse_integ_step = 4,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 8,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 8,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 768,
+			.w0_size = 8192,
+			.h0_size = 4608,
+			.scale_w = 4096,
+			.scale_h = 2304,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2304,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2304,
+		},
+		.pdaf_cap = TRUE,
+
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = -436,
+		.delay_frame = 3,
+		.saturation_info = &imgsensor_saturation_info_14bit,
+		.dcg_info = {
+			.dcg_mode = IMGSENSOR_DCG_COMPOSE,
+			.dcg_gain_mode = IMGSENSOR_DCG_RATIO_MODE,
+			.dcg_gain_ratio_min = 16000,
+			.dcg_gain_ratio_max = 16000,
+			.dcg_gain_ratio_step = 0,
+			.dcg_gain_table = imx06a_dcg_ratio_table_ratio16,
+			.dcg_gain_table_size = sizeof(imx06a_dcg_ratio_table_ratio16),
+		},
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 4,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_SE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_SE].max = BASEGAIN * 64,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 1390,  // 8.023ms
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = 1390,  // 8.023ms
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_SE].max = 278,  // 0.99ms
+		.multiexp_s_info[IMGSENSOR_EXPOSURE_SE].belong_to_lut_id = IMGSENSOR_LUT_B,
+		.mode_lut_s_info[IMGSENSOR_LUT_B].linelength = 9952,//line_length_pck
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW14_R,
+	},
+
+	{
+		.frame_desc = frame_desc_regC,
+		.num_entries = ARRAY_SIZE(frame_desc_regC),
+		.mode_setting_table = imx06a_dcg_vs_regC,
+		.mode_setting_len = ARRAY_SIZE(imx06a_dcg_vs_regC),
+		.seamless_switch_group = 1,
+		.seamless_switch_mode_setting_table = imx06a_dcg_vs_regC,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx06a_dcg_vs_regC),
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 2803200000,// VTPXCK system pixel rate
+		.linelength = 17664,//line_length_pck
+		.framelength = 5288,//frame_length_lines
+		.max_framerate = 300,
+		.mipi_pixel_rate = 1747100000,// OPSYCK system pixel rate
+		.readout_length = 3142, // normal mode no need
+		.read_margin = 32,  // normal mode no need
+		.framelength_step = 1,  // no need
+		.coarse_integ_step = 1,  // no need
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 768,
+			.w0_size = 8192,
+			.h0_size = 4608,
+			.scale_w = 4096,
+			.scale_h = 2304,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2304,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2304,
+		},
+		.pdaf_cap = TRUE,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 6326,//TBD
+		.delay_frame = 3,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW14_R,
+	},
+#endif
 };
 
 static struct subdrv_static_ctx static_ctx = {
@@ -610,7 +969,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.start_exposure_offset = 500000, // tuning for sensor fusion
 
 	.pdaf_type = PDAF_SUPPORT_CAMSV_QPD, // ask vendor
-	.hdr_type = HDR_SUPPORT_STAGGER_FDOL,
+	.hdr_type = HDR_SUPPORT_STAGGER_FDOL|HDR_SUPPORT_DCG_VS,
 	.seamless_switch_support = TRUE,
 	.seamless_switch_type = SEAMLESS_SWITCH_CUT_VB_INIT_SHUT,
 	.seamless_switch_hw_re_init_time_ns = 3500000,
@@ -649,8 +1008,28 @@ static struct subdrv_static_ctx static_ctx = {
 	.reg_addr_frame_count = 0x0005,
 	.reg_addr_fast_mode = 0x3010,
 
+	.reg_addr_exposure_in_lut = {
+			{0x0E20, 0x0E21},
+			{0x0E80, 0x0E81},
+	},
+	.reg_addr_ana_gain_in_lut = {
+			{0x0E22, 0x0E23},
+			{0x0E82, 0x0E83},
+	},
+	.reg_addr_frame_length_in_lut = {
+			{0x0E28, 0x0E29},
+			{0x0E88, 0x0E89},
+	},
+	.reg_addr_dcg_ratio = 0x3172,
+
+#ifndef FOR_DCG_VS
 	.init_setting_table = imx06a_init_setting,
 	.init_setting_len = ARRAY_SIZE(imx06a_init_setting),
+#else
+	.init_setting_table = imx06a_dcg_vs_init_setting,
+	.init_setting_len = ARRAY_SIZE(imx06a_dcg_vs_init_setting),
+#endif
+
 	.mode = mode_struct,
 	.sensor_mode_num = ARRAY_SIZE(mode_struct),
 	.list = feature_control_list,
@@ -964,6 +1343,8 @@ static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt, u64 sof_ts
 static int imx06a_mcss_init(void *arg)
 {
 	struct subdrv_ctx *ctx = (struct subdrv_ctx *)arg;
+
+	return 0;
 
 	if (!(ctx->mcss_init_info.enable_mcss)) {
 		memset(&(ctx->mcss_init_info), 0, sizeof(struct mtk_fsync_hw_mcss_init_info));
