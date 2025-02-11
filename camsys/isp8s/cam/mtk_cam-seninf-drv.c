@@ -47,11 +47,10 @@
 #include "mtk_cam-seninf-aov-sentest-ioctrl.h"
 #include "mtk_cam-seninf-aov-sentest-ctrl.h"
 #include "mtk_cam-seninf-eint.h"
-#if KERNEL_VERSION(6, 6, 0) == LINUX_VERSION_CODE
+
 #define CSI_POWER_STATE
 #ifdef CSI_POWER_STATE
 #include "subsys/swpm_isp_wrapper.h"
-#endif
 #endif
 
 #define is_irq_ready 1
@@ -79,9 +78,7 @@ struct mtk_cam_seninf_ops *g_seninf_ops;
 /* aov sensor use */
 struct mtk_seninf_aov_ctrl g_aov_ctrl[AOV_SENINF_NUM];
 
-#if KERNEL_VERSION(6, 6, 0) == LINUX_VERSION_CODE
 static void gather_csi_ps_info(struct seninf_ctx *ctx);
-#endif
 
 #ifdef CSI_EFUSE_SET
 #include <linux/nvmem-consumer.h>
@@ -1800,10 +1797,10 @@ static int mtk_cam_seninf_set_fmt(struct v4l2_subdev *sd,
 
 		if (bSinkFormatChanged && !ctx->is_test_model && !ctx->streaming)
 			mtk_cam_seninf_get_vcinfo(ctx);
-#if KERNEL_VERSION(6, 6, 0) == LINUX_VERSION_CODE
+
 		if (seninf_pmsr_en && fmt->pad == PAD_SINK)
 			gather_csi_ps_info(ctx);
-#endif
+
 		if (bSinkFormatChanged && !ctx->is_test_model) {
 			mtk_cam_seninf_get_sensor_usage(&ctx->subdev);
 			mtk_cam_sensor_get_vc_info_by_scenario(ctx, fmt->format.code);
@@ -2496,7 +2493,6 @@ static int debug_err_detect_initialize(struct seninf_ctx *ctx)
 	return 0;
 }
 
-#if KERNEL_VERSION(6, 6, 0) == LINUX_VERSION_CODE
 static void gather_csi_ps_info(struct seninf_ctx *ctx)
 {
 	struct v4l2_subdev *sd = ctx->sensor_sd;
@@ -2534,8 +2530,16 @@ static void gather_csi_ps_info(struct seninf_ctx *ctx)
 
 	memset(&fi, 0, sizeof(fi));
 	fi.pad = ctx->sensor_pad_idx;
+
+#if (KERNEL_VERSION(6, 7, 0) < LINUX_VERSION_CODE)
+	fi.which = V4L2_SUBDEV_FORMAT_ACTIVE;
+	ret = v4l2_subdev_call_state_active(sd, pad, get_frame_interval, &fi);
+#else
 	fi.reserved[0] = V4L2_SUBDEV_FORMAT_ACTIVE;
 	ret = v4l2_subdev_call(sd, video, g_frame_interval, &fi);
+#endif
+
+
 	if (ret) {
 		dev_info(ctx->dev, "no g_frame_interval in %s\n", sd->name);
 		return;
@@ -2616,8 +2620,7 @@ static void gather_csi_ps_info(struct seninf_ctx *ctx)
 	dev_info(ctx->dev, "set_csi_idx done\n");
 #endif
 }
-#endif
-#if KERNEL_VERSION(6, 6, 0) == LINUX_VERSION_CODE
+
 static void reset_csi_ps_info(struct seninf_ctx *ctx)
 {
 	struct seninf_core *core = ctx->core;
@@ -2648,7 +2651,7 @@ static void reset_csi_ps_info(struct seninf_ctx *ctx)
 
 	dev_info(ctx->dev, "[%s] reset done\n", __func__);
 }
-#endif
+
 static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 {
 #ifdef SENSOR_SECURE_MTEE_SUPPORT
@@ -2778,10 +2781,10 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 		g_seninf_ops->_poweroff(ctx);
 		ctx->dbg_last_dump_req = 0;
 		pm_runtime_put_sync(ctx->dev);
-#if KERNEL_VERSION(6, 6, 0) == LINUX_VERSION_CODE
+
 		if (seninf_pmsr_en)
 			reset_csi_ps_info(ctx);
-#endif
+
 	}
 
 	ctx->csi_streaming = enable;
