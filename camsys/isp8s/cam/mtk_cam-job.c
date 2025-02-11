@@ -1243,7 +1243,7 @@ _stream_on(struct mtk_cam_job *job, bool on)
 	/* fifo monitor bind */
 	if (on)
 		mtk_cam_fmon_bind(fmon,
-			bit_map_subset_of(MAP_HW_RAW, job->used_engine), is_dc_mode(job));
+			bit_map_subset_of(MAP_HW_RAW, job->used_engine), ctx->hw_sv ? 1:0);
 
 	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
 		if (ctx->hw_raw[i]) {
@@ -4251,7 +4251,7 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 		get_sensor_interval_us(job)/1000);
 
 	mtk_cam_fmon_bind(&cam->fmon,
-		bit_map_subset_of(MAP_HW_RAW, job->used_engine), is_srt);
+		bit_map_subset_of(MAP_HW_RAW, job->used_engine), 1);
 	stream_on(raw_dev, 1, false);
 
 	/* sv on */

@@ -19,7 +19,7 @@
 #include "mtk_cam-fmon_regs.h"
 
 /* ep default fix yuv a/b/c */
-static int fmon_enable;
+static int fmon_enable = 1;
 module_param(fmon_enable, int, 0644);
 MODULE_PARM_DESC(fmon_enable, "debug fifo monitor 0, rx:0-3, tx:4-7");
 
@@ -65,7 +65,7 @@ MODULE_PARM_DESC(dbg_fmon_tx_csr, "fifo monitor tx csr");
 #define FMON_STOP_THRS_RATIO_D 100
 bool is_fmon_support(void)
 {
-	return fmon_enable && GET_PLAT_HW(fmon_support);
+	return fmon_enable && GET_PLAT_HW(fmon_support) && is_hrt_dbg_enabled();
 }
 
 static u32 stop_thres_ratio(u32 size)
@@ -87,7 +87,7 @@ static u32 thres_ratio(u32 size)
 static struct fmon_settings fmon_map
 	[FPIPE_INFO_NUM][FPIPE_INFO_NUM][FPIPE_INFO_NUM][FMON_NUM] = {
 #ifdef FMON_OTF_SUBA_TEST
-	[FPIPE_OTF][FPIPE_NONE][FPIPE_NONE] = {
+	[FPIPE_RAW][FPIPE_NONE][FPIPE_NONE] = {
 		{ .tx_mux = 3, .rx_mux = 1, .engine = FMON_RAW_A, .fifo_size = 7424, },
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_NONE,  .fifo_size = 0,   },
 		{ .tx_mux = 0, .rx_mux = 1, .engine = FMON_YUV_A, .fifo_size = 5888, },
@@ -95,49 +95,49 @@ static struct fmon_settings fmon_map
 	},
 #endif
 	/* pipe-a dc only */
-	[FPIPE_DC][FPIPE_NONE][FPIPE_NONE] = {
+	[FPIPE_SV][FPIPE_NONE][FPIPE_NONE] = {
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
 		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
 		{ .tx_mux = 4, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
 		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
 	},
 	/* pipe-b dc only */
-	[FPIPE_NONE][FPIPE_DC][FPIPE_NONE] = {
+	[FPIPE_NONE][FPIPE_SV][FPIPE_NONE] = {
 		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
 		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
 	},
 	/* pipe-c dc only */
-	[FPIPE_NONE][FPIPE_NONE][FPIPE_DC] = {
+	[FPIPE_NONE][FPIPE_NONE][FPIPE_SV] = {
 		{ .tx_mux = 2, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
 	},
 	/* pipe-a,b dc */
-	[FPIPE_DC][FPIPE_DC][FPIPE_NONE] = {
+	[FPIPE_SV][FPIPE_SV][FPIPE_NONE] = {
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
 		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
 		{ .tx_mux = 4, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
 		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
 	},
 	/* pipe-b,c dc */
-	[FPIPE_NONE][FPIPE_DC][FPIPE_DC] = {
+	[FPIPE_NONE][FPIPE_SV][FPIPE_SV] = {
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
 		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
 	},
 	/* pipe-a,c dc */
-	[FPIPE_DC][FPIPE_NONE][FPIPE_DC] = {
+	[FPIPE_SV][FPIPE_NONE][FPIPE_SV] = {
 		{ .tx_mux = 2, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
 		{ .tx_mux = 4, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
 		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
 	},
 	/* pipe-a,b,c dc */
-	[FPIPE_DC][FPIPE_DC][FPIPE_DC] = {
+	[FPIPE_SV][FPIPE_SV][FPIPE_SV] = {
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
 		{ .tx_mux = 4, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
@@ -341,7 +341,7 @@ static void fmon_bind_engine(struct mtk_fmon_device *fmon)
 		__func__, readl(fmon->base + REG_CAM_FMON_SETTING));
 }
 
-void mtk_cam_fmon_bind(struct mtk_fmon_device *fmon, unsigned int used_raw, bool is_dc)
+void mtk_cam_fmon_bind(struct mtk_fmon_device *fmon, unsigned int used_raw, bool sv_on)
 {
 	u32 master_id;
 
@@ -355,8 +355,8 @@ void mtk_cam_fmon_bind(struct mtk_fmon_device *fmon, unsigned int used_raw, bool
 		goto OUT;
 	}
 
-	/* only monitor dc mode */
-	fmon->pipes[master_id] = is_dc ? FPIPE_DC : FPIPE_NONE;
+	/* only monitor camsv */
+	fmon->pipes[master_id] = sv_on ? FPIPE_SV : FPIPE_NONE;
 
 	fmon_bind_engine(fmon);
 

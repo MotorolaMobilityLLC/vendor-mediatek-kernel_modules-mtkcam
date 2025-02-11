@@ -120,6 +120,12 @@ bool is_hwccf_apply(void)
 	return true;
 }
 
+static int g_hrt_dbg_enabled;
+bool is_hrt_dbg_enabled(void)
+{
+	return g_hrt_dbg_enabled;
+}
+
 static int mtk_cam_req_try_update_used_ctx(struct media_request *req);
 
 #define LTMSGO_BUF_SZ		(130 * 8)
@@ -4775,6 +4781,7 @@ struct tag_chipid {
 	u32 hw_ver;
 	u32 sw_ver;
 };
+
 void mtk_cam_get_chipid(struct mtk_cam_device *cam)
 {
 	struct device_node *node;
@@ -4794,6 +4801,27 @@ void mtk_cam_get_chipid(struct mtk_cam_device *cam)
 	if (chip_id)
 		cam->sw_ver = chip_id->sw_ver;
 	dev_info(cam->dev, "current sw version:0x%x\n", cam->sw_ver);
+}
+
+void mtk_cam_get_hrt_debug(struct mtk_cam_device *cam)
+{
+	struct device_node *node;
+	const char *name = NULL;
+	int ret;
+
+	node = of_find_node_by_path("/chosen");
+	if (!node)
+		node = of_find_node_by_path("/chosen@0");
+
+	if (node) {
+		ret = of_property_read_string_index(node, "mtk_fabric_hrt_debug", 0, &name);
+		if (!ret && (!strncmp("on", name, sizeof("on"))))
+			g_hrt_dbg_enabled = true;
+		else
+			g_hrt_dbg_enabled = false;
+	} else {
+		pr_info("chosen node not found in device tree\n");
+	}
 }
 
 int mtk_cam_update_engine_status(struct mtk_cam_device *cam,
@@ -5539,6 +5567,7 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	init_waitqueue_head(&cam_dev->shutdown_wq);
 
 	mtk_cam_get_chipid(cam_dev);
+	mtk_cam_get_hrt_debug(cam_dev);
 	mtk_cam_tuning_probe();
 	mtk_cam_dvfs_probe(&pdev->dev,
 			&cam_dev->dvfs, cam_dev->max_stream_num);

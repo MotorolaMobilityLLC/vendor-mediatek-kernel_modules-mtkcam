@@ -32,8 +32,8 @@ enum FMON_TX_MUX {
 
 enum FMON_PIPE_INFO {
 	FPIPE_NONE = 0,
-	FPIPE_OTF,
-	FPIPE_DC,
+	FPIPE_RAW,
+	FPIPE_SV,
 	FPIPE_INFO_NUM,
 };
 
@@ -90,7 +90,7 @@ bool is_fmon_support(void);
 void mtk_cam_fmon_enable(struct mtk_fmon_device *fmon);
 void mtk_cam_fmon_disable(struct mtk_fmon_device *fmon);
 
-void mtk_cam_fmon_bind(struct mtk_fmon_device *fmon, unsigned int used_raw, bool is_dc);
+void mtk_cam_fmon_bind(struct mtk_fmon_device *fmon, unsigned int used_raw, bool sv_on);
 void mtk_cam_fmon_unbind(struct mtk_fmon_device *fmon, unsigned int used_raw);
 
 void mtk_cam_fmon_dump(struct mtk_fmon_device *fmon);
