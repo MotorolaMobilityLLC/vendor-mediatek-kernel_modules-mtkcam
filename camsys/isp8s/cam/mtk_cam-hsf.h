@@ -23,7 +23,7 @@ void ccu_apply_cq(struct mtk_cam_job *job, unsigned long raw_engines, dma_addr_t
 unsigned int cq_size, unsigned int cq_offset,  unsigned int sub_cq_size,
 unsigned int sub_cq_offset);
 void ccu_stream_on(struct mtk_cam_ctx *ctx, unsigned int without_tg);
-
+void ccu_hsf_camsv_config(struct mtk_cam_ctx *ctx, bool En);
 struct dma_buf *mtk_cam_dmabuf_alloc(struct mtk_cam_ctx *ctx, unsigned int size);
 int mtk_cam_dmabuf_get_iova(struct mtk_cam_ctx *ctx, struct device *dev,
 struct mtk_cam_dma_map *dmap);

@@ -354,6 +354,44 @@ void ccu_hsf_config(struct mtk_cam_ctx *ctx, unsigned int En)
 		pr_info("%s En(%d) Tg(%d) success\n", __func__, En, pData.tg_idx);
 }
 
+void ccu_hsf_camsv_config(struct mtk_cam_ctx *ctx, bool En)
+{
+	int ret = 0;
+	struct sv_info pData;
+	struct mtk_cam_hsf_ctrl *hsf_config = NULL;
+	struct mtk_cam_hsf_info *share_buf = NULL;
+
+	if (ctx == NULL) {
+		pr_info("%s error: ctx is NULL pointer check initial\n", __func__);
+		return;
+	}
+	hsf_config = ctx->hsf;
+
+	if (hsf_config == NULL) {
+		pr_info("%s error: hsf_config is NULL pointer check hsf initial\n", __func__);
+		return;
+	}
+
+	share_buf = hsf_config->share_buf;
+	pData.tg_idx = share_buf->cam_tg;
+	// pData.chunk_iova = share_buf->chunk_iova;
+	// pData.cq_iova = share_buf->cq_dst_iova;
+	pData.enable_sv = share_buf->enable_raw;
+	pData.hsf_en = En;
+
+#ifdef SKIP_IN_FPGA_EP
+	ret = mtk_ccu_rproc_ipc_send(
+		hsf_config->ccu_pdev,
+		MTK_CCU_FEATURE_CAMSYS,
+		MSG_TO_CCU_CAMSV_HSF_CONFIG,
+		(void *)&pData, sizeof(struct sv_info));
+#endif
+
+	if (ret != 0)
+		pr_info("%s En(%d) error\n", __func__, En);
+	else
+		pr_info("%s En(%d) success\n", __func__, En);
+}
 
 
 void ccu_apply_cq(struct mtk_cam_job *job, unsigned long raw_engines, dma_addr_t cq_addr,
@@ -664,6 +702,7 @@ int mtk_cam_hsf_uninit(struct mtk_cam_ctx *ctx)
 	}
 
 	ccu_hsf_config(ctx, 0);
+	ccu_hsf_camsv_config(ctx, 0);
 	mtk_cam_dmabuf_free_iova(ctx, hsf_config->cq_buf);
 	mtk_cam_dmabuf_free_iova(ctx, hsf_config->chk_buf);
 

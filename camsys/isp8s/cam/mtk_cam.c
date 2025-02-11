@@ -3625,12 +3625,16 @@ int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job, int seninf_pad_bitmask)
 
 		raws = bit_map_subset_of(MAP_HW_RAW, ctx->used_engine);
 		raw_idx = find_first_bit_set(raws);
+
 		if (raw_idx >= 0) {
 			ret = mtk_cam_hsf_config(ctx, raw_idx);
 			if (ret != 0) {
 				dev_info(cam->dev, "Error:mtk_cam_hsf_config fail\n");
 				return -EPERM;
 			}
+			if (is_dc_mode(job))
+				ccu_hsf_camsv_config(ctx, 1);
+
 			mtk_cam_seninf_set_secure(seninf, 1,
 				ctx->hsf->share_buf->chunk_hsfhandle);
 		}

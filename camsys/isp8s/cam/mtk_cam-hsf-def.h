@@ -34,6 +34,7 @@
 #define MSG_TO_CCU_START_FIFO_DETECT 6
 #define MSG_TO_CCU_FIFO_DUMP 7
 #define MSG_TO_CCU_STOP_FIFO_DETECT 8
+#define MSG_TO_CCU_CAMSV_HSF_CONFIG 9
 
 struct mtk_cam_hsf_info {
 	u32 cq_size;
@@ -66,6 +67,12 @@ struct raw_info {
 	uint32_t enable_raw;
 	uint32_t hsf_status;
 	uint32_t without_tg;
+};
+
+struct sv_info{
+	uint32_t tg_idx;
+	uint32_t hsf_en;
+	uint32_t enable_sv;
 };
 
 struct mtk_cam_dma_map {
