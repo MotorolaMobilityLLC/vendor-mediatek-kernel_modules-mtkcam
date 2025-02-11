@@ -138,6 +138,10 @@ static int mtk_camsv_set_fmt(struct v4l2_subdev *sd,
 
 	if (mtk_camsv_try_fmt(sd, fmt) == MTKCAM_IPI_IMG_FMT_UNKNOWN) {
 		mf = get_sv_fmt(pipe, state, fmt->pad, fmt->which);
+		if (!mf) {
+			dev_info(sd->v4l2_dev->dev, "sd:%s no format\n", sd->name);
+			return -EINVAL;
+		}
 		fmt->format = *mf;
 
 		dev_info(sd->v4l2_dev->dev,
@@ -145,6 +149,10 @@ static int mtk_camsv_set_fmt(struct v4l2_subdev *sd,
 			sd->name, fmt->pad, mf->width, mf->height, mf->code, fmt->which);
 	} else {
 		mf = get_sv_fmt(pipe, state, fmt->pad, fmt->which);
+		if (!mf) {
+			dev_info(sd->v4l2_dev->dev, "sd:%s no format\n", sd->name);
+			return -EINVAL;
+		}
 		*mf = fmt->format;
 
 		dev_info(sd->v4l2_dev->dev,
