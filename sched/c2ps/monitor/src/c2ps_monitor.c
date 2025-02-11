@@ -491,7 +491,7 @@ static void c2ps_proxy_wq_process(struct work_struct *work)
 
 		mutex_lock(&reg_check_task_list_lock);
 		hash_for_each(reg_check_task_list, tmp, tsk, hlist) {
-			if (tsk->active && tsk->start_timing >= 0 &&
+			if (tsk->active && tsk->start_timing > 0 &&
 				tsk->procfunc != NULL) {
 				if (curr_ns_time - tsk->input_data.cache_data->start_timing >=
 						tsk->input_data.start_in_ms * 1000000)
@@ -504,8 +504,12 @@ static void c2ps_proxy_wq_process(struct work_struct *work)
 
 static void c2ps_reg_check_timer_callback(struct timer_list *t)
 {
-	if (atomic_read(&enable_reg_check_timer) > 0)
+	if (atomic_read(&enable_reg_check_timer) > 0) {
 		mod_timer(&c2ps_reg_check_timer, jiffies);
+	} else {
+		mod_timer(&c2ps_reg_check_timer, jiffies + 10*HZ);
+		return;
+	}
 
 	c2ps_main_systrace("reg check timer callback");
 	queue_work(proxy_wq, &proxy_work.m_work);

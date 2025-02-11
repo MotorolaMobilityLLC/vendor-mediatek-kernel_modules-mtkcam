@@ -43,7 +43,7 @@
 #define LxF_S_KF_QVAL 10
 #define LxF_F_KF_QVAL 20
 #define LxF_DIFF_THRES 10000
-// freq kf param for L/M um ratio
+// kf param for filter runtime freq
 #define FREQ_KF_MIN_EST_ERR 1000
 #define FREQ_KF_QVAL 50
 #define FREQ_KF_MEAS_ERR 50000
@@ -60,8 +60,8 @@ extern int c2ps_regulator_base_update_um;
 extern int c2ps_regulator_um_min;
 extern int c2ps_lcore_mcore_um_ratio;
 extern bool enable_runnable_monitor;
+extern bool enable_dyna_isolation;
 extern int c2ps_pwr_eff_threshold;
-extern int L_dvide_M_ratio;
 extern int long_period_idle;
 
 enum c2ps_env_status : int {
@@ -206,6 +206,7 @@ struct global_info {
 	u64 l_loadxfreq[MAX_CPU_NUM];
 	struct kf_est slow_lxf_est[MAX_CPU_NUM];
 	struct kf_est fast_lxf_est[MAX_CPU_NUM];
+	struct kf_est freq_est[MAX_NUMBER_OF_CLUSTERS];
 	// CPU floor frequency of the scenario
 	u32 scn_cpu_freq_floor[MAX_NUMBER_OF_CLUSTERS];
 	u32 possible_config_cpu_freq[MAX_NUMBER_OF_CLUSTERS];
@@ -269,6 +270,12 @@ struct cpu_info {
 	u32 l_core_max_util;
 	u32 m_core_max_util;
 	u32 b_core_max_util;
+	int cluster_first_cpu[MAX_NUMBER_OF_CLUSTERS];
+};
+
+struct cpu_isolation_info {
+	bool camera_control_isolation;
+	int set_cores[MAX_NUMBER_OF_CLUSTERS];
 };
 
 struct eas_settings {
@@ -288,6 +295,16 @@ struct regulator_req {
 	enum c2ps_env_status stat;
 	bool is_flush;
 	int curr_um;
+};
+
+struct timer_action_info {
+	unsigned int process_dynamic_core_on_round;
+	unsigned int process_dynamic_core_off_round;
+	unsigned int min_duration;
+	unsigned int background_monitor_duration;
+	unsigned int runnable_monitor_duration;
+	unsigned int dynamic_core_on_monitor_duration;
+	unsigned int dynamic_core_off_monitor_duration;
 };
 
 #define C2PS_LOGD(fmt, ...)                                                 \
@@ -363,6 +380,7 @@ u64 c2ps_get_time(void);
 void c2ps_update_task_info_hist(struct c2ps_task_info *tsk_info);
 struct global_info *get_glb_info(void);
 struct cpu_info *get_cpu_info(void);
+struct cpu_isolation_info *get_cpu_isolation_info(void);
 void set_config_camfps(int camfps);
 void decide_special_uclamp_max(int placeholder_type);
 void update_vsync_time(u64 ts);
@@ -415,20 +433,12 @@ void cache_possible_config_cpu_freq_info(void);
 int refine_uclamp(struct global_info *g_info, int ori_uclamp);
 // cpu dynamic isolation
 void update_available_cpus(void);
-void update_c2ps_set_m_core_cpus(int m_core_cpus);
-bool get_enable_dyna_isolation(void);
 void check_cpu_on_condition(void);
 void check_cpu_off_condition(void);
 void cancel_dyna_core_isolation(void);
-// for L/M um ratio
+// um ratio
 int c2ps_get_kf_freq(int curr_freq, int cluster_index);
-extern int get_cpu_util_with_margin(int cpu, int cpu_util);
-extern int pd_util2opp(int cpu, int util, int quant, int wl, int *val_s, int r_o, int caller);
-extern int pd_freq2opp(int cpu, int freq, int quant, int wl);
-extern int pd_opp2freq(int cpu, int opp, int quant, int wl);
-extern int pd_opp2cap(int cpu, int opp, int quant, int wl, int *val_s, int r_o, int caller);
-extern int pd_opp2pwr_eff(int cpu, int opp, int quant, int wl, int *val_s, int r_o, int caller);
-extern unsigned long pd_get_freq_pwr_eff(unsigned int cpu, unsigned long freq);
+int c2ps_cal_pwr_eff(int cluster, struct cpu_info *g_cpu_info);
 
 // EAS
 extern void set_curr_uclamp_ctrl(int val);
@@ -461,6 +471,8 @@ extern int core_ctl_get_min_cpus(unsigned int cid);
 extern int core_ctl_set_min_cpus(unsigned int cid, unsigned int min, int requester, unsigned int have_demand);
 extern int core_ctl_get_max_cpus(unsigned int cid);
 extern int core_ctl_set_max_cpus(unsigned int cid, unsigned int max, int requester, unsigned int have_demand);
+// um ratio
+extern unsigned long pd_get_freq_pwr_eff(unsigned int cpu, unsigned long freq);
 
 #if IS_ENABLED(CONFIG_MTK_SCHED_GROUP_AWARE) && IS_ENABLED(CONFIG_MTK_SCHED_FAST_LOAD_TRACKING)
 extern bool flt_ctrl_force_get(void);

@@ -133,13 +133,14 @@ void c2ps_regulator_bgpolicy_simple(struct regulator_req *req)
 			&c2ps_uclamp_bg_up_margin_cluster0,
 			&c2ps_uclamp_bg_up_margin_cluster1,
 			&c2ps_uclamp_bg_up_margin_cluster2};
+	struct cpu_info *g_cpu_info = get_cpu_info();
 
-	if (unlikely(!req->glb_info))
+	if (unlikely(!req->glb_info || !g_cpu_info))
 		return;
 
 	for (; cluster_index < c2ps_nr_clusters; cluster_index++) {
 		int *_cur_bg_uclamp = &(req->glb_info->curr_max_uclamp[cluster_index]);
-		int cpu = c2ps_get_first_cpu_of_cluster(cluster_index);
+		int cpu = g_cpu_info->cluster_first_cpu[cluster_index];
 		int _uclamp_max_floor = req->glb_info->use_uclamp_max_floor?
 							req->glb_info->uclamp_max_floor[cluster_index]:0;
 		int *_uclamp_max_ceiling = &(req->glb_info->uclamp_max_ceiling[cluster_index]);
@@ -270,11 +271,8 @@ void c2ps_regulator_bgpolicy_um_stable_default(struct regulator_req *req)
 
 	if (dangerous_idle_rate)
 		curr_um = max(curr_um, 100);
-	// decide L/M um ratio by power efficiency
-	if (enable_dyna_lm_um_ratio)
-		c2ps_decide_l_m_um_ratio(&req->glb_info->scn_cpu_freq_floor[0], &req->glb_info->scn_cpu_freq_floor[1]);
-	else
-		c2ps_lcore_mcore_um_ratio = 10;
+
+	c2ps_decide_um_ratio(req);
 
 	curr_um = min(c2ps_regulator_um_max, max(curr_um, c2ps_regulator_um_min));
 	curr_m_core_um = min(c2ps_regulator_um_max, max(curr_um*10/c2ps_lcore_mcore_um_ratio, c2ps_regulator_um_min));
@@ -286,11 +284,11 @@ void c2ps_regulator_bgpolicy_um_stable_default(struct regulator_req *req)
 	req->glb_info->curr_um_idle = curr_um;
 
 	c2ps_bg_info_um_default_systrace(
-		"um=%d runnable_count_0=%u runnable_count_1=%u runnable_count_2=%u guided_index=%d c2ps_lcore_mcore_um_ratio=%d",
+		"um=%d runnable_cnt_0=%u runnable_cnt_1=%u runnable_cnt_2=%u guided_index=%d um_ratio=%d",
 		curr_um, req->glb_info->runnable_count[0], req->glb_info->runnable_count[1],
 		req->glb_info->runnable_count[2], guided_index, c2ps_lcore_mcore_um_ratio);
 	C2PS_LOGD(
-		"debug: um: %d runnable_count_0=%u runnable_count_1=%u runnable_count_2=%u c2ps_lcore_mcore_um_ratio: %d",
+		"debug: um: %d runnable_cnt_0=%u runnable_cnt_1=%u runnable_cnt_2=%u um_ratio: %d",
 		curr_um, req->glb_info->runnable_count[0], req->glb_info->runnable_count[1],
 		req->glb_info->runnable_count[2], c2ps_lcore_mcore_um_ratio);
 
@@ -521,11 +519,7 @@ void c2ps_regulator_bgpolicy_um_stable(struct regulator_req *req)
 		}
 	}
 
-	// decide L/M um ratio by power efficiency
-	if (enable_dyna_lm_um_ratio)
-		c2ps_decide_l_m_um_ratio(&req->glb_info->scn_cpu_freq_floor[0], &req->glb_info->scn_cpu_freq_floor[1]);
-	else
-		c2ps_lcore_mcore_um_ratio = 10;
+	c2ps_decide_um_ratio(req);
 
 	if (need_update_um) {
 		action_um = min(c2ps_regulator_um_max,
@@ -557,7 +551,7 @@ void c2ps_regulator_bgpolicy_um_stable(struct regulator_req *req)
 		req->anc_info->anchor_id, req->glb_info->curr_um,
 		_item->latency, _item->jitter,
 		_item->lat_est.est_err, _item->lat_est.min_est_err);
-	C2PS_LOGD("um=%d runnable_count_0=%u runnable_count_1=%u runnable_count_2=%u c2ps_lcore_mcore_um_ratio=%d",
+	C2PS_LOGD("um=%d runnable_cnt_0=%u runnable_cnt_1=%u runnable_cnt_2=%u um_ratio=%d",
 		req->glb_info->curr_um,
 		req->glb_info->runnable_count[0], req->glb_info->runnable_count[1], req->glb_info->runnable_count[2],
 		c2ps_lcore_mcore_um_ratio);
@@ -566,11 +560,6 @@ void c2ps_regulator_bgpolicy_um_stable(struct regulator_req *req)
 		req->anc_info->anchor_id, req->glb_info->curr_um, _item->latency, req->anc_info->latency_spec,
 		_item->jitter, req->anc_info->jitter_spec, _item->lat_est.est_err,
 		_item->lat_est.min_est_err);
-	c2ps_bg_info_um_systrace(
-		"stable state anchor_id=%d um=%d runnable_count_0=%u runnable_count_1=%u runnable_count_2=%u c2ps_lcore_mcore_um_ratio=%d",
-		req->anc_info->anchor_id, req->glb_info->curr_um, req->glb_info->runnable_count[0],
-		req->glb_info->runnable_count[1], req->glb_info->runnable_count[2],
-		c2ps_lcore_mcore_um_ratio);
 
 	if (req->anc_info->is_last_anchor)
 		req->glb_info->um_vote.vote_result = -1;
@@ -601,12 +590,12 @@ void c2ps_regulator_bgpolicy_um_transient(struct regulator_req *req)
 	c2ps_set_util_margin(0, action_um);
 	c2ps_set_util_margin(1, action_um);
 	c2ps_set_util_margin(2, action_um);
-	if (get_enable_dyna_isolation()) {
+	if (enable_dyna_isolation) {
 		core_ctl_set_min_cpus(1, 3, 2, 1);
-		update_c2ps_set_m_core_cpus(3);
+		update_available_cpus();
 	}
-	C2PS_LOGD("transient state um=%d, m core all on", action_um);
-	c2ps_bg_info_um_systrace("transient state um=%d, m core all on", action_um);
+	C2PS_LOGD("transient state um=%d", action_um);
+	c2ps_bg_info_um_systrace("transient state um=%d", action_um);
 
 	req->glb_info->curr_um = max(req->glb_info->curr_um, 100);
 	req->glb_info->curr_um_idle = max(req->glb_info->curr_um_idle, 100);
@@ -630,34 +619,36 @@ void c2ps_regulator_bgpolicy_um_runnable_boost(struct regulator_req *req)
 	req->glb_info->curr_um = max(req->glb_info->curr_um, *action_um);
 }
 
-inline int c2ps_cal_pwr_eff(int cluster)
+void c2ps_decide_um_ratio(struct regulator_req *req)
 {
-	int curr_freq = c2ps_get_cur_cpu_freq(c2ps_get_first_cpu_of_cluster(cluster));
-	u32 proc_freq = c2ps_get_kf_freq(curr_freq, cluster);
-	int pwr_eff = pd_get_freq_pwr_eff(c2ps_get_first_cpu_of_cluster(cluster), proc_freq);
+	if (enable_dyna_lm_um_ratio) {
+		struct cpu_info *g_cpu_info = get_cpu_info();
+		int l_pwr_eff, m_pwr_eff, l_freq, m_freq;
 
-	C2PS_LOGD("cluster=%d, proc_freq=%u, pwr_eff=%d", cluster, proc_freq, pwr_eff);
-	c2ps_main_systrace("cluster=%d, proc_freq=%u, pwr_eff=%d", cluster, proc_freq, pwr_eff);
-	return pwr_eff;
-}
+		if (unlikely(!g_cpu_info || !req->glb_info))
+			return;
 
-int c2ps_decide_l_m_um_ratio(u32 *l_cpu_freq_floor, u32 *m_cpu_freq_floor)
-{
-	int l_pwr_eff = c2ps_cal_pwr_eff(0);
-	int m_pwr_eff = c2ps_cal_pwr_eff(1);
-	int l_freq = c2ps_get_cur_cpu_freq(c2ps_get_first_cpu_of_cluster(0));
-	int m_freq = c2ps_get_cur_cpu_freq(c2ps_get_first_cpu_of_cluster(1));
+		l_pwr_eff = c2ps_cal_pwr_eff(0, g_cpu_info);
+		m_pwr_eff = c2ps_cal_pwr_eff(1, g_cpu_info);
+		l_freq = c2ps_get_cur_cpu_freq(g_cpu_info->cluster_first_cpu[0]);
+		m_freq = c2ps_get_cur_cpu_freq(g_cpu_info->cluster_first_cpu[1]);
 
-	if (m_freq > *m_cpu_freq_floor && (m_pwr_eff - l_pwr_eff) > c2ps_pwr_eff_threshold)
-		c2ps_lcore_mcore_um_ratio += 1;
-	else if (l_freq > *l_cpu_freq_floor && (l_pwr_eff - m_pwr_eff) > c2ps_pwr_eff_threshold)
-		c2ps_lcore_mcore_um_ratio -= 1;
+		if (l_freq <= 0 || m_freq <= 0 || l_pwr_eff <= 0 || m_pwr_eff <= 0)
+			return;
+		else if (m_freq > req->glb_info->scn_cpu_freq_floor[1] &&
+				(m_pwr_eff - l_pwr_eff) > c2ps_pwr_eff_threshold)
+			c2ps_lcore_mcore_um_ratio += 1;
+		else if (l_freq > req->glb_info->scn_cpu_freq_floor[0] &&
+				(l_pwr_eff - m_pwr_eff) > c2ps_pwr_eff_threshold)
+			c2ps_lcore_mcore_um_ratio -= 1;
 
-	C2PS_LOGD(
-		"m_freq: %d, l_freq: %d, m_pwr_eff: %d, l_pwr_eff: %d, decide c2ps_lcore_mcore_um_ratio: %d",
-		m_freq, l_freq, m_pwr_eff, l_pwr_eff, c2ps_lcore_mcore_um_ratio);
-	c2ps_main_systrace(
-		"m_freq: %d, l_freq: %d, m_pwr_eff: %d, l_pwr_eff: %d, decide c2ps_lcore_mcore_um_ratio: %d",
-		m_freq, l_freq, m_pwr_eff, l_pwr_eff, c2ps_lcore_mcore_um_ratio);
-	return c2ps_lcore_mcore_um_ratio;
+		C2PS_LOGD(
+			"cluster0: freq=%d pwr_eff=%d, cluster1: freq=%d pwr_eff=%d, um ratio: %d",
+			l_freq, l_pwr_eff, m_freq, m_pwr_eff, c2ps_lcore_mcore_um_ratio);
+		c2ps_main_systrace(
+			"cluster0: freq=%d pwr_eff=%d, cluster1: freq=%d pwr_eff=%d, um ratio: %d",
+			l_freq, l_pwr_eff, m_freq, m_pwr_eff, c2ps_lcore_mcore_um_ratio);
+	} else if (unlikely(c2ps_lcore_mcore_um_ratio != 10)) {
+		c2ps_lcore_mcore_um_ratio = 10;
+	}
 }

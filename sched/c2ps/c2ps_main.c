@@ -69,10 +69,12 @@ static int picked_wl_table = 0;
 static unsigned int background_monitor_duration = BACKGROUND_MONITOR_DURATION;
 static unsigned int c2ps_vip_throttle_time = 12;
 static atomic_t processing_count = ATOMIC_INIT(0);
+static struct timer_action_info *bg_timer_info;
 
 unsigned int c2ps_nr_clusters;
 struct timer_list background_info_update_timer;
 struct timer_list self_uninit_timer;
+int runnable_duration = 4;
 
 module_param(picked_wl_table, int, 0644);
 module_param(background_monitor_duration, int, 0644);
@@ -86,39 +88,89 @@ static void trigger_bg_policy(void)
 	}
 }
 
-static inline void core_isolation_update(void)
+inline bool need_update_process_round(void)
 {
-	static int check_cpu_on_off_count;
+	if (bg_timer_info->background_monitor_duration != background_monitor_duration ||
+		(enable_runnable_monitor && bg_timer_info->min_duration > runnable_duration) ||
+		(enable_dyna_isolation && (
+			bg_timer_info->dynamic_core_on_monitor_duration != background_monitor_duration ||
+			bg_timer_info->dynamic_core_off_monitor_duration != 3 * background_monitor_duration)) ||
+		(!enable_runnable_monitor && bg_timer_info->min_duration == runnable_duration))
+		return true;
+	return false;
+}
 
-	check_cpu_on_off_count++;
-	check_cpu_on_condition();
-	if (check_cpu_on_off_count >= 3) {
-		check_cpu_off_condition();
-		check_cpu_on_off_count = 0;
+void decide_timer_callback_process_round(void)
+{
+	if (unlikely(!bg_timer_info))
+		return;
+
+	bg_timer_info->min_duration = background_monitor_duration / 2;
+	bg_timer_info->background_monitor_duration = background_monitor_duration;
+
+	// set duration for runnable monitor and update min duration of the timer
+	if (enable_runnable_monitor) {
+		bg_timer_info->runnable_monitor_duration = runnable_duration;
+		bg_timer_info->min_duration = min(bg_timer_info->min_duration,
+			bg_timer_info->runnable_monitor_duration);
 	}
+	// set durations for dynamic core isolation and update min duration of the timer
+	// determine the count to process dynamic cpu isolation
+	if (enable_dyna_isolation) {
+		bg_timer_info->dynamic_core_on_monitor_duration = background_monitor_duration;
+		bg_timer_info->dynamic_core_off_monitor_duration = 3 * background_monitor_duration;
+		bg_timer_info->min_duration = min(bg_timer_info->min_duration,
+			min(bg_timer_info->dynamic_core_on_monitor_duration,
+				bg_timer_info->dynamic_core_off_monitor_duration));
+
+		bg_timer_info->process_dynamic_core_on_round =
+			bg_timer_info->dynamic_core_on_monitor_duration / bg_timer_info->min_duration;
+		bg_timer_info->process_dynamic_core_off_round =
+			bg_timer_info->dynamic_core_off_monitor_duration / bg_timer_info->min_duration;
+	}
+
+	C2PS_LOGD("dynamic_core_on_round: %u, dynamic_core_off_round: %u, timer min_duration: %u",
+		bg_timer_info->process_dynamic_core_on_round, bg_timer_info->process_dynamic_core_off_round,
+		bg_timer_info->min_duration);
 }
 
 static void background_info_update_timer_callback(struct timer_list *t)
 {
+	static int counter;
+	struct cpu_isolation_info *g_cpu_isolation_info = get_cpu_isolation_info();
+
+	if (unlikely(!bg_timer_info))
+		return;
+
+	counter++;
+
 	if (unlikely(background_monitor_duration == 0))
 		background_monitor_duration = BACKGROUND_MONITOR_DURATION;
-	if (enable_runnable_monitor) {
-		/*
-		 * force 4 ms monitor duration when runnable monitor enabled
-		 */
-		background_monitor_duration = 4;
-		long_period_idle = 4;
-	} else {
-		long_period_idle = 2;
-	}
-	mod_timer(t, jiffies + background_monitor_duration*HZ / 1000 / 2);
+	if (unlikely(need_update_process_round()))
+		decide_timer_callback_process_round();
+
+	mod_timer(t, jiffies + bg_timer_info->min_duration*HZ / 1000 - 1);
+	long_period_idle = enable_runnable_monitor ? 4 : 2;
+
 	monitor_system_info();
 	trigger_bg_policy();
-	if (get_enable_dyna_isolation())
-		core_isolation_update();
-	else
-		cancel_dyna_core_isolation();
-	update_available_cpus();
+
+	if (likely(g_cpu_isolation_info)) {
+		if (enable_dyna_isolation) {
+			if (counter % bg_timer_info->process_dynamic_core_on_round == 0)
+				check_cpu_on_condition();
+			if (counter % bg_timer_info->process_dynamic_core_off_round == 0)
+				check_cpu_off_condition();
+			if (g_cpu_isolation_info->camera_control_isolation == false)
+				g_cpu_isolation_info->camera_control_isolation = true;
+		} else if (g_cpu_isolation_info->camera_control_isolation) {
+			cancel_dyna_core_isolation();
+		}
+	} else {
+		C2PS_LOGW("g_cpu_isolation_info is null\n");
+	}
+	if (unlikely(counter > 3 * background_monitor_duration))
+		counter = 0;
 }
 
 static void c2ps_notifier_init(int cfg_camfps)
@@ -131,6 +183,13 @@ static void c2ps_notifier_init(int cfg_camfps)
 	self_uninit_timer.expires = jiffies + 8*HZ;
 	timer_setup(&self_uninit_timer, self_uninit_timer_callback, 0);
 	add_timer(&self_uninit_timer);
+
+	bg_timer_info = kzalloc(sizeof(*bg_timer_info), GFP_KERNEL);
+	if (unlikely(!bg_timer_info)) {
+		C2PS_LOGD("OOM\n");
+		return;
+	}
+	decide_timer_callback_process_round();
 
 	background_info_update_timer.expires = jiffies;
 	timer_setup(&background_info_update_timer,
@@ -166,6 +225,11 @@ static void c2ps_notifier_uninit(void)
 		unset_target_margin_low(i);
 	#endif
 		set_turn_point_freq(i, 0);
+	}
+
+	if (likely(bg_timer_info)) {
+		kfree(bg_timer_info);
+		bg_timer_info = NULL;
 	}
 }
 

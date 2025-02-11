@@ -22,9 +22,8 @@ void c2ps_regulator_bgpolicy_um_stable_default(struct regulator_req *req);
 void c2ps_regulator_bgpolicy_um_stable(struct regulator_req *req);
 void c2ps_regulator_bgpolicy_um_transient(struct regulator_req *req);
 void c2ps_regulator_bgpolicy_um_runnable_boost(struct regulator_req *req);
-// dynamically adjust c2ps_lcore_mcore_um_ratio
-int c2ps_cal_pwr_eff(int cluster);
-int c2ps_decide_l_m_um_ratio(u32 *l_cpu_freq_floor, u32 *m_cpu_freq_floor);
+// dynamically adjust um ratio
+void c2ps_decide_um_ratio(struct regulator_req *req);
 
 enum c2ps_regulator_mode : int
 {
