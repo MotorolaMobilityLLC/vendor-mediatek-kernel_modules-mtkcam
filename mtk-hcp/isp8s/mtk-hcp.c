@@ -1438,7 +1438,7 @@ static int mtk_hcp_red_init(
 		mb = plat_op->fetch_gce_mb(i);
 		if (likely(mb)) {
 			mb->cfg.size = init_info->gce_mb_cfg[i].size;
-			/* coherent ?*/
+			mb->cfg.cache_mode = init_info->gce_mb_cfg[i].coherent_mode;
 			HCP_PRINT_INF("Set %s sz 0x%llX coherent:%u, mode:%u\n",
 				mb->cfg.name, mb->cfg.size, mb->cfg.cache_mode, i);
 		}
@@ -1446,7 +1446,7 @@ static int mtk_hcp_red_init(
 		mb = plat_op->fetch_gce_clr_token_mb(i);
 		if (likely(mb)) {
 			mb->cfg.size = init_info->gce_clr_token_cfg[i].size;
-			/* coherent ?*/
+			mb->cfg.cache_mode = init_info->gce_clr_token_cfg[i].coherent_mode;
 			HCP_PRINT_INF("Set %s sz 0x%llX coherent:%u, mode:%u\n",
 				mb->cfg.name, mb->cfg.size, mb->cfg.cache_mode, i);
 		}
@@ -1456,7 +1456,11 @@ static int mtk_hcp_red_init(
 				mb = plat_op->fetch_mod_mb(i, j, k);
 				if (likely(mb)) {
 					mb->cfg.size = init_info->mod_mb_cfg[i][j][k].size;
-					/* coherent ?*/
+					/* only cq and tdr need determine coherent mode or not */
+					if (k == IMGSYS_MODULE_WORKING_BUF_TYPE_CQ ||
+							k == IMGSYS_MODULE_WORKING_BUF_TYPE_TDR) {
+						mb->cfg.cache_mode = init_info->mod_mb_cfg[i][j][k].coherent_mode;
+					}
 					HCP_PRINT_INF("Set %s sz 0x%llX coherent:%u, mode:%u\n",
 						mb->cfg.name, mb->cfg.size, mb->cfg.cache_mode, i);
 				}
