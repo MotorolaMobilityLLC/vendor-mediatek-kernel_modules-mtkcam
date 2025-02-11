@@ -15,6 +15,7 @@
 #include <linux/vmalloc.h>
 #include <media/videobuf2-dma-contig.h>
 #include <media/v4l2-event.h>
+#include <mtk_heap.h>
 #include <mtk_imgsys-requesttrack.h>
 #include <mtk_imgsys-trace.h>
 #include <mtk_imgsys-v4l2-debug.h>
@@ -561,6 +562,7 @@ u64 mtk_imgsys_get_iova(struct dma_buf *dma_buf, s32 ionFd,
 	struct mtk_imgsys_pipe *pipe = &imgsys_dev->imgsys_pipe[0];
 	struct mtk_imgsys_dma_buf_iova_get_info *iova_info;
 	bool cache = false;
+	int coherent_heap_enable;
 
 	spin_lock(&pipe->iova_cache.lock);
 #ifdef LINEAR_CACHE
@@ -603,7 +605,12 @@ u64 mtk_imgsys_get_iova(struct dma_buf *dma_buf, s32 ionFd,
 		return 0;
 	}
 
-	dev = imgsys_dev->smmu_dev;
+	coherent_heap_enable = is_coherent_heap_dmabuf(dma_buf);
+
+	if (coherent_heap_enable)
+		dev = imgsys_dev->acp_smmu_dev;
+	else
+		dev = imgsys_dev->smmu_dev;
 
 	attach = dma_buf_attach(dma_buf, dev);
 

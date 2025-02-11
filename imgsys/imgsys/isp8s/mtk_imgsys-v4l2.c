@@ -25,6 +25,7 @@
 #include <media/v4l2-event.h>
 #include <linux/dma-mapping.h>
 #include <linux/uaccess.h>
+#include <mtk_heap.h>
 #include <mtk_imgsys-cmdq.h>
 //#include <mtk_imgsys-data.h>
 #include "mtk-img-ipi.h"
@@ -2045,6 +2046,7 @@ static int mtkdip_ioc_acquire_iova(struct v4l2_subdev *subdev, void *arg)
 	dma_addr_t dma_addr;
 	int i;
 	uint8_t acp_coherence_enable;
+	int coherent_heap_enable;
 
 	if (!fd_tbl->fds[0].fd) {
 		dev_dbg(pipe->imgsys_dev->dev, "%s:NULL usrptr\n", __func__);
@@ -2078,7 +2080,10 @@ static int mtkdip_ioc_acquire_iova(struct v4l2_subdev *subdev, void *arg)
 			"[%s]%s: fd(%d) GCE buffer used\n", __func__, dmabuf->name, fd_tbl->fds[i].fd);
 		spin_unlock(&dmabuf->name_lock);
 #endif
-		if (acp_coherence_enable)
+
+		coherent_heap_enable = is_coherent_heap_dmabuf(dmabuf);
+
+		if (acp_coherence_enable | coherent_heap_enable)
 			attach = dma_buf_attach(dmabuf, pipe->imgsys_dev->acp_smmu_dev);
 		else
 			attach = dma_buf_attach(dmabuf, pipe->imgsys_dev->smmu_dev);
@@ -2143,12 +2148,12 @@ static int mtkdip_ioc_acquire_iova(struct v4l2_subdev *subdev, void *arg)
 #endif
 		if (imgsys_dbg_enable())
 			dev_info(pipe->imgsys_dev->dev,
-				"%s:dma_buf:%lx,attach:%lx,sgt:%lx,acp(%d)\n",
+				"%s:dma_buf:%lx,attach:%lx,sgt:%lx,acp(%d), coh_heap(%d)\n",
 				__func__,
 				(unsigned long)fd_iova->dma_buf,
 				(unsigned long)fd_iova->attach,
 				(unsigned long)fd_iova->sgt,
-				acp_coherence_enable);
+				acp_coherence_enable, coherent_heap_enable);
 
 		spin_lock(&pipe->iova_cache.lock);
 		list_add_tail(&fd_iova->list_entry, &pipe->iova_cache.list);
