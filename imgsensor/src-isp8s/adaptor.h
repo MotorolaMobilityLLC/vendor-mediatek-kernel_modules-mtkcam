@@ -159,6 +159,7 @@ struct adaptor_ctx {
 	struct v4l2_ctrl *pd_pixel_region;
 	struct v4l2_ctrl *max_fps;
 	struct v4l2_ctrl *test_pattern;
+	struct v4l2_ctrl *test_pattern_data;
 
 	/* custom v4l2 ctrls */
 	struct v4l2_ctrl *anti_flicker;
@@ -282,6 +283,9 @@ struct adaptor_ctx {
 
 	/* broadcast framework lock */
 	struct mutex broadcast_lock;
+
+	/* restore ctrls list */
+	struct list_head restore_ctrls_list;
 };
 
 #endif

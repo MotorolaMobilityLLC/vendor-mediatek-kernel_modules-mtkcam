@@ -21,6 +21,7 @@
 #include "adaptor.h"
 #include "adaptor-hw.h"
 #include "adaptor-i2c.h"
+#include "adaptor-common-ctrl.h"
 #include "adaptor-ctrls.h"
 #include "adaptor-command.h"
 #include "adaptor-fsync-ctrls.h"
@@ -420,11 +421,6 @@ static void control_sensor(struct adaptor_ctx *ctx)
 				SENSOR_FEATURE_SET_CPHY_LRTE_MODE,
 				(u8 *)data, &len);
 		ctx->is_sensor_scenario_inited = 1;
-	}
-	if (!ctx->is_streaming) {// no need to restore ae when seamless
-		mutex_lock(&ctx->broadcast_lock);
-		restore_ae_ctrl(ctx);
-		mutex_unlock(&ctx->broadcast_lock);
 	}
 
 	adaptor_logm(ctx, "-\n");
@@ -890,6 +886,14 @@ static int imgsensor_start_streaming(struct adaptor_ctx *ctx)
 
 	control_sensor(ctx);
 
+	/* restore init(ctrl) setting */
+	apply_streamon_restore_ctrls(ctx);
+
+	/* restore ae */
+	mutex_lock(&ctx->broadcast_lock);
+	restore_ae_ctrl(ctx);
+	mutex_unlock(&ctx->broadcast_lock);
+
 	streamon_delay_ns = imgsensor_streaming_delay(ctx);
 	if (streamon_delay_ns) {
 		/* delay stream on */
@@ -920,7 +924,6 @@ static int imgsensor_stop_streaming(struct adaptor_ctx *ctx)
 {
 	u64 data[4];
 	u32 len;
-	union feature_para para;
 
 	/* clear ebd record */
 	mutex_lock(&ctx->ebd_lock);
@@ -931,11 +934,8 @@ static int imgsensor_stop_streaming(struct adaptor_ctx *ctx)
 		SENSOR_FEATURE_SET_STREAMING_SUSPEND,
 		(u8 *)data, &len);
 
-	para.u8[0] = 0;
 	//Make sure close test pattern
-	subdrv_call(ctx, feature_control,
-		    SENSOR_FEATURE_SET_TEST_PATTERN,
-		    para.u8, &len);
+	ctx->test_pattern->val = 0;
 
 	/* notify seninf-eint streaming OFF */
 	notify_seninf_eint_streaming(ctx, 0);
@@ -1702,6 +1702,7 @@ static int imgsensor_probe(struct i3c_i2c_device *client)
 	mutex_init(&ctx->subctx.i2c_buffer_lock);
 	mutex_init(&ctx->broadcast_lock);
 
+	INIT_LIST_HEAD(&ctx->restore_ctrls_list);
 
 	if (sentest_probe_init(ctx))
 		adaptor_loge(ctx, "sentest_probe_init return failed\n");

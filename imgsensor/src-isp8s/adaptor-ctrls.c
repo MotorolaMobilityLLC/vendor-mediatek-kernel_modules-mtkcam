@@ -204,6 +204,75 @@ static void dump_perframe_info(struct adaptor_ctx *ctx, struct mtk_hdr_ae *ae_ct
 	kfree(ebd_msg);
 }
 
+static int set_max_fps_restore_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct adaptor_ctx *ctx = ctrl_to_ctx(ctrl);
+	union feature_para para;
+	int ret = 0;
+	u32 len;
+
+	para.u64[0] = ctx->cur_mode->id;
+	para.u64[1] = ctrl->val;
+	subdrv_call(ctx, feature_control,
+		SENSOR_FEATURE_SET_MAX_FRAME_RATE_BY_SCENARIO,
+		para.u8, &len);
+
+	return ret;
+}
+
+static int set_max_fps_apply_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct adaptor_ctx *ctx = ctrl_to_ctx(ctrl);
+	int ret = 0;
+
+	mutex_lock(&ctx->broadcast_lock);
+	ret = set_max_fps_restore_ctrl(ctrl);
+	notify_fsync_mgr_update_min_fl(ctx);
+	mutex_unlock(&ctx->broadcast_lock);
+
+	adaptor_logi(ctx, "apply val=%d\n", ctrl->val);
+
+	return ret;
+}
+
+static int set_test_pattern_apply_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct adaptor_ctx *ctx = ctrl_to_ctx(ctrl);
+	union feature_para para;
+	int ret = 0;
+	u32 len;
+
+	para.u8[0] = ctrl->val;
+	subdrv_call(ctx, feature_control,
+		SENSOR_FEATURE_SET_TEST_PATTERN,
+		para.u8, &len);
+
+	adaptor_logi(ctx, "apply val=%d\n", ctrl->val);
+
+	return ret;
+}
+
+static int set_test_pattern_data_apply_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct adaptor_ctx *ctx = ctrl_to_ctx(ctrl);
+	int ret = 0;
+	u32 len;
+	struct mtk_test_pattern_data *data;
+
+	subdrv_call(ctx, feature_control,
+		SENSOR_FEATURE_SET_TEST_PATTERN_DATA,
+		ctrl->p_new.p, &len);
+
+	data = (struct mtk_test_pattern_data *) ctrl->p_new.p;
+	adaptor_logi(ctx, "apply val=[R:%u,Gr:%u,Gb:%u,B:%u]\n",
+		     data->Channel_R,
+		     data->Channel_Gr,
+		     data->Channel_Gb,
+		     data->Channel_B);
+
+	return ret;
+}
+
 static int set_hdr_exposure_tri(struct adaptor_ctx *ctx, struct mtk_hdr_exposure *info)
 {
 	union feature_para para;
@@ -1491,6 +1560,16 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 	}
 
 	ADAPTOR_SYSTRACE_BEGIN("SensorWorker::%s %d", __func__, ctrl->id);
+
+	if (has_register_restore_ctrl(ctx, ctrl->id)) {
+		if (!ctx->is_streaming) {
+			adaptor_logi(ctx,
+				"streaming off, set restore '%s' val '%d' when stream on\n",
+				ctrl->name, ctrl->val);
+			goto imgsensor_set_ctrl_trace_end;
+		}
+	}
+
 	switch (ctrl->id) {
 	case V4L2_CID_FSYNC_HW_MCSS_INIT:
 		{
@@ -1618,10 +1697,7 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_TEST_PATTERN:
 		// dev_dbg(dev, "V4L2_SET_TEST_PATTERN (mode:%d)", ctrl->val);
-		para.u8[0] = ctrl->val;
-		subdrv_call(ctx, feature_control,
-			SENSOR_FEATURE_SET_TEST_PATTERN,
-			para.u8, &len);
+		set_test_pattern_apply_ctrl(ctrl);
 		break;
 	case V4L2_CID_MTK_ANTI_FLICKER:
 		para.u16[0] = ctrl->val;
@@ -1795,14 +1871,7 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 		ADAPTOR_SYSTRACE_BEGIN(
 			"imgsensor::V4L2_CID_MTK_MAX_FPS, idx:%d, val:%d, cur_mode:%d",
 			ctx->idx, ctrl->val, ctx->cur_mode->id);
-		para.u64[0] = ctx->cur_mode->id;
-		para.u64[1] = ctrl->val;
-		mutex_lock(&ctx->broadcast_lock);
-		subdrv_call(ctx, feature_control,
-			SENSOR_FEATURE_SET_MAX_FRAME_RATE_BY_SCENARIO,
-			para.u8, &len);
-		notify_fsync_mgr_update_min_fl(ctx);
-		mutex_unlock(&ctx->broadcast_lock);
+		set_max_fps_apply_ctrl(ctrl);
 		ADAPTOR_SYSTRACE_END();
 		break;
 	case V4L2_CID_SEAMLESS_SCENARIOS:
@@ -1991,9 +2060,7 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 
 	case V4L2_CID_MTK_SENSOR_TEST_PATTERN_DATA:
-		subdrv_call(ctx, feature_control,
-			SENSOR_FEATURE_SET_TEST_PATTERN_DATA,
-			ctrl->p_new.p, &len);
+		set_test_pattern_data_apply_ctrl(ctrl);
 		break;
 	case V4L2_CID_MTK_SENSOR_RESET:
 		{
@@ -2015,6 +2082,7 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 					&image_window,
 					&sensor_config_data);
 
+			reset_restore_ctrls(ctx);
 			restore_ae_ctrl(ctx);
 
 			/* update timeout value after reset*/
@@ -2153,6 +2221,8 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 		}
 		break;
 	}
+
+imgsensor_set_ctrl_trace_end:
 	ADAPTOR_SYSTRACE_END();
 	return ret;
 }
@@ -3098,7 +3168,7 @@ int adaptor_init_ctrls(struct adaptor_ctx *ctx)
 	v4l2_ctrl_new_custom(&ctx->ctrls, &cfg_seamless_scenario, NULL);
 	v4l2_ctrl_new_custom(&ctx->ctrls, &cfg_fd_ctrl, NULL);
 	v4l2_ctrl_new_custom(&ctx->ctrls, &cfg_csi_param_ctrl, NULL);
-	v4l2_ctrl_new_custom(&ctx->ctrls, &cfg_test_pattern_data, NULL);
+	ctx->test_pattern_data = v4l2_ctrl_new_custom(&ctx->ctrls, &cfg_test_pattern_data, NULL);
 	v4l2_ctrl_new_custom(&ctx->ctrls, &cfg_mtkcam_sensor_idx, NULL);
 	v4l2_ctrl_new_custom(&ctx->ctrls, &cfg_mtkcam_aov_switch_i2c_bus_scl_aux, NULL);
 	v4l2_ctrl_new_custom(&ctx->ctrls, &cfg_mtkcam_aov_switch_i2c_bus_sda_aux, NULL);
@@ -3124,6 +3194,20 @@ int adaptor_init_ctrls(struct adaptor_ctx *ctx)
 		adaptor_loge(ctx, "control init failed: %d\n", ret);
 		goto error;
 	}
+
+	/*
+	 * register restore ctrls
+	 * The registered ctrl will not apply i2c when s_stream enable and
+	 * sensor reset.
+	 * Thus, only keep the value when in sw standby mode (no i2c operation)
+	 */
+	register_restore_ctrl(ctx, ctx->max_fps, set_max_fps_apply_ctrl, set_max_fps_restore_ctrl);
+	register_restore_ctrl(ctx, ctx->test_pattern,
+			      set_test_pattern_apply_ctrl,
+			      set_test_pattern_apply_ctrl);
+	register_restore_ctrl(ctx, ctx->test_pattern_data,
+			      set_test_pattern_data_apply_ctrl,
+			      set_test_pattern_data_apply_ctrl);
 
 	ctx->sd.ctrl_handler = ctrl_hdlr;
 

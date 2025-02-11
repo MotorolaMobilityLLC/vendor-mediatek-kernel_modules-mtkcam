@@ -11,6 +11,13 @@ struct adaptor_sensor_lbmf_property_st {
 	unsigned int exp_cnt;
 };
 
+struct adaptor_ctrl_restore {
+	struct v4l2_ctrl *ctrl;
+	struct list_head list;
+	int (*streamon_apply_fn)(struct v4l2_ctrl *ctrl);
+	int (*reset_restore_fn)(struct v4l2_ctrl *ctrl);
+};
+
 
 /******************************************************************************/
 // static inline function
@@ -77,5 +84,18 @@ u32 g_sensor_lbmf_property(struct adaptor_ctx *ctx, const u32 scenario_id,
 
 int notify_imgsensor_start_streaming_delay(struct adaptor_ctx *ctx,
 					struct mtk_cam_seninf_tsrec_timestamp_info *ts_info);
+
+/* control helper */
+
+int register_restore_ctrl(struct adaptor_ctx *ctx,
+		     struct v4l2_ctrl *ctrl,
+		     int (*streamon_apply_fn)(struct v4l2_ctrl *ctrl),
+		     int (*reset_restore_fn)(struct v4l2_ctrl *ctrl));
+
+bool has_register_restore_ctrl(struct adaptor_ctx *ctx, u32 cid);
+
+int apply_streamon_restore_ctrls(struct adaptor_ctx *ctx);
+
+int reset_restore_ctrls(struct adaptor_ctx *ctx);
 
 #endif

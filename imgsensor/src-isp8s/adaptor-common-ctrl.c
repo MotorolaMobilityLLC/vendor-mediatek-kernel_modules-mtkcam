@@ -360,3 +360,68 @@ int notify_imgsensor_start_streaming_delay(struct adaptor_ctx *ctx,
 
 	return 0;
 }
+
+int register_restore_ctrl(struct adaptor_ctx *ctx,
+		     struct v4l2_ctrl *ctrl,
+		     int (*streamon_apply_fn)(struct v4l2_ctrl *ctrl),
+		     int (*reset_restore_fn)(struct v4l2_ctrl *ctrl))
+{
+	struct adaptor_ctrl_restore *ctl;
+
+	ctl = devm_kzalloc(ctx->dev, sizeof(*ctl), GFP_KERNEL);
+	if (unlikely(ctl == NULL))
+		return -ENOMEM;
+
+	ctl->ctrl = ctrl;
+	ctl->streamon_apply_fn = streamon_apply_fn;
+	ctl->reset_restore_fn = reset_restore_fn;
+
+	list_add_tail(&ctl->list, &ctx->restore_ctrls_list);
+
+	return 0;
+}
+
+bool has_register_restore_ctrl(struct adaptor_ctx *ctx, u32 cid)
+{
+	bool ret = false;
+	struct adaptor_ctrl_restore *ctl;
+
+	list_for_each_entry(ctl, &ctx->restore_ctrls_list, list) {
+		if (ctl->ctrl->id == cid) {
+			/* true if found in list */
+			ret = true;
+			break;
+		}
+	}
+
+	return ret;
+}
+
+int apply_streamon_restore_ctrls(struct adaptor_ctx *ctx)
+{
+	struct adaptor_ctrl_restore *ctl;
+
+	list_for_each_entry(ctl, &ctx->restore_ctrls_list, list) {
+		if (ctl->streamon_apply_fn) {
+			/* apply when stream */
+			ctl->streamon_apply_fn(ctl->ctrl);
+		}
+	}
+
+	return 0;
+}
+
+int reset_restore_ctrls(struct adaptor_ctx *ctx)
+{
+	struct adaptor_ctrl_restore *ctl;
+
+	list_for_each_entry(ctl, &ctx->restore_ctrls_list, list) {
+		if (ctl->streamon_apply_fn) {
+			/* apply after reset */
+			ctl->reset_restore_fn(ctl->ctrl);
+		}
+	}
+
+	return 0;
+}
+
