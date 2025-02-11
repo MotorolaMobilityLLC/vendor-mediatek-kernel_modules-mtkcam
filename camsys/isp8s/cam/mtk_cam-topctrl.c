@@ -71,12 +71,12 @@ void mtk_cam_main_halt(struct mtk_raw_device *raw, int is_srt)
 void mtk_cam_main_sv_halt(struct mtk_cam_device *cam)
 {
 	/* camsv default urgent enable */
-	writel_relaxed(0x1, cam->base + REG_CAM_MAIN_HALT1_EN);
-	writel_relaxed(0x1, cam->base + REG_CAM_MAIN_HALT2_EN);
-	writel_relaxed(0x1, cam->base + REG_CAM_MAIN_HALT3_EN);
-	writel_relaxed(0x1, cam->base + REG_CAM_MAIN_HALT4_EN);
-	writel_relaxed(0x1, cam->base + REG_CAM_MAIN_HALT5_EN);
-	writel_relaxed(0x1, cam->base + REG_CAM_MAIN_HALT6_EN);
+	writel_relaxed(0x3, cam->base + REG_CAM_MAIN_HALT1_EN);
+	writel_relaxed(0x3, cam->base + REG_CAM_MAIN_HALT2_EN);
+	writel_relaxed(0x3, cam->base + REG_CAM_MAIN_HALT3_EN);
+	writel_relaxed(0x3, cam->base + REG_CAM_MAIN_HALT4_EN);
+	writel_relaxed(0x3, cam->base + REG_CAM_MAIN_HALT5_EN);
+	writel_relaxed(0x3, cam->base + REG_CAM_MAIN_HALT6_EN);
 
 	pr_info("%s: 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x\n",
 		__func__,

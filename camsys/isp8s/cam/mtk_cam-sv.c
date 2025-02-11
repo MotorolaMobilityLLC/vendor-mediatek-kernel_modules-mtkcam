@@ -3291,17 +3291,15 @@ static irqreturn_t mtk_thread_irq_camsv(int irq, void *data)
 			irq_info.tg_cnt);
 
 		/* error case */
-		if (unlikely(irq_info.irq_type == (1 << CAMSYS_IRQ_ERROR)) &&
+		if (unlikely(irq_info.irq_type & (1 << CAMSYS_IRQ_ERROR)) &&
 			irq_info.e.err_status != 0) {
 			camsv_handle_err(sv_dev, &irq_info);
-			continue;
 		}
 
 		/* error cq case */
-		if (unlikely(irq_info.irq_type == (1 << CAMSYS_IRQ_ERROR)) &&
+		if (unlikely(irq_info.irq_type & (1 << CAMSYS_IRQ_ERROR)) &&
 			irq_info.e.err_status2 != 0) {
 			camsv_handle_cq_err(sv_dev, &irq_info);
-			continue;
 		}
 
 		/* normal case */
