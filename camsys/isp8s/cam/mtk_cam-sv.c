@@ -1894,7 +1894,7 @@ int mtk_cam_get_sv_tag_index(struct mtk_camsv_tag_info *arr_tag,
 	}
 
 	pr_info("[%s] tag is not found by pipe_id(%d)", __func__, pipe_id);
-	return -1;
+	return SVTAG_UNKNOWN;
 }
 
 unsigned int mtk_cam_get_seninf_pad_index(struct mtk_camsv_tag_info *arr_tag,
@@ -2623,6 +2623,10 @@ static void mtk_cam_sv_set_pda_frame_param_dmao(
 
 	sv_dev = dev_get_drvdata(ctx->hw_sv);
 	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, pipe_id);
+	if (tag_idx == SVTAG_UNKNOWN) {
+		dev_info(ctx->cam->dev, "%s: unknown tag idx", __func__);
+		return;
+	}
 	fp->camsv_param[0][tag_idx].pda_enable = pda_en;
 	fp->camsv_param[0][tag_idx].pda_idx = pipe->res_config.stats_cfg_param.pda_idx;
 
@@ -2631,6 +2635,10 @@ static void mtk_cam_sv_set_pda_frame_param_dmao(
 	info[pdao_m1].stride = pipe->res_config.stats_cfg_param.pda_stride;
 
 	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, pipe_id);
+	if (tag_idx == SVTAG_UNKNOWN) {
+		dev_info(ctx->cam->dev, "%s: unknown tag idx", __func__);
+		return;
+	}
 	out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[pdao_m1];
 	out->uid.id = MTKCAM_IPI_MRAW_PDA_OUT;
 	out->uid.pipe_id = pipe_id;
@@ -2657,13 +2665,16 @@ static void mtk_cam_sv_set_pdp_frame_param_dmao(
 	struct mtk_camsv_device *sv_dev;
 	struct mtk_mraw_pipeline *pipe =
 		&ctx->cam->pipelines.mraw[pipe_id - MTKCAM_SUBDEV_MRAW_START];
-	unsigned int tag_idx, dmao_num;
+	unsigned int tag_idx = 0, dmao_num = 0;
 	unsigned long offset;
 	int i;
 
 	sv_dev = dev_get_drvdata(ctx->hw_sv);
 	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, pipe_id);
-
+	if (tag_idx == SVTAG_UNKNOWN) {
+		dev_info(ctx->cam->dev, "%s: unknown tag idx", __func__);
+		return;
+	}
 	fp->camsv_param[0][tag_idx].dev_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
 	fp->camsv_param[0][tag_idx].tag_id = tag_idx;
 	fp->camsv_param[0][tag_idx].pdp_enable = pdp_en;
@@ -2755,6 +2766,10 @@ int mtk_cam_sv_cal_cfg_info(struct mtk_cam_ctx *ctx, struct mtk_cam_buffer *buf,
 		return 0;
 
 	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, pipe_id);
+	if (tag_idx == SVTAG_UNKNOWN) {
+		dev_info(ctx->cam->dev, "%s: unknown tag idx", __func__);
+		return 0;
+	}
 	if (job->tag_info[tag_idx].is_pdp_enable)
 		pdp_support = true;
 	else
@@ -2836,6 +2851,10 @@ void mtk_cam_sv_copy_user_input_param(struct mtk_cam_ctx *ctx, struct mtk_cam_jo
 		param->lm_mode_ctrl);
 
 	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, mraw_pipe->id);
+	if (tag_idx == SVTAG_UNKNOWN) {
+		dev_info(ctx->cam->dev, "%s: unknown tag idx", __func__);
+		return;
+	}
 	sv_dev = dev_get_drvdata(ctx->hw_sv);
 
 	if (param->pdp_en)
