@@ -141,6 +141,12 @@ static int g_sentest_aov_apmcu_status(struct seninf_ctx *ctx, void *arg)
 	/* aov_param check */
 	pr_info("[%s]aov_param check\n", __func__);
 	pr_info("[%s]aov_param check aov_csi_port(%d)\n", __func__, aov_csi_port);
+
+	if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+		pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+		return -EFAULT;
+	}
+
 	pr_info("[%s]aov_param check sensor_idx(%d)\n", __func__,
 		g_aov_ctrl[aov_csi_port].aov_param.sensor_idx);
 	pr_info("[%s]aov_param check height(%lld)\n", __func__,

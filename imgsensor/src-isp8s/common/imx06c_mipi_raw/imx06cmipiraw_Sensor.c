@@ -394,8 +394,14 @@ static int imx06c_mcss_update_subdrv_para(void *arg, int scenario_id)
 
 	ctx->min_frame_length = max(ctx->min_frame_length, ctx->s_ctx.mode[scenario_id].framelength);
 	ctx->frame_length = ctx->s_ctx.mode[scenario_id].framelength;
-	framerate = 1000000000 / linetime_in_ns / ctx->frame_length  * 10;
-	ctx->current_fps = framerate;
+
+	if (linetime_in_ns == 0) {
+		ctx->current_fps = ctx->s_ctx.mode[scenario_id].max_framerate;
+		DRV_LOGE(ctx, "linetime_in_ns is zero using default max_framerate\n");
+	} else {
+		framerate = 1000000000 / linetime_in_ns / ctx->frame_length  * 10;
+		ctx->current_fps = framerate;
+	}
 
 	DRV_LOG_MUST(ctx, "scenario_id(%d) framelength(%d) min_frame_length(%d)\n",
 			scenario_id,

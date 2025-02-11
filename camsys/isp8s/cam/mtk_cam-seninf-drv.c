@@ -1866,6 +1866,11 @@ static int set_aov_test_model_param(struct seninf_ctx *ctx, char enable)
 
 	pr_info("[%s] aov_csi_port(%d)+\n", __func__, aov_csi_port);
 
+	if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+		pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+		return -1;
+	}
+
 	if (enable) {
 		g_aov_ctrl[aov_csi_port].aov_param.sensor_idx = 5; // 5: test model
 		g_aov_ctrl[aov_csi_port].aov_ctx = ctx;
@@ -2056,6 +2061,10 @@ static int config_hw_csi(struct seninf_ctx *ctx)
 #endif
 
 #if AOV_GET_PARAM
+	if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+		pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+		return -1;
+	}
 	if (!(core->aov_sensor_id < 0) &&
 		!(ctx->current_sensor_id < 0) &&
 		(ctx->current_sensor_id == core->aov_sensor_id)) {
@@ -2195,6 +2204,10 @@ static int get_buffered_pixel_rate(struct seninf_ctx *ctx,
 	ctx->fps_d = fi.interval.numerator;
 
 #if AOV_GET_PARAM
+	if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+		pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+		return -1;
+	}
 	if (!(core->aov_sensor_id < 0) &&
 		!(ctx->current_sensor_id < 0) &&
 		(ctx->current_sensor_id == core->aov_sensor_id)) {
@@ -2229,6 +2242,10 @@ static int get_customized_pixel_rate(struct seninf_ctx *ctx, struct v4l2_subdev 
 	*result = v4l2_ctrl_g_ctrl(ctrl);
 
 #if AOV_GET_PARAM
+	if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+		pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+		return -1;
+	}
 	if (!(core->aov_sensor_id < 0) &&
 	    !(ctx->current_sensor_id < 0) &&
 	     (ctx->current_sensor_id == core->aov_sensor_id))
@@ -2256,6 +2273,10 @@ static int get_pixel_rate(struct seninf_ctx *ctx, struct v4l2_subdev *sd,
 	*result = v4l2_ctrl_g_ctrl_int64(ctrl);
 
 #if AOV_GET_PARAM
+	if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+		pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+		return -1;
+	}
 	if (!(core->aov_sensor_id < 0) &&
 	    !(ctx->current_sensor_id < 0) &&
 	     (ctx->current_sensor_id == core->aov_sensor_id))
@@ -2285,6 +2306,10 @@ static int get_mbus_config(struct seninf_ctx *ctx, struct v4l2_subdev *sd)
 	ctx->num_data_lanes = cfg.bus.mipi_csi2.num_data_lanes;
 
 #if AOV_GET_PARAM
+	if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+		pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+		return -1;
+	}
 	if (!(core->aov_sensor_id < 0) &&
 		!(ctx->current_sensor_id < 0) &&
 		(ctx->current_sensor_id == core->aov_sensor_id)) {
@@ -2658,6 +2683,10 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 	dev_info(ctx->dev, "[%s] enable(%d)\n", __func__, enable);
 
 	if (ctx->is_aov_real_sensor && !enable) {
+		if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+			pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+			return -1;
+		}
 		if (!g_aov_ctrl[aov_csi_port].aov_scp_alive)
 			dev_info(ctx->dev,
 				"[%s] aov real sensor streaming off by aov MW on apmcu side\n",
@@ -2696,6 +2725,10 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 
 		update_isp_clk(ctx);
 #if AOV_GET_PARAM
+		if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+			pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+			return -1;
+		}
 		if (!(core->aov_sensor_id < 0) &&
 			!(ctx->current_sensor_id < 0) &&
 			(ctx->current_sensor_id == core->aov_sensor_id))
@@ -2873,6 +2906,10 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 	}
 
 	if (ctx->is_aov_real_sensor && !enable) {
+		if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+			pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+			return -1;
+		}
 		if (!g_aov_ctrl[aov_csi_port].aov_scp_alive)
 			dev_info(ctx->dev,
 				"[%s] aov real sensor streaming off by aov MW on apmcu side\n",
@@ -2919,6 +2956,10 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 
 	if (core->aov_abnormal_deinit_flag) {
 		ctx->is_aov_real_sensor = 0;
+		if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+			pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+			return -1;
+		}
 		if (!g_aov_ctrl[aov_csi_port].aov_scp_alive &&
 			core->aov_abnormal_deinit_usr_fd_kill_flag) {
 			dev_info(ctx->dev,
@@ -3126,6 +3167,11 @@ static int seninf_real_sensor_for_aov_param(struct seninf_ctx *ctx, u32 enable)
 	int tmp;
 	int aov_csi_port = ctx->port;
 
+	if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+		pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+		return -1;
+	}
+
 	switch (enable) {
 	case 0:
 		if (ctx->streaming)
@@ -3262,6 +3308,11 @@ static int mtk_cam_seninf_set_ctrl(struct v4l2_ctrl *ctrl)
 	unsigned long flags;
 	int tmp;
 	int aov_csi_port = ctx->port;
+
+	if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+		pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+		return -1;
+	}
 
 	switch (ctrl->id) {
 	case V4L2_CID_MTK_SENINF_EINT_IRQ_EN:
@@ -3482,6 +3533,10 @@ static int seninf_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	if (!ctx->open_refcnt) {
 		dev_info(ctx->dev, "%s open_refcnt %d\n", __func__, ctx->open_refcnt);
 
+		if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+			pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+			return -1;
+		}
 		/* clear aov_ctx */
 		for (i = 0; i < AOV_SENINF_NUM; i++) {
 			if (g_aov_ctrl[aov_csi_port].aov_ctx == ctx) {

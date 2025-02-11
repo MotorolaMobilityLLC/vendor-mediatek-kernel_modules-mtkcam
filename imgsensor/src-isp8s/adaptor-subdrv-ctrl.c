@@ -6468,7 +6468,6 @@ int common_get_pixel_clk_base_linetime_in_ns(void *arg,
 	unsigned int linelength = 0;
 
 	if (!ctx) {
-		DRV_LOGE(ctx, "ctx is NULL\n");
 		return -EINVAL;
 	}
 
@@ -6502,7 +6501,6 @@ int common_get_cycle_base_v1_linetime_in_ns(void *arg,
 	u32 cycle_base_linetime_in_ns = 0;
 
 	if (!ctx) {
-		DRV_LOGE(ctx, "ctx is NULL\n");
 		return -EINVAL;
 	}
 
