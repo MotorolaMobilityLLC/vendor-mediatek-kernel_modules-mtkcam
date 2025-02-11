@@ -5811,6 +5811,8 @@ static int mtk_cam_runtime_resume(struct device *dev)
 	mtk_cam_vcore_ddren(cam_dev, true);
 	mtk_cam_vcore_ccu_qos_remap(cam_dev);
 	mtk_cam_vcore_sv_qos_remap(cam_dev);
+	mtk_cam_vcore_coh_req(cam_dev);
+	mtk_cam_vcore_wla20(cam_dev);
 	mtk_cam_main_sv_halt(cam_dev);
 	mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_CAM);
 	mtk_cam_dvc_top_enable(&cam_dev->dvfs.dvc);

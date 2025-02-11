@@ -21,9 +21,13 @@ static int cam_remap_srt_tbl = 0x0990199;
 module_param(cam_remap_srt_tbl, int, 0644);
 MODULE_PARM_DESC(cam_remap_srt_tbl, "srt remap lut");
 
-static int cam_coh_req_swmode = 1;
+static int cam_coh_req_swmode;
 module_param(cam_coh_req_swmode, int, 0644);
 MODULE_PARM_DESC(cam_coh_req_swmode, "1 : active sw mode");
+
+static int cam_wal20_mode = -1;
+module_param(cam_wal20_mode, int, 0644);
+MODULE_PARM_DESC(cam_wal20_mode, "-1 : legecy mode, 0: swmode 1: hwmode");
 
 static bool qos_remap_enable(void)
 {
@@ -243,9 +247,36 @@ void mtk_cam_vcore_coh_req(struct mtk_cam_device *cam)
 		readl(cam->vcore_base + REG_CAM_VCORE_COH_REQ_CTRL_0));
 }
 
+#define WLA2P0_DEBOUNCE 0x80006000
 void mtk_cam_vcore_wla20(struct mtk_cam_device *cam)
 {
-	/* todo */
+	u32 val = 0;
+
+	/* set debounce to 15us */
+	writel(WLA2P0_DEBOUNCE, cam->vcore_base + REG_CAM_VCORE_WLA2P0_DEBOUNCE);
+
+	val = readl(cam->vcore_base + REG_CAM_VCORE_WLA2P0_CTRL_0);
+	SET_FIELD(&val, CAM_VCORE_WLA2P0_LEGACY_MODE, (cam_wal20_mode < 0) ? 1 : 0);
+	SET_FIELD(&val, CAM_VCORE_WLA2P0_SW_DDREN_VOTE, (cam_wal20_mode == 0) ? 1: 0);
+	SET_FIELD(&val, CAM_VCORE_WLA2P0_SW_DDREN_VOTE_MUX_EN, (cam_wal20_mode == 0) ? 1: 0);
+	writel(val, cam->vcore_base + REG_CAM_VCORE_WLA2P0_CTRL_0);
+
+	pr_info("%s: ctrl_0: 0x%x wla20_deb: 0x%x\n", __func__,
+		readl(cam->vcore_base + REG_CAM_VCORE_WLA2P0_CTRL_0),
+		readl(cam->vcore_base + REG_CAM_VCORE_WLA2P0_DEBOUNCE));
 }
 
+void mtk_cam_vcore_wla20_dbg_dump(struct mtk_cam_device *cam)
+{
+	pr_info("%s: wla20 status0~4:0x%x/0x%x/0x%x/0x%x/0x%x dbg status0~2:0x%x/0x%x/0x%x\n",
+		__func__,
+		readl(cam->vcore_base + REG_CAM_VCORE_WLA2P0_STATUS_0),
+		readl(cam->vcore_base + REG_CAM_VCORE_WLA2P0_STATUS_1),
+		readl(cam->vcore_base + REG_CAM_VCORE_WLA2P0_STATUS_2),
+		readl(cam->vcore_base + REG_CAM_VCORE_WLA2P0_STATUS_3),
+		readl(cam->vcore_base + REG_CAM_VCORE_WLA2P0_STATUS_4),
+		readl(cam->vcore_base + REG_CAM_VCORE_WLA2P0_STATUS_DBG_0),
+		readl(cam->vcore_base + REG_CAM_VCORE_WLA2P0_STATUS_DBG_1),
+		readl(cam->vcore_base + REG_CAM_VCORE_WLA2P0_STATUS_DBG_2));
+}
 

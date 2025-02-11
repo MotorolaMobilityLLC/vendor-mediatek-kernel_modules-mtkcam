@@ -18,9 +18,9 @@ void mtk_cam_vcore_ccu_qos_remap(struct mtk_cam_device *cam);
 
 /* cam-vcore: ddren/coh_req/wla2.0 */
 void mtk_cam_vcore_ddren(struct mtk_cam_device *cam, int on_off);
-void mtk_cam_vcore_coh_req(struct mtk_cam_device *cam, int is_srt);
+void mtk_cam_vcore_coh_req(struct mtk_cam_device *cam);
 void mtk_cam_vcore_wla20(struct mtk_cam_device *cam);
 
-//void mtk_cam_vcore_dbg_dump(struct mtk_cam_device *cam);
+void mtk_cam_vcore_wla20_dbg_dump(struct mtk_cam_device *cam);
 
 #endif /*__MTK_CAM_TOP_CTRL_H*/
