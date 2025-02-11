@@ -1964,7 +1964,7 @@ static int impl_put_ref(struct mtk_hcp_rsv_mb *mb)
 	/* determine whether is a kref_mb */
 	if (likely(kref_put(&mb->kref, release_mb) == 0)) {
 		if (GET_MEM_MODE(mb->cfg.id) == IMGSYS_MEMORY_MODE_SMVR)
-			HCP_PRINT_INF("%s ref:%d\n", mb->cfg.name, kref_read(&mb->kref));
+			HCP_PRINT_DBG("%s ref:%d\n", mb->cfg.name, kref_read(&mb->kref));
 	}
 
 	return ret;
