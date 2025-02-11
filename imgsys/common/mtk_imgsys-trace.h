@@ -80,6 +80,17 @@ void ftrace_imgsys_qof_mod3(const char *fmt, ...);
 DEFINE_IMGSYS_QOF_EVENT(mod4);
 void ftrace_imgsys_qof_mod4(const char *fmt, ...);
 
+DEFINE_IMGSYS_QOF_EVENT(DIP);
+void ftrace_imgsys_qof_DIP(const char *fmt, ...);
+DEFINE_IMGSYS_QOF_EVENT(TRAW);
+void ftrace_imgsys_qof_TRAW(const char *fmt, ...);
+DEFINE_IMGSYS_QOF_EVENT(EIS);
+void ftrace_imgsys_qof_EIS(const char *fmt, ...);
+DEFINE_IMGSYS_QOF_EVENT(TNR);
+void ftrace_imgsys_qof_TNR(const char *fmt, ...);
+DEFINE_IMGSYS_QOF_EVENT(LITE);
+void ftrace_imgsys_qof_LITE(const char *fmt, ...);
+
 DECLARE_EVENT_CLASS(imgsys_hwqos_event,
 	TP_PROTO(struct va_format *vaf),
 	TP_ARGS(vaf),

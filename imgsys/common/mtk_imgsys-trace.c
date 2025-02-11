@@ -62,6 +62,17 @@ EXPORT_SYMBOL(ftrace_imgsys_qof_mod3);
 FTRACE_IMGSYS_QOF(mod4);
 EXPORT_SYMBOL(ftrace_imgsys_qof_mod4);
 
+FTRACE_IMGSYS_QOF(DIP);
+EXPORT_SYMBOL(ftrace_imgsys_qof_DIP);
+FTRACE_IMGSYS_QOF(TRAW);
+EXPORT_SYMBOL(ftrace_imgsys_qof_TRAW);
+FTRACE_IMGSYS_QOF(EIS);
+EXPORT_SYMBOL(ftrace_imgsys_qof_EIS);
+FTRACE_IMGSYS_QOF(TNR);
+EXPORT_SYMBOL(ftrace_imgsys_qof_TNR);
+FTRACE_IMGSYS_QOF(LITE);
+EXPORT_SYMBOL(ftrace_imgsys_qof_LITE);
+
 #define FTRACE_IMGSYS_HWQOS(name) \
 	void ftrace_imgsys_hwqos_##name(const char *fmt, ...) \
 	{ \

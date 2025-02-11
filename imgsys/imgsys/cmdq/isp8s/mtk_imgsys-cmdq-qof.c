@@ -1171,7 +1171,6 @@ void mtk_imgsys_cmdq_qof_release(struct mtk_imgsys_dev *imgsys_dev, struct cmdq_
 			iounmap(g_maped_rg[rg_idx]);
 	}
 
-	cmdq_mbox_buf_free(imgsys_clt, imgsys_dev->work_buf_va, imgsys_dev->work_buf_pa);
 	QOF_LOGI("release resource -\n");
 }
 
@@ -1596,27 +1595,27 @@ static void imgsys_qof_dbg_print_trace(int mod)
 		value = 0;
 	switch(mod) {
 	case ISP8S_PWR_DIP:
-		ftrace_imgsys_qof_mod0("%s=%u",
+		ftrace_imgsys_qof_DIP("%s=%u",
 			buf,
 			(u32) (value & (0xff)));
 		break;
 	case ISP8S_PWR_TRAW:
-		ftrace_imgsys_qof_mod1("%s=%u",
+		ftrace_imgsys_qof_TRAW("%s=%u",
 			buf,
 			(u32) (value & (0xff)));
 		break;
 	case ISP8S_PWR_WPE_1_EIS:
-		ftrace_imgsys_qof_mod2("%s=%u",
+		ftrace_imgsys_qof_EIS("%s=%u",
 			buf,
 			(u32) (value & (0xff)));
 		break;
 	case ISP8S_PWR_WPE_2_TNR:
-		ftrace_imgsys_qof_mod3("%s=%u",
+		ftrace_imgsys_qof_TNR("%s=%u",
 			buf,
 			(u32) (value & (0xff)));
 		break;
 	case ISP8S_PWR_WPE_3_LITE:
-		ftrace_imgsys_qof_mod4("%s=%u",
+		ftrace_imgsys_qof_LITE("%s=%u",
 			buf,
 			(u32) (value & (0xff)));
 		break;

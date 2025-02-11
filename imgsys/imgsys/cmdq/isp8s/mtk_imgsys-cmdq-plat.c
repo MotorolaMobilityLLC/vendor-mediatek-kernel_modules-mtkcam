@@ -2124,10 +2124,6 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 	#if IMGSYS_SECURE_ENABLE
 	mutex_lock(&(imgsys_dev->sec_task_lock));
 	if (frm_info->is_secReq && (is_sec_task_create == 0)) {
-		/* disable qof */
-		MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
-			mtk_imgsys_cmdq_qof_stream_off(imgsys_dev);
-		);
 		is_pwr_sec_mode = true;
 
 		/* start sec work */
@@ -2272,6 +2268,14 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
 					mtk_imgsys_cmdq_qof_add(pkt, qof_need_sub,
 						frm_info->user_info[frm_idx].hw_comb);
+				);
+			} else {
+				//enable all mtcmos
+				MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
+					mtk_imgsys_cmdq_qof_add(pkt, qof_need_sub,
+					pwr_group[ISP8S_PWR_DIP] | pwr_group[ISP8S_PWR_TRAW] |
+					pwr_group[ISP8S_PWR_WPE_1_EIS] | pwr_group[ISP8S_PWR_WPE_2_TNR] |
+					pwr_group[ISP8S_PWR_WPE_3_LITE]);
 				);
 			}
 
@@ -2491,11 +2495,9 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					frm_info->frm_owner, cb_param, frm_idx, frm_num,
 					blk_idx, blk_num);
 
-				if (is_qof_sec_mode == false) {
-					MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
-						mtk_imgsys_cmdq_qof_sub(pkt, qof_need_sub);
-					);
-				}
+				MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
+					mtk_imgsys_cmdq_qof_sub(pkt, qof_need_sub);
+				);
 
 				ret_flush = cmdq_pkt_flush_async(pkt, imgsys_cmdq_task_cb_plat8s,
 								(void *)cb_param);
@@ -3368,7 +3370,6 @@ void mtk_imgsys_power_ctrl_plat8s(struct mtk_imgsys_dev *imgsys_dev, bool isPowe
 	int i;
 	u32 img_main_modules = 0xFFFF;
 	int pm_ret = 0;
-	bool is_sec_mode = false;
 
 	if (isPowerOn) {
 		user_cnt = atomic_inc_return(&imgsys_dev->imgsys_user_cnt);
@@ -3427,7 +3428,6 @@ void mtk_imgsys_power_ctrl_plat8s(struct mtk_imgsys_dev *imgsys_dev, bool isPowe
 
 			#if IMGSYS_SECURE_ENABLE
 			mutex_lock(&(imgsys_dev->sec_task_lock));
-			is_sec_mode = is_pwr_sec_mode;
 			is_pwr_sec_mode = false;
 			mutex_unlock(&(imgsys_dev->sec_task_lock));
 			#endif
@@ -3438,11 +3438,9 @@ void mtk_imgsys_power_ctrl_plat8s(struct mtk_imgsys_dev *imgsys_dev, bool isPowe
 				mtk_imgsys_cmdq_hwqos_streamoff();
 			);
 
-			if (is_sec_mode == false) {
-				MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
-					mtk_imgsys_cmdq_qof_stream_off(imgsys_dev);
-				);
-			}
+			MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
+				mtk_imgsys_cmdq_qof_stream_off(imgsys_dev);
+			);
 
 			mtk_imgsys_mod_put(imgsys_dev);
 
