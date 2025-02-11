@@ -6041,6 +6041,8 @@ static int fill_raw_meta_header(struct req_buffer_helper *helper)
 
 		p.rgbw = is_rgbw(job);
 
+		p.raws = bit_map_subset_of(MAP_HW_RAW, job->used_engine);
+
 		helper->meta_cfg_buf_va = p.meta_cfg;
 		if (ltmsgo_low_latency)
 			job->need_copy_ltmsgo =

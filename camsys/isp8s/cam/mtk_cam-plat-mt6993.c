@@ -3,6 +3,7 @@
 // Copyright (c) 2019 MediaTek Inc.
 
 #include <linux/module.h>
+#include <linux/bitops.h>
 
 #include "mtk_cam-plat.h"
 #include "mtk_cam-raw_regs.h"
@@ -11,6 +12,7 @@
 #include "mtk_camera-v4l2-controls-8s.h"
 #include "mtk_camera-videodev2.h"
 #include "mtk_cam-dvfs_qos_raw.h"
+#include "mtk_cam-debug_option.h"
 
 #define RAW_STATS_CFG_SIZE \
 	ALIGN(sizeof(struct mtk_cam_uapi_meta_raw_stats_cfg), SZ_4K)
@@ -109,6 +111,8 @@ static int set_meta_stat0_info(struct mtk_cam_uapi_meta_raw_stats_0 *stats,
 	struct mtk_cam_uapi_meta_raw_stats_cfg *cfg = p->meta_cfg;
 	size_t offset = sizeof(*stats);
 	unsigned int flko_size;
+	unsigned int dflko_size, dflkbo_size;
+	unsigned int dflk_blk_num = MTK_CAM_UAPI_DFLK_MAX_STAT_BLK_NUM;
 	unsigned int awbo_r1_size, awbo_r2_size, aeo_size;
 	unsigned int pdo_size;
 
@@ -132,14 +136,27 @@ static int set_meta_stat0_info(struct mtk_cam_uapi_meta_raw_stats_0 *stats,
 		cfg->ae_param.block_win_cfg.block_num_x *
 		cfg->ae_param.block_win_cfg.block_num_y *
 		32;
+
+	if (hweight32(p->raws) == 2)
+		dflk_blk_num += 2;
+	else if (hweight32(p->raws) == 3)
+		dflk_blk_num += 4;
+
+	dflko_size = (p->height / p->bin_ratio / cfg->dflk_param.sample_rate) *
+		MTK_CAM_UAPI_DFLK_BLK_SIZE * dflk_blk_num;
+	dflkbo_size = dflko_size;
 #else
 	flko_size = MTK_CAM_UAPI_FLK_MAX_BUF_SIZE;
 	awbo_r1_size = MTK_CAM_UAPI_AWBO_R1_MAX_BUF_SIZE;
 	awbo_r2_size = MTK_CAM_UAPI_AWBO_R2_MAX_BUF_SIZE;
 	aeo_size = MTK_CAM_UAPI_AEO_MAX_BUF_SIZE;
-	pr_info("[%s] flko/awb1/awb2/aeo:%d/%d/%d/%d",
-		__func__, flko_size, awbo_r1_size, awbo_r2_size, aeo_size);
+	dflko_size = dflkbo_size = MTK_CAM_UAPI_DFLKO_MAX_BUF_SIZE;
 #endif
+	if (CAM_DEBUG_ENABLED(IPI_BUF))
+		pr_info("[%s] flko/awb1/awb2/aeo/dflko/dflkbo:%d/%d/%d/%d/%d/%d",
+			__func__, flko_size, awbo_r1_size, awbo_r2_size, aeo_size,
+			dflko_size, dflkbo_size);
+
 	// TODO: FIX PDE
 	pdo_size = cfg->pde_enable ? cfg->pde_param.pdo_max_size : 0;
 
@@ -165,12 +182,10 @@ static int set_meta_stat0_info(struct mtk_cam_uapi_meta_raw_stats_0 *stats,
 		    MTK_CAM_UAPI_LTMSGO_SIZE, &offset);
 	set_payload(&stats->flk_stats.flko_buf,
 		    flko_size, &offset);
-#ifdef SKIP_IN_FPGA_EP
 	set_payload(&stats->dflk_stats.dflko_buf,
-				MTK_CAM_UAPI_DFLKO_MAX_BUF_SIZE, &offset);
+				dflko_size, &offset);
 	set_payload(&stats->dflk_stats.dflkbo_buf,
-				MTK_CAM_UAPI_DFLKBO_MAX_BUF_SIZE, &offset);
-#endif
+				dflkbo_size, &offset);
 	set_payload(&stats->tsf_stats.tsfo_r1_buf,
 		    MTK_CAM_UAPI_TSFSO_SIZE, &offset);
 #ifdef SKIP_IN_FPGA_EP
