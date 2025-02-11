@@ -1078,6 +1078,23 @@ unsigned int read_data_region(struct EEPROM_DRV_FD_DATA *pdata,
 	return ret;
 }
 
+bool get_if_use_legacy(struct EEPROM_DRV_FD_DATA *pdata)
+{
+	struct STRUCT_CAM_CAL_CONFIG_STRUCT *cfg;
+	bool ret = false;
+	int i = 0;
+
+	for (i = 0; i < cam_cal_number; i++) {
+		cfg = cam_cal_config_list[i];
+		if (pdata->sensor_info.sensor_id == cfg->sensor_id)
+			ret |= cfg->use_legacy;
+		must_log("[%d] current_sensor_id = 0x%x layout type %s sensor_id 0x%x ret %d",
+			i, pdata->sensor_info.sensor_id, cfg->name, cfg->sensor_id, ret);
+	}
+
+	return ret;
+}
+
 int read_cam_cal(unsigned int sensor_id, unsigned char *buf,
 			unsigned int offset, unsigned int size)
 {

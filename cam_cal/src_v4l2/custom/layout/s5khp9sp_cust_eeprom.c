@@ -44,6 +44,7 @@ struct STRUCT_CAM_CAL_CONFIG_STRUCT s5khp9sp_cust_eeprom = {
 	.enable_preload = 1,
 	.preload_size = 0x4000,
 	.has_stored_data = 1,
+	.use_legacy = true,
 };
 
 static unsigned int do_single_lsc_s5khp9sp(struct EEPROM_DRV_FD_DATA *pdata,

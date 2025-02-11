@@ -45,6 +45,7 @@ struct STRUCT_CAM_CAL_CONFIG_STRUCT {
 	unsigned int preload_size;
 	unsigned int has_stored_data;
 	unsigned int base_address;
+	bool use_legacy;
 
 	struct i2c_client *client;
 };
@@ -84,5 +85,6 @@ int read_data(struct EEPROM_DRV_FD_DATA *pdata,
 unsigned int read_data_region(struct EEPROM_DRV_FD_DATA *pdata,
 		unsigned char *buf, unsigned int offset, unsigned int size,
 		struct STRUCT_CAM_CAL_CONFIG_STRUCT *cfg);
+bool get_if_use_legacy(struct EEPROM_DRV_FD_DATA *pdata);
 
 #endif /* __CAM_CAL_LAYOUT_H */

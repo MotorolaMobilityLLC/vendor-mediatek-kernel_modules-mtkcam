@@ -262,6 +262,11 @@ static long eeprom_ioctl(struct file *a_file, unsigned int a_cmd,
 		       pdata->sensor_info.sensor_id);
 		break;
 	case CAM_CALIOC_G_GKI_QUERY:
+		if (get_if_use_legacy(pdata)) {
+			must_log("use_legacy\n");
+			kfree(pBuff);
+			return -EPERM;
+		}
 		/* debug_log("QUERY\n"); */
 		break;
 	case CAM_CALIOC_G_GKI_READ:
