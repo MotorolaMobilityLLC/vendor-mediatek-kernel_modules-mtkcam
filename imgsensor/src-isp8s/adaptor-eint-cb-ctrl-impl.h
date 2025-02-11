@@ -69,9 +69,9 @@ static inline int notify_seninf_eint_seamless_switch(struct adaptor_ctx *ctx, in
 
 	if (ctx->subctx.s_ctx.seamless_switch_prsh_length_lc == 0)
 		return 0;
-	else
-		return (adaptor_eint_cb_ctrl_execute(ctx,
-			EINT_CB_CMD_NOTIFY_SEAMLESS_SWITCH, &is_seamless_switch, __func__));
+
+	return (adaptor_eint_cb_ctrl_execute(ctx,
+		EINT_CB_CMD_NOTIFY_SEAMLESS_SWITCH, &is_seamless_switch, __func__));
 }
 
 #endif

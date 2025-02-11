@@ -131,6 +131,7 @@ struct mtk_seninf_eint {
 	struct eint_dts_info_pair *eint_dts_info_pairs;
 	int address_size_pairs_len;
 	int eint_dts_info_pairs_len;
+	u32 systimer_left_shift_bits;
 	struct mtk_seninf_eint_pin eints[EINT_NUM_MAX];
 	struct eint_irq_cb_ctx irq_cb_ctx[EINT_NUM_MAX];
 };
@@ -269,6 +270,7 @@ static u64 read_eint_reg_tick(int index)
 {
 	int i;
 	u64 cnt_h, cnt_l, tmp_h, val;
+	u32 systimer_left_shift_bits = seninf_eint.systimer_left_shift_bits;
 	void __iomem *base =
 		seninf_eint.eints[index].dts_info.base;
 
@@ -280,7 +282,7 @@ static u64 read_eint_reg_tick(int index)
 			break;
 	}
 	val = ((cnt_h << 32) & 0xFFFFFFFF00000000) | (cnt_l & 0xFFFFFFFF);
-	val = val << 7;
+	val = val << systimer_left_shift_bits;
 
 	return val;
 }
@@ -1052,6 +1054,7 @@ static int get_eint_info(struct device *dev)
 {
 	phandle handle;
 	int matrix_number, i, ret;
+	u32 systimer_left_shift_bits = 0;
 	unsigned int total_pin_number, instance_number;
 	struct device_node *eint_np, *node = NULL;
 
@@ -1061,6 +1064,18 @@ static int get_eint_info(struct device *dev)
 			"ERROR: can't find DTS compatiable node:'%s'\n",
 			"mediatek,seninf-eint");
 		return -1;
+	}
+
+	ret = of_property_read_u32(node,
+		"systimer-leftshift-bits", &systimer_left_shift_bits);
+	if (unlikely(ret < 0))
+		EINT_INF(
+			"ERROR: Failed to read lshift_bits property, ret:%d\n", ret);
+	else {
+		seninf_eint.systimer_left_shift_bits = systimer_left_shift_bits;
+		EINT_INF(
+			"read systimer_left_shift_bits property successlly, lshift_bits=%u ret:%d\n",
+			seninf_eint.systimer_left_shift_bits, ret);
 	}
 
 	ret = of_property_read_u32(node, "mediatek,seninf-eint", &handle);

@@ -34,7 +34,7 @@
 #define EINT_DEVM_KFREE(p)
 
 
-#define EINT_TICK_FACTOR  (1000)
+#define EINT_TICK_FACTOR  (13)
 #define EINT_IRQ_FIFO_LEN (10)
 
 #define TIMER_LATCH_CTRL   (0x0C20)
@@ -280,7 +280,6 @@ static u64 read_eint_reg_tick(int index)
 			break;
 	}
 	val = ((cnt_h << 32) & 0xFFFFFFFF00000000) | (cnt_l & 0xFFFFFFFF);
-	val = val << 7;
 
 	return val;
 }
