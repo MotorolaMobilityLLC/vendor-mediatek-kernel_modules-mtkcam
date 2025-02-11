@@ -70,7 +70,7 @@ void __iomem *CAMSYS_CONFIG_BASE;
 #define CAMSYS_BASE_ADDR CAMSYS_CONFIG_BASE
 #define REG_CAMSYS_CG_SET               (CAMSYS_BASE_ADDR + 0x4)
 #define REG_CAMSYS_CG_CLR               (CAMSYS_BASE_ADDR + 0x8)
-#define REG_CAMSYS_SW_RST               (CAMSYS_BASE_ADDR + 0xA0)
+#define REG_CAMSYS_SW_RST               (CAMSYS_BASE_ADDR + 0xA4)
 
 #define PDA_DONE 0x00000001
 #define PDA_ERROR 0x00000002
@@ -791,6 +791,12 @@ static void HWDMASettings(struct PDA_Data_t *pda_PdaConfig)
 		PDA_WR32(PDA_devs[i].m_pda_base + PDA_OFL_SKIP_MODE_REG, 0x1);
 		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_DL_CTRL_REG, 0x1);
 
+		//LOG_INF("PDA_PDA_PSUEDO_MODE_EN_REG enable !!\n");
+		//PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_PSUEDO_MODE_EN_REG,
+		//	0x63);
+		//LOG_INF("PDA_PDA_PSUEDO_MODE_EN_REG : 0x%x (expected 0x63)\n",
+		//	PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDA_PSUEDO_MODE_EN_REG));
+
 		// setting read clear
 		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_ERR_STAT_EN_REG, 0x00000001);
 
@@ -1333,7 +1339,8 @@ static void TF_dump_log(unsigned int hw_trigger_num)
 		0x41000000, 0x42000000, 0x43000000, 0x44000000, 0x45000000,
 		0x44000000, 0x44100000, 0x44200000, 0x44300000, 0x44400000, 0x44500000,
 		0x51000000, 0x52000000, 0x53000000, 0x54000000, 0x55000000,
-		0x54000000, 0x54100000, 0x54200000, 0x54300000, 0x54400000, 0x54500000};
+		0x54000000, 0x54100000, 0x54200000, 0x54300000, 0x54400000, 0x54500000,
+		0xb4480000, 0xb4400000, 0xb4410000};
 	unsigned int Length_Arr = sizeof(Debug_Sel)/sizeof(*Debug_Sel);
 
 #ifdef SMI_LOG

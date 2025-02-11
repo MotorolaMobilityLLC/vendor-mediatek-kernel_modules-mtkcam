@@ -45,8 +45,8 @@ static int32_t pda_log_dbg_en;
  *                               Porting Part
  ******************************************************************************/
 #define CAMSYS_NODE_COMPATIBLE "mediatek,mt6993-camsys_mraw"
-#define PDA_0_RESET_BITMASK (BIT(12) | BIT(13))
-#define PDA_1_RESET_BITMASK (BIT(14) | BIT(15))
+#define PDA_0_RESET_BITMASK (BIT(18) | BIT(19))
+#define PDA_1_RESET_BITMASK (BIT(16) | BIT(17))
 
 #ifdef PDA_MMQOS
 // mmqos relate
