@@ -69,6 +69,7 @@ static void get_outfmt_code(struct adaptor_ctx *ctx)
 		case SENSOR_OUTPUT_FORMAT_RAW_B:
 		case SENSOR_OUTPUT_FORMAT_RAW_IR:
 		case SENSOR_OUTPUT_FORMAT_RAW_MONO:
+		case SENSOR_OUTPUT_FORMAT_RAW_MULTISPECTRAL:
 			ctx->fmt_code[i] =  MEDIA_BUS_FMT_SBGGR10_1X10;
 			break;
 		case SENSOR_OUTPUT_FORMAT_RAW_Gb:
