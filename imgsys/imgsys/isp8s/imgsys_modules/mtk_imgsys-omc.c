@@ -363,6 +363,10 @@ void imgsys_omc_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			u_iova_addr = imgsys_dev->imgsys_get_iova(dbuf,
 					user_info->priv[i].buf_fd,
 					imgsys_dev, dev_b) + user_info->priv[i].buf_offset;
+			if (cq_base == NULL) {
+				pr_err("[%s][%d] cq base is null!\n", __func__, __LINE__);
+				continue;
+			}
 			u_cq_desc = (u64 *)((void *)(cq_base +
 				user_info->priv[i].desc_offset +
 				(OMC_UFOD_P2_DESC_OFST * (sizeof(union omc_cq_cmd_desc_t)))));
@@ -383,6 +387,10 @@ void imgsys_omc_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 		}
 
 		if (tuning_iova) {
+			if (cq_base == NULL) {
+				pr_err("[%s][%d] cq base is null!\n", __func__, __LINE__);
+				continue;
+			}
 			u_cq_desc = (u64 *)((void *)(cq_base +
 					user_info->priv[i].desc_offset));
 
@@ -971,7 +979,7 @@ void imgsys_omc_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	if (ctl_en & (DIP_DL|TRAW_DL)) {
 		pr_info("%s: OMC Done: %d", __func__,
 			!(ioread32((void *)(omcRegBA))) &&
-			(ioread32((void *)(omcRegBA + 0x24)) & 0x1));
+			(ioread32((void *)(omcRegBA + 0x1C)) & 0x1));
 		pr_info("%s: OMC_DL: PDIP(%d), TRAW(%d)", __func__,
 			(ctl_en & DIP_DL) > 0, (ctl_en & TRAW_DL) > 0);
 		imgsys_omc_debug_dl_dump(imgsys_dev, omcRegBA);

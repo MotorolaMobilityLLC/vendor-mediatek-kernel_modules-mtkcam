@@ -293,6 +293,8 @@ void imgsys_wpe_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 	if (hcp_ops && hcp_ops->fetch_wpe_cq_mb_virt)
 		cq_base = hcp_ops->fetch_wpe_cq_mb_virt(imgsys_dev->scp_pdev, mode);
 
+
+
 	for (i = IMGSYS_HW_WPE_EIS; i <= IMGSYS_HW_WPE_LITE; i++) {
 		if (!user_info->priv[i].need_update_desc)
 			continue;
@@ -309,6 +311,10 @@ void imgsys_wpe_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 					user_info->priv[i].buf_fd,
 					imgsys_dev, dev_b) + user_info->priv[i].buf_offset;
 
+			if (cq_base == NULL) {
+				pr_err("[%s][%d] cq base is null!\n", __func__, __LINE__);
+				continue;
+			}
 			u_cq_desc = (u64 *)((void *)(cq_base +
 				user_info->priv[i].desc_offset +
 				(WPE_UFOD_P2_DESC_OFST * (sizeof(union wpe_cq_cmd_desc_t)))));
@@ -328,6 +334,10 @@ void imgsys_wpe_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 
 		// Update PSP tuning cq descriptor
 		if (tuning_iova) {
+			if (cq_base == NULL) {
+				pr_err("[%s][%d] cq base is null!\n", __func__, __LINE__);
+				continue;
+			}
 			u_cq_desc = (u64 *)((void *)(cq_base + user_info->priv[i].desc_offset));
 			cq_desc = (union wpe_cq_cmd_desc_t *)u_cq_desc;
 			for (j = 0; j < WPE_CQ_DESC_NUM; j++) {
@@ -837,7 +847,7 @@ void imgsys_wpe_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	if (ctl_en & (PQDIP_DL|DIP_DL|TRAW_DL)) {
 		pr_info("%s: WPE Done: %d", __func__,
 			!(ioread32((void *)(wpeRegBA))) &&
-			(ioread32((void *)(wpeRegBA + 0x24)) & 0x1));
+			(ioread32((void *)(wpeRegBA + 0x1C)) & 0x1));
 		pr_info("%s: WPE_DL: PQDIP(%d), DIP(%d), TRAW(%d)", __func__,
 			(ctl_en & PQDIP_DL) > 0, (ctl_en & DIP_DL) > 0, (ctl_en & TRAW_DL) > 0);
 		imgsys_wpe_debug_dl_dump(imgsys_dev, wpeRegBA);
