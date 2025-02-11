@@ -7,19 +7,14 @@ package(
     ],
 )
 
-mgk_isp_pspm_outs = [
-    # keep sorted
-    "isp_pspm_ioctl/isp_pspm_ioctl.ko"
-]
-
 define_mgk_ddk_ko(
     name = "isp_pspm",
     srcs = glob([
         "**/*.c",
         "**/*.h",
     ]),
-    header_deps = [
-        "//kernel_device_modules-{}/drivers/misc/mediatek/swpm/modules/debug/v1:swpm_isp_wrapper_headers".format(kernel_version),
+    ko_deps = [
+        "//kernel_device_modules-{}/drivers/misc/mediatek/swpm/modules/debug/v1/subsys:mtk-swpm-isp-wrapper".format(kernel_version),
     ],
-    out = "isp_pspm_ioctl/isp_pspm_ioctl.ko"
+    out = "isp_pspm_ioctl.ko"
 )

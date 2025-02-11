@@ -17,7 +17,7 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/ioctl.h>
-#include "subsys/swpm_isp_wrapper.h"
+#include <swpm_isp_wrapper.h>
 
 #define MyTag "[ISP_PSPM_IOCTL]"
 #define isp_log_basic(fmt, args...) pr_info(MyTag "[%s] " fmt "\n", __func__, ##args)
@@ -43,6 +43,3 @@ struct ISP_PSPM_P2 {
 #define ISP_PSPM_SETPARAM _IOW(ISP_PSPM_IOCTL_MGAIC, 5, struct ISP_PSPM_P2)
 
 #endif  // _ISP_PSPM_IOCTL_H_
-
-
-
