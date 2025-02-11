@@ -50,9 +50,9 @@ static unsigned int ltmsgo_low_latency = 1;
 module_param(ltmsgo_low_latency, int, 0644);
 MODULE_PARM_DESC(ltmsgo_low_latency, "ltmsgo_low_latency");
 
-static unsigned int disable_ufbc = 1;
+static unsigned int disable_ufbc;
 module_param(disable_ufbc, int, 0644);
-MODULE_PARM_DESC(disable_ufbc, "disable_ufbc (default off)");
+MODULE_PARM_DESC(disable_ufbc, "disable_ufbc (default enabled)");
 
 //static unsigned int rms_freerun;
 //module_param(rms_freerun, int, 0644);
