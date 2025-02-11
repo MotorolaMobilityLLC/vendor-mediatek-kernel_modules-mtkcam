@@ -4184,7 +4184,7 @@ void get_exp_line_by_scenario(struct subdrv_ctx *ctx,
 	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
 		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
 			ctx->current_scenario_id, &linetime_in_ns, 0);
-		shutter = 1000000000 / framerate * 10
+		shutter = (u64)1000000000 / framerate * 10
 			/ linetime_in_ns;
 	} else {
 		shutter = ctx->s_ctx.mode[scenario_id].pclk / framerate * 10

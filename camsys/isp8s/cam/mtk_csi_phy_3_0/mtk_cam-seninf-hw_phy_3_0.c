@@ -7626,7 +7626,7 @@ int mtk_cam_seninf_config_outmux(struct seninf_ctx *ctx, u8 outmux_idx, u8 src_m
 	u32 filt_vc, filt_dt;
 	u32 exp_img_v;
 	u32 exp_img_h_in_bit;
-	u8 bit_to_pixel_fmt;
+	u8 bit_to_pixel_fmt = 1; // Initialize bit_to_pixel_fmt by raw10
 
 	pSeninf_mux = ctx->reg_if_outmux[outmux_idx];
 
@@ -7720,7 +7720,9 @@ int mtk_cam_seninf_config_outmux(struct seninf_ctx *ctx, u8 outmux_idx, u8 src_m
 			bit_to_pixel_fmt = 8;
 			break;
 		default:
-			dev_info(ctx->dev, "[Error][%s] invalid out_mux bit depth fmt (%d)\n",
+			bit_to_pixel_fmt = 1;
+			dev_info(ctx->dev,
+				"[Error][%s]invalid out_mux bit depth fmt(%d) plz check\n",
 				__func__, tag_cfg[i].bit_depth);
 			break;
 		}

@@ -761,7 +761,8 @@ static u64 imgsensor_streaming_delay(struct adaptor_ctx *ctx)
 		streaming_sensor_vsync_ts = ctx->streamon_1sof_vsync_ts_info.vsync_ts_ns;
 		/* reference to frame_time_us if non-zero */
 		if (ctx->streamon_1sof_vsync_ts_info.frame_time_us)
-			streaming_sensor_fl_ns = (ctx->streamon_1sof_vsync_ts_info.frame_time_us) * 1000;
+			streaming_sensor_fl_ns =
+				(u64)(ctx->streamon_1sof_vsync_ts_info.frame_time_us) * 1000;
 		else {
 			streaming_sensor_fl_ns = (ctx->streamon_1sof_vsync_ts_info.fps)
 				? (10000000000/(ctx->streamon_1sof_vsync_ts_info.fps)) : 0;
@@ -1424,6 +1425,11 @@ static int try_probe_subdrv_entry(struct adaptor_ctx *ctx)
 {
 	int ret;
 	u32 sensor_id = 0xffffffff;
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s] ctx is NULL", __func__);
+		return -EINVAL;
+	}
 
 	ctx->subctx.i2c_client = ctx->i2c_client;
 	ctx->subctx.ixc_client = ctx->ixc_client;
