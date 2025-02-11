@@ -75,11 +75,15 @@ void imgsys_me_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 				user_info->priv[IMGSYS_HW_ME].desc_offset));
 			for (i = 0; i < ME_CQ_DESC_NUM; i++) {
 				dtable = (struct mtk_imgsys_me_dtable *)cq_desc + i;
+				if (!dtable) {
+					pr_info("dtable is NULL!\n");
+					return;
+				}
 				if ((dtable->cmd2 & PSEUDO_DESC_TUNING_ME) == PSEUDO_DESC_TUNING_ME) {
 					tun_ofst = dtable->addr;
 					dtable->addr = (tun_ofst + iova_addr) & 0xFFFFFFFF;
 					dtable->cmd2 = (dtable->cmd2 & 0xFFFFFFF0) |
-							(((tun_ofst + iova_addr) >> 32) & 0xF);
+						(((tun_ofst + iova_addr) >> 32) & 0xF);
 					if (imgsys_me_8s_dbg_enable())
 						pr_debug("%s: tuning_buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
 							__func__, iova_addr,
@@ -98,7 +102,7 @@ void imgsys_me_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 		me_buf_info.mode = mode;
 		me_buf_info.is_tuning = false;
 		if (imgsys_me_8s_dbg_enable())
-			pr_debug("imgsys_fw cq me_buf_info (%d/%d/%d), mode(%d)",
+			pr_debug("imgsys_fw cq me_buf_info (%d/%d/%d), mode(%d)\n",
 				me_buf_info.fd, me_buf_info.len,
 				me_buf_info.offset, me_buf_info.mode);
 		if (hcp_ops && hcp_ops->flush_mb && hcp_ops->fetch_me_cq_mb_id)
@@ -135,6 +139,7 @@ int imgsys_me_tfault_callback(int port, dma_addr_t mva, void *data)
 	if (!meRegBA) {
 		pr_info("%s Unable to ioremap me registers\n",
 		__func__);
+		return -1;
 	}
 	/* iomap registers */
 	mmgRegBA = g_mmgRegBA;
@@ -185,6 +190,7 @@ int imgsys_mmg_tfault_callback(int port, dma_addr_t mva, void *data)
 	if (!mmgRegBA) {
 		pr_info("%s Unable to ioremap mmg registers\n",
 		__func__);
+		return -1;
 	}
 
 	for (i = MMG_CTL_OFFSET; i <= MMG_CTL_OFFSET + MMG_CTL_RANGE_TF; i += 0x10) {
@@ -243,6 +249,7 @@ void imgsys_me_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 	mmgRegBA = g_mmgRegBA;
 	if (!mmgRegBA) {
@@ -250,6 +257,7 @@ void imgsys_me_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 
 
@@ -307,11 +315,13 @@ void ipesys_me_debug_dump_local(void)
 	if (!meRegBA) {
 		pr_info("imgsys %s Unable to ioremap me registers\n",
 			__func__);
+		return;
 	}
 	mmgRegBA = g_mmgRegBA;
 	if (!mmgRegBA) {
 		pr_info("imgsys %s Unable to ioremap mmg registers\n",
 			__func__);
+		return;
 	}
 	pr_info("imgsys %s: dump me regs\n", __func__);
 	for (i = ME_CTL_OFFSET; i <= ME_CTL_OFFSET + ME_CTL_RANGE; i += 0x10) {
@@ -345,11 +355,13 @@ void imgsys_me_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 	if (!meRegBA) {
 		pr_info("imgsys %s Unable to ioremap me registers\n",
 			__func__);
+		return;
 	}
 	mmgRegBA = g_mmgRegBA;
 	if (!mmgRegBA) {
 		pr_info("imgsys %s Unable to ioremap mmg registers\n",
 			__func__);
+		return;
 	}
 		// /* ME HW mode ddren */
 		iowrite32(0x00000001, (void *)(meRegBA + 0x00000198));

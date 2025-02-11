@@ -45,6 +45,7 @@ int ME_TranslationFault_callback(int port, dma_addr_t mva, void *data)
 	if (!meRegBA) {
 		pr_info("%s Unable to ioremap me registers\n",
 		__func__);
+		return -1;
 	}
 
 	for (i = ME_CTL_OFFSET; i <= ME_CTL_OFFSET + ME_CTL_RANGE_TF; i += 0x10) {
@@ -70,6 +71,7 @@ int MMG_TranslationFault_callback(int port, dma_addr_t mva, void *data)
 	if (!mmgRegBA) {
 		pr_info("%s Unable to ioremap mmg registers\n",
 		__func__);
+		return -1;
 	}
 
 	for (i = MMG_CTL_OFFSET; i <= MMG_CTL_OFFSET + MMG_CTL_RANGE_TF; i += 0x10) {
@@ -126,6 +128,7 @@ void imgsys_me_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 	mmgRegBA = g_mmgRegBA;
 	if (!mmgRegBA) {
@@ -133,6 +136,7 @@ void imgsys_me_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 
 
@@ -168,11 +172,13 @@ void ipesys_me_debug_dump_local(void)
 	if (!meRegBA) {
 		pr_info("imgsys %s Unable to ioremap me registers\n",
 			__func__);
+		return;
 	}
 	mmgRegBA = g_mmgRegBA;
 	if (!mmgRegBA) {
 		pr_info("imgsys %s Unable to ioremap mmg registers\n",
 			__func__);
+		return;
 	}
 	pr_info("imgsys %s: dump me regs\n", __func__);
 	for (i = ME_CTL_OFFSET; i <= ME_CTL_OFFSET + ME_CTL_RANGE; i += 0x10) {
@@ -206,11 +212,13 @@ void ME_mode3_reset(struct mtk_imgsys_dev *imgsys_dev) {
 	if (!meRegBA) {
 		pr_info("imgsys %s Unable to ioremap me registers\n",
 			__func__);
+		return;
 	}
 	mmgRegBA = g_mmgRegBA;
 	if (!mmgRegBA) {
 		pr_info("imgsys %s Unable to ioremap mmg registers\n",
 			__func__);
+		return;
 	}
 
 	// ME reset core

@@ -73,6 +73,7 @@ int imgsys_dfp_tfault_callback(int port, dma_addr_t mva, void *data)
 	if (!feRegBA | !fmRegBA | !dvgfRegBA) {
 		pr_info("%s Unable to ioremap DFP registers\n",
 		__func__);
+		return -1;
 	}
 
 	pr_info("FE register dump");
@@ -181,6 +182,7 @@ void imgsys_dfp_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 	feRegBA = g_feRegBA;
 	if (!feRegBA ) {
@@ -188,6 +190,7 @@ void imgsys_dfp_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 	drzh2nRegBA = g_drzh2nRegBA;
 	if (!drzh2nRegBA ) {
@@ -195,6 +198,7 @@ void imgsys_dfp_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 	fmRegBA = g_fmRegBA;
 	if (!fmRegBA) {
@@ -202,6 +206,7 @@ void imgsys_dfp_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 	dfp2topRegBA = g_dfp2topRegBA;
 	if (!dfp2topRegBA) {
@@ -209,6 +214,7 @@ void imgsys_dfp_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 	dvgfRegBA = g_dvgfRegBA;
 	if (!dvgfRegBA) {
@@ -216,6 +222,7 @@ void imgsys_dfp_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 
 
@@ -297,6 +304,7 @@ void imgsys_dfp_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 	feRegBA = g_feRegBA;
 	if (!feRegBA ) {
@@ -304,6 +312,7 @@ void imgsys_dfp_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 	drzh2nRegBA = g_drzh2nRegBA;
 	if (!drzh2nRegBA ) {
@@ -311,6 +320,7 @@ void imgsys_dfp_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 	fmRegBA = g_fmRegBA;
 	if (!fmRegBA) {
@@ -318,6 +328,7 @@ void imgsys_dfp_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 	dfp2topRegBA = g_dfp2topRegBA;
 	if (!dfp2topRegBA) {
@@ -325,6 +336,7 @@ void imgsys_dfp_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 	dvgfRegBA = g_dvgfRegBA;
 	if (!dvgfRegBA) {
@@ -332,6 +344,7 @@ void imgsys_dfp_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 			__func__);
 		dev_info(imgsys_dev->dev, "%s of_iomap fail, devnode(%s).\n",
 			__func__, imgsys_dev->dev->of_node->name);
+		return;
 	}
 
 	/* FEFM HW mode ddren */
