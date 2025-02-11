@@ -1089,6 +1089,7 @@ u64 mtk_cam_query_interval_from_sensor(struct v4l2_subdev *sensor)
 	memset(&fi, 0, sizeof(fi));
 
 	fi.pad = 0;
+	fi.which = V4L2_SUBDEV_FORMAT_ACTIVE;
 
 #if (KERNEL_VERSION(6, 7, 0) < LINUX_VERSION_CODE)
 	v4l2_subdev_call_state_active(sensor, pad, get_frame_interval, &fi);
