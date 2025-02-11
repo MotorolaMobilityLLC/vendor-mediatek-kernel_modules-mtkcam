@@ -35,12 +35,19 @@ struct mtk_camsv_pad_config {
 	struct v4l2_mbus_framefmt mbus_fmt;
 };
 
+struct mtk_camsv_ctrl_data {
+	bool is_buf_early_return;
+};
+
 struct mtk_camsv_pipeline {
 	unsigned int id;
 	struct v4l2_subdev subdev;
 	struct media_pad pads[MTK_CAMSV_PIPELINE_PADS_NUM];
 	struct mtk_cam_video_device vdev_nodes[MTK_CAMSV_TOTAL_NODES];
 	struct mtk_camsv_pad_config pad_cfg[MTK_CAMSV_PIPELINE_PADS_NUM];
+
+	struct v4l2_ctrl_handler ctrl_handler;
+	struct mtk_camsv_ctrl_data ctrl_data;
 
 	/* seninf pad index */
 	u32 seninf_padidx;

@@ -11,6 +11,7 @@
 #include "mtk_cam-sv_pipeline.h"
 #include "mtk_cam-plat.h"
 #include "mtk_cam-fmt_utils.h"
+#include "mtk_cam-raw_ctrl.h"
 
 #define MTK_CAMSV_TOTAL_CAPTURE_QUEUES 2
 
@@ -789,6 +790,159 @@ static const char *sv_capture_queue_names[MAX_SV_PIPELINE_NUN][MTK_CAMSV_TOTAL_C
 		"mtk-cam camsv-15 ext-stream"},
 };
 
+static void sv_res_sensor_info_validate(
+		struct mtk_cam_resource_sensor_v2 *s)
+{
+	if (s->interval.numerator == 0 ||
+		s->interval.denominator == 0) {
+		pr_info("%s: wrong fps(%u/%u) use (300/10) instead\n",
+			__func__,
+			s->interval.denominator,
+			s->interval.numerator);
+
+		s->interval.denominator = 300;
+		s->interval.numerator = 10;
+	}
+}
+
+static int sv_res_calc_fill_sensor(struct mtk_cam_sv_resource *r)
+{
+	struct mtk_cam_resource_sensor_v2 *s = &r->sensor_res;
+	long interval;
+	u32 interval_n, interval_d;
+
+	sv_res_sensor_info_validate(s);
+
+	interval_n = max(s->interval.numerator, 1U);
+	interval_d = max(s->interval.denominator, 1U);
+	interval = 1000000000L * interval_n / interval_d;
+
+	/* fill sensor deadline */
+	r->sen_deadline_ns = reserved_i2c_time((u64)interval);
+
+	return 0;
+}
+
+static struct mtk_camsv_pipeline *
+	mtk_cam_ctrl_handler_to_sv_pipeline(struct v4l2_ctrl_handler *handler)
+{
+	return container_of(handler, struct mtk_camsv_pipeline, ctrl_handler);
+};
+
+static int mtk_camsv_get_ctrl(struct v4l2_ctrl *ctrl)
+{
+	return 0;
+}
+
+static int mtk_camsv_set_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct mtk_camsv_pipeline *pipeline;
+	struct mtk_camsv_ctrl_data *ctrl_data;
+	struct device *dev;
+	int ret = 0;
+
+	pipeline = mtk_cam_ctrl_handler_to_sv_pipeline(ctrl->handler);
+	ctrl_data = &pipeline->ctrl_data;
+	dev = subdev_to_cam_dev(&pipeline->subdev);
+
+	switch (ctrl->id) {
+	case V4L2_CID_MTK_CAM_SV_BUF_EARLY_RETURN:
+		ctrl_data->is_buf_early_return = ctrl->val;
+		dev_info(dev, "%s:pipe(%d):sv buffer early return(%d)\n",
+			 __func__, pipeline->id, ctrl_data->is_buf_early_return);
+		break;
+	default:
+		dev_info(dev, "%s: error. ctrl(\"%s\", id:0x%x) not supported yet\n",
+			__func__, ctrl->name, ctrl->id);
+		break;
+	}
+
+	return ret;
+}
+
+static int mtk_camsv_try_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct mtk_camsv_pipeline *pipeline;
+	struct device *dev;
+	int ret = 0;
+
+	pipeline = mtk_cam_ctrl_handler_to_sv_pipeline(ctrl->handler);
+	dev = subdev_to_cam_dev(&pipeline->subdev);
+
+	switch (ctrl->id) {
+	case V4L2_CID_MTK_CAM_SV_RESOURCE_CALC:
+		{
+			struct mtk_cam_sv_resource *user_ctrl =
+				(struct mtk_cam_sv_resource *)ctrl->p_new.p;
+
+			ret = sv_res_calc_fill_sensor(user_ctrl);
+		}
+		break;
+	default:
+		dev_info(dev, "%s: error. ctrl(\"%s\", id:0x%x) not supported yet\n",
+			 __func__, ctrl->name, ctrl->id);
+		break;
+	}
+
+	return ret;
+}
+
+static const struct v4l2_ctrl_ops camsv_ctrl_ops = {
+	.g_volatile_ctrl = mtk_camsv_get_ctrl,
+	.s_ctrl = mtk_camsv_set_ctrl,
+	.try_ctrl = mtk_camsv_try_ctrl,
+};
+
+static const struct v4l2_ctrl_config sv_buf_early_return = {
+	.ops = &camsv_ctrl_ops,
+	.id = V4L2_CID_MTK_CAM_SV_BUF_EARLY_RETURN,
+	.name = "sv buffer early return",
+	.type = V4L2_CTRL_TYPE_BOOLEAN,
+	.min = 0,
+	.max = 1,
+	.step = 1,
+	.def = 1,
+};
+
+static struct v4l2_ctrl_config sv_res_calc = {
+	.ops = &camsv_ctrl_ops,
+	.id = V4L2_CID_MTK_CAM_SV_RESOURCE_CALC,
+	.name = "resource calculation",
+	.type = V4L2_CTRL_COMPOUND_TYPES,
+	.flags = V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
+	.max = 0xFFFFFFFF,
+	.step = 1,
+	.dims = {sizeof(struct mtk_cam_sv_resource)},
+};
+
+static void mtk_camsv_pipeline_ctrl_setup(struct mtk_camsv_pipeline *pipe)
+{
+	struct v4l2_ctrl_handler *ctrl_hdlr;
+	struct v4l2_ctrl *ctrl;
+	int ret = 0;
+
+	ctrl_hdlr = &pipe->ctrl_handler;
+	ret = v4l2_ctrl_handler_init(ctrl_hdlr, 8);
+	if (ret) {
+		pr_info("%s: v4l2_ctrl_handler init failed\n", __func__);
+		return;
+	}
+
+	ctrl = v4l2_ctrl_new_custom(ctrl_hdlr, &sv_buf_early_return, NULL);
+	if (ctrl)
+		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE |
+			V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
+
+	ctrl = v4l2_ctrl_new_custom(ctrl_hdlr, &sv_res_calc, NULL);
+	if (ctrl)
+		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE |
+			V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
+
+	pipe->subdev.ctrl_handler = ctrl_hdlr;
+
+	memset(&pipe->ctrl_data, 0, sizeof(pipe->ctrl_data));
+}
+
 static void mtk_camsv_pipeline_queue_setup(
 	struct mtk_camsv_pipeline *pipe)
 {
@@ -830,6 +984,7 @@ static int mtk_camsv_pipeline_register(const char *str,
 		return ret;
 	}
 	v4l2_set_subdevdata(sd, pipe);
+	mtk_camsv_pipeline_ctrl_setup(pipe);
 
 	//pr_info("%s: %s\n", __func__, sd->name);
 

@@ -38,6 +38,8 @@
 #define V4L2_CID_MTK_CAM_REF_SOF_TS (V4L2_CID_USER_MTK_CAM_BASE + 31)
 #define V4L2_CID_MTK_CAM_EXP_SHUTTER (V4L2_CID_USER_MTK_CAM_BASE + 32)
 #define V4L2_CID_MTK_CAM_STABLE_FRM_LEN (V4L2_CID_USER_MTK_CAM_BASE + 33)
+#define V4L2_CID_MTK_CAM_SV_BUF_EARLY_RETURN (V4L2_CID_USER_MTK_CAM_BASE + 34)
+#define V4L2_CID_MTK_CAM_SV_RESOURCE_CALC (V4L2_CID_USER_MTK_CAM_BASE + 35)
 
 #define V4L2_CID_MTK_CAM_RAW_RESOURCE_CALC_TEST                                \
 	(V4L2_CID_USER_MTK_CAM_BASE + 47)
@@ -291,6 +293,11 @@ struct mtk_cam_exp_shutter {
 	__u64 sse_exp_ns;
 	__u64 ssse_exp_ns;
 	__u8 long_exposure_flow;
+};
+
+struct mtk_cam_sv_resource {
+	struct mtk_cam_resource_sensor_v2 sensor_res;
+	__u64 sen_deadline_ns;
 };
 
 #endif
