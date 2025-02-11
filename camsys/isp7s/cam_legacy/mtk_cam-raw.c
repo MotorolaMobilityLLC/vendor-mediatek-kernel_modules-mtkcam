@@ -3933,6 +3933,9 @@ int mtk_raw_set_src_pad_selection_default(struct v4l2_subdev *sd,
 
 	pipe = container_of(sd, struct mtk_raw_pipeline, subdev);
 	source_sel = mtk_raw_pipeline_get_selection(pipe, state, pad, which);
+	if (!source_sel)
+		return 0;
+
 	if (source_sel->width > sink_fmt->width) {
 		source_sel->width = sink_fmt->width;
 		/* may need some log */

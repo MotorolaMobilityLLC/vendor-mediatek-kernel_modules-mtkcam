@@ -51,7 +51,9 @@ static inline bool raw_is_valid_pad(unsigned int id)
 
 static inline int raw_pad_to_node_idx(unsigned int id)
 {
-	WARN_ON(id < MTK_RAW_SINK_NUM);
+	if(WARN_ON(id < MTK_RAW_SINK_NUM))
+		return 0;
+
 	return id - MTK_RAW_SINK_NUM;
 }
 

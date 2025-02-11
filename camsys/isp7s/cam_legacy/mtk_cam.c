@@ -7509,7 +7509,7 @@ mtk_cam_raw_pipeline_config(struct mtk_cam_ctx *ctx,
 			if (pipe->enabled_raw & 1 << i) {
 				dev_info(raw->cam_dev, "%s: power off raw (%d) for reset\n",
 						 __func__, i);
-				pm_runtime_put_sync(raw->devs[i]);
+				WARN_ON(pm_runtime_put_sync(raw->devs[i]));
 			}
 		}
 	}
@@ -7524,7 +7524,7 @@ mtk_cam_raw_pipeline_config(struct mtk_cam_ctx *ctx,
 	for (i = 0; i < ARRAY_SIZE(raw->devs); i++) {
 		if (pipe->enabled_raw & 1 << i) {
 			dev_info(raw->cam_dev, "%s: power on raw (%d)\n", __func__, i);
-			pm_runtime_get_sync(raw->devs[i]);
+			WARN_ON(pm_runtime_get_sync(raw->devs[i]));
 		}
 	}
 
@@ -7536,7 +7536,7 @@ mtk_cam_raw_pipeline_config(struct mtk_cam_ctx *ctx,
 			if (pipe->enabled_raw & 1 << i) {
 				dev_info(raw->cam_dev, "%s: power off raw (%d)\n",
 						 __func__, i);
-				pm_runtime_put_sync(raw->devs[i]);
+				WARN_ON(pm_runtime_put_sync(raw->devs[i]));
 			}
 		return ret;
 	}
@@ -8752,7 +8752,7 @@ struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 		cam->running_job_count = 0;
 
 		dev_info(cam->dev, "%s: power on camsys\n", __func__);
-		pm_runtime_get_sync(cam->dev);
+		WARN_ON(pm_runtime_get_sync(cam->dev));
 
 		/* power on the remote proc device */
 		if (!cam->rproc_handle)  {
@@ -8936,7 +8936,8 @@ fail_uninit_composer:
 	cam->composer_cnt--;
 fail_shutdown:
 	if (is_first_ctx) {
-		mtk_ccd_client_stop(ccd);
+		if (ccd != NULL)
+			mtk_ccd_client_stop(ccd);
 		pm_runtime_mark_last_busy(cam->dev);
 		pm_runtime_put_sync_autosuspend(cam->dev);
 		rproc_shutdown(cam->rproc_handle);
@@ -9438,7 +9439,7 @@ int mtk_cam_ctx_stream_on(struct mtk_cam_ctx *ctx)
 
 	/* config camsv */
 	if (ctx->sv_dev) {
-		pm_runtime_get_sync(ctx->sv_dev->dev);
+		WARN_ON(pm_runtime_get_sync(ctx->sv_dev->dev));
 		mtk_cam_sv_pipeline_config(ctx->sv_dev);
 	}
 
@@ -9691,7 +9692,7 @@ int mtk_cam_ctx_stream_off(struct mtk_cam_ctx *ctx)
 	}
 
 	if (ctx->sv_dev)
-		pm_runtime_put_sync(ctx->sv_dev->dev);
+		WARN_ON(pm_runtime_put_sync(ctx->sv_dev->dev));
 
 	mtk_cam_ctx_img_working_buf_pool_release(ctx);
 	mtk_cam_generic_buf_release(ctx);
