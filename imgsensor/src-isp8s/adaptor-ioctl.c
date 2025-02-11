@@ -86,129 +86,6 @@ static int workbuf_put(struct workbuf *workbuf)
 }
 
 
-static enum VC_FEATURE fd_desc_to_vc_feature(
-		u16 fd_user)
-{
-	enum VC_FEATURE ret;
-
-	switch (fd_user) {
-	case VC_RAW_DATA://V4L2_MBUS_CSI2_USER_DEFINED_DATA_DESC_NONE:
-		ret = VC_RAW_DATA;
-		break;
-	case VC_3HDR_Y:
-		ret = VC_3HDR_Y;
-		break;
-	case VC_3HDR_AE:
-		ret = VC_3HDR_AE;
-		break;
-	case VC_3HDR_FLICKER:
-		ret = VC_3HDR_FLICKER;
-		break;
-	case VC_3HDR_EMBEDDED:
-		ret = VC_3HDR_EMBEDDED;
-		break;
-	case VC_PDAF_STATS:
-	//case V4L2_MBUS_CSI2_USER_DEFINED_DATA_DESC_PDAF_DIFF:
-		ret = VC_PDAF_STATS;
-		break;
-	case VC_STAGGER_NE:
-		ret = VC_STAGGER_NE;
-		break;
-	case VC_STAGGER_ME:
-		ret = VC_STAGGER_ME;
-		break;
-	case VC_STAGGER_SE:
-		ret = VC_STAGGER_SE;
-		break;
-	case VC_PDAF_STATS_PIX_1:
-		ret = VC_PDAF_STATS_PIX_1;
-		break;
-	case VC_PDAF_STATS_PIX_2:
-		ret = VC_PDAF_STATS_PIX_2;
-		break;
-	case VC_PDAF_STATS_ME_PIX_1:
-		ret = VC_PDAF_STATS_ME_PIX_1;
-		break;
-	case VC_PDAF_STATS_ME_PIX_2:
-		ret = VC_PDAF_STATS_ME_PIX_2;
-		break;
-	case VC_PDAF_STATS_SE_PIX_1:
-		ret = VC_PDAF_STATS_SE_PIX_1;
-		break;
-	case VC_PDAF_STATS_SE_PIX_2:
-		ret = VC_PDAF_STATS_SE_PIX_2;
-		break;
-	case VC_YUV_Y:
-		ret = VC_YUV_Y;
-		break;
-	case VC_YUV_UV:
-		ret = VC_YUV_UV;
-		break;
-	case VC_RAW_NE_W_DATA: /* eq to VC_RAW_W_DATA */
-		ret = VC_RAW_NE_W_DATA;
-		break;
-	case VC_RAW_ME_W_DATA:
-		ret = VC_RAW_ME_W_DATA;
-		break;
-	case VC_RAW_SE_W_DATA:
-		ret = VC_RAW_SE_W_DATA;
-		break;
-	case VC_RAW_PROCESSED_DATA:
-		ret = VC_RAW_PROCESSED_DATA;
-		break;
-	case VC_GENERAL_EMBEDDED:
-		ret = VC_GENERAL_EMBEDDED;
-		break;
-	case VC_RAW_FLICKER_DATA:
-		ret = VC_RAW_FLICKER_DATA;
-		break;
-	default:
-		ret = VC_NONE;
-		break;
-	}
-
-	return ret;
-}
-
-static void frame_desc_to_vcinfo2(
-		struct mtk_mbus_frame_desc *fd,
-		struct SENSOR_VC_INFO2_STRUCT *vcinfo2)
-{
-	int i;
-	struct mtk_mbus_frame_desc_entry_csi2 *entry;
-	struct SINGLE_VC_INFO2 *vc;
-
-	vcinfo2->VC_Num = fd->num_entries;
-	vcinfo2->VC_PixelNum = 0x0a;
-	vcinfo2->ModeSelect = 0x00;
-	vcinfo2->EXPO_Ratio = 0x08;
-	vcinfo2->ODValue = 0x40;
-	vcinfo2->RG_STATSMODE = 0x00;
-
-	for (i = 0; i < fd->num_entries; i++) {
-		vc = &vcinfo2->vc_info[i];
-		entry = &fd->entry[i].bus.csi2;
-		vc->VC_FEATURE = fd_desc_to_vc_feature(entry->user_data_desc);
-		vc->VC_ID = entry->channel;
-		vc->VC_DataType = entry->data_type;
-		vc->VC_SIZEH_PIXEL = entry->hsize;
-		vc->VC_SIZEV = entry->vsize;
-		vc->DT_REMAP_TO_TYPE = entry->dt_remap_to_type;
-		vc->valid_bit = entry->valid_bit;
-		if (vc->VC_DataType == 0x2b ||
-			vc->DT_REMAP_TO_TYPE == MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10)
-			vc->VC_SIZEH_BYTE = vc->VC_SIZEH_PIXEL * 10 / 8;
-		else if (vc->VC_DataType == 0x2c ||
-			vc->DT_REMAP_TO_TYPE == MTK_MBUS_FRAME_DESC_REMAP_TO_RAW12)
-			vc->VC_SIZEH_BYTE = vc->VC_SIZEH_PIXEL * 12 / 8;
-		else if (vc->VC_DataType == 0x2d ||
-			vc->DT_REMAP_TO_TYPE == MTK_MBUS_FRAME_DESC_REMAP_TO_RAW14)
-			vc->VC_SIZEH_BYTE = vc->VC_SIZEH_PIXEL * 14 / 8;
-		else
-			vc->VC_SIZEH_BYTE = vc->VC_SIZEH_PIXEL;
-	}
-}
-
 static void vcinfo2_fill_pad(
 		struct SENSOR_VC_INFO2_STRUCT *vcinfo2)
 {
@@ -464,9 +341,8 @@ static int g_vcinfo_by_scenario(struct adaptor_ctx *ctx, void *arg)
 	MSDK_SENSOR_INFO_STRUCT *sinfo = NULL;
 	MSDK_SENSOR_CONFIG_STRUCT *config = NULL;
 	struct SENSOR_VC_INFO2_STRUCT *vcinfo2 = NULL;
-	struct mtk_mbus_frame_desc fd;
-
-	memset(&fd, 0, sizeof(fd));
+	union feature_para para;
+	u32 len;
 
 	sinfo = kmalloc(sizeof(MSDK_SENSOR_INFO_STRUCT), GFP_KERNEL);
 	config = kmalloc(sizeof(MSDK_SENSOR_CONFIG_STRUCT), GFP_KERNEL);
@@ -484,8 +360,13 @@ static int g_vcinfo_by_scenario(struct adaptor_ctx *ctx, void *arg)
 	memset(vcinfo2, 0, sizeof(struct SENSOR_VC_INFO2_STRUCT));
 
 	subdrv_call(ctx, get_info, info->scenario_id, sinfo, config);
-	subdrv_call(ctx, get_frame_desc, info->scenario_id, &fd);
-	frame_desc_to_vcinfo2(&fd, vcinfo2);
+
+	para.u64[0] = info->scenario_id;
+	para.u64[1] = (uintptr_t)vcinfo2;
+
+	subdrv_call(ctx, feature_control,
+		SENSOR_FEATURE_GET_FRAME_DESC_TO_VC_INFO,
+		para.u8, &len);
 
 	vcinfo2_fill_output_format(vcinfo2, sinfo->SensorOutputDataFormat);
 	vcinfo2_fill_pad(vcinfo2);

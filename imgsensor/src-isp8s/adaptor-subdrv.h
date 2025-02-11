@@ -75,6 +75,16 @@ enum {
 };
 
 enum {
+	IMGSENSOR_LUT_NA = 0,
+	IMGSENSOR_LUT_A = IMGSENSOR_LUT_NA,
+	IMGSENSOR_LUT_B,
+	IMGSENSOR_LUT_C,
+	IMGSENSOR_LUT_D,
+	IMGSENSOR_LUT_E,
+	IMGSENSOR_LUT_MAXCNT,
+};
+
+enum {
 	HW_ID_AVDD = 0,
 	HW_ID_DVDD,
 	HW_ID_DOVDD,
@@ -264,6 +274,37 @@ struct hw_init_time_struct {
 	u32 times;
 };
 
+/* The info may be different by lut */
+/* By lut might has different linetime */
+/* The mode's static info will be assumed as default/non-lut info */
+struct mode_lut_static_info {
+	u64 pclk;
+	u32 linelength;
+	u32 framelength;
+	/* line_time is calculated by pclk and linelength */
+
+	u32 readout_length;
+	u8 read_margin;
+	u32 framelength_step;
+	u32 min_vblanking_line;
+};
+
+/* The info may be different by exp */
+/* Will override mode's info if specified */
+struct multiexp_static_info {
+	/* used to query the linetime info by lut */
+	u8 belong_to_lut_id;
+
+	u32 coarse_integ_step;
+	u32 exposure_margin;
+	u32 ae_binning_ratio;
+	int fine_integ_line;
+
+	u32 dig_gain_min;
+	u32 dig_gain_max;
+	u32 dig_gain_step;
+};
+
 struct subdrv_mode_struct {
 	u16 *mode_setting_table;
 	u32 mode_setting_len;
@@ -318,6 +359,10 @@ struct subdrv_mode_struct {
 	u32 dig_gain_step;
 	struct u32_min_max multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_CNT];
 	struct u64_min_max multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_CNT];
+
+	/* The fillin number will up to mode's `exp_cnt` */
+	struct multiexp_static_info multiexp_s_info[IMGSENSOR_EXPOSURE_CNT];
+	struct mode_lut_static_info mode_lut_s_info[IMGSENSOR_LUT_MAXCNT];
 
 	bool dpc_enabled; /* defect pixel correction */
 	bool pdc_enabled; /* pd correction */
@@ -897,5 +942,42 @@ struct subdrv_entry {
 	} while (0); \
 	val; \
 })
+
+#define get_multiexp_belong_lut(subctx, scenario_id, exp_no) \
+({ \
+	u8 __val; \
+	if (scenario_id >= subctx->s_ctx.sensor_mode_num || exp_no >= IMGSENSOR_EXPOSURE_CNT) \
+		__val = 0; \
+	else \
+		__val = subctx->s_ctx.mode[scenario_id].multiexp_s_info[exp_no].belong_to_lut_id; \
+	__val; \
+})
+#define get_multiexp_static_info(subctx, type, field, scenario_id, exp_no) \
+({ \
+	type __val; \
+	if (scenario_id >= subctx->s_ctx.sensor_mode_num || exp_no >= IMGSENSOR_EXPOSURE_CNT) \
+		__val = 0; \
+	if (subctx->s_ctx.mode[scenario_id].multiexp_s_info[exp_no].field) \
+		__val = subctx->s_ctx.mode[scenario_id].multiexp_s_info[exp_no].field; \
+	else \
+		__val = subctx->s_ctx.mode[scenario_id].field; \
+	__val; \
+})
+
+#define get_lut_static_info(subctx, type, field, scenario_id, lut_id) \
+({ \
+	type __val; \
+	if (scenario_id >= subctx->s_ctx.sensor_mode_num || lut_id >= IMGSENSOR_LUT_MAXCNT) \
+		__val = 0; \
+	if (subctx->s_ctx.mode[scenario_id].mode_lut_s_info[lut_id].field) \
+		__val = subctx->s_ctx.mode[scenario_id].mode_lut_s_info[lut_id].field; \
+	else \
+		__val = subctx->s_ctx.mode[scenario_id].field; \
+	__val; \
+})
+
+#define line2ntime(line, linetime_ns) ((line) * (linetime_ns))
+
+#define ntime2line(ntime, linetime_ns) ((ntime) / (linetime_ns))
 
 #endif

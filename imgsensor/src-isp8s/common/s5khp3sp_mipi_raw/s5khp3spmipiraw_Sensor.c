@@ -120,9 +120,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 
 
 static struct mtk_sensor_saturation_info imgsensor_saturation_info = {
-	.gain_ratio = 1000,
 	.OB_pedestal = 64,
-	.saturation_level = 1023,
 };
 
 static struct subdrv_mode_struct mode_struct[] = {

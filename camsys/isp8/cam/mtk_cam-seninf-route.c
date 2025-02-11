@@ -1747,7 +1747,7 @@ int mtk_cam_seninf_get_tag_order(struct v4l2_subdev *sd,
 	struct v4l2_subdev *sensor_sd;
 	struct mtk_sensor_mode_config_info info;
 	struct seninf_vc *vc;
-	struct mtk_sensor_vc_info_by_scenario vc_sid = {0};
+	struct mtk_sensor_vc_info_by_scenario *vc_sid;
 	u64 fsync_ext_vsync_pad_code = 0;
 	int ret = EXPOSURE_LAST;  /* default return last exposure */
 	int i = 0;
@@ -1818,15 +1818,23 @@ int mtk_cam_seninf_get_tag_order(struct v4l2_subdev *sd,
 		}
 	}
 
+
+	vc_sid = kmalloc(sizeof(struct mtk_sensor_vc_info_by_scenario), GFP_KERNEL);
+	if (unlikely(vc_sid == NULL)) {
+		seninf_logi(ctx, "[Error][line %d] kzalloc fail\n", __LINE__);
+		return -EINVAL;
+	}
+
+
 	/* get fs_seq info by pad */
-	vc_sid.scenario_id = scenario;
+	vc_sid->scenario_id = scenario;
 	if (ctx->sensor_sd &&
 	    ctx->sensor_sd->ops &&
 	    ctx->sensor_sd->ops->core &&
 	    ctx->sensor_sd->ops->core->command) {
 		ctx->sensor_sd->ops->core->command(ctx->sensor_sd,
 						   V4L2_CMD_G_SENSOR_VC_INFO_BY_SCENARIO,
-						   &vc_sid);
+						   vc_sid);
 	} else {
 		seninf_logi(ctx, "find sensor command failed\n");
 	}
@@ -1835,10 +1843,10 @@ int mtk_cam_seninf_get_tag_order(struct v4l2_subdev *sd,
 	if (vc == NULL)
 		return -EINVAL;
 
-	for (i = 0; i < vc_sid.fd.num_entries; i++) {
-		desc = vc_sid.fd.entry[i].bus.csi2.user_data_desc;
-		vc->vc = vc_sid.fd.entry[i].bus.csi2.channel;
-		vc->dt = vc_sid.fd.entry[i].bus.csi2.data_type;
+	for (i = 0; i < vc_sid->fd.num_entries; i++) {
+		desc = vc_sid->fd.entry[i].bus.csi2.user_data_desc;
+		vc->vc = vc_sid->fd.entry[i].bus.csi2.channel;
+		vc->dt = vc_sid->fd.entry[i].bus.csi2.data_type;
 
 		mtk_cam_seninf_fill_outpad_to_vc(
 				ctx, vc, desc, &fsync_ext_vsync_pad_code);
@@ -1846,7 +1854,7 @@ int mtk_cam_seninf_get_tag_order(struct v4l2_subdev *sd,
 		if (vc->out_pad != pad_id)
 			continue;
 
-		if (vc_sid.fd.entry[i].bus.csi2.fs_seq == MTK_FRAME_DESC_FS_SEQ_ONLY_ONE) {
+		if (vc_sid->fd.entry[i].bus.csi2.fs_seq == MTK_FRAME_DESC_FS_SEQ_ONLY_ONE) {
 			ret = EXPOSURE_FIRST;
 			break;
 		}

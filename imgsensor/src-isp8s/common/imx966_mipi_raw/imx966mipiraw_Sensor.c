@@ -179,21 +179,15 @@ static u32 imx966_dcg_ratio_table_14bit[] = {16000};
 static u32 imx966_dcg_ratio_table_ratio4[] = {4000};
 
 static struct mtk_sensor_saturation_info imgsensor_saturation_info_10bit = {
-	.gain_ratio = 1000,
 	.OB_pedestal = 64,
-	.saturation_level = 1023,
 };
 
 static struct mtk_sensor_saturation_info imgsensor_saturation_info_12bit = {
-	.gain_ratio = 4000,
 	.OB_pedestal = 64,
-	.saturation_level = 3900,
 };
 
 static struct mtk_sensor_saturation_info imgsensor_saturation_info_14bit = {
-	.gain_ratio = 16000,
 	.OB_pedestal = 64,
-	.saturation_level = 15408,
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {

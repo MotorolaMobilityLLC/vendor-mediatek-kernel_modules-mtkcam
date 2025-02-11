@@ -41,15 +41,11 @@ static struct subdrv_feature_control feature_control_list[] = {
 static u32 gc13a2_dag_ratio_table_12bit[] = {4000};
 
 static struct mtk_sensor_saturation_info imgsensor_saturation_info_10bit = {
-	.gain_ratio = 1000,
 	.OB_pedestal = 64,
-	.saturation_level = 1023,
 };
 
 static struct mtk_sensor_saturation_info imgsensor_saturation_info_12bit = {
-	.gain_ratio = 4000,
 	.OB_pedestal = 256,
-	.saturation_level = 4095,
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {

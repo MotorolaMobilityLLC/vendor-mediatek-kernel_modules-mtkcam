@@ -314,9 +314,7 @@ static u32 imx06c_dcg_ratio_table_16bit[] = {16000};
 static u32 imx06c_dcg_ratio_table_ratio4[] = {4000};
 
 static struct mtk_sensor_saturation_info imgsensor_saturation_info = {
-	.gain_ratio = 1000,
 	.OB_pedestal = 64,
-	.saturation_level = 1023
 };
 
 //preview_frame_desc

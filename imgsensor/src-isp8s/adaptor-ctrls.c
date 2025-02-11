@@ -561,6 +561,106 @@ static int do_set_dcg_ae_ctrl(struct adaptor_ctx *ctx,
 	return 0;
 }
 
+static int do_set_dcg_vs_ae_ctrl(struct adaptor_ctx *ctx, struct mtk_hdr_ae *ae_ctrl)
+{
+	union feature_para para;
+	u32 len = 0, exp_count = 0, scenario_exp_cnt = 0, dcg_gain = 0;
+	struct subdrv_mode_struct *mode_info = &ctx->subctx.s_ctx.mode[ctx->cur_mode->id];
+	enum IMGSENSOR_DCG_GAIN_BASE dcg_gain_base = mode_info->dcg_info.dcg_gain_base;
+	// XXX: force disable fsync in dcg-vs
+	// u64 fsync_exp[2] = {0}; /* needed by fsync set_shutter */
+
+	adaptor_logm(ctx, "+\n");
+
+	setup_ae_ctrl_dbg_info(ctx);
+
+	/* update ctx req id */
+	ctx->req_id = ae_ctrl->req_id;
+	ctx->frame_id = ae_ctrl->frame_id;
+
+	ctx->subctx.ae_ctrl_gph_en = 1;
+	while (exp_count < IMGSENSOR_STAGGER_EXPOSURE_CNT &&
+		ae_ctrl->exposure.arr[exp_count] != 0)
+		exp_count++;
+
+	switch (dcg_gain_base) {
+	case (IMGSENSOR_DCG_GAIN_LCG_BASE):
+	{
+		// 2exp DCG + VS
+		dcg_gain = ae_ctrl->gain.me_gain;
+	}
+		break;
+	case (IMGSENSOR_DCG_GAIN_MCG_BASE):
+	{
+		dcg_gain = ae_ctrl->gain.me_gain;
+	}
+		break;
+	case (IMGSENSOR_DCG_GAIN_HCG_BASE):
+	default:
+		dcg_gain = ae_ctrl->gain.le_gain;
+		break;
+	}
+
+	/* get scenario exp_cnt */
+	scenario_exp_cnt = g_scenario_exposure_cnt(ctx, ctx->subctx.current_scenario_id);
+	if (scenario_exp_cnt != exp_count) {
+		adaptor_logi(ctx, "warn: scenario_exp_cnt=%u, but ae_exp_count=%u\n",
+			 scenario_exp_cnt, exp_count);
+		exp_count = scenario_exp_cnt;
+	}
+
+	switch (exp_count) {
+	case 3:  // 2exp DCG + VS
+		ADAPTOR_SYSTRACE_BEGIN("imgsensor::set_exposure");
+		// fsync_exp[0] = ae_ctrl->exposure.le_exposure;
+		// fsync_exp[1] = ae_ctrl->exposure.se_exposure;
+		// if (!chk_if_need_to_use_s_multi_exp_fl_by_fsync_mgr(
+		//		ctx, fsync_exp, 2)) {
+			/* NOT enable frame-sync || using HW sync solution */
+			para.u64[0] = ae_ctrl->exposure.le_exposure;
+			para.u64[1] = ae_ctrl->exposure.se_exposure;
+			subdrv_call(ctx, feature_control,
+						SENSOR_FEATURE_SET_HDR_SHUTTER,
+						para.u8, &len);
+		// }
+		// notify_fsync_mgr_set_shutter(ctx, fsync_exp, 2);
+		ADAPTOR_SYSTRACE_END();
+
+		ADAPTOR_SYSTRACE_BEGIN("imgsensor::set_gain_tri");
+		set_hdr_gain_tri(ctx, &ae_ctrl->gain); // total 3exp gain
+		ADAPTOR_SYSTRACE_END();
+
+		break;
+	default:
+		adaptor_loge(ctx, "error dcg exp cnt, exp_cnt=%u"
+			,exp_count);
+		break;
+	}
+
+	if (ae_ctrl->actions & IMGSENSOR_EXTEND_FRAME_LENGTH_TO_DOL) {
+		para.u64[0] = get_ext_ftime_for_hdr_seamless(ctx, exp_count, ae_ctrl);
+		ADAPTOR_SYSTRACE_BEGIN("imgsensor::set_extend_frame_length");
+		subdrv_call(ctx, feature_control,
+					SENSOR_FEATURE_SET_SEAMLESS_EXTEND_FRAME_LENGTH,
+					para.u8, &len);
+		ADAPTOR_SYSTRACE_END();
+
+		notify_fsync_mgr_set_extend_framelength(ctx, 0);
+	}
+	if (ae_ctrl->actions & IMGSENSOR_EXTEND_FRAME_LENGTH_TO_DOL_DISABLE) {
+		ctx->subctx.extend_frame_length_en = FALSE;
+		adaptor_logi(ctx, "Disabled extend framelength.");
+	}
+	ctx->exposure->val = FINE_INTEG_CONVERT(ae_ctrl->exposure.le_exposure, ctx->cur_mode->fine_intg_line);
+	ctx->analogue_gain->val = ae_ctrl->gain.le_gain;
+	ctx->subctx.ae_ctrl_gph_en = 0;
+	dump_perframe_info(ctx, ae_ctrl);
+
+	adaptor_logm(ctx, "-\n");
+	return 0;
+}
+
+
 static int do_set_ae_ctrl(struct adaptor_ctx *ctx,
 						  struct mtk_hdr_ae *ae_ctrl)
 {
@@ -787,6 +887,10 @@ static int s_ae_ctrl(struct v4l2_ctrl *ctrl)
 	case HDR_RAW_DCG_RAW:
 	case HDR_RAW_DCG_COMPOSE:
 		return do_set_dcg_ae_ctrl(ctx, ae_ctrl);
+	case HDR_RAW_DCG_RAW_VS:
+	case HDR_RAW_DCG_COMPOSE_VS:
+		// DONE: DCG-VS
+		return do_set_dcg_vs_ae_ctrl(ctx, ae_ctrl);
 	default:
 		if (ctx->sentest_cfg_info.lbmf_delay_do_ae_en)
 			return push_do_ae_ctrl_delay_work(ctx, get_lbmf_lut_a_delay_time(ctx));
@@ -2666,6 +2770,11 @@ void restore_ae_ctrl(struct adaptor_ctx *ctx)
 	case HDR_RAW_DCG_RAW:
 	case HDR_RAW_DCG_COMPOSE:
 		do_set_dcg_ae_ctrl(ctx, &ctx->ae_memento);
+		break;
+	case HDR_RAW_DCG_RAW_VS:
+	case HDR_RAW_DCG_COMPOSE_VS:
+		// DONE: DCG-VS
+		do_set_dcg_vs_ae_ctrl(ctx, &ctx->ae_memento);
 		break;
 	default:
 		do_set_ae_ctrl(ctx, &ctx->ae_memento);

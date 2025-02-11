@@ -399,13 +399,6 @@ enum mtk_frame_desc_parsing_type {
 	MTK_EBD_PARSING_TYPE_MIPI_RAW14,
 };
 
-enum mtk_frame_desc_fs_seq {
-	MTK_FRAME_DESC_FS_SEQ_UNKNOWN = 0,
-	MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
-	MTK_FRAME_DESC_FS_SEQ_FIRST = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
-	MTK_FRAME_DESC_FS_SEQ_LAST,
-};
-
 struct mtk_mbus_frame_desc_entry_csi2 {
 	u8 channel;
 	u8 data_type;
@@ -420,6 +413,7 @@ struct mtk_mbus_frame_desc_entry_csi2 {
 	u8 is_active_line;
 	u8 ebd_parsing_type; // for ebd parser query how to parse content
 	enum mtk_frame_desc_fs_seq fs_seq;
+	struct mtk_sensor_saturation_info *saturation_info;
 };
 
 struct mtk_mbus_frame_desc_entry {
@@ -477,13 +471,23 @@ struct mtk_csi_param {
 };
 
 struct mtk_sensor_saturation_info {
-	__u32 gain_ratio;
 	__u32 OB_pedestal;
-	__u32 saturation_level;
+
 	/* The merged raw by the dcg sensor merging mode is merged from several bits of raws */
 	__u32 adc_bit;
 	/* The OB value before merging */
 	__u32 ob_bm;
+
+	/* bit per pixel */
+	__u32 bit_depth;
+	__u32 valid_bit;
+
+	/* if sensor has 0 padding, descript LSB / MSB pading */
+	enum mtk_sensor_dummy_padding_type dummy_padding;
+
+	/* phase out param after DX-3*/
+	__u32 gain_ratio;
+	__u32 saturation_level;
 };
 
 struct mtk_n_1_mode {
