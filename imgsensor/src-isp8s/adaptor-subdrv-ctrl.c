@@ -4743,16 +4743,12 @@ void sensor_init(struct subdrv_ctx *ctx)
 	u64 time_boot_begin = 0;
 	u64 ixc_time = 0;
 	int i;
-	u32 delay_in_us, total_init_len, tlb_len;
+	u32 delay_in_us, tlb_len;
+	u32 max_tlb_len = 0;
 
 	/* write init setting */
 	if (ctx->s_ctx.init_setting_table_v2 != NULL) {
 		/* using init setting table v2 for initialization */
-		if ((ctx->power_on_profile_en != NULL) &&
-			(*ctx->power_on_profile_en))
-			time_boot_begin = ktime_get_boottime_ns();
-
-		total_init_len = 0;
 
 		/* apply setting */
 		for (i = 0; i < ctx->s_ctx.init_setting_table_v2_cnt; i++) {
@@ -4760,19 +4756,24 @@ void sensor_init(struct subdrv_ctx *ctx)
 			tlb_len = ctx->s_ctx.init_setting_table_v2[i].setting_table_len;
 
 			ixc_time = ixc_table_write_with_entry(ctx, &ctx->s_ctx.init_setting_table_v2[i]);
-			total_init_len += tlb_len;
+
+			if (tlb_len > max_tlb_len) {
+				/*
+				 * report the i2c init setting period only on
+				 * the maximum table to prevent affected by delay
+				 */
+				max_tlb_len = tlb_len;
+				if ((ctx->power_on_profile_en != NULL) &&
+					(*ctx->power_on_profile_en)) {
+					ctx->sensor_pw_on_profile.i2c_init_period = ixc_time * 1000;
+
+					ctx->sensor_pw_on_profile.i2c_init_table_len = tlb_len;
+				}
+			}
 
 			udelay(delay_in_us);
 			DRV_LOG_MUST(ctx, "init table v2: item[%d] size:%u, i2c time(us):%lld, delay(us):%u\n",
 				     i, tlb_len, ixc_time, delay_in_us);
-		}
-
-		if ((ctx->power_on_profile_en != NULL) &&
-			(*ctx->power_on_profile_en)) {
-			ctx->sensor_pw_on_profile.i2c_init_period =
-				ktime_get_boottime_ns() - time_boot_begin;
-
-			 ctx->sensor_pw_on_profile.i2c_init_table_len = total_init_len;
 		}
 	} else if (ctx->s_ctx.init_setting_table != NULL) {
 		/* using legacy init setting table for initialization */
