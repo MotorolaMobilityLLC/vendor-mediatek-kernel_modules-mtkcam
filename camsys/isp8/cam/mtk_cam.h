@@ -235,7 +235,6 @@ struct mtk_cam_v4l2_pipelines {
 	int num_mraw;
 	struct mtk_mraw_pipeline *mraw;
 };
-
 int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job,
 			int seninf_pad, int raw_tg_idx);
 int ctx_stream_off_seninf_sensor(struct mtk_cam_ctx *ctx);

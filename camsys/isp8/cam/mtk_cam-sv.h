@@ -267,7 +267,8 @@ void mtk_cam_sv_fill_tag_info(struct mtk_camsv_tag_info *arr_tag,
 	unsigned int mbus_width, unsigned int mbus_height,
 	unsigned int mbus_code,	struct mtk_camsv_pipeline *pipeline);
 int mtk_cam_sv_get_tag_param(struct mtk_camsv_tag_param *arr_tag_param,
-	unsigned int hw_scen, unsigned int exp_no, unsigned int req_amount);
+	unsigned int hw_scen, unsigned int exp_no, unsigned int req_amount,
+	bool is_dcg_with_vs, bool is_fusion);
 void apply_camsv_cq(struct mtk_camsv_device *sv_dev,
 	      dma_addr_t cq_addr, unsigned int cq_size, unsigned int cq_offset,
 	      int initial);

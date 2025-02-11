@@ -3309,7 +3309,7 @@ int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job,
 	struct mtk_cam_device *cam = ctx->cam;
 	struct v4l2_subdev *seninf = ctx->seninf;
 	unsigned int mraw_idx, max_pixel_mode = 0;
-	int cur_exp = job_exp_num(job);
+	int sensor_cur_exp = job_sensor_exp_num(job);
 	int ret;
 	int i;
 
@@ -3363,14 +3363,16 @@ int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job,
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
 		CALL_PLAT_V4L2(get_sv_max_pixel_mode, sv_dev->id, &max_pixel_mode);
 
-		if (ctx->has_raw_subdev &&
-			(scen_is_normal(&job->job_scen)) &&
-			(job_prev_exp_num_seamless(job) != job_exp_num(job))) {
+		if (ctx->has_raw_subdev && (scen_is_normal(&job->job_scen))) {
 			/* image */
-			for (i = 0; i < cur_exp; i++) {
-				tag_idx = (cur_exp > 1 && (i + 1) == cur_exp) ?
-					get_sv_tag_idx(cur_exp, MTKCAM_IPI_ORDER_LAST_TAG, false) :
-					get_sv_tag_idx(cur_exp, i, false);
+			for (i = 0; i < sensor_cur_exp; i++) {
+				bool is_fusion = job_sensor_exp_num(job) == job_exp_num(job) ? true : false;
+
+				tag_idx = (sensor_cur_exp > 1 && (i + 1) == sensor_cur_exp) ?
+					get_sv_tag_idx(sensor_cur_exp, MTKCAM_IPI_ORDER_LAST_TAG, false,
+						is_dcg_with_vs(job), is_fusion) :
+					get_sv_tag_idx(sensor_cur_exp, i, false,
+						is_dcg_with_vs(job), is_fusion);
 
 				mtk_cam_seninf_set_camtg_camsv(seninf,
 					PAD_SRC_RAW0 + i,
@@ -3381,9 +3383,13 @@ int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job,
 					sv_dev->cammux_id);
 
 				if (is_rgbw(job)) {
-					tag_idx = (cur_exp > 1 && (i + 1) == cur_exp) ?
-						get_sv_tag_idx(cur_exp, MTKCAM_IPI_ORDER_LAST_TAG, true) :
-						get_sv_tag_idx(cur_exp, i, true);
+					bool is_fusion = job_sensor_exp_num(job) == job_exp_num(job) ?
+						true : false;
+					tag_idx = (sensor_cur_exp > 1 && (i + 1) == sensor_cur_exp) ?
+						get_sv_tag_idx(sensor_cur_exp, MTKCAM_IPI_ORDER_LAST_TAG, true,
+							is_dcg_with_vs(job), is_fusion) :
+						get_sv_tag_idx(sensor_cur_exp, i, true,
+							is_dcg_with_vs(job), is_fusion);
 
 					mtk_cam_seninf_set_camtg_camsv(seninf,
 						PAD_SRC_RAW_W0 + i,

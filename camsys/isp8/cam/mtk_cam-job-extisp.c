@@ -31,7 +31,7 @@ int handle_sv_tag_extisp(struct mtk_cam_job *job)
 	hw_scen = ((1 << MTKCAM_SV_SPECIAL_SCENARIO_EXT_ISP));
 	pr_info("[%s] hw_scen:%d exp_no:%d req_amount:%d",
 			__func__, hw_scen, exp_no, req_amount);
-	if (mtk_cam_sv_get_tag_param(img_tag_param, hw_scen, exp_no, req_amount))
+	if (mtk_cam_sv_get_tag_param(img_tag_param, hw_scen, exp_no, req_amount, false, false))
 		return 1;
 
 	// raw_sink = get_raw_sink_data(job);

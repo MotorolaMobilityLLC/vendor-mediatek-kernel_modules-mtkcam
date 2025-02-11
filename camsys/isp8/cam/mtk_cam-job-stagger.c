@@ -37,8 +37,8 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 	struct mtk_mraw_pipeline *mraw_pipe;
 	struct mtk_cam_seninf_mux_param param;
 	struct mtk_cam_seninf_mux_setting settings[9];
-	int prev_exp = job_prev_exp_num_seamless(job);
-	int cur_exp = job_exp_num(job);
+	int prev_sensor_exp = job_prev_sensor_exp_num_seamless(job);
+	int sensor_cur_exp = job_sensor_exp_num(job);
 	int config_exposure_num = scen_max_exp_num(&job->job_scen);
 	int hw_scen = get_hw_scenario(job);
 	int raw_id = get_master_raw_id(job->used_engine);
@@ -50,6 +50,7 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 	bool is_offline_ts = is_offline_timeshare(job) ? true : false;
 	bool config_grp_en = job->raw_change == JOB_RAW_MASTER_CHANGED;
 	unsigned int max_pixel_mode = 0;
+	bool is_fusion;
 
 	/**
 	 * To identify the "max" exposure_num, we use
@@ -74,16 +75,20 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 		return 0;
 	}
 
+	is_fusion = job_sensor_exp_num(job) == job_exp_num(job) ? true : false;
+
 	memset(settings, 0,
 		sizeof(struct mtk_cam_seninf_mux_setting) * ARRAY_SIZE(settings));
 	if (config_exposure_num == 3) {
 		unsigned int i = 0, sv_idx, mraw_idx, mraw_dev_idx;
-		if (cur_exp == 2) {
+		if (sensor_cur_exp == 2) {
 			// TODO: TCG <=> DCG OTF
 			first_tag_idx =
-				get_sv_tag_idx(2, MTKCAM_IPI_ORDER_FIRST_TAG, false);
+				get_sv_tag_idx(2, MTKCAM_IPI_ORDER_FIRST_TAG, false,
+					is_dcg_with_vs(job), is_fusion);
 			last_tag_idx =
-				get_sv_tag_idx(2, MTKCAM_IPI_ORDER_LAST_TAG, false);
+				get_sv_tag_idx(2, MTKCAM_IPI_ORDER_LAST_TAG, false,
+					is_dcg_with_vs(job), is_fusion);
 			settings[i].seninf = ctx->seninf;
 			settings[i].source = PAD_SRC_RAW0;
 			settings[i].camtg  = sv_dev->cammux_id;
@@ -156,9 +161,10 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 					settings[i++].enable = 1;
 				}
 			}
-		} else if (cur_exp == 1) {
+		} else if (sensor_cur_exp == 1) {
 			first_tag_idx =
-				get_sv_tag_idx(1, MTKCAM_IPI_ORDER_FIRST_TAG, false);
+				get_sv_tag_idx(1, MTKCAM_IPI_ORDER_FIRST_TAG, false,
+					is_dcg_with_vs(job), is_fusion);
 			settings[i].seninf = ctx->seninf;
 			settings[i].source = PAD_SRC_RAW0;
 
@@ -231,13 +237,16 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 					settings[i++].enable = 1;
 				}
 			}
-		} else if (cur_exp == 3) {
+		} else if (sensor_cur_exp == 3) {
 			first_tag_idx =
-				get_sv_tag_idx(3, MTKCAM_IPI_ORDER_FIRST_TAG, false);
+				get_sv_tag_idx(3, MTKCAM_IPI_ORDER_FIRST_TAG, false,
+					is_dcg_with_vs(job), is_fusion);
 			second_tag_idx =
-				get_sv_tag_idx(3, MTKCAM_IPI_ORDER_NORMAL_TAG, false);
+				get_sv_tag_idx(3, MTKCAM_IPI_ORDER_NORMAL_TAG, false,
+					is_dcg_with_vs(job), is_fusion);
 			last_tag_idx =
-				get_sv_tag_idx(3, MTKCAM_IPI_ORDER_LAST_TAG, false);
+				get_sv_tag_idx(3, MTKCAM_IPI_ORDER_LAST_TAG, false,
+					is_dcg_with_vs(job), is_fusion);
 			settings[i].seninf = ctx->seninf;
 			settings[i].source = PAD_SRC_RAW0;
 			settings[i].camtg  = sv_dev->cammux_id;
@@ -324,7 +333,7 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 		mtk_cam_seninf_streaming_mux_change(&param, config_grp_en);
 		dev_info(ctx->cam->dev,
 			"[%s] switch Req:%d pre:%d cur:%d cam_mux[0-3]:[%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d]\n",
-			__func__, job->frame_seq_no, prev_exp, cur_exp,
+			__func__, job->frame_seq_no, prev_sensor_exp, sensor_cur_exp,
 			settings[0].source, settings[0].camtg, settings[0].enable,
 			settings[1].source, settings[1].camtg, settings[1].enable,
 			settings[2].source, settings[2].camtg, settings[2].enable,
@@ -336,11 +345,13 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 			settings[8].source, settings[8].camtg, settings[8].enable);
 	} else if (config_exposure_num == 2) {
 		unsigned int i = 0, sv_idx, mraw_idx, mraw_dev_idx;
-		if (cur_exp == 1) {
+		if (sensor_cur_exp == 1) {
 			first_tag_idx =
-				get_sv_tag_idx(1, MTKCAM_IPI_ORDER_FIRST_TAG, false);
+				get_sv_tag_idx(1, MTKCAM_IPI_ORDER_FIRST_TAG, false,
+					is_dcg_with_vs(job), is_fusion);
 			first_tag_idx_w =
-				get_sv_tag_idx(1, MTKCAM_IPI_ORDER_FIRST_TAG, true);
+				get_sv_tag_idx(1, MTKCAM_IPI_ORDER_FIRST_TAG, true,
+					is_dcg_with_vs(job), is_fusion);
 			settings[i].seninf = ctx->seninf;
 			settings[i].source = PAD_SRC_RAW0;
 
@@ -422,15 +433,19 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 					settings[i++].enable = 1;
 				}
 			}
-		} else if (cur_exp == 2) {
+		} else if (sensor_cur_exp == 2) {
 			first_tag_idx =
-				get_sv_tag_idx(2, MTKCAM_IPI_ORDER_FIRST_TAG, false);
+				get_sv_tag_idx(2, MTKCAM_IPI_ORDER_FIRST_TAG, false,
+					is_dcg_with_vs(job), is_fusion);
 			first_tag_idx_w =
-				get_sv_tag_idx(2, MTKCAM_IPI_ORDER_FIRST_TAG, true);
+				get_sv_tag_idx(2, MTKCAM_IPI_ORDER_FIRST_TAG, true,
+					is_dcg_with_vs(job), is_fusion);
 			last_tag_idx =
-				get_sv_tag_idx(2, MTKCAM_IPI_ORDER_LAST_TAG, false);
+				get_sv_tag_idx(2, MTKCAM_IPI_ORDER_LAST_TAG, false,
+					is_dcg_with_vs(job), is_fusion);
 			last_tag_idx_w =
-				get_sv_tag_idx(2, MTKCAM_IPI_ORDER_LAST_TAG, true);
+				get_sv_tag_idx(2, MTKCAM_IPI_ORDER_LAST_TAG, true,
+					is_dcg_with_vs(job), is_fusion);
 
 			if (hw_scen == MTKCAM_IPI_HW_PATH_OTF_STAGGER_LN_INTL) {
 				settings[i].seninf = ctx->seninf;
@@ -537,7 +552,7 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 		mtk_cam_seninf_streaming_mux_change(&param, config_grp_en);
 		dev_info(ctx->cam->dev,
 			"[%s] switch Req:%d pre:%d cur:%d cam_mux[0-3]:[%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d]\n",
-			__func__, job->frame_seq_no, prev_exp, cur_exp,
+			__func__, job->frame_seq_no, prev_sensor_exp, sensor_cur_exp,
 			settings[0].source, settings[0].camtg, settings[0].enable,
 			settings[1].source, settings[1].camtg, settings[1].enable,
 			settings[2].source, settings[2].camtg, settings[2].enable,
@@ -550,9 +565,11 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 	} else if (config_exposure_num == 1) {
 		unsigned int i = 0, sv_idx, mraw_idx, mraw_dev_idx;
 		first_tag_idx =
-			get_sv_tag_idx(1, MTKCAM_IPI_ORDER_FIRST_TAG, false);
+			get_sv_tag_idx(1, MTKCAM_IPI_ORDER_FIRST_TAG, false,
+				is_dcg_with_vs(job), is_fusion);
 		first_tag_idx_w =
-			get_sv_tag_idx(1, MTKCAM_IPI_ORDER_FIRST_TAG, true);
+			get_sv_tag_idx(1, MTKCAM_IPI_ORDER_FIRST_TAG, true,
+				is_dcg_with_vs(job), is_fusion);
 		settings[i].seninf = ctx->seninf;
 		settings[i].source = PAD_SRC_RAW0;
 
@@ -632,7 +649,7 @@ int apply_cam_mux_switch(struct mtk_cam_job *job)
 		mtk_cam_seninf_streaming_mux_change(&param, config_grp_en);
 		dev_info(ctx->cam->dev,
 			"[%s] switch Req:%d pre:%d cur:%d cam_mux[0-3]:[%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d][%d/%d/%d]\n",
-			__func__, job->frame_seq_no, prev_exp, cur_exp,
+			__func__, job->frame_seq_no, prev_sensor_exp, sensor_cur_exp,
 			settings[0].source, settings[0].camtg, settings[0].enable,
 			settings[1].source, settings[1].camtg, settings[1].enable,
 			settings[2].source, settings[2].camtg, settings[2].enable,

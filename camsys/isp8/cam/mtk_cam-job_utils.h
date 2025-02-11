@@ -62,10 +62,12 @@ struct pack_job_ops_helper {
 };
 void _set_timestamp(struct mtk_cam_job *job,
 	u64 time_boot, u64 time_mono);
-
+int job_prev_sensor_exp_num_seamless(struct mtk_cam_job *job);
 int job_prev_exp_num_seamless(struct mtk_cam_job *job);
 int job_prev_exp_num(struct mtk_cam_job *job);
 int job_exp_num(struct mtk_cam_job *job);
+int job_prev_sensor_exp_num(struct mtk_cam_job *job);
+int job_sensor_exp_num(struct mtk_cam_job *job);
 int scen_max_exp_num(struct mtk_cam_scen *scen);
 int get_subsample_ratio(struct mtk_cam_scen *scen);
 u64 infer_i2c_deadline_ns(struct mtk_cam_job *job, u64 frame_interval_ns);
@@ -141,7 +143,8 @@ int add_ufbc_header_entry(struct req_buffer_helper *helper,
 struct mtkcam_ipi_crop v4l2_rect_to_ipi_crop(const struct v4l2_rect *r);
 bool ipi_crop_eq(const struct mtkcam_ipi_crop *s,
 				 const struct mtkcam_ipi_crop *d);
-int get_sv_tag_idx(unsigned int exp_no, unsigned int tag_order, bool is_w);
+int get_sv_tag_idx(unsigned int exp_no, unsigned int tag_order, bool is_w,
+	bool is_dcg_with_vs, bool is_fusion);
 
 int get_hw_scenario(struct mtk_cam_job *job);
 int get_sw_feature(struct mtk_cam_job *job);

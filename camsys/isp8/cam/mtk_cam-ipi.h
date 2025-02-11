@@ -195,6 +195,8 @@ struct mtkcam_ipi_camsv_frame_param {
 	__u32	pipe_id;
 	__u8	tag_id;
 	__u32	hardware_scenario; /* TODO: remove it */
+	__u32	sensor_exposure_num;
+	__u32	previous_sensor_exposure_num;
 
 	struct mtkcam_ipi_img_output camsv_img_outputs[CAMSV_MAX_IMAGE_OUTPUT];
 } __packed;
