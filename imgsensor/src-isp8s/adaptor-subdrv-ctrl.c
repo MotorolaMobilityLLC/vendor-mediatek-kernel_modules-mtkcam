@@ -23,6 +23,7 @@
 #include "adaptor-i2c.h"
 #include "adaptor-ctrls.h"
 #include "adaptor-util.h"
+#include "adaptor-hw.h"
 
 static const char * const clk_names[] = {
 	ADAPTOR_CLK_NAMES
@@ -3581,8 +3582,8 @@ void get_gain_range_by_scenario(struct subdrv_ctx *ctx,
 			scenario_id, ctx->s_ctx.sensor_mode_num);
 		scenario_id = SENSOR_SCENARIO_ID_NORMAL_PREVIEW;
 	}
-	*min_gain = ctx->s_ctx.mode[scenario_id].ana_gain_min;
-	*max_gain = ctx->s_ctx.mode[scenario_id].ana_gain_max;
+	*min_gain = ctx->s_ctx.mode[scenario_id].multi_exposure_ana_gain_range[0].min;
+	*max_gain = ctx->s_ctx.mode[scenario_id].multi_exposure_ana_gain_range[0].max;
 }
 
 void get_base_gain_iso_and_step(struct subdrv_ctx *ctx,
@@ -4695,10 +4696,6 @@ void subdrv_ctx_init(struct subdrv_ctx *ctx)
 		if (!ctx->s_ctx.mode[i].sensor_output_dataformat)
 			ctx->s_ctx.mode[i].sensor_output_dataformat =
 				ctx->s_ctx.sensor_output_dataformat;
-		if (!ctx->s_ctx.mode[i].ana_gain_min)
-			ctx->s_ctx.mode[i].ana_gain_min = ctx->s_ctx.ana_gain_min;
-		if (!ctx->s_ctx.mode[i].ana_gain_max)
-			ctx->s_ctx.mode[i].ana_gain_max = ctx->s_ctx.ana_gain_max;
 		if (!ctx->s_ctx.mode[i].dig_gain_min)
 			ctx->s_ctx.mode[i].dig_gain_min = ctx->s_ctx.dig_gain_min;
 		if (!ctx->s_ctx.mode[i].dig_gain_max)
@@ -4979,7 +4976,7 @@ int common_get_info(struct subdrv_ctx *ctx,
 		sensor_info->exposure_order_in_dcg[i] = ctx->s_ctx.mode[i].exposure_order_in_dcg;
 		sensor_info->mipi_pixel_rate[i] = ctx->s_ctx.mode[i].mipi_pixel_rate;
 	}
-	sensor_info->SensorDrivingCurrent = ctx->s_ctx.isp_driving_current;
+	sensor_info->SensorDrivingCurrent = g_mclk_info(ctx, pw_seq, HW_ID_MCLK_DRIVING_CURRENT);
 	sensor_info->IHDR_Support = 0;
 	sensor_info->IHDR_LE_FirstLine = 0;
 	sensor_info->TEMPERATURE_SUPPORT = ctx->s_ctx.temperature_support;
@@ -4988,7 +4985,7 @@ int common_get_info(struct subdrv_ctx *ctx,
 	sensor_info->HDR_Support = ctx->s_ctx.hdr_type;
 	sensor_info->RGBW_Support = ctx->s_ctx.rgbw_support;
 	sensor_info->SensorMIPILaneNumber = ctx->s_ctx.mipi_lane_num;
-	sensor_info->SensorClockFreq = ctx->s_ctx.mclk;
+	sensor_info->SensorClockFreq = g_mclk_info(ctx, pw_seq, HW_ID_MCLK);
 	sensor_info->SensorClockRisingCount = 0;
 	sensor_info->SensorWidthSampling = 0;
 	sensor_info->SensorHightSampling = 0;
@@ -6466,9 +6463,9 @@ int common_get_cycle_base_v1_linetime_in_ns(void *arg,
 	linelength = ctx->s_ctx.mode[scenario_id].linelength;
 
 	if (ctx->s_ctx.mode[scenario_id].aov_mode)
-		mclk = ctx->s_ctx.aov_mclk;
+		mclk = g_mclk_info(ctx, aov_pw_seq, HW_ID_MCLK);
 	else
-		mclk = ctx->s_ctx.mclk;
+		mclk = g_mclk_info(ctx, pw_seq, HW_ID_MCLK);
 
 	pclk = ctx->s_ctx.mode[scenario_id].pclk;
 

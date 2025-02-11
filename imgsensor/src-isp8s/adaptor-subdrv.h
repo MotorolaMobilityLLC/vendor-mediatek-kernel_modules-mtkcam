@@ -352,8 +352,8 @@ struct subdrv_mode_struct {
 	/* assign value only if fixed value by mode */
 	u8 sensor_output_dataformat;
 	enum ACDK_SENSOR_OUTPUT_FORMAT_CELL_TYPE sensor_output_dataformat_cell_type;
-	u32 ana_gain_min;
-	u32 ana_gain_max;
+	//u32 ana_gain_min; // Deprecated, use multi_exposure_ana_gain_range instead
+	u32 ana_gain_max; // FIXME: Deprecated, use multi_exposure_ana_gain_range instead
 	u32 dig_gain_min;
 	u32 dig_gain_max;
 	u32 dig_gain_step;
@@ -400,12 +400,12 @@ struct subdrv_static_ctx {
 	u32 i2c_transfer_data_type;
 	struct eeprom_info_struct *eeprom_info;
 	u32 eeprom_num;
-	u16 resolution[2];
+	//u16 resolution[2];  // Deprecated, no used
 	u8 mirror;
 
-	u8 mclk; /* mclk freqency, suggest 24 or 26 for 24Mhz or 26Mhz */
-	u8 aov_mclk; /* aov_mclk freqency, suggest 24 or 26 for 24Mhz or 26Mhz */
-	u8 isp_driving_current; /* mclk driving current */
+	//u8 mclk; // mclk freqency, suggest 24 or 26 for 24Mhz or 26Mhz. Deprecated, use pw_seq instead
+	//u8 aov_mclk; // aov_mclk freqency, suggest 24 or 26 for 24Mhz or 26Mhz. Deprecated, use pw_seq instead
+	//u8 isp_driving_current; // mclk driving current. Deprecated, use pw_seq instead
 	u8 sensor_interface_type;
 	u8 mipi_sensor_type; /* 0,MIPI_OPHY_NCSI2; 1,MIPI_OPHY_CSI2, default is NCSI2 */
 	u8 mipi_lane_num;
@@ -890,6 +890,24 @@ struct subdrv_entry {
 #define subdrv_ixc_wr_regs_u16(subctx, list, len) \
 	adaptor_ixc_wr_regs_u16(&subctx->ixc_client, \
 		subctx->i2c_write_id >> 1, list, len)
+
+#define g_mclk_info(sub_ctx, seq, hw_id) \
+({ \
+	struct subdrv_ctx *__sub_ctx = (sub_ctx); \
+	struct adaptor_ctx *__ctx = container_of(__sub_ctx, struct adaptor_ctx, subctx); \
+	const struct subdrv_pw_seq_entry *__pw_seq; \
+	int __pw_seq_cnt; \
+	int __ret = 0; \
+	if (__ctx && __ctx->subdrv) { \
+		__pw_seq = __ctx->subdrv->seq; \
+		__pw_seq_cnt = __ctx->subdrv->seq##_cnt; \
+	} else { \
+		__pw_seq = NULL; \
+		__pw_seq_cnt = 0; \
+	} \
+	__ret = get_mclk_info(__pw_seq, __pw_seq_cnt, hw_id); \
+	__ret; \
+})
 
 #define FINE_INTEG_CONVERT(_shutter, _fine_integ) \
 ( \

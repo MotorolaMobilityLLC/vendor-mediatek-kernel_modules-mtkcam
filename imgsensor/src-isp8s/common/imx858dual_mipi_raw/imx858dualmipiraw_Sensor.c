@@ -549,11 +549,8 @@ static struct subdrv_static_ctx static_ctx = {
 	.i2c_transfer_data_type = I2C_DT_ADDR_16_DATA_8,
 	.eeprom_info = 0,
 	.eeprom_num = 0,
-	.resolution = {8192, 6144},
 	.mirror = IMAGE_NORMAL,
 
-	.mclk = 24,
-	.isp_driving_current = ISP_DRIVING_4MA,
 	.sensor_interface_type = SENSOR_INTERFACE_TYPE_MIPI,
 	.mipi_sensor_type = MIPI_CPHY,
 	.mipi_lane_num = SENSOR_MIPI_3_LANE,

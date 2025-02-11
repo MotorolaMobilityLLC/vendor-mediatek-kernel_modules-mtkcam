@@ -163,7 +163,9 @@ static int unset_mclk(struct adaptor_ctx *ctx, void *data, const struct subdrv_p
 
 	//reset osc clk src to normal-src (i.e. normal-src)
 	if (val->para2 == MCLK_ULPOSC) {
-		mclk_freq = (ctx->subctx.s_ctx.mclk) ? ctx->subctx.s_ctx.mclk : DEF_MCLK_FREQ;
+		mclk_freq = get_mclk_info(ctx->subdrv->pw_seq, ctx->subdrv->pw_seq_cnt, HW_ID_MCLK);
+		if (mclk_freq == 0)
+			mclk_freq = DEF_MCLK_FREQ;
 		reset_src = get_clk_by_idx_freq(ctx, idx, mclk_freq, MCLK_NORMAL);
 		if ((reset_src == NULL) || IS_ERR(reset_src)) {
 			adaptor_logi(ctx, "no mclk src %dMHz\n", mclk_freq);
@@ -430,6 +432,25 @@ static int deinit_pinctrl(struct adaptor_ctx *ctx)
 		ctx->pinctrl = NULL;
 	}
 	return 0;
+}
+
+int get_mclk_info(const struct subdrv_pw_seq_entry *pw_seq,
+		  const int pw_seq_cnt, int target_hw_id)
+{
+	int i;
+	int ret = 0;
+
+	if (!pw_seq || !pw_seq_cnt)
+		return ret;
+
+	for (i = 0; i < pw_seq_cnt; i++) {
+		if (pw_seq[i].id == target_hw_id) {
+			ret = pw_seq[i].val.para1;
+			break;
+		}
+	}
+
+	return ret;
 }
 
 int do_cam_pmic_on(struct adaptor_ctx *ctx)

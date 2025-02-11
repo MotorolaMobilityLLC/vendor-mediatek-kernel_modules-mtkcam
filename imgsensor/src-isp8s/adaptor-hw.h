@@ -12,5 +12,7 @@ int adaptor_cam_pmic_on(struct adaptor_ctx *ctx);
 int adaptor_cam_pmic_off(struct adaptor_ctx *ctx);
 int adaptor_hw_deinit(struct adaptor_ctx *ctx);
 
+int get_mclk_info(const struct subdrv_pw_seq_entry *pw_seq,
+		  const int pw_seq_cnt, int target_hw_id);
 
 #endif

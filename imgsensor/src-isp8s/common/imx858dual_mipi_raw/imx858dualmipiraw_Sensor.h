@@ -42,5 +42,6 @@
 #include "adaptor-subdrv-ctrl.h"
 #include "adaptor-i2c.h"
 #include "adaptor.h"
+#include "adaptor-hw.h"
 
 #endif
