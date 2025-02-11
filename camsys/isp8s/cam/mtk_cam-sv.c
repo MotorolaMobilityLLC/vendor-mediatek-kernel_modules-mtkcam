@@ -2025,7 +2025,30 @@ void mtk_cam_sv_fill_tag_info(struct mtk_camsv_tag_info *arr_tag,
 	if (cfg_in_param->fmt == MTKCAM_IPI_IMG_FMT_RGB888)
 		cfg_in_param->in_crop.s.w = mbus_width * 3;
 }
-
+int mtk_cam_get_sv_meta_tag(int meta_tag_num, int pad_id)
+{
+	switch (meta_tag_num) {
+	case 1:
+		return SVTAG_4;
+	case 2:
+		if (pad_id == PAD_SRC_PDAF1)
+			return SVTAG_4;
+		else
+			return SVTAG_5;
+	case 3:
+		if (pad_id == PAD_SRC_PDAF1)
+			return SVTAG_4;
+		else if (pad_id == PAD_SRC_PDAF2)
+			return SVTAG_6;
+		else
+			return SVTAG_5;
+	default:
+		break;
+	}
+	pr_info("%s error. not support pad id %d meta tag num %d\n",
+		__func__, pad_id, meta_tag_num);
+	return 0;
+}
 int mtk_cam_sv_get_tag_param(struct mtk_camsv_tag_param *arr_tag_param,
 	unsigned int hw_scen, unsigned int exp_no, unsigned int req_amount,
 	bool is_dcg_with_vs, bool is_fusion)
@@ -2879,38 +2902,31 @@ void mtk_cam_sv_copy_user_input_param(struct mtk_cam_ctx *ctx, struct mtk_cam_jo
 
 void mtk_cam_sv_fifo_dump(struct mtk_camsv_device *sv_dev)
 {
-	unsigned int tmp_dbg_sel, dbg_port;
+	unsigned int dbg_port;
 	unsigned int dbg_port1, dbg_port2, dbg_port3, dbg_port4;
 	unsigned int dbg_port5, dbg_port6, dbg_port7, dbg_port8;
-	unsigned int mask_dbg_port, mask_dma_core, mask_sub_module;
+	unsigned int debug_sel = 0;
 
 	for (int dma_core = 0; dma_core < MAX_DMA_CORE; dma_core++) {
-
-		tmp_dbg_sel = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
-		mask_dma_core = 0x30; //[5,4]
-		tmp_dbg_sel &= ~mask_dma_core;
-		tmp_dbg_sel |= (dma_core & 0x3) << 4;
-		writel_relaxed(tmp_dbg_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
-
+		debug_sel = 0;
+		debug_sel |= (1 << 7);
+		debug_sel |= (dma_core << 4);
 		for (int sel = 1; sel < 16; sel++) {
-			tmp_dbg_sel = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
-			mask_dbg_port = 0xf; //[3,2,1,0]
-			tmp_dbg_sel &= ~mask_dbg_port;
-			tmp_dbg_sel |= sel & 0xf;
-			writel_relaxed(tmp_dbg_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
+			debug_sel &= ~(0xf);
+			debug_sel |= sel;
 			if (sel == 4) {
 				for (int sub_module = 0; sub_module < SVTAG_END; sub_module++) {
-					mask_sub_module = 0x700; //[10,9,8]
-					tmp_dbg_sel &= ~mask_sub_module;
-					tmp_dbg_sel |= (sub_module & 0x7) << 8;
-					writel_relaxed(tmp_dbg_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
+					debug_sel &= ~(0x700);
+					debug_sel |= (sub_module << 8);
+					writel_relaxed(debug_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
 					dbg_port = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
 					dev_info(sv_dev->dev, "tag:%d => crc_of_sram = 0x%x\n", sub_module, dbg_port);
 				}
 			} else {
+				writel_relaxed(debug_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
 				dbg_port = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
-				dev_info(sv_dev->dev, "[core%d] dbg_sel:%d => dbg_port = 0x%x\n",
-					dma_core, sel, dbg_port);
+				dev_info(sv_dev->dev, "[core%d] dbg_sel:0x%x => dbg_port = 0x%x\n",
+					dma_core, debug_sel, dbg_port);
 			}
 		}
 

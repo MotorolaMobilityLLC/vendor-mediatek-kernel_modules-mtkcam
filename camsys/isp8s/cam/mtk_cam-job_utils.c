@@ -2411,6 +2411,7 @@ int handle_sv_tag(struct mtk_cam_job *job)
 	unsigned int cfg_exp_no = scen_max_exp_num(&job->job_scen);
 	int ret = 0, i;
 	bool is_dcg_vs, is_fusion;
+	int meta_num = 0;
 
 	if (ctx->hw_sv) {
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
@@ -2487,16 +2488,14 @@ int handle_sv_tag(struct mtk_cam_job *job)
 	}
 
 	/* meta tag(s) */
-	tag_idx = SVTAG_META_START;
+	meta_num = ctx->num_mraw_subdevs;
 	for (i = 0; i < ctx->num_mraw_subdevs; i++) {
-		if (tag_idx >= SVTAG_END)
-			return 1;
 		mraw_pipe_idx = ctx->mraw_subdev_idx[i];
 		if (mraw_pipe_idx >= ctx->cam->pipelines.num_mraw)
 			return 1;
 		mraw_pipe = &ctx->cam->pipelines.mraw[mraw_pipe_idx];
 		mraw_sink = &job->req->mraw_data[mraw_pipe_idx].sink;
-		meta_tag_param.tag_idx = tag_idx;
+		meta_tag_param.tag_idx = mtk_cam_get_sv_meta_tag(meta_num, mraw_pipe->seninf_padidx);
 		meta_tag_param.seninf_padidx = mraw_pipe->seninf_padidx;
 		meta_tag_param.tag_order = mtk_cam_seninf_get_tag_order(
 			job->seninf, mraw_sink->mbus_code, mraw_pipe->seninf_padidx);
@@ -2509,8 +2508,7 @@ int handle_sv_tag(struct mtk_cam_job *job)
 			mraw_sink->mbus_code, 1, mraw_pipe);
 
 		job->used_tag_cnt++;
-		job->enabled_tags |= (1 << tag_idx);
-		tag_idx++;
+		job->enabled_tags |= (1 << meta_tag_param.tag_idx);
 
 		pr_info("[%s] mraw subdevice tag_idx:%d seninf_padidx:%d tag_order:%d pixel_mode:%d sub_ratio:%d width/height/mbus_code:0x%x_0x%x_0x%x\n",
 			__func__,
@@ -2523,7 +2521,7 @@ int handle_sv_tag(struct mtk_cam_job *job)
 			mraw_sink->height,
 			mraw_sink->mbus_code);
 	}
-
+	tag_idx = SVTAG_META_START + meta_num;
 	for (i = 0; i < ctx->num_sv_subdevs; i++) {
 		if (tag_idx >= SVTAG_END)
 			return 1;
