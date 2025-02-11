@@ -3252,13 +3252,11 @@ _add_mraw_mux_setting(struct mtk_cam_job *job,
 		      unsigned int sv_max_pixel_mode)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
-	unsigned int mraw_idx, mraw_dev_idx, tag_idx;
+	unsigned int mraw_idx, tag_idx;
 
 	for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
-		mraw_dev_idx = ctx->mraw_subdev_idx[mraw_idx];
 		tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
-			ctx->mraw_subdev_idx[mraw_dev_idx] + MTKCAM_SUBDEV_MRAW_START);
-
+			ctx->mraw_subdev_idx[mraw_idx] + MTKCAM_SUBDEV_MRAW_START);
 		settings[*cnt].seninf = ctx->seninf;
 		settings[*cnt].source = job->tag_info[tag_idx].seninf_padidx;
 		settings[*cnt].camtg  = sv_dev_cammux_id;
