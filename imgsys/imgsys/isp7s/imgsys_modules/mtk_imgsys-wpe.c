@@ -415,7 +415,10 @@ void imgsys_wpe_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			#endif
 						user_info->priv[i].desc_offset + (WPE_UFOD_P2_DESC_OFST
 						* (sizeof(struct mtk_imgsys_wpe_dtable)))));
-
+			if (u_cq_desc == NULL) {
+				pr_err("[%s][%d] u_cq_desc is null!\n", __func__, __LINE__);
+				continue;
+			}
 			dtable = (struct mtk_imgsys_wpe_dtable *)u_cq_desc;
 			dtable->addr = u_iova_addr & 0xFFFFFFFF;
 			dtable->addr_msb = (u_iova_addr >> 32) & 0xF;
@@ -438,6 +441,10 @@ void imgsys_wpe_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			u_cq_desc = (u64 *)((void *)(mtk_hcp_get_wpe_mem_virt(imgsys_dev->scp_pdev) +
 				user_info->priv[i].desc_offset));
 			#endif
+			if (u_cq_desc == NULL) {
+				pr_err("[%s][%d] u_cq_desc is null!\n", __func__, __LINE__);
+				continue;
+			}
 			dtable = (struct mtk_imgsys_wpe_dtable *)u_cq_desc;
 			for (j = 0; j < WPE_CQ_DESC_NUM; j++) {
 				if ((dtable->addr_msb & PSEUDO_DESC_TUNING) == PSEUDO_DESC_TUNING) {
