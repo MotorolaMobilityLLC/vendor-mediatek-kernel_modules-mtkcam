@@ -7,55 +7,46 @@
  */
 
 #include "mtk_imgsys-cmdq-qof.h"
+#include "mtk_imgsys-cmdq-qof-reg.h"
 
 /**
  * @brief List all qof related data.
  *   such as larb golden.
  */
-
-#define QOF_REG_BASE			(0x34005000)
-#define MMPC_REG_BASE		   (0x31B50000)
+#define QOF_REG_BASE			(0x34016000)
+#define QOF_IMG_EVENT_A			(0x340C0000)
+#define QOF_IMG_EVENT_B			(0x340D0000)
+#define QOF_IMG_EVENT_C			(0x340E0000)
+#define MMPC_REG_BASE		    (0x31B50000)
+#define HWCCF_REG_BASE			(0x31c00000)
+#define RTFF_REG_BASE			(0x34780000)
 
 /* MTCMOS related */
 #define ISP_TRAW_PWR_CON		(MMPC_REG_BASE+0x000)
 #define ISP_DIP_PWR_CON			(MMPC_REG_BASE+0x004)
-#define ISP_MAIN_PWR_CON		(MMPC_REG_BASE+0x008)
-#define ISP_VCORE_PWR_CON		(MMPC_REG_BASE+0x00C)
-#define ISP_WPE_EIS_PWR_CON		(MMPC_REG_BASE+0x010)
-#define ISP_WPE_TNR_PWR_CON		(MMPC_REG_BASE+0x014)
-#define ISP_WPE_LITE_PWR_CON	(MMPC_REG_BASE+0x018)
+#define ISP_DIP_CINE_PWR_CON    (MMPC_REG_BASE+0x008)
+#define ISP_MAIN_PWR_CON		(MMPC_REG_BASE+0x00C)
+#define ISP_VCORE_PWR_CON		(MMPC_REG_BASE+0x010)
+#define ISP_WPE_EIS_PWR_CON		(MMPC_REG_BASE+0x014)
+#define ISP_WPE_TNR_PWR_CON		(MMPC_REG_BASE+0x018)
+#define ISP_WPE_LITE_PWR_CON	(MMPC_REG_BASE+0x01C)
+
+/* HWCCF related */
+#define HWCCF_LINK_SET_ADDR		(HWCCF_REG_BASE+0x3FB0)
+#define HWCCF_LINK_CLR_ADDR		(HWCCF_REG_BASE+0x3FB4)
+#define HWCCF_LINK_STA_ADDR		(HWCCF_REG_BASE+0x3FB8)
 
 /* CG macro */
-#define IMG_CG_IMGSYS_MAIN		(0x34000000)
-#define IMG_CG_DIP_NR1_DIP1		(0x34130000)
-#define IMG_CG_DIP_NR2_DIP1		(0x34170000)
-#define IMG_CG_DIP_TOP_DIP1		(0x34110000)
+#define IMG_CG_IMGSYS_MAIN		(0x34010000)
+#define DIP_CINE_DIP1		    (0x34170000)
+#define IMG_CG_DIP_NR1_DIP1		(0x34120000)
+#define IMG_CG_DIP_NR2_DIP1		(0x34150000)
+#define IMG_CG_DIP_TOP_DIP1		(0x34100000)
 #define IMG_CG_TRAW_CAP_DIP1	(0x34740000)
-#define IMG_CG_TRAW_DIP1		(0x34710000)
-#define IMG_CG_WPE1_DIP1		(0x34220000)
-#define IMG_CG_WPE2_DIP1		(0x34520000)
-#define IMG_CG_WPE3_DIP1		(0x34620000)
-
-/* Larb reg base */
-#define QOF_SUPPORT_LARB_ID10	(10)
-#define QOF_SUPPORT_LARB_ID11	(11)
-#define QOF_SUPPORT_LARB_ID15	(15)
-#define QOF_SUPPORT_LARB_ID22	(22)
-#define QOF_SUPPORT_LARB_ID23	(23)
-#define QOF_SUPPORT_LARB_ID28	(28)
-#define QOF_SUPPORT_LARB_ID38	(38)
-#define QOF_SUPPORT_LARB_ID39	(39)
-#define QOF_SUPPORT_LARB_ID40	(40)
-#define QOF_SUPPORT_LARB_ARR_MAX	(QOF_SUPPORT_LARB_ID40 + 1)
-#define IMG_LARB10_BASE		 (0x34120000)
-#define IMG_LARB11_BASE		 (0x34230000)
-#define IMG_LARB15_BASE		 (0x34140000)
-#define IMG_LARB22_BASE		 (0x34530000)
-#define IMG_LARB23_BASE		 (0x34630000)
-#define IMG_LARB28_BASE		 (0x34720000)
-#define IMG_LARB38_BASE		 (0x34190000)
-#define IMG_LARB39_BASE		 (0x34180000)
-#define IMG_LARB40_BASE		 (0x34730000)
+#define IMG_CG_TRAW_DIP1		(0x34700000)
+#define IMG_CG_WPE1_DIP1		(0x34200000)
+#define IMG_CG_WPE2_DIP1		(0x34500000)
+#define IMG_CG_WPE3_DIP1		(0x34600000)
 
 /* QOF related */
 #define QOF_SPARE_VALUE_TO_BE_FIX		 (0)
@@ -70,33 +61,27 @@ struct imgsys_cg_data common_cg_data = {
 	.sta_ofs = 0
 };
 
-const u64 qof_larb_id_bit = (0UL |
-	BIT_ULL(QOF_SUPPORT_LARB_ID10)   |
-	BIT_ULL(QOF_SUPPORT_LARB_ID11)   |
-	BIT_ULL(QOF_SUPPORT_LARB_ID15)   |
-	BIT_ULL(QOF_SUPPORT_LARB_ID22)   |
-	BIT_ULL(QOF_SUPPORT_LARB_ID23)   |
-	BIT_ULL(QOF_SUPPORT_LARB_ID28)   |
-	BIT_ULL(QOF_SUPPORT_LARB_ID38)   |
-	BIT_ULL(QOF_SUPPORT_LARB_ID39)   |
-	BIT_ULL(QOF_SUPPORT_LARB_ID40)
-);
-
-#define QOF_SPARE_REG_FOOTPRINT	(QOF_REG_BASE + 0x000000910)
+#define QOF_SPARE_REG_FOOTPRINT	(QOF_REG_BASE + 0x00000A78)
 enum QOF_FOOTPRINT_BIT {
-	QOF_FOOTPRINT_BIT_GET_SMI_EVENT,
-	QOF_FOOTPRINT_BIT_BEFORE_ADD,
-	QOF_FOOTPRINT_BIT_AFTER_ADD,
-	QOF_FOOTPRINT_BIT_BEFORE_SUB,
-	QOF_FOOTPRINT_BIT_AFTER_SUB,
-	QOF_FOOTPRINT_BIT_FINISH_LOGIC,
-	QOF_FOOTPRINT_BIT_HSK_DONE,
+	/*1*/QOF_FOOTPRINT_BIT_IN_ADD_CRITIAL = 1,
+	/*2*/QOF_FOOTPRINT_BIT_BEFORE_ADD,
+	/*3*/QOF_FOOTPRINT_BIT_AFTER_ADD,
+	/*4*/QOF_FOOTPRINT_BIT_MODULE_INIT,
+	/*5*/QOF_FOOTPRINT_BIT_DL_RESET,
+	/*6*/QOF_FOOTPRINT_BIT_RESTORE_ING,
+	/*7*/QOF_FOOTPRINT_BIT_RESTORE_DONE,
+	/*8*/QOF_FOOTPRINT_BIT_ADD_DONE,
+	/*9*/QOF_FOOTPRINT_WAIT_FOR_PWR_UP,
+	/*10*/QOF_FOOTPRINT_BIT_OUT_ADD_CRITIAL,
+	/*11*/QOF_FOOTPRINT_BIT_IN_SUB_CRITIAL,
+	/*12*/QOF_FOOTPRINT_BIT_BEFORE_SUB,
+	/*13*/QOF_FOOTPRINT_BIT_AFTER_SUB,
+	/*14*/QOF_FOOTPRINT_BIT_SUB_DONE,
+	/*15*/QOF_FOOTPRINT_BIT_OUT_SUB_CRITIAL,
 };
 
 enum QOF_USER {
-	QOF_USER_AP,
 	QOF_USER_GCE,
-	QOF_USER_GCE_SWWA, // wa for gce thd lacked
 	QOF_USER_MAX,
 };
 
@@ -110,10 +95,10 @@ enum IMG_GCE_PWR_THREAD_ID {
 	IMG_GCE_THREAD_PWR_START,
 	IMG_GCE_THREAD_DIP = IMG_GCE_THREAD_PWR_START,
 	IMG_GCE_THREAD_TRAW,
-	IMG_GCE_THREAD_WPE_12,
+	IMG_GCE_THREAD_WPE_1_EIS,
+	IMG_GCE_THREAD_WPE_2_TNR,
 	IMG_GCE_THREAD_WPE_3_LITE,
-	IMG_GCE_THREAD_SMI_DUMP,
-	IMG_GCE_THREAD_PWR_END = IMG_GCE_THREAD_SMI_DUMP,
+	IMG_GCE_THREAD_PWR_END,
 };
 #define QOF_TOTAL_THREAD (IMG_GCE_THREAD_PWR_END - IMG_GCE_THREAD_PWR_START + 1)
 
@@ -124,7 +109,6 @@ enum QOF_SUPPORT_MODULE {
 	QOF_SUPPORT_WPE_EIS,
 	QOF_SUPPORT_WPE_TNR,
 	QOF_SUPPORT_WPE_LITE,
-
 	QOF_TOTAL_MODULE,
 };
 
@@ -149,383 +133,22 @@ enum MAPED_RG_LIST {
 	MAPED_RG_IMG_CG_WPE1_DIP1,
 	MAPED_RG_IMG_CG_WPE2_DIP1,
 	MAPED_RG_IMG_CG_WPE3_DIP1,
-	/* Larb related */
-	MAPED_RG_IMG_LARB10_BASE,
-	MAPED_RG_IMG_LARB11_BASE,
-	MAPED_RG_IMG_LARB15_BASE,
-	MAPED_RG_IMG_LARB22_BASE,
-	MAPED_RG_IMG_LARB23_BASE,
-	MAPED_RG_IMG_LARB38_BASE,
-	MAPED_RG_IMG_LARB39_BASE,
-	MAPED_RG_IMG_LARB28_BASE,
-	MAPED_RG_IMG_LARB40_BASE,
 	/* qof related */
 	MAPED_RG_QOF_REG_BASE,
+	MAPED_RG_QOF_CNT_A_REG_BASE,
+	MAPED_RG_QOF_CNT_B_REG_BASE,
+	MAPED_RG_QOF_CNT_C_REG_BASE,
 	MAPED_RG_MMPC_REG_BASE,
-	MAPED_RG_LIST_ED = MAPED_RG_MMPC_REG_BASE,
+	/* HWCCF related */
+	MAPED_RG_HWCCF_REG_SET,
+	MAPED_RG_HWCCF_REG_CLR,
+	MAPED_RG_HWCCF_REG_STA,
+	MAPED_RG_HWCCF_REG_BASE,
+	/* RTFF related*/
+	MAPED_RG_RTFF_BASE,
+	MAPED_RG_LIST_ED = MAPED_RG_RTFF_BASE,
 };
 #define MAPED_RG_LIST_NUM (MAPED_RG_LIST_ED - MAPED_RG_LIST_START + 1)
-
-/* Larb golden */
-struct qof_reg_data qof_larb10_golden[] = {
-	{0x24, 0x300256},
-	{0x524, 0x300256},
-	{0x40, 0x1},
-	{0x70, 0xffffffff},
-	{0x200, 0x2b},
-	{0x204, 0x8},
-	{0x208, 0x20},
-	{0x20c, 0x1d},
-	{0x210, 0x19},
-	{0x214, 0xf},
-	{0x218, 0x1},
-	{0x21c, 0x3},
-	/* cmd throttle */
-	{0x380, 0x9},
-	{0x384, 0x9},
-	{0x388, 0x9},
-	{0x38c, 0x9},
-	{0x390, 0x9},
-	{0x394, 0x9},
-	{0x398, 0x9},
-	{0x39c, 0x9},
-};
-
-struct qof_reg_data qof_larb11_golden[] = {
-	{0x24, 0x300256},
-	{0x524, 0x300256},
-	{0x40, 0x1},
-	{0x70, 0xffffffff},
-	{0x200, 0x8},
-	{0x204, 0x16},
-	{0x208, 0x16},
-	{0x20c, 0x24},
-	{0x210, 0x1},
-	{0x214, 0x1},
-	{0x218, 0x1},
-	{0x21c, 0x3},
-	{0x220, 0x32},
-	{0x224, 0x1},
-	{0x228, 0x8},
-	{0x22c, 0x10},
-	{0x230, 0x16},
-	{0x234, 0x2},
-	{0x238, 0x38},
-	{0x380, 0x9},
-	{0x384, 0x9},
-	{0x388, 0x9},
-	{0x38c, 0x9},
-	{0x390, 0x9},
-	{0x394, 0x9},
-	{0x398, 0x9},
-	{0x39c, 0x9},
-	{0x3a0, 0x9},
-	{0x3a4, 0x9},
-	{0x3a8, 0x9},
-	{0x3ac, 0x9},
-	{0x3b0, 0x9},
-	{0x3b4, 0x9},
-	{0x3b8, 0x9},
-
-};
-
-struct qof_reg_data qof_larb15_golden[] = {
-	{0x24,	0x300256},
-	{0x524,	0x300256},
-	{0x40,	0x1},
-	{0x70,	0xffffffff},
-	{0x200,	0x2b},
-	{0x204,	0x7},
-	{0x208,	0x31},
-	{0x20c,	0xa},
-	{0x210,	0x10},
-	{0x214,	0x10},
-	{0x218,	0x2b},
-	{0x21c,	0x29},
-	{0x220,	0x7},
-	{0x224,	0x1},
-	{0x380,	0x9},
-	{0x384,	0x9},
-	{0x388,	0x9},
-	{0x38c,	0x9},
-	{0x390,	0x9},
-	{0x394,	0x9},
-	{0x398,	0x9},
-	{0x39c,	0x9},
-	{0x3a0,	0x9},
-	{0x3a4,	0x9},
-};
-
-struct qof_reg_data qof_larb22_golden[] = {
-	{0x24,	0x300256},
-	{0x524,	0x300256},
-	{0x40,	0x1},
-	{0x70,	0xffffffff},
-	{0x200,	0x8},
-	{0x204,	0x16},
-	{0x208,	0x16},
-	{0x20c,	0x24},
-	{0x210,	0x1},
-	{0x214,	0x1},
-	{0x218,	0x1},
-	{0x21c,	0x3},
-	{0x220,	0x32},
-	{0x224,	0x1},
-	{0x228,	0x8},
-	{0x22c,	0x10},
-	{0x230,	0x16},
-	{0x234,	0x2},
-	{0x238,	0x38},
-	{0x380,	0x9},
-	{0x384,	0x9},
-	{0x388,	0x9},
-	{0x38c,	0x9},
-	{0x390,	0x9},
-	{0x394,	0x9},
-	{0x398,	0x9},
-	{0x39c,	0x9},
-	{0x3a0,	0x9},
-	{0x3a4,	0x9},
-	{0x3a8,	0x9},
-	{0x3ac,	0x9},
-	{0x3b0,	0x9},
-	{0x3b4,	0x9},
-	{0x3b8,	0x9},
-};
-
-struct qof_reg_data qof_larb23_golden[] = {
-	{0x24,	0x300256},
-	{0x524,	0x300256},
-	{0x40,	0x1},
-	{0x70,	0xffffffff},
-	{0x200,	0x8},
-	{0x204,	0x16},
-	{0x208,	0x16},
-	{0x20c,	0x24},
-	{0x210,	0x1},
-	{0x214,	0x1},
-	{0x218,	0x1},
-	{0x21c,	0x3},
-	{0x220,	0x32},
-	{0x224,	0x1},
-	{0x228,	0x8},
-	{0x22c,	0x10},
-	{0x230,	0x16},
-	{0x234,	0x2},
-	{0x238,	0x38},
-	{0x380,	0x9},
-	{0x384,	0x9},
-	{0x388,	0x9},
-	{0x38c,	0x9},
-	{0x390,	0x9},
-	{0x394,	0x9},
-	{0x398,	0x9},
-	{0x39c,	0x9},
-	{0x3a0,	0x9},
-	{0x3a4,	0x9},
-	{0x3a8,	0x9},
-	{0x3ac,	0x9},
-	{0x3b0,	0x9},
-	{0x3b4,	0x9},
-	{0x3b8,	0x9},
-};
-
-struct qof_reg_data qof_larb38_golden[] = {
-	{0x24,	0x300256},
-	{0x524,	0x300256},
-	{0x40,	0x1},
-	{0x70,	0xffffffff},
-	{0x200,	0x29},
-	{0x204,	0x40},
-	{0x208,	0x40},
-	{0x20c,	0x7},
-	{0x210,	0x4},
-	{0x214,	0x40},
-	{0x218,	0x4},
-	{0x21c,	0x18},
-	{0x220,	0x1},
-	{0x224,	0x1},
-	{0x228,	0x1},
-	{0x22c,	0x7},
-	{0x230,	0x4},
-	{0x234,	0x1},
-	{0x380,	0x9},
-	{0x384,	0x9},
-	{0x388,	0x9},
-	{0x38c,	0x9},
-	{0x390,	0x9},
-	{0x394,	0x9},
-	{0x398,	0x9},
-	{0x39c,	0x9},
-	{0x3a0,	0x9},
-	{0x3a4,	0x9},
-	{0x3a8,	0x9},
-	{0x3ac,	0x9},
-	{0x3b0,	0x9},
-	{0x3b4,	0x9},
-};
-
-struct qof_reg_data qof_larb39_golden[] = {
-	{0x24,	0x300256},
-	{0x524,	0x300256},
-	{0x40,	0x1},
-	{0x70,	0xffffffff},
-	{0x200, 0x16},
-	{0x204, 0x4},
-	{0x208, 0x4},
-	{0x20c, 0x8},
-	{0x210, 0x4},
-	{0x214, 0x6},
-	{0x218, 0x6},
-	{0x21c, 0x13},
-	{0x220, 0x11},
-	{0x224, 0x20},
-	{0x228, 0x11},
-	{0x22c, 0x1},
-	{0x230, 0x1},
-	{0x234, 0x1},
-	{0x238, 0x9},
-	{0x23c, 0x8},
-	{0x240, 0x4},
-	{0x244, 0x6},
-	{0x248, 0x6},
-	{0x380, 0x9},
-	{0x384, 0x9},
-	{0x388, 0x9},
-	{0x38c, 0x9},
-	{0x390, 0x9},
-	{0x394, 0x9},
-	{0x398, 0x9},
-	{0x39c, 0x9},
-	{0x3a0, 0x9},
-	{0x3a4, 0x9},
-	{0x3a8, 0x9},
-	{0x3ac, 0x9},
-	{0x3b0, 0x9},
-	{0x3b4, 0x9},
-	{0x3b8,	0x9},
-	{0x3bc,	0x9},
-	{0x3c0,	0x9},
-	{0x3c4,	0x9},
-	{0x3c8,	0x9},
-};
-
-struct qof_reg_data qof_larb28_golden[] = {
-	{0x24, 0x300256},
-	{0x524, 0x300256},
-	{0x40, 0x1},
-	{0x70, 0xffffffff},
-	{0x200, 0x2b},
-	{0x204, 0x8},
-	{0x208, 0x31},
-	{0x20c, 0x10},
-	{0x210, 0x26},
-	{0x214, 0x15},
-	{0x218, 0x1},
-	{0x21c, 0x10},
-	{0x380, 0x9},
-	{0x384, 0x9},
-	{0x388, 0x9},
-	{0x38c, 0x9},
-	{0x390, 0x9},
-	{0x394, 0x9},
-	{0x398, 0x9},
-	{0x39c, 0x9},
-};
-
-struct qof_reg_data qof_larb40_golden[] = {
-	{0x24, 0x300256},
-	{0x524, 0x300256},
-	{0x40, 0x1},
-	{0x70, 0xffffffff},
-	{0x200, 0x9},
-	{0x204, 0x7},
-	{0x208, 0x7},
-	{0x20c, 0xb},
-	{0x210, 0xf},
-	{0x214, 0x1d},
-	{0x218, 0x13},
-	{0x21c, 0x6},
-	{0x220, 0x1},
-	{0x224, 0x1},
-	{0x228, 0x1},
-	{0x22c, 0x6},
-	{0x230, 0x9},
-	{0x234, 0x7},
-	{0x238, 0xe},
-	{0x23c, 0x3},
-	{0x380, 0x9},
-	{0x384, 0x9},
-	{0x388, 0x9},
-	{0x38c, 0x9},
-	{0x390, 0x9},
-	{0x394, 0x9},
-	{0x398, 0x9},
-	{0x39c, 0x9},
-	{0x3a0, 0x9},
-	{0x3a4, 0x9},
-	{0x3a8, 0x9},
-	{0x3ac, 0x9},
-	{0x3b0, 0x9},
-	{0x3b4, 0x9},
-	{0x3b8, 0x9},
-	{0x3bc, 0x9},
-};
-
-/* Larb data */
-struct qof_larb_info qof_larb10_info = {
-	.reg_ba = IMG_LARB10_BASE,
-	.reg_list_size = sizeof(qof_larb10_golden)/sizeof(struct qof_reg_data),
-	.larb_reg_list = qof_larb10_golden,
-};
-
-struct qof_larb_info qof_larb11_info = {
-	.reg_ba = IMG_LARB11_BASE,
-	.reg_list_size = sizeof(qof_larb11_golden)/sizeof(struct qof_reg_data),
-	.larb_reg_list = qof_larb11_golden,
-};
-
-struct qof_larb_info qof_larb15_info = {
-	.reg_ba = IMG_LARB15_BASE,
-	.reg_list_size = sizeof(qof_larb15_golden)/sizeof(struct qof_reg_data),
-	.larb_reg_list = qof_larb15_golden,
-};
-
-struct qof_larb_info qof_larb22_info = {
-	.reg_ba = IMG_LARB22_BASE,
-	.reg_list_size = sizeof(qof_larb22_golden)/sizeof(struct qof_reg_data),
-	.larb_reg_list = qof_larb22_golden,
-};
-
-struct qof_larb_info qof_larb23_info = {
-	.reg_ba = IMG_LARB23_BASE,
-	.reg_list_size = sizeof(qof_larb23_golden)/sizeof(struct qof_reg_data),
-	.larb_reg_list = qof_larb23_golden,
-};
-
-struct qof_larb_info qof_larb38_info = {
-	.reg_ba = IMG_LARB38_BASE,
-	.reg_list_size = sizeof(qof_larb38_golden)/sizeof(struct qof_reg_data),
-	.larb_reg_list = qof_larb38_golden,
-};
-
-struct qof_larb_info qof_larb39_info = {
-	.reg_ba = IMG_LARB39_BASE,
-	.reg_list_size = sizeof(qof_larb39_golden)/sizeof(struct qof_reg_data),
-	.larb_reg_list = qof_larb39_golden,
-};
-
-struct qof_larb_info qof_larb28_info = {
-	.reg_ba = IMG_LARB28_BASE,
-	.reg_list_size = sizeof(qof_larb28_golden)/sizeof(struct qof_reg_data),
-	.larb_reg_list = qof_larb28_golden,
-};
-
-struct qof_larb_info qof_larb40_info = {
-	.reg_ba = IMG_LARB40_BASE,
-	.reg_list_size = sizeof(qof_larb40_golden)/sizeof(struct qof_reg_data),
-	.larb_reg_list = qof_larb40_golden,
-};
 
 enum MTCMOS_REG_NAME {
 	MTCMOS_ISP_PWR_CON,
@@ -533,956 +156,1357 @@ enum MTCMOS_REG_NAME {
 	MTCMOS_REG_TOTAL_NUM,
 };
 
-enum QOF_REG_NAME {
-	QOF_IMG_EVENT_CNT_ADD,
-	QOF_IMG_ITC_SRC_SEL,
-	QOF_IMG_HW_CLR_EN,
-	QOF_IMG_HW_SET_EN,
-	QOF_IMG_OFF_ITC_W_EN,
-	QOF_IMG_ON_ITC_W_EN,
-	QOF_IMG_HW_SEQ_EN,
-	QOF_IMG_RTC_EN,
-	QOF_IMG_GCE_RESTORE_EN,
-	QOF_IMG_GCE_SAVE_EN,
-	QOF_IMG_PWR_ACK_2ND_WAIT_TH,
-	QOF_IMG_PWR_ACK_WAIT_TH,
-	QOF_IMG_QOF_ENG_EN,
-	QOF_IMG_INTX_STATUS,
-	QOF_IMG_EVENT_CNT_SUB,
-	QOF_IMG_GCE_SAVE_DONE,
-	QOF_IMG_POWER_STATE,
-	QOF_IMG_GCE_RESTORE_DONE,
-	QOF_IMG_APMCU_SET,
-	QOF_IMG_APMCU_CLR,
-	QOF_IMG_INTX_STATUS_FOR_CQ,
-	QOF_IMG_QOF_EVENT_CNT,
-	QOF_IMG_QOF_VOTER_DBG,
-	QOF_IMG_QOF_DONE_STATUS,
-	QOF_IMG_ITC_STATUS,
-	QOF_IMG_QOF_STATE_DBG,
-	QOF_IMG_QOF_MTC_ST_LSB,
-	QOF_IMG_QOF_MTC_ST_MSB2,
-
+enum QOF_REG_LIST_NAME {
+	QOF_REG_IMG_EVENT_CNT_ADD,
+	QOF_REG_IMG_VM_A,
+	QOF_REG_IMG_VM_B,
+	QOF_REG_IMG_VM_C,
+	QOF_REG_IMG_ITC_SRC_SEL,
+	QOF_REG_IMG_HW_CLR_EN,
+	QOF_REG_IMG_HW_SET_EN,
+	QOF_REG_IMG_OFF_ITC_W_EN,
+	QOF_REG_IMG_ON_ITC_W_EN,
+	QOF_REG_IMG_HW_SEQ_EN,
+	QOF_REG_IMG_HW_HWCCF_EN,
+	QOF_REG_IMG_RTC_EN,
+	QOF_REG_IMG_GCE_RESTORE_EN,
+	QOF_REG_IMG_GCE_SAVE_EN,
+	QOF_REG_IMG_PWR_ACK_2ND_WAIT_TH,
+	QOF_REG_IMG_PWR_ACK_WAIT_TH,
+	QOF_REG_IMG_QOF_ENG_EN,
+	QOF_REG_IMG_EVENT_CNT_SUB,
+	QOF_REG_IMG_GCE_SAVE_DONE,
+	QOF_REG_IMG_POWER_STATE,
+	QOF_REG_IMG_GCE_RESTORE_DONE,
+	QOF_REG_IMG_APMCU_SET,
+	QOF_REG_IMG_APMCU_CLR,
+	QOF_REG_IMG_QOF_VOTER_DBG,
+	QOF_REG_IMG_QOF_DONE_STATUS,
+	QOF_REG_IMG_ITC_STATUS,
+	QOF_REG_IMG_QOF_STATE_DBG,
+	QOF_REG_IMG_QOF_MTC_ST_LSB,
+	QOF_REG_IMG_QOF_MTC_ST_MSB2,
+	QOF_REG_IMG_HWCCF_SW_VOTE_ON,
+	QOF_REG_IMG_HWCCF_SW_VOTE_OFF,
+	QOF_REG_IMG_OPT_MTC_ACT,
+	QOF_REG_IMG_QOF_SPARE1_TOP,
+	QOF_REG_IMG_SCP_SET,
+	QOF_REG_IMG_SCP_CLR,
+	QOF_REG_IMG_HWCCF_SW_VOTER_OFF_SUB_OUTER,
+	QOF_REG_IMG_HWCCF_SW_VOTER_ON_SUB_OUTER,
+	QOF_REG_IMG_HWCCF_MTCMOS,
+	QOF_REG_IMG_HWCCF_DIP_CINE,
+	QOF_REG_IMG_TRG_OFF_CNT,
+	QOF_REG_IMG_TRG_ON_CNT,
 	QOF_REG_TOTAL_NUM,
 };
 
-const struct reg_table_unit mtcmos_reg_table[QOF_TOTAL_MODULE][MTCMOS_REG_TOTAL_NUM] = {
-	// DIP
-	{
-		{
-			// MTCMOS_ISP_PWR_CON
-			.addr = ISP_DIP_PWR_CON,
-			.val = BIT(30)|BIT(31),
-			.mask = BIT(30)|BIT(31),
-		},
-	},
-	// TRAW
-	{
-		{
-			// MTCMOS_ISP_PWR_CON
-			.addr = ISP_TRAW_PWR_CON,
-			.val = BIT(30)|BIT(31),
-			.mask = BIT(30)|BIT(31),
-		},
-	},
-	// WPE_1_EIS
-	{
-		{
-			// MTCMOS_ISP_PWR_CON
-			.addr = ISP_WPE_EIS_PWR_CON,
-			.val = BIT(30)|BIT(31),
-			.mask = BIT(30)|BIT(31),
-		},
-	},
-	// WPE_2_TNR
-	{
-		{
-			// MTCMOS_ISP_PWR_CON
-			.addr = ISP_WPE_TNR_PWR_CON,
-			.val = BIT(30)|BIT(31),
-			.mask = BIT(30)|BIT(31),
-		},
-	},
-	// WPE_3_LITE
-	{
-		{
-			// MTCMOS_ISP_PWR_CON
-			.addr = ISP_WPE_LITE_PWR_CON,
-			.val = BIT(30)|BIT(31),
-			.mask = BIT(30)|BIT(31),
-		},
-	},
-
+enum HWCCF_REG {
+	HWCCF_REG_LINK_SET,
+	HWCCF_REG_LINK_CLR,
+	HWCCF_REG_LINK_STA,
+	HWCCF_REG_TOTAL_NUM,
 };
 
 const struct reg_table_unit qof_reg_table[QOF_TOTAL_MODULE][QOF_REG_TOTAL_NUM] = {
-	// QOF_SUPPORT_DIP
+	[QOF_SUPPORT_DIP] = // DIP
 	{
-		{
-			// QOF_IMG_EVENT_CNT_ADD
-			.addr = QOF_REG_BASE + 0x00000020,
-			.val = BIT(7),
-			.mask = BIT(7),
+		[QOF_REG_IMG_EVENT_CNT_ADD] = {
+			// TODO : need to check CODA
+			// QOF_REG_IMG_EVENT_CNT_ADD
+			.addr = QOF_IMG_EVENT_A,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(1, 0)),
+			.field = REG_FLD(1, 0),
 		},
-		{
-			// QOF_IMG_ITC_SRC_SEL
-			.addr = QOF_REG_BASE + 0x00000000,
+		[QOF_REG_IMG_VM_A] = {
+			.addr = QOF_IMG_EVENT_A + 0x14,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(7, 0)),
+			.field = REG_FLD(7, 0),
+		},
+		[QOF_REG_IMG_VM_B] = {
+			.addr = QOF_IMG_EVENT_B + 0x14,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(7, 0)),
+			.field = REG_FLD(7, 0),
+		},
+		[QOF_REG_IMG_VM_C] = {
+			.addr = QOF_IMG_EVENT_C + 0x14,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(7, 0)),
+			.field = REG_FLD(7, 0),
+		},
+		[QOF_REG_IMG_ITC_SRC_SEL] = {
+			// QOF_REG_IMG_ITC_SRC_SEL
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TOP_CTL),
+			.val = BIT(24),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_ITC_SRC_SEL_1),
+			.field = QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_ITC_SRC_SEL_1,
+		},
+		[QOF_REG_IMG_HW_CLR_EN] = {
+			// QOF_IMG_HW_CLR_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_1),
+			.val = BIT(14),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_HW_CLR_EN_1),
+			.field = QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_HW_CLR_EN_1,
+		},
+		[QOF_REG_IMG_HW_SET_EN] = {
+			// QOF_IMG_HW_SET_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_1),
+			.val = BIT(13),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_HW_SET_EN_1),
+			.field = QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_HW_SET_EN_1,
+		},
+		[QOF_REG_IMG_OFF_ITC_W_EN] = {
+			// QOF_IMG_OFF_ITC_W_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_1),
+			.val = BIT(12),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_OFF_ITC_W_EN_1),
+			.field = QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_OFF_ITC_W_EN_1,
+		},
+		[QOF_REG_IMG_ON_ITC_W_EN] = {
+			// QOF_IMG_ON_ITC_W_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_1),
+			.val = BIT(11),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_ON_ITC_W_EN_1),
+			.field = QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_ON_ITC_W_EN_1,
+		},
+		[QOF_REG_IMG_HW_SEQ_EN] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_1),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_POWER_CTL_MODE_1),
+			.field = QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_POWER_CTL_MODE_1,
+		},
+		[QOF_REG_IMG_HW_HWCCF_EN] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_1),
+			.val = 0,
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_POWER_CTL_MODE_1),
+			.field = QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_POWER_CTL_MODE_1,
+		},
+		[QOF_REG_IMG_RTC_EN] = {
+			// QOF_IMG_RTC_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_1),
+			.val = BIT(9),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_RTC_EN_1),
+			.field = QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_RTC_EN_1,
+		},
+		[QOF_REG_IMG_GCE_RESTORE_EN] = {
+			// QOF_IMG_GCE_RESTORE_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_1),
+			.val = BIT(2),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_1_FLD_QOF_IMG_GCE_RESTORE_EN_1),
+			.field = QOF_IMG_QOF_GCE_CTL_1_FLD_QOF_IMG_GCE_RESTORE_EN_1,
+		},
+		[QOF_REG_IMG_GCE_SAVE_EN] = {
+			// QOF_IMG_GCE_SAVE_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_1),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_1_FLD_QOF_IMG_GCE_SAVE_EN_1),
+			.field = QOF_IMG_QOF_GCE_CTL_1_FLD_QOF_IMG_GCE_SAVE_EN_1,
+		},
+		[QOF_REG_IMG_PWR_ACK_2ND_WAIT_TH] = {
+			// QOF_IMG_PWR_ACK_2ND_WAIT_TH
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_POWER_ACK_CYCLE_1),
+			.val = 0x5140000, // bit 16~31 =‘h514
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_POWER_ACK_CYCLE_1_FLD_QOF_IMG_PWR_ACK_2ND_WAIT_TH_1),
+			.field = QOF_IMG_QOF_POWER_ACK_CYCLE_1_FLD_QOF_IMG_PWR_ACK_2ND_WAIT_TH_1,
+		},
+		[QOF_REG_IMG_PWR_ACK_WAIT_TH] = {
+			// QOF_IMG_PWR_ACK_WAIT_TH
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_POWER_ACK_CYCLE_1),
+			.val = 0x514, //  =‘h514
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_POWER_ACK_CYCLE_1_FLD_QOF_IMG_PWR_ACK_WAIT_TH_1),
+			.field = QOF_IMG_QOF_POWER_ACK_CYCLE_1_FLD_QOF_IMG_PWR_ACK_WAIT_TH_1,
+		},
+		[QOF_REG_IMG_QOF_ENG_EN] = {
+			// QOF_IMG_QOF_ENG_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TOP_CTL),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_QOF_ENG_EN_1),
+			.field = QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_QOF_ENG_EN_1,
+		},
+		[QOF_REG_IMG_EVENT_CNT_SUB] = {
+			// TODO: Need to check CODA
+			// QOF_IMG_EVENT_CNT_SUB
+			.addr = QOF_IMG_EVENT_A,
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(REG_FLD(1, 1)),
+			.field = REG_FLD(1, 1),
+		},
+		[QOF_REG_IMG_GCE_SAVE_DONE] = {
+			// QOF_IMG_GCE_SAVE_DONE
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_1),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_1_FLD_QOF_IMG_GCE_SAVE_DONE_1),
+			.field = QOF_IMG_QOF_GCE_CTL_1_FLD_QOF_IMG_GCE_SAVE_DONE_1,
+		},
+		[QOF_REG_IMG_POWER_STATE] = {
+			// QOF_IMG_POWER_STATE
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_STATE_DBG_1),
+			.val = BIT_PERIOD(0, 7),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_STATE_DBG_1_FLD_QOF_IMG_POWER_STATE_1),
+			.field = QOF_IMG_QOF_STATE_DBG_1_FLD_QOF_IMG_POWER_STATE_1,
+		},
+		[QOF_REG_IMG_GCE_RESTORE_DONE] = {
+			// QOF_REG_IMG_GCE_RESTORE_DONE
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_1),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_1_FLD_QOF_IMG_GCE_RESTORE_DONE_1),
+			.field = QOF_IMG_QOF_GCE_CTL_1_FLD_QOF_IMG_GCE_RESTORE_DONE_1,
+		},
+		[QOF_REG_IMG_APMCU_SET] = {
+			// QOF_REG_IMG_APMCU_SET
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_1),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_APMCU_SET_1),
+			.field = QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_APMCU_SET_1,
+		},
+		[QOF_REG_IMG_APMCU_CLR] = {
+			// QOF_IMG_APMCU_CLR
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_1),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_APMCU_CLR_1),
+			.field = QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_APMCU_CLR_1,
+		},
+		[QOF_REG_IMG_QOF_VOTER_DBG] = {
+			// TODO : naming refine
+			// QOF_IMG_QOF_VOTER_DBG
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_VOTER_DBG_1),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_VOTER_DBG_1_FLD_QOF_IMG_VOTE_1),
+			.field = QOF_IMG_QOF_VOTER_DBG_1_FLD_QOF_IMG_VOTE_1,
+		},
+		[QOF_REG_IMG_QOF_DONE_STATUS] = {
+			// TODO : naming refine
+			// QOF_REG_IMG_QOF_DONE_STATUS
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_DONE_STATUS_1),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_DONE_STATUS_1_FLD_QOF_IMG_CFG_ON_DONE_1),
+			.field = QOF_IMG_QOF_DONE_STATUS_1_FLD_QOF_IMG_CFG_ON_DONE_1,
+		},
+		[QOF_REG_IMG_ITC_STATUS] = {
+			// QOF_REG_IMG_ITC_STATUS
+			.addr = (QOF_REG_BASE + QOF_IMG_ITC_STATUS),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_ITC_STATUS_FLD_QOF_IMG_ITC_SEL_STATUS),
+			.field = QOF_IMG_ITC_STATUS_FLD_QOF_IMG_ITC_SEL_STATUS,
+		},
+		[QOF_REG_IMG_QOF_STATE_DBG] = {
+			// TODO : check mask
+			// QOF_REG_IMG_QOF_STATE_DBG
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_STATE_DBG_1),
+			.val = BIT(3),
+			.mask = BIT(3),
+			.field = REG_FLD(1, 3),
+		},
+		[QOF_REG_IMG_QOF_MTC_ST_LSB] = {
+			// TODO : check mask
+			// QOF_REG_IMG_QOF_MTC_ST_LSB
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_MTC_ST_LSB_1),
+			.val = BIT(3),
+			.mask = BIT(3),
+			.field = REG_FLD(1, 3),
+		},
+		[QOF_REG_IMG_QOF_MTC_ST_MSB2] = {
+			// TODO : check mask
+			// QOF_REG_IMG_QOF_MTC_ST_MSB2
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_MTC_ST_MSB2_1),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_MTC_ST_MSB2_1_FLD_QOF_IMG_MTCMOS_ST_MSB2_1),
+			.field = QOF_IMG_QOF_MTC_ST_MSB2_1_FLD_QOF_IMG_MTCMOS_ST_MSB2_1,
+		},
+		[QOF_REG_IMG_OPT_MTC_ACT] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_1),
+			.val = BIT(23),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_OPT_MTC_ACT_1),
+			.field = QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_OPT_MTC_ACT_1,
+		},
+		[QOF_REG_IMG_QOF_SPARE1_TOP] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_SPARE1_TOP),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_SPARE1_TOP_FLD_QOF_IMG_QOF_SPARE1_TOP),
+			.field = QOF_IMG_QOF_SPARE1_TOP_FLD_QOF_IMG_QOF_SPARE1_TOP,
+		},
+		[QOF_REG_IMG_HWCCF_SW_VOTE_OFF] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_HWCCF_SW_CTL),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_OFF_1),
+			.field = QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_OFF_1,
+		},
+		[QOF_REG_IMG_HWCCF_SW_VOTE_ON] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_HWCCF_SW_CTL),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_ON_1),
+			.field = QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_ON_1,
+		},
+		[QOF_REG_IMG_SCP_CLR] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_1),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_SCP_CLR_1),
+			.field = QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_SCP_CLR_1,
+		},
+		[QOF_REG_IMG_SCP_SET] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_1),
+			.val = BIT(2),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_SCP_SET_1),
+			.field = QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_SCP_SET_1,
+		},
+		[QOF_REG_IMG_HWCCF_SW_VOTER_OFF_SUB_OUTER] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_SPARE1_TOP),
+			.val = BIT(2),
+			.mask = REG_FLD_MASK(REG_FLD(1, 2)),
+			.field = REG_FLD(1, 2),
+		},
+		[QOF_REG_IMG_HWCCF_SW_VOTER_ON_SUB_OUTER] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_SPARE1_TOP),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(REG_FLD(1, 3)),
+			.field = REG_FLD(1, 3),
+		},
+		[QOF_REG_IMG_HWCCF_MTCMOS] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_SPARE2_TOP),
+			.val = BIT(2),
+			.mask = REG_FLD_MASK(REG_FLD(1, 2)),
+			.field = REG_FLD(1, 2),
+		},
+		[QOF_REG_IMG_HWCCF_DIP_CINE] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_SPARE2_TOP),
+			.val = BIT(22),
+			.mask = REG_FLD_MASK(REG_FLD(1, 22)),
+			.field = REG_FLD(1, 22),
+		},
+		[QOF_REG_IMG_TRG_OFF_CNT] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TRIG_CNT_1),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TRIG_CNT_1_FLD_QOF_IMG_TRG_OFF_CNT_1),
+			.field = QOF_IMG_QOF_TRIG_CNT_1_FLD_QOF_IMG_TRG_OFF_CNT_1,
+		},
+		[QOF_REG_IMG_TRG_ON_CNT] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TRIG_CNT_1),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TRIG_CNT_1_FLD_QOF_IMG_TRG_ON_CNT_1),
+			.field = QOF_IMG_QOF_TRIG_CNT_1_FLD_QOF_IMG_TRG_ON_CNT_1,
+		},
+	},
+
+	[QOF_SUPPORT_TRAW] = // TRAW
+	{
+		[QOF_REG_IMG_EVENT_CNT_ADD] = {
+			// TODO : need to check CODA
+			// QOF_REG_IMG_EVENT_CNT_ADD
+			.addr = QOF_IMG_EVENT_A + 0x4,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(1, 0)),
+			.field = REG_FLD(1, 0),
+		},
+		[QOF_REG_IMG_VM_A] = {
+			.addr = QOF_IMG_EVENT_A + 0x18,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(7, 0)),
+			.field = REG_FLD(7, 0),
+		},
+		[QOF_REG_IMG_VM_B] = {
+			.addr = QOF_IMG_EVENT_B + 0x18,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(7, 0)),
+			.field = REG_FLD(7, 0),
+		},
+		[QOF_REG_IMG_VM_C] = {
+			.addr = QOF_IMG_EVENT_C + 0x18,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(7, 0)),
+			.field = REG_FLD(7, 0),
+		},
+		[QOF_REG_IMG_ITC_SRC_SEL] = {
+			// QOF_REG_IMG_ITC_SRC_SEL
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TOP_CTL),
 			.val = BIT(25),
-			.mask = BIT(25),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_ITC_SRC_SEL_2),
+			.field = QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_ITC_SRC_SEL_2,
 		},
-		{
+		[QOF_REG_IMG_HW_CLR_EN] = {
 			// QOF_IMG_HW_CLR_EN
-			.addr = QOF_REG_BASE + 0x00000020,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_2),
 			.val = BIT(14),
-			.mask = BIT(14),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_HW_CLR_EN_2),
+			.field = QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_HW_CLR_EN_2,
 		},
-		{
+		[QOF_REG_IMG_HW_SET_EN] = {
 			// QOF_IMG_HW_SET_EN
-			.addr = QOF_REG_BASE + 0x00000020,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_2),
 			.val = BIT(13),
-			.mask = BIT(13),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_HW_SET_EN_2),
+			.field = QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_HW_SET_EN_2,
 		},
-		{
+		[QOF_REG_IMG_OFF_ITC_W_EN] = {
 			// QOF_IMG_OFF_ITC_W_EN
-			.addr = QOF_REG_BASE + 0x00000020,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_2),
 			.val = BIT(12),
-			.mask = BIT(12),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_OFF_ITC_W_EN_2),
+			.field = QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_OFF_ITC_W_EN_2,
 		},
-		{
+		[QOF_REG_IMG_ON_ITC_W_EN] = {
 			// QOF_IMG_ON_ITC_W_EN
-			.addr = QOF_REG_BASE + 0x00000020,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_2),
 			.val = BIT(11),
-			.mask = BIT(11),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_ON_ITC_W_EN_2),
+			.field = QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_ON_ITC_W_EN_2,
 		},
-		{
+		[QOF_REG_IMG_HW_SEQ_EN] = {
+			// TODO: Need to check CODA
 			// QOF_IMG_HW_SEQ_EN
-			.addr = QOF_REG_BASE + 0x00000020,
-			.val = BIT(10),
-			.mask = BIT(10),
-		},
-		{
-			// QOF_IMG_RTC_EN
-			.addr = QOF_REG_BASE + 0x00000020,
-			.val = BIT(9),
-			.mask = BIT(9),
-		},
-		{
-			// QOF_IMG_GCE_RESTORE_EN
-			.addr = QOF_REG_BASE + 0x00000034,
-			.val = BIT(2),
-			.mask = BIT(2),
-		},
-		{
-			// QOF_IMG_GCE_SAVE_EN
-			.addr = QOF_REG_BASE + 0x00000034,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_2),
 			.val = BIT(0),
-			.mask = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_POWER_CTL_MODE_2),
+			.field = QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_POWER_CTL_MODE_2,
 		},
-		{
+		[QOF_REG_IMG_HW_HWCCF_EN] = {
+			// TODO: Need to check CODA
+			// QOF_IMG_HW_SEQ_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_2),
+			.val = 0,
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_POWER_CTL_MODE_2),
+			.field = QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_POWER_CTL_MODE_2,
+		},
+		[QOF_REG_IMG_RTC_EN] = {
+			// QOF_IMG_RTC_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_2),
+			.val = BIT(9),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_RTC_EN_2),
+			.field = QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_RTC_EN_2,
+		},
+		[QOF_REG_IMG_GCE_RESTORE_EN] = {
+			// QOF_IMG_GCE_RESTORE_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_2),
+			.val = BIT(2),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_2_FLD_QOF_IMG_GCE_RESTORE_EN_2),
+			.field = QOF_IMG_QOF_GCE_CTL_2_FLD_QOF_IMG_GCE_RESTORE_EN_2,
+		},
+		[QOF_REG_IMG_GCE_SAVE_EN] = {
+			// QOF_IMG_GCE_SAVE_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_2),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_2_FLD_QOF_IMG_GCE_SAVE_EN_2),
+			.field = QOF_IMG_QOF_GCE_CTL_2_FLD_QOF_IMG_GCE_SAVE_EN_2,
+		},
+		[QOF_REG_IMG_PWR_ACK_2ND_WAIT_TH] = {
 			// QOF_IMG_PWR_ACK_2ND_WAIT_TH
-			.addr = QOF_REG_BASE + 0x00000040,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_POWER_ACK_CYCLE_2),
 			.val = 0x5140000, // bit 16~31 =‘h514
-			.mask = BIT(16)|BIT(17)|BIT(18)|BIT(19)|BIT(20)|BIT(21)|BIT(22)|
-				BIT(23)|BIT(24)|BIT(25)|BIT(26)|BIT(27)|BIT(28)|BIT(29)|
-				BIT(30)|BIT(31)//BIT_PERIOD(16, 31),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_POWER_ACK_CYCLE_2_FLD_QOF_IMG_PWR_ACK_2ND_WAIT_TH_2),
+			.field = QOF_IMG_QOF_POWER_ACK_CYCLE_2_FLD_QOF_IMG_PWR_ACK_2ND_WAIT_TH_2,
 		},
-		{
+		[QOF_REG_IMG_PWR_ACK_WAIT_TH] = {
 			// QOF_IMG_PWR_ACK_WAIT_TH
-			.addr = QOF_REG_BASE + 0x00000040,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_POWER_ACK_CYCLE_2),
 			.val = 0x514, //  =‘h514
-			.mask = BIT_PERIOD(0, 15)
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_POWER_ACK_CYCLE_2_FLD_QOF_IMG_PWR_ACK_WAIT_TH_2),
+			.field = QOF_IMG_QOF_POWER_ACK_CYCLE_2_FLD_QOF_IMG_PWR_ACK_WAIT_TH_2,
 		},
-		{
+		[QOF_REG_IMG_QOF_ENG_EN] = {
 			// QOF_IMG_QOF_ENG_EN
-			.addr = QOF_REG_BASE + 0x00000000,
-			.val = BIT(3),
-			.mask = BIT(3)
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TOP_CTL),
+			.val = BIT(4),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_QOF_ENG_EN_2),
+			.field = QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_QOF_ENG_EN_2,
 		},
-		{
-			// QOF_IMG_INTX_STATUS
-			.addr = QOF_REG_BASE + 0x000000A4,
-			.val = 0xFFFFFFFF,
-			.mask = 0xFFFFFFFF
-		},
-		{
+		[QOF_REG_IMG_EVENT_CNT_SUB] = {
+			// TODO: Need to check CODA
 			// QOF_IMG_EVENT_CNT_SUB
-			.addr = QOF_REG_BASE + 0x00000020,
-			.val = BIT(8),
-			.mask = BIT(8),
-		},
-		{
-			// QOF_IMG_GCE_SAVE_DONE
-			.addr = QOF_REG_BASE + 0x00000034,
+			.addr = QOF_IMG_EVENT_A + 0x4,
 			.val = BIT(1),
-			.mask = BIT(1),
+			.mask = REG_FLD_MASK(REG_FLD(1, 1)),
+			.field = REG_FLD(1, 1),
 		},
-		{
+		[QOF_REG_IMG_GCE_SAVE_DONE] = {
+			// QOF_IMG_GCE_SAVE_DONE
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_2),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_2_FLD_QOF_IMG_GCE_SAVE_DONE_2),
+			.field = QOF_IMG_QOF_GCE_CTL_2_FLD_QOF_IMG_GCE_SAVE_DONE_2,
+		},
+		[QOF_REG_IMG_POWER_STATE] = {
 			// QOF_IMG_POWER_STATE
-			.addr = QOF_REG_BASE + 0x00000038,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_STATE_DBG_2),
 			.val = BIT_PERIOD(0, 7),
-			.mask = BIT_PERIOD(0, 7),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_STATE_DBG_2_FLD_QOF_IMG_POWER_STATE_2),
+			.field = QOF_IMG_QOF_STATE_DBG_2_FLD_QOF_IMG_POWER_STATE_2,
 		},
-		{
-			// QOF_IMG_GCE_RESTORE_DONE
-			.addr = QOF_REG_BASE + 0x00000034,
+		[QOF_REG_IMG_GCE_RESTORE_DONE] = {
+			// QOF_REG_IMG_GCE_RESTORE_DONE
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_2),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_2_FLD_QOF_IMG_GCE_RESTORE_DONE_2),
+			.field = QOF_IMG_QOF_GCE_CTL_2_FLD_QOF_IMG_GCE_RESTORE_DONE_2,
+		},
+		[QOF_REG_IMG_APMCU_SET] = {
+			// QOF_REG_IMG_APMCU_SET
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_2),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_APMCU_SET_2),
+			.field = QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_APMCU_SET_2,
+		},
+		[QOF_REG_IMG_APMCU_CLR] = {
+			// QOF_IMG_APMCU_CLR
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_2),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_APMCU_CLR_2),
+			.field = QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_APMCU_CLR_2,
+		},
+		[QOF_REG_IMG_QOF_VOTER_DBG] = {
+			// TODO : naming refine
+			// QOF_IMG_QOF_VOTER_DBG
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_VOTER_DBG_2),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_VOTER_DBG_2_FLD_QOF_IMG_VOTE_2),
+			.field = QOF_IMG_QOF_VOTER_DBG_2_FLD_QOF_IMG_VOTE_2,
+		},
+		[QOF_REG_IMG_QOF_DONE_STATUS] = {
+			// TODO : naming refine
+			// QOF_REG_IMG_QOF_DONE_STATUS
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_DONE_STATUS_2),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_DONE_STATUS_2_FLD_QOF_IMG_CFG_ON_DONE_2),
+			.field = QOF_IMG_QOF_DONE_STATUS_2_FLD_QOF_IMG_CFG_ON_DONE_2,
+		},
+		[QOF_REG_IMG_ITC_STATUS] = {
+			// QOF_REG_IMG_ITC_STATUS
+			.addr = (QOF_REG_BASE + QOF_IMG_ITC_STATUS),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_ITC_STATUS_FLD_QOF_IMG_ITC_SEL_STATUS),
+			.field = QOF_IMG_ITC_STATUS_FLD_QOF_IMG_ITC_SEL_STATUS,
+		},
+		[QOF_REG_IMG_QOF_STATE_DBG] = {
+			// TODO : check mask
+			// QOF_REG_IMG_QOF_STATE_DBG
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_STATE_DBG_2),
 			.val = BIT(3),
 			.mask = BIT(3),
+			.field = REG_FLD(1, 3),
 		},
-		{
-			// QOF_IMG_APMCU_SET
-			.addr = QOF_REG_BASE + 0x00000020,
+		[QOF_REG_IMG_QOF_MTC_ST_LSB] = {
+			// TODO : check mask
+			// QOF_REG_IMG_QOF_MTC_ST_LSB
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_MTC_ST_LSB_2),
+			.val = BIT(3),
+			.mask = BIT(3),
+			.field = REG_FLD(1, 3),
+		},
+		[QOF_REG_IMG_QOF_MTC_ST_MSB2] = {
+			// TODO : check mask
+			// QOF_REG_IMG_QOF_MTC_ST_MSB2
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_MTC_ST_MSB2_2),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_MTC_ST_MSB2_2_FLD_QOF_IMG_MTCMOS_ST_MSB2_2),
+			.field = QOF_IMG_QOF_MTC_ST_MSB2_2_FLD_QOF_IMG_MTCMOS_ST_MSB2_2,
+		},
+		[QOF_REG_IMG_HWCCF_SW_VOTE_OFF] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_HWCCF_SW_CTL),
+			.val = BIT(5),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_OFF_2),
+			.field = QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_OFF_2,
+		},
+		[QOF_REG_IMG_HWCCF_SW_VOTE_ON] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_HWCCF_SW_CTL),
+			.val = BIT(4),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_ON_2),
+			.field = QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_ON_2,
+		},
+		[QOF_REG_IMG_SCP_CLR] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_2),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_SCP_CLR_2),
+			.field = QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_SCP_CLR_2,
+		},
+		[QOF_REG_IMG_SCP_SET] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_2),
+			.val = BIT(2),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_SCP_SET_2),
+			.field = QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_SCP_SET_2,
+		},
+		[QOF_REG_IMG_HWCCF_MTCMOS] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_SPARE2_TOP),
+			.val = BIT(6),
+			.mask = REG_FLD_MASK(REG_FLD(1, 6)),
+			.field = REG_FLD(1, 6),
+		},
+		[QOF_REG_IMG_TRG_OFF_CNT] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TRIG_CNT_2),
 			.val = BIT(0),
-			.mask = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TRIG_CNT_2_FLD_QOF_IMG_TRG_OFF_CNT_2),
+			.field = QOF_IMG_QOF_TRIG_CNT_2_FLD_QOF_IMG_TRG_OFF_CNT_2,
 		},
-		{
-			// QOF_IMG_APMCU_CLR
-			.addr = QOF_REG_BASE + 0x00000020,
-			.val = BIT(1),
-			.mask = BIT(1),
-		},
-		{
-			// DIP_REG_CQ_INT2_STATUS
-			.addr = QOF_REG_BASE + 0x000000AC,
-			.val = BIT(1),
-			.mask = BIT(1),
-		},
-		{
-			// QOF_IMG_QOF_EVENT_CNT
-			.addr = QOF_REG_BASE + 0x0000003C,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_VOTER_DBG
-			.addr = QOF_REG_BASE + 0x00000028,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_DONE_STATUS
-			.addr = QOF_REG_BASE + 0x00000024,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_ITC_STATUS
-			.addr = QOF_REG_BASE + 0x00000004,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_STATE_DBG
-			.addr = QOF_REG_BASE + 0x00000038,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_MTC_ST_LSB
-			.addr = QOF_REG_BASE + 0x00000200,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_MTC_ST_MSB2
-			.addr = QOF_REG_BASE + 0x00000204,
-			.val = BIT(3),
-			.mask = BIT(3)
+		[QOF_REG_IMG_TRG_ON_CNT] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TRIG_CNT_2),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TRIG_CNT_2_FLD_QOF_IMG_TRG_ON_CNT_2),
+			.field = QOF_IMG_QOF_TRIG_CNT_2_FLD_QOF_IMG_TRG_ON_CNT_2,
 		},
 	},
 
-	//QOF_SUPPORT_TRAW
+	[QOF_SUPPORT_WPE_EIS] =
 	{
-		{
-			// QOF_IMG_EVENT_CNT_ADD
-			.addr = QOF_REG_BASE + 0x00000210,
-			.val = BIT(7),
-			.mask = BIT(7),
+		[QOF_REG_IMG_EVENT_CNT_ADD] = {
+			// TODO : need to check CODA
+			// QOF_REG_IMG_EVENT_CNT_ADD
+			.addr = QOF_IMG_EVENT_A + 0x8,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(1, 0)),
+			.field = REG_FLD(1, 0),
 		},
-		{
-			// QOF_IMG_ITC_SRC_SEL
-			.addr = QOF_REG_BASE + 0x00000000,
+		[QOF_REG_IMG_VM_A] = {
+			.addr = QOF_IMG_EVENT_A + 0x1c,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(7, 0)),
+			.field = REG_FLD(7, 0),
+		},
+		[QOF_REG_IMG_VM_B] = {
+			.addr = QOF_IMG_EVENT_B + 0x1c,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(7, 0)),
+			.field = REG_FLD(7, 0),
+		},
+		[QOF_REG_IMG_VM_C] = {
+			.addr = QOF_IMG_EVENT_C + 0x1c,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(7, 0)),
+			.field = REG_FLD(7, 0),
+		},
+		[QOF_REG_IMG_ITC_SRC_SEL] = {
+			// QOF_REG_IMG_ITC_SRC_SEL
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TOP_CTL),
 			.val = BIT(26),
-			.mask = BIT(26),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_ITC_SRC_SEL_3),
+			.field = QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_ITC_SRC_SEL_3,
 		},
-		{
+		[QOF_REG_IMG_HW_CLR_EN] = {
 			// QOF_IMG_HW_CLR_EN
-			.addr = QOF_REG_BASE + 0x00000210,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_3),
 			.val = BIT(14),
-			.mask = BIT(14),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_HW_CLR_EN_3),
+			.field = QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_HW_CLR_EN_3,
 		},
-		{
+		[QOF_REG_IMG_HW_SET_EN] = {
 			// QOF_IMG_HW_SET_EN
-			.addr = QOF_REG_BASE + 0x00000210,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_3),
 			.val = BIT(13),
-			.mask = BIT(13),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_HW_SET_EN_3),
+			.field = QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_HW_SET_EN_3,
 		},
-		{
+		[QOF_REG_IMG_OFF_ITC_W_EN] = {
 			// QOF_IMG_OFF_ITC_W_EN
-			.addr = QOF_REG_BASE + 0x00000210,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_3),
 			.val = BIT(12),
-			.mask = BIT(12),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_OFF_ITC_W_EN_3),
+			.field = QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_OFF_ITC_W_EN_3,
 		},
-		{
+		[QOF_REG_IMG_ON_ITC_W_EN] = {
 			// QOF_IMG_ON_ITC_W_EN
-			.addr = QOF_REG_BASE + 0x00000210,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_3),
 			.val = BIT(11),
-			.mask = BIT(11),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_ON_ITC_W_EN_3),
+			.field = QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_ON_ITC_W_EN_3,
 		},
-		{
+		[QOF_REG_IMG_HW_SEQ_EN] = {
+			// TODO: Need to check CODA
 			// QOF_IMG_HW_SEQ_EN
-			.addr = QOF_REG_BASE + 0x00000210,
-			.val = BIT(10),
-			.mask = BIT(10),
-		},
-		{
-			// QOF_IMG_RTC_EN
-			.addr = QOF_REG_BASE + 0x00000210,
-			.val = BIT(9),
-			.mask = BIT(9),
-		},
-		{
-			// QOF_IMG_GCE_RESTORE_EN
-			.addr = QOF_REG_BASE + 0x00000224,
-			.val = BIT(2),
-			.mask = BIT(2),
-		},
-		{
-			// QOF_IMG_GCE_SAVE_EN
-			.addr = QOF_REG_BASE + 0x00000224,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_3),
 			.val = BIT(0),
-			.mask = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_POWER_CTL_MODE_3),
+			.field = QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_POWER_CTL_MODE_3,
 		},
-		{
-			// QOF_IMG_PWR_ACK_2ND_WAIT_TH
-			.addr = QOF_REG_BASE + 0x00000230,
+		[QOF_REG_IMG_HW_HWCCF_EN] = {
+			// TODO: Need to check CODA
+			// QOF_IMG_HW_SEQ_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_3),
+			.val = 0,
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_POWER_CTL_MODE_3),
+			.field = QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_POWER_CTL_MODE_3,
+		},
+		[QOF_REG_IMG_RTC_EN] = {
+			// QOF_IMG_RTC_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_3),
+			.val = BIT(9),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_RTC_EN_3),
+			.field = QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_RTC_EN_3,
+		},
+		[QOF_REG_IMG_GCE_RESTORE_EN] = {
+			// QOF_IMG_GCE_RESTORE_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_3),
+			.val = BIT(2),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_3_FLD_QOF_IMG_GCE_RESTORE_EN_3),
+			.field = QOF_IMG_QOF_GCE_CTL_3_FLD_QOF_IMG_GCE_RESTORE_EN_3,
+		},
+		[QOF_REG_IMG_GCE_SAVE_EN] = {
+			// QOF_IMG_GCE_SAVE_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_3),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_3_FLD_QOF_IMG_GCE_SAVE_EN_3),
+			.field = QOF_IMG_QOF_GCE_CTL_3_FLD_QOF_IMG_GCE_SAVE_EN_3,
+		},
+		[QOF_REG_IMG_PWR_ACK_2ND_WAIT_TH] = {
+			// QOF_IMG_PWR_ACK_3ND_WAIT_TH
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_POWER_ACK_CYCLE_3),
 			.val = 0x5140000, // bit 16~31 =‘h514
-			.mask = BIT(16)|BIT(17)|BIT(18)|BIT(19)|BIT(20)|BIT(21)|BIT(22)|
-				BIT(23)|BIT(24)|BIT(25)|BIT(26)|BIT(27)|BIT(28)|BIT(29)|
-				BIT(30)|BIT(31)//BIT_PERIOD(16, 31),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_POWER_ACK_CYCLE_3_FLD_QOF_IMG_PWR_ACK_2ND_WAIT_TH_3),
+			.field = QOF_IMG_QOF_POWER_ACK_CYCLE_3_FLD_QOF_IMG_PWR_ACK_2ND_WAIT_TH_3,
 		},
-		{
+		[QOF_REG_IMG_PWR_ACK_WAIT_TH] = {
 			// QOF_IMG_PWR_ACK_WAIT_TH
-			.addr = QOF_REG_BASE + 0x00000230,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_POWER_ACK_CYCLE_3),
 			.val = 0x514, //  =‘h514
-			.mask = BIT_PERIOD(0, 15)
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_POWER_ACK_CYCLE_3_FLD_QOF_IMG_PWR_ACK_WAIT_TH_3),
+			.field = QOF_IMG_QOF_POWER_ACK_CYCLE_3_FLD_QOF_IMG_PWR_ACK_WAIT_TH_3,
 		},
-		{
+		[QOF_REG_IMG_QOF_ENG_EN] = {
 			// QOF_IMG_QOF_ENG_EN
-			.addr = QOF_REG_BASE + 0x00000000,
-			.val = BIT(4), // NEED TO = 1
-			.mask = BIT(4)
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TOP_CTL),
+			.val = BIT(5),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_QOF_ENG_EN_3),
+			.field = QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_QOF_ENG_EN_3,
 		},
-		{
-			// QOF_IMG_INTX_STATUS
-			.addr = QOF_REG_BASE + QOF_SPARE_VALUE_TO_BE_FIX,
-			.val = QOF_SPARE_VALUE_TO_BE_FIX,
-			.mask = QOF_SPARE_VALUE_TO_BE_FIX
-		},
-		{
+		[QOF_REG_IMG_EVENT_CNT_SUB] = {
+			// TODO: Need to check CODA
 			// QOF_IMG_EVENT_CNT_SUB
-			.addr = QOF_REG_BASE + 0x00000210,
-			.val = BIT(8),
-			.mask = BIT(8),
-		},
-		{
-			// QOF_IMG_GCE_SAVE_DONE
-			.addr = QOF_REG_BASE + 0x00000224,
+			.addr = QOF_IMG_EVENT_A + 0x8,
 			.val = BIT(1),
-			.mask = BIT(1),
+			.mask = REG_FLD_MASK(REG_FLD(1, 1)),
+			.field = REG_FLD(1, 1),
 		},
-		{
+		[QOF_REG_IMG_GCE_SAVE_DONE] = {
+			// QOF_IMG_GCE_SAVE_DONE
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_3),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_3_FLD_QOF_IMG_GCE_SAVE_DONE_3),
+			.field = QOF_IMG_QOF_GCE_CTL_3_FLD_QOF_IMG_GCE_SAVE_DONE_3,
+		},
+		[QOF_REG_IMG_POWER_STATE] = {
 			// QOF_IMG_POWER_STATE
-			.addr = QOF_REG_BASE + 0x00000228,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_STATE_DBG_3),
 			.val = BIT_PERIOD(0, 7),
-			.mask = BIT_PERIOD(0, 7),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_STATE_DBG_3_FLD_QOF_IMG_POWER_STATE_3),
+			.field = QOF_IMG_QOF_STATE_DBG_3_FLD_QOF_IMG_POWER_STATE_3,
 		},
-		{
-			// QOF_IMG_GCE_RESTORE_DONE
-			.addr = QOF_REG_BASE + 0x00000224,
+		[QOF_REG_IMG_GCE_RESTORE_DONE] = {
+			// QOF_REG_IMG_GCE_RESTORE_DONE
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_3),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_3_FLD_QOF_IMG_GCE_RESTORE_DONE_3),
+			.field = QOF_IMG_QOF_GCE_CTL_3_FLD_QOF_IMG_GCE_RESTORE_DONE_3,
+		},
+		[QOF_REG_IMG_APMCU_SET] = {
+			// QOF_REG_IMG_APMCU_SET
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_3),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_APMCU_SET_3),
+			.field = QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_APMCU_SET_3,
+		},
+		[QOF_REG_IMG_APMCU_CLR] = {
+			// QOF_IMG_APMCU_CLR
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_3),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_APMCU_CLR_3),
+			.field = QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_APMCU_CLR_3,
+		},
+		[QOF_REG_IMG_QOF_VOTER_DBG] = {
+			// TODO : naming refine
+			// QOF_IMG_QOF_VOTER_DBG
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_VOTER_DBG_3),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_VOTER_DBG_3_FLD_QOF_IMG_VOTE_3),
+			.field = QOF_IMG_QOF_VOTER_DBG_3_FLD_QOF_IMG_VOTE_3,
+		},
+		[QOF_REG_IMG_QOF_DONE_STATUS] = {
+			// TODO : naming refine
+			// QOF_REG_IMG_QOF_DONE_STATUS
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_DONE_STATUS_3),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_DONE_STATUS_3_FLD_QOF_IMG_CFG_ON_DONE_3),
+			.field = QOF_IMG_QOF_DONE_STATUS_3_FLD_QOF_IMG_CFG_ON_DONE_3,
+		},
+		[QOF_REG_IMG_ITC_STATUS] = {
+			// QOF_REG_IMG_ITC_STATUS
+			.addr = (QOF_REG_BASE + QOF_IMG_ITC_STATUS),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_ITC_STATUS_FLD_QOF_IMG_ITC_SEL_STATUS),
+			.field = QOF_IMG_ITC_STATUS_FLD_QOF_IMG_ITC_SEL_STATUS,
+		},
+		[QOF_REG_IMG_QOF_STATE_DBG] = {
+			// TODO : check mask
+			// QOF_REG_IMG_QOF_STATE_DBG
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_STATE_DBG_3),
 			.val = BIT(3),
 			.mask = BIT(3),
+			.field = REG_FLD(1, 3),
 		},
-		{
-			// QOF_IMG_APMCU_SET
-			.addr = QOF_REG_BASE + 0x00000210,
+		[QOF_REG_IMG_QOF_MTC_ST_LSB] = {
+			// TODO : check mask
+			// QOF_REG_IMG_QOF_MTC_ST_LSB
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_MTC_ST_LSB_3),
+			.val = BIT(3),
+			.mask = BIT(3),
+			.field = REG_FLD(1, 3),
+		},
+		[QOF_REG_IMG_QOF_MTC_ST_MSB2] = {
+			// TODO : check mask
+			// QOF_REG_IMG_QOF_MTC_ST_MSB2
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_MTC_ST_MSB2_3),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_MTC_ST_MSB2_3_FLD_QOF_IMG_MTCMOS_ST_MSB2_3),
+			.field = QOF_IMG_QOF_MTC_ST_MSB2_3_FLD_QOF_IMG_MTCMOS_ST_MSB2_3,
+		},
+		[QOF_REG_IMG_HWCCF_SW_VOTE_OFF] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_HWCCF_SW_CTL),
+			.val = BIT(9),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_OFF_3),
+			.field = QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_OFF_3,
+		},
+		[QOF_REG_IMG_HWCCF_SW_VOTE_ON] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_HWCCF_SW_CTL),
+			.val = BIT(8),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_ON_3),
+			.field = QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_ON_3,
+		},
+		[QOF_REG_IMG_SCP_CLR] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_3),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_SCP_CLR_3),
+			.field = QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_SCP_CLR_3,
+		},
+		[QOF_REG_IMG_SCP_SET] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_3),
+			.val = BIT(2),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_SCP_SET_3),
+			.field = QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_SCP_SET_3,
+		},
+		[QOF_REG_IMG_HWCCF_MTCMOS] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_SPARE2_TOP),
+			.val = BIT(10),
+			.mask = REG_FLD_MASK(REG_FLD(1, 10)),
+			.field = REG_FLD(1, 10),
+		},
+		[QOF_REG_IMG_TRG_OFF_CNT] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TRIG_CNT_3),
 			.val = BIT(0),
-			.mask = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TRIG_CNT_3_FLD_QOF_IMG_TRG_OFF_CNT_3),
+			.field = QOF_IMG_QOF_TRIG_CNT_3_FLD_QOF_IMG_TRG_OFF_CNT_3,
 		},
-		{
-			// QOF_IMG_APMCU_CLR
-			.addr = QOF_REG_BASE + 0x00000210,
-			.val = BIT(1),
-			.mask = BIT(1),
-		},
-		{
-			// QOF_IMG_INTX_STATUS
-			.addr = QOF_REG_BASE + QOF_SPARE_VALUE_TO_BE_FIX,
-			.val = QOF_SPARE_VALUE_TO_BE_FIX,
-			.mask = QOF_SPARE_VALUE_TO_BE_FIX,
-		},
-		{
-			// QOF_IMG_QOF_EVENT_CNT
-			.addr = QOF_REG_BASE + 0x0000022C,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_VOTER_DBG
-			.addr = QOF_REG_BASE + 0x00000218,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_DONE_STATUS
-			.addr = QOF_REG_BASE + 0x00000214,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_ITC_STATUS
-			.addr = QOF_REG_BASE + 0x00000004,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_STATE_DBG
-			.addr = QOF_REG_BASE + 0x00000228,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_MTC_ST_LSB
-			.addr = QOF_REG_BASE + 0x00000400,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_MTC_ST_MSB2
-			.addr = QOF_REG_BASE + 0x00000404,
-			.val = BIT(3),
-			.mask = BIT(3)
+		[QOF_REG_IMG_TRG_ON_CNT] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TRIG_CNT_3),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TRIG_CNT_3_FLD_QOF_IMG_TRG_ON_CNT_3),
+			.field = QOF_IMG_QOF_TRIG_CNT_3_FLD_QOF_IMG_TRG_ON_CNT_3,
 		},
 	},
 
-	// QOF_SUPPORT_WPE_EIS
+	[QOF_SUPPORT_WPE_TNR] =
 	{
-		{
-			// QOF_IMG_EVENT_CNT_ADD
-			.addr = QOF_REG_BASE + 0x00000410,
-			.val = BIT(7),
-			.mask = BIT(7),
+		[QOF_REG_IMG_EVENT_CNT_ADD] = {
+			// TODO : need to check CODA
+			// QOF_REG_IMG_EVENT_CNT_ADD
+			.addr = QOF_IMG_EVENT_A + 0xc,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(1, 0)),
+			.field = REG_FLD(1, 0),
 		},
-		{
-			// QOF_IMG_ITC_SRC_SEL
-			.addr = QOF_REG_BASE + 0x00000000,
+		[QOF_REG_IMG_VM_A] = {
+			.addr = QOF_IMG_EVENT_A + 0x20,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(7, 0)),
+			.field = REG_FLD(7, 0),
+		},
+		[QOF_REG_IMG_VM_B] = {
+			.addr = QOF_IMG_EVENT_B + 0x20,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(7, 0)),
+			.field = REG_FLD(7, 0),
+		},
+		[QOF_REG_IMG_VM_C] = {
+			.addr = QOF_IMG_EVENT_C + 0x20,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(7, 0)),
+			.field = REG_FLD(7, 0),
+		},
+		[QOF_REG_IMG_ITC_SRC_SEL] = {
+			// QOF_REG_IMG_ITC_SRC_SEL
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TOP_CTL),
 			.val = BIT(27),
-			.mask = BIT(27),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_ITC_SRC_SEL_4),
+			.field = QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_ITC_SRC_SEL_4,
 		},
-		{
+		[QOF_REG_IMG_HW_CLR_EN] = {
 			// QOF_IMG_HW_CLR_EN
-			.addr = QOF_REG_BASE + 0x00000410,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_4),
 			.val = BIT(14),
-			.mask = BIT(14),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_HW_CLR_EN_4),
+			.field = QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_HW_CLR_EN_4,
 		},
-		{
+		[QOF_REG_IMG_HW_SET_EN] = {
 			// QOF_IMG_HW_SET_EN
-			.addr = QOF_REG_BASE + 0x00000410,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_4),
 			.val = BIT(13),
-			.mask = BIT(13),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_HW_SET_EN_4),
+			.field = QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_HW_SET_EN_4,
 		},
-		{
+		[QOF_REG_IMG_OFF_ITC_W_EN] = {
 			// QOF_IMG_OFF_ITC_W_EN
-			.addr = QOF_REG_BASE + 0x00000410,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_4),
 			.val = BIT(12),
-			.mask = BIT(12),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_OFF_ITC_W_EN_4),
+			.field = QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_OFF_ITC_W_EN_4,
 		},
-		{
+		[QOF_REG_IMG_ON_ITC_W_EN] = {
 			// QOF_IMG_ON_ITC_W_EN
-			.addr = QOF_REG_BASE + 0x00000410,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_4),
 			.val = BIT(11),
-			.mask = BIT(11),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_ON_ITC_W_EN_4),
+			.field = QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_ON_ITC_W_EN_4,
 		},
-		{
+		[QOF_REG_IMG_HW_SEQ_EN] = {
+			// TODO: Need to check CODA
 			// QOF_IMG_HW_SEQ_EN
-			.addr = QOF_REG_BASE + 0x00000410,
-			.val = BIT(10),
-			.mask = BIT(10),
-		},
-		{
-			// QOF_IMG_RTC_EN
-			.addr = QOF_REG_BASE + 0x00000410,
-			.val = BIT(9),
-			.mask = BIT(9),
-		},
-		{
-			// QOF_IMG_GCE_RESTORE_EN
-			.addr = QOF_REG_BASE + 0x00000424,
-			.val = BIT(2),
-			.mask = BIT(2),
-		},
-		{
-			// QOF_IMG_GCE_SAVE_EN
-			.addr = QOF_REG_BASE + 0x00000424,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_4),
 			.val = BIT(0),
-			.mask = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_POWER_CTL_MODE_4),
+			.field = QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_POWER_CTL_MODE_4,
 		},
-		{
-			// QOF_IMG_PWR_ACK_2ND_WAIT_TH
-			.addr = QOF_REG_BASE + 0x00000430,
+		[QOF_REG_IMG_HW_HWCCF_EN] = {
+			// TODO: Need to check CODA
+			// QOF_IMG_HW_SEQ_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_4),
+			.val = 0,
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_POWER_CTL_MODE_4),
+			.field = QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_POWER_CTL_MODE_4,
+		},
+		[QOF_REG_IMG_RTC_EN] = {
+			// QOF_IMG_RTC_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_4),
+			.val = BIT(9),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_RTC_EN_4),
+			.field = QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_RTC_EN_4,
+		},
+		[QOF_REG_IMG_GCE_RESTORE_EN] = {
+			// QOF_IMG_GCE_RESTORE_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_4),
+			.val = BIT(2),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_4_FLD_QOF_IMG_GCE_RESTORE_EN_4),
+			.field = QOF_IMG_QOF_GCE_CTL_4_FLD_QOF_IMG_GCE_RESTORE_EN_4,
+		},
+		[QOF_REG_IMG_GCE_SAVE_EN] = {
+			// QOF_IMG_GCE_SAVE_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_4),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_4_FLD_QOF_IMG_GCE_SAVE_EN_4),
+			.field = QOF_IMG_QOF_GCE_CTL_4_FLD_QOF_IMG_GCE_SAVE_EN_4,
+		},
+		[QOF_REG_IMG_PWR_ACK_2ND_WAIT_TH] = {
+			// QOF_IMG_PWR_ACK_4ND_WAIT_TH
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_POWER_ACK_CYCLE_4),
 			.val = 0x5140000, // bit 16~31 =‘h514
-			.mask = BIT(16)|BIT(17)|BIT(18)|BIT(19)|BIT(20)|BIT(21)|BIT(22)|
-				BIT(23)|BIT(24)|BIT(25)|BIT(26)|BIT(27)|BIT(28)|BIT(29)|
-				BIT(30)|BIT(31)//BIT_PERIOD(16, 31),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_POWER_ACK_CYCLE_4_FLD_QOF_IMG_PWR_ACK_2ND_WAIT_TH_4),
+			.field = QOF_IMG_QOF_POWER_ACK_CYCLE_4_FLD_QOF_IMG_PWR_ACK_2ND_WAIT_TH_4,
 		},
-		{
+		[QOF_REG_IMG_PWR_ACK_WAIT_TH] = {
 			// QOF_IMG_PWR_ACK_WAIT_TH
-			.addr = QOF_REG_BASE + 0x00000430,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_POWER_ACK_CYCLE_4),
 			.val = 0x514, //  =‘h514
-			.mask = BIT_PERIOD(0, 15)
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_POWER_ACK_CYCLE_4_FLD_QOF_IMG_PWR_ACK_WAIT_TH_4),
+			.field = QOF_IMG_QOF_POWER_ACK_CYCLE_4_FLD_QOF_IMG_PWR_ACK_WAIT_TH_4,
 		},
-		{
+		[QOF_REG_IMG_QOF_ENG_EN] = {
 			// QOF_IMG_QOF_ENG_EN
-			.addr = QOF_REG_BASE + 0x00000000,
-			.val = BIT(5), // NEED TO = 1
-			.mask = BIT(5)
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TOP_CTL),
+			.val = BIT(6),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_QOF_ENG_EN_4),
+			.field = QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_QOF_ENG_EN_4,
 		},
-		{
-			// QOF_IMG_INTX_STATUS = PQDIP_A_REG_INT2_STATUS = QOF_IMG_INT6_STATUS_3
-			.addr = QOF_REG_BASE + 0x000004A4,
-			.val = 0xFFFFFFFF,
-			.mask = 0xFFFFFFFF
-		},
-		{
+		[QOF_REG_IMG_EVENT_CNT_SUB] = {
+			// TODO: Need to check CODA
 			// QOF_IMG_EVENT_CNT_SUB
-			.addr = QOF_REG_BASE + 0x00000410,
-			.val = BIT(8),
-			.mask = BIT(8),
-		},
-		{
-			// QOF_IMG_GCE_SAVE_DONE
-			.addr = QOF_REG_BASE + 0x00000424,
+			.addr = QOF_IMG_EVENT_A + 0xc,
 			.val = BIT(1),
-			.mask = BIT(1),
+			.mask = REG_FLD_MASK(REG_FLD(1, 1)),
+			.field = REG_FLD(1, 1),
 		},
-		{
+		[QOF_REG_IMG_GCE_SAVE_DONE] = {
+			// QOF_IMG_GCE_SAVE_DONE
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_4),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_4_FLD_QOF_IMG_GCE_SAVE_DONE_4),
+			.field = QOF_IMG_QOF_GCE_CTL_4_FLD_QOF_IMG_GCE_SAVE_DONE_4,
+		},
+		[QOF_REG_IMG_POWER_STATE] = {
 			// QOF_IMG_POWER_STATE
-			.addr = QOF_REG_BASE + 0x00000428,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_STATE_DBG_4),
 			.val = BIT_PERIOD(0, 7),
-			.mask = BIT_PERIOD(0, 7),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_STATE_DBG_4_FLD_QOF_IMG_POWER_STATE_4),
+			.field = QOF_IMG_QOF_STATE_DBG_4_FLD_QOF_IMG_POWER_STATE_4,
 		},
-		{
-			// QOF_IMG_GCE_RESTORE_DONE
-			.addr = QOF_REG_BASE + 0x00000424,
+		[QOF_REG_IMG_GCE_RESTORE_DONE] = {
+			// QOF_REG_IMG_GCE_RESTORE_DONE
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_4),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_4_FLD_QOF_IMG_GCE_RESTORE_DONE_4),
+			.field = QOF_IMG_QOF_GCE_CTL_4_FLD_QOF_IMG_GCE_RESTORE_DONE_4,
+		},
+		[QOF_REG_IMG_APMCU_SET] = {
+			// QOF_REG_IMG_APMCU_SET
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_4),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_APMCU_SET_4),
+			.field = QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_APMCU_SET_4,
+		},
+		[QOF_REG_IMG_APMCU_CLR] = {
+			// QOF_IMG_APMCU_CLR
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_4),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_APMCU_CLR_4),
+			.field = QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_APMCU_CLR_4,
+		},
+		[QOF_REG_IMG_QOF_VOTER_DBG] = {
+			// TODO : naming refine
+			// QOF_IMG_QOF_VOTER_DBG
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_VOTER_DBG_4),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_VOTER_DBG_4_FLD_QOF_IMG_VOTE_4),
+			.field = QOF_IMG_QOF_VOTER_DBG_4_FLD_QOF_IMG_VOTE_4,
+		},
+		[QOF_REG_IMG_QOF_DONE_STATUS] = {
+			// TODO : naming refine
+			// QOF_REG_IMG_QOF_DONE_STATUS
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_DONE_STATUS_4),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_DONE_STATUS_4_FLD_QOF_IMG_CFG_ON_DONE_4),
+			.field = QOF_IMG_QOF_DONE_STATUS_4_FLD_QOF_IMG_CFG_ON_DONE_4,
+		},
+		[QOF_REG_IMG_ITC_STATUS] = {
+			// QOF_REG_IMG_ITC_STATUS
+			.addr = (QOF_REG_BASE + QOF_IMG_ITC_STATUS),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_ITC_STATUS_FLD_QOF_IMG_ITC_SEL_STATUS),
+			.field = QOF_IMG_ITC_STATUS_FLD_QOF_IMG_ITC_SEL_STATUS,
+		},
+		[QOF_REG_IMG_QOF_STATE_DBG] = {
+			// TODO : check mask
+			// QOF_REG_IMG_QOF_STATE_DBG
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_STATE_DBG_4),
 			.val = BIT(3),
 			.mask = BIT(3),
+			.field = REG_FLD(1, 3),
 		},
-		{
-			// QOF_IMG_APMCU_SET
-			.addr = QOF_REG_BASE + 0x00000410,
+		[QOF_REG_IMG_QOF_MTC_ST_LSB] = {
+			// TODO : check mask
+			// QOF_REG_IMG_QOF_MTC_ST_LSB
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_MTC_ST_LSB_4),
+			.val = BIT(3),
+			.mask = BIT(3),
+			.field = REG_FLD(1, 3),
+		},
+		[QOF_REG_IMG_QOF_MTC_ST_MSB2] = {
+			// TODO : check mask
+			// QOF_REG_IMG_QOF_MTC_ST_MSB2
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_MTC_ST_MSB2_4),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_MTC_ST_MSB2_4_FLD_QOF_IMG_MTCMOS_ST_MSB2_4),
+			.field = QOF_IMG_QOF_MTC_ST_MSB2_4_FLD_QOF_IMG_MTCMOS_ST_MSB2_4,
+		},
+		[QOF_REG_IMG_HWCCF_SW_VOTE_OFF] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_HWCCF_SW_CTL),
+			.val = BIT(13),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_OFF_4),
+			.field = QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_OFF_4,
+		},
+		[QOF_REG_IMG_HWCCF_SW_VOTE_ON] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_HWCCF_SW_CTL),
+			.val = BIT(12),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_ON_4),
+			.field = QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_ON_4,
+		},
+		[QOF_REG_IMG_SCP_CLR] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_4),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_SCP_CLR_4),
+			.field = QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_SCP_CLR_4,
+		},
+		[QOF_REG_IMG_SCP_SET] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_4),
+			.val = BIT(2),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_SCP_SET_4),
+			.field = QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_SCP_SET_4,
+		},
+		[QOF_REG_IMG_HWCCF_MTCMOS] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_SPARE2_TOP),
+			.val = BIT(14),
+			.mask = REG_FLD_MASK(REG_FLD(1, 14)),
+			.field = REG_FLD(1, 14),
+		},
+		[QOF_REG_IMG_TRG_OFF_CNT] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TRIG_CNT_4),
 			.val = BIT(0),
-			.mask = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TRIG_CNT_4_FLD_QOF_IMG_TRG_OFF_CNT_4),
+			.field = QOF_IMG_QOF_TRIG_CNT_4_FLD_QOF_IMG_TRG_OFF_CNT_4,
 		},
-		{
-			// QOF_IMG_APMCU_CLR
-			.addr = QOF_REG_BASE + 0x00000410,
-			.val = BIT(1),
-			.mask = BIT(1),
-		},
-		{
-			// QOF_IMG_INTX_STATUS
-			.addr = QOF_REG_BASE + 0x000004AC,
-			.val = BIT(1),
-			.mask = BIT(1),
-		},
-		{
-			// QOF_IMG_QOF_EVENT_CNT
-			.addr = QOF_REG_BASE + 0x0000042C,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_VOTER_DBG
-			.addr = QOF_REG_BASE + 0x00000418,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_DONE_STATUS
-			.addr = QOF_REG_BASE + 0x00000414,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_ITC_STATUS
-			.addr = QOF_REG_BASE + 0x00000004,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_STATE_DBG
-			.addr = QOF_REG_BASE + 0x00000428,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_MTC_ST_LSB
-			.addr = QOF_REG_BASE + 0x00000600,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_MTC_ST_MSB2
-			.addr = QOF_REG_BASE + 0x00000604,
-			.val = BIT(3),
-			.mask = BIT(3)
+		[QOF_REG_IMG_TRG_ON_CNT] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TRIG_CNT_4),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TRIG_CNT_4_FLD_QOF_IMG_TRG_ON_CNT_4),
+			.field = QOF_IMG_QOF_TRIG_CNT_4_FLD_QOF_IMG_TRG_ON_CNT_4,
 		},
 	},
 
-	// QOF_SUPPORT_WPE_TNR
+	[QOF_SUPPORT_WPE_LITE] =
 	{
-		{
-			// QOF_IMG_EVENT_CNT_ADD
-			.addr = QOF_REG_BASE + 0x00000610,
-			.val = BIT(7),
-			.mask = BIT(7),
+		[QOF_REG_IMG_EVENT_CNT_ADD] = {
+			// TODO : need to check CODA
+			// QOF_REG_IMG_EVENT_CNT_ADD
+			.addr = QOF_IMG_EVENT_A + 0x10,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(1, 0)),
+			.field = REG_FLD(1, 0),
 		},
-		{
-			// QOF_IMG_ITC_SRC_SEL
-			.addr = QOF_REG_BASE + 0x00000000,
+		[QOF_REG_IMG_VM_A] = {
+			.addr = QOF_IMG_EVENT_A + 0x24,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(7, 0)),
+			.field = REG_FLD(7, 0),
+		},
+		[QOF_REG_IMG_VM_B] = {
+			.addr = QOF_IMG_EVENT_B + 0x24,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(7, 0)),
+			.field = REG_FLD(7, 0),
+		},
+		[QOF_REG_IMG_VM_C] = {
+			.addr = QOF_IMG_EVENT_C + 0x24,
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(7, 0)),
+			.field = REG_FLD(7, 0),
+		},
+		[QOF_REG_IMG_ITC_SRC_SEL] = {
+			// QOF_REG_IMG_ITC_SRC_SEL
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TOP_CTL),
 			.val = BIT(28),
-			.mask = BIT(28),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_ITC_SRC_SEL_5),
+			.field = QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_ITC_SRC_SEL_5,
 		},
-		{
+		[QOF_REG_IMG_HW_CLR_EN] = {
 			// QOF_IMG_HW_CLR_EN
-			.addr = QOF_REG_BASE + 0x00000610,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_5),
 			.val = BIT(14),
-			.mask = BIT(14),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_HW_CLR_EN_5),
+			.field = QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_HW_CLR_EN_5,
 		},
-		{
+		[QOF_REG_IMG_HW_SET_EN] = {
 			// QOF_IMG_HW_SET_EN
-			.addr = QOF_REG_BASE + 0x00000610,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_5),
 			.val = BIT(13),
-			.mask = BIT(13),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_HW_SET_EN_5),
+			.field = QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_HW_SET_EN_5,
 		},
-		{
+		[QOF_REG_IMG_OFF_ITC_W_EN] = {
 			// QOF_IMG_OFF_ITC_W_EN
-			.addr = QOF_REG_BASE + 0x00000610,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_5),
 			.val = BIT(12),
-			.mask = BIT(12),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_OFF_ITC_W_EN_5),
+			.field = QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_OFF_ITC_W_EN_5,
 		},
-		{
+		[QOF_REG_IMG_ON_ITC_W_EN] = {
 			// QOF_IMG_ON_ITC_W_EN
-			.addr = QOF_REG_BASE + 0x00000610,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_5),
 			.val = BIT(11),
-			.mask = BIT(11),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_ON_ITC_W_EN_5),
+			.field = QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_ON_ITC_W_EN_5,
 		},
-		{
+		[QOF_REG_IMG_HW_SEQ_EN] = {
+			// TODO: Need to check CODA
 			// QOF_IMG_HW_SEQ_EN
-			.addr = QOF_REG_BASE + 0x00000610,
-			.val = BIT(10),
-			.mask = BIT(10),
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_5),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_POWER_CTL_MODE_5),
+			.field = QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_POWER_CTL_MODE_5,
 		},
-		{
+		[QOF_REG_IMG_HW_HWCCF_EN] = {
+			// TODO: Need to check CODA
+			// QOF_IMG_HW_SEQ_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_5),
+			.val = 0,
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_POWER_CTL_MODE_5),
+			.field = QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_POWER_CTL_MODE_5,
+		},
+		[QOF_REG_IMG_RTC_EN] = {
 			// QOF_IMG_RTC_EN
-			.addr = QOF_REG_BASE + 0x00000610,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_5),
 			.val = BIT(9),
-			.mask = BIT(9),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_RTC_EN_5),
+			.field = QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_RTC_EN_5,
 		},
-		{
+		[QOF_REG_IMG_GCE_RESTORE_EN] = {
 			// QOF_IMG_GCE_RESTORE_EN
-			.addr = QOF_REG_BASE + 0x00000624,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_5),
 			.val = BIT(2),
-			.mask = BIT(2),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_5_FLD_QOF_IMG_GCE_RESTORE_EN_5),
+			.field = QOF_IMG_QOF_GCE_CTL_5_FLD_QOF_IMG_GCE_RESTORE_EN_5,
 		},
-		{
+		[QOF_REG_IMG_GCE_SAVE_EN] = {
 			// QOF_IMG_GCE_SAVE_EN
-			.addr = QOF_REG_BASE + 0x00000624,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_5),
 			.val = BIT(0),
-			.mask = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_5_FLD_QOF_IMG_GCE_SAVE_EN_5),
+			.field = QOF_IMG_QOF_GCE_CTL_5_FLD_QOF_IMG_GCE_SAVE_EN_5,
 		},
-		{
-			// QOF_IMG_PWR_ACK_2ND_WAIT_TH
-			.addr = QOF_REG_BASE + 0x00000630,
+		[QOF_REG_IMG_PWR_ACK_2ND_WAIT_TH] = {
+			// QOF_IMG_PWR_ACK_5ND_WAIT_TH
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_POWER_ACK_CYCLE_5),
 			.val = 0x5140000, // bit 16~31 =‘h514
-			.mask = BIT(16)|BIT(17)|BIT(18)|BIT(19)|BIT(20)|BIT(21)|BIT(22)|
-				BIT(23)|BIT(24)|BIT(25)|BIT(26)|BIT(27)|BIT(28)|BIT(29)|
-				BIT(30)|BIT(31)//BIT_PERIOD(16, 31),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_POWER_ACK_CYCLE_5_FLD_QOF_IMG_PWR_ACK_2ND_WAIT_TH_5),
+			.field = QOF_IMG_QOF_POWER_ACK_CYCLE_5_FLD_QOF_IMG_PWR_ACK_2ND_WAIT_TH_5,
 		},
-		{
+		[QOF_REG_IMG_PWR_ACK_WAIT_TH] = {
 			// QOF_IMG_PWR_ACK_WAIT_TH
-			.addr = QOF_REG_BASE + 0x00000630,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_POWER_ACK_CYCLE_5),
 			.val = 0x514, //  =‘h514
-			.mask = BIT_PERIOD(0, 15)
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_POWER_ACK_CYCLE_5_FLD_QOF_IMG_PWR_ACK_WAIT_TH_5),
+			.field = QOF_IMG_QOF_POWER_ACK_CYCLE_5_FLD_QOF_IMG_PWR_ACK_WAIT_TH_5,
 		},
-		{
+		[QOF_REG_IMG_QOF_ENG_EN] = {
 			// QOF_IMG_QOF_ENG_EN
-			.addr = QOF_REG_BASE + 0x00000000,
-			.val = BIT(6), // NEED TO = 1
-			.mask = BIT(6)
-		},
-		{
-			// QOF_IMG_INTX_STATUS
-			.addr = QOF_REG_BASE + QOF_SPARE_VALUE_TO_BE_FIX,
-			.val = QOF_SPARE_VALUE_TO_BE_FIX,
-			.mask = QOF_SPARE_VALUE_TO_BE_FIX
-		},
-		{
-			// QOF_IMG_EVENT_CNT_SUB
-			.addr = QOF_REG_BASE + 0x00000610,
-			.val = BIT(8),
-			.mask = BIT(8),
-		},
-		{
-			// QOF_IMG_GCE_SAVE_DONE
-			.addr = QOF_REG_BASE + 0x00000624,
-			.val = BIT(1),
-			.mask = BIT(1),
-		},
-		{
-			// QOF_IMG_POWER_STATE
-			.addr = QOF_REG_BASE + 0x00000628,
-			.val = BIT_PERIOD(0, 7),
-			.mask = BIT_PERIOD(0, 7),
-		},
-		{
-			// QOF_IMG_GCE_RESTORE_DONE
-			.addr = QOF_REG_BASE + 0x00000624,
-			.val = BIT(3),
-			.mask = BIT(3),
-		},
-		{
-			// QOF_IMG_APMCU_SET
-			.addr = QOF_REG_BASE + 0x00000610,
-			.val = BIT(0),
-			.mask = BIT(0),
-		},
-		{
-			// QOF_IMG_APMCU_CLR
-			.addr = QOF_REG_BASE + 0x00000610,
-			.val = BIT(1),
-			.mask = BIT(1),
-		},
-		{
-			// QOF_IMG_INTX_STATUS_FOR_CQ: QOF_SPARE_VALUE_TO_BE_FIX
-			.addr = QOF_REG_BASE + QOF_SPARE_VALUE_TO_BE_FIX,
-			.val = QOF_SPARE_VALUE_TO_BE_FIX,
-			.mask = QOF_SPARE_VALUE_TO_BE_FIX,
-		},
-		{
-			// QOF_IMG_QOF_EVENT_CNT
-			.addr = QOF_REG_BASE + 0x0000062C,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_VOTER_DBG
-			.addr = QOF_REG_BASE + 0x00000618,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_DONE_STATUS
-			.addr = QOF_REG_BASE + 0x00000614,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_ITC_STATUS
-			.addr = QOF_REG_BASE + 0x00000004,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_STATE_DBG
-			.addr = QOF_REG_BASE + 0x00000628,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_MTC_ST_LSB
-			.addr = QOF_REG_BASE + 0x00000800,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_MTC_ST_MSB2
-			.addr = QOF_REG_BASE + 0x00000804,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-	},
-
-	// QOF_SUPPORT_WPE_LITE
-	{
-		{
-			// QOF_IMG_EVENT_CNT_ADD
-			.addr = QOF_REG_BASE + 0x00000810,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TOP_CTL),
 			.val = BIT(7),
-			.mask = BIT(7),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_QOF_ENG_EN_5),
+			.field = QOF_IMG_QOF_TOP_CTL_FLD_QOF_IMG_QOF_ENG_EN_5,
 		},
-		{
-			// QOF_IMG_ITC_SRC_SEL
-			.addr = QOF_REG_BASE + 0x00000000,
-			.val = BIT(29),
-			.mask = BIT(29),
-		},
-		{
-			// QOF_IMG_HW_CLR_EN
-			.addr = QOF_REG_BASE + 0x00000810,
-			.val = BIT(14),
-			.mask = BIT(14),
-		},
-		{
-			// QOF_IMG_HW_SET_EN
-			.addr = QOF_REG_BASE + 0x00000810,
-			.val = BIT(13),
-			.mask = BIT(13),
-		},
-		{
-			// QOF_IMG_OFF_ITC_W_EN
-			.addr = QOF_REG_BASE + 0x00000810,
-			.val = BIT(12),
-			.mask = BIT(12),
-		},
-		{
-			// QOF_IMG_ON_ITC_W_EN
-			.addr = QOF_REG_BASE + 0x00000810,
-			.val = BIT(11),
-			.mask = BIT(11),
-		},
-		{
-			// QOF_IMG_HW_SEQ_EN
-			.addr = QOF_REG_BASE + 0x00000810,
-			.val = BIT(10),
-			.mask = BIT(10),
-		},
-		{
-			// QOF_IMG_RTC_EN
-			.addr = QOF_REG_BASE + 0x00000810,
-			.val = BIT(9),
-			.mask = BIT(9),
-		},
-		{
-			// QOF_IMG_GCE_RESTORE_EN
-			.addr = QOF_REG_BASE + 0x00000824,
-			.val = BIT(2),
-			.mask = BIT(2),
-		},
-		{
-			// QOF_IMG_GCE_SAVE_EN
-			.addr = QOF_REG_BASE + 0x00000824,
-			.val = BIT(0),
-			.mask = BIT(0),
-		},
-		{
-			// QOF_IMG_PWR_ACK_2ND_WAIT_TH
-			.addr = QOF_REG_BASE + 0x00000830,
-			.val = 0x5140000, // bit 16~31 =‘h514
-			.mask = BIT(16)|BIT(17)|BIT(18)|BIT(19)|BIT(20)|BIT(21)|BIT(22)|
-				BIT(23)|BIT(24)|BIT(25)|BIT(26)|BIT(27)|BIT(28)|BIT(29)|
-				BIT(30)|BIT(31)//BIT_PERIOD(16, 31),
-		},
-		{
-			// QOF_IMG_PWR_ACK_WAIT_TH
-			.addr = QOF_REG_BASE + 0x00000830,
-			.val = 0x514, //  =‘h514
-			.mask = BIT_PERIOD(0, 15)
-		},
-		{
-			// QOF_IMG_QOF_ENG_EN
-			.addr = QOF_REG_BASE + 0x00000000,
-			.val = BIT(7), // NEED TO = 1
-			.mask = BIT(7)
-		},
-		{
-			// QOF_IMG_INTX_STATUS = QOF_SPARE_VALUE_TO_BE_FIX
-			.addr = QOF_REG_BASE + QOF_SPARE_VALUE_TO_BE_FIX,
-			.val = QOF_SPARE_VALUE_TO_BE_FIX,
-			.mask = QOF_SPARE_VALUE_TO_BE_FIX
-		},
-		{
+		[QOF_REG_IMG_EVENT_CNT_SUB] = {
+			// TODO: Need to check CODA
 			// QOF_IMG_EVENT_CNT_SUB
-			.addr = QOF_REG_BASE + 0x00000810,
-			.val = BIT(8),
-			.mask = BIT(8),
-		},
-		{
-			// QOF_IMG_GCE_SAVE_DONE
-			.addr = QOF_REG_BASE + 0x00000824,
+			.addr = QOF_IMG_EVENT_A + 0x10,
 			.val = BIT(1),
-			.mask = BIT(1),
+			.mask = REG_FLD_MASK(REG_FLD(1, 1)),
+			.field = REG_FLD(1, 1),
 		},
-		{
+		[QOF_REG_IMG_GCE_SAVE_DONE] = {
+			// QOF_IMG_GCE_SAVE_DONE
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_5),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_5_FLD_QOF_IMG_GCE_SAVE_DONE_5),
+			.field = QOF_IMG_QOF_GCE_CTL_5_FLD_QOF_IMG_GCE_SAVE_DONE_5,
+		},
+		[QOF_REG_IMG_POWER_STATE] = {
 			// QOF_IMG_POWER_STATE
-			.addr = QOF_REG_BASE + 0x00000828,
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_STATE_DBG_5),
 			.val = BIT_PERIOD(0, 7),
-			.mask = BIT_PERIOD(0, 7),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_STATE_DBG_5_FLD_QOF_IMG_POWER_STATE_5),
+			.field = QOF_IMG_QOF_STATE_DBG_5_FLD_QOF_IMG_POWER_STATE_5,
 		},
-		{
-			// QOF_IMG_GCE_RESTORE_DONE
-			.addr = QOF_REG_BASE + 0x00000824,
+		[QOF_REG_IMG_GCE_RESTORE_DONE] = {
+			// QOF_REG_IMG_GCE_RESTORE_DONE
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_GCE_CTL_5),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_GCE_CTL_5_FLD_QOF_IMG_GCE_RESTORE_DONE_5),
+			.field = QOF_IMG_QOF_GCE_CTL_5_FLD_QOF_IMG_GCE_RESTORE_DONE_5,
+		},
+		[QOF_REG_IMG_APMCU_SET] = {
+			// QOF_REG_IMG_APMCU_SET
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_5),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_APMCU_SET_5),
+			.field = QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_APMCU_SET_5,
+		},
+		[QOF_REG_IMG_APMCU_CLR] = {
+			// QOF_IMG_APMCU_CLR
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_5),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_APMCU_CLR_5),
+			.field = QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_APMCU_CLR_5,
+		},
+		[QOF_REG_IMG_QOF_VOTER_DBG] = {
+			// TODO : naming refine
+			// QOF_IMG_QOF_VOTER_DBG
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_VOTER_DBG_5),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_VOTER_DBG_5_FLD_QOF_IMG_VOTE_5),
+			.field = QOF_IMG_QOF_VOTER_DBG_5_FLD_QOF_IMG_VOTE_5,
+		},
+		[QOF_REG_IMG_QOF_DONE_STATUS] = {
+			// TODO : naming refine
+			// QOF_REG_IMG_QOF_DONE_STATUS
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_DONE_STATUS_5),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_DONE_STATUS_5_FLD_QOF_IMG_CFG_ON_DONE_5),
+			.field = QOF_IMG_QOF_DONE_STATUS_5_FLD_QOF_IMG_CFG_ON_DONE_5,
+		},
+		[QOF_REG_IMG_ITC_STATUS] = {
+			// QOF_REG_IMG_ITC_STATUS
+			.addr = (QOF_REG_BASE + QOF_IMG_ITC_STATUS),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_ITC_STATUS_FLD_QOF_IMG_ITC_SEL_STATUS),
+			.field = QOF_IMG_ITC_STATUS_FLD_QOF_IMG_ITC_SEL_STATUS,
+		},
+		[QOF_REG_IMG_QOF_STATE_DBG] = {
+			// TODO : check mask
+			// QOF_REG_IMG_QOF_STATE_DBG
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_STATE_DBG_5),
 			.val = BIT(3),
 			.mask = BIT(3),
+			.field = REG_FLD(1, 3),
 		},
-		{
-			// QOF_IMG_APMCU_SET
-			.addr = QOF_REG_BASE + 0x00000810,
+		[QOF_REG_IMG_QOF_MTC_ST_LSB] = {
+			// TODO : check mask
+			// QOF_REG_IMG_QOF_MTC_ST_LSB
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_MTC_ST_LSB_5),
+			.val = BIT(3),
+			.mask = BIT(3),
+			.field = REG_FLD(1, 3),
+		},
+		[QOF_REG_IMG_QOF_MTC_ST_MSB2] = {
+			// TODO : check mask
+			// QOF_REG_IMG_QOF_MTC_ST_MSB2
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_MTC_ST_MSB2_5),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_MTC_ST_MSB2_5_FLD_QOF_IMG_MTCMOS_ST_MSB2_5),
+			.field = QOF_IMG_QOF_MTC_ST_MSB2_5_FLD_QOF_IMG_MTCMOS_ST_MSB2_5,
+		},
+		[QOF_REG_IMG_HWCCF_SW_VOTE_OFF] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_HWCCF_SW_CTL),
+			.val = BIT(17),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_OFF_5),
+			.field = QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_OFF_5,
+		},
+		[QOF_REG_IMG_HWCCF_SW_VOTE_ON] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_HWCCF_SW_CTL),
+			.val = BIT(16),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_ON_5),
+			.field = QOF_IMG_QOF_HWCCF_SW_CTL_FLD_QOF_IMG_HWCCF_SW_VOTE_ON_5,
+		},
+		[QOF_REG_IMG_SCP_CLR] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_5),
+			.val = BIT(3),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_SCP_CLR_5),
+			.field = QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_SCP_CLR_5,
+		},
+		[QOF_REG_IMG_SCP_SET] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_5),
+			.val = BIT(2),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_SCP_SET_5),
+			.field = QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_SCP_SET_5,
+		},
+		[QOF_REG_IMG_HWCCF_MTCMOS] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_SPARE2_TOP),
+			.val = BIT(18),
+			.mask = REG_FLD_MASK(REG_FLD(1, 18)),
+			.field = REG_FLD(1, 18),
+		},
+		[QOF_REG_IMG_TRG_OFF_CNT] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TRIG_CNT_5),
 			.val = BIT(0),
-			.mask = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TRIG_CNT_5_FLD_QOF_IMG_TRG_OFF_CNT_5),
+			.field = QOF_IMG_QOF_TRIG_CNT_5_FLD_QOF_IMG_TRG_OFF_CNT_5,
 		},
-		{
-			// QOF_IMG_APMCU_CLR
-			.addr = QOF_REG_BASE + 0x00000810,
-			.val = BIT(1),
-			.mask = BIT(1),
-		},
-		{
-			// QOF_IMG_INTX_STATUS_FOR_CQ: QOF_SPARE_VALUE_TO_BE_FIX
-			.addr = QOF_REG_BASE + QOF_SPARE_VALUE_TO_BE_FIX,
-			.val = QOF_SPARE_VALUE_TO_BE_FIX,
-			.mask = QOF_SPARE_VALUE_TO_BE_FIX,
-		},
-		{
-			// QOF_IMG_QOF_EVENT_CNT
-			.addr = QOF_REG_BASE + 0x0000082C,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_VOTER_DBG
-			.addr = QOF_REG_BASE + 0x00000818,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_DONE_STATUS
-			.addr = QOF_REG_BASE + 0x00000814,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_ITC_STATUS
-			.addr = QOF_REG_BASE + 0x00000004,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_STATE_DBG
-			.addr = QOF_REG_BASE + 0x00000828,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_MTC_ST_LSB
-			.addr = QOF_REG_BASE + 0x00000A00,
-			.val = BIT(3),
-			.mask = BIT(3)
-		},
-		{
-			// QOF_IMG_QOF_MTC_ST_MSB2
-			.addr = QOF_REG_BASE + 0x00000A04,
-			.val = BIT(3),
-			.mask = BIT(3)
+		[QOF_REG_IMG_TRG_ON_CNT] = {
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_TRIG_CNT_5),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_TRIG_CNT_5_FLD_QOF_IMG_TRG_ON_CNT_5),
+			.field = QOF_IMG_QOF_TRIG_CNT_5_FLD_QOF_IMG_TRG_ON_CNT_5,
 		},
 	},
 };
