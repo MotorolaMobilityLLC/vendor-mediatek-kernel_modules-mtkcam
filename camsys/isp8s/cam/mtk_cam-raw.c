@@ -1752,18 +1752,23 @@ static void raw_disable_dma_err_en(struct mtk_raw_device *raw)
 	raw_writel_relaxed((int17_en & ~FBIT(CAMCTL_DMA_ERR_EN)),
 					   raw, raw->base, REG_CAMCTL_INT17_EN);
 
+	qof_int_en_raw_dma_err(raw, false);
+
 	dev_info(raw->dev, "%s: int17_en before disable 0x%x",
 			 __func__, int17_en);
 }
 
 static void yuv_disable_dma_err_en(struct mtk_raw_device *raw)
 {
+	struct mtk_yuv_device *yuv = get_yuv_dev(raw);
 	u32 int17_en = raw_readl_relaxed(raw, raw->yuv_base, REG_CAMCTL2_INT17_EN);
 
 	raw_writel_relaxed((int17_en & ~FBIT(CAMCTL2_DMA_ERR_EN)),
 					   raw, raw->yuv_base, REG_CAMCTL2_INT17_EN);
 
-	dev_info(raw->dev, "%s: int17_en before disable 0x%x",
+	qof_int_en_yuv_dma_err(yuv, false);
+
+	dev_info(yuv->dev, "%s: int17_en before disable 0x%x",
 			 __func__, int17_en);
 }
 

@@ -761,9 +761,6 @@ mtk_cam_job_initialize_engines(struct mtk_cam_ctx *ctx,
 			/* the necessity of hw ddren */
 			qof_init_timer_freq(raw);
 
-			if (check_qof_support(job))
-				mtk_cam_enable_itc(raw);
-
 			initialize(raw, &engine_cb, !is_master, is_srt,
 				get_sensor_interval_us(job));
 
@@ -785,9 +782,9 @@ mtk_cam_job_initialize_engines(struct mtk_cam_ctx *ctx,
 			}
 		}
 
-		if (qof_enabled && is_stagger_dol(job))
+		if (qof_enabled && mtk_cam_job_not_support_qof(job))
 			qof_mtcmos_voter_handle(&ctx->cam->engines,
-				ctx->used_engine, &ctx->DOL_not_support);
+				ctx->used_engine, &ctx->unsupport_scen);
 
 		if (job->enable_hsf_raw)
 			mtk_cam_hsf_init(ctx);
@@ -2719,9 +2716,9 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job)
 				}
 			}
 
-			if (qof_enabled && is_stagger_dol(job))
+			if (qof_enabled && mtk_cam_job_not_support_qof(job))
 				qof_mtcmos_voter_handle(&ctx->cam->engines,
-					ctx->used_engine, &ctx->DOL_not_support);
+					ctx->used_engine, &ctx->unsupport_scen);
 
 			if (job->enable_hsf_raw)
 				mtk_cam_hsf_init(ctx);
@@ -4296,7 +4293,9 @@ int mtk_cam_job_uninit_engine(struct mtk_cam_job *job, int unit_engs)
 
 			if (qof_is_enabled(raw_dev)) {
 				qof_enable(raw_dev, false);
+				qof_setup_ctrl(raw_dev, false);
 				qof_reset_mtcmos_raw_voter(raw_dev);
+				qof_hwccf_link(raw_dev, true);
 				qof_reset(raw_dev);
 			}
 
@@ -4659,6 +4658,8 @@ static int raw_qof_init(struct mtk_cam_job *job, struct device *dev)
 					!res_raw_is_dc_mode(&res->raw_res), sv_last_tag);
 	qof_setup_hw_timer(raw, get_sensor_interval_us(job));
 	qof_setup_rtc(raw);
+	qof_setup_ctrl(raw, true);
+	qof_hwccf_link(raw, false);
 
 	return 0;
 }
@@ -6865,3 +6866,9 @@ int mtk_cam_job_config_raw_slc(struct mtk_cam_job *job, int enable)
 
 	return 0;
 }
+
+bool mtk_cam_job_not_support_qof(struct mtk_cam_job *job)
+{
+	return (is_stagger_dol(job) || is_dc_mode(job));
+}
+

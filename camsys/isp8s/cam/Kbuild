@@ -20,6 +20,8 @@ subdir-ccflags-y += \
     -I$(DEVICE_MODULES_PATH)/drivers/clk/mediatek/ \
     -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/slbc/ \
     -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/swpm/modules/debug/v1/ \
+    -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/ \
+    -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/hwccf/include/ \
     -I$(KO_PATH) \
     -I$(DEVICE_MODULES_PATH)/include/
 

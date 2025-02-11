@@ -231,7 +231,7 @@ struct mtk_cam_ctx {
 	bool enable_luma_dump;
 	bool rms_disable;
 
-	struct qof_voter_handle DOL_not_support;
+	struct qof_voter_handle unsupport_scen;
 	struct mtk_cam_exp_shutter last_req_exposue;
 	bool is_sv_mraw_error;
 	bool is_seninf_error_trigger;

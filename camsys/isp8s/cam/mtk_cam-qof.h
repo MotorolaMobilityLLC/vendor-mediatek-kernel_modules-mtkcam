@@ -7,6 +7,7 @@
 #define __MTK_CAM_QOF_H
 
 struct mtk_raw_device;
+struct mtk_yuv_device;
 struct mtk_cam_ctx;
 struct mtk_cam_device;
 
@@ -35,6 +36,12 @@ void qof_init_timer_freq(struct mtk_raw_device *dev);
 void qof_setup_hw_timer(struct mtk_raw_device *dev, u32 interval_us);
 void qof_setup_rtc(struct mtk_raw_device *dev);
 int qof_setup_twin(struct mtk_raw_device *dev, bool is_master, bool next_raw);
+int qof_hwccf_link(struct mtk_raw_device *dev, bool enable);
+int qof_config_pm(struct mtk_raw_device *dev, bool enable);
+int qof_int_en(struct mtk_raw_device *dev, bool enable);
+int qof_int_en_raw_dma_err(struct mtk_raw_device *dev, bool enable);
+int qof_int_en_yuv_dma_err(struct mtk_yuv_device *dev, bool enable);
+
 void qof_set_cq_start_max(struct mtk_raw_device *dev, int scq_ms);
 
 bool qof_is_enabled(struct mtk_raw_device *dev);
@@ -77,7 +84,7 @@ void qof_force_dump_all(struct mtk_raw_device *raw);
 
 u32 qof_get_mtcmos_margin(void);
 
-void mtk_cam_enable_itc(struct mtk_raw_device *raw);
+void mtk_cam_enable_itc(struct mtk_raw_device *raw, bool enable);
 void mtk_cam_reset_itc(struct mtk_cam_device *cam);
 
 #endif /*__MTK_CAM_QOF_H */

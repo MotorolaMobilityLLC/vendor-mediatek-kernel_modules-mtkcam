@@ -97,6 +97,8 @@ struct mtk_raw_device {
 	int apmcu_voter_cnt;
 	spinlock_t apmcu_voter_lock;
 	spinlock_t qof_ctrl_lock;
+	bool xpc_raw_enabled;
+	bool xpc_rms_enabled;
 
 	atomic_t time_share_used;/*identify first and last*/
 	atomic_t time_share_on_process;/*identify busy*/
@@ -178,6 +180,7 @@ void apply_cq(struct mtk_raw_device *dev,
 	      dma_addr_t cq_addr,
 	      unsigned int cq_size, unsigned int cq_offset,
 	      unsigned int sub_cq_size, unsigned int sub_cq_offset);
+
 /* db */
 void dbload_force(struct mtk_raw_device *dev);
 void toggle_db(struct mtk_raw_device *dev);

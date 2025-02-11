@@ -3753,7 +3753,7 @@ static void mtk_cam_ctx_raw_qof_disable(struct mtk_cam_ctx *ctx)
 	struct mtk_raw_device *raw;
 	struct mtk_camsv_device *sv;
 
-	qof_mtcmos_voter_handle(&ctx->cam->engines, 0, &ctx->DOL_not_support);
+	qof_mtcmos_voter_handle(&ctx->cam->engines, 0, &ctx->unsupport_scen);
 #ifdef QOF_CCU_READY
 	mtk_cam_power_ctrl_ccu(ctx->cam->dev, 1);
 #endif
@@ -3764,6 +3764,7 @@ static void mtk_cam_ctx_raw_qof_disable(struct mtk_cam_ctx *ctx)
 		raw = dev_get_drvdata(ctx->hw_raw[i]);
 		qof_setup_twin(raw, true, false);
 		qof_enable(raw, false);
+		qof_setup_ctrl(raw, false);
 		if (ctx->hw_sv) {
 			sv = dev_get_drvdata(ctx->hw_sv);
 			mtk_cam_sv_set_queue_mode(sv, false);
@@ -3778,6 +3779,7 @@ static void mtk_cam_ctx_raw_qof_disable(struct mtk_cam_ctx *ctx)
 		if (!ctx->hw_raw[i])
 			continue;
 		raw = dev_get_drvdata(ctx->hw_raw[i]);
+		qof_hwccf_link(raw, true);
 		qof_reset(raw);
 	}
 }
@@ -5110,7 +5112,6 @@ REGISTER_LARB_FAIL:
 	return ret;
 }
 
-#ifdef SKIP_IN_FPGA_EP
 static irqreturn_t __maybe_unused mtk_irq_qof(int irq, void *data)
 {
 	struct mtk_cam_device *drvdata = (struct mtk_cam_device *)data;
@@ -5167,7 +5168,6 @@ static irqreturn_t __maybe_unused mtk_irq_qof(int irq, void *data)
 
 	return IRQ_HANDLED;
 }
-#endif
 
 static int mtk_cam_vcore_probe(struct platform_device *pdev)
 {
@@ -5286,7 +5286,7 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	struct device *alloc_dev;
 	struct device_node *node;
 	struct device_link *link;
-	int ret;
+	int ret = -1;
 	unsigned int i, clks;
 	struct resource *res_base;
 	const struct camsys_platform_data *platform_data;
@@ -5439,11 +5439,10 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	}
 
 	// qof
-#ifdef SKIP_IN_FPGA_EP
 	irq = platform_get_irq_byname(pdev, "qoftop");
 	if (irq < 0) {
 		dev_err(dev, "%s: failed to get qoftop irq\n", __func__);
-		goto SKIP_ADLRD_IRQ;
+		goto fail_return;
 	}
 
 	cam_dev->qoftop_irq = irq;
@@ -5455,7 +5454,6 @@ static int mtk_cam_probe(struct platform_device *pdev)
 		return ret;
 	}
 	dev_dbg(dev, "registered qoftop irq=%d\n", cam_dev->qoftop_irq);
-#endif
 
 	clks = of_count_phandle_with_args(
 					pdev->dev.of_node, "clocks", "#clock-cells");
@@ -5609,9 +5607,8 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 
 	dev_info(dev, "%s:suspend\n", __func__);
 
-#ifdef SKIP_IN_FPGA_EP
 	disable_irq(cam_dev->qoftop_irq);
-#endif
+
 	mtk_cam_isp8s_bwr_disable(cam_dev->bwr);
 	mtk_cam_vcore_ddren(cam_dev, false);
 	mtk_cam_dvc_top_disable(&cam_dev->dvfs.dvc);
@@ -5684,12 +5681,7 @@ static int mtk_cam_runtime_resume(struct device *dev)
 	mtk_cam_dvc_top_enable(&cam_dev->dvfs.dvc);
 	mtk_cam_fmon_enable(&cam_dev->fmon);
 
-	if (GET_PLAT_HW(qof_support))
-		mtk_cam_reset_itc(cam_dev);
-
-#ifdef SKIP_IN_FPGA_EP
 	enable_irq(cam_dev->qoftop_irq);
-#endif
 
 	return 0;
 }

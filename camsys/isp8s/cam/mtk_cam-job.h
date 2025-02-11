@@ -742,4 +742,6 @@ int mtk_cam_job_uninit_engine(
 
 int mtk_cam_job_config_raw_slc(struct mtk_cam_job *job, int enable);
 
+bool mtk_cam_job_not_support_qof(struct mtk_cam_job *job);
+
 #endif //__MTK_CAM_JOB_H

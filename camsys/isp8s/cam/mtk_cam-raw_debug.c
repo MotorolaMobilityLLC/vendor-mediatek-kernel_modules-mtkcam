@@ -6,6 +6,7 @@
 #include <linux/io.h>
 
 #include "mtk_cam-raw.h"
+#include "mtk_cam-qof.h"
 #include "mtk_cam-plat.h"
 #include "mtk_cam-raw_regs.h"
 #include "mtk_cam-reg_utils.h"
@@ -99,6 +100,7 @@ void dump_raw_dma_err_st(struct mtk_raw_device *raw)
 		}
 	}
 	mtk_cam_log_flush(&log);
+	qof_int_en_raw_dma_err(raw, true);
 }
 
 void dump_yuv_dma_err_st(struct mtk_yuv_device *yuv)
@@ -121,6 +123,8 @@ void dump_yuv_dma_err_st(struct mtk_yuv_device *yuv)
 		}
 	}
 	mtk_cam_log_flush(&log);
+
+	qof_int_en_yuv_dma_err(yuv, true);
 }
 void dump_dmatop_dc_st(struct mtk_raw_device *raw)
 {

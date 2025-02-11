@@ -1620,12 +1620,12 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 
 	mtk_cam_job_update_clk_switching(job, 0);
 
-	if (is_stagger_dol(job))
+	if (mtk_cam_job_not_support_qof(job))
 		qof_mtcmos_voter_handle(&ctx->cam->engines,
-			raw_after_change, &ctx->DOL_not_support);
+			raw_after_change, &ctx->unsupport_scen);
 	else
 		qof_mtcmos_voter_handle(&ctx->cam->engines,
-			0, &ctx->DOL_not_support);
+			0, &ctx->unsupport_scen);
 
 	for (i = 0; i < cam->engines.num_raw_devices; i++) {
 		if (BIT(i) & raw_after_change) {
@@ -1815,12 +1815,12 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 	if (engine_uninit)
 		mtk_cam_event_camsys_resource_ready(&ctx->cam_ctrl, engine_uninit);
 
-	if (is_stagger_dol(job))
+	if (mtk_cam_job_not_support_qof(job))
 		qof_mtcmos_voter_handle(&ctx->cam->engines,
-			raw_after_change, &ctx->DOL_not_support);
+			raw_after_change, &ctx->unsupport_scen);
 	else
 		qof_mtcmos_voter_handle(&ctx->cam->engines,
-			0, &ctx->DOL_not_support);
+			0, &ctx->unsupport_scen);
 
 	trigger_fake_sof_event(ctrl);  /* trigger apply sensor done */
 
