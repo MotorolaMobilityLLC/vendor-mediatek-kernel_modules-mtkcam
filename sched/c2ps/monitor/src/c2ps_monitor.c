@@ -512,7 +512,8 @@ static void c2ps_reg_check_timer_callback(struct timer_list *t)
 	}
 
 	c2ps_main_systrace("reg check timer callback");
-	queue_work(proxy_wq, &proxy_work.m_work);
+	if (likely(proxy_wq != NULL))
+		queue_work(proxy_wq, &proxy_work.m_work);
 }
 
 void c2ps_monitor_init(void)
