@@ -115,7 +115,7 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 void set_dcg_vs_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 		enum SENSOR_SCENARIO_ID_ENUM scenario_id, u32 framerate);
 bool set_auto_flicker(struct subdrv_ctx *ctx, bool min_framelength_en);
-void set_long_exposure(struct subdrv_ctx *ctx);
+void set_long_exposure(struct subdrv_ctx *ctx, u16 exp_cnt);
 void set_shutter(struct subdrv_ctx *ctx, u64 shutter);
 void set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter, u32 frame_length);
 void set_hdr_tri_shutter(struct subdrv_ctx *ctx, u64 *shutters, u16 exp_cnt);

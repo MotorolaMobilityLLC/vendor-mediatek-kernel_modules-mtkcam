@@ -496,6 +496,45 @@ void check_frame_length_limitation(struct subdrv_ctx *ctx)
 	DRV_LOG(ctx, "no calibration data applied to sensor.");
 }
 
+void check_write_frame_length_need_lshift(struct subdrv_ctx *ctx, u32 *fll)
+{
+	u8 lshift_max = ctx->s_ctx.fll_lshift_max ? ctx->s_ctx.fll_lshift_max : DEFAULT_LSHIFT_MAX;
+	u32 l_framelength = 0;
+	u16 l_shift = 0;
+	u32 frame_length_max_without_lshift = ctx->s_ctx.frame_length_max_without_lshift ?
+		ctx->s_ctx.frame_length_max_without_lshift : ctx->s_ctx.frame_length_max;
+
+	if (!(*fll > frame_length_max_without_lshift)) {
+		if (ctx->s_ctx.reg_addr_frame_length_lshift != PARAM_UNDEFINED)
+			set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_frame_length_lshift, 0);
+		return;
+	}
+
+	if (ctx->s_ctx.reg_addr_frame_length_lshift == PARAM_UNDEFINED) {
+		DRV_LOGE(ctx,
+				"reg_addr_frame_length_lshift == PARAM_UNDEFINED, fll:0x%x", (*fll));
+		return;
+	}
+
+	for (l_shift = 1; l_shift < lshift_max; l_shift++) {
+		l_framelength = (((*fll) - 1) >> l_shift) + 1;
+		if (l_framelength < frame_length_max_without_lshift)
+			break;
+	}
+	if (l_shift > lshift_max) {
+		DRV_LOGE(ctx,
+				"unable to set framelength l_shift:%u, set to lshift_max:%u\n",
+				l_shift, lshift_max);
+		l_shift = lshift_max;
+	}
+	(*fll) = (((*fll) - 1) >> l_shift) + 1;
+
+	set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_frame_length_lshift, l_shift);
+	DRV_LOG_MUST(ctx,
+			"write framelength with lshift fll:0x%x fll_lshift:0x%x",
+			(*fll), l_shift);
+}
+
 void write_frame_length(struct subdrv_ctx *ctx, u32 fll)
 {
 	u32 addr_h = ctx->s_ctx.reg_addr_frame_length.addr[0];
@@ -515,6 +554,8 @@ void write_frame_length(struct subdrv_ctx *ctx, u32 fll)
 
 	if (!(ctx->s_ctx.stagger_fl_type == IMGSENSOR_STAGGER_FL_MANUAL))
 		fll = fll / dol_cnt;
+
+	check_write_frame_length_need_lshift(ctx, &fll);
 
 	if (ctx->extend_frame_length_en == FALSE) {
 		if (addr_ll) {
@@ -1937,14 +1978,22 @@ bool set_auto_flicker(struct subdrv_ctx *ctx, bool min_framelength_en)
 	return ret;
 }
 
-void set_long_exposure(struct subdrv_ctx *ctx)
+void set_long_exposure(struct subdrv_ctx *ctx, u16 exp_cnt)
 {
 	u32 shutter = ctx->exposure[IMGSENSOR_STAGGER_EXPOSURE_LE];
 	u32 l_shutter = 0;
 	u16 l_shift = 0;
 	u32 scenario_id = ctx->current_scenario_id;
+	u8 lshift_max = ctx->s_ctx.cit_lshift_max ? ctx->s_ctx.cit_lshift_max : DEFAULT_LSHIFT_MAX;
+	u32 frame_length_max_without_lshift = ctx->s_ctx.frame_length_max_without_lshift ?
+		ctx->s_ctx.frame_length_max_without_lshift : ctx->s_ctx.frame_length_max;
 
-	if (shutter > (ctx->s_ctx.frame_length_max - ctx->s_ctx.mode[scenario_id].exposure_margin)) {
+	if (exp_cnt != 1) {
+		DRV_LOGE(ctx, "multi-exp (%u-exp) no support of exposure lshift!\n", exp_cnt);
+		return;
+	}
+
+	if (shutter > (frame_length_max_without_lshift - ctx->s_ctx.mode[scenario_id].exposure_margin)) {
 		if (ctx->mcss_init_info.enable_mcss) {
 			DRV_LOGE(ctx, " MCSS no support of exposure lshift!\n");
 			WRAP_AEE_EXCEPTION("[AEE] MCSS no support of exposure lshift!", "Err");
@@ -1958,20 +2007,22 @@ void set_long_exposure(struct subdrv_ctx *ctx)
 			DRV_LOGE(ctx, "please implement lshift register address\n");
 			return;
 		}
-		for (l_shift = 1; l_shift < 7; l_shift++) {
+		for (l_shift = 1; l_shift < lshift_max; l_shift++) {
 			l_shutter = ((shutter - 1) >> l_shift) + 1;
 			if (l_shutter
-				< (ctx->s_ctx.frame_length_max -
+				< (frame_length_max_without_lshift -
 					ctx->s_ctx.mode[scenario_id].exposure_margin))
 				break;
 		}
-		if (l_shift > 7) {
+		if (l_shift > lshift_max) {
 			DRV_LOGE(ctx, "unable to set exposure:%u, set to max\n", shutter);
-			l_shift = 7;
+			l_shift = lshift_max;
 		}
-		shutter = ((shutter - 1) >> l_shift) + 1;
+
+		/* At here, ctx->frame_length may greater than 0xFFFF and needs FLL_LSHIFT */
 		ctx->frame_length = shutter + ctx->s_ctx.mode[scenario_id].exposure_margin;
-		DRV_LOG(ctx, "long exposure mode: lshift %u times", l_shift);
+		shutter = ((shutter - 1) >> l_shift) + 1;
+		DRV_LOG_MUST(ctx, "long exposure mode: lshift %u times", l_shift);
 		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure_lshift, l_shift);
 		ctx->l_shift = l_shift;
 		/* Frame exposure mode customization for LE*/
@@ -1980,7 +2031,7 @@ void set_long_exposure(struct subdrv_ctx *ctx)
 		ctx->current_ae_effective_frame = 2;
 	} else {
 		if (ctx->s_ctx.reg_addr_exposure_lshift != PARAM_UNDEFINED) {
-			set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure_lshift, l_shift);
+			set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure_lshift, 0);
 			ctx->l_shift = l_shift;
 		}
 		ctx->current_ae_effective_frame = 2;
@@ -2028,7 +2079,7 @@ void set_shutter_frame_length(struct subdrv_ctx *ctx, u64 shutter, u32 frame_len
 	else if (ctx->s_ctx.reg_addr_auto_extend)
 		write_frame_length(ctx, ctx->min_frame_length);
 	/* write shutter */
-	set_long_exposure(ctx);
+	set_long_exposure(ctx, 1);
 	if (ctx->s_ctx.reg_addr_exposure[0].addr[2]) {
 		set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_exposure[0].addr[0],
 			(ctx->exposure[0] >> 16) & 0xFF);
@@ -2212,6 +2263,7 @@ void set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 	else if (ctx->s_ctx.reg_addr_auto_extend)
 		write_frame_length(ctx, ctx->min_frame_length);
 	/* write shutter */
+	set_long_exposure(ctx, exp_cnt);
 	switch (exp_cnt) {
 	case 1:
 		rg_shutters[0] = (u32) shutters[0] / exp_cnt;
@@ -2228,10 +2280,7 @@ void set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 	default:
 		break;
 	}
-	if (ctx->s_ctx.reg_addr_exposure_lshift != PARAM_UNDEFINED) {
-		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure_lshift, 0);
-		ctx->l_shift = 0;
-	}
+
 	for (i = 0; i < 3; i++) {
 		if (rg_shutters[i]) {
 			if (ctx->s_ctx.reg_addr_exposure[i].addr[2]) {
@@ -2500,6 +2549,9 @@ void set_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure_lshift, 0);
 		ctx->l_shift = 0;
 	}
+	if (ctx->s_ctx.reg_addr_frame_length_lshift != PARAM_UNDEFINED)
+		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_frame_length_lshift, 0);
+
 	for (i = 0; i < 3; i++) {
 		if (cit_in_lut[i]) {
 			if (ctx->s_ctx.reg_addr_exposure_in_lut[i].addr[2]) {

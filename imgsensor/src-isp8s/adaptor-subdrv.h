@@ -38,6 +38,7 @@
 #define GLP_DT_MAX_CNT 4
 #define HW_INIT_TIME_MAX 15000000 // 15ms
 #define MAX_UPDATED_TIMES 100
+#define DEFAULT_LSHIFT_MAX 7
 enum {
 	I2C_DT_ADDR_16_DATA_8 = 0,
 	I2C_DT_ADDR_16_DATA_16,
@@ -432,7 +433,9 @@ struct subdrv_static_ctx {
 	u32 dig_gain_step;
 	struct mtk_sensor_saturation_info *saturation_info;
 
-	u32 frame_length_max;
+	u32 frame_length_max; /* max frame length for sensor capability, maybe using fll_lshift */
+	u32 frame_length_max_without_lshift; /* max of FLL register */
+
 	u8 ae_effective_frame;
 	u8 frame_time_delay_frame; /* EX: sony => 3 ; non-sony => 2 */
 	u32 start_exposure_offset;
@@ -464,6 +467,9 @@ struct subdrv_static_ctx {
 	u16 reg_addr_mirror_flip;
 	struct reg_ reg_addr_exposure[IMGSENSOR_STAGGER_EXPOSURE_CNT];
 	struct reg_ reg_addr_exposure_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
+
+	u8 fll_lshift_max;
+	u8 cit_lshift_max;
 	u16 long_exposure_support;
 	u16 reg_addr_exposure_lshift;
 	u16 reg_addr_frame_length_lshift;
