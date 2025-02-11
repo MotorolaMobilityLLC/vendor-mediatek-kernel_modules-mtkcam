@@ -133,7 +133,8 @@ int update_work_buffer_to_ipi_frame(struct req_buffer_helper *helper);
 int update_sensor_meta_buffer_to_ipi_frame(struct mtk_cam_job *job,
 	struct mtkcam_ipi_frame_param *fp);
 
-int write_ufbc_header_to_buf(struct mtk_cam_ufbc_header *ufbc_header);
+int write_ufbc_header_to_buf(struct mtk_cam_job *job,
+							 struct mtk_cam_ufbc_header *ufbc_header);
 int add_ufbc_header_entry(struct req_buffer_helper *helper,
 		unsigned int pixelformat, int ipi_video_id,
 		struct mtk_cam_buffer *buf, int plane, unsigned int offset);

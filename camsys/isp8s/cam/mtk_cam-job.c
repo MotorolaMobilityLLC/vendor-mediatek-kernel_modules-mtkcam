@@ -411,11 +411,6 @@ static bool is_scen_support_ufbc(struct mtk_cam_job *job)
 	return support;
 }
 
-static bool is_4cell_sensor(struct mtk_cam_job *job)
-{
-	return get_sensor_data_pattern(job) == MTK_CAM_PATTERN_4CELL;
-}
-
 static bool is_sv_support_ufbc(struct mtk_cam_job *job)
 {
 	bool use_ufbc = !job->is_sv_pure_raw;
@@ -433,7 +428,6 @@ static void update_buf_fmt_sel(struct mtk_cam_job *job)
 
 	use_ufbc = !disable_ufbc
 		&& is_sv_support_ufbc(job)
-		&& !is_4cell_sensor(job)
 		&& is_scen_support_ufbc(job);
 
 	if (use_ufbc)
@@ -2572,7 +2566,7 @@ _compose_done(struct mtk_cam_job *job,
 	job->local_ack_isp_ts = local_clock();
 	job->rms_disable = cq_ret->rms_disable;
 	if (job->composed)
-		write_ufbc_header_to_buf(&job->ufbc_header);
+		write_ufbc_header_to_buf(job, &job->ufbc_header);
 
 	if (compose_ret)
 		trigger_error_dump(job, MSG_COMPOSE_ERROR);
@@ -3831,7 +3825,7 @@ static void compose_done_mstream(struct mtk_cam_job *job,
 	++mjob->composed_idx;
 
 	if (job->composed)
-		write_ufbc_header_to_buf(&job->ufbc_header);
+		write_ufbc_header_to_buf(job, &job->ufbc_header);
 
 	/* TODO: add compose failed dump for 1st frame */
 	if (compose_ret)
@@ -5286,11 +5280,21 @@ static void ipi_add_hw_map(struct mtkcam_ipi_config_param *config,
 static int raw_set_ipi_input_param(struct mtkcam_ipi_input_param *input,
 				   struct mtk_raw_sink_data *sink,
 				   int pixel_mode, int dc_sv_pixel_mode,
-				   int subsample)
+				   int subsample, u8 data_pattern)
 {
 	input->fmt = sensor_mbus_to_ipi_fmt(sink->mbus_code);
 	input->raw_pixel_id = sensor_mbus_to_ipi_pixel_id(sink->mbus_code);
-	input->data_pattern = MTKCAM_IPI_SENSOR_PATTERN_NORMAL;
+	switch (data_pattern) {
+	case MTK_CAM_PATTERN_4CELL:
+		input->data_pattern = MTKCAM_IPI_SENSOR_PATTERN_4CELL;
+		break;
+	case MTK_CAM_PATTERN_16CELL:
+		input->data_pattern = MTKCAM_IPI_SENSOR_PATTERN_16CELL;
+		break;
+	default:
+		input->data_pattern = MTKCAM_IPI_SENSOR_PATTERN_NORMAL;
+		break;
+	}
 	input->pixel_mode = pixel_mode;
 	input->pixel_mode_before_raw = dc_sv_pixel_mode;
 	input->subsample = subsample - 1; /* TODO(AY): remove -1 */
@@ -5409,7 +5413,8 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 		raw_set_ipi_input_param(input, sink,
 			ctrl->resource.tgo_pxl_mode,
 			ctrl->resource.tgo_pxl_mode_before_raw,
-			job->sub_ratio); /* TODO */
+			job->sub_ratio,
+			ctrl->resource.user_data.sensor_res.pattern); /* TODO */
 
 		raw_dev = (int)bit_map_subset_of(MAP_HW_RAW, used_engine);
 		ipi_add_hw_map(config, MTKCAM_SUBDEV_RAW_0, raw_dev);

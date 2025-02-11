@@ -1040,11 +1040,33 @@ EXIT:
 	return ret;
 }
 
-static int fill_ufbc_header_bayer(void *vaddr,
+static int fill_ufbc_header_bayer(struct mtk_cam_job *job,
+			void *vaddr,
 			struct mtkcam_ipi_img_ufo_param *ufo_param)
 {
 	struct UFO_META_INFO *header = vaddr;
 	struct UFD_META_INFO *ufd_header;
+	struct mtk_raw_ctrl_data *ctrl = get_raw_ctrl_data(job);
+	struct mtk_cam_resource_sensor_v2 *sensor_res = NULL;
+	unsigned int ncell = 0; //bayer
+
+	if (!ctrl) {
+		pr_info("%s: ERROR. job->ctrl not found\n", __func__);
+	} else {
+		sensor_res = &ctrl->resource.user_data.sensor_res;
+
+		switch (sensor_res->pattern) {
+		case MTK_CAM_PATTERN_4CELL:
+			ncell = 1;
+			break;
+		case MTK_CAM_PATTERN_16CELL:
+			ncell = 3;
+			break;
+		default:
+			ncell = 0;
+			break;
+		}
+	}
 
 	if (!header) {
 		pr_info("[%s] fail to get buf va\n", __func__);
@@ -1055,6 +1077,9 @@ static int fill_ufbc_header_bayer(void *vaddr,
 
 	ufd_header = &header->UFD.UFD;
 	ufd_header->bUF = 1;
+
+	// TODO: get from backend ack to check if CRM enabled
+	ufd_header->N_CELL = ncell;
 
 	// Note: ufd_bond_mode[0] is 1 only when it is twin/triple mode
 	// therefore, pure raw with camsv will always go to else.
@@ -1113,7 +1138,8 @@ static int fill_ufbc_header_yuvo(void *vaddr,
 	return 0;
 }
 
-int write_ufbc_header_to_buf(struct mtk_cam_ufbc_header *ufbc_header)
+int write_ufbc_header_to_buf(struct mtk_cam_job *job,
+							 struct mtk_cam_ufbc_header *ufbc_header)
 {
 	int i;
 
@@ -1124,7 +1150,7 @@ int write_ufbc_header_to_buf(struct mtk_cam_ufbc_header *ufbc_header)
 		case MTKCAM_IPI_RAW_IMGO:
 		case MTKCAM_IPI_RAW_IMGO_W:
 		case MTKCAM_IPI_CAMSV_MAIN_OUT:
-			fill_ufbc_header_bayer(param->vaddr, param->param);
+			fill_ufbc_header_bayer(job, param->vaddr, param->param);
 			break;
 		case MTKCAM_IPI_RAW_YUVO_1:
 		case MTKCAM_IPI_RAW_YUVO_3:

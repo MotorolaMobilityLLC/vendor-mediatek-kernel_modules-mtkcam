@@ -77,6 +77,7 @@ struct UFD_META_INFO {
 	unsigned int UFD_BS_AU_START[4];
 	unsigned int UFD_AU2_SIZE[4];
 	unsigned int UFD_BOND_MODE[4];
+	unsigned int N_CELL; // 0:bayer 1:4cell 2:9cell 3:16cell
 };
 
 struct UFD_HW_META_INFO {

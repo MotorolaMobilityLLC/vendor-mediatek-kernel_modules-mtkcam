@@ -197,6 +197,8 @@ enum mtkcam_ipi_sensor_pattern {
 	MTKCAM_IPI_SENSOR_PATTERN_YUV			= 11,
 	 /* FIXME: what's 'normal' pd? */
 	MTKCAM_IPI_SENSOR_PATTERN_NORMAL_PD		= 12,
+	MTKCAM_IPI_SENSOR_PATTERN_9CELL			= 13,
+	MTKCAM_IPI_SENSOR_PATTERN_16CELL			= 14,
 };
 
 enum mtkcam_ipi_raw_path_control {
