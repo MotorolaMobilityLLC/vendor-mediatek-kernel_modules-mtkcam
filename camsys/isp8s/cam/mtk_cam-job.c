@@ -411,6 +411,11 @@ static bool is_scen_support_ufbc(struct mtk_cam_job *job)
 	return support;
 }
 
+static bool is_16cell_sensor(struct mtk_cam_job *job)
+{
+	return get_sensor_data_pattern(job) == MTK_CAM_PATTERN_16CELL;
+}
+
 static bool is_sv_support_ufbc(struct mtk_cam_job *job)
 {
 	bool use_ufbc = !job->is_sv_pure_raw;
@@ -428,6 +433,7 @@ static void update_buf_fmt_sel(struct mtk_cam_job *job)
 
 	use_ufbc = !disable_ufbc
 		&& is_sv_support_ufbc(job)
+		&& !is_16cell_sensor(job)
 		&& is_scen_support_ufbc(job);
 
 	if (use_ufbc)
@@ -5404,6 +5410,7 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 			ctrl->resource.user_data.sensor_res.line_interleave;
 		config->ois_compensation = is_ois_compensation(job);
 		config->all_exp_in_slc = is_all_exp_in_slc(job);
+		config->is_2raw_flow = is_2raw_flow(job);
 
 		if (scen_support_rgbw(&job->job_scen)) {
 			if (WARN_ON(!job->w_caci_buf))

@@ -2132,6 +2132,12 @@ bool is_all_exp_in_slc(struct mtk_cam_job *job)
 	return false;
 }
 
+bool is_2raw_flow(struct mtk_cam_job *job)
+{
+	return job_exp_num(job) == 2 &&
+		get_sensor_data_pattern(job) == MTK_CAM_PATTERN_16CELL;
+}
+
 bool is_rgbw(struct mtk_cam_job *job)
 {
 	return scen_is_rgbw(&job->job_scen);

@@ -263,6 +263,7 @@ struct mtkcam_ipi_config_param {
 	__u8	line_interleave;
 	__u8	ois_compensation;
 	__u8	all_exp_in_slc;
+	__u8	is_2raw_flow;
 	struct mtkcam_ipi_buffer w_cac_table; /* for rgbw's empty cac table */
 } __packed;
 

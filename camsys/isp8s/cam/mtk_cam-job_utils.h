@@ -157,6 +157,7 @@ bool is_dc_mode(struct mtk_cam_job *job);
 bool is_ois_compensation(struct mtk_cam_job *job);
 bool is_dvc_hwmode(struct mtk_cam_job *job);
 bool is_all_exp_in_slc(struct mtk_cam_job *job);
+bool is_2raw_flow(struct mtk_cam_job *job);
 bool is_sv_pure_raw(struct mtk_cam_job *job);
 bool is_offline_timeshare(struct mtk_cam_job *job);
 bool is_rgbw(struct mtk_cam_job *job);
