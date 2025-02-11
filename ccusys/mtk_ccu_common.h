@@ -192,6 +192,8 @@ struct mtk_ccu {
 	uint32_t ccu_resource_bits;
 	uint32_t ccu_exch_pa;
 	uint32_t ccu_sram_log_offset;
+	uint32_t ccu_mbext;
+	uint32_t ccu_mbext_int;
 	void __iomem *ccu_base;
 	void __iomem *ccu_exch_base;
 	void __iomem *ccu_spare_base;
@@ -232,6 +234,7 @@ struct mtk_ccu {
 	int g_LogBufIdx;
 	int log_level;
 	int log_taglevel;
+	uint32_t bin_check;
 	uint32_t ipc_tout_fid;
 	uint32_t ipc_tout_mid;
 	u64 ktime;

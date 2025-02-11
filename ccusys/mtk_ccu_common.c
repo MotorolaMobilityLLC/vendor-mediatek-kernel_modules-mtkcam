@@ -127,7 +127,7 @@ static long mtk_ccu_ioctl(struct file *flip, unsigned int cmd,
 {
 	int ret = 0;
 	int log_idx;
-	uint32_t log_level[2] = {0};
+	uint32_t log_level[3] = {0};
 	struct mtk_ccu_buffer log_info = {0};
 	struct mtk_ccu *ccu = flip->private_data;
 
@@ -142,6 +142,7 @@ static long mtk_ccu_ioctl(struct file *flip, unsigned int cmd,
 		}
 		ccu->log_level = log_level[0];
 		ccu->log_taglevel = log_level[1];
+		ccu->bin_check = log_level[2];
 
 		break;
 	}
@@ -298,7 +299,9 @@ void mtk_ccu_ipc_log_handle(uint32_t data, uint32_t len, void *priv)
 	ccu->g_LogBufIdx = (uint32_t)data;
 	local_irq_save(flags);
 	ccu->ktime = ktime_get_ns();
-	ccu->gtick = (uint32_t)arch_timer_read_counter();
+	ccu->gtick = (ccu->systick_freq == 1000000000) ?
+		(uint32_t)(arch_timer_read_counter() >> 7) :
+		(uint32_t)arch_timer_read_counter();
 	local_irq_restore(flags);
 	wake_up_interruptible(&ccu->WaitQueueHead);
 #endif

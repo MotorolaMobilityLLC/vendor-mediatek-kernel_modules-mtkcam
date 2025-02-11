@@ -114,6 +114,14 @@ static int mtk_ccu_rproc_ipc_trigger(struct mtk_ccu *ccu,
 				readl(ccu->ccu_spare_base + MTK_CCU_SPARE_REG29),
 				readl(ccu->ccu_spare_base + MTK_CCU_SPARE_REG30),
 				readl(ccu->ccu_spare_base + MTK_CCU_SPARE_REG31));
+		LOG_DBG_IPI_MUST(
+			"pc:0x%x, lr:0x%x, sp:0x%x, 55_pc:0x%x, 55_lr:0x%x, 55_sp:0x%x\n",
+			readl(ccu->ccu_base + MTK_CCU_RV33_MON_PC),
+			readl(ccu->ccu_base + MTK_CCU_RV33_MON_LR),
+			readl(ccu->ccu_base + MTK_CCU_RV33_MON_SP),
+			readl(ccu->ccu_base + MTK_CCU_RV55_MON_PC),
+			readl(ccu->ccu_base + MTK_CCU_RV55_MON_LR),
+			readl(ccu->ccu_base + MTK_CCU_RV55_MON_SP));
 		return -EINVAL;
 	}
 
@@ -167,6 +175,14 @@ static int mtk_ccu_rproc_ipc_trigger(struct mtk_ccu *ccu,
 				readl(ccu->ccu_spare_base + MTK_CCU_SPARE_REG29),
 				readl(ccu->ccu_spare_base + MTK_CCU_SPARE_REG30),
 				readl(ccu->ccu_spare_base + MTK_CCU_SPARE_REG31));
+		LOG_DBG_IPI_MUST(
+			"pc:0x%x, lr:0x%x, sp:0x%x, 55_pc:0x%x, 55_lr:0x%x, 55_sp:0x%x\n",
+			readl(ccu->ccu_base + MTK_CCU_RV33_MON_PC),
+			readl(ccu->ccu_base + MTK_CCU_RV33_MON_LR),
+			readl(ccu->ccu_base + MTK_CCU_RV33_MON_SP),
+			readl(ccu->ccu_base + MTK_CCU_RV55_MON_PC),
+			readl(ccu->ccu_base + MTK_CCU_RV55_MON_LR),
+			readl(ccu->ccu_base + MTK_CCU_RV55_MON_SP));
 		ccu->ipc_tout_fid = msg->feature_type;
 		ccu->ipc_tout_mid = msg->msg_id;
 		return -ETIMEDOUT;
@@ -188,12 +204,22 @@ static int mtk_ccu_mb_rx(struct mtk_ccu *ccu,
 	uint32_t front;
 	uint32_t next;
 
+	if (ccu == NULL) {
+		LOG_DBG_IPI("ccu is NULL.\n");
+		return -1;
+	}
+
+	if (ccu->mb == NULL) {
+		LOG_DBG_IPI("ccu->mb is NULL.\n");
+		return -1;
+	}
+
 	if (!spin_trylock(&ccu->ccu_poweron_lock))
-		return 0;
+		return -1;
 
 	if (!ccu->poweron) {
 		spin_unlock(&ccu->ccu_poweron_lock);
-		return 0;
+		return -1;
 	}
 
 	rear = readl(&ccu->mb->rear);
@@ -220,13 +246,14 @@ static int mtk_ccu_mb_rx(struct mtk_ccu *ccu,
 		} else
 			memcpy(task, &(ccu->mb->queue[next]),
 				sizeof(struct mtk_ccu_msg));
-		ccu->mb->front = next;
+		if (ccu->ccu_mbext == 0)
+			ccu->mb->front = next;
 
 		if (ccu->compact_ipc)
 			LOG_DBG_IPI_MUST(
 			"[%u] received cmd: f(%d), r(%d), cmd(%d), in(%x)\n",
 			(uint32_t)arch_timer_read_counter(),
-			ccu->mb->front,
+			next,
 			ccu->mb->rear,
 			task->msg_id,
 			task->in_data_ptr);
@@ -234,12 +261,12 @@ static int mtk_ccu_mb_rx(struct mtk_ccu *ccu,
 			LOG_DBG_IPI_MUST(
 			"[%u] received cmd: f(%d), r(%d), cmd(%d), in(%x)\n",
 			(uint32_t)arch_timer_read_counter(),
-			ccu->mb->front,
+			next,
 			ccu->mb->rear,
 			ccu->mb->queue[next].msg_id,
 			ccu->mb->queue[next].in_data_ptr);
 
-		ret = rear - front + 1;
+		ret = next;
 #if IS_ENABLED(CONFIG_MTK_CCU_DEBUG)
 		LOG_DBG_IPI_MUST("fs[%d,%d,%d],sc[%d,%d,%d],cam[%d,%d,%d],senif[%d,%d,%d]\n",
 			ccu->bootcnt[0][0].counter, ccu->bootcnt[0][1].counter,
@@ -255,9 +282,12 @@ static int mtk_ccu_mb_rx(struct mtk_ccu *ccu,
 			ccu->bootcnt[6][0].counter, ccu->bootcnt[6][1].counter,
 			ccu->bootcnt[6][2].counter, ccu->bootcnt[7][0].counter,
 			ccu->bootcnt[7][1].counter, ccu->bootcnt[7][2].counter);
+		LOG_DBG_IPI("seninf[%d,%d,%d]\n",
+			ccu->bootcnt[8][0].counter, ccu->bootcnt[8][1].counter,
+			ccu->bootcnt[8][2].counter);
 #endif
 	} else
-		ret = 0;
+		ret = -1;
 
 	spin_unlock(&ccu->ccu_poweron_lock);
 
@@ -266,7 +296,7 @@ static int mtk_ccu_mb_rx(struct mtk_ccu *ccu,
 
 irqreturn_t mtk_ccu_isr_handler(int irq, void *priv)
 {
-	int mb_cnt;
+	int mb_front;
 	static struct mtk_ccu_msg msg;
 	struct mtk_ccu *ccu = (struct mtk_ccu *)priv;
 	mtk_ccu_ipc_handle_t handler;
@@ -320,8 +350,8 @@ irqreturn_t mtk_ccu_isr_handler(int irq, void *priv)
 	spin_unlock(&ccu->ccu_poweron_lock);
 
 	while (1) {
-		mb_cnt = mtk_ccu_mb_rx(ccu, &msg);
-		if (mb_cnt == 0) {
+		mb_front = mtk_ccu_mb_rx(ccu, &msg);
+		if (mb_front < 0) {
 			if (spin_trylock(&ccu->ccu_irq_lock)) {
 				if (ccu->disirq) {
 					ccu->disirq = false;
@@ -333,15 +363,42 @@ irqreturn_t mtk_ccu_isr_handler(int irq, void *priv)
 			goto ISR_EXIT;
 		}
 
-		if (msg.msg_id >= MTK_CCU_MSG_TO_APMCU_MAX)
-			continue;
+		if (msg.msg_id < MTK_CCU_MSG_TO_APMCU_MAX) {
+			mutex_lock(&ccu->ipc_desc_lock);
+			handler = ccu->ipc_desc[msg.msg_id].handler;
+			handler_priv = ccu->ipc_desc[msg.msg_id].priv;
+			mutex_unlock(&ccu->ipc_desc_lock);
+			if (handler != NULL)
+				handler(msg.in_data_ptr, msg.inDataSize, handler_priv);
+		}
 
-		mutex_lock(&ccu->ipc_desc_lock);
-		handler = ccu->ipc_desc[msg.msg_id].handler;
-		handler_priv = ccu->ipc_desc[msg.msg_id].priv;
-		mutex_unlock(&ccu->ipc_desc_lock);
-		if (handler != NULL)
-			handler(msg.in_data_ptr, msg.inDataSize, handler_priv);
+		if (ccu->ccu_mbext) {
+			if (!spin_trylock(&ccu->ccu_poweron_lock)) {
+				LOG_DBG_IPI_MUST("trylock failed2.\n");
+				goto ISR_EXIT;
+			}
+
+			if (!ccu->poweron) {
+				LOG_DBG_IPI_MUST("ccu->poweron false2.\n");
+#ifdef REQUEST_IRQ_IN_INIT
+				if (spin_trylock(&ccu->ccu_irq_lock)) {
+					if (ccu->disirq) {
+						ccu->disirq = false;
+						spin_unlock(&ccu->ccu_irq_lock);
+						disable_irq_nosync(ccu->irq_num);
+					} else
+						spin_unlock(&ccu->ccu_irq_lock);
+				}
+#endif
+				spin_unlock(&ccu->ccu_poweron_lock);
+				goto ISR_EXIT;
+			}
+
+			ccu->mb->front = (uint32_t)mb_front;
+			if (ccu->ccu_mbext_int)
+				writel(2, ccu->ccu_ipc.ccuIntTrigPtr);
+			spin_unlock(&ccu->ccu_poweron_lock);
+		}
 	}
 
 ISR_EXIT:

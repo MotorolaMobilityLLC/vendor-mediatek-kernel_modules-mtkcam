@@ -61,6 +61,13 @@
 #define CCU_RESOURCE_OFFSET   (0x82C)
 #define CCU_RESOURCE_BITS     (0x0B000000)
 
+#define MTK_CCU_RV55_MON_PC   (0x6C)
+#define MTK_CCU_RV55_MON_LR   (0x70)
+#define MTK_CCU_RV55_MON_SP   (0x74)
+#define MTK_CCU_RV33_MON_PC   (0xB4)
+#define MTK_CCU_RV33_MON_LR   (0xB8)
+#define MTK_CCU_RV33_MON_SP   (0xBC)
+
 #define MTK_CCU_SPARE_REG00   (0x00)
 #define MTK_CCU_SPARE_REG01   (0x04)
 #define MTK_CCU_SPARE_REG02   (0x08)
