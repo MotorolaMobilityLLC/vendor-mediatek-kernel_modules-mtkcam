@@ -102,7 +102,10 @@ int mtk_ccd_client_put_channel(struct mtk_ccd *ccd, int id_mask)
 	channel_id = channel_id_from_mask(id_mask);
 
 	/* channel uninit - stop worker service */
-	mtk_ccd_channel_uninit(ccd, center_id, channel_id);
+	if (mtk_ccd_channel_uninit(ccd, center_id, channel_id)) {
+		dev_err(dev, "%s, invalid channel ID", __func__);
+		return -1;
+	}
 
 	/* put channel - free ept + return rpmsg dev */
 	mtk_ccd_put_channel(ccd, center_id, channel_id);
@@ -122,6 +125,11 @@ int mtk_ccd_client_msg_send(struct mtk_ccd *ccd, int id_mask,
 	dev = ccd->dev;
 	center_id = center_id_from_mask(id_mask);
 	channel_id = channel_id_from_mask(id_mask);
+
+	if (channel_id >= CCD_IPI_MAX) {
+		dev_err(dev, "%s, invalid channel ID", __func__);
+		return -1;
+	}
 
 	dev_dbg(dev, "%s, id mask:%#010x", __func__, id_mask);
 

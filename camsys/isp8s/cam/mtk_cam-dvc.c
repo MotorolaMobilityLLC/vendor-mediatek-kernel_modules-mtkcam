@@ -142,9 +142,6 @@ void mtk_cam_dvc_init(struct mtk_camsys_dvc *dvc,
 	if (!base)
 		return;
 
-	if (WARN_ON(opp < 0))
-		return;
-
 	val = readl(dvc->top_base + REG_DVC_CAM_TOP_CTL);
 	switch(raw_id) {
 	case RAW_A:
@@ -260,9 +257,6 @@ int mtk_cam_dvc_vote(struct mtk_camsys_dvc *dvc, u32 raw_id, u32 opp, bool boost
 	if (!base)
 		return 0;
 
-	if (WARN_ON(opp < 0))
-		return 0;
-
 	SET_FIELD(&val, DVC_CAM_SW_REQ, 1);
 	SET_FIELD(&val, DVC_CAM_SW_OPP_VAL, boost ? opp + 2 : opp);
 	writel(val, base + REG_DVC_CAM_SW_VOTER);
@@ -340,4 +334,3 @@ int mtk_cam_dvc_probe(struct platform_device *pdev, struct mtk_camsys_dvc *dvc)
 
 	return ret;
 }
-

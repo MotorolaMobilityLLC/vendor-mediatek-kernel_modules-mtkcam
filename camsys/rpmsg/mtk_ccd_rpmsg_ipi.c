@@ -264,6 +264,11 @@ int ccd_worker_read(struct mtk_ccd *ccd, struct ccd_worker_item *read_obj)
 	struct mtk_rpmsg_rproc_subdev *mtk_subdev;
 	pid_t curr_pid;
 
+	if (!read_obj || read_obj->src >= CCD_IPI_MAX) {
+		ret = -EFAULT;
+		return -1;
+	}
+
 	dev = ccd->dev;
 	curr_pid = current->tgid;
 
@@ -361,6 +366,9 @@ int ccd_worker_write(struct mtk_ccd *ccd, struct ccd_worker_item *write_obj)
 	struct mtk_rpmsg_device *srcmdev;
 	struct mtk_ccd_rpmsg_endpoint *mept;
 	pid_t curr_pid;
+
+	if (!write_obj || write_obj->src >= CCD_IPI_MAX)
+		return -1;
 
 	dev = ccd->dev;
 	curr_pid = current->tgid;

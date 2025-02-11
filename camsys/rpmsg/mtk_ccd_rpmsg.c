@@ -521,6 +521,11 @@ int mtk_ccd_channel_uninit(struct mtk_ccd *ccd,
 	int ret;
 	u32 listen_obj_rdy;
 
+	if (channel_id >= CCD_IPI_MAX) {
+		dev_err(dev, "%s, invalid channel ID", __func__);
+		return -1;
+	}
+
 	dev = ccd->dev;
 	subdev = ccd->channel_center[center_id];
 	if (!subdev) {
@@ -584,6 +589,11 @@ int mtk_ccd_channel_send(struct mtk_ccd *ccd,
 	struct rproc_subdev *subdev;
 	struct mtk_rpmsg_rproc_subdev *mtk_subdev;
 	struct mtk_rpmsg_device *mdev;
+
+	if (channel_id >= CCD_IPI_MAX) {
+		dev_info(dev, "%s invalid channel ID\n", __func__);
+		return -1;
+	}
 
 	dev = ccd->dev;
 	subdev = ccd->channel_center[center_id];

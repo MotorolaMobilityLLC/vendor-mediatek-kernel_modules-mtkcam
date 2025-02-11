@@ -3274,11 +3274,17 @@ _add_mraw_mux_setting(struct mtk_cam_job *job,
 		      unsigned int sv_max_pixel_mode)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
-	unsigned int mraw_idx, tag_idx;
+	struct mtk_cam_device *cam = ctx->cam;
+	int mraw_idx, tag_idx;
 
 	for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
 		tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 			ctx->mraw_subdev_idx[mraw_idx] + MTKCAM_SUBDEV_MRAW_START);
+		if (tag_idx == SVTAG_UNKNOWN) {
+			dev_err(cam->dev, "%s: invalid mraw tag_idx", __func__);
+			break;
+		}
+
 		settings[*cnt].seninf = ctx->seninf;
 		settings[*cnt].source = job->tag_info[tag_idx].seninf_padidx;
 		settings[*cnt].camtg  = sv_dev_cammux_id;
@@ -3297,11 +3303,16 @@ _add_camsv_mux_setting(struct mtk_cam_job *job,
 		       unsigned int sv_max_pixel_mode)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
-	unsigned int sv_idx, tag_idx;
+	struct mtk_cam_device *cam = ctx->cam;
+	int sv_idx, tag_idx;
 
 	for (sv_idx = 0; sv_idx < ctx->num_sv_subdevs; sv_idx++) {
 		tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 			ctx->sv_subdev_idx[sv_idx] + MTKCAM_SUBDEV_CAMSV_START);
+		if (tag_idx == SVTAG_UNKNOWN) {
+			dev_err(cam->dev, "%s: invalid sv tag_idx", __func__);
+			break;
+		}
 
 		settings[*cnt].seninf = ctx->seninf;
 		settings[*cnt].source = job->tag_info[tag_idx].seninf_padidx;
@@ -5408,7 +5419,7 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	struct device_node *node;
 	struct device_link *link;
 	int ret = -1;
-	unsigned int i, clks;
+	int i, clks;
 	struct resource *res_base;
 	const struct camsys_platform_data *platform_data;
 	int irq;
@@ -5578,7 +5589,7 @@ static int mtk_cam_probe(struct platform_device *pdev)
 
 	clks = of_count_phandle_with_args(
 					pdev->dev.of_node, "clocks", "#clock-cells");
-	cam_dev->num_clks = (clks == -ENOENT) ? 0 : clks;
+	cam_dev->num_clks = (clks <= 0) ? 0 : clks;
 	dev_info(dev, "clk_num:%d\n", cam_dev->num_clks);
 
 	if (cam_dev->num_clks) {

@@ -785,9 +785,16 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 			}
 			if (is_smmu_enabled) {
 				if (avg_bw || peak_bw) {
+					if (x_size == 0) {
+						dev_err(ctx->cam->dev,
+							"%s: Invalid x_size: division by zero", __func__);
+						return -EINVAL;
+					}
+
 					/* stash */
 					strideLCM = LCM(x_size, 4096);
-					stash_peak_bw = stash_avg_bw = img_h / (strideLCM/x_size) * 16 * sensor_fps;
+					stash_peak_bw = stash_avg_bw =
+						img_h / (strideLCM/x_size) * 16 * (u64)sensor_fps;
 					stash_peak_bw = stash_avg_bw = to_qos_icc(stash_avg_bw);
 				}
 			}
@@ -799,9 +806,15 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 				calc_bw(x_size * img_h, linet, sensor_h);
 			total_peak_bw += peak_bw;
 			if (avg_bw || peak_bw) {
+				if (x_size == 0) {
+					dev_err(ctx->cam->dev,
+						"%s: Invalid x_size: division by zero", __func__);
+					return -EINVAL;
+				}
+
 				/* stash */
 				strideLCM = LCM(x_size, 4096);
-				stash_peak_bw = stash_avg_bw = img_h / (strideLCM/x_size) * 16 * sensor_fps;
+				stash_peak_bw = stash_avg_bw = img_h / (strideLCM/x_size) * 16 * (u64)sensor_fps;
 				stash_peak_bw = stash_avg_bw = to_qos_icc(stash_avg_bw);
 			}
 

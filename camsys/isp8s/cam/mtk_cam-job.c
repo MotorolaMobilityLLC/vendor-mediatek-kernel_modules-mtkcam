@@ -1018,7 +1018,7 @@ handle_sv_frame_done(struct mtk_cam_job *job)
 	struct mtk_camsv_sink_data *sv_sink;
 	struct mtk_mraw_pipeline *mraw_pipe;
 	unsigned int used_pipe = job->req->used_pipe & job->src_ctx->used_pipe;
-	unsigned int tag_idx;
+	int tag_idx;
 	int i, pipe_id;
 	bool pda_support;
 
@@ -1081,13 +1081,17 @@ handle_sv_frame_done(struct mtk_cam_job *job)
 		if (used_pipe & (1 << i)) {
 			pipe_id = i;
 			tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, pipe_id);
-			mraw_pipe = job->tag_info[tag_idx].mraw_pipe;
-			pda_support = job->pda_status;
+			if (tag_idx != SVTAG_UNKNOWN) {
+				mraw_pipe = job->tag_info[tag_idx].mraw_pipe;
+				pda_support = job->pda_status;
 
-			mtk_cam_sv_set_pda_status(mraw_pipe->res_config.vaddr[MTKCAM_IPI_MRAW_PDA_OUT
-			- MTKCAM_IPI_MRAW_ID_START], pda_support);
-			mtk_cam_req_buffer_done(job, i, -1,
-						job_vb2_buf_state(job), true);
+				mtk_cam_sv_set_pda_status(mraw_pipe->res_config.vaddr[MTKCAM_IPI_MRAW_PDA_OUT
+				- MTKCAM_IPI_MRAW_ID_START], pda_support);
+				mtk_cam_req_buffer_done(job, i, -1,
+							job_vb2_buf_state(job), true);
+			} else {
+				dev_err(cam->dev, "%s: unknown tag idx", __func__);
+			}
 		}
 	}
 
@@ -3560,8 +3564,8 @@ static int fill_sv_img_buffer_to_ipi_frame(
 
 	sv_dev = dev_get_drvdata(ctx->hw_sv);
 	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, node->uid.pipe_id);
-	if (tag_idx < 0) {
-		pr_err("[%s] invalid sv tag_idx", __func__);
+	if (tag_idx == SVTAG_UNKNOWN) {
+		pr_err("%s: unknown tag idx", __func__);
 		return ret;
 	}
 	pad_idx = mtk_cam_get_seninf_pad_index(job->tag_info, node->uid.pipe_id);
@@ -5703,7 +5707,8 @@ static int update_pdp_meta_buf_to_ipi_frame(
 	struct mtk_cam_ctx *ctx = helper->job->src_ctx;
 	struct mtkcam_ipi_frame_param *fp = helper->fp;
 	struct mtk_mraw_pipeline *mraw_pipe = NULL;
-	int ret = 0, i, param_idx = -1, tag_idx;
+	int ret = 0, i, param_idx = -1;
+	int tag_idx;
 	struct mtk_cam_job *job = helper->job;
 	struct mtkcam_ipi_img_output *out;
 	struct mtk_camsv_device *sv_dev;
@@ -5723,7 +5728,7 @@ static int update_pdp_meta_buf_to_ipi_frame(
 
 	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, node->uid.pipe_id);
 
-	if (tag_idx < 0) {
+	if (tag_idx == SVTAG_UNKNOWN) {
 		pr_info("%s %s no tag index for pipe id %d\n", __FILE__, __func__,
 			node->uid.pipe_id);
 		goto EXIT;

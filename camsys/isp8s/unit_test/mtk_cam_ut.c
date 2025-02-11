@@ -1764,7 +1764,7 @@ static int mtk_cam_ut_probe(struct platform_device *pdev)
 	struct device_link *link;
 #endif
 	const struct mtk_cam_ut_data *platform_data;
-	unsigned int i, clks;
+	int i, clks;
 	int ret;
 
 	ut = devm_kzalloc(dev, sizeof(*ut), GFP_KERNEL);

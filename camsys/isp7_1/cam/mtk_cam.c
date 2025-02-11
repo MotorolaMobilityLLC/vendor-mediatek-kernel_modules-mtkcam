@@ -6558,7 +6558,7 @@ struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 	int ret, i, is_first_ctx;
 	struct media_entity *entity = &node->vdev.entity;
 	struct media_pipeline_pad *ppad;
-	struct mtk_ccd *ccd;
+	struct mtk_ccd *ccd = NULL;
 
 	dev_info(cam->dev, "%s:ctx(%d): triggered by %s\n",
 		 __func__, ctx->stream_id, entity->name);

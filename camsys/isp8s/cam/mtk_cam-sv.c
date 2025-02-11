@@ -2611,7 +2611,7 @@ static void mtk_cam_sv_set_pda_frame_param_dmao(
 	struct mtk_camsv_device *sv_dev;
 	struct mtk_mraw_pipeline *pipe =
 		&ctx->cam->pipelines.mraw[pipe_id - MTKCAM_SUBDEV_MRAW_START];
-	unsigned int tag_idx;
+	int tag_idx;
 	unsigned long offset;
 
 	if (!pda_en)
@@ -2665,7 +2665,8 @@ static void mtk_cam_sv_set_pdp_frame_param_dmao(
 	struct mtk_camsv_device *sv_dev;
 	struct mtk_mraw_pipeline *pipe =
 		&ctx->cam->pipelines.mraw[pipe_id - MTKCAM_SUBDEV_MRAW_START];
-	unsigned int tag_idx = 0, dmao_num = 0;
+	unsigned int dmao_num = 0;
+	int tag_idx;
 	unsigned long offset;
 	int i;
 
@@ -2806,7 +2807,7 @@ void mtk_cam_sv_copy_user_input_param(struct mtk_cam_ctx *ctx, struct mtk_cam_jo
 	struct mraw_stats_cfg_param *param =
 		&mraw_pipe->res_config.stats_cfg_param;
 	struct mtk_camsv_device *sv_dev;
-	unsigned int tag_idx;
+	int tag_idx;
 
 	CALL_PLAT_V4L2(
 		get_mraw_stats_cfg_param, vaddr, param);
