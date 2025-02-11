@@ -1216,6 +1216,7 @@ _stream_on(struct mtk_cam_job *job, bool on)
 	struct mtk_raw_ctrl_data *ctrl_data;
 	int i, pad_bitmask;
 	bool is_dc, is_offline_ts;
+	unsigned int without_tg = 0;
 
 	is_dc = is_dc_mode(job);
 	is_offline_ts = is_offline_timeshare(job);
@@ -1237,8 +1238,7 @@ _stream_on(struct mtk_cam_job *job, bool on)
 	if (job->stream_on_seninf || job->raw_switch)
 		ctx_stream_on_seninf_sensor(job, pad_bitmask);
 
-	if (!job->enable_hsf_raw)
-		toggle_raw_engines_db(job);
+	toggle_raw_engines_db(job);
 
 	/* fifo monitor bind */
 	if (on)
@@ -1253,13 +1253,15 @@ _stream_on(struct mtk_cam_job *job, bool on)
 				continue;
 			if (is_offline_timeshare(job))
 				continue;
+
+			update_scq_start_period(raw_dev, job->scq_period,
+				get_sensor_interval_us(job) / 1000);
 			if (job->enable_hsf_raw) {
-				ccu_stream_on(ctx, on);
-			} else {
-				update_scq_start_period(raw_dev, job->scq_period,
-					get_sensor_interval_us(job) / 1000);
-				stream_on(raw_dev, on, true);
+				without_tg =  is_dc_mode(job) || is_m2m(job) ||
+					is_offline_timeshare(job);
+				ccu_stream_on(ctx, without_tg);
 			}
+			stream_on(raw_dev, on, true);
 		}
 	}
 
@@ -1610,9 +1612,6 @@ static void set_cq_deadline(struct mtk_cam_job *job, int cq_deadline)
 	int i, raw_idx = 0;
 	unsigned long subset;
 
-	if (job->enable_hsf_raw)
-		return;
-
 	job->src_ctx->last_cq_deadline = cq_deadline;
 
 	subset = bit_map_subset_of(MAP_HW_RAW, job->used_engine);
@@ -1867,34 +1866,27 @@ static int _apply_raw_cq(struct mtk_cam_job *job,
 
 	raw_dev = dev_get_drvdata(cam->engines.raw_devs[raw_id]);
 
-	if (job->enable_hsf_raw)
-		ccu_apply_cq(job, raw_engines,
-			cq->daddr, cq_rst->main.size,
-			cq_rst->main.offset, cq_rst->sub.size,
-			cq_rst->sub.offset);
-	else {
-		if (job->disable_qof_cq_ctrl) {
-			struct mtk_raw_device *r;
-			int i;
+	if (job->disable_qof_cq_ctrl) {
+		struct mtk_raw_device *r;
+		int i;
 
-			job->back_to_qof_cq_ctrl = true;
+		job->back_to_qof_cq_ctrl = true;
 
-			qof_mtcmos_voter(&cam->engines, job->used_engine, true);
+		qof_mtcmos_voter(&cam->engines, job->used_engine, true);
 
-			for (i = 0; i < cam->engines.num_raw_devices; ++i) {
-				if (!(BIT(i) & bit_map_subset_of(MAP_HW_RAW, job->used_engine)))
-					continue;
+		for (i = 0; i < cam->engines.num_raw_devices; ++i) {
+			if (!(BIT(i) & bit_map_subset_of(MAP_HW_RAW, job->used_engine)))
+				continue;
 
-				r = dev_get_drvdata(cam->engines.raw_devs[i]);
-				qof_enable_cq_trigger_by_qof(r, false);
-			}
+			r = dev_get_drvdata(cam->engines.raw_devs[i]);
+			qof_enable_cq_trigger_by_qof(r, false);
 		}
-
-		apply_cq(raw_dev,
-			cq->daddr,
-			cq_rst->main.size, cq_rst->main.offset,
-			cq_rst->sub.size, cq_rst->sub.offset);
 	}
+
+	apply_cq(raw_dev,
+		cq->daddr,
+		cq_rst->main.size, cq_rst->main.offset,
+		cq_rst->sub.size, cq_rst->sub.offset);
 
 	return 0;
 }

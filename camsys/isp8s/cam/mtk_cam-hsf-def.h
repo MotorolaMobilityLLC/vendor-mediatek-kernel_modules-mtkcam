@@ -64,8 +64,8 @@ struct raw_info {
 	uint64_t cq_iova;
 	uint32_t Hsf_en;
 	uint32_t enable_raw;
-	uint32_t vf_en;
 	uint32_t hsf_status;
+	uint32_t without_tg;
 };
 
 struct mtk_cam_dma_map {

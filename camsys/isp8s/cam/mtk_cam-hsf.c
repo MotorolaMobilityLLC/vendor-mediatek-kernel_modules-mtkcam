@@ -26,9 +26,10 @@
 #include "mtk_cam-engine.h"
 #include "mtk_heap.h"
 #include <linux/soc/mediatek/mtk_sip_svc.h>
-#include <linux/arm-smccc.h>
 #include "iommu_debug.h"
 #include <public/trusted_mem_api.h>
+
+#define SKIP_IN_FPGA_EP
 
 uint64_t chk_pa;
 
@@ -231,7 +232,7 @@ static void mtk_cam_power_on_ccu(struct mtk_cam_hsf_ctrl *handle_inst, unsigned 
 }
 #endif
 
-void ccu_stream_on(struct mtk_cam_ctx *ctx, int on)
+void ccu_stream_on(struct mtk_cam_ctx *ctx, unsigned int without_tg)
 {
 	int ret = 0;
 	struct mtk_cam_hsf_ctrl *hsf_config = NULL;
@@ -269,9 +270,10 @@ void ccu_stream_on(struct mtk_cam_ctx *ctx, int on)
 	}
 
 	pData.tg_idx = raw_id;
-	pData.vf_en = on;
 	pData.chunk_iova = share_buf->chunk_iova;
 	pData.hsf_status = 0;
+	pData.without_tg = without_tg;
+	pr_info("%s pData.without_tg = %d\n", __func__, pData.without_tg);
 #ifdef SKIP_IN_FPGA_EP
 #ifdef USING_CCU
 	ret = mtk_ccu_rproc_ipc_send(
@@ -290,10 +292,11 @@ void ccu_stream_on(struct mtk_cam_ctx *ctx, int on)
 #endif
 
 	if (ret != 0 || pData.hsf_status == 0)
-		pr_info("%s TG(%d) VF(%d) fail, hsf_status:(%d)\n",
-			__func__, pData.tg_idx, on, pData.hsf_status);
+		pr_info("%s TG(%d) enable raw_sel secure lock fail, hsf_status:(%d)\n",
+			__func__, pData.tg_idx, pData.hsf_status);
 	else
-		pr_info("%s TG(%d) VF(%d) success\n", __func__, pData.tg_idx, on);
+		pr_info("%s TG(%d) enable raw_sel secure lock success\n",
+			__func__, pData.tg_idx);
 }
 
 void ccu_hsf_config(struct mtk_cam_ctx *ctx, unsigned int En)
@@ -520,7 +523,6 @@ int mtk_cam_hsf_config(struct mtk_cam_ctx *ctx, unsigned int raw_id)
 	struct mtk_cam_dma_map *dma_map_chk = NULL;
 	struct device *dev_to_attach;
 	//struct mtk_raw_device *raw_dev;
-	struct arm_smccc_res res;
 
 #ifdef PERFORMANCE_HSF
 	int ms_0 = 0, ms_1 = 0, ms = 0;
@@ -614,8 +616,6 @@ int mtk_cam_hsf_config(struct mtk_cam_ctx *ctx, unsigned int raw_id)
 		return -1;
 	}
 
-	arm_smccc_smc(MTK_SIP_KERNEL_DAPC_CAM_CONTROL, 1, 0, 0, 0, 0, 0, 0, &res);
-
 	ccu_hsf_config(ctx, 1);
 
 
@@ -645,7 +645,6 @@ int mtk_cam_hsf_uninit(struct mtk_cam_ctx *ctx)
 	struct mtk_cam_device *cam = ctx->cam;
 	struct mtk_cam_hsf_ctrl *hsf_config = NULL;
 	int ret = 0;
-	struct arm_smccc_res res;
 #ifdef PERFORMANCE_HSF
 	int ms_0 = 0, ms_1 = 0, ms = 0;
 	struct timeval time
@@ -665,7 +664,6 @@ int mtk_cam_hsf_uninit(struct mtk_cam_ctx *ctx)
 	}
 
 	ccu_hsf_config(ctx, 0);
-	arm_smccc_smc(MTK_SIP_KERNEL_DAPC_CAM_CONTROL, 0, 0, 0, 0, 0, 0, 0, &res);
 	mtk_cam_dmabuf_free_iova(ctx, hsf_config->cq_buf);
 	mtk_cam_dmabuf_free_iova(ctx, hsf_config->chk_buf);
 

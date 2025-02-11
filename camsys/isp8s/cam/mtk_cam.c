@@ -1988,6 +1988,14 @@ static struct device *get_dev_to_attach(struct mtk_cam_ctx *ctx)
 	return ctx->cam->smmu_dev ? : ctx->cam->engines.raw_devs[0];
 }
 
+static bool region_heap_is_prot(struct dma_buf *dbuf)
+{
+	if (strstr(dbuf->exp_name, "prot"))
+		return true;
+
+	return false;
+}
+
 static int _alloc_pool_by_dbuf(struct mtk_cam_device_buf *buf,
 			       struct mtk_cam_pool *pool,
 			       struct device *dev,
@@ -1995,11 +2003,19 @@ static int _alloc_pool_by_dbuf(struct mtk_cam_device_buf *buf,
 {
 	int ret;
 
-	if (!dbuf)
+	if (!dbuf) {
+		pr_info("%s: query dbuf failed\n", __func__);
 		return -1;
+	}
 
-	ret = mtk_cam_device_buf_init(buf, dbuf, dev, total_size)
-		|| mtk_cam_device_buf_vmap(buf);
+	if (region_heap_is_prot(dbuf)) {
+		pr_info("%s: skip buf_vmap for dma_buf from prot heap region\n",
+			__func__);
+		ret = mtk_cam_device_buf_init(buf, dbuf, dev, total_size);
+	} else
+		ret = mtk_cam_device_buf_init(buf, dbuf, dev, total_size)
+			|| mtk_cam_device_buf_vmap(buf);
+
 	if (ret)
 		return ret;
 
@@ -3830,10 +3846,7 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 				dev_info(raw_dev->dev, "time-share: ctx:%d last uninitialize",
 						ctx->stream_id);
 			}
-			if (ctx->enable_hsf_raw)
-				ccu_stream_on(ctx, false);
-			else
-				stream_on(raw_dev, false, true);
+			stream_on(raw_dev, false, true);
 		}
 	}
 
