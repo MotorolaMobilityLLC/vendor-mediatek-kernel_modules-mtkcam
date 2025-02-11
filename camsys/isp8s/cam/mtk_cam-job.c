@@ -4634,6 +4634,7 @@ static int raw_qof_init(struct mtk_cam_job *job, struct device *dev)
 	struct mtk_raw_ctrl_data *ctrl = get_raw_ctrl_data(job);
 	const struct mtk_cam_resource_v2 *res;
 	int exp, sv_last_tag;
+	bool is_fusion = job_sensor_exp_num(job) == job_exp_num(job) ? true : false;
 
 	if (!ctrl) {
 		pr_info("%s: warn. should not be called\n", __func__);
@@ -4641,10 +4642,12 @@ static int raw_qof_init(struct mtk_cam_job *job, struct device *dev)
 	}
 
 	res = &ctrl->resource.user_data;
-	exp = job_exp_num(job);
+	exp = job_sensor_exp_num(job);
 	sv_last_tag = (exp == 1) ?
-		get_sv_tag_idx(exp, MTKCAM_IPI_ORDER_FIRST_TAG, false) :
-		get_sv_tag_idx(exp, MTKCAM_IPI_ORDER_LAST_TAG, false);
+		get_sv_tag_idx(exp, MTKCAM_IPI_ORDER_FIRST_TAG, false,
+			is_dcg_with_vs(job), is_fusion) :
+		get_sv_tag_idx(exp, MTKCAM_IPI_ORDER_LAST_TAG, false,
+			is_dcg_with_vs(job), is_fusion);
 
 	qof_sof_src_sel(raw, job_exp_num(job),
 					!res_raw_is_dc_mode(&res->raw_res), sv_last_tag);
@@ -5582,6 +5585,21 @@ static int update_job_raw_param_to_ipi_frame(struct mtk_cam_job *job,
 	return 0;
 }
 
+static int update_job_sv_param_to_ipi_frame(struct mtk_cam_job *job,
+					     struct mtkcam_ipi_frame_param *fp)
+{
+	int i;
+	struct mtkcam_ipi_camsv_frame_param *sv_param;
+
+	for (i = 0; i < CAMSV_MAX_TAGS; i++) {
+		sv_param = &fp->camsv_param[0][i];
+		sv_param->previous_sensor_exposure_num = job_prev_sensor_exp_num(job);
+		sv_param->sensor_exposure_num = job_sensor_exp_num(job);
+	}
+
+	return 0;
+}
+
 static int update_raw_image_buf_to_ipi_frame(struct req_buffer_helper *helper,
 		struct mtk_cam_buffer *buf, struct mtk_cam_video_device *node,
 		struct pack_job_ops_helper *job_helper)
@@ -6137,6 +6155,7 @@ static int mtk_cam_job_fill_ipi_frame(struct mtk_cam_job *job,
 
 	ret = update_cq_buffer_to_ipi_frame(&job->cq, fp)
 		|| update_job_raw_param_to_ipi_frame(job, fp)
+		|| update_job_sv_param_to_ipi_frame(job, fp)
 		|| update_job_buffer_to_ipi_frame(job, fp, job_helper)
 		|| update_sensor_meta_buffer_to_ipi_frame(job, fp)
 		|| update_ltms_buf_to_ipi_frame(job, fp);

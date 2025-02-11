@@ -117,6 +117,34 @@ static const struct mtk_camsv_tag_param sv_tag_param_2exp_stagger[4] = {
 	},
 };
 
+
+static const struct mtk_camsv_tag_param sv_tag_param_2exp_dcg_vs[4] = {
+	{
+		.tag_idx = SVTAG_2,
+		.seninf_padidx = PAD_SRC_RAW0,
+		.tag_order = MTKCAM_IPI_ORDER_FIRST_TAG,
+		.is_w = false,
+	},
+	{
+		.tag_idx = SVTAG_0,
+		.seninf_padidx = PAD_SRC_RAW1,
+		.tag_order = MTKCAM_IPI_ORDER_LAST_TAG,
+		.is_w = false,
+	},
+	{
+		.tag_idx = SVTAG_1,
+		.seninf_padidx = PAD_SRC_RAW_W0,
+		.tag_order = MTKCAM_IPI_ORDER_FIRST_TAG,
+		.is_w = true,
+	},
+	{
+		.tag_idx = SVTAG_3,
+		.seninf_padidx = PAD_SRC_RAW_W1,
+		.tag_order = MTKCAM_IPI_ORDER_LAST_TAG,
+		.is_w = true,
+	},
+};
+
 static const struct mtk_camsv_tag_param sv_tag_param_3exp_stagger[3] = {
 	{
 		.tag_idx = SVTAG_0,
@@ -132,6 +160,27 @@ static const struct mtk_camsv_tag_param sv_tag_param_3exp_stagger[3] = {
 	},
 	{
 		.tag_idx = SVTAG_2,
+		.seninf_padidx = PAD_SRC_RAW2,
+		.tag_order = MTKCAM_IPI_ORDER_LAST_TAG,
+		.is_w = false,
+	},
+};
+
+static const struct mtk_camsv_tag_param sv_tag_param_3exp_dcg_vs[3] = {
+	{
+		.tag_idx = SVTAG_0,
+		.seninf_padidx = PAD_SRC_RAW0,
+		.tag_order = MTKCAM_IPI_ORDER_FIRST_TAG,
+		.is_w = false,
+	},
+	{
+		.tag_idx = SVTAG_2,
+		.seninf_padidx = PAD_SRC_RAW1,
+		.tag_order = MTKCAM_IPI_ORDER_NORMAL_TAG,
+		.is_w = false,
+	},
+	{
+		.tag_idx = SVTAG_1,
 		.seninf_padidx = PAD_SRC_RAW2,
 		.tag_order = MTKCAM_IPI_ORDER_LAST_TAG,
 		.is_w = false,
@@ -1834,15 +1883,22 @@ void mtk_cam_sv_fill_tag_info(struct mtk_camsv_tag_info *arr_tag,
 }
 
 int mtk_cam_sv_get_tag_param(struct mtk_camsv_tag_param *arr_tag_param,
-	unsigned int hw_scen, unsigned int exp_no, unsigned int req_amount)
+	unsigned int hw_scen, unsigned int exp_no, unsigned int req_amount,
+	bool is_dcg_with_vs, bool is_fusion)
 {
 	int ret = 0;
 
 	if (hw_scen == (1 << HWPATH_ID(MTKCAM_IPI_HW_PATH_STAGGER)) ||
 		hw_scen == (1 << HWPATH_ID(MTKCAM_IPI_HW_PATH_DC_STAGGER)) ||
 		hw_scen == (1 << HWPATH_ID(MTKCAM_IPI_HW_PATH_OFFLINE_STAGGER))) {
-		if (exp_no == 2)
+		if (exp_no == 2 && is_fusion)
 			memcpy(arr_tag_param, sv_tag_param_2exp_stagger,
+				sizeof(struct mtk_camsv_tag_param) * req_amount);
+		else if (exp_no == 2 && is_dcg_with_vs && !is_fusion)
+			memcpy(arr_tag_param, sv_tag_param_2exp_dcg_vs,
+				sizeof(struct mtk_camsv_tag_param) * req_amount);
+		else if (exp_no == 3 && is_dcg_with_vs)
+			memcpy(arr_tag_param, sv_tag_param_3exp_dcg_vs,
 				sizeof(struct mtk_camsv_tag_param) * req_amount);
 		else if (exp_no == 3)
 			memcpy(arr_tag_param, sv_tag_param_3exp_stagger,

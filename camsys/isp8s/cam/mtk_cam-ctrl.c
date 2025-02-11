@@ -1679,6 +1679,7 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 	int raw_after_change = bit_map_subset_of(MAP_HW_RAW, job->used_engine);
 	int raw_uninit = bit_map_subset_of(MAP_HW_RAW, engine_uninit);
 	int raw_all = raw_after_change | raw_uninit;
+	bool is_fusion;
 
 	dev_info(dev, "[%s] begin waiting switch no:%d seq 0x%x\n",
 		__func__, job->req_seq, job->frame_seq_no);
@@ -1753,10 +1754,13 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 		ctrl = get_raw_ctrl_data(job);
 		if (ctrl)
 			res = &ctrl->resource.user_data;
-		exp = job_exp_num(job);
+		exp = job_sensor_exp_num(job);
+		is_fusion = job_sensor_exp_num(job) == job_exp_num(job) ? true : false;
 		sv_last_tag = (exp == 1) ?
-		get_sv_tag_idx(exp, MTKCAM_IPI_ORDER_FIRST_TAG, false) :
-		get_sv_tag_idx(exp, MTKCAM_IPI_ORDER_LAST_TAG, false);
+		get_sv_tag_idx(exp, MTKCAM_IPI_ORDER_FIRST_TAG, false,
+			is_dcg_with_vs(job), is_fusion) :
+		get_sv_tag_idx(exp, MTKCAM_IPI_ORDER_LAST_TAG, false,
+			is_dcg_with_vs(job), is_fusion);
 
 		if (raw && res)
 			qof_sof_src_sel(raw, job_exp_num(job),

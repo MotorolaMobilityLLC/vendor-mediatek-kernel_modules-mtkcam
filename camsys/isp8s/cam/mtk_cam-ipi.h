@@ -194,6 +194,8 @@ struct mtkcam_ipi_camsv_frame_param {
 	__u8	pdp_enable;
 	__u8	pda_enable;
 	__u32	pda_idx;
+	__u32	sensor_exposure_num;
+	__u32	previous_sensor_exposure_num;
 	struct mtkcam_ipi_meta_input pdp_meta_inputs;
 	struct mtkcam_ipi_img_output camsv_img_outputs[CAMSV_MAX_IMAGE_OUTPUT];
 } __packed;

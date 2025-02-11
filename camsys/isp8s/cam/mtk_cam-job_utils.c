@@ -272,7 +272,7 @@ int get_sv_tag_idx_hdr(unsigned int exp_no, unsigned int tag_order, bool is_w)
 
 	hw_scen = 1 << HWPATH_ID(MTKCAM_IPI_HW_PATH_STAGGER);
 	req_amount = (exp_no < 3) ? exp_no * 2 : exp_no;
-	if (mtk_cam_sv_get_tag_param(img_tag_param, hw_scen, exp_no, req_amount))
+	if (mtk_cam_sv_get_tag_param(img_tag_param, hw_scen, exp_no, req_amount, false, true))
 		goto EXIT;
 	else {
 		for (i = 0; i < req_amount; i++) {
@@ -384,6 +384,46 @@ int get_img_wbuf_num(struct mtk_cam_job *job)
 	return res->raw_res.img_wbuf_num;
 }
 
+static int scen_sensor_exp_num(struct mtk_cam_scen *scen)
+{
+	int exp = 1;
+
+	switch (scen->id) {
+	case MTK_CAM_SCEN_NORMAL:
+	case MTK_CAM_SCEN_ODT_NORMAL:
+	case MTK_CAM_SCEN_M2M_NORMAL:
+	case MTK_CAM_SCEN_TIMESHARE:
+		if (scen->scen.normal.exp_num == 0)
+			pr_info("%s: error: NORMAL SCEN(%d) w/o setting exp_num",
+					__func__, scen->id);
+		else
+			exp = scen->scen.normal.exp_num;
+		break;
+	case MTK_CAM_SCEN_MSTREAM:
+	case MTK_CAM_SCEN_ODT_MSTREAM:
+		switch (scen->scen.mstream.type) {
+		case MTK_CAM_MSTREAM_NE_SE:
+		case MTK_CAM_MSTREAM_SE_NE:
+			exp = 2;
+			break;
+		case MTK_CAM_MSTREAM_1_EXPOSURE:
+			exp = 1;
+			break;
+		default:
+			break;
+		}
+		break;
+	case MTK_CAM_SCEN_EXT_ISP:
+		exp = 1;
+		break;
+	case MTK_CAM_SCEN_SMVR:
+	default:
+		break;
+	}
+
+	return exp;
+}
+
 static int scen_exp_num(struct mtk_cam_scen *scen)
 {
 	int exp = 1;
@@ -429,6 +469,21 @@ static int scen_exp_num(struct mtk_cam_scen *scen)
 	return exp;
 }
 
+int job_prev_sensor_exp_num_seamless(struct mtk_cam_job *job)
+{
+	int prev;
+
+	//NOTE: for legacy issue, it is assumed that
+	//in stagger scenario, it will start from the sensor mode of max exp
+
+	if (job->first_job || job->raw_switch)
+		prev = scen_max_exp_num(&job->job_scen);
+	else
+		prev = job_prev_sensor_exp_num(job);
+
+	return prev;
+}
+
 int job_prev_exp_num_seamless(struct mtk_cam_job *job)
 {
 	int prev;
@@ -459,6 +514,23 @@ int job_exp_num(struct mtk_cam_job *job)
 	struct mtk_cam_scen *scen = &job->job_scen;
 
 	return scen_exp_num(scen);
+}
+
+int job_prev_sensor_exp_num(struct mtk_cam_job *job)
+{
+	struct mtk_cam_scen *scen = &job->prev_scen;
+
+	//NOTE: prev_scen of first job comes from req
+	//which is equal to job_scen of first req
+
+	return scen_sensor_exp_num(scen);
+}
+
+int job_sensor_exp_num(struct mtk_cam_job *job)
+{
+	struct mtk_cam_scen *scen = &job->job_scen;
+
+	return scen_sensor_exp_num(scen);
 }
 
 int scen_max_exp_num(struct mtk_cam_scen *scen)
@@ -1848,7 +1920,7 @@ int fill_sv_img_fp(
 	unsigned int pipe_id, exp_no, buf_cnt = 0;
 	int exp_order = get_exp_order(&job->job_scen);
 	int tag_idx, i, j, ret = 0;
-	bool is_w, is_mstream = false;
+	bool is_w, is_mstream = false, is_fusion;
 
 	if (!is_pure_raw_node(job, node))
 		goto EXIT;
@@ -1893,9 +1965,11 @@ int fill_sv_img_fp(
 			continue;
 		for (j = 0; j < buf_cnt; j++) {
 			is_w = (j % 2) ? true : false;
+			is_fusion = job_sensor_exp_num(job) == job_exp_num(job) ? true : false;
 			tag_idx = (exp_no > 1 && (i + 1) == exp_no) ?
-				get_sv_tag_idx(exp_no, MTKCAM_IPI_ORDER_LAST_TAG, is_w) :
-				get_sv_tag_idx(exp_no, i, is_w);
+				get_sv_tag_idx(exp_no, MTKCAM_IPI_ORDER_LAST_TAG, is_w,
+					is_dcg_with_vs(job), is_fusion) :
+				get_sv_tag_idx(exp_no, i, is_w, is_dcg_with_vs(job), is_fusion);
 			if (tag_idx == -1) {
 				ret = -1;
 				pr_info("%s: tag_idx not found(exp_no:%d is_w:%d)",
@@ -1903,9 +1977,9 @@ int fill_sv_img_fp(
 				goto EXIT;
 			}
 			ret = fill_sv_mp_fp(helper, buf, node, tag_idx, pipe_id,
-					    get_buf_plane(exp_order, i),
-					    get_plane_per_exp((buf_cnt == 2)),
-					    get_plane_buf_offset(is_w));
+					get_buf_plane(exp_order, i),
+					get_plane_per_exp((buf_cnt == 2)),
+					get_plane_buf_offset(is_w));
 		}
 	}
 
@@ -1964,7 +2038,8 @@ int fill_imgo_buf_as_working_buf(
 	return ret;
 }
 
-int get_sv_tag_idx(unsigned int exp_no, unsigned int tag_order, bool is_w)
+int get_sv_tag_idx(unsigned int exp_no, unsigned int tag_order, bool is_w,
+	bool is_dcg_with_vs, bool is_fusion)
 {
 	struct mtk_camsv_tag_param img_tag_param[SVTAG_IMG_END] = {};
 	unsigned int hw_scen, req_amount;
@@ -1976,7 +2051,8 @@ int get_sv_tag_idx(unsigned int exp_no, unsigned int tag_order, bool is_w)
 		goto EXIT;
 	}
 	req_amount = (exp_no < 3) ? exp_no * 2 : exp_no;
-	if (mtk_cam_sv_get_tag_param(img_tag_param, hw_scen, exp_no, req_amount))
+	if (mtk_cam_sv_get_tag_param(img_tag_param, hw_scen, exp_no, req_amount,
+		is_dcg_with_vs, is_fusion))
 		goto EXIT;
 	else {
 		for (i = 0; i < req_amount; i++) {
@@ -2328,6 +2404,7 @@ int handle_sv_tag(struct mtk_cam_job *job)
 	unsigned int exp_no, req_amount, max_pixel_mode = 3;
 	unsigned int cfg_exp_no = scen_max_exp_num(&job->job_scen);
 	int ret = 0, i;
+	bool is_dcg_vs, is_fusion;
 
 	if (ctx->hw_sv) {
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
@@ -2369,7 +2446,10 @@ int handle_sv_tag(struct mtk_cam_job *job)
 	}
 	pr_info("[%s] hw_scen:%d exp_no:%d req_amount:%d",
 			__func__, hw_scen, exp_no, req_amount);
-	if (mtk_cam_sv_get_tag_param(img_tag_param, hw_scen, exp_no, req_amount))
+	is_dcg_vs = is_dcg_with_vs(job);
+	is_fusion = job_sensor_exp_num(job) == job_exp_num(job) ? true : false;
+	if (mtk_cam_sv_get_tag_param(img_tag_param, hw_scen, exp_no, req_amount,
+		is_dcg_vs, is_fusion))
 		return 1;
 
 	raw_sink = get_raw_sink_data(job);
@@ -2581,7 +2661,7 @@ int handle_sv_tag_display_ic(struct mtk_cam_job *job)
 		req_amount = 3;
 	else
 		req_amount = 2;
-	ret = mtk_cam_sv_get_tag_param(tag_param, hw_scen, 1, req_amount);
+	ret = mtk_cam_sv_get_tag_param(tag_param, hw_scen, 1, req_amount, false, false);
 
 	for (i = 0; i < req_amount; i++) {
 		if (tag_param[i].tag_idx == SVTAG_0) {
@@ -2705,7 +2785,7 @@ int handle_sv_tag_non_comb_ic(struct mtk_cam_job *job)
 	sv_pipe = &ctx->cam->pipelines.camsv[sv_pipe_idx];
 	hw_scen = (1 << MTKCAM_SV_SPECIAL_SCENARIO_NON_COMB_IC);
 	req_amount = 4;
-	ret = mtk_cam_sv_get_tag_param(tag_param, hw_scen, 1, req_amount);
+	ret = mtk_cam_sv_get_tag_param(tag_param, hw_scen, 1, req_amount, false, false);
 
 	for (i = 0; i < req_amount; i++) {
 		width = sv_sink->width / 4;
