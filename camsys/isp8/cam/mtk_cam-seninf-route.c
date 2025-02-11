@@ -548,6 +548,10 @@ int mtk_cam_seninf_get_csi_param(struct seninf_ctx *ctx)
 		csi_param->cphy_lrte_support);
 
 #if AOV_GET_PARAM
+	if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+		pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+		return -1;
+	}
 	if (!(core->aov_sensor_id < 0) &&
 		!(ctx->current_sensor_id < 0) &&
 		(ctx->current_sensor_id == core->aov_sensor_id)) {
