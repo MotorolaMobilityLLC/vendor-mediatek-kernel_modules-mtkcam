@@ -90,14 +90,13 @@ define_mgk_ddk_ko(
         "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",
         "//vendor/mediatek/kernel_modules/mtkcam/imgsensor:imgsensor_header",
         "//vendor/mediatek/kernel_modules/mtkcam/imgsensor/src-v4l2:imgsensor_v4l2_header",
+        "//kernel_device_modules-{}/drivers/misc/mediatek/imgsensor:imgsensor_kd_header".format(kernel_version),
     ],
     hdrs = glob([
         "**/*.h"
     ]),
     copts = [
         "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/mt-plat",
-        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/imgsensor",
-        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/imgsensor/inc",
         "-I$(srctree)/drivers/thermal",
     ],
     includes = [

@@ -106,7 +106,6 @@ define_mgk_ddk_ko(
     },
     copts = [
         "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/mt-plat",
-        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/imgsensor/inc",
     ],
     ko_deps = [
         "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-plat-util",
@@ -138,6 +137,7 @@ define_mgk_ddk_ko(
         "//vendor/mediatek/kernel_modules/mtkcam/imgsensor/src-v4l2:imgsensor_v4l2_header",
         "//kernel_device_modules-{}/drivers/misc/mediatek/iommu:iommu_misc_headers".format(kernel_version),
         "//kernel_device_modules-{}/drivers/iommu/arm/arm-smmu-v3:smmu_public_headers".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/misc/mediatek/imgsensor:imgsensor_kd_header".format(kernel_version),
     ],
     includes = [
         "isp7_1/cam",
@@ -175,11 +175,10 @@ define_mgk_ddk_ko(
     header_deps = [
         "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",
         "//vendor/mediatek/kernel_modules/mtkcam/imgsensor:imgsensor_header",
+        "//kernel_device_modules-{}/drivers/misc/mediatek/imgsensor:imgsensor_kd_header".format(kernel_version),
     ],
     local_defines = ["CAMSYS_MRAW_V1"],
     copts = [
-        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/imgsensor",
-        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/imgsensor/inc",
     ],
 )
 
@@ -197,11 +196,10 @@ define_mgk_ddk_ko(
     header_deps = [
         "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",
         "//vendor/mediatek/kernel_modules/mtkcam/imgsensor:imgsensor_header",
+        "//kernel_device_modules-{}/drivers/misc/mediatek/imgsensor:imgsensor_kd_header".format(kernel_version),
     ],
     local_defines = ["DCAMSYS_MRAW_V2"],
     copts = [
-        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/imgsensor",
-        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/imgsensor/inc",
     ],
 )
 
@@ -219,11 +217,10 @@ define_mgk_ddk_ko(
     header_deps = [
         "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",
         "//vendor/mediatek/kernel_modules/mtkcam/imgsensor:imgsensor_header",
+        "//kernel_device_modules-{}/drivers/misc/mediatek/imgsensor:imgsensor_kd_header".format(kernel_version),
     ],
     local_defines = ["CAMSYS_MRAW_V3"],
     copts = [
-        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/imgsensor",
-        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/imgsensor/inc",
     ],
 )
 
