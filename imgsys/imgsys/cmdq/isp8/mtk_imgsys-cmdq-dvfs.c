@@ -16,6 +16,7 @@ void mtk_imgsys_mmdvfs_init_plat8(struct mtk_imgsys_dev *imgsys_dev)
 {
 	struct mtk_imgsys_dvfs *dvfs_info = &imgsys_dev->dvfs_info;
 	u64 freq = 0;
+	unsigned int pix_mode;
 	int ret = 0, opp_num = 0, opp_idx = 0, idx = 0, volt;
 	struct device_node *np, *child_np = NULL;
 	struct of_phandle_iterator it;
@@ -143,10 +144,10 @@ void mtk_imgsys_mmdvfs_init_plat8(struct mtk_imgsys_dev *imgsys_dev)
 	}
 
 	if (of_property_read_u32(dvfs_info->dev->of_node,
-		"mediatek,imgsys-dvfs-pix-mode", &ret) != 0) {
+		"mediatek,imgsys-dvfs-pix-mode", &pix_mode) != 0) {
 		dev_info(dvfs_info->dev, "mmdvfs pix mode is not exist\n");
 	} else {
-		dvfs_info->pix_mode = ret;
+		dvfs_info->pix_mode = pix_mode;
 	}
 
 	dvfs_info->cur_volt = 0;

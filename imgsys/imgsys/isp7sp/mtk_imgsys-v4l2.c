@@ -1963,7 +1963,7 @@ static int mtkdip_ioc_add_iova(struct v4l2_subdev *subdev, void *arg)
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
 	dma_addr_t dma_addr;
-	unsigned int *kfd;
+	int *kfd;
 	size_t size;
 	int i, ret;
 
@@ -2070,7 +2070,7 @@ static int mtkdip_ioc_del_iova(struct v4l2_subdev *subdev, void *arg)
 	struct fd_tbl *fd_tbl = (struct fd_tbl *)arg;
 	struct fd_info fd_info;
 	struct dma_buf *dmabuf;
-	unsigned int *kfd;
+	int *kfd;
 	size_t size;
 	int i, ret;
 	bool found = false;
