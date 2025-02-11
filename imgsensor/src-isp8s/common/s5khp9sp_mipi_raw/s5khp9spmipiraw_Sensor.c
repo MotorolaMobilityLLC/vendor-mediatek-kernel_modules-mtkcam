@@ -247,7 +247,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_FCM_28[] = {
 			.hsize = 4080,
 			.vsize = 2296,
 			.user_data_desc = VC_STAGGER_NE,
-			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST,
 		},
 	},
 	{
@@ -268,6 +268,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_FCM_28[] = {
 			.vsize = 286,
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_2,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
 		},
 	},
 };
@@ -326,7 +327,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_FCM_1[] = {
 			.hsize = 16320,
 			.vsize = 12288,
 			.user_data_desc = VC_STAGGER_NE,
-			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST,
 		},
 	},
 	{
@@ -347,6 +348,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_FCM_1[] = {
 			.vsize = 768,
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_2,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
 		},
 	},
 };
@@ -569,6 +571,26 @@ static struct mtk_mbus_frame_desc_entry frame_desc_FCM_8[] = {
 	{
 		.bus.csi2 = {
 			.channel = 0x1,
+			.data_type = 0x30, /* 0x2b, */
+			.hsize = 1016,
+			.vsize = 192,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0x2,
+			.data_type = 0x30, /* 0x2b, */
+			.hsize = 248,
+			.vsize = 192,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_2,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+		},
+	},
+		{
+		.bus.csi2 = {
+			.channel = 0x3,
 			.data_type = 0x2b,
 			.hsize = 4080,
 			.vsize = 3072,
@@ -578,10 +600,21 @@ static struct mtk_mbus_frame_desc_entry frame_desc_FCM_8[] = {
 	{
 		.bus.csi2 = {
 			.channel = 0x4,
-			.data_type = 0x2b,
+			.data_type = 0x30, /* 0x2b, */
 			.hsize = 1016,
 			.vsize = 192,
 			.user_data_desc = VC_PDAF_STATS_ME_PIX_1,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0x5,
+			.data_type = 0x30, /* 0x2b, */
+			.hsize = 248,
+			.vsize = 192,
+			.user_data_desc = VC_PDAF_STATS_ME_PIX_2,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
 		},
 	},
@@ -601,6 +634,26 @@ static struct mtk_mbus_frame_desc_entry frame_desc_FCM_9[] = {
 	{
 		.bus.csi2 = {
 			.channel = 0x1,
+			.data_type = 0x30, /* 0x2b, */
+			.hsize = 2040,
+			.vsize = 384,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0x2,
+			.data_type = 0x30, /* 0x2b, */
+			.hsize = 504,
+			.vsize = 384,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_2,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+		},
+	},
+		{
+		.bus.csi2 = {
+			.channel = 0x3,
 			.data_type = 0x2b,
 			.hsize = 4080,
 			.vsize = 3072,
@@ -610,10 +663,21 @@ static struct mtk_mbus_frame_desc_entry frame_desc_FCM_9[] = {
 	{
 		.bus.csi2 = {
 			.channel = 0x4,
-			.data_type = 0x2b,
+			.data_type = 0x30, /* 0x2b, */
 			.hsize = 2040,
 			.vsize = 384,
 			.user_data_desc = VC_PDAF_STATS_ME_PIX_1,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0x5,
+			.data_type = 0x30, /* 0x2b, */
+			.hsize = 504,
+			.vsize = 384,
+			.user_data_desc = VC_PDAF_STATS_ME_PIX_2,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
 		},
 	},
@@ -947,6 +1011,26 @@ static struct mtk_mbus_frame_desc_entry frame_desc_FCM_19[] = {
 	{
 		.bus.csi2 = {
 			.channel = 0x1,
+			.data_type = 0x30, /* 0x2b, */
+			.hsize = 1016,
+			.vsize = 160,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0x2,
+			.data_type = 0x30, /* 0x2b, */
+			.hsize = 248,
+			.vsize = 160,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_2,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0x3,
 			.data_type = 0x2b,
 			.hsize = 4080,
 			.vsize = 2560,
@@ -956,10 +1040,21 @@ static struct mtk_mbus_frame_desc_entry frame_desc_FCM_19[] = {
 	{
 		.bus.csi2 = {
 			.channel = 0x4,
-			.data_type = 0x2b,
+			.data_type = 0x30, /* 0x2b, */
 			.hsize = 1016,
 			.vsize = 160,
 			.user_data_desc = VC_PDAF_STATS_ME_PIX_1,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0x5,
+			.data_type = 0x30, /* 0x2b, */
+			.hsize = 248,
+			.vsize = 160,
+			.user_data_desc = VC_PDAF_STATS_ME_PIX_2,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
 		},
 	},
@@ -1042,7 +1137,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.pdaf_cap = TRUE,
@@ -1090,7 +1185,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.pdaf_cap = TRUE,
@@ -1138,7 +1233,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.pdaf_cap = TRUE,
@@ -1186,7 +1281,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.pdaf_cap = TRUE,
@@ -1234,7 +1329,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 316,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 64,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.pdaf_cap = TRUE,
@@ -1282,7 +1379,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 316,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 64,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2, /* tetra */
@@ -1334,7 +1433,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 64,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_4X4, /* hexdeca */
@@ -1386,7 +1487,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.pdaf_cap = TRUE,
@@ -1436,7 +1537,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 64,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_4X4, /* hexdeca */
@@ -1488,7 +1591,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 64,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.pdaf_cap = TRUE,
@@ -1510,11 +1615,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.exp_cnt = 2,
 		.pclk = 2002000000,
 		.linelength = 20320,
-		.framelength = 3272,
+		.framelength = 3279 * 2,
 		.max_framerate = 150,
 		.mipi_pixel_rate = 1842285714,
-		.readout_length = 0,
-		.read_margin = 0,
+		.readout_length = 3072,
+		.read_margin = (3279 - 3072),
 		.imgsensor_winsize_info = { /* 4X crop 16cell */
 			.full_w = 16320,
 			.full_h = 12288,
@@ -1537,7 +1642,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_4X4, /* hexdeca */
@@ -1545,10 +1649,14 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.awb_enabled = 1,
 		.exposure_order_in_lbmf = IMGSENSOR_LBMF_EXPOSURE_SE_FIRST,
 		.mode_type_in_lbmf = IMGSENSOR_LBMF_MODE_MANUAL,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 0xFFFF,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = 0xFFFF,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 16,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = (0xFFFF - 74),
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = (0xFFFF - 74),
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 16,
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info_fullsize,
 	},
@@ -1568,11 +1676,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.exp_cnt = 2,
 		.pclk = 1759333333,
 		.linelength = 11562,
-		.framelength = 5072, /* origin: 2796, modify to 30 FPS */
-		.max_framerate = 150, /* origin: 544, modify to 30 FPS */
+		.framelength = 5072 * 2,
+		.max_framerate = 150,
 		.mipi_pixel_rate = 1842285714,
-		.readout_length = 0,
-		.read_margin = 0,
+		.readout_length = 3072,
+		.read_margin = (5072 - 3072),
 		.imgsensor_winsize_info = { /* 2X crop 4cell */
 			.full_w = 16320,
 			.full_h = 12288,
@@ -1595,7 +1703,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 316,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2, /* tetra */
@@ -1603,10 +1710,14 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.awb_enabled = 1,
 		.exposure_order_in_lbmf = IMGSENSOR_LBMF_EXPOSURE_SE_FIRST,
 		.mode_type_in_lbmf = IMGSENSOR_LBMF_MODE_MANUAL,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 0xFFFF,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = 0xFFFF,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 16,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = (0xFFFF - 74),
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = (0xFFFF - 74),
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 64,
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info_fullsize_fdsum,
 	},
@@ -1653,7 +1764,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 316,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 64,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.pdaf_cap = TRUE,
@@ -1702,7 +1815,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 316,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 64,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2, /* tetra */
@@ -1754,11 +1869,13 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info_8Fdsum_4H2V,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_Gr,
+
 	},
 
 
@@ -1780,7 +1897,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.framelength = 9648,
 		.max_framerate = 300,
 		.mipi_pixel_rate = 1842285714,
-		.readout_length = 3072,
+		.readout_length = 2560,
 		.read_margin = 64,
 		.min_vblanking_line = 0, /* TBD */
 		.imgsensor_winsize_info = { /* 16:10 BIN */
@@ -1804,16 +1921,17 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 180,
 		.delay_frame = 2,
-		.min_exposure_line = 8,
-		.ana_gain_max = BASEGAIN * 128,
+		.min_exposure_line = 16,
 		.framelength_step = 4,
 		.coarse_integ_step = 4,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min =  8,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min =  8,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min =  16,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min =  16,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max =  (0xFFFF - 74),
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max =  (0xFFFF - 74),
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 128,//8SUM2
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,//8SUM2
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 128,//8SUM2
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 16,//8SUM2
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info,
 	},
@@ -1860,7 +1978,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 316,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 64,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2, /* tetra */
@@ -1913,7 +2033,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 128,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.pdaf_cap = TRUE,
@@ -1962,7 +2082,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 64,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 32,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_4X4, /* hexdeca */
@@ -1987,11 +2109,11 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.exp_cnt = 2,
 		.pclk = 2002000000,
 		.linelength = 20320,
-		.framelength = 3279,
+		.framelength = 3279 * 2,
 		.max_framerate = 150,
 		.mipi_pixel_rate = 1842285714,
-		.readout_length = 0,
-		.read_margin = 0,
+		.readout_length = 2560,
+		.read_margin = (3279 - 2560),
 		.imgsensor_winsize_info = { /* 4X crop 16cell */
 			.full_w = 16320,
 			.full_h = 12288,
@@ -2014,8 +2136,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 64,
-		.coarse_integ_step = 8,
+		.coarse_integ_step = 16,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_4X4, /* hexdeca */
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
@@ -2026,6 +2147,14 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 0xFFFF,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = 0xFFFF,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 16,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = (0xFFFF - 74),
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = (0xFFFF - 74),
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 16,
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info_fullsize,
 	},
@@ -2072,7 +2201,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 316,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 64,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2, /* tetra */
@@ -2124,10 +2255,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 360,
 		.delay_frame = 2,
 		.min_exposure_line = 16,
-		.ana_gain_max = BASEGAIN * 16, /* full:16, 4Sum:64, 8Sum_2H1V:128, iDCG:16, FHD:128 */
 		.coarse_integ_step = 8,
 		.framelength_step = 8,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min =  8,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min =  16,
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,//FULL
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_4X4, /* hexdeca */
@@ -2176,11 +2306,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4080,
 			.h2_tg_size = 2560,
 		},
-		.ae_binning_ratio = 2000,
+		.ae_binning_ratio = 16000,
 		.fine_integ_line = 500,
 		.delay_frame = 2,
 		.min_exposure_line = 8,
-		.ana_gain_max = BASEGAIN * 16,
 		.csi_param = {0},
 		.saturation_info = &imgsensor_saturation_info_10bit,
 		.dcg_info = {
@@ -2192,8 +2321,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.dcg_gain_ratio_step = 0,
 		},
 		.coarse_integ_step = 2,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min =  8,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min =  8,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min =  16,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min =  16,
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 8,
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 8,
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
@@ -2238,11 +2367,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4080,
 			.h2_tg_size = 2560,
 		},
-		.ae_binning_ratio = 2000,
+		.ae_binning_ratio = 16000,
 		.fine_integ_line = 500,
 		.delay_frame = 2,
 		.min_exposure_line = 8,
-		.ana_gain_max = BASEGAIN * 16,
 		.csi_param = {0},
 		.saturation_info = &imgsensor_saturation_info_10bit,
 		.dcg_info = {
@@ -2254,8 +2382,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.dcg_gain_ratio_step = 0,
 		},
 		.coarse_integ_step = 2,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min =  8,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min =  8,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min =  16,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min =  16,
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 4,
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 4,
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
@@ -2276,7 +2404,7 @@ struct mtk_sensor_ctle_param static_ctle_param = {
 
 
 static struct subdrv_static_ctx static_ctx = {
-	.sensor_id = S5KHP3SP_SENSOR_ID,
+	.sensor_id = S5KHP9SP_SENSOR_ID,
 	.reg_addr_sensor_id = { 0x0000, 0x0001 },
 	.i2c_addr_table = {0x20, 0xFF},
 	.i2c_burst_write_support = TRUE,
@@ -2293,7 +2421,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_B,
 	.ana_gain_def = BASEGAIN * 4,
 	.ana_gain_min = BASEGAIN * 1,
-	.ana_gain_max = BASEGAIN * 128,
+	.ana_gain_max = BASEGAIN * 64,
 	.ana_gain_type = 2,
 	.ana_gain_step = 1,
 	.ana_gain_table = s5khp9sp_ana_gain_table,
@@ -2301,13 +2429,13 @@ static struct subdrv_static_ctx static_ctx = {
 	.tuning_iso_base = 100,
 	.exposure_def = 0x3D0,
 	.exposure_min = 6,
-	.exposure_max = (0xFFFF - 74) << 7, /* cit_lshift_max = 7 */
+	.exposure_max = (0xFFFF - 74),
 	.exposure_step = 1,
 	.exposure_margin = 34,
 	.dig_gain_min = BASE_DGAIN * 1,
 	.dig_gain_max = BASE_DGAIN * 16,
 	.dig_gain_step = 4,
-	.frame_length_max = 0xFFFF << 7, /* fll_lshift_max = 7 */
+	.frame_length_max = 0xFFFF,
 	/* .frame_length_max_without_lshift = 0xFFFF, */
 	.ae_effective_frame = 2,
 	.frame_time_delay_frame = 2,
@@ -2363,8 +2491,8 @@ static struct subdrv_static_ctx static_ctx = {
 			{0x0E22, 0x0E23},
 	},
 	.reg_addr_frame_length_in_lut = {
-			{0x0E24, 0x0E25},
 			{0x0E16, 0x0E17},
+			{0x0E24, 0x0E25},
 	},
 
 

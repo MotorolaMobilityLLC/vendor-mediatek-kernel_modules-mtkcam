@@ -399,7 +399,7 @@ struct fw_mode_info {
 	u16 max_framerate;
 	u32 mipi_pixel_rate;
 	u32 readout_length;
-	u8 read_margin;
+	u32 read_margin;
 	u32 framelength_step;
 	u32 coarse_integ_step;
 	u32 min_exposure_line;
