@@ -350,7 +350,7 @@ void mtk_cam_fmon_bind(struct mtk_fmon_device *fmon, unsigned int used_raw, bool
 
 	mutex_lock(&fmon->op_lock);
 	master_id = get_master_raw_id(used_raw);
-	if (WARN_ON(master_id > 3 || master_id < 0)) {
+	if (master_id > 3 || master_id < 0) {
 		pr_info("%s: error: invalid master\n", __func__);
 		goto OUT;
 	}
@@ -376,7 +376,7 @@ void mtk_cam_fmon_unbind(struct mtk_fmon_device *fmon, unsigned int used_raw)
 
 	mutex_lock(&fmon->op_lock);
 	master_id = get_master_raw_id(used_raw);
-	if (WARN_ON(master_id > 3 || master_id < 0)) {
+	if (master_id > 3 || master_id < 0) {
 		pr_info("%s: error: invalid master\n", __func__);
 		goto OUT;
 	}
