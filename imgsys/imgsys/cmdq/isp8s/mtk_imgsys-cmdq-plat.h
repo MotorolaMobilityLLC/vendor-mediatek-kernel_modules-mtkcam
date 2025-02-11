@@ -15,7 +15,7 @@
 #define IMGSYS_QOS_SET_BY_SCEN (1)
 
 #ifndef CONFIG_FPGA_EARLY_PORTING
-#define IMGSYS_SECURE_ENABLE   (1)
+#define IMGSYS_SECURE_ENABLE   (0)
 #else
 #define IMGSYS_SECURE_ENABLE   (0)
 #endif
