@@ -80,20 +80,6 @@ MODULE_PARM_DESC(debug_ddren_sw_mode, "debug: 1 : active sw mode");
 	raw->io_ops->__writel_relaxed(raw, val, base, off); \
 })
 
-static void set_fifo_threshold(void __iomem *dma_base, unsigned int fifo_size)
-{
-	writel_relaxed((0x10 << 24) | fifo_size,
-			dma_base + DMA_OFFSET_CON0);
-	writel_relaxed((0x1 << 28) | FIFO_THRESHOLD(fifo_size, 2/10, 1/10),
-			dma_base + DMA_OFFSET_CON1);
-	writel_relaxed((0x1 << 28) | FIFO_THRESHOLD(fifo_size, 4/10, 3/10),
-			dma_base + DMA_OFFSET_CON2);
-	writel_relaxed((0x1 << 31) | FIFO_THRESHOLD(fifo_size, 6/10, 5/10),
-			dma_base + DMA_OFFSET_CON3);
-	writel_relaxed((0x1 << 31) | FIFO_THRESHOLD(fifo_size, 1/10, 0),
-			dma_base + DMA_OFFSET_CON4);
-}
-
 static struct mtk_yuv_device *get_yuv_dev(struct mtk_raw_device *raw_dev)
 {
 	struct device *dev;
@@ -150,16 +136,6 @@ void init_raw_settings(struct mtk_raw_device *dev, bool is_srt, int frm_time_us)
 
 	//Set rdy/req snapshot
 	set_topdebug_rdyreq(dev, is_srt ? ALL_THE_TIME : TG_OVERRUN);
-
-	//Set CQI sram size
-	set_fifo_threshold(dev->dmatop_base + REG_CQI_R1_BASE, 64);
-	set_fifo_threshold(dev->dmatop_base + REG_CQI_R2_BASE, 64);
-	set_fifo_threshold(dev->dmatop_base + REG_CQI_R3_BASE, 64);
-	set_fifo_threshold(dev->dmatop_base + REG_CQI_R4_BASE, 64);
-	set_fifo_threshold(dev->dmatop_base + REG_CQI_R5_BASE, 64);
-	set_fifo_threshold(dev->dmatop_base + REG_CQI_R6_BASE, 64);
-	set_fifo_threshold(dev->dmatop_base + REG_CQI_R7_BASE, 64);
-	set_fifo_threshold(dev->dmatop_base + REG_CQI_R8_BASE, 64);
 
 	//Set 16level qos
 	mtk_cam_vcore_qos_remap(dev, is_srt);
