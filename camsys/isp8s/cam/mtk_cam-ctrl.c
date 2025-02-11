@@ -3253,24 +3253,36 @@ int mtk_cam_ctrl_notify_hw_hang(struct mtk_cam_device *cam,
 {
 	unsigned int ctx_id = ctx_from_fh_cookie(inner_cookie);
 	struct mtk_cam_ctrl *ctrl = &cam->ctxs[ctx_id].cam_ctrl;
-	struct mtk_cam_job *job;
+	struct mtk_cam_job *current_job, *next_job;
+	int next_seq_no = next_frame_seq(inner_cookie);
 
 	dev_info(cam->dev, "%s: warn. eng %d-%d seq 0x%x\n",
 		 __func__, engine_type, engine_id, inner_cookie);
 
-	job = mtk_cam_ctrl_get_job(ctrl, cond_frame_no_belong, &inner_cookie);
-	if (!job)
+	current_job = mtk_cam_ctrl_get_job(ctrl, cond_frame_no_belong, &inner_cookie);
+	if (!current_job)
 		return 0;
 
-	if (is_dc_mode(job)) {
-		/*
-		 * count frames before doing recovery to avoid various hw timing.
-		 * 'set 10 to enable recovery'
-		 */
-		ctrl->hw_hang_count_down = (DISABLE_RECOVER_FLOW) ? 0 : 10;
-		job->is_error = 1;
+	if (is_dc_mode(current_job)) {
+		next_job = mtk_cam_ctrl_get_job(ctrl, cond_frame_no_belong, &next_seq_no);
+		if (next_job && next_job->seamless_switch) {
+			ctrl->hw_hang_count_down = 0;
+			current_job->is_error = 1;
+
+			mtk_cam_ctrl_send_event(ctrl, CAMSYS_EVENT_HW_HANG);
+		} else {
+			/*
+			 * count frames before doing recovery to avoid various hw timing.
+			 * 'set 10 to enable recovery'
+			 */
+			ctrl->hw_hang_count_down = (DISABLE_RECOVER_FLOW) ? 0 : 10;
+			current_job->is_error = 1;
+		}
+
+		if (next_job)
+			mtk_cam_job_put(next_job);
 	}
-	mtk_cam_job_put(job);
+	mtk_cam_job_put(current_job);
 
 	return 0;
 }
