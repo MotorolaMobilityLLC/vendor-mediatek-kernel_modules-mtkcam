@@ -14,6 +14,8 @@
 #include <linux/gpio/consumer.h>
 #include <linux/regulator/consumer.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/hrtimer.h>
+#include <linux/ktime.h>
 
 #include "adaptor-def.h"
 #include "adaptor-subdrv.h"
@@ -128,6 +130,7 @@ struct adaptor_work {
 	struct kthread_delayed_work dwork;
 	struct adaptor_ctx *ctx;
 	struct mtk_hdr_ae ae_ctrl;
+	u64 systime_to_queue;
 };
 
 
@@ -273,6 +276,9 @@ struct adaptor_ctx {
 	struct mtk_ebd_dump_record latest_ebd;
 	/* 1SOF timing prediction */
 	struct mtk_1sof_vsync_ts_info streamon_1sof_vsync_ts_info;
+
+	/* stream on hrtimer */
+	struct hrtimer streamon_hrtimer;
 
 	/* broadcast framework lock */
 	struct mutex broadcast_lock;

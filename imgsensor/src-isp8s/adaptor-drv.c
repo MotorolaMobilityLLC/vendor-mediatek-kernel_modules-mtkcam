@@ -734,7 +734,18 @@ static int imgsensor_set_power(struct v4l2_subdev *sd, int on)
 	return ret;
 }
 
-static int imgsensor_streaming_delay(struct adaptor_ctx *ctx)
+static void do_streamon_i2c(struct adaptor_ctx *ctx)
+{
+	u64 data[4];
+	u32 len;
+
+	data[0] = 0; // shutter
+	subdrv_call(ctx, feature_control,
+		SENSOR_FEATURE_SET_STREAMING_RESUME,
+		(u8 *)data, &len);
+}
+
+static u64 imgsensor_streaming_delay(struct adaptor_ctx *ctx)
 {
 	u64 sys_ts, mono_ts, ae_memento_le_ns, streaming_sensor_vsync_ts,
 		streaming_sensor_fl_ns, hw_reinit_time_ns, target_timing_ns;
@@ -838,41 +849,35 @@ static int imgsensor_streaming_delay(struct adaptor_ctx *ctx)
 								ae_ctrl_cit,
 								ctx->cur_mode->linetime_in_ns);
 
-		ADAPTOR_SYSTRACE_BEGIN_MUST("imgsensor::streamondelay::%s",systrace_log);
-		udelay(streamon_delay_ns/1000);
-		// while (ktime_get_boottime_ns() < (sys_ts + streamon_delay_ns)) {
-		// ;
-		// }
-		ADAPTOR_SYSTRACE_END_MUST();
-
+		ADAPTOR_SYSTRACE_BEGIN_MUST("imgsensor::streamondelay::hrtimer::%s",systrace_log);
 		adaptor_logi(ctx,
-					"cur_mode_id:%u (%llu/%llu/%llu) sys_ts:%llu mono_ts:%llu hw_reinit:%llu ae_memento_le_ns:%llu(%u*%llu) streamon_delay_ns:%lld(%u) [SYSTRACE: %s]\n",
-					ctx->cur_mode->id,
-					streaming_sensor_vsync_ts,
-					streaming_sensor_fl_ns,
-					target_timing_ns,
-					sys_ts,
-					mono_ts,
-					hw_reinit_time_ns,
-					ae_memento_le_ns,
-					ae_ctrl_cit,
-					ctx->cur_mode->linetime_in_ns,
-					streamon_delay_ns,
-					tmp,
-					systrace_log);
+			"hrtimer delay, cur_mode_id:%u (%llu/%llu/%llu) sys_ts:%llu mono_ts:%llu hw_reinit:%llu ae_memento_le_ns:%llu(%u*%llu) streamon_delay_ns:%lld(%u) [SYSTRACE: %s]\n",
+			ctx->cur_mode->id,
+			streaming_sensor_vsync_ts,
+			streaming_sensor_fl_ns,
+			target_timing_ns,
+			sys_ts,
+			mono_ts,
+			hw_reinit_time_ns,
+			ae_memento_le_ns,
+			ae_ctrl_cit,
+			ctx->cur_mode->linetime_in_ns,
+			streamon_delay_ns,
+			tmp,
+			systrace_log);
+		ADAPTOR_SYSTRACE_END_MUST();
 
 		/* reset variables */
 		kfree(systrace_log);
 		memset(&ctx->streamon_1sof_vsync_ts_info, 0, sizeof(ctx->streamon_1sof_vsync_ts_info));
 	}
-	return 0;
+	return streamon_delay_ns;
 }
 
 /* Start streaming */
 static int imgsensor_start_streaming(struct adaptor_ctx *ctx)
 {
-	u64 data[4];
-	u32 len;
+	u64 streamon_delay_ns = 0;
 
 	if (ctx == NULL) {
 		adaptor_loge(ctx, "null pointer ctx is invalid\n");
@@ -885,13 +890,14 @@ static int imgsensor_start_streaming(struct adaptor_ctx *ctx)
 
 	control_sensor(ctx);
 
-	data[0] = 0; // shutter
-	imgsensor_streaming_delay(ctx);
-	subdrv_call(ctx, feature_control,
-		SENSOR_FEATURE_SET_STREAMING_RESUME,
-		(u8 *)data, &len);
-
-	adaptor_logm(ctx, "[SENSOR_FEATURE_SET_STREAMING_RESUME] -\n");
+	streamon_delay_ns = imgsensor_streaming_delay(ctx);
+	if (streamon_delay_ns) {
+		/* delay stream on */
+		hrtimer_start(&ctx->streamon_hrtimer, ns_to_ktime(streamon_delay_ns), HRTIMER_MODE_REL);
+	} else {
+		do_streamon_i2c(ctx);
+		adaptor_logi(ctx, "executing streamon sub-ctrl\n");
+	}
 
 	/* notify seninf-eint streaming ON */
 	notify_seninf_eint_streaming(ctx, 1);
@@ -1598,6 +1604,79 @@ static int search_sensor(struct adaptor_ctx *ctx)
 	return -EIO;
 }
 
+static void streamon_work_fn(struct kthread_work *work)
+{
+	struct adaptor_work *_adaptor_work = NULL;
+	struct adaptor_ctx *ctx = NULL;
+	u64 time_boot = ktime_get_boottime_ns();
+	u64 time_aqire_lock;
+	bool call_streamon = false;
+
+	_adaptor_work = container_of(work, struct adaptor_work, work);
+
+	if (_adaptor_work) {
+		ctx = _adaptor_work->ctx;
+		if (ctx) {
+
+			mutex_lock(&ctx->mutex);
+			/*
+			 * ignore call stream on when
+			 * quick stream off already
+			 */
+			call_streamon = !!ctx->is_streaming;
+
+			time_aqire_lock = ktime_get_boottime_ns();
+
+			ADAPTOR_SYSTRACE_BEGIN_MUST(
+				"imgsensor::streamondelay::[sensor:%u(%s),sid:%u,do_i2c(%d),work_delay_ns:%llu,wait_lock_ns:%llu]",
+				ctx->dts_idx,
+				ctx->subdrv->name,
+				ctx->cur_mode->id,
+				call_streamon,
+				(time_boot - _adaptor_work->systime_to_queue),
+				(time_aqire_lock - time_boot));
+
+			if (call_streamon)
+				do_streamon_i2c(ctx);
+
+			ADAPTOR_SYSTRACE_END_MUST();
+
+			mutex_unlock(&ctx->mutex);
+
+			adaptor_logi(ctx,
+				"streamon delay, do_i2c:%d, work_delay_ns:%llu, work_exe_ns:%llu+%llu\n",
+				call_streamon,
+				(time_boot - _adaptor_work->systime_to_queue),
+				(time_aqire_lock - time_boot),
+				(ktime_get_boottime_ns() - time_aqire_lock));
+		}
+
+		kfree(_adaptor_work);
+	}
+}
+
+static enum hrtimer_restart trigger_streamon_work(struct hrtimer *timer)
+{
+	struct adaptor_ctx *ctx;
+	struct adaptor_work *_adaptor_work = NULL;
+	u64 time_trigger = ktime_get_boottime_ns();
+
+	ctx = container_of(timer, struct adaptor_ctx, streamon_hrtimer);
+
+	/* queue to worker */
+	_adaptor_work = kmalloc(sizeof(struct adaptor_work), GFP_ATOMIC);
+	if (_adaptor_work != NULL) {
+		kthread_init_work(&_adaptor_work->work, streamon_work_fn);
+		_adaptor_work->ctx = ctx;
+		_adaptor_work->systime_to_queue = time_trigger;
+
+		kthread_queue_work(&ctx->adaptor_worker,
+				   &_adaptor_work->work);
+	}
+
+	return HRTIMER_NORESTART;
+}
+
 static int imgsensor_probe(struct i3c_i2c_device *client)
 {
 	struct device *dev = adaptor_ixc_get_dev(client);
@@ -1821,6 +1900,10 @@ static int imgsensor_probe(struct i3c_i2c_device *client)
 	if (!ctx->sensor_ws)
 		adaptor_loge(ctx, "failed to wakeup_source_register\n");
 
+	/* init hrtimer */
+	hrtimer_init(&ctx->streamon_hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	ctx->streamon_hrtimer.function = &trigger_streamon_work;
+
 	kthread_init_worker(&ctx->adaptor_worker);
 	ctx->adaptor_kworker_task = kthread_run(kthread_worker_fn,
 				&ctx->adaptor_worker,
@@ -1859,6 +1942,9 @@ static void imgsensor_remove(struct i3c_i2c_device *client)
 		adaptor_loge(ctx, "invalid pointer ctx\n");
 		return;
 	}
+
+	/* deinit hrtimer */
+	hrtimer_cancel(&ctx->streamon_hrtimer);
 
 	v4l2_async_unregister_subdev(sd);
 	media_entity_cleanup(&sd->entity);
