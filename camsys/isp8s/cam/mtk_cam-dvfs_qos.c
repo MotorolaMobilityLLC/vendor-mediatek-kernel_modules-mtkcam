@@ -25,9 +25,7 @@
 #include "mtk_cam-plat.h"
 #include "mtk_cam-bwr.h"
 #include "mtk_cam-sv-df.h"
-#if KERNEL_VERSION(6, 6, 0) == LINUX_VERSION_CODE
 #include "subsys/swpm_isp_wrapper.h"
-#endif
 
 #define BOOST_DVFS_OPP    2
 #define ICCPATH_NAME_SIZE 32
@@ -907,10 +905,25 @@ static void update_sensor_active_info(struct mtk_cam_job *job)
 	}
 }
 
-static void _trigger_sspm(struct mtk_cam_job *job)
+void mtk_cam_fill_qos(struct req_buffer_helper *helper)
 {
-#if KERNEL_VERSION(6, 6, 0) == LINUX_VERSION_CODE
+	struct mtkcam_ipi_frame_param *fp = helper->fp;
+	struct mtk_cam_job *job = helper->job;
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	u32 senser_vb, sensor_h, sensor_fps;
+	u64 avg_linet;
+	int i;
 	struct ISP_P1 idx;
+
+	memset(job->raw_mmqos, 0, sizeof(job->raw_mmqos));
+	memset(job->yuv_mmqos, 0, sizeof(job->yuv_mmqos));
+	memset(job->sv_mmqos, 0, sizeof(job->sv_mmqos));
+
+	update_sensor_active_info(job);
+	avg_linet =  ctx->act_line_info.avg_linetime_in_ns ? : get_line_time(job);
+	sensor_h = ctx->act_line_info.active_line_num ? : get_sensor_h(job);
+	senser_vb = get_sensor_vb(job);
+	sensor_fps = get_sensor_fps(job);
 
 	if (cam_sspm_en && (job->frame_seq_no % 10 == 0)) {
 		idx.raw_num = get_used_raw_num(job);
@@ -923,31 +936,6 @@ static void _trigger_sspm(struct mtk_cam_job *job)
 			idx.exposure_num, idx.data);
 		set_p1_idx(idx);
 	}
-#else
-	(void)job;
-#endif
-}
-
-void mtk_cam_fill_qos(struct req_buffer_helper *helper)
-{
-	struct mtkcam_ipi_frame_param *fp = helper->fp;
-	struct mtk_cam_job *job = helper->job;
-	struct mtk_cam_ctx *ctx = job->src_ctx;
-	u32 senser_vb, sensor_h, sensor_fps;
-	u64 avg_linet;
-	int i;
-
-	memset(job->raw_mmqos, 0, sizeof(job->raw_mmqos));
-	memset(job->yuv_mmqos, 0, sizeof(job->yuv_mmqos));
-	memset(job->sv_mmqos, 0, sizeof(job->sv_mmqos));
-
-	update_sensor_active_info(job);
-	avg_linet =  ctx->act_line_info.avg_linetime_in_ns ? : get_line_time(job);
-	sensor_h = ctx->act_line_info.active_line_num ? : get_sensor_h(job);
-	senser_vb = get_sensor_vb(job);
-	sensor_fps = get_sensor_fps(job);
-
-	_trigger_sspm(job);
 
 	if (avg_linet == 0 || sensor_h == 0 || sensor_fps == 0) {
 		pr_info("%s: wrong sensor param h/vb/linetime/fps: %d/%d/%llu/%d",
