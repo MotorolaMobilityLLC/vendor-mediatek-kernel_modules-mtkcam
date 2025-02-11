@@ -2442,7 +2442,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.start_exposure_offset = 3000000,
 
 	/* stagger behavior by vendor type */
-	.stagger_rg_orger = IMGSENSOR_STAGGER_RG_SE_FIRST,
+	.stagger_rg_order = IMGSENSOR_STAGGER_RG_SE_FIRST,
 	.stagger_fl_type = IMGSENSOR_STAGGER_FL_MANUAL,
 
 	.pdaf_type = PDAF_SUPPORT_CAMSV_QPD,

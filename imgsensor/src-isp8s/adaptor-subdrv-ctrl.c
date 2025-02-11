@@ -552,7 +552,7 @@ void write_frame_length(struct subdrv_ctx *ctx, u32 fll)
 	if (ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_STAGGER)
 		dol_cnt = ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt;
 
-	if (!(ctx->s_ctx.stagger_fl_type == IMGSENSOR_STAGGER_FL_MANUAL))
+	if (ctx->s_ctx.stagger_fl_type == IMGSENSOR_STAGGER_FL_AUTO_DIVIDED)
 		fll = fll / dol_cnt;
 
 	check_write_frame_length_need_lshift(ctx, &fll);
@@ -2149,7 +2149,7 @@ void set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 	u32 cit_step = 0;
 	u32 fll = 0, fll_temp = 0, s_fll;
 
-	if (ctx->s_ctx.stagger_rg_orger == IMGSENSOR_STAGGER_RG_SE_FIRST) {
+	if (ctx->s_ctx.stagger_rg_order == IMGSENSOR_STAGGER_RG_SE_FIRST) {
 		/* swapping for customized sensor */
 		u32 exposure[IMGSENSOR_STAGGER_EXPOSURE_CNT]; /* recover L and S exposure */
 
@@ -2944,7 +2944,7 @@ void set_multi_gain(struct subdrv_ctx *ctx, u32 *gains, u16 exp_cnt)
 		exp_cnt = ARRAY_SIZE(ctx->ana_gain);
 	}
 
-	if (ctx->s_ctx.stagger_rg_orger == IMGSENSOR_STAGGER_RG_SE_FIRST) {
+	if (ctx->s_ctx.stagger_rg_order == IMGSENSOR_STAGGER_RG_SE_FIRST) {
 		/* swapping for customized sensor */
 		u32 ana_gain[IMGSENSOR_STAGGER_EXPOSURE_CNT]; /* recover L and S gain */
 

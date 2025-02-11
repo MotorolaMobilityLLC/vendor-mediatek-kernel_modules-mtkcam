@@ -179,7 +179,7 @@ enum IMGSENSOR_STAGGER_RG_ORDER {
 
 enum IMGSENSOR_STAGGER_FL_TYPE {
 	IMGSENSOR_STAGGER_FL_NONE = 0,
-	IMGSENSOR_STAGGER_FL_AUTO_MULTIPLY = IMGSENSOR_STAGGER_FL_NONE,
+	IMGSENSOR_STAGGER_FL_AUTO_DIVIDED = IMGSENSOR_STAGGER_FL_NONE,
 	IMGSENSOR_STAGGER_FL_MANUAL = 1,
 };
 
@@ -550,7 +550,7 @@ struct subdrv_static_ctx {
 	char *cust_global_data;
 
 	/* stagger behavior by vendor type */
-	enum IMGSENSOR_STAGGER_RG_ORDER stagger_rg_orger;
+	enum IMGSENSOR_STAGGER_RG_ORDER stagger_rg_order;
 	enum IMGSENSOR_STAGGER_FL_TYPE stagger_fl_type;
 };
 
