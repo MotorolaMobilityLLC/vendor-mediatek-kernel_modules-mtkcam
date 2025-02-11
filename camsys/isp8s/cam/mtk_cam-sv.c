@@ -3387,7 +3387,8 @@ static irqreturn_t mtk_irq_camsv_debug(int irq, void *data)
 	struct mtk_camsv_device *sv_dev = (struct mtk_camsv_device *)data;
 	struct mtk_camsys_irq_info irq_info;
 	unsigned int frm_seq_no, frm_seq_no_inner;
-	unsigned int i, first_tag, common_status, top_status, fifo_status;
+	unsigned int i, j, first_tag;
+	unsigned int common_status, top_status, fifo_status, channel_status;
 	unsigned int exp_0_bid = 0, exp_1_bid = 0;
 	unsigned int addr_frm_seq_no = REG_CAMSVCENTRAL_FH_SPARE_TAG_1;
 	bool wake_thread = false;
@@ -3420,6 +3421,11 @@ static irqreturn_t mtk_irq_camsv_debug(int irq, void *data)
 	fifo_status =
 		readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_INT_FIFO_STAT);
 
+	if (sv_dev->is_buf_early_return)
+		channel_status = readl_relaxed(sv_dev->base + REG_CAMSVCENTRAL_CHANNEL_STATUS);
+	else
+		channel_status = 0;
+
 	if (CAM_DEBUG_ENABLED(RAW_INT))
 		dev_info(sv_dev->dev, "camsv-%d: common_status:0x%x, fifo_status:0x%x, frm_seq_no:0x%x/0x%x, ts:%llu\n",
 			sv_dev->id, common_status, fifo_status, frm_seq_no, frm_seq_no_inner, irq_info.ts_ns);
@@ -3448,6 +3454,17 @@ static irqreturn_t mtk_irq_camsv_debug(int irq, void *data)
 	if (top_status) {
 		irq_info.irq_type |= (1 << CAMSYS_IRQ_DF);
 		irq_info.n.status = top_status;
+	}
+
+	if (channel_status) {
+		for (i = SVTAG_START; i < SVTAG_END; i++) {
+			j = i * CAMSVCENTRAL_DMA_DONE_BIT_OFFSET +
+				CAMSVCENTRAL_DMA_DONE_BIT_START;
+			if (channel_status & BIT(j))
+				irq_info.done_tags |= (1 << i);
+		}
+		if (irq_info.done_tags)
+			irq_info.irq_type |= (1 << CAMSYS_IRQ_SV_DMAO_DONE);
 	}
 
 	if (irq_info.irq_type && push_msgfifo(sv_dev, &irq_info) == 0)

@@ -247,6 +247,8 @@ struct mtk_camsv_device {
 	atomic_t is_fifo_full;
 	atomic_t is_sub_en;
 
+	bool is_buf_early_return;
+
 	unsigned int camsv_error_count;
 
 	/* ois compensation */

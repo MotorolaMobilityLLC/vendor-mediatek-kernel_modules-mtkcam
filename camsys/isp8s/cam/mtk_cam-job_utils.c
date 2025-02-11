@@ -2417,6 +2417,7 @@ int handle_sv_tag(struct mtk_cam_job *job)
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
 		CALL_PLAT_V4L2(
 			get_sv_max_pixel_mode, sv_dev->id, &max_pixel_mode);
+		sv_dev->is_buf_early_return = false;
 	}
 
 	/* reset tag info */
@@ -2637,6 +2638,7 @@ int handle_sv_tag_display_ic(struct mtk_cam_job *job)
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
 		CALL_PLAT_V4L2(
 			get_sv_max_pixel_mode, sv_dev->id, &max_pixel_mode);
+		sv_dev->is_buf_early_return = false;
 	}
 
 	/* reset tag info */
@@ -2771,6 +2773,7 @@ int handle_sv_tag_non_comb_ic(struct mtk_cam_job *job)
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
 		CALL_PLAT_V4L2(
 			get_sv_max_pixel_mode, sv_dev->id, &max_pixel_mode);
+		sv_dev->is_buf_early_return = false;
 	}
 
 	/* reset tag info */
@@ -2842,6 +2845,7 @@ int handle_sv_tag_only_sv(struct mtk_cam_job *job)
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
 		CALL_PLAT_V4L2(
 			get_sv_max_pixel_mode, sv_dev->id, &max_pixel_mode);
+		sv_dev->is_buf_early_return = false;
 	}
 
 	/* reset tag info */
@@ -2867,11 +2871,14 @@ int handle_sv_tag_only_sv(struct mtk_cam_job *job)
 			sv_sink->width, sv_sink->height,
 			sv_sink->mbus_code, 0, sv_pipe);
 
+		if (sv_pipe->ctrl_data.is_buf_early_return)
+			sv_dev->is_buf_early_return = true;
+
 		job->used_tag_cnt++;
 		job->enabled_tags |= (1 << tag_idx);
 		tag_idx++;
 
-		pr_info("[%s] tag_idx:%d seninf_padidx:%d tag_order:%d pixel_mode:%d width/height/mbus_code:0x%x_0x%x_0x%x\n",
+		pr_info("[%s] tag_idx:%d seninf_padidx:%d tag_order:%d pixel_mode:%d width/height/mbus_code:0x%x_0x%x_0x%x is_early_return:%d\n",
 			__func__,
 			tag_param.tag_idx,
 			tag_param.seninf_padidx,
@@ -2879,7 +2886,8 @@ int handle_sv_tag_only_sv(struct mtk_cam_job *job)
 			max_pixel_mode,
 			sv_sink->width,
 			sv_sink->height,
-			sv_sink->mbus_code);
+			sv_sink->mbus_code,
+			(sv_pipe->ctrl_data.is_buf_early_return) ? 1 : 0);
 	}
 
 	/* sensor meta */

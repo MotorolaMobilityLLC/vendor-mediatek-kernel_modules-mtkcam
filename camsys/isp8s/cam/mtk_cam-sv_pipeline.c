@@ -55,6 +55,7 @@ static int mtk_camsv_sd_s_stream(struct v4l2_subdev *sd, int enable)
 		memset(&pipe->sentest_param, 0,
 			sizeof(struct mtk_cam_seninf_sentest_param));
 		pipe->feature_pending = 0;
+		pipe->ctrl_data.is_buf_early_return = false;
 	}
 
 	return 0;

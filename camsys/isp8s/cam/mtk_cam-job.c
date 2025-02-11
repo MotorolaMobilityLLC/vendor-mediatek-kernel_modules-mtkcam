@@ -505,6 +505,9 @@ static int mtk_cam_job_pack_init(struct mtk_cam_job *job,
 	job->done_handled = 0;
 	job->done_pipe = 0;
 
+	atomic_long_set(&job->done_tags, 0);
+	atomic_long_set(&job->done_tags_handled, 0);
+
 	job->frame_cnt = 1;
 
 	job->composed = 0;
@@ -876,6 +879,33 @@ _meta1_done(struct mtk_cam_job *job)
 	return 0;
 }
 
+static int
+_sv_dmao_done(struct mtk_cam_job *job)
+{
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	struct mtk_cam_device *cam = ctx->cam;
+	struct mtk_camsv_pipeline *sv_pipe;
+	unsigned int i, done_tags;
+
+	done_tags = atomic_long_read(&job->done_tags);
+	for (i = SVTAG_START; i < SVTAG_END; i++) {
+		if (done_tags & BIT(i)) {
+			sv_pipe = job->tag_info[i].sv_pipe;
+			if (sv_pipe)
+				mtk_cam_req_buffer_done(job, sv_pipe->id, -1,
+					VB2_BUF_STATE_DONE, true);
+		}
+	}
+
+	if (CAM_DEBUG_ENABLED(JOB))
+		dev_info(cam->dev, "%s:%s:ctx(%d): seq_no:0x%x, state:0x%x\n",
+			 __func__, job->req->debug_str, job->src_ctx->stream_id,
+			 job->frame_seq_no,
+			 mtk_cam_job_state_get(&job->job_state, ISP_STATE));
+
+	return 0;
+}
+
 //#define TIMESTAMP_LOG
 static void cpu_timestamp_to_meta(struct mtk_cam_job *job)
 {
@@ -1116,6 +1146,20 @@ static int job_mark_afo_done(struct mtk_cam_job *job, int seq_no)
 
 	if (!atomic_long_fetch_or(BIT(0), &job->afo_done))
 		wake_up_interruptible(&ctrl->done_wq);
+
+	return 0;
+}
+
+static int job_mark_sv_dmao_done(struct mtk_cam_job *job,
+		unsigned int done_tags, int seq_no)
+{
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	struct mtk_cam_ctrl *ctrl = &ctx->cam_ctrl;
+
+	if (done_tags) {
+		atomic_long_or(done_tags, &job->done_tags);
+		wake_up_interruptible(&ctrl->done_wq);
+	}
 
 	return 0;
 }
@@ -4407,6 +4451,7 @@ static struct mtk_cam_job_ops otf_only_sv_job_ops = {
 	.apply_sensor = _apply_sensor,
 	.apply_isp = _apply_cq,
 	.mark_engine_done = job_mark_engine_done,
+	.mark_sv_dmao_done = job_mark_sv_dmao_done,
 	.dump_aa_info = 0,
 };
 static struct mtk_cam_job_ops extisp_job_ops = {
@@ -5460,6 +5505,7 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 				sv_input->is_two_smi_out = (is_two_smi_out) ? 1 : 0;
 				sv_input->is_queue_mode = atomic_read(&sv_dev->is_queue_mode);
 				sv_input->is_unpack_msb = job->ipi_config.sv_input[0][i].is_unpack_msb;
+				sv_input->is_early_return = 0;
 				if (job->tag_info[i].is_meta_tag) {
 					struct mtk_mraw_pipeline *pipe = job->tag_info[i].mraw_pipe;
 					unsigned int mraw_subdev_idx = pipe->id - MTKCAM_SUBDEV_MRAW_START;
@@ -5482,6 +5528,7 @@ static int mtk_cam_job_fill_ipi_config_only_sv(struct mtk_cam_job *job,
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_camsv_device *sv_dev = dev_get_drvdata(ctx->hw_sv);
 	struct mtkcam_ipi_sv_input_param *sv_input;
+	struct mtk_camsv_pipeline *sv_pipe;
 	int i;
 
 	memset(config, 0, sizeof(*config));
@@ -5492,12 +5539,15 @@ static int mtk_cam_job_fill_ipi_config_only_sv(struct mtk_cam_job *job,
 	for (i = SVTAG_START; i < SVTAG_END; i++) {
 		if (job->enabled_tags & (1 << i)) {
 			sv_input = &config->sv_input[0][i];
+			sv_pipe = job->tag_info[i].sv_pipe;
 
 			sv_input->dev_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
 			sv_input->tag_id = i;
 			sv_input->tag_order = job->tag_info[i].tag_order;
 			sv_input->is_first_frame = (job->first_job) ? 1 : 0;
 			sv_input->is_unpack_msb = job->ipi_config.sv_input[0][i].is_unpack_msb;
+			sv_input->is_early_return =
+				(sv_pipe && sv_pipe->ctrl_data.is_buf_early_return) ? 1 : 0;
 			sv_input->input = job->ipi_config.sv_input[0][i].input;
 		}
 	}
@@ -6621,6 +6671,14 @@ int job_handle_done(struct mtk_cam_job *job)
 	if (atomic_long_read(&job->afo_done) == BIT(0)) {
 		_meta1_done(job);
 		NO_CHECK_RETURN(atomic_long_fetch_or(BIT(1), &job->afo_done));
+	}
+
+	if (atomic_long_read(&job->done_tags) !=
+		atomic_long_read(&job->done_tags_handled)) {
+		_sv_dmao_done(job);
+		NO_CHECK_RETURN(atomic_long_fetch_or(
+			atomic_long_read(&job->done_tags),
+			&job->done_tags_handled));
 	}
 
 	/* handle_raw */

@@ -336,6 +336,8 @@ struct mtk_cam_job_ops {
 	int (*mark_engine_done)(struct mtk_cam_job *s,
 				int engine_type, int engine_id,
 				int seq_no);
+	int (*mark_sv_dmao_done)(struct mtk_cam_job *s,
+				unsigned int done_tags, int seq_no);
 	int (*dump_aa_info)(struct mtk_cam_job *s);
 	int (*apply_extisp_meta_pd)(struct mtk_cam_job *s); /* extisp use */
 	int (*apply_extisp_procraw)(struct mtk_cam_job *s); /* extisp use */
@@ -406,6 +408,9 @@ struct mtk_cam_job {
 	atomic_long_t done_set;
 	unsigned long done_handled;
 	unsigned int done_pipe;
+
+	atomic_long_t done_tags;
+	atomic_long_t done_tags_handled;
 
 	int job_type;	/* job type - only job layer */
 	int ctx_id;

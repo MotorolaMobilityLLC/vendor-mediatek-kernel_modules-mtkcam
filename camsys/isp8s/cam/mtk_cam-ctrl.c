@@ -646,6 +646,24 @@ static void handle_meta1_done(struct mtk_cam_ctrl *ctrl, int seq_no)
 	mtk_cam_job_put(job);
 }
 
+static void handle_sv_dmao_done(struct mtk_cam_ctrl *ctrl,
+		unsigned int done_tags, int seq_no)
+{
+	struct mtk_cam_job *job;
+
+	job = mtk_cam_ctrl_get_job(ctrl, cond_frame_no_belong, &seq_no);
+
+	if (!job) {
+		pr_info("%s: warn. job not found seq 0x%x\n",
+			__func__,  seq_no);
+		return;
+	}
+
+	call_jobop(job, mark_sv_dmao_done, done_tags, seq_no);
+
+	mtk_cam_job_put(job);
+}
+
 static void handle_frame_done(struct mtk_cam_ctrl *ctrl,
 			      int engine_type, int engine_id,
 			      int seq_no)
@@ -1143,6 +1161,11 @@ static int mtk_camsys_event_handle_camsv(struct mtk_cam_ctrl *ctrl,
 {
 	struct mtk_cam_job *job;
 	int seq_no = seq_from_fh_cookie(irq_info->cookie_done);
+
+	/* camsv's DMAO done */
+	if (irq_info->irq_type & BIT(CAMSYS_IRQ_SV_DMAO_DONE))
+		handle_sv_dmao_done(ctrl, irq_info->done_tags,
+			seq_from_fh_cookie(irq_info->cookie_done));
 
 	/* camsv's SW done */
 	if (irq_info->irq_type & BIT(CAMSYS_IRQ_FRAME_DONE)) {
