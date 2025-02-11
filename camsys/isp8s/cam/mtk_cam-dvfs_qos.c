@@ -1011,7 +1011,7 @@ static void apply_raw_qos(struct mtk_cam_job *job)
 	int a_bw_ttl = 0, p_bw_ttl = 0;
 
 	used_raw_num = get_used_raw_num(job);
-	if (WARN_ON(used_raw_num == 0)) {
+	if (used_raw_num == 0) {
 		pr_info("%s: req_seq(%d) wrong used raw number\n",
 			__func__, job->req_seq);
 		return;
