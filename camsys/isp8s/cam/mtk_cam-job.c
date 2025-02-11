@@ -6395,7 +6395,7 @@ static int job_dump_aa_info(struct mtk_cam_job *job)
 	struct mtk_cam_engines *eng = &ctx->cam->engines;
 	struct mtk_raw_sink_data *sink = get_raw_sink_data(job);
 	struct mtk_raw_device *raw_dev;
-	struct mtk_ae_debug_data ae_data, ae_data_w;
+	struct mtk_ae_debug_data ae_data;
 	unsigned long submask;
 	int i;
 	char *str_buf;
@@ -6411,39 +6411,23 @@ static int job_dump_aa_info(struct mtk_cam_job *job)
 		return 0;
 
 	memset(&ae_data, 0, sizeof(ae_data));
-	memset(&ae_data_w, 0, sizeof(ae_data_w));
 
-	if (is_rgbw(job)) {
-		submask = bit_map_subset_of(MAP_HW_RAW, ctx->used_engine);
-		for (i = 0; i < eng->num_raw_devices && submask;
-				i++, submask >>= 1) {
-			if (!(submask & 0x1))
-				continue;
+	submask = bit_map_subset_of(MAP_HW_RAW, ctx->used_engine);
+	for (i = 0; i < eng->num_raw_devices && submask; i++, submask >>= 1) {
+		if (!(submask & 0x1))
+			continue;
 
-			raw_dev = dev_get_drvdata(eng->raw_devs[i]);
-			if (raw_dev->is_slave)
-				fill_aa_info(raw_dev, &ae_data_w);
-			else
-				fill_aa_info(raw_dev, &ae_data);
-		}
-	} else {
-		submask = bit_map_subset_of(MAP_HW_RAW, ctx->used_engine);
-		for (i = 0; i < eng->num_raw_devices && submask;
-				i++, submask >>= 1) {
-			if (!(submask & 0x1))
-				continue;
-
-			raw_dev = dev_get_drvdata(eng->raw_devs[i]);
-			fill_aa_info(raw_dev, &ae_data);
-		}
+		raw_dev = dev_get_drvdata(eng->raw_devs[i]);
+		fill_aa_info(raw_dev, &ae_data);
 	}
-	n += scnprintf(str_buf, str_buf_size, "%s:%s:ctx(%d):pipe(%d),seq(%d),size(%d,%d),",
-		__func__, job->req->debug_str,
-		ctx->stream_id, ctx->raw_subdev_idx, job->req_seq,
-		sink->width, sink->height);
+
+	n += scnprintf(str_buf, str_buf_size,
+			"%s:%s:ctx(%d):pipe(%d),seq(%d),size(%d,%d),",
+			__func__, job->req->debug_str,
+			ctx->stream_id, ctx->raw_subdev_idx, job->req_seq,
+			sink->width, sink->height);
 	n = ae_data_to_str(str_buf + n, str_buf_size - n, &ae_data);
-	n += scnprintf(str_buf + n, str_buf_size - n, "|");
-	ae_data_to_str(str_buf + n, str_buf_size - n, &ae_data_w);
+
 	if (CAM_DEBUG_ENABLED(JOB))
 		pr_info("%s\n", str_buf);
 

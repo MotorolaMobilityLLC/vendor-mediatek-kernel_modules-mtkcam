@@ -9915,77 +9915,41 @@
 #define REG_DRZH1NO_R1_BASE    0x1850
 #define REG_DRZH1NBO_R1_BASE   0x18a0
 
-#define REG_OBC_R1A                    0x2000
-#define OFFSET_OBC_R1_R_SUM_L          (REG_OBC_R1A + 0x4)
-#define OFFSET_OBC_R1_R_SUM_H          (REG_OBC_R1A + 0x8)
-#define OFFSET_OBC_R1_B_SUM_L          (REG_OBC_R1A + 0xC)
-#define OFFSET_OBC_R1_B_SUM_H          (REG_OBC_R1A + 0x10)
-#define OFFSET_OBC_R1_GR_SUM_L         (REG_OBC_R1A + 0x14)
-#define OFFSET_OBC_R1_GR_SUM_H         (REG_OBC_R1A + 0x18)
-#define OFFSET_OBC_R1_GB_SUM_L         (REG_OBC_R1A + 0x1C)
-#define OFFSET_OBC_R1_GB_SUM_H         (REG_OBC_R1A + 0x20)
-#define OFFSET_OBC_R1_ACT_WIN_X        (REG_OBC_R1A + 0x50)
-#define OFFSET_OBC_R1_ACT_WIN_Y        (REG_OBC_R1A + 0x54)
+#define REG_OBC_R1A                     0x2000
+#define OFFSET_OBC_R1_R_SUM_L           (REG_OBC_R1A + 0x4)
+#define OFFSET_OBC_R1_R_SUM_H           (REG_OBC_R1A + 0x8)
+#define OFFSET_OBC_R1_B_SUM_L           (REG_OBC_R1A + 0xC)
+#define OFFSET_OBC_R1_B_SUM_H           (REG_OBC_R1A + 0x10)
+#define OFFSET_OBC_R1_GR_SUM_L          (REG_OBC_R1A + 0x14)
+#define OFFSET_OBC_R1_GR_SUM_H          (REG_OBC_R1A + 0x18)
+#define OFFSET_OBC_R1_GB_SUM_L          (REG_OBC_R1A + 0x1C)
+#define OFFSET_OBC_R1_GB_SUM_H          (REG_OBC_R1A + 0x20)
+#define OFFSET_OBC_R1_ACT_WIN_X         (REG_OBC_R1A + 0x50)
+#define OFFSET_OBC_R1_ACT_WIN_Y         (REG_OBC_R1A + 0x54)
 
-#define REG_OBC_R2A                    0x4440
-#define OFFSET_OBC_R2_R_SUM_L          (REG_OBC_R2A + 0x4)
-#define OFFSET_OBC_R2_R_SUM_H          (REG_OBC_R2A + 0x8)
-#define OFFSET_OBC_R2_B_SUM_L          (REG_OBC_R2A + 0xC)
-#define OFFSET_OBC_R2_B_SUM_H          (REG_OBC_R2A + 0x10)
-#define OFFSET_OBC_R2_GR_SUM_L         (REG_OBC_R2A + 0x14)
-#define OFFSET_OBC_R2_GR_SUM_H         (REG_OBC_R2A + 0x18)
-#define OFFSET_OBC_R2_GB_SUM_L         (REG_OBC_R2A + 0x1C)
-#define OFFSET_OBC_R2_GB_SUM_H         (REG_OBC_R2A + 0x20)
-#define OFFSET_OBC_R2_ACT_WIN_X        (REG_OBC_R2A + 0x50)
-#define OFFSET_OBC_R2_ACT_WIN_Y        (REG_OBC_R2A + 0x54)
+#define REG_OBC_R2A                     0x4580
+#define OFFSET_OBC_R2_R_SUM_L           (REG_OBC_R2A + 0x4)
+#define OFFSET_OBC_R2_R_SUM_H           (REG_OBC_R2A + 0x8)
+#define OFFSET_OBC_R2_B_SUM_L           (REG_OBC_R2A + 0xC)
+#define OFFSET_OBC_R2_B_SUM_H           (REG_OBC_R2A + 0x10)
+#define OFFSET_OBC_R2_GR_SUM_L          (REG_OBC_R2A + 0x14)
+#define OFFSET_OBC_R2_GR_SUM_H          (REG_OBC_R2A + 0x18)
+#define OFFSET_OBC_R2_GB_SUM_L          (REG_OBC_R2A + 0x1C)
+#define OFFSET_OBC_R2_GB_SUM_H          (REG_OBC_R2A + 0x20)
+#define OFFSET_OBC_R2_ACT_WIN_X         (REG_OBC_R2A + 0x50)
+#define OFFSET_OBC_R2_ACT_WIN_Y         (REG_OBC_R2A + 0x54)
 
-#define REG_OBC_R3A                    0x5700
-#define OFFSET_OBC_R3_R_SUM_L          (REG_OBC_R3A + 0x4)
-#define OFFSET_OBC_R3_R_SUM_H          (REG_OBC_R3A + 0x8)
-#define OFFSET_OBC_R3_B_SUM_L          (REG_OBC_R3A + 0xC)
-#define OFFSET_OBC_R3_B_SUM_H          (REG_OBC_R3A + 0x10)
-#define OFFSET_OBC_R3_GR_SUM_L         (REG_OBC_R3A + 0x14)
-#define OFFSET_OBC_R3_GR_SUM_H         (REG_OBC_R3A + 0x18)
-#define OFFSET_OBC_R3_GB_SUM_L         (REG_OBC_R3A + 0x1C)
-#define OFFSET_OBC_R3_GB_SUM_H         (REG_OBC_R3A + 0x20)
-#define OFFSET_OBC_R3_ACT_WIN_X        (REG_OBC_R3A + 0x50)
-#define OFFSET_OBC_R3_ACT_WIN_Y        (REG_OBC_R3A + 0x54)
-
-#define REG_OBC_R4A                    0x2440
-#define OFFSET_OBC_R4_R_SUM_L          (REG_OBC_R4A + 0x4)
-#define OFFSET_OBC_R4_R_SUM_H          (REG_OBC_R4A + 0x8)
-#define OFFSET_OBC_R4_B_SUM_L          (REG_OBC_R4A + 0xC)
-#define OFFSET_OBC_R4_B_SUM_H          (REG_OBC_R4A + 0x10)
-#define OFFSET_OBC_R4_GR_SUM_L         (REG_OBC_R4A + 0x14)
-#define OFFSET_OBC_R4_GR_SUM_H         (REG_OBC_R4A + 0x18)
-#define OFFSET_OBC_R4_GB_SUM_L         (REG_OBC_R4A + 0x1C)
-#define OFFSET_OBC_R4_GB_SUM_H         (REG_OBC_R4A + 0x20)
-#define OFFSET_OBC_R4_ACT_WIN_X        (REG_OBC_R4A + 0x50)
-#define OFFSET_OBC_R4_ACT_WIN_Y        (REG_OBC_R4A + 0x54)
-
-#define REG_OBC_R5A                    0x6100
-#define OFFSET_OBC_R5_R_SUM_L          (REG_OBC_R5A + 0x4)
-#define OFFSET_OBC_R5_R_SUM_H          (REG_OBC_R5A + 0x8)
-#define OFFSET_OBC_R5_B_SUM_L          (REG_OBC_R5A + 0xC)
-#define OFFSET_OBC_R5_B_SUM_H          (REG_OBC_R5A + 0x10)
-#define OFFSET_OBC_R5_GR_SUM_L         (REG_OBC_R5A + 0x14)
-#define OFFSET_OBC_R5_GR_SUM_H         (REG_OBC_R5A + 0x18)
-#define OFFSET_OBC_R5_GB_SUM_L         (REG_OBC_R5A + 0x1C)
-#define OFFSET_OBC_R5_GB_SUM_H         (REG_OBC_R5A + 0x20)
-#define OFFSET_OBC_R5_ACT_WIN_X        (REG_OBC_R5A + 0x50)
-#define OFFSET_OBC_R5_ACT_WIN_Y        (REG_OBC_R5A + 0x54)
-
-#define REG_OBC_R6A                    0x61c0
-#define OFFSET_OBC_R6_R_SUM_L          (REG_OBC_R6A + 0x4)
-#define OFFSET_OBC_R6_R_SUM_H          (REG_OBC_R6A + 0x8)
-#define OFFSET_OBC_R6_B_SUM_L          (REG_OBC_R6A + 0xC)
-#define OFFSET_OBC_R6_B_SUM_H          (REG_OBC_R6A + 0x10)
-#define OFFSET_OBC_R6_GR_SUM_L         (REG_OBC_R6A + 0x14)
-#define OFFSET_OBC_R6_GR_SUM_H         (REG_OBC_R6A + 0x18)
-#define OFFSET_OBC_R6_GB_SUM_L         (REG_OBC_R6A + 0x1C)
-#define OFFSET_OBC_R6_GB_SUM_H         (REG_OBC_R6A + 0x20)
-#define OFFSET_OBC_R6_ACT_WIN_X        (REG_OBC_R6A + 0x50)
-#define OFFSET_OBC_R6_ACT_WIN_Y        (REG_OBC_R6A + 0x54)
+#define REG_OBC_R3A                     0x55c0
+#define OFFSET_OBC_R3_R_SUM_L           (REG_OBC_R3A + 0x4)
+#define OFFSET_OBC_R3_R_SUM_H           (REG_OBC_R3A + 0x8)
+#define OFFSET_OBC_R3_B_SUM_L           (REG_OBC_R3A + 0xC)
+#define OFFSET_OBC_R3_B_SUM_H           (REG_OBC_R3A + 0x10)
+#define OFFSET_OBC_R3_GR_SUM_L          (REG_OBC_R3A + 0x14)
+#define OFFSET_OBC_R3_GR_SUM_H          (REG_OBC_R3A + 0x18)
+#define OFFSET_OBC_R3_GB_SUM_L          (REG_OBC_R3A + 0x1C)
+#define OFFSET_OBC_R3_GB_SUM_H          (REG_OBC_R3A + 0x20)
+#define OFFSET_OBC_R3_ACT_WIN_X         (REG_OBC_R3A + 0x50)
+#define OFFSET_OBC_R3_ACT_WIN_Y         (REG_OBC_R3A + 0x54)
 
 #define REG_CCM_AE_DEBUG_R_MSB			0x116c
 #define REG_CCM_AE_DEBUG_R_LSB			0x1170
@@ -9994,33 +9958,35 @@
 #define REG_CCM_AE_DEBUG_G_MSB			0x117c
 #define REG_CCM_AE_DEBUG_G_LSB			0x1180
 
-#define REG_LTM_AE_DEBUG_B_MSB         0x60f4
-#define REG_LTM_AE_DEBUG_B_LSB         0x60f8
-#define REG_LTM_AE_DEBUG_GB_MSB        0x60fc
-#define REG_LTM_AE_DEBUG_GB_LSB        0x6100
-#define REG_LTM_AE_DEBUG_GR_MSB        0x6104
-#define REG_LTM_AE_DEBUG_GR_LSB        0x6108
-#define REG_LTM_AE_DEBUG_R_MSB         0x610c
-#define REG_LTM_AE_DEBUG_R_LSB         0x6110
-#define REG_LTMS_ACT_WIN_X             0x6114
-#define REG_LTMS_ACT_WIN_Y             0x6118
+#define OFFSET_LTM                      0x6000
+#define OFFSET_LTM_AE_DEBUG_B_MSB       (OFFSET_LTM + 0xd4)
+#define OFFSET_LTM_AE_DEBUG_B_LSB       (OFFSET_LTM + 0xd8)
+#define OFFSET_LTM_AE_DEBUG_GB_MSB      (OFFSET_LTM + 0xdc)
+#define OFFSET_LTM_AE_DEBUG_GB_LSB      (OFFSET_LTM + 0xe0)
+#define OFFSET_LTM_AE_DEBUG_GR_MSB      (OFFSET_LTM + 0xe4)
+#define OFFSET_LTM_AE_DEBUG_GR_LSB      (OFFSET_LTM + 0xe8)
+#define OFFSET_LTM_AE_DEBUG_R_MSB       (OFFSET_LTM + 0xec)
+#define OFFSET_LTM_AE_DEBUG_R_LSB       (OFFSET_LTM + 0xf0)
+#define OFFSET_LTM_ACT_WIN_X            (OFFSET_LTM + 0xf4)
+#define OFFSET_LTM_ACT_WIN_Y            (OFFSET_LTM + 0xf8)
 
-#define REG_AA_R_SUM_L                 0x599c
-#define REG_AA_R_SUM_H                 0x59a0
-#define REG_AA_B_SUM_L                 0x59a4
-#define REG_AA_B_SUM_H                 0x59a8
-#define REG_AA_GR_SUM_L                0x59ac
-#define REG_AA_GR_SUM_H                0x59b0
-#define REG_AA_GB_SUM_L                0x59b4
-#define REG_AA_GB_SUM_H                0x59b8
-#define REG_AA_R_CLIP_SUM_L            0x59bc
-#define REG_AA_R_CLIP_SUM_H            0x59c0
-#define REG_AA_B_CLIP_SUM_L            0x59c4
-#define REG_AA_B_CLIP_SUM_H            0x59c8
-#define REG_AA_GR_CLIP_SUM_L           0x59cc
-#define REG_AA_GR_CLIP_SUM_H           0x59d0
-#define REG_AA_GB_CLIP_SUM_L           0x59d4
-#define REG_AA_GB_CLIP_SUM_H           0x59d8
+#define OFFSET_AESTAT                   0x5440
+#define OFFSET_AESTAT_R_SUM_L           (OFFSET_AESTAT + 0x1f8)
+#define OFFSET_AESTAT_R_SUM_H           (OFFSET_AESTAT + 0x1fc)
+#define OFFSET_AESTAT_B_SUM_L           (OFFSET_AESTAT + 0x200)
+#define OFFSET_AESTAT_B_SUM_H           (OFFSET_AESTAT + 0x204)
+#define OFFSET_AESTAT_GR_SUM_L          (OFFSET_AESTAT + 0x208)
+#define OFFSET_AESTAT_GR_SUM_H          (OFFSET_AESTAT + 0x20c)
+#define OFFSET_AESTAT_GB_SUM_L          (OFFSET_AESTAT + 0x210)
+#define OFFSET_AESTAT_GB_SUM_H          (OFFSET_AESTAT + 0x214)
+#define OFFSET_AESTAT_R_CLIP_SUM_L      (OFFSET_AESTAT + 0x218)
+#define OFFSET_AESTAT_R_CLIP_SUM_H      (OFFSET_AESTAT + 0x21c)
+#define OFFSET_AESTAT_B_CLIP_SUM_L      (OFFSET_AESTAT + 0x220)
+#define OFFSET_AESTAT_B_CLIP_SUM_H      (OFFSET_AESTAT + 0x224)
+#define OFFSET_AESTAT_GR_CLIP_SUM_L     (OFFSET_AESTAT + 0x228)
+#define OFFSET_AESTAT_GR_CLIP_SUM_H     (OFFSET_AESTAT + 0x22c)
+#define OFFSET_AESTAT_GB_CLIP_SUM_L     (OFFSET_AESTAT + 0x230)
+#define OFFSET_AESTAT_GB_CLIP_SUM_H     (OFFSET_AESTAT + 0x234)
 
 #define REG_DGN_R_SUM_L                 0x309c
 #define REG_DGN_R_SUM_H                 0x30a0
