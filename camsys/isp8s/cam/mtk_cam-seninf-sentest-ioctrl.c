@@ -118,13 +118,14 @@ static int s_sentest_seamless_ut_en(struct seninf_ctx *ctx, void *arg)
 		return -EFAULT;
 	}
 
+	if (*en) {
+		ctx->sentest_seamless_ut_status = SENTEST_SEAMLESS_IS_DOING;
+		seninf_sentest_set_csi_chk_ctrl(ctx);
+	} else
+		ctx->sentest_seamless_ut_status = SENTEST_SEAMLESS_IS_IDLE;
+
 	ctx->sentest_seamless_ut_en = *en;
 	ctx->sentest_seamless_irq_ref = ctx->sentest_irq_counter;
-
-	if (*en)
-		ctx->sentest_seamless_ut_status = SENTEST_SEAMLESS_IS_DOING;
-	else
-		ctx->sentest_seamless_ut_status = SENTEST_SEAMLESS_IS_IDLE;
 
 	dev_info(ctx->dev, "[%s] en: %d, sentest_seamless_ut_en is %d\n",
 				__func__, *en, ctx->sentest_seamless_ut_en);
@@ -216,15 +217,83 @@ static int g_sentest_sensor_meter_info(struct seninf_ctx *ctx, void *arg)
 	return 0;
 }
 
+static int s_sentest_tsrec_vc_dt_manual_config(struct seninf_ctx *ctx, void *arg)
+{
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s][ERROR] ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(&ctx->sentest_vsync_order_info, arg,
+		sizeof(struct vsync_order_cfg_info))) {
+		pr_info("[%s][ERROR] copy_to_user return failed\n", __func__);
+		return -EFAULT;
+	}
+	ctx->sentest_force_tsrec_vc_dt_en = true;
+	pr_info("[%s]sentest_force_tsrec_vc_dt_en %d\n",
+		__func__, ctx->sentest_force_tsrec_vc_dt_en);
+
+	return 0;
+}
+
+static int s_sentest_active_frame_measure_en(struct seninf_ctx *ctx, void *arg)
+{
+	struct mtk_cam_seninf_sentest_active_info info;
+
+	if (unlikely(arg == NULL)) {
+		pr_info("[%s][ERROR] arg is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s][ERROR] ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(&info, arg, sizeof(struct mtk_cam_seninf_sentest_active_info))) {
+		pr_info("[%s][ERROR] copy_from_user return failed\n", __func__);
+		return -EFAULT;
+	}
+
+	ctx->sentest_active_frame_en = info.enable;
+	ctx->sentest_avtive_frame_fps = info.fps;
+	ctx->sentest_active_frame_irq_ref_counter = ctx->sentest_active_frame_irq_counter;
+
+	pr_info("[%s]sentest_active_frame_en %d fps %d\n",
+		__func__,
+		ctx->sentest_active_frame_en,
+		ctx->sentest_avtive_frame_fps);
+	return 0;
+}
+
+static int g_sentest_seamless_last_frame_info(struct seninf_ctx *ctx, void *arg)
+{
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s][ERROR] ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (copy_to_user(arg, &ctx->sentest_mac_chk_result, sizeof(struct mtk_cam_csi_checker))) {
+		pr_info("[%s][ERROR] copy_to_user return failed\n", __func__);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
 static const struct seninf_sentest_ioctl sentest_ioctl_table[] = {
 	{SENINF_SENTEST_S_MAX_ISP_EN, s_sentest_max_isp_clk_en},
 	{SENINF_SENTEST_S_SINGLE_STREAM_RAW, s_sentest_mipi_measure_en},
 	{SENINF_SENTEST_S_SEAMLESS_UT_EN, s_sentest_seamless_ut_en},
 	{SENINF_SENTEST_S_SEAMLESS_UT_CONFIG, s_sentest_seamless_ut_cfg},
+	{SENINF_SENTEST_S_TSREC_VC_DT_MANUAL_CONFIG, s_sentest_tsrec_vc_dt_manual_config},
+	{SENINF_SENTEST_S_ACTIVE_FRAME_MEASURE_EN, s_sentest_active_frame_measure_en},
 
 	{SENINF_SENTEST_G_DEBUG_RESULT, g_sentest_debug_result},
 	{SENINF_SENTEST_G_SEAMLESS_STATUS, g_sentest_seamless_current_status},
 	{SENINF_SENTEST_G_SENSOR_METER_INFO_BY_LINE, g_sentest_sensor_meter_info},
+	{SENINF_SENTEST_G_SEAMLESS_LAST_FRAME_INFO, g_sentest_seamless_last_frame_info},
 };
 
 int seninf_sentest_ioctl_entry(struct seninf_ctx *ctx, void *arg)

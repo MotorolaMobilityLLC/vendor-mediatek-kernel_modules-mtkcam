@@ -49,7 +49,7 @@ static inline int mtk_cam_seninf_tsrec_irq_notify_chk_users(struct seninf_ctx *c
 		return 0;
 	}
 
-	if (unlikely(ctx->sentest_seamless_ut_en))
+	if (unlikely(ctx->sentest_seamless_ut_en || ctx->sentest_active_frame_en))
 		set_user_event(&ret, TSREC_IRQ_EVENT_USER_SENTEST);
 
 	if (unlikely(ctx->core->vsync_irq_en_flag || ctx->core->csi_irq_en_flag))

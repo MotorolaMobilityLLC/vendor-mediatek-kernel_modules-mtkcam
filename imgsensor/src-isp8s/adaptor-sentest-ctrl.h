@@ -22,4 +22,7 @@ int notify_sentest_tsrec_time_stamp(struct adaptor_ctx *ctx,
 int sentest_get_current_tsrec_info(struct adaptor_ctx *ctx,
 					struct mtk_cam_seninf_sentest_ts *info);
 
+int sentest_get_sensor_setting_info(struct adaptor_ctx *ctx,
+		struct mtk_sentest_sensor_setting_info *info);
+
 #endif

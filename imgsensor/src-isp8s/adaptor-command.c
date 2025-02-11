@@ -713,6 +713,23 @@ static int g_cmd_ctle_param(struct adaptor_ctx *ctx, void *arg)
 	return 0;
 }
 
+static int s_cmd_sensor_frame_length(struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_fps_by_scenario *info = arg;
+	union feature_para para;
+	u32 len;
+
+	para.u64[0] = ctx->subctx.current_scenario_id;
+	para.u64[1] = info->fps;
+
+	subdrv_call(ctx, feature_control,
+		SENSOR_FEATURE_SET_MAX_FRAME_RATE_BY_SCENARIO,
+		para.u8, &len);
+
+	adaptor_logi(ctx, "[%s] set max frame rate %d", __func__, info->fps);
+	return 0;
+}
+
 /*---------------------------------------------------------------------------*/
 // adaptor command framework/entry
 /*---------------------------------------------------------------------------*/
@@ -750,7 +767,8 @@ static const struct command_entry command_list[] = {
 	{V4L2_CMD_TSREC_SETUP_CB_FUNC_OF_SENSOR, s_cmd_tsrec_setup_cb_info},
 	{V4L2_CMD_SET_SENSOR_FL_PROLONG, s_cmd_sensor_fl_prolong},
 	{V4L2_CMD_SET_SENSOR_AOV_DUALSYNC, s_cmd_sensor_aov_dualsync},
-	{V4L2_CMD_SET_SENSOR_BROADCAST_EVENT, s_cmd_sensor_broadcast_event}
+	{V4L2_CMD_SET_SENSOR_BROADCAST_EVENT, s_cmd_sensor_broadcast_event},
+	{V4L2_CMD_SET_SENSOR_FRAME_LENGTH, s_cmd_sensor_frame_length},
 };
 
 long adaptor_command(struct v4l2_subdev *sd, unsigned int cmd, void *arg)

@@ -61,10 +61,59 @@ static int sentest_g_sensor_profile(struct adaptor_ctx *ctx, void *user_buf)
 	return 0;
 }
 
+static int sentest_g_conceptual_info(struct adaptor_ctx *ctx, void *user_arg)
+{
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s][ERROR] ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (copy_to_user(user_arg, &ctx->is_conceptual_mipi, sizeof(unsigned int))) {
+		dev_info(ctx->dev,
+			"[%s][ERR] copy_to_user return failed\n", __func__);
+		return -EFAULT;
+	}
+
+	dev_info(ctx->dev, "[%s] is done\n", __func__);
+	return 0;
+}
+
 static int sentest_g_tsrec_info(struct adaptor_ctx *ctx, void *arg)
 {
 	return sentest_get_current_tsrec_info(ctx,
 				(struct mtk_cam_seninf_sentest_ts *)arg);
+}
+
+static int sentest_g_mode_setting(struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_sentest_sensor_setting_info result;
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s][ERROR] ctx is NULL\n", __func__);
+		return -EFAULT;
+	}
+
+	if (unlikely(arg == NULL)) {
+		pr_info("[%s][ERROR] arg is NULL\n", __func__);
+		return -EFAULT;
+	}
+
+	if (copy_from_user(&result, arg, sizeof(struct mtk_sentest_sensor_setting_info))) {
+		pr_info("[%s][ERROR] copy_from_user return failed\n", __func__);
+		return -EFAULT;
+	}
+
+	if (sentest_get_sensor_setting_info(ctx, &result)) {
+		pr_info("[%s][ERROR] sentest_get_sensor_setting_info return failed\n", __func__);
+		return -EFAULT;
+	}
+
+	if (copy_to_user(arg, &result, sizeof(struct mtk_sentest_sensor_setting_info))) {
+		pr_info("[%s][ERROR] copy_to_user return failed\n", __func__);
+		return -EFAULT;
+	}
+
+	return 0;
 }
 
 static int sentest_s_tsrec_traget_frame_id(struct adaptor_ctx *ctx, void *arg)
@@ -186,6 +235,8 @@ static const struct adaptor_sentest_ioctl
 	sentest_ioctl_table[SENTEST_S_CTRL_ID_MAX] = {
 	{SENTEST_G_SENSOR_PROFILE, sentest_g_sensor_profile},
 	{SENTEST_G_TSREC_TIME_STAMP, sentest_g_tsrec_info},
+	{SENTEST_G_SENSOR_SETTING_TABLE_INFO, sentest_g_mode_setting},
+	{SENTEST_G_MIPI_CONCEPTUAL_INFO, sentest_g_conceptual_info},
 	{SENTEST_S_SENSOR_PROFILE_EN, sentest_s_sensor_profile_en},
 	{SENTEST_S_SENSOR_LBMF_DO_DELAY_AE_EN, sentest_s_lbmf_delay_do_ae_en},
 	{SENTEST_S_TSREC_TRAGET_FRAME_ID, sentest_s_tsrec_traget_frame_id},

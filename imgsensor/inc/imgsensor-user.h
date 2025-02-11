@@ -46,6 +46,8 @@ enum sentest_ctrl_id {
 	SENTEST_G_CTRL_ID_MIN,
 	SENTEST_G_SENSOR_PROFILE = SENTEST_G_CTRL_ID_MIN,
 	SENTEST_G_TSREC_TIME_STAMP,
+	SENTEST_G_SENSOR_SETTING_TABLE_INFO,
+	SENTEST_G_MIPI_CONCEPTUAL_INFO,
 	SENTEST_G_CTRL_ID_MAX,
 
 	/* SET CTRL */
@@ -55,6 +57,13 @@ enum sentest_ctrl_id {
 	SENTEST_S_TSREC_TRAGET_FRAME_ID,
 	SENTEST_S_CTRL_ID_MAX,
 };
+
+enum sentest_sensor_table_type {
+	SENTEST_SENSOR_SETTING,
+	SENTEST_SEAMLESS_SETTING,
+	SENTEST_IGNORE_SETTING,
+};
+
 enum mtk_sensor_usage {
 	MTK_SENSOR_USAGE_SINGLE,
 	MTK_SENSOR_USAGE_COMB,
@@ -579,6 +588,13 @@ struct mtk_sensor_profile {
 struct mtk_adaptor_sentest_ctrl {
 	enum sentest_ctrl_id ctrl_id;
 	void *param_ptr;
+};
+
+struct mtk_sentest_sensor_setting_info {
+	void *param_ptr;
+	enum sentest_sensor_table_type type;
+	__u32 table_length;
+	__u32 scenario;
 };
 
 struct mtk_gain_range {

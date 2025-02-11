@@ -371,6 +371,9 @@ struct mtk_cam_broadcast_info {
 #define V4L2_CMD_EINT_SETUP_CB_FUNC_OF_SENSOR \
 	(V4L2_CMD_USER_MTK_SENSOR_BASE + 24)
 
+#define V4L2_CMD_SET_SENSOR_FRAME_LENGTH \
+	(V4L2_CMD_USER_MTK_SENSOR_BASE + 25)
+
 
 /**
  * EINT

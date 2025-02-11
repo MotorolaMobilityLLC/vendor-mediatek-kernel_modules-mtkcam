@@ -210,6 +210,17 @@ SHOW(buf, len, "csirx_mac_csi2 SENINF_SIZE_CHK_CTRL/_EXP/_RCV/_ERR/_IRQ_EN/_IRQ_
 	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_STATUS)); \
 }
 
+#define SET_CSI_CHK_CTRL(ptr, chk_id, vc, dt) do { \
+	SENINF_BITS(ptr, CSIRX_MAC_CSI2_SIZE_CHK_CTRL##chk_id, \
+			RG_CSI2_CHK_VC_SEL_SET##chk_id, vc); \
+	SENINF_BITS(ptr, CSIRX_MAC_CSI2_SIZE_CHK_CTRL##chk_id, \
+			RG_CSI2_CHK_DT_SEL_SET##chk_id, dt); \
+	SENINF_BITS(ptr, CSIRX_MAC_CSI2_SIZE_CHK_CTRL##chk_id, \
+			RG_CSI2_CHK_VC_EN_SET##chk_id, true); \
+	SENINF_BITS(ptr, CSIRX_MAC_CSI2_SIZE_CHK_CTRL##chk_id, \
+			RG_CSI2_CHK_DT_EN_SET##chk_id, true); \
+} while (0)
+
 #define SET_DI_CTRL(ptr, s, vc) do { \
 SENINF_BITS(ptr, CSIRX_MAC_CSI2_S##s##_DI_CTRL, RG_CSI2_S##s##_DT_SEL, vc->dt); \
 SENINF_BITS(ptr, CSIRX_MAC_CSI2_S##s##_DI_CTRL, RG_CSI2_S##s##_VC_SEL, vc->vc); \
@@ -8334,6 +8345,98 @@ static int mtk_cam_seninf_set_csi_ctle_config(struct seninf_ctx *ctx,
 	return ret;
 }
 
+static int mtk_cam_mac_set_chk_ctrl(struct seninf_ctx *ctx, u32 vc, u32 dt, u32 chk_id)
+{
+	void *csirx_mac_csi = ctx->reg_csirx_mac_csi[(uint32_t)ctx->port];
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[Error][%s] ctx is NULL", __func__);
+		return -EFAULT;
+	}
+
+	if (unlikely(csirx_mac_csi == NULL)) {
+		pr_info("[Error][%s] csirx_mac_csi is NULL", __func__);
+		return -EFAULT;
+	}
+
+	switch (chk_id) {
+	case 0:
+		SET_CSI_CHK_CTRL(csirx_mac_csi, 0, vc, dt);
+		break;
+	case 1:
+		SET_CSI_CHK_CTRL(csirx_mac_csi, 1, vc, dt);
+		break;
+	case 2:
+		SET_CSI_CHK_CTRL(csirx_mac_csi, 2, vc, dt);
+		break;
+	case 3:
+		SET_CSI_CHK_CTRL(csirx_mac_csi, 3, vc, dt);
+		break;
+	case 4:
+		SET_CSI_CHK_CTRL(csirx_mac_csi, 4, vc, dt);
+		break;
+	case 5:
+		SET_CSI_CHK_CTRL(csirx_mac_csi, 5, vc, dt);
+		break;
+	default:
+		pr_info("[Error][%s]chk_id %d is invalid", __func__, chk_id);
+		return -EFAULT;
+	}
+
+	pr_info(
+		"CSIRX_MAC_CSI2_SIZE_CHK_CTRL0/_CTRL1/_CTRL2/_CTRL3/_CTRL4/_CTRL5:(0x%x)/(0x%x)/(0x%x)/(0x%x)/(0x%x)/(0x%x)\n",
+		SENINF_READ_REG(csirx_mac_csi, CSIRX_MAC_CSI2_SIZE_CHK_CTRL0),
+		SENINF_READ_REG(csirx_mac_csi, CSIRX_MAC_CSI2_SIZE_CHK_CTRL1),
+		SENINF_READ_REG(csirx_mac_csi, CSIRX_MAC_CSI2_SIZE_CHK_CTRL2),
+		SENINF_READ_REG(csirx_mac_csi, CSIRX_MAC_CSI2_SIZE_CHK_CTRL3),
+		SENINF_READ_REG(csirx_mac_csi, CSIRX_MAC_CSI2_SIZE_CHK_CTRL4),
+		SENINF_READ_REG(csirx_mac_csi, CSIRX_MAC_CSI2_SIZE_CHK_CTRL5));
+
+	return 0;
+}
+
+static int mtk_cam_mac_get_chk_result(struct seninf_ctx *ctx)
+{
+	int i = 0;
+	u32 *csi_chk_rcv;
+	void *csirx_mac_csi = ctx->reg_csirx_mac_csi[(uint32_t)ctx->port];
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[Error][%s] ctx is NULL", __func__);
+		return -EFAULT;
+	}
+
+	for (i = 0; i < ctx->sentest_mac_chk_result.valid_measure_cnt; i++) {
+		csi_chk_rcv = &ctx->sentest_mac_chk_result.info[i].rcv;
+		switch (i) {
+		case 0:
+			*csi_chk_rcv = SENINF_READ_REG(csirx_mac_csi, CSIRX_MAC_CSI2_SIZE_CHK_RCV0);
+			break;
+		case 1:
+			*csi_chk_rcv = SENINF_READ_REG(csirx_mac_csi, CSIRX_MAC_CSI2_SIZE_CHK_RCV1);
+			break;
+		case 2:
+			*csi_chk_rcv = SENINF_READ_REG(csirx_mac_csi, CSIRX_MAC_CSI2_SIZE_CHK_RCV2);
+			break;
+		case 3:
+			*csi_chk_rcv = SENINF_READ_REG(csirx_mac_csi, CSIRX_MAC_CSI2_SIZE_CHK_RCV3);
+			break;
+		case 4:
+			*csi_chk_rcv = SENINF_READ_REG(csirx_mac_csi, CSIRX_MAC_CSI2_SIZE_CHK_RCV4);
+			break;
+		case 5:
+			*csi_chk_rcv = SENINF_READ_REG(csirx_mac_csi, CSIRX_MAC_CSI2_SIZE_CHK_RCV5);
+			break;
+		default:
+			pr_info("[Error][%s]chk_id %d is invalid", __func__, i);
+			return -EFAULT;
+		}
+		pr_info("[%s] i = %d, csi_chk_rcv = 0x%x", __func__, i, *csi_chk_rcv);
+	}
+
+	return 0;
+}
+
 struct mtk_cam_seninf_ops mtk_csi_phy_3_0 = {
 	._init_iomem = mtk_cam_seninf_init_iomem,
 	._init_port = mtk_cam_seninf_init_port,
@@ -8401,4 +8504,6 @@ struct mtk_cam_seninf_ops mtk_csi_phy_3_0 = {
 	._show_mac_chk_status = mtk_cam_show_mac_chk_status,
 	._get_csi_HV_HB_meter = mtk_cam_csi_mac_get_hv_hb,
 	._set_csi_ctle_config = mtk_cam_seninf_set_csi_ctle_config,
+	._set_mac_chk_ctrl = mtk_cam_mac_set_chk_ctrl,
+	._get_mac_chk_result = mtk_cam_mac_get_chk_result,
 };

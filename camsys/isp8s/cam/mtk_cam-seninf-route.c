@@ -29,6 +29,7 @@
 #include <aee.h>
 
 #include "mtk_cam-defs.h"
+#include "mtk_cam-seninf-sentest-ctrl.h"
 
 enum mtk_cam_seninf_rdy_set_cmd {
 	MTK_CAM_SENINF_RDY_SET_SW_STATUS,
@@ -1210,6 +1211,9 @@ int mtk_cam_seninf_get_vcinfo(struct seninf_ctx *ctx)
 						fd.entry[i].bus.csi2.cust_assign_to_tsrec_exp_id,
 						fd.entry[i].bus.csi2.is_sensor_hw_pre_latch_exp);
 
+		/*overwrite tsrec vc info if sentest is on */
+		seninf_sentest_set_tsrec_manual_vc_config(ctx, vc);
+
 		vcinfo->cnt++;
 	}
 
@@ -2329,6 +2333,11 @@ mtk_cam_seninf_streaming_mux_change(struct mtk_cam_seninf_mux_param *param, bool
 		camtg = param->settings[i].camtg;
 		ctx = container_of(sd, struct seninf_ctx, subdev);
 
+		if (camtg < 0 || camtg >= SENINF_OUTMUX_NUM) {
+			pr_info("[%s][ERR] camtg id %d\n", __func__, camtg);
+			return -EFAULT;
+		}
+
 		/* disable outer setting & clr dest cnt to 0 */
 		_mtk_cam_seninf_reset_outmux_outer(ctx, pad_id);
 
@@ -2488,8 +2497,11 @@ SENINF_MUX_CHANGE_LOG_AND_EXIT:
 		 ktime_get_ns());
 
 	kfree(buf);
+
 	/* show mac chk status and clear it (is_clear = 1) */
-	g_seninf_ops->_show_mac_chk_status(ctx, 1);
+	/* but avoid write clear when sentest seamless switch */
+	if (!ctx->sentest_seamless_ut_en)
+		g_seninf_ops->_show_mac_chk_status(ctx, 1);
 	return false;
 }
 

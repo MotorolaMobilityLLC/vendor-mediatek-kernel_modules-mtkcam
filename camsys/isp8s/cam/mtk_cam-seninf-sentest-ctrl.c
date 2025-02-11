@@ -13,6 +13,7 @@
 /******************************************************************************/
 
 #define WATCHDOG_INTERVAL_MS 50
+#define FPS30_FRAME_DURATION_IN_MS 33
 
 struct seninf_sentest_work {
 	struct kthread_work work;
@@ -94,6 +95,10 @@ int seninf_sentest_flag_init(struct seninf_ctx *ctx)
 	seninf_sentest_reset_seamless_flag(ctx);
 	ctx->sentest_adjust_isp_en = false;
 	ctx->sentest_mipi_measure_en = false;
+	ctx->sentest_force_tsrec_vc_dt_en = false;
+	ctx->sentest_active_frame_en = false;
+	ctx->sentest_active_frame_irq_counter = 0;
+	ctx->sentest_active_frame_measure_result = 0;
 
 	return 0;
 }
@@ -251,6 +256,8 @@ int seninf_sentest_watchingdog_en(struct mtk_cam_sentest_watchdog *wd, bool en)
 				WATCHDOG_INTERVAL_MS;
 		}
 
+		if (shutter_for_timeout < FPS30_FRAME_DURATION_IN_MS)
+			shutter_for_timeout = FPS30_FRAME_DURATION_IN_MS;
 
 		seninf_sentest_watchdog_init(wd);
 		// setup timer
@@ -346,6 +353,24 @@ static int seninf_sentest_set_fmt(struct seninf_ctx *ctx)
 	return 0;
 }
 
+static bool check_if_outmux_setting_repeat(struct mtk_cam_seninf_mux_setting *setting_list,
+	u32 valid_cnt, struct mtk_cam_seninf_mux_setting *coming_setting)
+{
+	int i;
+	bool is_repeat = false;
+
+	for (i = 0; i < valid_cnt; i++) {
+		if (coming_setting->camtg == setting_list[i].camtg &&
+		coming_setting->enable == setting_list[i].enable &&
+		coming_setting->source == setting_list[i].source) {
+			is_repeat = true;
+			break;
+		}
+	}
+
+	return is_repeat;
+}
+
 static int seninf_sentest_set_camtg_for_seamless(struct seninf_ctx *ctx)
 {
 	int i, out_pad, ret = 0;
@@ -354,6 +379,7 @@ static int seninf_sentest_set_camtg_for_seamless(struct seninf_ctx *ctx)
 	struct seninf_vcinfo *vcinfo = &ctx->vcinfo;
 	struct mtk_cam_seninf_mux_param param;
 	struct mtk_cam_seninf_rdy_mask_en rdy_mask_en;
+	struct mtk_cam_seninf_mux_setting setting_;
 	struct mtk_cam_seninf_mux_setting settings[12];
 	struct v4l2_ctrl *ctrl;
 
@@ -366,11 +392,32 @@ static int seninf_sentest_set_camtg_for_seamless(struct seninf_ctx *ctx)
 	for (i = 0; i < vcinfo->cnt; i++) {
 		out_pad = vcinfo->vc[i].out_pad;
 
-		settings[param.num].seninf = &ctx->subdev;
-		settings[param.num].source = out_pad;
-		settings[param.num].camtg = ctx->pad2cam[out_pad][0];
-		settings[param.num].enable = false;
-		settings[param.num].tag_id = 0;
+		memset(&setting_, 0, sizeof(struct mtk_cam_seninf_mux_setting));
+
+		setting_.seninf = &ctx->subdev;
+		setting_.source = out_pad;
+		setting_.camtg = ctx->pad2cam[out_pad][0];
+		setting_.enable = false;
+		setting_.tag_id = 0;
+
+		if (setting_.camtg == 255)
+			continue;
+
+		if (check_if_outmux_setting_repeat(settings, param.num, &setting_))
+			continue;
+
+		settings[param.num].seninf = setting_.seninf;
+		settings[param.num].source = setting_.source;
+		settings[param.num].camtg = setting_.camtg;
+		settings[param.num].enable = setting_.enable;
+		settings[param.num].tag_id = setting_.tag_id;
+		pr_info("[%s][disabe list] pad %d, camtg %d, en %d tag %d num %d",
+				__func__,
+				settings[param.num].source,
+				settings[param.num].camtg,
+				settings[param.num].enable,
+				settings[param.num].tag_id,
+				param.num);
 		param.num++;
 	}
 
@@ -400,20 +447,34 @@ static int seninf_sentest_set_camtg_for_seamless(struct seninf_ctx *ctx)
 			return -EFAULT;
 		}
 
-		settings[param.num].seninf = &ctx->subdev;
-		settings[param.num].source = cur_vcinfo->vc[i].out_pad;
-		settings[param.num].camtg = i;
-		settings[param.num].enable = true;
-		settings[param.num].tag_id = 0;
+		memset(&setting_, 0, sizeof(struct mtk_cam_seninf_mux_setting));
+
+		setting_.seninf = &ctx->subdev;
+		setting_.source = cur_vcinfo->vc[i].out_pad;
+		setting_.camtg = i;
+		setting_.enable = true;
+		setting_.tag_id = 0;
+
+		if (check_if_outmux_setting_repeat(settings, param.num, &setting_))
+			continue;
+
+		settings[param.num].seninf = setting_.seninf;
+		settings[param.num].source = setting_.source;
+		settings[param.num].camtg = setting_.camtg;
+		settings[param.num].enable = setting_.enable;
+		settings[param.num].tag_id = setting_.tag_id;
+
+		pr_info("[%s][enable list]pad %d, camtg %d, en %d tag %d num %d",
+				__func__,
+				settings[param.num].source,
+				settings[param.num].camtg,
+				settings[param.num].enable,
+				settings[param.num].tag_id,
+				param.num);
+
 		param.num++;
 
-		pr_info("[%s]pad %d, camtg %d, en %d tag %d num %d",
-				__func__,
-				settings[i].source,
-				settings[i].camtg,
-				settings[i].enable,
-				settings[i].tag_id,
-				param.num);
+
 	}
 
 	rdy_mask_en.rdy_sw_en = true;
@@ -492,8 +553,10 @@ static int is_target_vsync(struct seninf_ctx *ctx,
 
 	for (i = 0; i < vcinfo->cnt; i++) {
 		vc = &vcinfo->vc[i];
-		if ((vc->out_pad == PAD_SRC_RAW1) ||
+		if ((vc->out_pad == PAD_SRC_RAW0) ||
+			(vc->out_pad == PAD_SRC_RAW1) ||
 			(vc->out_pad == PAD_SRC_RAW2) ||
+			(vc->out_pad == PAD_SRC_RAW_W0) ||
 			(vc->out_pad == PAD_SRC_RAW_W1) ||
 			(vc->out_pad == PAD_SRC_RAW_W2))
 			mask_shift_cnt++;
@@ -502,7 +565,7 @@ static int is_target_vsync(struct seninf_ctx *ctx,
 	if (vsync_type == SENTEST_FIRST_VSYNC) {
 		ret = (p_info->vsync_status & 0x01)? true : false;
 	} else {
-		mask |= (mask << mask_shift_cnt);
+		mask = (mask << (mask_shift_cnt - 1));
 
 		ret = (p_info->vsync_status & mask)? true : false;
 	}
@@ -555,7 +618,87 @@ static int seninf_sentest_ops_after_sensor_seamless(struct seninf_ctx *ctx)
 	return 0;
 }
 
-int notify_sentest_irq(struct seninf_ctx *ctx,
+static bool set_sensor_extend_frame_ll(struct seninf_ctx *ctx)
+{
+	unsigned int action = IMGSENSOR_EXTEND_FRAME_LENGTH_TO_DOL;
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[Error][%s] ctx is NULL", __func__);
+		return -EFAULT;
+	}
+
+	ctx->sensor_sd->ops->core->command(ctx->sensor_sd,
+						V4L2_CMD_SET_SENSOR_FL_PROLONG,
+						&action);
+	return 0;
+}
+
+int seninf_sentest_set_csi_chk_ctrl(struct seninf_ctx *ctx)
+{
+	struct seninf_vcinfo *cur_vcinfo = &ctx->cur_vcinfo;
+	int i, max_cnt = 0;
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[Error][%s] ctx is NULL", __func__);
+		return -EFAULT;
+	}
+
+	memset(&ctx->sentest_mac_chk_result, 0, sizeof(struct mtk_cam_csi_checker));
+
+	max_cnt = min(cur_vcinfo->cnt, MAX_CSI_CHECKER_NUM);
+
+	for (i = 0; i < max_cnt; i++) {
+		if ((cur_vcinfo->vc[i].out_pad < PAD_SRC_RAW0) ||
+			(cur_vcinfo->vc[i].out_pad > PAD_SRC_RAW_W2))
+			continue;
+
+		g_seninf_ops->_set_mac_chk_ctrl(
+				ctx, cur_vcinfo->vc[i].vc, cur_vcinfo->vc[i].dt, i);
+
+
+		ctx->sentest_mac_chk_result.info[i].vc = cur_vcinfo->vc[i].vc;
+		ctx->sentest_mac_chk_result.info[i].dt = cur_vcinfo->vc[i].dt;
+		ctx->sentest_mac_chk_result.info[i].exp =
+			(cur_vcinfo->vc[i].exp_vsize << 16) + cur_vcinfo->vc[i].exp_hsize;
+		ctx->sentest_mac_chk_result.valid_measure_cnt++;
+
+		pr_info("[%s] vc 0x%x dt 0x%x, exp_size: 0x%x, valid_cnt %d",
+				__func__,
+				ctx->sentest_mac_chk_result.info[i].vc,
+				ctx->sentest_mac_chk_result.info[i].dt,
+				ctx->sentest_mac_chk_result.info[i].exp,
+				ctx->sentest_mac_chk_result.valid_measure_cnt);
+
+
+	}
+
+	return 0;
+}
+
+static int seninf_sentest_dump_last_frame_size(struct seninf_ctx *ctx)
+{
+	int i, max_cnt = 0;
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[Error][%s] ctx is NULL", __func__);
+		return -EFAULT;
+	}
+
+	max_cnt = ctx->sentest_mac_chk_result.valid_measure_cnt;
+
+	g_seninf_ops->_get_mac_chk_result(ctx);
+
+	for (i = 0; i < max_cnt; i++) {
+		pr_info("[%s] exp_size: 0x%x, chk_rcv %d",
+				__func__,
+				ctx->sentest_mac_chk_result.info[i].exp,
+				ctx->sentest_mac_chk_result.info[i].rcv);
+	}
+
+	return 0;
+}
+
+int notify_sentest_irq_for_seamless_switch(struct seninf_ctx *ctx,
 					const struct mtk_cam_seninf_tsrec_irq_notify_info *p_info)
 {
 	if (is_target_vsync(ctx, p_info , SENTEST_FIRST_VSYNC))
@@ -567,14 +710,82 @@ int notify_sentest_irq(struct seninf_ctx *ctx,
 			ctx->sentest_irq_counter);
 
 	if ((ctx->sentest_seamless_irq_ref + 1) == ctx->sentest_irq_counter) {
+		set_sensor_extend_frame_ll(ctx);
 
-		if (!is_target_vsync(ctx, p_info , SENTEST_LAST_VSYNC))
-			return 0;
+	} else if ((ctx->sentest_seamless_irq_ref + 2) == ctx->sentest_irq_counter) {
+		pr_info("[%s] stay turn for N-1 frame duration ", __func__);
 
-		seninf_sentest_seamless_ut_start(ctx);
-	} else {
+	} else if ((ctx->sentest_seamless_irq_ref + 3) == ctx->sentest_irq_counter) {
+
+		if (is_target_vsync(ctx, p_info , SENTEST_FIRST_VSYNC))
+			g_seninf_ops->_show_mac_chk_status(ctx, true);
+
+		if (is_target_vsync(ctx, p_info , SENTEST_LAST_VSYNC))
+			seninf_sentest_seamless_ut_start(ctx);
+
+		pr_info("[%s] sentest seamless switch config done ", __func__);
+	} else if ((ctx->sentest_seamless_irq_ref + 4) == ctx->sentest_irq_counter) {
+
+		seninf_sentest_dump_last_frame_size(ctx);
 		seninf_sentest_ops_after_sensor_seamless(ctx);
 	}
+
+
+	return 0;
+}
+
+static bool set_sensor_max_fps(struct seninf_ctx *ctx)
+{
+	struct mtk_fps_by_scenario info;
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[Error][%s] ctx is NULL", __func__);
+		return -EFAULT;
+	}
+
+	info.fps = ctx->sentest_avtive_frame_fps;
+	ctx->sensor_sd->ops->core->command(ctx->sensor_sd,
+						V4L2_CMD_SET_SENSOR_FRAME_LENGTH,
+						&info);
+	return 0;
+}
+
+int notify_sentest_irq_for_active_frame(struct seninf_ctx *ctx,
+					const struct mtk_cam_seninf_tsrec_irq_notify_info *p_info)
+{
+	if (!is_target_vsync(ctx, p_info , SENTEST_FIRST_VSYNC))
+		return 0;
+
+	ctx->sentest_active_frame_irq_counter++;
+
+	pr_info(
+		"[%s] active_frame_irq_ref_counter %llu, active_frame_irq_counter %llu\n",
+		__func__,
+		ctx->sentest_active_frame_irq_ref_counter,
+		ctx->sentest_active_frame_irq_counter);
+
+
+	if ((ctx->sentest_active_frame_irq_ref_counter + 1) ==
+		ctx->sentest_active_frame_irq_counter) {
+		set_sensor_max_fps(ctx);
+	}
+
+	return 0;
+}
+
+int notify_sentest_irq(struct seninf_ctx *ctx,
+					const struct mtk_cam_seninf_tsrec_irq_notify_info *p_info)
+{
+	if (unlikely(ctx == NULL)) {
+		pr_info("[Error][%s] ctx is NULL", __func__);
+		return -EFAULT;
+	}
+
+	if (ctx->sentest_seamless_ut_en)
+		return notify_sentest_irq_for_seamless_switch(ctx, p_info);
+
+	if (ctx->sentest_active_frame_en)
+		return notify_sentest_irq_for_active_frame(ctx, p_info);
 
 	return 0;
 }
@@ -612,5 +823,44 @@ int seninf_sentest_get_csi_mipi_measure_result(struct seninf_ctx *ctx,
 		return -EFAULT;
 	}
 
+	return 0;
+}
+
+int seninf_sentest_set_tsrec_manual_vc_config(struct seninf_ctx *ctx, struct seninf_vc *vc)
+{
+	int i = 0;
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s][ERROR] ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (unlikely(vc == NULL)) {
+		pr_info("[%s][ERROR] vc is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (ctx->sentest_force_tsrec_vc_dt_en == 0)
+		return 0;
+
+	pr_info("[%s] start overwrite tsrec vc setting\n", __func__);
+
+	/* sentest only pass two cfg to seninf drv */
+	for (i = 0; i < 2; i++) {
+		if (ctx->sentest_vsync_order_info.cfg[i].vc != vc->vc)
+			continue;
+
+		if (ctx->sentest_vsync_order_info.cfg[i].dt != vc->dt)
+			continue;
+
+		mtk_cam_seninf_set_vc_info_to_tsrec(ctx, vc,
+			ctx->sentest_vsync_order_info.cfg[i].tsrec_id, 0);
+		pr_info("[%s] VC %u DT 0x%x using TSREC %d config done\n",
+			__func__,
+			ctx->sentest_vsync_order_info.cfg[i].vc,
+			ctx->sentest_vsync_order_info.cfg[i].dt,
+			ctx->sentest_vsync_order_info.cfg[i].tsrec_id);
+		break;
+	}
 	return 0;
 }

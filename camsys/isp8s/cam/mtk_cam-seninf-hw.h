@@ -260,6 +260,8 @@ struct mtk_cam_seninf_ops {
 	int (*_show_mac_chk_status)(struct seninf_ctx *ctx, int is_clear);
 	int (*_get_csi_HV_HB_meter)(struct seninf_ctx *ctx, struct mtk_cam_seninf_meter_info *info,
 										const int valid_measure_req);
+	int (*_set_mac_chk_ctrl)(struct seninf_ctx *ctx, u32 vc, u32 dt, u32 chk_id);
+	int (*_get_mac_chk_result)(struct seninf_ctx *ctx);
 	unsigned int async_num;
 	unsigned int outmux_num;
 	const char *iomem_ver;

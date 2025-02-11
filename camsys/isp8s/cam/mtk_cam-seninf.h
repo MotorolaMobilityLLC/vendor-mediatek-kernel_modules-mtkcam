@@ -50,6 +50,19 @@
 	} \
 } while (0)
 
+#define MAX_CSI_CHECKER_NUM 6
+
+struct csi_checker_info {
+	u32 vc;
+	u32 dt;
+	u32 exp;
+	u32 rcv;
+};
+struct mtk_cam_csi_checker {
+	u32 valid_measure_cnt;
+	struct csi_checker_info info[MAX_CSI_CHECKER_NUM];
+};
+
 struct seninf_ctx;
 
 /* aov sensor use */
@@ -186,6 +199,17 @@ struct mtk_cam_seninf_set_camtg_cfg {
 	u16 pad_id;
 	u16 camtg;
 	u16 tag_id;
+};
+
+struct mtk_cam_seninf_tsrec_manual_cfg_info {
+	__u32 vc;
+	__u32 dt;
+	__u8 tsrec_id;
+	long long ts_diff_to_first_fs;
+};
+
+struct vsync_order_cfg_info {
+	struct mtk_cam_seninf_tsrec_manual_cfg_info cfg[2];
 };
 
 struct seninf_core {
@@ -444,7 +468,13 @@ struct seninf_ctx {
 	unsigned int set_abort_flag;
 
 	/* for sentest use */
+	bool sentest_active_frame_en;
+	u32 sentest_avtive_frame_fps;
+	u64 sentest_active_frame_irq_counter;
+	int sentest_active_frame_measure_result;
+	u64 sentest_active_frame_irq_ref_counter;
 	bool sentest_adjust_isp_en;
+	bool sentest_force_tsrec_vc_dt_en;
 	bool sentest_seamless_ut_en;
 	bool sentest_seamless_is_set_camtg_done;
 	bool sentest_mipi_measure_en;
@@ -455,6 +485,8 @@ struct seninf_ctx {
 	struct mtk_seamless_switch_param sentest_seamless_cfg;
 	struct kthread_worker sentest_worker;
 	struct task_struct *sentest_kworker_task;
+	struct vsync_order_cfg_info sentest_vsync_order_info;
+	struct mtk_cam_csi_checker sentest_mac_chk_result;
 
 	/* seninf ctx rdy mask info */
 	struct list_head list_using_rdy_msk_grp_id;

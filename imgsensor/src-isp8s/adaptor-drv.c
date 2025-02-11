@@ -1695,7 +1695,7 @@ static int imgsensor_probe(struct i3c_i2c_device *client)
 	struct device_node *endpoint;
 	struct adaptor_ctx *ctx;
 	int i, ret;
-	unsigned int reindex;
+	unsigned int reindex, conceptual_mipi;
 	unsigned int pmic_delayus;
 	unsigned int pre_cfg_addr;
 	const char *reindex_match[OF_SENSOR_NAMES_MAXCNT];
@@ -1853,6 +1853,14 @@ static int imgsensor_probe(struct i3c_i2c_device *client)
 			}
 		}
 	}
+
+	if ((!of_property_read_u32(dev->of_node, "is_conceptual_mipi", &conceptual_mipi) &&
+		(conceptual_mipi == 1))) {
+		ctx->is_conceptual_mipi = true;
+	} else {
+		ctx->is_conceptual_mipi = false;
+	}
+	adaptor_logi(ctx, "is_conceptual_mipi:%d\n", ctx->is_conceptual_mipi);
 
 	/* init subdev name */
 	ret = snprintf(ctx->sd.name, sizeof(ctx->sd.name), "%s%d",

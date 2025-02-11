@@ -30,4 +30,8 @@ int notify_sentest_irq(struct seninf_ctx *ctx,
 int seninf_sentest_get_csi_mipi_measure_result(struct seninf_ctx *ctx,
 			struct mtk_cam_seninf_meter_info *info);
 
+int seninf_sentest_set_tsrec_manual_vc_config(struct seninf_ctx *ctx, struct seninf_vc *vc);
+
+int seninf_sentest_set_csi_chk_ctrl(struct seninf_ctx *ctx);
+
 #endif
