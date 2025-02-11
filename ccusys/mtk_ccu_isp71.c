@@ -131,14 +131,14 @@ struct mtk_ccu_clk_name ccu_clk_name_isp8s[] = {
 	/* {true, "PD_CAM_VCORE"}, */
 	/* {true, "PD_CAM_MAIN"}, */
 	/* {true, "PD_CCU"}, */
-	{true, "MM_CCUSYS"},
+	/* {true, "MM_CCUSYS"}, */
 	{true, "MM_CCUTM"},
 	{true, "CCU2MM0_GALS"},
 	{true, "CCU_LARB"},
 	{true, "CCU_INFRA"},
 	{true, "CCUSYS_CCU0"},
 	{true, "CAM_MAIN"},
-	{true, "VCORE_26M"},
+	/* {true, "VCORE_26M"}, */
 	{true, "VCORE_SUBCOMM1"},
 	{true, "VCORE_X60_GAL"},
 	{true, "VCORE_X90_GAL"},
