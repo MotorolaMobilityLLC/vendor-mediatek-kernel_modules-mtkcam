@@ -31,7 +31,7 @@ MODULE_PARM_DESC(ccd_debug, "ccd debug log");
 
 int mtk_ccd_debug_enabled(void)
 {
-	return ccd_debug >= 1 ? 1 : 0;
+	return ccd_debug;
 }
 EXPORT_SYMBOL_GPL(mtk_ccd_debug_enabled);
 
@@ -79,7 +79,7 @@ __rpmsg_create_ept(struct mtk_rpmsg_rproc_subdev *mtk_subdev,
 	ept->addr = id;  /* channel index */
 
 	INIT_LIST_HEAD(&mept->pending_sendq.queue);
-	spin_lock_init(&mept->pending_sendq.queue_lock);
+	mutex_init(&mept->pending_sendq.queue_lock);
 	init_waitqueue_head(&mept->worker_readwq);
 	atomic_set(&mept->ccd_cmd_sent, 0);
 	atomic_set(&mept->ccd_mep_state, CCD_MENDPOINT_CREATED);
@@ -119,12 +119,12 @@ static void mtk_rpmsg_destroy_ept(struct rpmsg_endpoint *ept)
 			__func__, mept, mtk_subdev->id, ept->addr,
 			atomic_read(&mept->ccd_cmd_sent));
 
-		spin_lock(&mept->pending_sendq.queue_lock);
+		mutex_lock(&mept->pending_sendq.queue_lock);
 		ccd_params = list_first_entry(&mept->pending_sendq.queue,
 					      struct mtk_ccd_params,
 					      list_entry);
 		list_del(&ccd_params->list_entry);
-		spin_unlock(&mept->pending_sendq.queue_lock);
+		mutex_unlock(&mept->pending_sendq.queue_lock);
 
 		atomic_dec(&mept->ccd_cmd_sent);
 
@@ -613,6 +613,55 @@ int mtk_ccd_channel_send(struct mtk_ccd *ccd,
 }
 
 /* rproc_subdev */
+static void _prepare_ccd_param_pool(struct mtk_ccd_params_pool *pool)
+{
+	int i;
+	struct mtk_ccd_params *ccd_params;
+
+	mutex_init(&pool->lock);
+	INIT_LIST_HEAD(&pool->queue);
+	pool->cnt = 0;
+
+	for (i = 0; i < 64; i++) {
+		ccd_params = kzalloc(sizeof(*ccd_params), GFP_KERNEL);
+		if (!ccd_params)
+			continue;
+
+		mutex_lock(&pool->lock);
+		list_add_tail(&ccd_params->list_entry, &pool->queue);
+		pool->cnt++;
+		mutex_unlock(&pool->lock);
+
+		if(pool->cnt >= MAX_CCD_PARAM_NUM)
+			break;
+	}
+
+	pr_info("%s cnt:%d", __func__, pool->cnt);
+}
+
+static void _unprepare_ccd_param_pool(struct mtk_ccd_params_pool *pool)
+{
+	struct mtk_ccd_params *ccd_params;
+
+	mutex_lock(&pool->lock);
+	while (!list_empty(&pool->queue)) {
+		ccd_params = list_first_entry_or_null(&pool->queue,
+						      struct mtk_ccd_params,
+						      list_entry);
+		if (ccd_params != NULL) {
+			list_del(&ccd_params->list_entry);
+			kfree(ccd_params);
+			pool->cnt--;
+		} else {
+			pr_err("%s: list_first_entry_or_null returned NULL", __func__);
+			break;
+		}
+	}
+	mutex_unlock(&pool->lock);
+
+	pr_info("%s cnt:%d", __func__, pool->cnt);
+}
+
 struct rproc_subdev *
 mtk_rpmsg_create_rproc_subdev(struct platform_device *pdev,
 			      struct mtk_ccd_rpmsg_ops *ops,
@@ -638,6 +687,8 @@ mtk_rpmsg_create_rproc_subdev(struct platform_device *pdev,
 	init_waitqueue_head(&mtk_subdev->master_listen_wq);
 	init_waitqueue_head(&mtk_subdev->ccd_listen_wq);
 
+	_prepare_ccd_param_pool(&mtk_subdev->ccd_params_pool);
+
 	/* channels initialization */
 	for (i = 0; i < CCD_IPI_MAX; i++)
 		mtk_subdev->channels[i] = NULL;
@@ -658,6 +709,8 @@ void mtk_rpmsg_destroy_rproc_subdev(struct rproc_subdev *subdev)
 				mtk_subdev->id, i);
 			WARN_ON(1);
 		}
+
+	_unprepare_ccd_param_pool(&mtk_subdev->ccd_params_pool);
 
 	kfree(mtk_subdev);
 }

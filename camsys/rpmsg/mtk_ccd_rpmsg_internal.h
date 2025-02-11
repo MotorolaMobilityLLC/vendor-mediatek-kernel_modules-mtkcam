@@ -21,7 +21,7 @@ enum ccd_mept_state {
 
 struct mtk_ccd_queue {
 	struct list_head queue;
-	spinlock_t queue_lock; /* Protect queue operation */
+	struct mutex queue_lock; /* Protect queue operation */
 };
 
 struct mtk_ccd_params {

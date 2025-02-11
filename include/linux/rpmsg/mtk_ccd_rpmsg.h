@@ -14,6 +14,7 @@
 #include <uapi/linux/mtk_ccd_controls.h>
 
 #define NAME_MAX_LEN			(32)
+#define MAX_CCD_PARAM_NUM 4
 
 struct mtk_ccd;
 struct mtk_ccd_rpmsg_endpoint;
@@ -34,6 +35,12 @@ struct mtk_rpmsg_device {
 	unsigned int id; /* channels index */
 };
 
+struct mtk_ccd_params_pool {
+	struct list_head queue;
+	unsigned int cnt;
+	struct mutex lock;
+};
+
 struct mtk_rpmsg_rproc_subdev {
 	unsigned int id;  /* center_id, assign at creation */
 	struct platform_device *pdev;
@@ -47,6 +54,8 @@ struct mtk_rpmsg_rproc_subdev {
 	wait_queue_head_t master_listen_wq;
 	wait_queue_head_t ccd_listen_wq;
 	atomic_t listen_obj_rdy;
+
+	struct mtk_ccd_params_pool ccd_params_pool;
 
 	unsigned int master_status;
 	pid_t process_id;

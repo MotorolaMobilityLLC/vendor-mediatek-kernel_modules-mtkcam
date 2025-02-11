@@ -36,6 +36,47 @@ get_mtk_subdev_by_pid(struct mtk_ccd *ccd, pid_t curr_pid)
 	return NULL;
 }
 
+static struct mtk_ccd_params *
+_get_ccd_params(struct mtk_ccd_params_pool *pool)
+{
+	struct mtk_ccd_params *ccd_params;
+
+	mutex_lock(&pool->lock);
+	ccd_params = list_first_entry_or_null(&pool->queue,
+					      struct mtk_ccd_params,
+					      list_entry);
+	if (ccd_params) {
+		list_del(&ccd_params->list_entry);
+		pool->cnt--;
+	}
+	mutex_unlock(&pool->lock);
+
+	if (!ccd_params) {
+		pr_info("%s create ccd_params", __func__);
+		ccd_params = kzalloc(sizeof(*ccd_params), GFP_KERNEL);
+	}
+
+	return ccd_params;
+}
+
+static void _return_ccd_params(struct mtk_ccd_params_pool *pool,
+			       struct mtk_ccd_params *ccd_params)
+{
+	mutex_lock(&pool->lock);
+	if (pool->cnt < MAX_CCD_PARAM_NUM) {
+		list_add_tail(&ccd_params->list_entry, &pool->queue);
+		pool->cnt++;
+		ccd_params = NULL;
+	}
+	mutex_unlock(&pool->lock);
+
+	if (ccd_params) {
+		pr_info("%s delete ccd_params", __func__);
+		kfree(ccd_params);
+		ccd_params = NULL;
+	}
+}
+
 int rpmsg_ccd_ipi_send(struct mtk_rpmsg_rproc_subdev *mtk_subdev,
 		       struct mtk_ccd_rpmsg_endpoint *mept,
 		       void *buf, unsigned int len, unsigned int wait)
@@ -43,8 +84,9 @@ int rpmsg_ccd_ipi_send(struct mtk_rpmsg_rproc_subdev *mtk_subdev,
 	int ret = 0;
 	struct device *dev;
 	struct mtk_ccd *ccd = platform_get_drvdata(mtk_subdev->pdev);
-	struct mtk_ccd_params *ccd_params = kzalloc(sizeof(*ccd_params),
-						    GFP_KERNEL);
+	struct mtk_ccd_params *ccd_params;
+
+	ccd_params = _get_ccd_params(&mtk_subdev->ccd_params_pool);
 	if (!ccd_params)
 		return -ENOMEM;
 
@@ -62,9 +104,9 @@ int rpmsg_ccd_ipi_send(struct mtk_rpmsg_rproc_subdev *mtk_subdev,
 	ccd_params->worker_obj.len = len;
 
 	/* No need to use spin_lock_irqsave for all non-irq context */
-	spin_lock(&mept->pending_sendq.queue_lock);
+	mutex_lock(&mept->pending_sendq.queue_lock);
 	list_add_tail(&ccd_params->list_entry, &mept->pending_sendq.queue);
-	spin_unlock(&mept->pending_sendq.queue_lock);
+	mutex_unlock(&mept->pending_sendq.queue_lock);
 
 	atomic_inc(&mept->ccd_cmd_sent);
 
@@ -287,18 +329,18 @@ int ccd_worker_read(struct mtk_ccd *ccd, struct ccd_worker_item *read_obj)
 		goto err_ret;
 	}
 
-	spin_lock(&mept->pending_sendq.queue_lock);
+	mutex_lock(&mept->pending_sendq.queue_lock);
 	ccd_params = list_first_entry_or_null(&mept->pending_sendq.queue,
 					      struct mtk_ccd_params,
 					      list_entry);
 	if (ccd_params != NULL)
 		list_del(&ccd_params->list_entry);
-	spin_unlock(&mept->pending_sendq.queue_lock);
+	mutex_unlock(&mept->pending_sendq.queue_lock);
 
 	if (ccd_params != NULL) {
 		atomic_dec(&mept->ccd_cmd_sent);
 		memcpy(read_obj, &ccd_params->worker_obj, sizeof(*read_obj));
-		kfree(ccd_params);
+		_return_ccd_params(&mtk_subdev->ccd_params_pool, ccd_params);
 	} else {
 		dev_info(ccd->dev, "warn. ccd_params is null\n");
 	}
