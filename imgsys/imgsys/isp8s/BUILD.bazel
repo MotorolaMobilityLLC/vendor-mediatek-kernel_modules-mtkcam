@@ -1,5 +1,6 @@
 load("//build/kernel/kleaf:kernel.bzl", "ddk_headers")
 load("//build/bazel_mgk_rules:mgk_ko.bzl", "define_mgk_ko")
+load("@mgk_info//:kernel_version.bzl", "kernel_version",)
 package(
     default_visibility = [
         "//visibility:public",
@@ -56,6 +57,7 @@ define_mgk_ko(
         "//vendor/mediatek/kernel_modules/mtkcam/mtk-ipesys-me:mtk-ipesys-me",
         "//vendor/mediatek/kernel_modules/mtkcam/imgsys/common:imgsys_common",
         "//vendor/mediatek/kernel_modules/mtkcam/imgsys/imgsys/cmdq/isp8s:imgsys_cmdq_isp8s",
+        "//kernel_device_modules-{}/drivers/misc/mediatek/vmm:mtk-vmm-notifier-mt6993".format(kernel_version),
     ],
 
     outs = mgk_imgsys_outs,
