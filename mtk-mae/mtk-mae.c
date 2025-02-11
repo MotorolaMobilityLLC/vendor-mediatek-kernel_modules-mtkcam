@@ -35,7 +35,7 @@
 #include "mtk_heap.h"
 
 #include "mtk-mae.h"
-#include "mtk_notify_aov.h"
+// #include "mtk_notify_aov.h"
 #include "./mae_mm16_fd/fdvt_FPGA_coef.h"
 #include "./mae_mm16_fd/fdvt_FPGA_config.h"
 #include "./mae_mm16_fld/fld_FPGA_coef.h"
@@ -101,7 +101,12 @@ module_param(umap_debug, int, 0644);
 module_param(cmdq_profiling_result, int, 0644);
 
 static struct device *mae_pm_dev;
+
+#define SUPPORT_AOV 0
+
+#if SUPPORT_AOV
 aov_notify m_aov_notify = NULL;
+#endif
 
 mtk_mae_register_tf_cb m_mae_reg_tf_cb;
 
@@ -161,11 +166,13 @@ void mtk_mae_set_data(const struct mae_plat_data *plat_data)
 }
 EXPORT_SYMBOL(mtk_mae_set_data);
 
+#if SUPPORT_AOV
 void aov_notify_register(aov_notify aov_notify_fn)
 {
 	m_aov_notify = aov_notify_fn;
 }
 EXPORT_SYMBOL(aov_notify_register);
+#endif
 
 void register_mtk_mae_reg_tf_cb(mtk_mae_register_tf_cb mtk_mae_register_tf_cb_fn)
 {
@@ -874,9 +881,11 @@ static int mtk_mae_hw_connect(struct mtk_mae_dev *mae_dev)
 
 	mae_dev->mae_stream_count++;
 	if (mae_dev->mae_stream_count == 1) {
+#if SUPPORT_AOV
 		/* unavailable: 0 available: 1 */
 		if (m_aov_notify != NULL)
 			m_aov_notify(mae_dev->aov_pdev, AOV_NOTIFY_AIE_AVAIL, 0);
+#endif
 
 		memset(mae_dev->map_table, 0, sizeof(*mae_dev->map_table));
 		if (m_mae_reg_tf_cb) {
@@ -1076,9 +1085,11 @@ static void mtk_mae_hw_disconnect(struct mtk_mae_dev *mae_dev)
 				mae_dev_info(mae_dev->dev, "%s: pm_runtime_put_sync failed:(%d)\n",
 					__func__, ret);
 
+#if SUPPORT_AOV
 			/* unavailable: 0 available: 1 */
 			if (m_aov_notify != NULL)
 				m_aov_notify(mae_dev->aov_pdev, AOV_NOTIFY_AIE_AVAIL, 1);
+#endif
 		}
 
 		// MAE_TO_DO: unmap buffer
@@ -2040,11 +2051,13 @@ static int mtk_mae_suspend(struct device *dev)
 		return -EBUSY;
 	}
 
+#if SUPPORT_AOV
 	if (!mae_dev->is_shutdown) {
 		/* unavailable: 0 available: 1 */
 		if (m_aov_notify != NULL)
 			m_aov_notify(mae_dev->aov_pdev, AOV_NOTIFY_AIE_AVAIL, 1);
 	}
+#endif
 
 
 	mae_dev_info(dev, "%s: suspend mae job end\n", __func__);
@@ -2054,14 +2067,18 @@ static int mtk_mae_suspend(struct device *dev)
 
 static int mtk_mae_resume(struct device *dev)
 {
+#if SUPPORT_AOV
 	struct mtk_mae_dev *mae_dev = dev_get_drvdata(dev);
+#endif
 
 	mae_dev_info(dev, "%s: resume mae job start\n", __func__);
 
+#if SUPPORT_AOV
 	if (!mae_dev->is_shutdown) {
 		if (m_aov_notify != NULL)
 			m_aov_notify(mae_dev->aov_pdev, AOV_NOTIFY_AIE_AVAIL, 0);
 	}
+#endif
 
 	mae_dev_info(dev, "%s: resume aie job end)\n", __func__);
 
