@@ -1158,14 +1158,18 @@ int chk_if_need_to_use_s_multi_exp_fl_by_fsync_mgr(struct adaptor_ctx *ctx,
 		fsync_mgr_chk_long_exposure(ctx, ae_exp_arr, ae_exp_cnt);
 		if (atomic_read(&long_exp_mode_bits) != 0) {
 			FSYNC_MGR_LOGI(ctx,
-				"NOTICE: sidx:%d, detect enable fsync sensor in long exp mode, long_exp_mode_bits:%#x => CTRL flow for sensor drv, return:0\n",
+				"NOTICE: sidx:%d, en_fsync:%#x, detect enable fsync sensor in long exp mode, long_exp_mode_bits:%#x => CTRL flow for sensor drv, return:0\n",
 				ctx->idx,
+				en_fsync,
 				atomic_read(&long_exp_mode_bits));
 			FSYNC_TRACE_PR_LOG_INF(
-				"NOTICE: sidx:%d, detect enable fsync sensor in long exp mode, long_exp_mode_bits:%#x => CTRL flow for sensor drv, return:0",
+				"NOTICE: sidx:%d, en_fsync:%#x, detect enable fsync sensor in long exp mode, long_exp_mode_bits:%#x => CTRL flow for sensor drv, return:0",
 				ctx->idx,
+				en_fsync,
 				atomic_read(&long_exp_mode_bits));
-			return 0;
+
+			ctx->needs_fsync_assign_fl = 0;
+			return ctx->needs_fsync_assign_fl;
 		}
 	}
 
@@ -1421,7 +1425,6 @@ void notify_fsync_mgr_set_shutter(struct adaptor_ctx *ctx,
 			ctx->idx,
 			atomic_read(&long_exp_mode_bits),
 			ctx->needs_fsync_assign_fl);
-		return;
 	}
 
 
@@ -1434,11 +1437,12 @@ void notify_fsync_mgr_set_shutter(struct adaptor_ctx *ctx,
 	/* !!! MUST call this after setup exp data !!! */
 	fsync_mgr_setup_cb_func_cmd_id(ctx, &pf_ctrl);
 
-	FSYNC_TRACE_BEGIN("%s::fs_set_shutter", __func__);
-	/* call frame-sync fs set shutter */
-	ctx->fsync_mgr->fs_set_shutter(&pf_ctrl);
-	FSYNC_TRACE_END();
 	if (ctx->needs_fsync_assign_fl) {
+		FSYNC_TRACE_BEGIN("%s::fs_set_shutter", __func__);
+		/* call frame-sync fs set shutter */
+		ctx->fsync_mgr->fs_set_shutter(&pf_ctrl);
+		FSYNC_TRACE_END();
+
 		/* Enable frame-sync && using SW sync (SA algo) solution */
 		/* set exp with fl (ctx->fsync_out_fl) */
 		fsync_mgr_s_multi_shutter_frame_length(ctx,
