@@ -2766,6 +2766,8 @@ int mtk_cam_sv_cal_cfg_info(struct mtk_cam_ctx *ctx, struct mtk_cam_buffer *buf,
 	if (ctx->hw_sv == NULL)
 		return 0;
 
+	memset(&info, 0, sizeof(info));
+
 	tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, pipe_id);
 	if (tag_idx == SVTAG_UNKNOWN) {
 		dev_info(ctx->cam->dev, "%s: unknown tag idx", __func__);
@@ -3802,7 +3804,7 @@ static int mtk_camsv_of_probe(struct platform_device *pdev,
 
 	sv_dev->num_larbs = of_count_phandle_with_args(
 					pdev->dev.of_node, "mediatek,larbs", NULL);
-	sv_dev->num_larbs = (sv_dev->num_larbs < 0) ? 0 : sv_dev->num_larbs;
+	sv_dev->num_larbs = (sv_dev->num_larbs <= 0) ? 0 : sv_dev->num_larbs;
 	dev_info(dev, "sv_dev larb_num:%d\n", sv_dev->num_larbs);
 
 	if (sv_dev->num_larbs) {
