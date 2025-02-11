@@ -412,7 +412,6 @@ static int _cal_sys_info_um(
 	bool is_safe_idle_rate = true;
 	int sys_info_um = req->glb_info->curr_um;
 	bool is_dangerous_idle_rate = false;
-	u32 runnable_count_sum = 0;
 
 	*force_use_idle_rate_um = true;
 
@@ -433,15 +432,6 @@ static int _cal_sys_info_um(
 		}
 		if (req->glb_info->need_update_bg[1 + _cluster_index] == 2)
 			is_dangerous_idle_rate = true;
-		runnable_count_sum += req->glb_info->runnable_count[_cluster_index];
-	}
-
-	if (enable_runnable_monitor &&
-		(req->glb_info->runnable_count_signal == C2PS_RUNNABLE_DANGER)) {
-		*use_sys_info_um = (*use_sys_info_um == C2PS_GUIDED_INDEX_IDLE) ?
-			C2PS_GUIDED_INDEX_IDLE_AND_RUNNABLE : C2PS_GUIDED_INDEX_RUNNABLE;
-		C2PS_LOGD("not safe idle due to runnable_count: %u, availabe_cpus: %d",
-			runnable_count_sum, req->glb_info->available_cpus);
 	}
 
 	if (!is_safe_idle_rate || *use_sys_info_um)

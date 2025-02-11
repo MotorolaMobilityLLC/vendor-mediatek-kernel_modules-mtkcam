@@ -1848,7 +1848,8 @@ bool need_update_background(void)
 		reset_need_update_status();
 
 	return (glb_info->need_update_bg[0] &&
-			!(c2ps_um_mode_on && glb_info->has_anchor_spec));
+			!(c2ps_um_mode_on && glb_info->has_anchor_spec &&
+				glb_info->runnable_count_signal != C2PS_RUNNABLE_DANGER));
 }
 
 void reset_need_update_status(void)
