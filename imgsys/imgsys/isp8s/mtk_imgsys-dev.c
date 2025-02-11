@@ -669,7 +669,7 @@ u64 mtk_imgsys_get_kva(struct dma_buf *dma_buf, s32 ionFd,
 {
 	dma_addr_t dma_addr;
 	unsigned long kva;
-	struct iosys_map map;
+	struct iosys_map map = {0};
 	struct device *dev;
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
