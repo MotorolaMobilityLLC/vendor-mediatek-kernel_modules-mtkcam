@@ -4587,7 +4587,8 @@ static void update_job_state_init_sensor_param(struct mtk_cam_job *job)
 			infer_i2c_deadline_ns(job, ctrl->frame_interval_ns);
 
 	job->job_state.s_params.latched_timing =
-		is_stagger_lbmf(job) ? SENSOR_LATCHED_L_SOF : SENSOR_LATCHED_F_SOF;
+		(is_stagger_lbmf(job) || is_dcg_with_vs(job)) ?
+			SENSOR_LATCHED_L_SOF : SENSOR_LATCHED_F_SOF;
 	job->job_state.s_params.subsample =
 		get_subsample_ratio(&job->job_scen);
 
@@ -4906,7 +4907,9 @@ static void check_sen_expo_change(struct mtk_cam_job *job)
 	s64 last_exp_diff_ns;
 	s64 voter_on_margin_ns = 0;
 
-	if (!is_stagger_lbmf(job) && !is_stagger_dol(job))
+	if (!is_dcg_with_vs(job) &&
+		!is_stagger_lbmf(job) &&
+		!is_stagger_dol(job))
 		return;
 
 	if (likely(qof_get_mtcmos_margin() > MARGIN_TO_VOTE_QOF_US)) {
@@ -6326,7 +6329,9 @@ static bool is_sensor_mode_update(struct mtk_cam_job *job)
 
 	// TODO: refactor
 	if ((scen_is_normal(&job->job_scen)) &&
-		(job_prev_exp_num_seamless(job) != job_exp_num(job)))
+		((job_prev_exp_num_seamless(job) != job_exp_num(job)) ||
+		 (job->prev_scen.scen.normal.stagger_type !=
+		  job->job_scen.scen.normal.stagger_type)))
 		return true;
 
 	/* sensor change */

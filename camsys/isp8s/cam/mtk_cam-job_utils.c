@@ -309,10 +309,7 @@ int get_hw_scenario(struct mtk_cam_job *job)
 		} else if (scen->scen.normal.exp_num > 1) {
 			if (is_dc) {
 				hard_scenario = MTKCAM_IPI_HW_PATH_DC_STAGGER;
-			} else if (scen->scen.normal.stagger_type ==
-					   MTK_CAM_STAGGER_DCG_AP_MERGE) {
-				// TODO: OTF RGBW
-				// OTF DCG AP merge
+			} else if (is_dcg_ap_merge(job) && !is_dcg_with_vs(job)) {
 				hard_scenario = MTKCAM_IPI_HW_PATH_OTF_STAGGER_LN_INTL;
 			} else {
 				hard_scenario = MTKCAM_IPI_HW_PATH_STAGGER;
@@ -399,7 +396,12 @@ static int scen_exp_num(struct mtk_cam_scen *scen)
 		if (scen->scen.normal.exp_num == 0)
 			pr_info("%s: error: NORMAL SCEN(%d) w/o setting exp_num",
 					__func__, scen->id);
-		else
+		else if (scen_is_dcg_vs(scen)) {
+			exp = 0;
+			exp += (scen->scen.normal.exp_for_raw & MTK_CAM_EXP_LE) ? 1 : 0;
+			exp += (scen->scen.normal.exp_for_raw & MTK_CAM_EXP_ME) ? 1 : 0;
+			exp += (scen->scen.normal.exp_for_raw & MTK_CAM_EXP_SE) ? 1 : 0;
+		} else
 			exp = scen->scen.normal.exp_num;
 		break;
 	case MTK_CAM_SCEN_MSTREAM:
@@ -503,7 +505,7 @@ u64 infer_i2c_deadline_ns(struct mtk_cam_job *job, u64 frame_interval_ns)
 	/* consider vsync is subsampled */
 	if (scen->id == MTK_CAM_SCEN_SMVR)
 		return frame_interval_ns * (scen->scen.smvr.subsample_num - 1);
-	else if (is_stagger_lbmf(job))
+	else if (is_stagger_lbmf(job) || is_dcg_with_vs(job))
 		return frame_interval_ns;
 	else
 		return frame_interval_ns - reserved_i2c_time(frame_interval_ns);
@@ -2046,6 +2048,11 @@ bool is_dcg_sensor_merge(struct mtk_cam_job *job)
 bool is_dcg_ap_merge(struct mtk_cam_job *job)
 {
 	return scen_is_dcg_ap_merge(&job->job_scen);
+}
+
+bool is_dcg_with_vs(struct mtk_cam_job *job)
+{
+	return scen_is_dcg_vs(&job->job_scen);
 }
 
 bool is_m2m(struct mtk_cam_job *job)

@@ -87,6 +87,11 @@ enum mtk_cam_stagger_type {
 	MTK_CAM_STAGGER_DCG_AP_MERGE,
 	MTK_CAM_STAGGER_LBMF,
 };
+enum mtk_cam_exposure {
+	MTK_CAM_EXP_LE = 0x1 << 0,
+	MTK_CAM_EXP_ME = 0x1 << 1,
+	MTK_CAM_EXP_SE = 0x1 << 2,
+};
 struct mtk_cam_scen_normal {
 	__u8 max_exp_num : 4;
 	__u8 exp_num : 4;
@@ -96,6 +101,9 @@ struct mtk_cam_scen_normal {
 	__u8 frame_order : 4;
 	__u8 mem_saving : 4;
 	__u8 stagger_type : 4;
+	__u8 exp_for_raw;
+	__u8 exp_for_camsv_bin;
+	__u8 with_veryshort: 4;
 };
 enum mtk_cam_mstream_type {
 	MTK_CAM_MSTREAM_1_EXPOSURE = 0,

@@ -70,6 +70,16 @@ static inline bool scen_is_dcg_ap_merge(const struct mtk_cam_scen *scen)
 	return false;
 }
 
+static inline bool scen_is_dcg_vs(const struct mtk_cam_scen *scen)
+{
+	if (scen_is_normal(scen) &&
+		((scen_is_dcg_ap_merge(scen)) ||
+		 (scen_is_dcg_sensor_merge(scen))))
+		return !!(scen->scen.normal.with_veryshort);
+
+	return false;
+}
+
 static inline bool scen_is_vhdr(const struct mtk_cam_scen *scen)
 {
 	switch (scen->id) {
