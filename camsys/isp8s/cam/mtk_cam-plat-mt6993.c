@@ -970,7 +970,9 @@ static const struct plat_v4l2_data mt6993_v4l2_data = {
 
 	.meta_cfg_size = RAW_STATS_CFG_SIZE,
 	.meta_stats0_size = RAW_STATS_0_SIZE,
+	.meta_stats0_header_size = RAW_STAT_0_STRUCT_SIZE,
 	.meta_stats1_size = RAW_STATS_1_SIZE,
+	.meta_stats1_header_size = RAW_STATS_1_SIZE_HEADER,
 	.meta_sv_ext_size = SV_STATS_0_SIZE,
 	.meta_mraw_ext_size = MRAW_STATS_0_SIZE,
 	.meta_pda_ext_size = PDA_STATS_0_SIZE,

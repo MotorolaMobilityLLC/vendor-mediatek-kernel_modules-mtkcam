@@ -418,6 +418,35 @@ void mtk_cam_vb2_sync_for_cpu(struct vb2_buffer *vb)
 	}
 }
 
+void mtk_cam_vb2_partial_sync_for_cpu(struct vb2_buffer *vb, unsigned long offset)
+{
+	struct mtk_cam_video_device *node;
+	struct mtk_cam_buffer *mtk_buf;
+	struct mtk_cam_vb2_buf *buf;
+	unsigned int plane;
+
+	if (!offset)
+		mtk_cam_vb2_sync_for_cpu(vb);
+
+	node = mtk_cam_vbq_to_vdev(vb->vb2_queue);
+	mtk_buf = mtk_cam_vb2_buf_to_dev_buf(vb);
+
+	for (plane = 0; plane < vb->num_planes; ++plane) {
+		buf = vb->planes[plane].mem_priv;
+
+		if (buf->dma_sgt && buf->sync && vb->planes[plane].dbuf) {
+			if (CAM_DEBUG_ENABLED(V4L2))
+				pr_info("%s: %s offset/size:%lu/%zu\n",
+					__func__, node->desc.name, offset, buf->size);
+
+			dma_buf_begin_cpu_access_partial(vb->planes[plane].dbuf,
+							 buf->dma_dir,
+							 offset,
+							 buf->size - offset);
+		}
+	}
+}
+
 MODULE_DESCRIPTION("DMA-contig memory handling routines for mtk-cam videobuf2");
 MODULE_IMPORT_NS(DMA_BUF);
 MODULE_LICENSE("GPL");

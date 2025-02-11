@@ -15,5 +15,6 @@ void mtk_cam_vb2_sync_range_for_device(
 	struct vb2_buffer *vb, unsigned long offset, size_t size);
 
 void mtk_cam_vb2_sync_for_cpu(struct vb2_buffer *vb);
+void mtk_cam_vb2_partial_sync_for_cpu(struct vb2_buffer *vb, unsigned long offset);
 
 #endif /*__MTK_CAM_VB2_DMA_CONTIG_H*/
