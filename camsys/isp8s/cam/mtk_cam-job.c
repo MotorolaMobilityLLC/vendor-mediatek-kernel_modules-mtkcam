@@ -2072,7 +2072,9 @@ static int apply_engines_cq(struct mtk_cam_job *job,
 			    struct mtkcam_ipi_frame_ack_result *cq_rst)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
+	struct mtk_cam_device *cam = ctx->cam;
 	struct mtk_raw_device *raw_dev = NULL;
+	struct mtk_camsv_device *sv_dev = NULL;
 	int raw_id;
 	unsigned long cq_engine, used_engine, sv_engine;
 	unsigned long subset;
@@ -2112,6 +2114,16 @@ static int apply_engines_cq(struct mtk_cam_job *job,
 		(ktime_get_boottime_ns() - ctx->cam_ctrl.r_info.sof_l_ts_ns);
 
 	mtk_cam_apply_qos(job);
+
+	if (ctx->has_raw_subdev) {
+		raw_id = get_master_raw_id(job->used_engine);
+		sv_dev = dev_get_drvdata(cam->engines.sv_devs[raw_id]);
+	} else {
+		if (ctx->hw_sv)
+			sv_dev = dev_get_drvdata(ctx->hw_sv);
+	}
+	mtk_cam_sv_run_df_actions(sv_dev);
+
 	ctx->cam_ctrl.frame_sync_id = job->req_info_id;
 	dev_info(ctx->cam->dev, "[%s] ctx-%d CQ-0x%x(%d) cq_eng 0x%lx used_eng 0x%lx (%s)[rms_dis:%d] cq_thr(%llu) ts(%llu) ref_sof(%llu);%s\n",
 		__func__, ctx->stream_id, frame_seq_no, job->req_info_id, cq_engine,

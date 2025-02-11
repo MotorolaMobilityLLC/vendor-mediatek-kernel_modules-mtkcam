@@ -24,6 +24,7 @@
 #include "mtk_cam-qof.h"
 #include "mtk_cam-plat.h"
 #include "mtk_cam-bwr.h"
+#include "mtk_cam-sv-df.h"
 #if KERNEL_VERSION(6, 6, 0) == LINUX_VERSION_CODE
 #include "subsys/swpm_isp_wrapper.h"
 #endif
@@ -734,13 +735,14 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 	struct mtkcam_ipi_img_output *in;
 	struct mtk_camsv_device *sv_dev;
 	unsigned int i, x_size, img_h, sv_id;
-	u64 avg_bw, peak_bw, stash_avg_bw, stash_peak_bw;
+	u64 avg_bw, peak_bw, stash_avg_bw, stash_peak_bw, total_peak_bw = 0;
 	unsigned int sv_port_num = 0;
 	bool is_smmu_enabled = true;
 	unsigned int strideLCM;
 
 	/* cqi */
 	avg_bw = peak_bw = to_qos_icc(CQ_BUF_SIZE * sensor_fps);
+	total_peak_bw += peak_bw;
 	job->sv_mmqos[SMI_PORT_SV_CQI].avg_bw += avg_bw;
 	job->sv_mmqos[SMI_PORT_SV_CQI].peak_bw += peak_bw;
 	if (CAM_DEBUG_ENABLED(MMQOS))
@@ -774,6 +776,7 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb);
 			peak_bw =
 				calc_bw(x_size * img_h, linet, sensor_h);
+			total_peak_bw += peak_bw;
 			if (ipifmt_is_raw_ufo(in->fmt.format)) {
 				/* compression ratio: 0.7x */
 				avg_bw = avg_bw * 7 / 10;
@@ -796,6 +799,7 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb);
 			peak_bw =
 				calc_bw(x_size * img_h, linet, sensor_h);
+			total_peak_bw += peak_bw;
 			if (avg_bw || peak_bw) {
 				/* stash */
 				strideLCM = LCM(x_size, 4096);
@@ -874,6 +878,8 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 				job->sv_mmqos[SMI_PORT_SV_WDMA_2].peak_bw,
 				job->sv_mmqos[SMI_PORT_SV_STG_2].peak_bw);
 	}
+
+	mtk_cam_sv_run_df_bw_update(sv_dev, total_peak_bw);
 
 	return 0;
 }

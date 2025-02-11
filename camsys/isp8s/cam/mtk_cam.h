@@ -33,6 +33,7 @@
 #include "mtk_cam-seninf-drv.h"
 #include "mtk_cam-seninf-if.h"
 #include "mtk_cam-sv.h"
+#include "mtk_cam-sv-df.h"
 
 #include "mtk_cam-bit_mapping.h"
 
@@ -353,6 +354,8 @@ struct mtk_cam_device {
 
 	struct mtk_bwr_device *bwr;
 	struct mtk_fmon_device fmon;
+
+	struct mtk_cam_sv_df_mgr sv_df_mgr;
 
 	/* shutdown flow */
 	wait_queue_head_t shutdown_wq;

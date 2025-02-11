@@ -13,11 +13,10 @@
 #include "mtk_cam-dvfs_qos.h"
 #include "mtk_cam-resource_calc.h"
 #include "mtk_cam-plat.h"
+#include "mtk_cam-sv-df.h"
 
 #define MAX_SV_HW_GROUPS 4
 #define CAMSV_IRQ_NUM 3
-#define MAX_SV_HW_NUM 6
-#define MAX_DMA_CORE 3
 
 enum SV_SMI_PORT_ID {
 	SMI_PORT0_SV_CQI = 0,
@@ -215,6 +214,8 @@ struct mtk_camsv_device {
 	struct engine_fsm fsm;
 	struct apply_cq_ref *cq_ref;
 
+	struct sv_df_action sv_df_action;
+
 	/* for preisp - for sof counter sync.*/
 	u64 sof_count;
 	int tg_cnt;
@@ -362,6 +363,13 @@ void mtk_cam_sv_backup(struct mtk_camsv_device *sv_dev);
 void mtk_cam_sv_restore(struct mtk_camsv_device *sv_dev);
 void mtk_cam_sv_exp_setup(struct mtk_camsv_device *sv_dev, int exp0_h, int exp1_h);
 int mtk_cam_sv_golden_set(struct mtk_camsv_device *sv_dev, bool is_golden_set);
+int mtk_cam_sv_df_config(struct mtk_camsv_device *sv_dev);
+int mtk_cam_sv_run_df_reset(struct mtk_camsv_device *sv_dev);
+int mtk_cam_sv_run_df_actions(struct mtk_camsv_device *sv_dev);
+int mtk_cam_sv_run_df_action_ack(struct mtk_camsv_device *sv_dev,
+		unsigned int top_status);
+int mtk_cam_sv_run_df_bw_update(struct mtk_camsv_device *sv_dev,
+		unsigned long long bw);
 int mtk_camsv_runtime_suspend(struct device *dev);
 int mtk_camsv_runtime_resume(struct device *dev);
 

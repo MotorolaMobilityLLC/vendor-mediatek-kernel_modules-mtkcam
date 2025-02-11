@@ -26,6 +26,8 @@ enum MTK_CAMSYS_IRQ_EVENT {
 	CAMSYS_IRQ_DEBUG_1,
 	/* ois compensation */
 	CAMSYS_IRQ_TUNING_UPDATE,
+	/* sv dynamic fifo */
+	CAMSYS_IRQ_DF,
 };
 
 enum MTK_CAMSYS_ENGINE_TYPE {
@@ -37,6 +39,7 @@ enum MTK_CAMSYS_ENGINE_TYPE {
 };
 
 struct mtk_camsys_irq_normal_data {
+	int status;
 };
 
 struct mtk_camsys_irq_error_data {

@@ -91,6 +91,7 @@ $(CAM_MODULE)-objs := \
     mtk_cam-sv.o \
     mtk_cam-pda.o \
     mtk_cam-sv_pipeline.o \
+    mtk_cam-sv-df.o \
     mtk_cam-mraw_pipeline.o \
     mtk_cam-tg-flash.o \
     mtk_cam-ctrl.o \
