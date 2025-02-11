@@ -37,7 +37,7 @@ $(info "imgsys, cmdq-isp8s subdir-ccflags-y = $(subdir-ccflags-y)")
 
 subdir-ccflags-y += -DMTK_IOVA_SINK2KERNEL
 subdir-ccflags-y += -DMTK_IOVA_NOTCHECK
-subdir-ccflags-y += -DMTK_ISC_SUPPORT
+#subdir-ccflags-y += -DMTK_ISC_SUPPORT
 
 #
 #  imgsys-cmdq
