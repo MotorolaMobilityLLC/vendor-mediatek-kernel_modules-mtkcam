@@ -33,6 +33,7 @@
 #include "imgsensor-glue/imgsensor-glue.h"
 #include "virt-sensor/virt-sensor-entry.h"
 #include "adaptor-fw-loader.h"
+#include "adaptor-core.h"
 
 #undef E
 #define E(__x__) (__x__##_entry)
@@ -1032,6 +1033,10 @@ static int imgsensor_set_stream(struct v4l2_subdev *sd, int enable)
 		return 0;
 	}
 
+	/* if AOV sensor mode, nofify adaptor core drv */
+	if (ctx->aov_mclk_ulposc_flag)
+		adaptor_drv_core_aov_sensor_notify(enable);
+
 	if (enable) {
 		/*
 		 * Apply default & customized values
@@ -2002,7 +2007,7 @@ static int __init adaptor_drv_init(void)
 	gSensor_num = 0;
 	is_multicam = 0;
 	is_imgsensor_fusion_test_workaround = 0;
-
+	adaptor_drv_core_init();
 	mtk_i3c_i2c_driver_register(&imgsensor_ixc_driver);
 
 	return 0;
@@ -2015,6 +2020,7 @@ static void __exit adaptor_drv_exit(void)
 	is_imgsensor_fusion_test_workaround = 0;
 
 	mtk_i3c_i2c_driver_unregister(&imgsensor_ixc_driver);
+	adaptor_drv_core_exit();
 }
 
 late_initcall(adaptor_drv_init);

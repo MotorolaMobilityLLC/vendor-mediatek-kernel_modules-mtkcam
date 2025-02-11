@@ -55,6 +55,7 @@ imgsensor_isp8s-objs += \
 	adaptor-trace.o \
 	adaptor-util.o \
 	adaptor-fw-loader.o \
+	adaptor-core.o \
 	common/generic_subdrv.o \
 
 define FILTER_DRV
