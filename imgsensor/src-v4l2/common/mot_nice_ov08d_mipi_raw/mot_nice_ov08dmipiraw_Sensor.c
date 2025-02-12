@@ -949,15 +949,22 @@ static int ov08d_streaming_on(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	LOG_INF("vsize = 0x%x\n", ((read_cmos_sensor_8(ctx, 0xa2) << 8) | read_cmos_sensor_8(ctx, 0xa3)));
 	LOG_INF("hszie = 0x%x\n", ((read_cmos_sensor_8(ctx, 0xa6) << 8) | read_cmos_sensor_8(ctx, 0xa7)));
 	write_cmos_sensor_8(ctx, 0xfd, 0x00);
-	write_cmos_sensor_8(ctx, 0x20, 0x0f);
+	write_cmos_sensor_8(ctx, 0x21, 0x0e);
+	write_cmos_sensor_8(ctx, 0x21, 0x00);
 
-	write_cmos_sensor_8(ctx, 0xe7, 0x03);
-	write_cmos_sensor_8(ctx, 0xe7, 0x00);
 	write_cmos_sensor_8(ctx, 0xfd, 0x01);
 	write_cmos_sensor_8(ctx, 0x01, 0x03);
 
 	write_cmos_sensor_8(ctx, 0xfd, 0x00);
-	write_cmos_sensor_8(ctx, 0xb6, 0x20);
+	write_cmos_sensor_8(ctx, 0x20, 0x0f);
+	write_cmos_sensor_8(ctx, 0xe7, 0x03);
+	write_cmos_sensor_8(ctx, 0xe7, 0x00);
+	write_cmos_sensor_8(ctx, 0xc2, 0x30);
+
+	write_cmos_sensor_8(ctx, 0xfd, 0x01);
+	write_cmos_sensor_8(ctx, 0x15, 0x01);
+
+	write_cmos_sensor_8(ctx, 0xfd, 0x00);
 	write_cmos_sensor_8(ctx, 0xa0, 0x01);
 	write_cmos_sensor_8(ctx, 0xfd, 0x01);
 	//write_cmos_sensor_8(ctx, 0x12, 0x01);
@@ -1115,11 +1122,12 @@ static int ov08d_streaming_off(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	}
 	LOG_INF("%s E\n", __func__);
 	write_cmos_sensor_8(ctx, 0xfd, 0x00);
-	write_cmos_sensor_8(ctx, 0x20, 0x0b);
-	write_cmos_sensor_8(ctx, 0xb6, 0x30);
 	write_cmos_sensor_8(ctx, 0xa0, 0x00);
+	write_cmos_sensor_8(ctx, 0x20, 0x0b);
 	write_cmos_sensor_8(ctx, 0xe7, 0x03);
 	write_cmos_sensor_8(ctx, 0xe7, 0x00);
+	write_cmos_sensor_8(ctx, 0xc2, 0x32);
+	write_cmos_sensor_8(ctx, 0x21, 0x0f);
 
 	write_cmos_sensor_8(ctx, 0xfd, 0x01);
 	LOG_INF("0xfd = 0x%x\n", read_cmos_sensor_8(ctx, 0xfd));
