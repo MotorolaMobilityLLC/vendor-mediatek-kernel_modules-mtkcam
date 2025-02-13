@@ -1924,11 +1924,11 @@ static struct subdrv_ops ops = {
 static struct subdrv_pw_seq_entry pw_seq[] = {
 	{HW_ID_MCLK, 24, 0},
 	{HW_ID_RST, 0, 0},
-	{HW_ID_DOVDD, 1800000, 2},
-	{HW_ID_DVDD, 1000000, 2},
-	{HW_ID_AVDD, 2200000, 1},
+	{HW_ID_DOVDD, 1800000, 7},
+	{HW_ID_DVDD, 1000000, 1},
+	{HW_ID_AVDD, 2200000, 4},
 	{HW_ID_MCLK_DRIVING_CURRENT, 6, 0},
-	{HW_ID_RST, 1, 13}
+	{HW_ID_RST, 1, 14}
 };
 
 const struct subdrv_entry mot_aito_s5kgn8_mipi_raw_entry = {
