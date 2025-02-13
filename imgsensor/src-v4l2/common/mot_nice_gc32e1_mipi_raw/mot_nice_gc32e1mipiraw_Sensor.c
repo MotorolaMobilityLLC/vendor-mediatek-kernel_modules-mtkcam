@@ -354,7 +354,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.ae_effective_frame = 2,
 	.frame_time_delay_frame = 2,
 #ifdef IMGSENSOR_FUSION_TEST_WORKAROUND
-	.start_exposure_offset_custom = 1000000,
+	.start_exposure_offset_custom = 1909000,
 #endif
 	.start_exposure_offset = 0,
 
