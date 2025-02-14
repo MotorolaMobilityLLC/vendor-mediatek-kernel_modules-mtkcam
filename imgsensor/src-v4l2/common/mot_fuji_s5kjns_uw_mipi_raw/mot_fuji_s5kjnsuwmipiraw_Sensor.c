@@ -36,6 +36,8 @@ static int s5kjns_uw_ops_close(struct subdrv_ctx *ctx);
 static int s5kjns_uw_streaming_off(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int s5kjns_uw_streaming_on(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 
+static bool streaming_status = false;
+
 #define ENABLE_S5KJNS_UW_PD TRUE
 #define ENABLE_S5KJNS_UW_60FPS_PD TRUE
 
@@ -904,21 +906,24 @@ static int s5kjns_uw_streaming_control(struct subdrv_ctx *ctx, kal_bool enable)
 	{
 		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_stream, 0x01);
 		mDELAY(10);
+		streaming_status = true;
 	}
 	else
 	{
-
-		for (i = 0; i < check_cnt; i++)
-		{
-			mDELAY(1);
-			framecnt = subdrv_i2c_rd_u8(ctx, 0x0005);
-			if(framecnt != 0xFF)
+		if(streaming_status == true){
+			for (i = 0; i < check_cnt; i++)
 			{
-				DRV_LOG_MUST(ctx,"last stream on OK at i=%d.\n", i);
-				break;
+				mDELAY(1);
+				framecnt = subdrv_i2c_rd_u8(ctx, 0x0005);
+				if(framecnt != 0xFF)
+				{
+					DRV_LOG_MUST(ctx,"last stream on OK at i=%d.\n", i);
+					break;
+				}
 			}
 		}
 
+		streaming_status = false;
 		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_stream, 0x00);
 		for (i = 0; i < timeout; i++)
 		{
