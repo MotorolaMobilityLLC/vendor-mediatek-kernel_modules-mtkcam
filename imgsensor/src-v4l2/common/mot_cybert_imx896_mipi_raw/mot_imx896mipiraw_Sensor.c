@@ -1047,7 +1047,7 @@ static struct subdrv_static_ctx static_ctx = {
 			{0x0218, 0x0219},
 	},
 	.reg_addr_frame_length = {0x0340, 0x0341},
-	.reg_addr_auto_extend = 0x0350,
+	.reg_addr_auto_extend = 0x0,
 	.reg_addr_frame_count = 0x0005,
 	.reg_addr_fast_mode = 0x3010,
 
