@@ -267,8 +267,19 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}
 	},
 	.iMirrorFlip = IMAGE_HV_MIRROR,
+	.i4FullRawW = 4096,
+	.i4FullRawH = 3072,
 	.i4ModeIndex = 3,
+	.i4VCPackNum = 1,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
+		.i4PDPattern = 1,
+		.i4BinFacX = 2,
+		.i4BinFacY = 4,
+		.i4PDOrder = {1},
+	},
 };
 
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
@@ -295,6 +306,14 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 	.i4FullRawH = 6144,
 	.i4ModeIndex = 3,
 	.i4VCPackNum = 1,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
+		.i4PDPattern = 1,
+		.i4BinFacX = 4,
+		.i4BinFacY = 2,
+		.i4PDOrder = {1},
+	},
 };
 
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus3_info = {
@@ -326,6 +345,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus3_info = {
 	/* VC's PD pattern description */
 	.sPDMapInfo[0] = {
 		.i4PDPattern = 3, //pair PD
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
 		.i4PDRepetition = 8,
 		.i4PDOrder = {1,0,0,1,1,0,0,1}, // R = 1, L = 0
 	},
