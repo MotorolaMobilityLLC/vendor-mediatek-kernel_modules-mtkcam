@@ -539,7 +539,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
 		{0, 0}, {0, 0}, {0, 384}, {0, 0}, {0, 0},
 		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
-		{0, 0}, {0, 384}, {0, 0}, {0, }, {0, 0},
+		{0, 0}, {0, 384}, {0, 0}, {0, 0}, {0, 0},
 		// <cust6> <cust7> <cust8> cust9 cust10
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		// cust11 cust12 cust13 <cust14> <cust15>
@@ -585,7 +585,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus5_info = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
-		{0, 0}, {0, 0}, {0, 0}, {0, }, {0, 0},
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		// <cust6> <cust7> <cust8> cust9 cust10
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		// cust11 cust12 cust13 <cust14> <cust15>
@@ -630,7 +630,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus6_info = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
-		{0, 0}, {0, 0}, {0, 0}, {0, }, {0, 0},
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		// <cust6> <cust7> <cust8> cust9 cust10
 		{2048, 1536}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		// cust11 cust12 cust13 <cust14> <cust15>
@@ -675,7 +675,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_vid_info = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
 		{0, 0}, {0, 0}, {0, 384}, {0, 0}, {0, 0},
 		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
-		{0, 0}, {0, 384}, {0, 0}, {0, }, {0, 0},
+		{0, 0}, {0, 384}, {0, 0}, {0, 384}, {0, 0},
 		// <cust6> <cust7> <cust8> cust9 cust10
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		// cust11 cust12 cust13 <cust14> <cust15>
@@ -1268,7 +1268,7 @@ static struct subdrv_static_ctx static_ov_ctx = {
 	.frame_length_max = 0xFFFF,
 	.ae_effective_frame = 2,
 	.frame_time_delay_frame = 2,
-	.start_exposure_offset = 500000,    // CTS sensor fusion test
+	.start_exposure_offset = 1614400,    // CTS sensor fusion test
 	.pdaf_type = PDAF_SUPPORT_CAMSV_QPD,
 	.hdr_type = HDR_SUPPORT_DCG,
 	.seamless_switch_support = TRUE,
@@ -1870,7 +1870,7 @@ static struct subdrv_static_ctx static_qt_ctx = {
 	.frame_length_max = 0xFFFF,
 	.ae_effective_frame = 2,
 	.frame_time_delay_frame = 2,
-	.start_exposure_offset = 500000,    // CTS sensor fusion test
+	.start_exposure_offset = 1659400,    // CTS sensor fusion test
 	.pdaf_type = PDAF_SUPPORT_CAMSV_QPD,
 	.hdr_type = HDR_SUPPORT_DCG,
 	.seamless_switch_support = TRUE,
