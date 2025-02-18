@@ -52,6 +52,7 @@
 #define MOD_BIT_OFST									(3)
 #define QOF_SUPPORT_SMI_GCE_CALLBACK					(1)
 #define QOF_ERROR_CODE									(0xdead)
+#define QOF_TIMEOUT_RETRY_CNT							(2)
 /* func */
 #define IS_MOD_SUPPORT_QOF(m)		(((m < QOF_TOTAL_MODULE)) && ((g_qof_ver & BIT(m)) == BIT(m)))
 #define IS_CON_PWR_ON(val)			((val & (BIT(30)|BIT(31))) == (BIT(30)|BIT(31)) ? TRUE:FALSE)
@@ -530,6 +531,7 @@ bool qof_smi_cb_power_on(void)
 {
 	struct cmdq_client *pwr_clt = smi_cb_pwr_ctl;
 	bool ret = true;
+	u8 retry_cnt = 0;
 
 	if ((g_qof_work_buf_va == NULL) || (*g_qof_work_buf_va == NULL) || (pwr_clt == NULL)) {
 		QOF_LOGE("smi get_if_in_use hang!!!! param wrong[%u/%u]\n",
@@ -538,14 +540,22 @@ bool qof_smi_cb_power_on(void)
 		return false;
 	}
 	if (**((unsigned int **)g_qof_work_buf_va) == 1) {
-		cmdq_set_event(pwr_clt->chan, CMDQ_SW_EVENT_QOF_SMI_SW_EVENT);
-		ret = qof_poll_smi_hsk_timeout(TIMEOUT_2000US);
+		while (retry_cnt <= QOF_TIMEOUT_RETRY_CNT) {
+			cmdq_set_event(pwr_clt->chan, CMDQ_SW_EVENT_QOF_SMI_SW_EVENT);
+			ret = qof_poll_smi_hsk_timeout(TIMEOUT_2000US);
+			if (ret == true)
+				break;
+			retry_cnt++;
+			QOF_LOGE("smi timeout! retry %d times\n", retry_cnt);
+		}
 		cmdq_clear_event(pwr_clt->chan, CMDQ_SW_EVENT_QOF_SMI_CB_HSK);
 		write_mask(QOF_GET_REMAP_ADDR(QOF_SPARE_REG_FOOTPRINT), 0, 0xffffffff);
 	}
-	QOF_LOGI("mem_cnt=%u, HANDSHAKE=%u, ret=%u",
+	QOF_LOGI("mem_cnt=%u, HANDSHAKE=%u, ret=%u, retry_cnt=%u\n",
 		**((unsigned int **)g_qof_work_buf_va),
-		cmdq_get_event(pwr_clt->chan, CMDQ_SW_EVENT_QOF_SMI_CB_HSK), ret);
+		cmdq_get_event(pwr_clt->chan, CMDQ_SW_EVENT_QOF_SMI_CB_HSK),
+		ret,
+		retry_cnt);
 	return ret;
 }
 
@@ -554,6 +564,7 @@ bool qof_smi_cb_power_off(u32 user)
 	struct cmdq_client *pwr_clt = smi_cb_pwr_ctl;
 	bool ret = true;
 	u32 pwr = 0;
+	u8 retry_cnt = 0;
 
 	if ((g_qof_work_buf_va == NULL) || (*g_qof_work_buf_va == NULL) || (pwr_clt == NULL)) {
 		QOF_LOGE("smi get_if_in_use hang!!!! param wrong[%u/%u]\n",
@@ -575,8 +586,14 @@ bool qof_smi_cb_power_off(u32 user)
 				qof_module_vote_sub(NULL, pwr, QOF_USER_AP);
 			break;
 		case QOF_USER_GCE:
-			cmdq_set_event(pwr_clt->chan, CMDQ_SW_EVENT_QOF_SMI_SW_EVENT);
-			ret = qof_poll_smi_hsk_timeout(TIMEOUT_2000US);
+			while (retry_cnt <= QOF_TIMEOUT_RETRY_CNT) {
+				cmdq_set_event(pwr_clt->chan, CMDQ_SW_EVENT_QOF_SMI_SW_EVENT);
+				ret = qof_poll_smi_hsk_timeout(TIMEOUT_2000US);
+				if (ret == true)
+					break;
+				retry_cnt++;
+				QOF_LOGE("smi timeout! retry %d times\n", retry_cnt);
+			}
 			cmdq_clear_event(pwr_clt->chan, CMDQ_SW_EVENT_QOF_SMI_CB_HSK);
 			write_mask(QOF_GET_REMAP_ADDR(QOF_SPARE_REG_FOOTPRINT), 0, 0xffffffff);
 			break;
