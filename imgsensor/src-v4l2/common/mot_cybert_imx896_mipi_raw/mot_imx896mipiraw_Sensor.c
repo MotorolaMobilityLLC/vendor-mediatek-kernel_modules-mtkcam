@@ -936,7 +936,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.readout_length = 3115 * 2,   //(85+6143+1)/2
 		.read_margin = 24 * 2,         //24*2
 		.framelength_step = 4 * 2,		// multiple of 4 for 2DOL
-		.coarse_integ_step = 2 * 2,		// multiple of 4 for 2DOL
+		.coarse_integ_step = 4 * 2,		// multiple of 4 for 2DOL
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4*2,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4*2,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 0x3FFF*2,
@@ -1519,7 +1519,7 @@ static int imx896_set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[1].addr[0],
 							   (rg_shutters[i] >> 8) & 0xFF);
 				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[1].addr[1],
-							   rg_shutters[i] & 0xFC);
+							   rg_shutters[i] & 0xFF);
 
 			} else {
 			        if(exp_cnt == 2)
@@ -1528,7 +1528,7 @@ static int imx896_set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 					set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[0],
 							   (rg_shutters[i] >> 8) & 0xFF);
 					set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[1],
-							   rg_shutters[i] & 0xFC);
+							   rg_shutters[i] & 0xFF);
 				} else {
 					set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[0],
 							   (rg_shutters[i] >> 8) & 0xFF);

@@ -1342,22 +1342,14 @@ void set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[1].addr[0],
 							   (rg_shutters[i] >> 8) & 0xFF);
 				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[1].addr[1],
-							   rg_shutters[i] & 0xFC);
+							   rg_shutters[i] & 0xFF);
 
 			} else {
-			        if(exp_cnt == 2)
-			        {
-					// set shutter for 1st frame exp
-					set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[0],
+
+				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[0],
 							   (rg_shutters[i] >> 8) & 0xFF);
-					set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[1],
-							   rg_shutters[i] & 0xFC);
-				} else {
-					set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[0],
-							   (rg_shutters[i] >> 8) & 0xFF);
-					set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[1],
+				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[1],
 							   rg_shutters[i] & 0xFF);
-				}
 			}
 		}
 	}
