@@ -1042,8 +1042,8 @@ void set_max_framerate(struct subdrv_ctx *ctx, u16 framerate, bool min_frameleng
 						ctx->current_scenario_id, dcg_lut_id);
 		u32 vs_linelength = get_lut_static_info(ctx, u32, linelength,
 						ctx->current_scenario_id, vs_lut_id);
-		u64 dcg_linetime_ns = (u64)dcg_linelength * 1000000000 / dcg_pclk;
-		u64 vs_linetime_ns = (u64)vs_linelength * 1000000000 / vs_pclk;
+		u64 dcg_linetime_ns = (u64)dcg_linelength * 1000000000 / (dcg_pclk ? dcg_pclk : 1);
+		u64 vs_linetime_ns = (u64)vs_linelength * 1000000000 / (vs_pclk ? vs_pclk : 1);
 
 		switch (ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt) {
 		case 3:  /* DCG + VS */
@@ -1220,8 +1220,8 @@ void set_max_framerate_base100(struct subdrv_ctx *ctx, u16 framerate, bool min_f
 						ctx->current_scenario_id, dcg_lut_id);
 		u32 vs_linelength = get_lut_static_info(ctx, u32, linelength,
 						ctx->current_scenario_id, vs_lut_id);
-		u64 dcg_linetime_ns = (u64)dcg_linelength * 1000000000 / dcg_pclk;
-		u64 vs_linetime_ns = (u64)vs_linelength * 1000000000 / vs_pclk;
+		u64 dcg_linetime_ns = (u64)dcg_linelength * 1000000000 / (dcg_pclk ? dcg_pclk : 1);
+		u64 vs_linetime_ns = (u64)vs_linelength * 1000000000 / (vs_pclk ? vs_pclk : 1);
 
 		switch (ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt) {
 		case 3: /* DCG + VS */
@@ -1762,8 +1762,8 @@ void set_dcg_vs_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 					scenario_id, dcg_lut_id);
 	u32 vs_fl_step = get_lut_static_info(ctx, u32, framelength_step,
 					scenario_id, vs_lut_id);
-	u64 dcg_linetime_ns = (u64)dcg_linelength * 1000000000 / dcg_pclk;
-	u64 vs_linetime_ns = (u64)vs_linelength * 1000000000 / vs_pclk;
+	u64 dcg_linetime_ns = (u64)dcg_linelength * 1000000000 / (dcg_pclk ? dcg_pclk : 1);
+	u64 vs_linetime_ns = (u64)vs_linelength * 1000000000 / (vs_pclk ? vs_pclk : 1);
 	u64 frame_time_ns, lut_0_ft_ns;
 
 	/* set default frame length if given default framerate */
@@ -2703,7 +2703,7 @@ void set_dcg_vs_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 						ctx->current_scenario_id, lut_id);
 		lut_linelength = get_lut_static_info(ctx, u32, linelength,
 						ctx->current_scenario_id, lut_id);
-		linetime_ns_in_lut[i] = (u64)lut_linelength * 1000000000 / lut_pclk;
+		linetime_ns_in_lut[i] = (u64)lut_linelength * 1000000000 / (lut_pclk ? lut_pclk : 1);
 
 		DRV_LOG_MUST(ctx,
 			"sid:%u,exp[%d]:dcg_expid:%d,fil/cit_step/lut/fll_step/exp_min/exp_max/readout_len/read_mar/exp_mar/pclk/llen/lt_ns:%d/%u/%u/%u/%llu/%llu/%u/%u/%u/%llu/%u/%llu\n",
