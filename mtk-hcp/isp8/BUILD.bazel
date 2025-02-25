@@ -26,6 +26,13 @@ filegroup(
         "Makefile",
     ],
 )
+
+ddk_headers(
+    name = "ddk_public_headers",
+    includes = ["."],
+    hdrs = glob(["**/*.h"]), # export all headers for other modules to use
+)
+
 # DDK conversion
 define_mgk_ddk_ko(
     name = "mtk-hcp-isp8",
@@ -36,9 +43,12 @@ define_mgk_ddk_ko(
         "mtk-hcp_log.c",
         "platform/mtk-hcp_isp8_plat_f.c",
         "platform/mtk-hcp_isp8_plat_p.c"
-    ]+glob(["**/*.h"]),
+    ],
 
     includes = [".", "platform"],
+
+    # export all headers for other modules to use
+    hdrs = glob(["**/*.h"]),
 
     ko_deps = [
         "//kernel_device_modules-{}/drivers/misc/mediatek/iommu:mtk_iommu_util".format(kernel_version),

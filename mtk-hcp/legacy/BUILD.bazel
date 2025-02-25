@@ -28,6 +28,12 @@ filegroup(
     ],
 )
 
+ddk_headers(
+    name = "ddk_public_headers",
+    includes = ["."],
+    hdrs = glob(["**/*.h"]), # export all headers for other modules to use
+)
+
 # DDK conversion
 define_mgk_ddk_ko(
     name = "mtk-hcp",
@@ -37,7 +43,7 @@ define_mgk_ddk_ko(
         "mtk-hcp_isp7s.c",
         "mtk-hcp_kernelfence.c",
         "mtk-hcp_isp7sp.c"
-    ]+glob(["**/*.h"]),
+    ],
 
     # to include out-of-tree non-DDK modules headers
     ko_deps = [
@@ -61,14 +67,17 @@ define_mgk_ddk_ko(
     # define the header search path under this module folder for this and dependent modules
     includes = ["."],
 
+    # export all headers for other modules to use
+    hdrs = glob(["**/*.h"]),
+
     # add headers' path under non-DDK device module folder
     copts = [
         # "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/mtk-interconnect/",
         "-I$(srctree)/include/media",
-        # "-I$(DEVICE_MODULES_PATH)/drivers/staging/android/mtk_ion/", # not seen in this branch
-        # "-I$(DEVICE_MODULES_PATH)/drivers/staging/android/mtk_ion/mtk/", # not seen in this branch
-        # "-I$(DEVICE_MODULES_PATH)/drivers/staging/android/aosp_ion/", # not seen in this branch
-        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/mt-plat/$(MTK_PLATFORM)/include/", # not seen in this branch
+        # "-I$(DEVICE_MODULES_PATH)/drivers/staging/android/mtk_ion/",
+        # "-I$(DEVICE_MODULES_PATH)/drivers/staging/android/mtk_ion/mtk/",
+        # "-I$(DEVICE_MODULES_PATH)/drivers/staging/android/aosp_ion/",
+        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/mt-plat/$(MTK_PLATFORM)/include/",
         "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/mt-plat/",
         "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/",
         # "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/slbc/",  # become ddk
