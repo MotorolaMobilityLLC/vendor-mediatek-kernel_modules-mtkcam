@@ -26,7 +26,7 @@ static struct STRUCT_CALIBRATION_LAYOUT_STRUCT cal_layout_table = {
 		{0x00000001, 0x00000001, 0x00000002, do_part_number},
 		{0x00000001, 0x00000791, 0x0000074C, do_single_lsc_s5kjn1},
 		{0x00000001, 0x00000007, 0x0000000E, do_2a_gain_s5kjn1},
-		{0x00000001, 0x00000820, 0x000005F9, do_pdaf},
+		{0x00000001, 0x00001311, 0x000005F9, do_pdaf},
 		{0x00000000, 0x00000000, 0x00000000, do_stereo_data},
 		{0x00000001, 0x00000000, 0x00008000, do_dump_all},
 		{0x00000001, 0x00000000, 0x00000000, do_lens_id_s5kjn1}
