@@ -27,11 +27,11 @@ define_mgk_ddk_ko(
         "{}/drivers/misc/mediatek/scp/rv:scp".format(kernel_path),
         "{}/drivers/misc/mediatek/slbc:mtk_slbc".format(kernel_path),
         "{}/drivers/misc/mediatek/smi:mtk-smi-dbg".format(kernel_path),
-        "{}/drivers/misc/mediatek/vmm:mtk-vmm-notifier-mt6991".format(kernel_path),
-        "{}/drivers/misc/mediatek/vmm:mtk-vmm-notifier-mt6993".format(kernel_path),
         "{}/drivers/soc/mediatek:mtk_tinysys_ipi".format(kernel_path),
         "{}/drivers/soc/mediatek:mtk-mmdvfs".format(kernel_path),
-    ],
+    ] +
+    (["{}/drivers/misc/mediatek/vmm:mtk-vmm-notifier-mt6991".format(kernel_path)] if glob([".flag.mt6991"]) else []) +
+    (["{}/drivers/misc/mediatek/vmm:mtk-vmm-notifier-mt6993".format(kernel_path)] if glob([".flag.mt6993"]) else []),
     header_deps = [
         "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",
         "{}/drivers/misc/mediatek/geniezone:gz-public_hdrs".format(kernel_path),
