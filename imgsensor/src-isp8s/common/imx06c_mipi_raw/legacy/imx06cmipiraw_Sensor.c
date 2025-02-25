@@ -6815,7 +6815,7 @@ static int imx06c_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	subdrv_i2c_wr_u8(ctx, 0x0104, 0x01);
 	subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_fast_mode, 0x02);
 
-	update_mode_info(ctx, scenario_id);
+	update_mode_info_seamless_switch(ctx, scenario_id);
 	i2c_table_write(ctx,
 		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_table,
 		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_len);

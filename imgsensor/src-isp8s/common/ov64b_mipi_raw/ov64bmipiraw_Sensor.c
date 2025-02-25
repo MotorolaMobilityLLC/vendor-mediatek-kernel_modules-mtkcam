@@ -202,7 +202,8 @@ static int ov64b_set_max_framerate_by_scenario(struct subdrv_ctx *ctx, u8 *para,
 	ctx->frame_length =
 		max(frame_length, ctx->s_ctx.mode[scenario_id].framelength);
 	ctx->frame_length = min(ctx->frame_length, ctx->s_ctx.frame_length_max);
-	ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+	ctx->current_fps = ctx->s_ctx.mode[scenario_id].pclk / ctx->frame_length * 10
+		/ ctx->s_ctx.mode[scenario_id].linelength;
 	ctx->min_frame_length = ctx->frame_length;
 	DRV_LOG(ctx, "max_fps(input/output):%u/%u(sid:%u), frame_length:%u, calc_fl:%u, min_fl_en:1\n",
 		framerate, ctx->current_fps, scenario_id, ctx->frame_length, calc_fl);
@@ -263,7 +264,7 @@ static int ov64b_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	scen2_hdr = ctx->s_ctx.mode[scenario_id].hdr_mode;
 	exp_cnt = ctx->s_ctx.mode[scenario_id].exp_cnt;
 	ctx->is_seamless = TRUE;
-	update_mode_info(ctx, scenario_id);
+	update_mode_info_seamless_switch(ctx, scenario_id);
 
 	set_table_to_buffer(ctx, isf_addr_data_pair_seamless_switch_step1_ov64b,
 		ARRAY_SIZE(isf_addr_data_pair_seamless_switch_step1_ov64b));

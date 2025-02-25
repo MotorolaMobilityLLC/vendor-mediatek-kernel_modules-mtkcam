@@ -245,6 +245,7 @@ void common_get_prsh_length_lines(struct subdrv_ctx *ctx,
 int common_get_resolution(struct subdrv_ctx *ctx,
 	MSDK_SENSOR_RESOLUTION_INFO_STRUCT *sensor_resolution);
 void update_mode_info(struct subdrv_ctx *ctx, enum SENSOR_SCENARIO_ID_ENUM scenario_id);
+void update_mode_info_seamless_switch(struct subdrv_ctx *ctx, enum SENSOR_SCENARIO_ID_ENUM scenario_id);
 bool check_is_no_crop(struct subdrv_ctx *ctx, enum SENSOR_SCENARIO_ID_ENUM scenario_id);
 int common_control(struct subdrv_ctx *ctx,
 	enum SENSOR_SCENARIO_ID_ENUM scenario_id,

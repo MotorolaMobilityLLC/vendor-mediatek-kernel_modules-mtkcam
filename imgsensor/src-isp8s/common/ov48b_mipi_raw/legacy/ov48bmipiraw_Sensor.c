@@ -2130,7 +2130,7 @@ static int ov48b_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	}
 
 	ctx->is_seamless = TRUE;
-	update_mode_info(ctx, scenario_id);
+	update_mode_info_seamless_switch(ctx, scenario_id);
 
 	set_table_to_buffer(ctx, addr_data_pair_seamless_switch_step1_ov48b2q,
 		ARRAY_SIZE(addr_data_pair_seamless_switch_step1_ov48b2q));

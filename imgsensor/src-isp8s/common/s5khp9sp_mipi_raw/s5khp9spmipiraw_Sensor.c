@@ -2636,7 +2636,7 @@ static int s5khp9sp_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 		ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_LBMF))
 		subdrv_ixc_wr_u8(ctx, ctx->s_ctx.reg_addr_fast_mode_in_lbmf, 0x4);
 
-	update_mode_info(ctx, scenario_id);
+	update_mode_info_seamless_switch(ctx, scenario_id);
 	ixc_table_write(ctx,
 		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_table,
 		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_len);

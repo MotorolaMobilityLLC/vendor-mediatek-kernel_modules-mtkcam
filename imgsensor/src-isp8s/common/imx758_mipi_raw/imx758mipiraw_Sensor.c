@@ -196,7 +196,7 @@ static int imx758_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 
 	exp_cnt = ctx->s_ctx.mode[scenario_id].exp_cnt;
 	ctx->is_seamless = TRUE;
-	update_mode_info(ctx, scenario_id);
+	update_mode_info_seamless_switch(ctx, scenario_id);
 
 	set_i2c_buffer(ctx, 0x0104, 0x01);
 	set_i2c_buffer(ctx, 0x3010, 0x02);

@@ -507,7 +507,7 @@ static int s5khp3sp_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	}
 
 	ctx->is_seamless = TRUE;
-	update_mode_info(ctx, scenario_id);
+	update_mode_info_seamless_switch(ctx, scenario_id);
 
 	subdrv_i2c_wr_u8(ctx, 0x0104, 0x01);
 	subdrv_i2c_wr_u8(ctx, 0x0b30, 0x01);

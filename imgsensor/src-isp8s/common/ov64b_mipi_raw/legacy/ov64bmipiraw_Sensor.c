@@ -1349,7 +1349,7 @@ static int ov64b_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	scen2_hdr = ctx->s_ctx.mode[scenario_id].hdr_mode;
 	exp_cnt = ctx->s_ctx.mode[scenario_id].exp_cnt;
 	ctx->is_seamless = TRUE;
-	update_mode_info(ctx, scenario_id);
+	update_mode_info_seamless_switch(ctx, scenario_id);
 
 	set_table_to_buffer(ctx, addr_data_pair_seamless_switch_step1_ov64b,
 		ARRAY_SIZE(addr_data_pair_seamless_switch_step1_ov64b));

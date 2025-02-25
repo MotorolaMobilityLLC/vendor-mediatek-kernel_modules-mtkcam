@@ -1429,20 +1429,18 @@ void set_max_framerate_by_scenario(struct subdrv_ctx *ctx,
 	if (framerate == ctx->s_ctx.mode[scenario_id].max_framerate)
 		ctx->frame_length = ctx->s_ctx.mode[scenario_id].framelength;
 
-	ctx->current_fps = ctx->s_ctx.mode[scenario_id].pclk /
-						ctx->frame_length * 10 /
-						ctx->s_ctx.mode[scenario_id].linelength;
-
 	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
 		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
 			ctx->current_scenario_id, &linetime_in_ns, 0);
 		ctx->current_fps = 1000000000 / linetime_in_ns / ctx->frame_length * 10;
 	} else {
-		ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+		ctx->current_fps = ctx->s_ctx.mode[scenario_id].pclk /
+				ctx->frame_length * 10 /
+				ctx->s_ctx.mode[scenario_id].linelength;
 	}
 
 	ctx->min_frame_length = ctx->frame_length;
-	DRV_LOG(ctx, "max_fps(input/output):%u/%u(sid:%u), min_fl_en:1, ctx->frame_length:%u\n",
+	DRV_LOG_MUST(ctx, "max_fps(input/output):%u/%u(sid:%u), min_fl_en:1, ctx->frame_length:%u\n",
 		framerate, ctx->current_fps, scenario_id, ctx->frame_length);
 	if (ctx->s_ctx.reg_addr_auto_extend ||
 			(ctx->frame_length >
@@ -1679,7 +1677,9 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 				ctx->current_scenario_id, &linetime_in_ns, 0);
 			ctx->current_fps = 1000000000 / linetime_in_ns / ctx->frame_length * 10;
 		} else {
-			ctx->current_fps = ctx->pclk / ctx->frame_length * 10 / ctx->line_length;
+			ctx->current_fps = ctx->s_ctx.mode[scenario_id].pclk /
+							ctx->frame_length * 10 /
+							ctx->s_ctx.mode[scenario_id].linelength;
 		}
 
 		ctx->min_frame_length = ctx->frame_length;
@@ -5453,6 +5453,83 @@ void update_mode_info(struct subdrv_ctx *ctx, enum SENSOR_SCENARIO_ID_ENUM scena
 		ctx->current_fps = 1000000000 / linetime_in_ns * 10 / ctx->frame_length;
 	} else {
 		ctx->current_fps = ctx->pclk / ctx->line_length * 10 / ctx->frame_length;
+	}
+
+	ctx->readout_length = ctx->s_ctx.mode[scenario_id].readout_length;
+	ctx->read_margin = ctx->s_ctx.mode[scenario_id].read_margin;
+	ctx->min_frame_length = ctx->frame_length;
+	ctx->margin = ctx->s_ctx.mode[scenario_id].exposure_margin;
+	ctx->autoflicker_en = FALSE;
+	ctx->l_shift = 0;
+	ctx->min_vblanking_line = ctx->s_ctx.mode[scenario_id].min_vblanking_line;
+	if (ctx->s_ctx.mode[scenario_id].hdr_mode == HDR_RAW_LBMF) {
+		memset(ctx->frame_length_in_lut, 0,
+			sizeof(ctx->frame_length_in_lut));
+
+		switch (ctx->s_ctx.mode[scenario_id].exp_cnt) {
+		case 2:
+			ctx->frame_length_in_lut[0] = ctx->readout_length + ctx->read_margin;
+			ctx->frame_length_in_lut[1] = ctx->frame_length -
+				ctx->frame_length_in_lut[0];
+			break;
+		case 3:
+			ctx->frame_length_in_lut[0] = ctx->readout_length + ctx->read_margin;
+			ctx->frame_length_in_lut[1] = ctx->readout_length + ctx->read_margin;
+			ctx->frame_length_in_lut[2] = ctx->frame_length -
+				ctx->frame_length_in_lut[1] - ctx->frame_length_in_lut[0];
+			break;
+		default:
+			break;
+		}
+		memcpy(ctx->frame_length_in_lut_rg, ctx->frame_length_in_lut,
+			sizeof(ctx->frame_length_in_lut_rg));
+	}
+
+	/* MCSS low power mode update para */
+	if (ctx->s_ctx.mcss_update_subdrv_para != NULL)
+		ctx->s_ctx.mcss_update_subdrv_para((void *) ctx, scenario_id);
+}
+
+/* This function is used for updating the sensor mode info when seamless_switch
+ * Unlike `update_mode_info`, `current_fps` will continue from the previous mode.
+ */
+void update_mode_info_seamless_switch(struct subdrv_ctx *ctx, enum SENSOR_SCENARIO_ID_ENUM scenario_id)
+{
+	u32 linetime_in_ns = 0;
+
+	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
+		DRV_LOGE(ctx, "invalid sid:%u, mode_num:%u\n",
+			scenario_id, ctx->s_ctx.sensor_mode_num);
+		return;
+	}
+	ctx->current_scenario_id = scenario_id;
+	ctx->pclk = ctx->s_ctx.mode[scenario_id].pclk;
+	ctx->line_length = ctx->s_ctx.mode[scenario_id].linelength;
+
+	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0);
+	}
+	if (ctx->current_fps <= ctx->s_ctx.mode[scenario_id].max_framerate) {
+		//ctx->frame_length = 1 / ctx->current_fps  * 10 * ctx->pclk / ctx->line_length;
+		ctx->frame_length = linetime_in_ns
+				? 1000000000 / linetime_in_ns / (ctx->current_fps / 10)
+				:ctx->pclk / ctx->line_length / (ctx->current_fps / 10);
+		ctx->frame_length_rg = ctx->frame_length;
+		DRV_LOG_MUST(ctx,
+			"sid:%u, keep previous fps:%u, frame_length:%u, linetime_in_ns:%u, pclk:%llu, line_length:%u\n",
+			scenario_id,  ctx->current_fps,
+			ctx->frame_length, linetime_in_ns, ctx->pclk, ctx->line_length);
+	} else {
+		ctx->frame_length = ctx->s_ctx.mode[scenario_id].framelength;
+		ctx->frame_length_rg = ctx->frame_length;
+		ctx->current_fps = linetime_in_ns
+				?1000000000 / linetime_in_ns * 10 / ctx->frame_length
+				:ctx->pclk / ctx->line_length * 10 / ctx->frame_length;
+		DRV_LOG_MUST(ctx,
+				"sid:%u, use max fps:%u, frame_length:%u, linetime_in_ns:%u, pclk:%llu, line_length:%u\n",
+				scenario_id,  ctx->current_fps,
+				ctx->frame_length, linetime_in_ns, ctx->pclk, ctx->line_length);
 	}
 
 	ctx->readout_length = ctx->s_ctx.mode[scenario_id].readout_length;
