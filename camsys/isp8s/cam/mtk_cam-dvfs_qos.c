@@ -737,7 +737,6 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 	u64 pd_avg_bw, pd_peak_bw;
 	unsigned int sv_port_num = 0;
 	bool is_smmu_enabled = true;
-	unsigned int strideLCM;
 
 	/* cqi */
 	avg_bw = peak_bw = to_qos_icc(CQ_BUF_SIZE * sensor_fps);
@@ -793,9 +792,7 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 					}
 
 					/* stash */
-					strideLCM = LCM(x_size, 4096);
-					stash_peak_bw = stash_avg_bw =
-						img_h / (strideLCM/x_size) * 16 * (u64)sensor_fps;
+					stash_peak_bw = stash_avg_bw = x_size * img_h / 4096 * 16 * (u64)sensor_fps;
 					stash_peak_bw = stash_avg_bw = to_qos_icc(stash_avg_bw);
 				}
 			}
@@ -814,8 +811,7 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 				}
 
 				/* stash */
-				strideLCM = LCM(x_size, 4096);
-				stash_peak_bw = stash_avg_bw = img_h / (strideLCM/x_size) * 16 * (u64)sensor_fps;
+				stash_peak_bw = stash_avg_bw = x_size * img_h / 4096 * 16 * (u64)sensor_fps;
 				stash_peak_bw = stash_avg_bw = to_qos_icc(stash_avg_bw);
 			}
 
@@ -900,6 +896,8 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 				job->sv_mmqos[SMI_PORT_SV_STG_1].peak_bw,
 				job->sv_mmqos[SMI_PORT_SV_WDMA_2].peak_bw,
 				job->sv_mmqos[SMI_PORT_SV_STG_2].peak_bw);
+
+		fp->camsv_param[0][i].peak_bw = peak_bw;
 	}
 
 	mtk_cam_sv_run_df_bw_update(sv_dev, total_peak_bw);
@@ -1200,8 +1198,7 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 			fifo_len_p2 = fifo_img_p2 / 80;
 
 			mtk_cam_sv_dmao_common_config(sv_dev, fifo_img_p1, fifo_img_p2, fifo_img_p3,
-				fifo_len_p1, fifo_len_p2, fifo_len_p3, get_sensor_fps(job), sv_peak_bw_w,
-				get_sensor_w(job), get_sensor_h(job), job->enabled_tags);
+				fifo_len_p1, fifo_len_p2, fifo_len_p3);
 
 			/* apply golden setting */
 			mtk_cam_sv_golden_set(sv_dev, is_dc_mode(job) ? true : false);

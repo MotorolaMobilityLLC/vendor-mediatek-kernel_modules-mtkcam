@@ -5331,6 +5331,7 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 					pipe->res_config.tg_crop = v4l2_rect_to_ipi_crop(&sink->crop);
 					atomic_set(&pipe->res_config.is_fmt_change, 1);
 				}
+				sv_input->fps = get_sensor_fps(job);
 			}
 		}
 	}
@@ -5365,6 +5366,7 @@ static int mtk_cam_job_fill_ipi_config_only_sv(struct mtk_cam_job *job,
 			sv_input->is_early_return =
 				(sv_pipe && sv_pipe->ctrl_data.is_buf_early_return) ? 1 : 0;
 			sv_input->input = job->ipi_config.sv_input[0][i].input;
+			sv_input->fps = get_sensor_fps(job);
 		}
 	}
 
