@@ -3943,7 +3943,6 @@ void mtk_cam_ctx_engine_enable_irq(struct mtk_cam_ctx *ctx)
 {
 	struct mtk_raw_device *raw_dev;
 	struct mtk_camsv_device *sv_dev;
-	struct mtk_pda_device *pda_dev;
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
@@ -3958,21 +3957,12 @@ void mtk_cam_ctx_engine_enable_irq(struct mtk_cam_ctx *ctx)
 		for (i = 0; i < ARRAY_SIZE(sv_dev->irq); i++)
 			enable_irq(sv_dev->irq[i]);
 	}
-
-	for (i = 0; i < ARRAY_SIZE(ctx->hw_pda); i++) {
-		if (ctx->hw_pda[i]) {
-			pda_dev = dev_get_drvdata(ctx->hw_pda[i]);
-			for (i = 0; i < ARRAY_SIZE(pda_dev->irq); i++)
-				enable_irq(pda_dev->irq[i]);
-		}
-	}
 }
 
 void mtk_cam_ctx_engine_disable_irq(struct mtk_cam_ctx *ctx)
 {
 	struct mtk_raw_device *raw_dev;
 	struct mtk_camsv_device *sv_dev;
-	struct mtk_pda_device *pda_dev;
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
@@ -3986,14 +3976,6 @@ void mtk_cam_ctx_engine_disable_irq(struct mtk_cam_ctx *ctx)
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
 		for (i = 0; i < ARRAY_SIZE(sv_dev->irq); i++)
 			disable_irq(sv_dev->irq[i]);
-	}
-
-	for (i = 0; i < ARRAY_SIZE(ctx->hw_pda); i++) {
-		if (ctx->hw_pda[i]) {
-			pda_dev = dev_get_drvdata(ctx->hw_pda[i]);
-			for (i = 0; i < ARRAY_SIZE(pda_dev->irq); i++)
-				disable_irq(pda_dev->irq[i]);
-		}
 	}
 }
 
