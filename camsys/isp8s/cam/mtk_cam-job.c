@@ -5699,6 +5699,10 @@ static int update_raw_image_buf_to_ipi_frame(struct req_buffer_helper *helper,
 		if (job_helper->update_raw_yuvo_to_ipi)
 			update_fn = job_helper->update_raw_yuvo_to_ipi;
 		break;
+	case MTKCAM_IPI_RAW_SV_BIN_IMGO:
+		if (job_helper->update_sv_bin_imgo_to_ipi)
+			update_fn = job_helper->update_sv_bin_imgo_to_ipi;
+		break;
 	default:
 		pr_info("%s %s: not supported port: %d\n",
 			__FILE__, __func__, node->desc.dma_port);

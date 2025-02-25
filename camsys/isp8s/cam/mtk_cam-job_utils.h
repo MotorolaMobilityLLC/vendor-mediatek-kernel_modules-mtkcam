@@ -58,6 +58,9 @@ struct pack_job_ops_helper {
 	int (*update_raw_yuvo_to_ipi)(struct req_buffer_helper *helper,
 				      struct mtk_cam_buffer *buf,
 				      struct mtk_cam_video_device *node);
+	int (*update_sv_bin_imgo_to_ipi)(struct req_buffer_helper *helper,
+				      struct mtk_cam_buffer *buf,
+				      struct mtk_cam_video_device *node);
 	int (*append_work_buf_to_ipi)(struct req_buffer_helper *helper);
 };
 void _set_timestamp(struct mtk_cam_job *job,

@@ -143,6 +143,7 @@ enum mtkcam_ipi_video_id {
 	MTKCAM_IPI_RAW_IPUO,		/* IPUO_R1 */
 	MTKCAM_IPI_RAW_GMPO,		/* GMPO_R1 */
 	MTKCAM_IPI_RAW_GRMGO,		/* GRMGO_R1 */
+	MTKCAM_IPI_RAW_SV_BIN_IMGO,		/* SV_BIN_IMGO */
 	MTKCAM_IPI_RAW_META_STATS_CFG,	/* All settings */
 	MTKCAM_IPI_RAW_META_STATS_0,	/* statistics */
 

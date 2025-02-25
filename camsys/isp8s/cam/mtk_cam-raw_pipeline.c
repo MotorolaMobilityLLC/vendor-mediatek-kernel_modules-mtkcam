@@ -3271,7 +3271,7 @@ static const char *output_queue_names[RAW_PIPELINE_NUM][MTK_RAW_TOTAL_OUTPUT_QUE
 };
 
 
-#define MTK_RAW_TOTAL_CAPTURE_QUEUES 17 //todo :check backend node size
+#define MTK_RAW_TOTAL_CAPTURE_QUEUES 18 //todo :check backend node size
 
 static const struct
 mtk_cam_dev_node_desc capture_queues[] = {
@@ -3588,6 +3588,32 @@ mtk_cam_dev_node_desc capture_queues[] = {
 		},
 	},
 	{
+		.id = MTK_RAW_SV_BIN_IMGO_OUT,
+		.name = "sv-bin-imgo",
+		.cap = V4L2_CAP_VIDEO_CAPTURE_MPLANE,
+		.buf_type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE,
+		.link_flags = MEDIA_LNK_FL_ENABLED |  MEDIA_LNK_FL_IMMUTABLE,
+		.image = true,
+		.smem_alloc = false,
+		.dma_port = MTKCAM_IPI_RAW_SV_BIN_IMGO,
+		.fmts = stream_out_fmts,
+		.num_fmts = ARRAY_SIZE(stream_out_fmts),
+		.default_fmt_idx = 0,
+		.ioctl_ops = &mtk_cam_v4l2_vcap_ioctl_ops,
+		.frmsizes = &(struct v4l2_frmsizeenum) {
+			.index = 0,
+			.type = V4L2_FRMSIZE_TYPE_CONTINUOUS,
+			.stepwise = {
+				.max_width = IMG_MAX_WIDTH,
+				.min_width = IMG_MIN_WIDTH,
+				.max_height = IMG_MAX_HEIGHT,
+				.min_height = IMG_MIN_HEIGHT,
+				.step_height = 1,
+				.step_width = 1,
+			},
+		},
+	},
+	{
 		.id = MTK_RAW_META_OUT_0,
 		.name = "partial meta 0",
 		.cap = V4L2_CAP_META_CAPTURE,
@@ -3697,6 +3723,7 @@ static const char *capture_queue_names[RAW_PIPELINE_NUM][MTK_RAW_TOTAL_CAPTURE_Q
 	 "mtk-cam raw-0 drzh1no-1",
 	 "mtk-cam raw-0 drzb2no-1",
 	 "mtk-cam raw-0 ipuo",
+	 "mtk-cam raw-0 sv-bin-imgo",
 	 "mtk-cam raw-0 partial-meta-0", "mtk-cam raw-0 partial-meta-1",
 	 "mtk-cam raw-0 ext-meta-0",
 	 "mtk-cam raw-0 gmpo","mtk-cam raw-0 grmgo"},
@@ -3710,6 +3737,7 @@ static const char *capture_queue_names[RAW_PIPELINE_NUM][MTK_RAW_TOTAL_CAPTURE_Q
 	 "mtk-cam raw-1 drzh1no-1",
 	 "mtk-cam raw-1 drzb2no-1",
 	 "mtk-cam raw-1 ipuo",
+	 "mtk-cam raw-1 sv-bin-imgo",
 	 "mtk-cam raw-1 partial-meta-0", "mtk-cam raw-1 partial-meta-1",
 	 "mtk-cam raw-1 ext-meta-0",
 	 "mtk-cam raw-1 gmpo","mtk-cam raw-1 grmgo"},
@@ -3723,6 +3751,7 @@ static const char *capture_queue_names[RAW_PIPELINE_NUM][MTK_RAW_TOTAL_CAPTURE_Q
 	 "mtk-cam raw-2 drzh1no-1",
 	 "mtk-cam raw-2 drzb2no-1",
 	 "mtk-cam raw-2 ipuo",
+	 "mtk-cam raw-2 sv-bin-imgo",
 	 "mtk-cam raw-2 partial-meta-0", "mtk-cam raw-2 partial-meta-1",
 	 "mtk-cam raw-2 ext-meta-0",
 	 "mtk-cam raw-2 gmpo","mtk-cam raw-2 grmgo"},
