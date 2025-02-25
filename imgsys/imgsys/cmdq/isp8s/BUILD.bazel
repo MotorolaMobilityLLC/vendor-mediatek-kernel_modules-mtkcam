@@ -85,7 +85,7 @@ define_mgk_ddk_ko(
         "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/",
     ],
 
-    local_defines = ["MTK_IOVA_SINK2KERNEL", "MTK_IOVA_NOTCHECK"],
+    local_defines = ["MTK_IOVA_SINK2KERNEL", "MTK_IOVA_NOTCHECK", "MTK_ISC_SUPPORT"],
 
     out = "mtk_imgsys_cmdq_isp8s.ko",
 
