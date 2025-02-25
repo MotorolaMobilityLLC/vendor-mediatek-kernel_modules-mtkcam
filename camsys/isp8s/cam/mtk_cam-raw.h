@@ -92,6 +92,7 @@ struct mtk_raw_device {
 	char str_debug_irq_data[128];
 
 	/* QOF */
+	bool qof_enabled;
 	const struct raw_io_ops *io_ops;
 	bool trigger_cq_by_qof;
 	int apmcu_voter_cnt;

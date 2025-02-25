@@ -261,6 +261,7 @@ void qof_sof_src_sel(struct mtk_raw_device *raw, int exp_num,
 	u32 otf_dc_mode = 0;
 	u32 exp_sof_sel = 0;
 	u32 val;
+	unsigned long flags;
 
 	if (with_tg) {
 		if (exp_num >= 2)
@@ -270,6 +271,7 @@ void qof_sof_src_sel(struct mtk_raw_device *raw, int exp_num,
 		exp_sof_sel = sv_last_tag;
 	}
 
+	spin_lock_irqsave(&cam->qoftop_lock, flags);
 	val = readl_relaxed(cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
 
 	switch (raw->id) {
@@ -287,10 +289,12 @@ void qof_sof_src_sel(struct mtk_raw_device *raw, int exp_num,
 		break;
 	default:
 		dev_info(raw->dev, "%s: raw id %d not found", __func__, raw->id);
+		spin_unlock_irqrestore(&cam->qoftop_lock, flags);
 		return;
 	}
 
 	writel(val, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
+	spin_unlock_irqrestore(&cam->qoftop_lock, flags);
 
 	dev_info(raw->dev, "qof: %s: TOP_CTL 0x%08x exp:%d/tg:%d", __func__,
 				 readl(cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL),
@@ -301,14 +305,18 @@ void mtk_cam_enable_itc(struct mtk_raw_device *raw, bool enable)
 {
 	struct mtk_cam_device *cam = raw->cam;
 	u32 val;
-//	bool qof_enabled = false;
+	unsigned long flags;
 
+	spin_lock_irqsave(&cam->qoftop_lock, flags);
 	val = readl(cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
 
 	if (enable)
 		val |= qof_raw_to_bit[raw->id].itc_src;
 	else
 		val &= ~qof_raw_to_bit[raw->id].itc_src;
+
+	writel(val, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
+	spin_unlock_irqrestore(&cam->qoftop_lock, flags);
 
 	dev_info(raw->dev, "qof: %s: misc1/2/3 0x%x 0x%x 0x%x (0x%x 0x%x 0x%x)", __func__,
 		 readl(raw->base + REG_CAMCTL_MISC),
@@ -317,8 +325,6 @@ void mtk_cam_enable_itc(struct mtk_raw_device *raw, bool enable)
 		 readl(raw->base_inner + REG_CAMCTL_MISC),
 		 readl(raw->yuv_base_inner + REG_CAMCTL2_MISC),
 		 readl(raw->rms_base_inner + REG_CAMCTL3_MISC));
-
-	writel(val, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
 
 	dev_info(raw->dev, "qof: %s: top_ctrl 0x%x itc_status 0x%x", __func__,
 		 readl(raw->cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL),
@@ -331,17 +337,20 @@ void mtk_cam_reset_itc(struct mtk_cam_device *cam)
 #ifdef QOF_ITC_ALWAYS_ON
 	int i;
 	u32 val;
+	unsigned long flags;
 #endif
 
 	writel(ITC_RESET, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_SW_RST);
 	writel(0, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_SW_RST);
 
 #ifdef QOF_ITC_ALWAYS_ON
+	spin_lock_irqsave(&cam->qoftop_lock, flags);
 	val = readl(cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
 	SET_FIELD(&val, QOF_CAM_TOP_ITC_SRC_SEL_1, 1);
 	SET_FIELD(&val, QOF_CAM_TOP_ITC_SRC_SEL_2, 1);
 	SET_FIELD(&val, QOF_CAM_TOP_ITC_SRC_SEL_3, 1);
 	writel(val, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
+	spin_unlock_irqrestore(&cam->qoftop_lock, flags);
 
 	for (i = 0; i < cam->engines.num_raw_devices; i++) {
 		struct mtk_raw_device *raw_dev;
@@ -397,9 +406,9 @@ void qof_setup_hw_timer(struct mtk_raw_device *raw, u32 interval_us)
 int qof_enable(struct mtk_raw_device *raw, bool enable)
 {
 	int en = enable ? 1 : 0;
-
 	struct mtk_cam_device *cam = raw->cam;
 	u32 val;
+	unsigned long flags;
 
 	if (enable == qof_is_enabled(raw))
 		return 0;
@@ -418,6 +427,7 @@ int qof_enable(struct mtk_raw_device *raw, bool enable)
 	if (en)
 		qof_setup_pwr_th(raw);
 
+	spin_lock_irqsave(&cam->qoftop_lock, flags);
 	val = readl(cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
 
 	if (enable)
@@ -427,6 +437,8 @@ int qof_enable(struct mtk_raw_device *raw, bool enable)
 
 	SET_FIELD(&val, QOF_CAM_TOP_SEQUENCE_MODE, QOF_SEQ_MODE_RTC_THEN_ITC);
 	writel(val, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
+	raw->qof_enabled = enable;
+	spin_unlock_irqrestore(&cam->qoftop_lock, flags);
 
 	if (en)
 		writel(0xfff, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_INT_EN);
@@ -473,31 +485,7 @@ int qof_enable_cq_trigger_by_qof(struct mtk_raw_device *raw, bool enable)
 // TODO: optimize
 bool qof_is_enabled(struct mtk_raw_device *dev)
 {
-	bool enabled = false;
-	struct mtk_cam_device *cam = dev->cam;
-	u32 val;
-
-	if (!cam)
-		goto OUT;
-
-	val = readl_relaxed(cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
-
-	switch (dev->id) {
-	case RAW_A:
-		enabled = !!(val & FBIT(QOF_CAM_TOP_QOF_SUBA_EN));
-		break;
-	case RAW_B:
-		enabled = !!(val & FBIT(QOF_CAM_TOP_QOF_SUBB_EN));
-		break;
-	case RAW_C:
-		enabled = !!(val & FBIT(QOF_CAM_TOP_QOF_SUBC_EN));
-		break;
-	default:
-		break;
-	}
-
-OUT:
-	return enabled;
+	return dev->qof_enabled;
 }
 
 //#define QOF_LOCK_BASE_SECURITY
@@ -1450,6 +1438,7 @@ void qof_force_dump_all(struct mtk_raw_device *raw)
 	qof_dump_power_state(raw);
 	qof_dump_voter(raw);
 	qof_dump_trigger_cnt(raw);
+	qof_dump_int_en_addr(raw);
 
 	dev_info(raw->dev, "[%s] QOF CQ_START_MAX:0x%08x\n",
 				 __func__, readl(raw->qof_base + REG_QOF_CAM_A_QOF_CQ_START_MAX));

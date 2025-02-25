@@ -351,7 +351,9 @@ struct mtk_cam_device {
 	/* chip id */
 	u32 sw_ver;
 
+	/* qoftop */
 	int qoftop_irq;
+	spinlock_t qoftop_lock;
 };
 
 static inline struct device *subdev_to_cam_dev(struct v4l2_subdev *sd)

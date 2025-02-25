@@ -5226,6 +5226,11 @@ REGISTER_LARB_FAIL:
 	return ret;
 }
 
+#define QOF_PWR_OFF_ACCESS_MASK	\
+	(FBIT(QOF_CAM_TOP_MTC_CYC_OV_INT_ST_1) | \
+	 FBIT(QOF_CAM_TOP_MTC_CYC_OV_INT_ST_2) | \
+	 FBIT(QOF_CAM_TOP_MTC_CYC_OV_INT_ST_3))
+
 static irqreturn_t __maybe_unused mtk_irq_qof(int irq, void *data)
 {
 	struct mtk_cam_device *drvdata = (struct mtk_cam_device *)data;
@@ -5239,44 +5244,17 @@ static irqreturn_t __maybe_unused mtk_irq_qof(int irq, void *data)
 		drvdata->qoftop_base + REG_QOF_CAM_TOP_QOF_INT_STATUS);
 
 	// TODO: consider trigger KE or fix state machine
-	dev_info(dev, "qof: QOFTOP-INT: INT 0x%x\n", int_status);
+	if (CAM_DEBUG_ENABLED(QOF) || (int_status & ~QOF_PWR_OFF_ACCESS_MASK))
+		dev_info(dev, "qof: QOFTOP-INT: INT 0x%x\n", int_status);
 
 	for (i = 0; i < eng->num_raw_devices; ++i) {
 		struct mtk_raw_device *raw = dev_get_drvdata(eng->raw_devs[i]);
 
-		if (int_status & FBIT(QOF_CAM_TOP_MTC_CYC_OV_INT_ST_1) && raw->id == 0) {
-			qof_dump_voter(raw);
-			qof_dump_power_state(raw);
-			qof_dump_hw_timer(raw);
-			dev_info(dev, "qof: QOF_CAM_TOP_MTC_CYC_OV_INT_ST: raw %u\n", raw->id);
-			qof_set_force_dump(raw, true);
-			qof_dump_trigger_cnt(raw);
-			qof_dump_voter(raw);
-			qof_dump_hw_timer(raw);
-			qof_dump_ctrl(raw);
-			qof_set_force_dump(raw, false);
-		} else if (int_status & FBIT(QOF_CAM_TOP_MTC_CYC_OV_INT_ST_2) && raw->id == 1) {
-			qof_dump_voter(raw);
-			qof_dump_power_state(raw);
-			qof_dump_hw_timer(raw);
-			dev_info(dev, "qof: QOF_CAM_TOP_MTC_CYC_OV_INT_ST: raw %u\n", raw->id);
-			qof_set_force_dump(raw, true);
-			qof_dump_trigger_cnt(raw);
-			qof_dump_voter(raw);
-			qof_dump_hw_timer(raw);
-			qof_dump_ctrl(raw);
-			qof_set_force_dump(raw, false);
-		} else if (int_status & FBIT(QOF_CAM_TOP_MTC_CYC_OV_INT_ST_3) && raw->id == 2) {
-			qof_dump_voter(raw);
-			qof_dump_power_state(raw);
-			qof_dump_hw_timer(raw);
-			dev_info(dev, "qof: QOF_CAM_TOP_MTC_CYC_OV_INT_ST: raw %u\n", raw->id);
-			qof_set_force_dump(raw, true);
-			qof_dump_trigger_cnt(raw);
-			qof_dump_voter(raw);
-			qof_dump_hw_timer(raw);
-			qof_dump_ctrl(raw);
-			qof_set_force_dump(raw, false);
+		if (((int_status & FBIT(QOF_CAM_TOP_MTC_CYC_OV_INT_ST_1)) && raw->id == 0) ||
+			((int_status & FBIT(QOF_CAM_TOP_MTC_CYC_OV_INT_ST_2)) && raw->id == 1) ||
+			((int_status & FBIT(QOF_CAM_TOP_MTC_CYC_OV_INT_ST_3)) && raw->id == 2)) {
+			dev_info(raw->dev, "qof: MTC_CYC_OV_INT_ST\n");
+			qof_force_dump_all(raw);
 		}
 	}
 
@@ -5666,6 +5644,7 @@ static int mtk_cam_probe(struct platform_device *pdev)
 		mtk_cam_ctx_init(cam_dev->ctxs + i, cam_dev, i);
 
 	spin_lock_init(&cam_dev->streaming_lock);
+	spin_lock_init(&cam_dev->qoftop_lock);
 	spin_lock_init(&cam_dev->pending_job_lock);
 	spin_lock_init(&cam_dev->running_job_lock);
 	INIT_LIST_HEAD(&cam_dev->pending_job_list);
