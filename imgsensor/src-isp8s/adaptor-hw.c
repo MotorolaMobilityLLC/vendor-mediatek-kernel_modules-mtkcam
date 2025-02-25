@@ -150,7 +150,7 @@ static int unset_mclk(struct adaptor_ctx *ctx, void *data, const struct subdrv_p
 {
 	struct clk *mclk, *reset_src;
 	unsigned long long idx;
-	int mclk_freq, ret;
+	int mclk_freq = 0, ret;
 
 	if (!val)
 		return -EINVAL;
@@ -163,7 +163,8 @@ static int unset_mclk(struct adaptor_ctx *ctx, void *data, const struct subdrv_p
 
 	//reset osc clk src to normal-src (i.e. normal-src)
 	if (val->para2 == MCLK_ULPOSC) {
-		mclk_freq = get_mclk_info(ctx->subdrv->pw_seq, ctx->subdrv->pw_seq_cnt, HW_ID_MCLK);
+		if (ctx->subdrv)
+			mclk_freq = get_mclk_info(ctx->subdrv->pw_seq, ctx->subdrv->pw_seq_cnt, HW_ID_MCLK);
 		if (mclk_freq == 0)
 			mclk_freq = DEF_MCLK_FREQ;
 		reset_src = get_clk_by_idx_freq(ctx, idx, mclk_freq, MCLK_NORMAL);

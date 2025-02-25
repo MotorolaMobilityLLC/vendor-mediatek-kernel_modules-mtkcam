@@ -1054,7 +1054,7 @@ void set_max_framerate(struct subdrv_ctx *ctx, u16 framerate, bool min_frameleng
 				min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
 			ctx->frame_length_in_lut[1] =
 				max(ctx->frame_length_in_lut[1], vs_readout_length + vs_read_margin);
-			if (ctx->frame_length >= ctx->frame_length_in_lut[0]) {
+			if (framerate && ctx->frame_length >= ctx->frame_length_in_lut[0]) {
 				u64 vs_ft_ns = (1000000000 / framerate * 10)
 					- line2ntime(ctx->frame_length_in_lut[0], dcg_linetime_ns);
 				ctx->frame_length_in_lut[1] =
@@ -1232,7 +1232,7 @@ void set_max_framerate_base100(struct subdrv_ctx *ctx, u16 framerate, bool min_f
 				min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
 			ctx->frame_length_in_lut[1] =
 				max(ctx->frame_length_in_lut[1], vs_readout_length + vs_read_margin);
-			if (ctx->frame_length >= ctx->frame_length_in_lut[0]) {
+			if (framerate && ctx->frame_length >= ctx->frame_length_in_lut[0]) {
 				u64 vs_ft_ns = (1000000000 / framerate * 100)
 					- line2ntime(ctx->frame_length_in_lut[0], dcg_linetime_ns);
 				ctx->frame_length_in_lut[1] =
@@ -1799,7 +1799,10 @@ void set_dcg_vs_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 				ntime2line(line2ntime(cit_in_lut[0], dcg_linetime_ns), vs_linetime_ns)
 				+ vs_exposure_margin);
 
-		frame_time_ns = 1000000000 / framerate * 10;
+		if (framerate)
+			frame_time_ns = 1000000000ULL / framerate * 10;
+		else
+			frame_time_ns = 1000000000ULL / 1 * 10;
 		lut_0_ft_ns = line2ntime(ctx->frame_length_in_lut[0], dcg_linetime_ns);
 		DRV_LOG_MUST(ctx, "total ft = %llu  nslut-A ft = %llu ns\n", frame_time_ns, lut_0_ft_ns);
 		if (frame_time_ns >= lut_0_ft_ns) {

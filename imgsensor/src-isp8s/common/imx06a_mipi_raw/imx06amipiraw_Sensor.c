@@ -1339,28 +1339,28 @@ static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt, u64 sof_ts
 
 static int imx06a_mcss_init(void *arg)
 {
-	struct subdrv_ctx *ctx = (struct subdrv_ctx *)arg;
+	//struct subdrv_ctx *ctx = (struct subdrv_ctx *)arg;
+
+	//if (!(ctx->mcss_init_info.enable_mcss)) {
+	//	memset(&(ctx->mcss_init_info), 0, sizeof(struct mtk_fsync_hw_mcss_init_info));
+
+	//	set_i2c_buffer(ctx,
+	//		ctx->s_ctx.reg_addr_mcss_mc_frm_mask_num, 0X00);
+	//	subdrv_i2c_wr_u8(ctx,
+	//		ctx->s_ctx.reg_addr_mcss_extout_en, 0x00);
+	//	DRV_LOG_MUST(ctx, "disable XVS output and clear MCSS mask frame to 0\n");
+	//	return ERROR_NONE;
+	//}
+
+	//if (ctx->mcss_init_info.is_mcss_master) {
+	//	DRV_LOG_MUST(ctx, "common_mcss_init controller (ctx->s_ctx.sensor_id=0x%x)\n",ctx->s_ctx.sensor_id);
+	//	subdrv_i2c_wr_u8(ctx,
+	//		ctx->s_ctx.reg_addr_mcss_extout_en, 0x01); /* start to output XVS signal */
+	//}
+
+	//return ERROR_NONE;
 
 	return 0;
-
-	if (!(ctx->mcss_init_info.enable_mcss)) {
-		memset(&(ctx->mcss_init_info), 0, sizeof(struct mtk_fsync_hw_mcss_init_info));
-
-		set_i2c_buffer(ctx,
-			ctx->s_ctx.reg_addr_mcss_mc_frm_mask_num, 0X00);
-		subdrv_i2c_wr_u8(ctx,
-			ctx->s_ctx.reg_addr_mcss_extout_en, 0x00);
-		DRV_LOG_MUST(ctx, "disable XVS output and clear MCSS mask frame to 0\n");
-		return ERROR_NONE;
-	}
-
-	if (ctx->mcss_init_info.is_mcss_master) {
-		DRV_LOG_MUST(ctx, "common_mcss_init controller (ctx->s_ctx.sensor_id=0x%x)\n",ctx->s_ctx.sensor_id);
-		subdrv_i2c_wr_u8(ctx,
-			ctx->s_ctx.reg_addr_mcss_extout_en, 0x01); /* start to output XVS signal */
-	}
-
-	return ERROR_NONE;
 }
 
 static int imx06a_mcss_set_mask_frame(struct subdrv_ctx *ctx, u32 num, u32 is_critical)

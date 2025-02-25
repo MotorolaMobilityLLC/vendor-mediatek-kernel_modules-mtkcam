@@ -980,7 +980,7 @@ struct subdrv_entry {
 	type __val; \
 	if (scenario_id >= subctx->s_ctx.sensor_mode_num || exp_no >= IMGSENSOR_EXPOSURE_CNT) \
 		__val = 0; \
-	if (subctx->s_ctx.mode[scenario_id].multiexp_s_info[exp_no].field) \
+	else if (subctx->s_ctx.mode[scenario_id].multiexp_s_info[exp_no].field) \
 		__val = subctx->s_ctx.mode[scenario_id].multiexp_s_info[exp_no].field; \
 	else \
 		__val = subctx->s_ctx.mode[scenario_id].field; \
@@ -992,7 +992,7 @@ struct subdrv_entry {
 	type __val; \
 	if (scenario_id >= subctx->s_ctx.sensor_mode_num || lut_id >= IMGSENSOR_LUT_MAXCNT) \
 		__val = 0; \
-	if (subctx->s_ctx.mode[scenario_id].mode_lut_s_info[lut_id].field) \
+	else if (subctx->s_ctx.mode[scenario_id].mode_lut_s_info[lut_id].field) \
 		__val = subctx->s_ctx.mode[scenario_id].mode_lut_s_info[lut_id].field; \
 	else \
 		__val = subctx->s_ctx.mode[scenario_id].field; \
