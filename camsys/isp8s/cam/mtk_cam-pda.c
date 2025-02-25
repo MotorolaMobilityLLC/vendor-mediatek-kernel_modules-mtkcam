@@ -66,7 +66,7 @@ void pda_reset(struct mtk_pda_device *pda_dev)
 	while (time_before(jiffies, end)) {
 		if ((readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DMA_RST) & 0x1)) {
 			// equivalent to hardware reset
-			writel_relaxed(0x4, pda_dev->base + REG_E_PDA_OTF_PDA_TOP_CTL);
+			writel_relaxed(0x2, pda_dev->base + REG_E_PDA_OTF_PDA_TOP_CTL);
 
 			// clear reset signal
 			writel_relaxed(0x0, pda_dev->base + REG_E_PDA_OTF_PDA_DMA_RST);
@@ -138,7 +138,6 @@ int mtk_cam_pda_dev_config(struct mtk_pda_device *pda_dev)
 	writel_relaxed((OUT_BYTE_PER_ROI-1), pda_dev->base + REG_E_PDA_OTF_PDAO_P1_XSIZE);
 
 	writel_relaxed(0x0000001f, pda_dev->base + REG_E_PDA_OTF_PDA_DMA_EN);
-	writel_relaxed(0x00000001, pda_dev->base + REG_E_PDA_OTF_PDA_DMA_RST);
 	writel_relaxed(0x00000802, pda_dev->base + REG_E_PDA_OTF_PDA_DMA_TOP);
 
 	// DCM all off: 0x0000007F
@@ -287,7 +286,18 @@ static int check_design_limitation(struct mtk_pda_device *pda_dev)
 static void debug_sel_print(struct mtk_pda_device *pda_dev)
 {
 	unsigned int sel_index = 0;
-	unsigned int Debug_Sel[] = {0x00008120, 0x0000400e, 0x0000c000};
+	unsigned int Debug_Sel[] = {0x00008120, 0x0000400e, 0x0000c000,
+		0x11000000, 0x12000000, 0x13000000, 0x14000000, 0x15000000, 0x16000000,
+		0x14000000, 0x14100000, 0x14200000, 0x14300000, 0x14400000, 0x14500000,
+		0x21000000, 0x22000000, 0x23000000, 0x24000000, 0x25000000,
+		0x24000000, 0x24100000, 0x24200000, 0x24300000, 0x24400000, 0x24500000,
+		0x31000000, 0x32000000, 0x33000000, 0x34000000, 0x35000000,
+		0x34000000, 0x34100000, 0x34200000, 0x34300000, 0x34400000, 0x34500000,
+		0x41000000, 0x42000000, 0x43000000, 0x44000000, 0x45000000,
+		0x44000000, 0x44100000, 0x44200000, 0x44300000, 0x44400000, 0x44500000,
+		0x51000000, 0x52000000, 0x53000000, 0x54000000, 0x55000000,
+		0x54000000, 0x54100000, 0x54200000, 0x54300000, 0x54400000, 0x54500000,
+		0xb4480000, 0xb4400000, 0xb4410000};
 	unsigned int Length_Arr = sizeof(Debug_Sel)/sizeof(*Debug_Sel);
 
 	// check debug data
