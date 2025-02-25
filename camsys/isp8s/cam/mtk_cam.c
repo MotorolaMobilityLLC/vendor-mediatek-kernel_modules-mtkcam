@@ -5702,6 +5702,7 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 	mtk_cam_dvc_top_disable(&cam_dev->dvfs.dvc);
 	mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_CAM);
 	mtk_cam_fmon_disable(&cam_dev->fmon);
+	mtk_cam_vcore_wla20(cam_dev, false);
 
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		dev_dbg(dev, "%s++:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
@@ -5765,7 +5766,7 @@ static int mtk_cam_runtime_resume(struct device *dev)
 	mtk_cam_vcore_ccu_qos_remap(cam_dev);
 	mtk_cam_vcore_sv_qos_remap(cam_dev);
 	mtk_cam_vcore_coh_req(cam_dev);
-	mtk_cam_vcore_wla20(cam_dev);
+	mtk_cam_vcore_wla20(cam_dev, true);
 	mtk_cam_main_sv_halt(cam_dev);
 	mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_CAM);
 	mtk_cam_dvc_top_enable(&cam_dev->dvfs.dvc);
