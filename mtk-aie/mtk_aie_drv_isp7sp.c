@@ -2614,6 +2614,7 @@ static int aie_config_network(struct mtk_aie_dev *fd,
 	u32 flush_len = AIE_ALIGN32(fdvt_fd_confi_frame01_size);
 	struct aie_static_info *pstv = NULL;
 	int msb_bit_0 = 0, msb_bit_1 = 0, msb_bit_2 = 0, msb_bit_3 = 0;
+	u32 temp = 0;
 
 	pstv = &fd->st_info;
 
@@ -2728,7 +2729,8 @@ static int aie_config_network(struct mtk_aie_dev *fd,
 		}
 
 		out_ysize_plus_1 = out_height - 1;
-		out_ysize_plus_1_stride2 = (u16)(((u32)out_height + 1) / 2) - 1;
+		temp = (out_height + 1) / 2 - 1;
+		out_ysize_plus_1_stride2 = (temp > 65535) ? 65535 : (u16)temp;
 
 		for (j = 0; j < output_WDMA_WRA_num; j++) {
 			fd_cur_set = fd_cur_cfg + 2 * j;
