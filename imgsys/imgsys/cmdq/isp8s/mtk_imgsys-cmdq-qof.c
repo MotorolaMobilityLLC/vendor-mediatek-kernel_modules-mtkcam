@@ -1355,7 +1355,7 @@ void mtk_imgsys_cmdq_qof_stream_on(struct mtk_imgsys_dev *imgsys_dev)
 
 	spin_lock_irqsave(&qof_lock, flag);
 
-	for (mod = ISP8S_PWR_START; mod < ISP8S_PWR_NUM; mod++) {
+	for (mod = QOF_SUPPORT_START; mod < QOF_TOTAL_MODULE; mod++) {
 		if (IS_MOD_SUPPORT_QOF(mod))
 			qof_set_engine_on(mod);
 		else
