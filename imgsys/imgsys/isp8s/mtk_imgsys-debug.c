@@ -739,9 +739,33 @@ void imgsys_main_cmdq_set_init(struct mtk_imgsys_dev *imgsys_dev, void *pkt, int
 
 void imgsys_main_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int engine)
 {
+	uint32_t value;
+	void __iomem *DdrRegBA = imgsysVcoreRegBA;
 	if (imgsys_isc_8s_dbg_log_en())
 		pr_info("%s: +\n", __func__);
 	imgsys_main_slc_dump(imgsys_dev, engine);
+	// dump for debug
+	value = ioread32((void *)(DdrRegBA + 0xf8));
+	pr_info("%s: DdrRegBA 0xF8 : 0x%08x\n", __func__, value);
+
+	value = ioread32((void *)(DdrRegBA + 0x90));
+	pr_info("%s: DdrRegBA 0x90 : 0x%08x\n", __func__, value);
+
+	value = ioread32((void *)(DdrRegBA + 0x94));
+	pr_info("%s: DdrRegBA 0x94 : 0x%08x\n", __func__, value);
+
+	value = ioread32((void *)(DdrRegBA + 0x98));
+	pr_info("%s: DdrRegBA 0x98 : 0x%08x\n", __func__, value);
+
+	value = ioread32((void *)(DdrRegBA + 0x9C));
+	pr_info("%s: DdrRegBA 0x9C : 0x%08x\n", __func__, value);
+
+	value = ioread32((void *)(DdrRegBA + 0xA0));
+	pr_info("%s: DdrRegBA 0xA0 : 0x%08x\n", __func__, value);
+
+	value = ioread32((void *)(DdrRegBA + 0x10));
+	pr_info("%s: DdrRegBA 0x10 : 0x%08x\n", __func__, value);
+	//
 	if (imgsys_isc_8s_dbg_log_en())
 		pr_info("%s: -\n", __func__);
 }
