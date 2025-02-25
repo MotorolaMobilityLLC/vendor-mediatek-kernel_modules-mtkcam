@@ -1,6 +1,11 @@
-
-load("//build/bazel_mgk_rules:mgk_ko.bzl", "define_mgk_ko")
+load("//build/bazel_mgk_rules:mgk_ddk_ko.bzl", "define_mgk_ddk_ko")
 load("//build/kernel/kleaf:kernel.bzl", "ddk_headers")
+load("//build/bazel_mgk_rules:mgk_ko.bzl", "define_mgk_ko")
+load("@mgk_info//:kernel_version.bzl","kernel_version")
+load("@mgk_info//:dict.bzl",
+     "DEFCONFIG_OVERLAYS",
+)
+
 package(
     default_visibility = [
         "//visibility:public",
@@ -35,30 +40,45 @@ ddk_headers(
 )
 
 # TODO: enable this part later
-define_mgk_ko(
+define_mgk_ddk_ko(
     name = "imgsys_7s",
+
     srcs = glob([
         "**/*.c",
         "**/*.h",
-        "**/Kbuild",
-        "**/Makefile",
-    ]) + [
-        "//vendor/mediatek/kernel_modules/mtkcam/mtk-hcp/legacy:public_headers",
-        "//vendor/mediatek/kernel_modules/mtkcam/mtk-ipesys-me:public_headers",
-        "//vendor/mediatek/kernel_modules/mtkcam/imgsys/common:public_headers",
-        "//vendor/mediatek/kernel_modules/mtkcam/imgsys/imgsys/cmdq/legacy:public_headers",
-        "//vendor/mediatek/kernel_modules/mtkcam/mtk-hcp/legacy:kbuild_makefiles",
-        "//vendor/mediatek/kernel_modules/mtkcam/mtk-ipesys-me:kbuild_makefiles",
-        "//vendor/mediatek/kernel_modules/mtkcam/imgsys/common:kbuild_makefiles",
-        "//vendor/mediatek/kernel_modules/mtkcam/imgsys/imgsys/cmdq/legacy:kbuild_makefiles",
-    ],
+    ]),
 
-    deps = [
+    includes = ["."],
+
+    ko_deps = [
         "//vendor/mediatek/kernel_modules/mtkcam/mtk-hcp/legacy:mtk-hcp",
-        "//vendor/mediatek/kernel_modules/mtkcam/mtk-ipesys-me:mtk-ipesys-me",
+        "//kernel_device_modules-{}/drivers/misc/mediatek/cmdq/mailbox:mtk-cmdq-drv-ext".format(kernel_version),
         "//vendor/mediatek/kernel_modules/mtkcam/imgsys/common:imgsys_common",
         "//vendor/mediatek/kernel_modules/mtkcam/imgsys/imgsys/cmdq/legacy:imgsys_cmdq",
+        "//kernel_device_modules-{}/drivers/misc/mediatek/mtk-interconnect:mtk-icc-core".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/misc/mediatek/smi:mtk-smi-dbg".format(kernel_version), # TBD
+        "//kernel_device_modules-{}/drivers/misc/mediatek/iommu:mtk_iommu_util".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/misc/mediatek/iommu:iommu_debug".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/misc/mediatek/slbc:mtk_slbc".format(kernel_version),
+        ###
+        "//vendor/mediatek/kernel_modules/mtkcam/ccusys:mtk_ccuv",
+        "//kernel_device_modules-{}/drivers/memory:mtk-smi".format(kernel_version),
+    ]+
+    (["//kernel_device_modules-{}/drivers/soc/mediatek:mtk-mmdvfs-v3".format(kernel_version)] if "entry_level" not in DEFCONFIG_OVERLAYS else []),
+
+    header_deps = [
+        "//kernel_device_modules-{}/drivers/misc/mediatek/smi:smi_dbg_headers".format(kernel_version), # TBD
+        "//kernel_device_modules-{}/drivers/misc/mediatek/iommu:iommu_misc_headers".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/iommu/arm/arm-smmu-v3:smmu_public_headers".format(kernel_version),
+        ###
     ],
 
-    outs = mgk_imgsys_outs,
+    copts = [
+        "-I$(DEVICE_MODULES_PATH)/include/soc/mediatek/",
+        "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/",
+    ],
+
+    local_defines = ["MTK_IOVA_SINK2KERNEL"],
+
+    out = "mtk_imgsys_isp7s.ko",
 )
