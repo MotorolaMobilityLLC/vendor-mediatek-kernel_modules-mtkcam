@@ -228,7 +228,7 @@ static inline void reset_eint_info(unsigned int index, u32 en)
 		if (worker)
 			seninf_eint.eints[index].worker = worker;
 		else
-			EINT_INF("ERROR: get tsrec kthread failed\n");
+			EINT_INF("ERROR: get tsrec kthread failed   [index:%u]\n", index);
 	}
 
 	seninf_eint.eints[index].status.is_start = en;
@@ -244,7 +244,7 @@ static void config_hw_latch(unsigned int index, u32 en)
 	void __iomem *base = seninf_eint.eints[index].dts_info.base;
 
 	if (base == NULL) {
-		EINT_INF("ERROR: base is null\n");
+		EINT_INF("ERROR: base is null   [index:%u]\n", index);
 		return;
 	}
 
@@ -429,7 +429,7 @@ static void eint_work_init_and_queue(
 
 	p_worker = seninf_eint.eints[index].worker;
 	if (p_worker == NULL) {
-		EINT_INF("ERROR: g_tsrec_worker_st failed\n");
+		EINT_INF("ERROR: g_tsrec_worker_st failed   [index:%u]\n", index);
 		return;
 	}
 
@@ -462,8 +462,9 @@ void eint_work_setup(int irq, void *data, struct eint_irq_info *irq_info)
 
 	if (unlikely(req == NULL)) {
 		EINT_INF(
-			"ERROR: work request:%p dynamic alloc mem failed, return\n",
-			req);
+			"ERROR: work request:%p dynamic alloc mem failed, return   [index:%d]\n",
+			req,
+			index);
 		return;
 	}
 
@@ -624,14 +625,15 @@ static int chk_xvs_for_preshutter(unsigned int index, struct eint_irq_info *irq_
 
 	if ((seq_no == 1) && (flag == 0)) {
 		EINT_INF(
-			"NOTICE: filter 1st XVS (preshutter) before 1 SOF idx:%u ts:%lluus(%llu/%u) seq_no:%d sys_ts:(%llu|%llu)\n",
+			"NOTICE: filter 1st XVS (preshutter) before 1 SOF idx:%u ts:%lluus(%llu/%u) seq_no:%d sys_ts:(%llu|%llu)   [index:%u]\n",
 			irq_info->index,
 			irq_info->tick / EINT_TICK_FACTOR,
 			irq_info->tick,
 			EINT_TICK_FACTOR,
 			seq_no,
 			irq_info->sys_ts,
-			irq_info->sys_ts_mono);
+			irq_info->sys_ts_mono,
+			index);
 		return -EINVAL;
 	}
 
@@ -640,14 +642,15 @@ static int chk_xvs_for_preshutter(unsigned int index, struct eint_irq_info *irq_
 		atomic_set(&seninf_eint.eints[index].status.is_seamless_switch, 0);
 
 		EINT_INF(
-			"NOTICE: filter 1st XVS (preshutter) for seamless switch idx:%u ts:%lluus(%llu/%u) seq_no:%d sys_ts:(%llu|%llu)\n",
+			"NOTICE: filter 1st XVS (preshutter) for seamless switch idx:%u ts:%lluus(%llu/%u) seq_no:%d sys_ts:(%llu|%llu)   [index:%u]\n",
 			irq_info->index,
 			irq_info->tick / EINT_TICK_FACTOR,
 			irq_info->tick,
 			EINT_TICK_FACTOR,
 			seq_no,
 			irq_info->sys_ts,
-			irq_info->sys_ts_mono);
+			irq_info->sys_ts_mono,
+			index);
 		return -EINVAL;
 	}
 
@@ -657,13 +660,14 @@ static int chk_xvs_for_preshutter(unsigned int index, struct eint_irq_info *irq_
 static int chk_eint_intr_en(unsigned int index, struct eint_irq_info *irq_info)
 {
 	if (seninf_eint.eints[index].status.intr_en == 0) {
-		EINT_INF("WARNING: EINT is not enabled! idx:%u ts:%lluus(%llu/%u) sys_ts:(%llu|%llu)\n",
+		EINT_INF("WARNING: EINT is not enabled! idx:%u ts:%lluus(%llu/%u) sys_ts:(%llu|%llu)   [index:%u]\n",
 			irq_info->index,
 			irq_info->tick / EINT_TICK_FACTOR,
 			irq_info->tick,
 			EINT_TICK_FACTOR,
 			irq_info->sys_ts,
-			irq_info->sys_ts_mono);
+			irq_info->sys_ts_mono,
+			index);
 		return -EINVAL;
 	}
 
@@ -887,7 +891,7 @@ static void eint_setup_cb_func_info_of_sensor(struct seninf_ctx *inf_ctx,
 			&& inf_ctx->sensor_sd->ops
 			&& inf_ctx->sensor_sd->ops->core
 			&& inf_ctx->sensor_sd->ops->core->command))) {
-		EINT_INF("[%s] cannot get sensor core ops\n", __func__);
+		EINT_INF("[%s] cannot get sensor core ops   [index:%u]\n", __func__, index);
 		return;
 	}
 
@@ -902,11 +906,12 @@ static void eint_setup_cb_func_info_of_sensor(struct seninf_ctx *inf_ctx,
 		V4L2_CMD_EINT_SETUP_CB_FUNC_OF_SENSOR,
 		&cb_info);
 
-	EINT_INF("tsrec_idx:%u eint_no:%d is_start:%u eint_cb_handler:%p\n",
+	EINT_INF("tsrec_idx:%u eint_no:%d is_start:%u eint_cb_handler:%p   [index:%u]\n",
 		cb_info.tsrec_idx,
 		cb_info.eint_no,
 		cb_info.is_start,
-		cb_info.eint_cb_handler);
+		cb_info.eint_cb_handler,
+		index);
 }
 
 
@@ -920,7 +925,7 @@ static void eint_notify_adaptor_enable_irq(unsigned int index, u32 en)
 
 	seninf_ctx = seninf_eint.eints[index].inf_ctx;
 	if (unlikely(seninf_ctx == NULL)) {
-		EINT_INF("[%s] seninf_ctx == NULL\n", __func__);
+		EINT_INF("[%s] seninf_ctx == NULL   [index:%u]\n", __func__, index);
 		return;
 	}
 
@@ -928,7 +933,7 @@ static void eint_notify_adaptor_enable_irq(unsigned int index, u32 en)
 			&& seninf_ctx->sensor_sd->ops
 			&& seninf_ctx->sensor_sd->ops->core
 			&& seninf_ctx->sensor_sd->ops->core->command))) {
-		EINT_INF("ERROR: can not get sensor ops or core ops\n");
+		EINT_INF("ERROR: can not get sensor ops or core ops   [index:%u]\n", index);
 		return;
 	}
 
@@ -940,10 +945,11 @@ static void eint_notify_adaptor_enable_irq(unsigned int index, u32 en)
 	seninf_ctx->sensor_sd->ops->core->command(
 		seninf_ctx->sensor_sd, V4L2_CMD_EINT_NOTIFY_IRQ_EN, &info);
 
-	EINT_INF("eint_no:%u tsrec_idx:%u flag:%u\n",
+	EINT_INF("eint_no:%u tsrec_idx:%u flag:%u   [index:%u]\n",
 		info.eint_no,
 		info.tsrec_idx,
-		info.flag);
+		info.flag,
+		index);
 }
 
 
@@ -953,7 +959,7 @@ static void eint_irq_line_en(unsigned int index, u32 en)
 	int seq_no;
 
 	if(!irq) {
-		EINT_INF("ERROR: irq == 0\n");
+		EINT_INF("ERROR: irq == 0   [index:%u]\n", index);
 		return;
 	}
 
@@ -985,7 +991,7 @@ static void eint_irq_ctrl(unsigned int index, u32 en)
 	unsigned int irq = seninf_eint.eints[index].irq_num;
 
 	if(!irq) {
-		EINT_INF("ERROR: irq == 0\n");
+		EINT_INF("ERROR: irq == 0   [index:%u]\n", index);
 		return;
 	}
 
@@ -1260,9 +1266,9 @@ static int get_eint_info_by_gpio_num(struct device *dev,
 	}
 
 	EINT_INF(
-		"parsing mediatek,pins id:%u hw_latch_code:%u address: %#x size: %#x\n",
+		"parsing mediatek,pins id:%u hw_latch_code:%u address: %#x size: %#x   [gpio_num:%u]\n",
 		pin->dts_info.id, pin->dts_info.hw_latch_code,
-		pin->dts_info.reg_address, pin->dts_info.reg_size);
+		pin->dts_info.reg_address, pin->dts_info.reg_size, gpio_num);
 
 	return 0;
 }
@@ -1310,16 +1316,17 @@ static int init_eint_info(struct platform_device *pdev, struct mtk_seninf_eint_p
 {
 	unsigned int index = pin->dts_info.eint_no;
 
-	mutex_init(&seninf_eint.eints[index].eint_intr_en_lock);
 	memcpy( seninf_eint.eints + index, pin, sizeof(struct mtk_seninf_eint_pin));
+	mutex_init(&seninf_eint.eints[index].eint_intr_en_lock);
 
-	EINT_INF("eint_no:%d gpio_num:%u, pins id:%u hw_latch_code:%u address: %#x size: %#x\n",
-		seninf_eint.eints->dts_info.eint_no,
-		seninf_eint.eints->dts_info.gpio_num,
-		seninf_eint.eints->dts_info.id,
-		seninf_eint.eints->dts_info.hw_latch_code,
-		seninf_eint.eints->dts_info.reg_address,
-		seninf_eint.eints->dts_info.reg_size);
+	EINT_INF("eint_no:%d gpio_num:%u, pins id:%u hw_latch_code:%u address: %#x size: %#x   [index:%u]\n",
+		seninf_eint.eints[index].dts_info.eint_no,
+		seninf_eint.eints[index].dts_info.gpio_num,
+		seninf_eint.eints[index].dts_info.id,
+		seninf_eint.eints[index].dts_info.hw_latch_code,
+		seninf_eint.eints[index].dts_info.reg_address,
+		seninf_eint.eints[index].dts_info.reg_size,
+		index);
 
 	return 0;
 }
@@ -1333,12 +1340,12 @@ static int init_eint_regs_iomem(struct platform_device *pdev, unsigned int index
 
 	reg_base = ioremap(address, size);
 	if (!reg_base) {
-		EINT_INF("ERROR: Failed to map I/O memory\n");
+		EINT_INF("ERROR: Failed to map I/O memory   [index:%u]\n", index);
 		return -ENOMEM;
 	}
 
 	seninf_eint.eints[index].dts_info.base = reg_base;
-	EINT_INF("of_iomap success get reg_base:%p\n", reg_base);
+	EINT_INF("of_iomap success get reg_base:%p   [index:%u]\n", reg_base, index);
 
 	return ret;
 }
@@ -1349,13 +1356,13 @@ static int init_eint_irq(struct platform_device *pdev, unsigned int index)
 	struct device *dev = &pdev->dev;
 
 	if(!dev) {
-		EINT_INF("ERROR: dev == NULL\n");
+		EINT_INF("ERROR: dev == NULL   [index:%u]\n", index);
 		return -1;
 	}
 
 	irq = irq_of_parse_and_map(dev->of_node, 0);
 	if (irq <= 0) {
-		EINT_INF("ERROR: failed to get irq number, ret:%d\n", irq);
+		EINT_INF("ERROR: failed to get irq number, ret:%d   [index:%u]\n", irq, index);
 		return -1;
 	}
 
@@ -1367,13 +1374,13 @@ static int init_eint_irq(struct platform_device *pdev, unsigned int index)
 		seninf_eint.core);
 
 	if (ret) {
-		EINT_INF("ERROR: Request %s failed\n", "seninf-eint");
+		EINT_INF("ERROR: Request %s failed   [index:%u]\n", "seninf-eint", index);
 		return ret;
 	}
 
 	seninf_eint.eints[index].irq_num = irq;
-	EINT_INF("registered seninf-eint-irq=%d seninf_eint.eints[%d].irq_num=%u\n",
-		irq, index, seninf_eint.eints[index].irq_num);
+	EINT_INF("registered seninf-eint-irq=%d seninf_eint.eints[%d].irq_num=%u   [index:%u]\n",
+		irq, index, seninf_eint.eints[index].irq_num, index);
 
 	return ret;
 }
@@ -1404,7 +1411,7 @@ static void init_eint_event_st(struct platform_device *pdev, unsigned int index)
 			devm_kzalloc(dev, seninf_eint.eints[index].event_st.fifo_size, GFP_ATOMIC);
 
 		if (unlikely(seninf_eint.eints[index].event_st.msg_buffer == NULL))
-			EINT_INF("ERROR: kfifo_init failed\n");
+			EINT_INF("ERROR: kfifo_init failed   [index:%u]\n", index);
 	}
 
 	atomic_set(&seninf_eint.eints[index].event_st.is_fifo_overflow, 0);

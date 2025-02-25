@@ -1294,16 +1294,17 @@ static int init_eint_info(struct platform_device *pdev, struct mtk_seninf_eint_p
 {
 	unsigned int index = pin->dts_info.eint_no;
 
-	mutex_init(&seninf_eint.eints[index].eint_intr_en_lock);
 	memcpy( seninf_eint.eints + index, pin, sizeof(struct mtk_seninf_eint_pin));
+	mutex_init(&seninf_eint.eints[index].eint_intr_en_lock);
 
-	EINT_INF("eint_no:%d gpio_num:%u, pins id:%u hw_latch_code:%u address: %#x size: %#x\n",
-		seninf_eint.eints->dts_info.eint_no,
-		seninf_eint.eints->dts_info.gpio_num,
-		seninf_eint.eints->dts_info.id,
-		seninf_eint.eints->dts_info.hw_latch_code,
-		seninf_eint.eints->dts_info.reg_address,
-		seninf_eint.eints->dts_info.reg_size);
+	EINT_INF("eint_no:%d gpio_num:%u, pins id:%u hw_latch_code:%u address: %#x size: %#x   [index:%u]\n",
+		seninf_eint.eints[index].dts_info.eint_no,
+		seninf_eint.eints[index].dts_info.gpio_num,
+		seninf_eint.eints[index].dts_info.id,
+		seninf_eint.eints[index].dts_info.hw_latch_code,
+		seninf_eint.eints[index].dts_info.reg_address,
+		seninf_eint.eints[index].dts_info.reg_size,
+		index);
 
 	return 0;
 }
