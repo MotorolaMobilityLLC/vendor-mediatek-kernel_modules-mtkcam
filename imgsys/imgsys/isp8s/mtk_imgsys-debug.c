@@ -15,6 +15,7 @@
 #include <linux/remoteproc.h>
 #include "mtk_imgsys-engine-isp8s.h"
 #include "mtk_imgsys-debug.h"
+#include "mtk-mminfra-debug.h"
 /* TODO */
 #include "smi.h"
 
@@ -766,6 +767,7 @@ void imgsys_main_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int engine)
 	value = ioread32((void *)(DdrRegBA + 0x10));
 	pr_info("%s: DdrRegBA 0x10 : 0x%08x\n", __func__, value);
 	//
+	mtk_mmpc_resource_dump();
 	if (imgsys_isc_8s_dbg_log_en())
 		pr_info("%s: -\n", __func__);
 }
