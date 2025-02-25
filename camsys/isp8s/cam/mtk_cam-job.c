@@ -564,6 +564,8 @@ static int mtk_cam_get_pda_idx(struct mtk_cam_job *job)
 
 			CALL_PLAT_V4L2(get_pda_idx, vaddr, &pda_idx);
 		}
+		if (pda_idx != -1)
+			return pda_idx;
 	}
 	return pda_idx;
 }
