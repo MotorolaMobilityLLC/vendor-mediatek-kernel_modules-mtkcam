@@ -739,9 +739,11 @@ void imgsys_main_cmdq_set_init(struct mtk_imgsys_dev *imgsys_dev, void *pkt, int
 
 void imgsys_main_dump(struct mtk_imgsys_dev *imgsys_dev, unsigned int engine)
 {
-	pr_info("%s: +\n", __func__);
+	if (imgsys_isc_8s_dbg_log_en())
+		pr_info("%s: +\n", __func__);
 	imgsys_main_slc_dump(imgsys_dev, engine);
-	pr_info("%s: -\n", __func__);
+	if (imgsys_isc_8s_dbg_log_en())
+		pr_info("%s: -\n", __func__);
 }
 
 void imgsys_main_uninit(struct mtk_imgsys_dev *imgsys_dev)
