@@ -71,7 +71,7 @@ extern void set_task_ls(int pid);
 
 #define SENSOR_META_BUF_SIZE 0x8000
 #define SENSOR_META_BUF_NUM 8
-#define MUX_SETTING_NUM 9
+#define MUX_SETTING_NUM 16
 #define MUX_SETTING_PACK_NUM (MUX_SETTING_NUM * 2)
 //#define RUN_ADL_FRAME_MODE_FROM_RAWI
 
