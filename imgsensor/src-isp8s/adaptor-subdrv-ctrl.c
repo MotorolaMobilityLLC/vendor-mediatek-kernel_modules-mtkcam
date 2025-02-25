@@ -2272,13 +2272,24 @@ void set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 		rg_shutters[0] = (u32) shutters[0] / exp_cnt;
 		break;
 	case 2:
-		rg_shutters[0] = (u32) shutters[0] / exp_cnt;
-		rg_shutters[2] = (u32) shutters[1] / exp_cnt;
+		if (ctx->s_ctx.stagger_fl_type == IMGSENSOR_STAGGER_FL_AUTO_DIVIDED) {
+			rg_shutters[0] = (u32) shutters[0] / exp_cnt;
+			rg_shutters[2] = (u32) shutters[1] / exp_cnt;
+		} else {
+			rg_shutters[0] = (u32) shutters[0];
+			rg_shutters[2] = (u32) shutters[1];
+		}
 		break;
 	case 3:
-		rg_shutters[0] = (u32) shutters[0] / exp_cnt;
-		rg_shutters[1] = (u32) shutters[1] / exp_cnt;
-		rg_shutters[2] = (u32) shutters[2] / exp_cnt;
+		if (ctx->s_ctx.stagger_fl_type == IMGSENSOR_STAGGER_FL_AUTO_DIVIDED) {
+			rg_shutters[0] = (u32) shutters[0] / exp_cnt;
+			rg_shutters[1] = (u32) shutters[1] / exp_cnt;
+			rg_shutters[2] = (u32) shutters[2] / exp_cnt;
+		} else {
+			rg_shutters[0] = (u32) shutters[0];
+			rg_shutters[1] = (u32) shutters[1];
+			rg_shutters[2] = (u32) shutters[2];
+		}
 		break;
 	default:
 		break;
