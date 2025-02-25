@@ -682,7 +682,9 @@ int mtk_cam_hsf_uninit(struct mtk_cam_ctx *ctx)
 {
 	struct mtk_cam_device *cam = ctx->cam;
 	struct mtk_cam_hsf_ctrl *hsf_config = NULL;
+	struct mtk_raw_device *raw_dev = NULL;
 	int ret = 0;
+	int raw_id, raw_engine;
 #ifdef PERFORMANCE_HSF
 	int ms_0 = 0, ms_1 = 0, ms = 0;
 	struct timeval time
@@ -701,6 +703,11 @@ int mtk_cam_hsf_uninit(struct mtk_cam_ctx *ctx)
 		return -1;
 	}
 
+	raw_engine = bit_map_subset_of(MAP_HW_RAW, ctx->used_engine);
+	raw_id = find_first_bit_set(raw_engine);
+	raw_dev = dev_get_drvdata(cam->engines.raw_devs[raw_id]);
+
+	reset(raw_dev);
 	ccu_hsf_config(ctx, 0);
 	ccu_hsf_camsv_config(ctx, 0);
 	mtk_cam_dmabuf_free_iova(ctx, hsf_config->cq_buf);
