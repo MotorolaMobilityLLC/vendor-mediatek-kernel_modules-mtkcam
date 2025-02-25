@@ -80,6 +80,9 @@ MODULE_PARM_DESC(debug_ddren_sw_mode, "debug: 1 : active sw mode");
 	raw->io_ops->__writel_relaxed(raw, val, base, off); \
 })
 
+static void raw_dump_debug_ufbc_status(struct mtk_raw_device *dev);
+static void raw_dump_debug_cqi_status(struct mtk_raw_device *dev);
+
 static struct mtk_yuv_device *get_yuv_dev(struct mtk_raw_device *raw_dev)
 {
 	struct device *dev;
@@ -1247,7 +1250,11 @@ bool is_rawi_ufdi_rdone_zero(struct mtk_raw_device *dev)
 	return false;
 }
 
-/* check again for rawi dcif case */
+#define SOFT_RST_STAT_RAW_DMA		0x1FEF5
+/* NOTE: BIT(8) not used; RAWI/UFDI ignore temporarily */
+
+#define SOFT_RST_STAT_YUV_DMA		0xFF
+
 bool is_all_dma_idle(struct mtk_raw_device *dev)
 {
 	struct mtk_yuv_device *yuv = get_yuv_dev(dev);
@@ -1257,7 +1264,8 @@ bool is_all_dma_idle(struct mtk_raw_device *dev)
 	u32 yuv_rst_stat =
 		raw_readl(dev, yuv->dmatop_base, REG_CAMYUVDMATOP_DMA_SOFT_RST_STAT);
 
-	return (raw_rst_stat == 0x1FFFF) && (yuv_rst_stat == 0xFF);
+	return ((raw_rst_stat & SOFT_RST_STAT_RAW_DMA) == SOFT_RST_STAT_RAW_DMA) &&
+		(yuv_rst_stat == SOFT_RST_STAT_YUV_DMA);
 }
 
 void dump_dma_soft_rst_stat(struct mtk_raw_device *dev)
@@ -1274,7 +1282,7 @@ void dump_dma_soft_rst_stat(struct mtk_raw_device *dev)
 void reset(struct mtk_raw_device *dev)
 {
 	int sw_ctl;
-	u32 mod10_en, val;
+	u32 mod10_en, val, soft_rst;
 	int ret;
 
 	dev_info(dev->dev, "%s, start", __func__);
@@ -1308,6 +1316,19 @@ void reset(struct mtk_raw_device *dev)
 		mtk_smi_dbg_hang_detect("camsys-raw");
 		goto RESET_FAILURE;
 	}
+
+	/* DEBUG use */
+	soft_rst = raw_readl(dev, dev->dmatop_base, REG_CAMRAWDMATOP_DMA_SOFT_RST_STAT);
+	if (!(soft_rst & BIT(1)) || !(soft_rst & BIT(3))) {
+		/* NOTE: BIT(1) RAWI/UFDI_r2, BIT(3) RAWI/UFDI_r5 */
+		dev_info(dev->dev, "%s, soft_rst 0x%x, rawi/ufdi may not idle",
+				 __func__, soft_rst);
+		qof_mtcmos_raw_voter(dev, true);
+		raw_dump_debug_ufbc_status(dev);
+		raw_dump_debug_cqi_status(dev);
+		qof_mtcmos_raw_voter(dev, false);
+	}
+
 	reset_error_handling(dev);
 	/* do hw rst */
 	raw_writel(FBIT(CAMCTL_HW_RST), dev, dev->base, REG_CAMCTL_SW_CTL);
@@ -1381,31 +1402,24 @@ static void raw_handle_error(struct mtk_raw_device *raw_dev,
 
 static void raw_dump_debug_ufbc_status(struct mtk_raw_device *dev)
 {
-#ifdef UFD_DEBUG
-	mtk_cam_dump_ufd_debug(dev,
-			       "UFD_R2",
-			       dbg_UFD_R2, ARRAY_SIZE(dbg_UFD_R2));
-	mtk_cam_dump_ufd_debug(dev,
-			       "UFD_R5",
-			       dbg_UFD_R5, ARRAY_SIZE(dbg_UFD_R5));
-#endif
+	mtk_cam_dump_ufd_debug(dev, "UFD_R2", REG_UFD_R2A_BASE);
+	mtk_cam_dump_ufd_debug(dev, "UFD_R5", REG_UFD_R5A_BASE);
 	mtk_cam_dump_dma_debug(dev,
 			       dev->dmatop_base, /* DMATOP_BASE */
 			       "RAWI_R2",
 			       dbg_RAWI_R2, ARRAY_SIZE(dbg_RAWI_R2));
 	mtk_cam_dump_dma_debug(dev,
 			       dev->dmatop_base, /* DMATOP_BASE */
-			       "RAWI_R2_UFD",
-			       dbg_RAWI_R2_UFD, ARRAY_SIZE(dbg_RAWI_R2_UFD));
+			       "UFDI_R2",
+			       dbg_UFDI_R2, ARRAY_SIZE(dbg_UFDI_R2));
 	mtk_cam_dump_dma_debug(dev,
 			       dev->dmatop_base, /* DMATOP_BASE */
 			       "RAWI_R5",
 			       dbg_RAWI_R5, ARRAY_SIZE(dbg_RAWI_R5));
 	mtk_cam_dump_dma_debug(dev,
 			       dev->dmatop_base, /* DMATOP_BASE */
-			       "RAWI_R5_UFD",
-			       dbg_RAWI_R5_UFD, ARRAY_SIZE(dbg_RAWI_R5_UFD));
-
+			       "UFDI_R5",
+			       dbg_UFDI_R5, ARRAY_SIZE(dbg_UFDI_R5));
 }
 
 static void raw_dump_debug_cqi_status(struct mtk_raw_device *dev)

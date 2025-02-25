@@ -39,7 +39,6 @@ void mtk_cam_dump_dma_debug(struct mtk_raw_device *dev,
 			    struct dma_debug_item *items, int n);
 
 void mtk_cam_dump_ufd_debug(struct mtk_raw_device *raw_dev,
-			    const char *mod_name,
-			    struct dma_debug_item *items, int n);
+			    const char *mod_name, unsigned int base);
 
 #endif	/* _MTK_CAM_RAW_DEBUG_H */

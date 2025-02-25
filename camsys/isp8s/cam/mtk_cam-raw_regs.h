@@ -10012,4 +10012,9 @@
 #define REG_CAM_YUV_LARB_VCSEL       0x3a8e00d0
 #define LARB_VCSEL_OFFSET            0x100000
 
+#define REG_UFD_R2A_BASE                0x2100
+#define REG_UFD_R5A_BASE                0x2280
+#define UFD_DBG_DEBUG_SEL               0x3C
+#define UFD_DBG_DEBUG_DATA              0x40
+
 #endif	/* _MTK_CAM_RAW_REGS_H */
