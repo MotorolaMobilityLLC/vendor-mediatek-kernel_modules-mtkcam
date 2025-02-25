@@ -36,12 +36,11 @@
 #include "kd_imgsensor_define_v4l2.h"
 #include "kd_imgsensor_errcode.h"
 
+#include "s5khp9sp_ana_gain_table.h"
+#include "s5khp9sp_Sensor_setting.h"
+
 #include "adaptor-subdrv-ctrl.h"
 #include "adaptor-i2c.h"
 #include "adaptor.h"
-
-#ifdef S5KHP9SP_ISF_DBG
-extern struct subdrv_static_ctx s5khp9sp_legacy_s_ctx;
-#endif
 
 #endif
