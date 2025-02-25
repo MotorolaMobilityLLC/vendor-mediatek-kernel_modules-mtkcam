@@ -2574,7 +2574,7 @@ void mtk_cam_sv_copy_user_input_param(struct mtk_cam_ctx *ctx, struct mtk_cam_jo
 	else
 		job->tag_info[tag_idx].is_pda_enable = false;
 
-	if (sv_dev->id == 2 && tag_idx == SVTAG_5) {
+	if ((sv_dev->id == 2 && tag_idx == SVTAG_5) || tag_idx >= SVTAG_6) {
 		job->tag_info[tag_idx].is_pdp_enable = false;
 		job->tag_info[tag_idx].is_pda_enable = false;
 	}
