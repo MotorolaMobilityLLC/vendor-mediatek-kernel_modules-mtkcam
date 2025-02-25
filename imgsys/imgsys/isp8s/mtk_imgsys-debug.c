@@ -601,7 +601,7 @@ void imgsys_main_set_init(struct mtk_imgsys_dev *imgsys_dev)
 
 	/* disable WLA & coh_req */
 	value = ioread32((void *)(DdrRegBA + 0xf8));
-	value = 0x0;
+	value = 0x4;
 	iowrite32(value, (DdrRegBA + 0xf8));
 
 	value = ioread32((void *)(DdrRegBA + 0xf8));
