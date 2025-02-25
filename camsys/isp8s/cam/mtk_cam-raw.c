@@ -1778,13 +1778,10 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 		else
 			raw->tg_count = tg_cnt;
 		irq_info.tg_cnt = raw->tg_count;
+
 		if (CAM_DEBUG_ENABLED(EXTISP_SW_CNT))
 			irq_info.tg_cnt = raw->sof_count - 2;
-		/* make sure no cq applied by hw postpone */
-		if (tg1_status & FBIT(CAMCTL_TG_SOF_INT_ST) && frame_idx <= frame_idx_inner &&
-			!raw->sub_sensor_ctrl_en)
-			do_engine_callback(raw->engine_cb, do_workaround_at_sof,
-				   raw->cam, CAMSYS_ENGINE_RAW, raw->id, frame_idx);
+
 		engine_handle_sof(&raw->cq_ref,
 				  bit_map_bit(MAP_HW_RAW, raw->id),
 				  irq_info.frame_idx_inner);

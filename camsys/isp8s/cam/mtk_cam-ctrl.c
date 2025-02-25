@@ -3117,6 +3117,7 @@ int mtk_cam_ctrl_ae_workaround(struct mtk_cam_device *cam,
 	struct mtk_raw_device *raw_dev;
 	int i = 0;
 
+	// NOTE: for liber A0
 	if (ctx->cam->sw_ver == 0x0001)
 		return 0;
 

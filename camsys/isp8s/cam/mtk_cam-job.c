@@ -710,7 +710,6 @@ static struct engine_callback engine_cb = {
 	.isr_event = mtk_cam_ctrl_isr_event,
 	.reset_sensor = mtk_cam_ctrl_reset_sensor,
 	.dump_request = mtk_cam_ctrl_dump_request,
-	.do_workaround_at_sof = mtk_cam_ctrl_ae_workaround,
 };
 
 int
@@ -5277,7 +5276,7 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 			config->flags = MTK_CAM_IPI_CONFIG_TYPE_REINIT;
 		else
 			config->flags = MTK_CAM_IPI_CONFIG_TYPE_INIT;
-		config->need_sw_workaround = ctx->cam->sw_ver != 0x0001;
+		config->need_sw_workaround = false;
 		config->use_buf_idx_for_mmap = mmap_reduction;
 		config->sw_feature = get_sw_feature(job);
 
