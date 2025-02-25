@@ -2628,12 +2628,14 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job)
 				qof_init_timer_freq(raw);
 
 				// TODO: replace "0x7"
-				if (BIT(raw->id) == (selected_need_init & 0x7))
+				if (BIT(raw->id) & (selected_need_init & 0x7)) {
+					int ret = -1;
+
 					initialize(raw, &engine_cb, 1, is_srt,
 								get_sensor_interval_us(job));
 
-				if (check_qof_support(job)) {
-					int ret = call_init_ops(job, qof_init, ctx->hw_raw[i]);
+					ret = (check_qof_support(job)) ?
+						call_init_ops(job, qof_init, ctx->hw_raw[i]) : -1;
 
 					if (!ret) {
 						qof_setup_twin(raw, raw->id == raw_master_id, next_raw);
