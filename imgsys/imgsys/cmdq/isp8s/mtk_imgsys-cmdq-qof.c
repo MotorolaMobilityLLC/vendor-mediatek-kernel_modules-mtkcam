@@ -176,7 +176,7 @@ static struct imgsys_mtcmos_data isp8s_module_data[] = {
 	},
 };
 
-static bool rtff_init(enum QOF_SUPPORT_MODULE mod)
+static bool rtff_init(u32 mod)
 {
 	//Main
 	write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x118, BIT(1)|BIT(2), 0xffffffff);
