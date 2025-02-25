@@ -16,10 +16,11 @@
 #include "mtk-interconnect.h"
 
 #include "camera_pda.h"
-//#include "mtk_cam-bwr.h"
+#include "mtk_cam-bwr.h"
 
 // --------- define region --------
 #define PDA_MMQOS
+//#define TWO_OFL_PDA_SUPPORT
 // --------------------------------
 
 #define PDA_DEV_NAME "camera-pda"
@@ -57,10 +58,14 @@ static const char * const mmqos_pda1_names_rdma[] = {
 #define PDA_MMQOS_PDA1_RDMA_NUM ARRAY_SIZE(mmqos_pda1_names_rdma)
 struct icc_path *icc_path_pda1_rdma[PDA_MMQOS_PDA1_RDMA_NUM];
 
+#ifdef TWO_OFL_PDA_SUPPORT
 static const char * const mmqos_pda2_names_rdma[] = {
 };
 #define PDA_MMQOS_PDA2_RDMA_NUM ARRAY_SIZE(mmqos_pda2_names_rdma)
 struct icc_path *icc_path_pda2_rdma[PDA_MMQOS_PDA2_RDMA_NUM];
+#else
+#define PDA_MMQOS_PDA2_RDMA_NUM (0)
+#endif
 
 static const char * const mmqos_names_pda1_rdma_b[] = {
 	"l26_pdai_b2",
@@ -70,10 +75,14 @@ static const char * const mmqos_names_pda1_rdma_b[] = {
 #define PDA_MMQOS_PDA1_RDMA_B_NUM ARRAY_SIZE(mmqos_names_pda1_rdma_b)
 struct icc_path *icc_path_pda1_rdma_b[PDA_MMQOS_PDA1_RDMA_B_NUM];
 
+#ifdef TWO_OFL_PDA_SUPPORT
 static const char * const mmqos_names_pda2_rdma_b[] = {
 };
 #define PDA_MMQOS_PDA2_RDMA_B_NUM ARRAY_SIZE(mmqos_names_pda2_rdma_b)
 struct icc_path *icc_path_pda2_rdma_b[PDA_MMQOS_PDA2_RDMA_B_NUM];
+#else
+#define PDA_MMQOS_PDA2_RDMA_B_NUM (0)
+#endif
 
 static const char * const mmqos_names_pda1_wdma[] = {
 	"l26_pdao_b"
@@ -81,13 +90,17 @@ static const char * const mmqos_names_pda1_wdma[] = {
 #define PDA_MMQOS_PDA1_WDMA_NUM ARRAY_SIZE(mmqos_names_pda1_wdma)
 struct icc_path *icc_path_pda1_wdma[PDA_MMQOS_PDA1_WDMA_NUM];
 
+#ifdef TWO_OFL_PDA_SUPPORT
 static const char * const mmqos_names_pda2_wdma[] = {
 };
 #define PDA_MMQOS_PDA2_WDMA_NUM ARRAY_SIZE(mmqos_names_pda2_wdma)
 struct icc_path *icc_path_pda2_wdma[PDA_MMQOS_PDA2_WDMA_NUM];
+#else
+#define PDA_MMQOS_PDA2_WDMA_NUM (0)
+#endif
 #endif
 
-//struct mtk_bwr_device *bwr_device;
+struct mtk_bwr_device *bwr_device;
 
 // clock relate
 int g_num_clks;
@@ -113,30 +126,34 @@ void pda_mmqos_init(struct device *pdev)
 		LOG_INF("rdma index: %d, mmqos name: %s\n", i, mmqos_pda1_names_rdma[i]);
 		icc_path_pda1_rdma[i] = of_mtk_icc_get(pdev, mmqos_pda1_names_rdma[i]);
 	}
+#ifdef TWO_OFL_PDA_SUPPORT
 	for (i = 0; i < PDA_MMQOS_PDA2_RDMA_NUM; ++i) {
 		LOG_INF("rdma index: %d, mmqos name: %s\n", i, mmqos_pda2_names_rdma[i]);
 		icc_path_pda2_rdma[i] = of_mtk_icc_get(pdev, mmqos_pda2_names_rdma[i]);
 	}
-
+#endif
 	// get interconnect path for MMQOS
 	for (i = 0; i < PDA_MMQOS_PDA1_RDMA_B_NUM; ++i) {
 		LOG_INF("rdma b index: %d, mmqos name: %s\n", i, mmqos_names_pda1_rdma_b[i]);
 		icc_path_pda1_rdma_b[i] = of_mtk_icc_get(pdev, mmqos_names_pda1_rdma_b[i]);
 	}
+#ifdef TWO_OFL_PDA_SUPPORT
 	for (i = 0; i < PDA_MMQOS_PDA2_RDMA_B_NUM; ++i) {
 		LOG_INF("rdma b index: %d, mmqos name: %s\n", i, mmqos_names_pda2_rdma_b[i]);
 		icc_path_pda2_rdma_b[i] = of_mtk_icc_get(pdev, mmqos_names_pda2_rdma_b[i]);
 	}
-
+#endif
 	// get interconnect path for MMQOS
 	for (i = 0; i < PDA_MMQOS_PDA1_WDMA_NUM; ++i) {
 		LOG_INF("wdma index: %d, mmqos name: %s\n", i, mmqos_names_pda1_wdma[i]);
 		icc_path_pda1_wdma[i] = of_mtk_icc_get(pdev, mmqos_names_pda1_wdma[i]);
 	}
+#ifdef TWO_OFL_PDA_SUPPORT
 	for (i = 0; i < PDA_MMQOS_PDA2_WDMA_NUM; ++i) {
 		LOG_INF("wdma index: %d, mmqos name: %s\n", i, mmqos_names_pda2_wdma[i]);
 		icc_path_pda2_wdma[i] = of_mtk_icc_get(pdev, mmqos_names_pda2_wdma[i]);
 	}
+#endif
 }
 
 void pda_mmqos_bw_set(struct PDA_Data_t *pda_Pdadata)
@@ -296,6 +313,7 @@ void pda_mmqos_bw_set(struct PDA_Data_t *pda_Pdadata)
 			pda_rdma_bw_port += rdma_bw_temp;
 		}
 	}
+#ifdef TWO_OFL_PDA_SUPPORT
 	for (i = 0; i < PDA_MMQOS_PDA2_RDMA_NUM; ++i) {
 		if (icc_path_pda2_rdma[i]) {
 			// share mmqos
@@ -304,7 +322,7 @@ void pda_mmqos_bw_set(struct PDA_Data_t *pda_Pdadata)
 				(int)(IMAGE_TABLE_RDMA_PEAK_BW));
 		}
 	}
-
+#endif
 	LOG_INF("RDMA_BW_PORT ImageTable AVG/PEAK: %d/%d\n",
 		rdma_bw_temp, IMAGE_TABLE_RDMA_PEAK_BW);
 
@@ -326,7 +344,7 @@ void pda_mmqos_bw_set(struct PDA_Data_t *pda_Pdadata)
 				}
 				pda_rdma_bw_port += rdma_bw_temp;
 			}
-
+#ifdef TWO_OFL_PDA_SUPPORT
 			if (PDA_MMQOS_PDA2_RDMA_B_NUM > 0) {
 				if (icc_path_pda2_rdma_b[i]) {
 					mtk_icc_set_bw(icc_path_pda2_rdma_b[i],
@@ -334,6 +352,7 @@ void pda_mmqos_bw_set(struct PDA_Data_t *pda_Pdadata)
 						(int)(IMAGE_IMAGE_RDMA_PEAK_BW));
 				}
 			}
+#endif
 		}
 		if (B_N > 0)
 			LOG_INF("RDMA_BW_PORT ImageImage AVG/PEAK: %d/%d\n",
@@ -359,6 +378,7 @@ void pda_mmqos_bw_set(struct PDA_Data_t *pda_Pdadata)
 			pda_wdma_bw_port += wdma_bw_temp;
 		}
 	}
+#ifdef TWO_OFL_PDA_SUPPORT
 	for (i = 0; i < PDA_MMQOS_PDA2_WDMA_NUM; ++i) {
 		if (icc_path_pda2_wdma[i]) {
 			mtk_icc_set_bw(icc_path_pda2_wdma[i],
@@ -366,6 +386,7 @@ void pda_mmqos_bw_set(struct PDA_Data_t *pda_Pdadata)
 				(int)(WDMA_PEAK_BW));
 		}
 	}
+#endif
 
 	if (pda_log_dbg_en == 1)
 		LOG_INF("WDMA_BW_PORT AVG/PEAK: %d/%d\n", wdma_bw_temp, WDMA_PEAK_BW);
@@ -375,21 +396,21 @@ void pda_mmqos_bw_set(struct PDA_Data_t *pda_Pdadata)
 	pda_wdma_bw_port /= 1000;
 
 	// larb25 setting, this is larb26 in jayer
-	//mtk_cam_isp8s_bwr_set_chn_bw(bwr_device, ENGINE_PDA, CAM0_PORT,
-	//	(int)(pda_rdma_bw_port), (int)(pda_wdma_bw_port), 0, 0, true);
+	mtk_cam_isp8s_bwr_set_chn_bw(bwr_device, ENGINE_PDA, CAM0_PORT,
+		(int)(pda_rdma_bw_port), (int)(pda_wdma_bw_port), 0, 0, true);
 
 	// larb26 setting, no use in jayer, CAM2_PORT is for larb25
 	if (PDA_MMQOS_PDA2_RDMA_NUM > 0) {
-		//mtk_cam_isp8s_bwr_set_chn_bw(bwr_device, ENGINE_PDA, CAM2_PORT,
-		//	(int)(pda_rdma_bw_port), (int)(pda_wdma_bw_port), 0, 0, true);
+		mtk_cam_isp8s_bwr_set_chn_bw(bwr_device, ENGINE_PDA, CAM2_PORT,
+			(int)(pda_rdma_bw_port), (int)(pda_wdma_bw_port), 0, 0, true);
 
 		// two pda, need to multiply by two
 		ttl_bw_temp = (pda_rdma_bw_port + pda_wdma_bw_port) * 2;
 	} else {
 		ttl_bw_temp = (pda_rdma_bw_port + pda_wdma_bw_port);
 	}
-	//mtk_cam_isp8s_bwr_set_ttl_bw(bwr_device, ENGINE_PDA,
-	//	(int)(ttl_bw_temp), 0, true);
+	mtk_cam_isp8s_bwr_set_ttl_bw(bwr_device, ENGINE_PDA,
+		(int)(ttl_bw_temp), 0, true);
 
 	if (pda_log_dbg_en == 1) {
 		LOG_INF("RDMA_BW TOTAL AVG: %d MB/s, WDMA_BW TOTAL AVG: %d MB/s\n",
@@ -415,35 +436,38 @@ void pda_mmqos_bw_reset(void)
 		if (icc_path_pda1_rdma[i])
 			mtk_icc_set_bw(icc_path_pda1_rdma[i], 0, 0);
 	}
+#ifdef TWO_OFL_PDA_SUPPORT
 	for (i = 0; i < PDA_MMQOS_PDA2_RDMA_NUM; ++i) {
 		if (icc_path_pda2_rdma[i])
 			mtk_icc_set_bw(icc_path_pda2_rdma[i], 0, 0);
 	}
-
+#endif
 	for (i = 0; i < PDA_MMQOS_PDA1_RDMA_B_NUM; ++i) {
 		if (icc_path_pda1_rdma_b[i])
 			mtk_icc_set_bw(icc_path_pda1_rdma_b[i], 0, 0);
 	}
+#ifdef TWO_OFL_PDA_SUPPORT
 	for (i = 0; i < PDA_MMQOS_PDA2_RDMA_B_NUM; ++i) {
 		if (icc_path_pda2_rdma_b[i])
 			mtk_icc_set_bw(icc_path_pda2_rdma_b[i], 0, 0);
 	}
-
+#endif
 	for (i = 0; i < PDA_MMQOS_PDA1_WDMA_NUM; ++i) {
 		if (icc_path_pda1_wdma[i])
 			mtk_icc_set_bw(icc_path_pda1_wdma[i], 0, 0);
 	}
+#ifdef TWO_OFL_PDA_SUPPORT
 	for (i = 0; i < PDA_MMQOS_PDA2_WDMA_NUM; ++i) {
 		if (icc_path_pda2_wdma[i])
 			mtk_icc_set_bw(icc_path_pda2_wdma[i], 0, 0);
 	}
-
+#endif
 	// larb25 setting, this is larb26 in jayer
-	//mtk_cam_isp8s_bwr_clr_bw(bwr_device, ENGINE_PDA, CAM0_PORT);
+	mtk_cam_isp8s_bwr_clr_bw(bwr_device, ENGINE_PDA, CAM0_PORT);
 
 	// larb26 setting, no use in jayer, CAM2_PORT is for larb25
-	//if (PDA_MMQOS_PDA2_RDMA_NUM > 0)
-	//	mtk_cam_isp8s_bwr_clr_bw(bwr_device, ENGINE_PDA, CAM2_PORT);
+	if (PDA_MMQOS_PDA2_RDMA_NUM > 0)
+		mtk_cam_isp8s_bwr_clr_bw(bwr_device, ENGINE_PDA, CAM2_PORT);
 
 	g_Frame_Width = 0;
 	g_Frame_Height = 0;
@@ -456,7 +480,7 @@ int pda_devm_clk_get(struct platform_device *pdev)
 	int i = 0;
 
 	//get bwr device
-	//bwr_device = mtk_cam_isp8s_bwr_get_dev(pdev);
+	bwr_device = mtk_cam_isp8s_bwr_get_dev(pdev);
 
 	g_num_clks = of_count_phandle_with_args(pdev->dev.of_node, "clocks",
 			"#clock-cells");
@@ -486,7 +510,7 @@ void pda_clk_prepare_enable(void)
 {
 	int ret, i;
 
-	//mtk_cam_isp8s_bwr_enable(bwr_device);
+	mtk_cam_isp8s_bwr_enable(bwr_device);
 
 	for (i = 0; i < g_num_clks; i++) {
 		ret = clk_prepare_enable(g_clks[i]);
@@ -506,7 +530,7 @@ void pda_clk_disable_unprepare(void)
 		LOG_INF("clk_disable_unprepare index:%d done\n", i);
 	}
 
-	//mtk_cam_isp8s_bwr_disable(bwr_device);
+	mtk_cam_isp8s_bwr_disable(bwr_device);
 }
 
 void __iomem *pda_get_camsys_address(void)
