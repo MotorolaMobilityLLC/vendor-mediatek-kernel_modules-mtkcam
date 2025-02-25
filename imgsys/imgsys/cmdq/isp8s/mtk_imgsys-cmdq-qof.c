@@ -1525,7 +1525,7 @@ void mtk_imgsys_cmdq_qof_add(struct cmdq_pkt *pkt, bool *qof_need_sub, u32 hw_co
 	if(g_qof_debug_level == QOF_DEBUG_MODE_PERFRAME_DUMP)
 		mtk_imgsys_cmdq_qof_dump(0, false);
 
-	for (pwr = ISP8S_PWR_START; pwr < ISP8S_PWR_NUM; pwr++) {
+	for (pwr = QOF_SUPPORT_START; pwr < QOF_TOTAL_MODULE; pwr++) {
 
 		if ((IS_MOD_SUPPORT_QOF(pwr)) &&
 			(qof_need_sub[pwr] == false) &&
