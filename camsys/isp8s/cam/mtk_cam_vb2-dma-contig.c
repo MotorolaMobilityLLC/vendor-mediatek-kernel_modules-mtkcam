@@ -425,8 +425,10 @@ void mtk_cam_vb2_partial_sync_for_cpu(struct vb2_buffer *vb, unsigned long offse
 	struct mtk_cam_vb2_buf *buf;
 	unsigned int plane;
 
-	if (!offset)
+	if (!offset) {
 		mtk_cam_vb2_sync_for_cpu(vb);
+		return;
+	}
 
 	node = mtk_cam_vbq_to_vdev(vb->vb2_queue);
 	mtk_buf = mtk_cam_vb2_buf_to_dev_buf(vb);

@@ -494,13 +494,13 @@ static void mtk_cam_vb2_buf_finish(struct vb2_buffer *vb)
 			dev_info(vb->vb2_queue->dev, "%s: %s: index:%d is_acp:%d\n", __func__,
 				node->desc.name, mtk_buf->v4l2_buffer_idx, mtk_buf->is_acp);
 
-		if (is_raw_subdev(node->uid.id) &&
+		if (is_raw_subdev(node->uid.pipe_id) &&
 		    node->desc.id == MTK_RAW_META_OUT_0)
 			offset = GET_PLAT_V4L2(meta_stats0_header_size);
-		else if (is_raw_subdev(node->uid.id) &&
+		else if (is_raw_subdev(node->uid.pipe_id) &&
 			 node->desc.id == MTK_RAW_META_OUT_1)
 			offset = GET_PLAT_V4L2(meta_stats1_header_size);
-		else if (is_mraw_subdev(node->uid.id) &&
+		else if (is_mraw_subdev(node->uid.pipe_id) &&
 			 node->desc.id == MTK_RAW_META_OUT_1)
 			offset = GET_PLAT_V4L2(meta_mraw_ext_size);
 		else
