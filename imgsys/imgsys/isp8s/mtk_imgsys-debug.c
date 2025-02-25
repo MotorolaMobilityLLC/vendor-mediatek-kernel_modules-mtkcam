@@ -599,13 +599,22 @@ void imgsys_main_set_init(struct mtk_imgsys_dev *imgsys_dev)
 
 	DdrRegBA = imgsysVcoreRegBA;
 
-	/* WLA 2.0 de-bounce */
-	value = 0x80006000;
-	iowrite32(value, (DdrRegBA + 0x9c));
+	/* disable WLA & coh_req */
+	value = ioread32((void *)(DdrRegBA + 0xf8));
+	value = 0x0;
+	iowrite32(value, (DdrRegBA + 0xf8));
 
-	/* HW DDREN*/
-	value = 0x1fd;
+	value = ioread32((void *)(DdrRegBA + 0xf8));
+	pr_debug("DdrRegBA + 0xf8 = 0x%08x\n", value);
+
+	/* WLA setting */
+	iowrite32(0x007d0002, (DdrRegBA + 0x98));
+	value = ioread32((void *)(DdrRegBA + 0x98));
+	pr_debug("DdrRegBA + 0x98 = 0x%08x\n", value);
+	/* Force SW ddren for debug */
+	value = 0x3fd;
 	iowrite32(value, (DdrRegBA + 0x10));
+	pr_debug("DdrRegBA + 0x10 = 0x%08x\n", value);
 
 	/* Wait platform resources ack */
 	count = 0;
@@ -613,11 +622,17 @@ void imgsys_main_set_init(struct mtk_imgsys_dev *imgsys_dev)
 	while ((value & 0x1fc) != 0x1fc) {
 		count++;
 		if (count > DDREN_ACK_TIMEOUT_CNT) {
-			pr_err("[%s][%d] wait platorm resources done timeout", __func__, __LINE__);
-				break;
+			pr_err("[%s][%d] wait platorm resources done timeout 0x%08x", __func__, __LINE__, value);
+			value = ioread32((void *)(DdrRegBA + 0xC4));
+			pr_err("[%s][%d] C4: 0x%08x", __func__, __LINE__, value);
+			value = ioread32((void *)(DdrRegBA + 0xC8));
+			pr_err("[%s][%d] C8: 0x%08x", __func__, __LINE__, value);
+			value = ioread32((void *)(DdrRegBA + 0xCC));
+			pr_err("[%s][%d] CC: 0x%08x", __func__, __LINE__, value);
+			break;
 		}
 		udelay(5);
-			value = ioread32((void *)(DdrRegBA + 0x14));
+		value = ioread32((void *)(DdrRegBA + 0x14));
 	}
 
 	if (imgsys_dev == NULL) {
