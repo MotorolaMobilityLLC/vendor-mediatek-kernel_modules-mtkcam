@@ -126,7 +126,6 @@ static inline bool apply_cq_ref_handle_sof(struct apply_cq_ref *ref,
 					   long mask,
 					   int inner_cookie)
 {
-
 	if (ref && ref->cookie == inner_cookie) {
 #if ENABLE_FSM_LOG
 		pr_info("%s: inner_not_ready:%lx , mask:%lx", __func__,

@@ -2445,13 +2445,13 @@ void mtk_cam_sv_set_pda_status(void *vaddr, bool pda_support)
 
 static void mtk_cam_sv_set_meta_stats_info(
 	void *pdp_header, void *pda_header, struct dma_info *info,
-	bool pdp_support, bool pda_support)
+	bool pdp_support, bool pda_support, int tag_idx)
 {
 	if (pdp_header)
 		CALL_PLAT_V4L2(
-				set_mraw_meta_stats_info, MTKCAM_IPI_MRAW_META_STATS_0, pdp_header, info,
-				pdp_support, pda_support);
-	if (pda_support)
+			set_mraw_meta_stats_info, MTKCAM_IPI_MRAW_META_STATS_0, pdp_header, info,
+			pdp_support, pda_support);
+	if (pda_header && tag_idx == SVTAG_4)
 		CALL_PLAT_V4L2(
 			set_mraw_meta_stats_info, MTKCAM_IPI_MRAW_PDA_OUT, pda_header, info,
 			pdp_support, pda_support);
@@ -2502,7 +2502,7 @@ int mtk_cam_sv_cal_cfg_info(struct mtk_cam_ctx *ctx, struct mtk_cam_buffer *buf,
 			- MTKCAM_IPI_MRAW_ID_START],
 		pipe->res_config.vaddr[MTKCAM_IPI_MRAW_PDA_OUT
 			- MTKCAM_IPI_MRAW_ID_START],
-		info, pdp_support, pda_support);
+		info, pdp_support, pda_support, tag_idx);
 
 	return 0;
 }

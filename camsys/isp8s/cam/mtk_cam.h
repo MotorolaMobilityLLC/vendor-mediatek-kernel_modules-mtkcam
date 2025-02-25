@@ -199,6 +199,9 @@ struct mtk_cam_ctx {
 	unsigned int enabled_tags;
 	struct mtk_camsv_tag_info tag_info[CAMSV_MAX_TAGS];
 
+	/* pda control */
+	unsigned int pda_modules;
+
 	/* for mmqos usage */
 	struct mtk_seninf_active_line_info act_line_info;
 
@@ -446,6 +449,8 @@ void mtk_cam_ctx_engine_reset_msgfifo(struct mtk_cam_ctx *ctx);
 int mtk_cam_ctx_send_raw_event(struct mtk_cam_ctx *ctx,
 			       struct v4l2_event *event);
 int mtk_cam_ctx_send_sv_event(struct mtk_cam_ctx *ctx,
+			       struct v4l2_event *event);
+int mtk_cam_ctx_send_mraw_event(struct mtk_cam_ctx *ctx,
 			       struct v4l2_event *event);
 
 int mtk_cam_ctx_queue_sensor_worker(struct mtk_cam_ctx *ctx,

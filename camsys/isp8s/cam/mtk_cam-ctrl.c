@@ -325,6 +325,29 @@ void mtk_cam_event_camsys_resource_ready(struct mtk_cam_ctrl *cam_ctrl,	u32 raw_
 	log_event(__func__, ctx->stream_id, &event);
 }
 
+void mtk_cam_event_pda_resource_ready(struct mtk_cam_ctrl *cam_ctrl, unsigned long pda_ready)
+{
+	struct mtk_cam_ctx *ctx = cam_ctrl->ctx;
+	unsigned int pda_id;
+	unsigned long subset;
+
+	subset = bit_map_subset_of(MAP_HW_PDA, pda_ready);
+	pda_id = find_first_bit_set(subset);
+
+	struct mtk_cam_event_pda_resource_ready data = {
+		.pda_ready = pda_id,
+	};
+	struct v4l2_event event = {
+		.type = V4L2_EVENT_PDA_RESOURCE_READY,
+	};
+
+	memcpy(event.u.data, &data, 4);
+
+	mtk_cam_ctx_send_mraw_event(ctx, &event);
+
+	log_event(__func__, ctx->stream_id, &event);
+}
+
 void mtk_cam_event_frame_sync(struct mtk_cam_ctrl *cam_ctrl,
 			      unsigned int frame_seq_no)
 {
@@ -1853,6 +1876,20 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 	check_args.expect_inner = job->frame_seq_no;
 	dev_info(dev, "[%s] begin waiting check for inner no:%d seq 0x%x\n",
 		__func__, job->req_seq, job->frame_seq_no);
+
+	if (job->uninit_pda_engine) {
+		dev_info(dev, "[%s] pda uninit start, uninit pda engines:0x%lx\n",
+			__func__, job->uninit_pda_engine);
+		if (mtk_cam_job_uninit_pda_engine(job, job->uninit_pda_engine)) {
+			dev_info(dev, "[%s] uninit engine failed, uninit pda:0x%lx\n",
+				__func__, job->uninit_pda_engine);
+			goto SWITCH_FAILURE;
+		}
+		mtk_cam_event_pda_resource_ready(&ctx->cam_ctrl, job->uninit_pda_engine);
+		dev_info(dev, "[%s] pda uninit finish, uninit pda engines:0x%lx\n",
+			__func__, job->uninit_pda_engine);
+	}
+
 	if (mtk_cam_ctrl_wait_event(ctrl, check_for_inner, &check_args,
 				    30000)) {
 		dev_info(dev, "[%s] check_for_inner timeout: expected in=0x%x\n",

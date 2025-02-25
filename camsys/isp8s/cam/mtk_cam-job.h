@@ -492,6 +492,7 @@ struct mtk_cam_job {
 
 	/* pda status */
 	bool pda_status;
+	unsigned long uninit_pda_engine;
 };
 
 static inline struct mtk_cam_job *mtk_cam_job_get(struct mtk_cam_job *job)
@@ -745,4 +746,6 @@ int mtk_cam_job_config_raw_slc(struct mtk_cam_job *job, int enable);
 
 bool mtk_cam_job_not_support_qof(struct mtk_cam_job *job);
 
+int mtk_cam_job_uninit_pda_engine(struct mtk_cam_job *job,
+	unsigned long unit_engs);
 #endif //__MTK_CAM_JOB_H

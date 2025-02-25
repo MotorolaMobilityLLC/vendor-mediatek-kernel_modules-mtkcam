@@ -4138,6 +4138,22 @@ int mtk_cam_ctx_send_sv_event(struct mtk_cam_ctx *ctx,
 	return 0;
 }
 
+int mtk_cam_ctx_send_mraw_event(struct mtk_cam_ctx *ctx,
+			       struct v4l2_event *event)
+{
+	int i;
+	unsigned int mraw_pipe_idx;
+	struct v4l2_subdev *sd = NULL;
+
+	for (i = 0; i < ctx->num_mraw_subdevs; i++) {
+		mraw_pipe_idx = ctx->mraw_subdev_idx[i];
+		sd = &ctx->cam->pipelines.mraw[mraw_pipe_idx].subdev;
+		break;
+	}
+	v4l2_event_queue(sd->devnode, event);
+	return 0;
+}
+
 static int ctx_kthread_queue_work(struct mtk_cam_ctx *ctx,
 				  struct kthread_worker *worker,
 				  struct kthread_work *work,

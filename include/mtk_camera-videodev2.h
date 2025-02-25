@@ -18,6 +18,7 @@
 #define V4L2_EVENT_ERROR  (V4L2_EVENT_PRIVATE_START + 5)
 #define V4L2_EVENT_EXTISP_CAMSYS_READY  (V4L2_EVENT_PRIVATE_START + 6)
 #define V4L2_EVENT_CAMSYS_RESOURCE_READY  (V4L2_EVENT_PRIVATE_START + 7)
+#define V4L2_EVENT_PDA_RESOURCE_READY  (V4L2_EVENT_PRIVATE_START + 8)
 
 struct mtk_cam_event_sensor_trigger {
 	__u32	tg_cnt;
@@ -34,6 +35,10 @@ struct mtk_cam_event_frame_sync_data {
 };
 struct mtk_cam_event_camsys_resource_ready {
 	__u32	raw_ready;
+	__u32	reserved[15];
+};
+struct mtk_cam_event_pda_resource_ready {
+	__u32	pda_ready;
 	__u32	reserved[15];
 };
 

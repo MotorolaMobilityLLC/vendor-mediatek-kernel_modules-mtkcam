@@ -533,6 +533,8 @@ static int mtk_cam_job_pack_init(struct mtk_cam_job *job,
 	job->local_ispdone_ts = 0;
 	job->longest_exp_ns = 0;
 
+	job->uninit_pda_engine = 0;
+
 	if (raw_data &&
 		raw_data->ctrl.req_info.req_type == SENSOR_REQUEST) {
 		job->req_info_id = raw_data->ctrl.req_info.req_sync_id;
@@ -554,7 +556,8 @@ static int mtk_cam_get_pda_idx(struct mtk_cam_job *job)
 		struct mtk_cam_video_device *node;
 
 		node = mtk_cam_buf_to_vdev(buf);
-		if (node->desc.dma_port == MTKCAM_IPI_MRAW_META_STATS_CFG) {
+		if (node->desc.dma_port == MTKCAM_IPI_MRAW_META_STATS_CFG &&
+		    belong_to_current_ctx(job, node->uid.pipe_id)) {
 			vaddr = vb2_plane_vaddr(&buf->vbb.vb2_buf, 0);
 			if (!vaddr)
 				pr_info("%s vaddr is NULL\n", __func__);
@@ -2549,24 +2552,35 @@ static int job_related_hw_init(struct mtk_cam_job *job)
 
 static int job_pda_hw_init(struct mtk_cam_job *job, int pda_idx)
 {
-	unsigned long pda_need_init;
+	unsigned long pda_need_init = 0, pda_need_uninit = 0;
 	unsigned long pda_selected = 0;
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	unsigned int i;
 
-	/* select pda hw */
-	pda_selected |= bit_map_bit(MAP_HW_PDA, pda_idx);
+	/* disable pda dc mode*/
+	if (pda_idx == -1 && ctx->pda_modules == 0)
+		return 0;
 
-	pda_need_init = pda_selected & ~ctx->used_engine;
-	pr_info("%s pda_need_init %lx", __func__, pda_need_init);
+	/* select pda hw */
+	if (pda_idx != -1) {
+		pda_selected |= bit_map_bit(MAP_HW_PDA, pda_idx);
+		pda_need_init = pda_selected & ~ctx->used_engine;
+	}
+
+	/* disable pda dc mode & uninit pda hw*/
+	if (pda_idx == -1 && ctx->pda_modules != 0)
+		pda_need_uninit = ctx->pda_modules;
 
 	if (pda_need_init) {
+		pr_info("%s pda_need_init %lx pda_need_unint %lx use engine %x ",
+			__func__, pda_need_init, pda_need_uninit, ctx->used_engine);
 		mtk_cam_ctx_fetch_pda_devices(ctx, pda_selected);
 		if (mtk_cam_occupy_engine(ctx->cam, pda_selected))
 			dev_info(ctx->cam->dev, "%s warning: occupy resource prev:0x%x/cur:0x%lx",
 			__func__, ctx->used_engine, pda_selected);
 		pda_need_init = pda_selected & ~ctx->used_engine;
 		ctx->used_engine |= pda_need_init;
+		ctx->pda_modules |= pda_need_init;
 		mtk_cam_pm_runtime_engines(&ctx->cam->engines, pda_need_init, 1);
 
 		/* pda */
@@ -2578,6 +2592,16 @@ static int job_pda_hw_init(struct mtk_cam_job *job, int pda_idx)
 			}
 		}
 	}
+	if (pda_need_uninit) {
+		pr_info("%s pda_need_init %lx pda_need_unint %lx use engine %x ",
+			__func__, pda_need_init, pda_need_uninit, ctx->used_engine);
+		if (mtk_cam_release_engine(ctx->cam, pda_need_uninit))
+			dev_info(ctx->cam->dev, "%s warning: release resource prev:0x%x",
+				__func__, ctx->used_engine);
+		ctx->used_engine &= ~pda_need_uninit;
+		ctx->pda_modules = 0;
+	}
+	job->uninit_pda_engine = pda_need_uninit;
 	return 0;
 }
 
@@ -2823,8 +2847,8 @@ _job_pack_otf_stagger(struct mtk_cam_job *job,
 		/* check if slave raw need to init or uninit */
 		job_raw_change_hw_init(job);
 	}
-	if (pda_idx != -1)
-		job_pda_hw_init(job, pda_idx);
+
+	job_pda_hw_init(job, pda_idx);
 
 	job->do_ipi_config = false;
 	if (check_if_need_configure(ctx->configured, job->seamless_switch,
@@ -3103,8 +3127,8 @@ _job_pack_normal(struct mtk_cam_job *job,
 		/* check if slave/new raw need to uninit or init */
 		job_raw_change_hw_init(job);
 	}
-	if (pda_idx != -1)
-		job_pda_hw_init(job, pda_idx);
+
+	job_pda_hw_init(job, pda_idx);
 
 	job->do_ipi_config = false;
 	if (check_if_need_configure(ctx->configured,
@@ -4171,6 +4195,28 @@ static struct mtk_cam_seamless_ops common_seamless = {
 	.after_sensor = NULL,
 	.after_prev_frame_done = _common_seamless_after_frame_done,
 };
+
+int mtk_cam_job_uninit_pda_engine(struct mtk_cam_job *job, unsigned long unit_engs)
+{
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	struct mtk_cam_device *cam = ctx->cam;
+	struct device *dev = ctx->cam->dev;
+	struct mtk_pda_device *pda_dev;
+	int i;
+
+	dev_info(dev, "[%s] begin uninit pda:0x%lx\n",
+			 __func__, unit_engs);
+	for (i = 0; i < cam->engines.num_pda_devices; i++) {
+		if (bit_map_bit(MAP_HW_PDA, i) & unit_engs) {
+			pda_dev = dev_get_drvdata(cam->engines.pda_devs[i]);
+			pda_reset(pda_dev);
+		}
+	}
+	if (unit_engs)
+		mtk_cam_pm_runtime_engines(&ctx->cam->engines, unit_engs, 0);
+
+	return 0;
+}
 
 int mtk_cam_job_uninit_engine(struct mtk_cam_job *job, int unit_engs)
 {
