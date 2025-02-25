@@ -1547,11 +1547,8 @@ void update_cpu_idle_rate(void)
 			_l_sum_of_idlerate[_cluster_idx] += idle_rate->l_idle;
 			_total_idlerate += idle_rate->l_idle;
 			_need_update_long_period = true;
-			if (_cpu_index < glb_info->available_cpus) {
+			if (_cpu_index < glb_info->available_cpus)
 				_total_idlerate_available_cpus += idle_rate->l_idle;
-				C2PS_LOGD("l_idle rate: %u for cpu: %d, _total_idlerate_available_cpus: %d",
-					idle_rate->l_idle, _cpu_index, glb_info->avg_available_cpus_idle_rate);
-			}
 		}
 
 		_num_of_cpu[_cluster_idx]++;

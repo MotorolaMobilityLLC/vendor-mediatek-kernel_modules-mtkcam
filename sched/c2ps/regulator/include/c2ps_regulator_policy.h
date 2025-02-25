@@ -10,6 +10,9 @@
 #include <linux/sched/cputime.h>
 #include <sched/sched.h>
 
+#define C2PS_UM_RATIO_LOWER_BOUND 7
+#define C2PS_UM_RATIO_UPPER_BOUND 14
+
 // critical task policy
 void c2ps_regulator_policy_fix_uclamp(struct regulator_req *req);
 // void c2ps_regulator_policy_simple(struct regulator_req *req);

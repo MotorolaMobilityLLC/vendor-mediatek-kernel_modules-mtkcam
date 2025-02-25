@@ -638,6 +638,8 @@ void c2ps_decide_um_ratio(struct regulator_req *req)
 		c2ps_main_systrace(
 			"cluster0: freq=%d pwr_eff=%d, cluster1: freq=%d pwr_eff=%d, um ratio: %d",
 			l_freq, l_pwr_eff, m_freq, m_pwr_eff, c2ps_lcore_mcore_um_ratio);
+		c2ps_lcore_mcore_um_ratio = max(C2PS_UM_RATIO_LOWER_BOUND,
+			min(c2ps_lcore_mcore_um_ratio, C2PS_UM_RATIO_UPPER_BOUND));
 	} else if (unlikely(c2ps_lcore_mcore_um_ratio != 10)) {
 		c2ps_lcore_mcore_um_ratio = 10;
 	}
