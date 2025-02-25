@@ -6714,13 +6714,14 @@ int mtk_cam_job_update_clk_switching(struct mtk_cam_job *job, bool begin)
 	unsigned int freq_hz;
 	bool boostable;
 
-	if (!begin)
-		return mtk_cam_dvfs_switch_end(&cam->dvfs, ctx->stream_id, raw_id);
-
 	if (job_fetch_freq(job, &freq_hz, &boostable))
 		return -1;
 
-	return mtk_cam_dvfs_switch_begin(&cam->dvfs, ctx->stream_id,
+	if (!begin)
+		return mtk_cam_dvfs_switch_end(&cam->dvfs, ctx->stream_id,
+					 raw_id, freq_hz);
+	else
+		return mtk_cam_dvfs_switch_begin(&cam->dvfs, ctx->stream_id,
 					 raw_id, freq_hz, boostable);
 }
 

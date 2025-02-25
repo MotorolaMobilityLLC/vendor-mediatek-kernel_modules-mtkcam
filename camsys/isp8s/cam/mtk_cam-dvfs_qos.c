@@ -350,10 +350,11 @@ int mtk_cam_dvfs_switch_begin(struct mtk_camsys_dvfs *dvfs, int stream_id, int r
 		   __func__);
 }
 
-int mtk_cam_dvfs_switch_end(struct mtk_camsys_dvfs *dvfs, int stream_id, int raw_id)
+int mtk_cam_dvfs_switch_end(struct mtk_camsys_dvfs *dvfs, int stream_id, int raw_id,
+			      unsigned int freq_hz)
 {
 	if (is_dvc_support())
-		return mtk_cam_dvc_vote(&dvfs->dvc, raw_id, 0, 0);
+		return mtk_cam_dvc_vote(&dvfs->dvc, raw_id, freq_to_oppidx(dvfs, freq_hz), 0);
 	else
 		return dvfs_switch_end(dvfs, stream_id);
 }

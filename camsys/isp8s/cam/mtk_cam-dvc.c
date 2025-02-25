@@ -16,7 +16,7 @@
 #include "mtk_cam-dvc_regs.h"
 #include "mtk_cam-debug_option.h"
 
-static int dvc_enable;
+static int dvc_enable = 1;
 module_param(dvc_enable, int, 0644);
 MODULE_PARM_DESC(dvc_enable, "debug dvc enable");
 
@@ -211,6 +211,9 @@ void mtk_cam_dvc_unint(struct mtk_camsys_dvc *dvc, u32 raw_id)
 	void __iomem *base = get_dvc_base(dvc, raw_id);
 	u32 val = 0;
 
+	if (!is_dvc_support())
+		return;
+
 	if (!base)
 		return;
 
@@ -246,6 +249,7 @@ void mtk_cam_dvc_unint(struct mtk_camsys_dvc *dvc, u32 raw_id)
 		readl(base + REG_DVC_CAM_HW_DVC_MAX_OPP_HIGH_TM));
 }
 
+#define BOOST_DVFS_OPP    2
 int mtk_cam_dvc_vote(struct mtk_camsys_dvc *dvc, u32 raw_id, u32 opp, bool boost)
 {
 	void __iomem *base = get_dvc_base(dvc, raw_id);
@@ -258,7 +262,7 @@ int mtk_cam_dvc_vote(struct mtk_camsys_dvc *dvc, u32 raw_id, u32 opp, bool boost
 		return 0;
 
 	SET_FIELD(&val, DVC_CAM_SW_REQ, 1);
-	SET_FIELD(&val, DVC_CAM_SW_OPP_VAL, boost ? opp + 2 : opp);
+	SET_FIELD(&val, DVC_CAM_SW_OPP_VAL, boost ? opp + BOOST_DVFS_OPP : opp);
 	writel(val, base + REG_DVC_CAM_SW_VOTER);
 
 	pr_info("%s: raw_id:%d index:%d, sw_vote:0x%x\n",

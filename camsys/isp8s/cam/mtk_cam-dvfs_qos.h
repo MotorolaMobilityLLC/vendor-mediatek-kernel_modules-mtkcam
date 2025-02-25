@@ -54,7 +54,8 @@ int mtk_cam_dvfs_update(struct mtk_camsys_dvfs *dvfs, int stream_id,
 
 int mtk_cam_dvfs_switch_begin(struct mtk_camsys_dvfs *dvfs, int stream_id, int raw_id,
 			unsigned int target_freq_hz, bool boostable);
-int mtk_cam_dvfs_switch_end(struct mtk_camsys_dvfs *dvfs, int stream_id, int raw_id);
+int mtk_cam_dvfs_switch_end(struct mtk_camsys_dvfs *dvfs, int stream_id, int raw_id,
+			unsigned int target_freq_hz);
 
 static inline
 int mtk_cam_dvfs_get_opp_table(struct mtk_camsys_dvfs *dvfs,
