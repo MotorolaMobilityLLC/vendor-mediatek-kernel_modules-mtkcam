@@ -108,6 +108,7 @@ static int set_meta_stat0_info(struct mtk_cam_uapi_meta_raw_stats_0 *stats,
 	unsigned int dflk_blk_num = MTK_CAM_UAPI_DFLK_MAX_STAT_BLK_NUM;
 	unsigned int awbo_r1_size, awbo_r2_size, aeo_size;
 	unsigned int pdo_size;
+	unsigned int dflk_sample_rate = 1;
 
 	if (!p->meta_cfg || !p->meta_cfg_size) {
 		meta_state0_reset_all(stats);
@@ -135,7 +136,9 @@ static int set_meta_stat0_info(struct mtk_cam_uapi_meta_raw_stats_0 *stats,
 	else if (hweight32(p->raws) == 3)
 		dflk_blk_num += 4;
 
-	dflko_size = (p->height / p->bin_ratio / cfg->dflk_param.sample_rate) *
+	dflk_sample_rate = max(cfg->dflk_param.sample_rate, 1);
+
+	dflko_size = (p->height / p->bin_ratio / dflk_sample_rate) *
 		MTK_CAM_UAPI_DFLK_BLK_SIZE * dflk_blk_num;
 	dflkbo_size = dflko_size;
 #else
@@ -146,9 +149,9 @@ static int set_meta_stat0_info(struct mtk_cam_uapi_meta_raw_stats_0 *stats,
 	dflko_size = dflkbo_size = MTK_CAM_UAPI_DFLKO_MAX_BUF_SIZE;
 #endif
 	if (CAM_DEBUG_ENABLED(IPI_BUF))
-		pr_info("[%s] flko/awb1/awb2/aeo/dflko/dflkbo:%d/%d/%d/%d/%d/%d",
+		pr_info("[%s] flko/awb1/awb2/aeo/dflko(SR)/dflkbo:%d/%d/%d/%d/%d(%u)/%d",
 			__func__, flko_size, awbo_r1_size, awbo_r2_size, aeo_size,
-			dflko_size, dflkbo_size);
+			dflko_size, dflk_sample_rate, dflkbo_size);
 
 	// TODO: FIX PDE
 	pdo_size = cfg->pde_enable ? cfg->pde_param.pdo_max_size : 0;

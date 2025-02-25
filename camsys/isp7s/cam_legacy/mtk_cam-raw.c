@@ -3964,6 +3964,10 @@ int mtk_raw_set_src_pad_selection_yuv(struct v4l2_subdev *sd,
 	pipe = container_of(sd, struct mtk_raw_pipeline, subdev);
 	mtk_raw_set_src_pad_selection_default(sd, state, sink_fmt, res, pad, which);
 	source_sel = mtk_raw_pipeline_get_selection(pipe, state, pad, which);
+	if (!source_sel)
+		return 0;
+
+
 
 	for (i = MTK_RAW_YUVO_1_OUT; i < pad; i++) {
 		framefmt = mtk_raw_pipeline_get_fmt(pipe, state, pad, which);

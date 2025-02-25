@@ -1173,6 +1173,7 @@ int rawi_r5_slc_config(struct mtk_raw_device *raw_dev, int gid, int bid)
 {
 	u32 val;
 
+	val = 0;
 	SET_FIELD(&val, CAMRAWDMATOP_RAWI_R5_SLC_GID, gid);
 	SET_FIELD(&val, CAMRAWDMATOP_RAWI_R5_SLC_BID, bid);
 
