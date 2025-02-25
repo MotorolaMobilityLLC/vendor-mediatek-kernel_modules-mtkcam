@@ -157,6 +157,7 @@ enum MTCMOS_REG_NAME {
 };
 
 enum QOF_REG_LIST_NAME {
+	QOF_REG_IMG_DDREN_HW_EN,
 	QOF_REG_IMG_EVENT_CNT_ADD,
 	QOF_REG_IMG_VM_A,
 	QOF_REG_IMG_VM_B,
@@ -211,8 +212,14 @@ enum HWCCF_REG {
 const struct reg_table_unit qof_reg_table[QOF_TOTAL_MODULE][QOF_REG_TOTAL_NUM] = {
 	[QOF_SUPPORT_DIP] = // DIP
 	{
+		[QOF_REG_IMG_DDREN_HW_EN] = {
+			//QOF_REG_IMG_DDREN_HW_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_1),
+			.val = BIT(19),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_DDREN_HW_EN_1),
+			.field = QOF_IMG_QOF_CTL_1_FLD_QOF_IMG_DDREN_HW_EN_1,
+		},
 		[QOF_REG_IMG_EVENT_CNT_ADD] = {
-			// TODO : need to check CODA
 			// QOF_REG_IMG_EVENT_CNT_ADD
 			.addr = QOF_IMG_EVENT_A,
 			.val = BIT(0),
@@ -492,6 +499,13 @@ const struct reg_table_unit qof_reg_table[QOF_TOTAL_MODULE][QOF_REG_TOTAL_NUM] =
 
 	[QOF_SUPPORT_TRAW] = // TRAW
 	{
+		[QOF_REG_IMG_DDREN_HW_EN] = {
+			//QOF_REG_IMG_DDREN_HW_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_2),
+			.val = BIT(19),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_DDREN_HW_EN_2),
+			.field = QOF_IMG_QOF_CTL_2_FLD_QOF_IMG_DDREN_HW_EN_2,
+		},
 		[QOF_REG_IMG_EVENT_CNT_ADD] = {
 			// TODO : need to check CODA
 			// QOF_REG_IMG_EVENT_CNT_ADD
@@ -747,6 +761,13 @@ const struct reg_table_unit qof_reg_table[QOF_TOTAL_MODULE][QOF_REG_TOTAL_NUM] =
 
 	[QOF_SUPPORT_WPE_EIS] =
 	{
+		[QOF_REG_IMG_DDREN_HW_EN] = {
+			//QOF_REG_IMG_DDREN_HW_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_3),
+			.val = BIT(19),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_DDREN_HW_EN_3),
+			.field = QOF_IMG_QOF_CTL_3_FLD_QOF_IMG_DDREN_HW_EN_3,
+		},
 		[QOF_REG_IMG_EVENT_CNT_ADD] = {
 			// TODO : need to check CODA
 			// QOF_REG_IMG_EVENT_CNT_ADD
@@ -1002,6 +1023,13 @@ const struct reg_table_unit qof_reg_table[QOF_TOTAL_MODULE][QOF_REG_TOTAL_NUM] =
 
 	[QOF_SUPPORT_WPE_TNR] =
 	{
+		[QOF_REG_IMG_DDREN_HW_EN] = {
+			//QOF_REG_IMG_DDREN_HW_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_4),
+			.val = BIT(19),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_DDREN_HW_EN_4),
+			.field = QOF_IMG_QOF_CTL_4_FLD_QOF_IMG_DDREN_HW_EN_4,
+		},
 		[QOF_REG_IMG_EVENT_CNT_ADD] = {
 			// TODO : need to check CODA
 			// QOF_REG_IMG_EVENT_CNT_ADD
@@ -1257,6 +1285,13 @@ const struct reg_table_unit qof_reg_table[QOF_TOTAL_MODULE][QOF_REG_TOTAL_NUM] =
 
 	[QOF_SUPPORT_WPE_LITE] =
 	{
+		[QOF_REG_IMG_DDREN_HW_EN] = {
+			//QOF_REG_IMG_DDREN_HW_EN
+			.addr = (QOF_REG_BASE + QOF_IMG_QOF_CTL_5),
+			.val = BIT(19),
+			.mask = REG_FLD_MASK(QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_DDREN_HW_EN_5),
+			.field = QOF_IMG_QOF_CTL_5_FLD_QOF_IMG_DDREN_HW_EN_5,
+		},
 		[QOF_REG_IMG_EVENT_CNT_ADD] = {
 			// TODO : need to check CODA
 			// QOF_REG_IMG_EVENT_CNT_ADD

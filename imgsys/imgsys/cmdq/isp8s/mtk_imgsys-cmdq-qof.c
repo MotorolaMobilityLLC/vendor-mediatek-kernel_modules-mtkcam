@@ -1189,6 +1189,11 @@ static void qof_engine_on_setting(const u32 mod)
 			QOF_LOGE("QOF_REG_IMG_OPT_MTC_ACT vote fail 0x%08x\n", readl(io_addr));
 	}
 
+	io_addr = QOF_GET_REMAP_ADDR(qof_reg_table[mod][QOF_REG_IMG_DDREN_HW_EN].addr);
+	write_mask(io_addr,
+		qof_reg_table[mod][QOF_REG_IMG_DDREN_HW_EN].val,
+		qof_reg_table[mod][QOF_REG_IMG_DDREN_HW_EN].mask);
+
 	io_addr = QOF_GET_REMAP_ADDR(qof_reg_table[mod][QOF_REG_IMG_HW_CLR_EN].addr);
 	write_mask(io_addr,
 		qof_reg_table[mod][QOF_REG_IMG_HW_CLR_EN].val,
