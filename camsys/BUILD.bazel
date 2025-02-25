@@ -563,6 +563,8 @@ define_mgk_ddk_ko(
     ko_deps = [
         "//vendor/mediatek/kernel_modules/mtkcam/camsys:ccd_rpmsg",
         "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk_ccd_remoteproc",
+		"//kernel_device_modules-{}/drivers/misc/mediatek/smi:mtk-smi-dbg".format(kernel_version),
+		"//kernel_device_modules-{}/drivers/memory:mtk-smi".format(kernel_version),
     ],
     header_deps = [
         "//vendor/mediatek/kernel_modules/mtkcam:mtkcam_header",

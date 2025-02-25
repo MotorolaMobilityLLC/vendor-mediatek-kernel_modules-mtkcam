@@ -1131,7 +1131,14 @@ static int mtk_ut_raw_of_probe(struct platform_device *pdev,
 	larbs = of_count_phandle_with_args(
 					pdev->dev.of_node, "mediatek,larbs", NULL);
 	dev_info(dev, "larb_num:%d\n", larbs);
-
+	raw->num_larbs = (larbs < 0) ? 0 : larbs;
+	if (raw->num_larbs) {
+		raw->larbs = devm_kcalloc(dev,
+					     raw->num_larbs, sizeof(*raw->larbs),
+					     GFP_KERNEL);
+		if (!raw->larbs)
+			return -ENOMEM;
+	}
 	for (i = 0; i < larbs; i++) {
 		larb_node = of_parse_phandle(
 					pdev->dev.of_node, "mediatek,larbs", i);
@@ -1152,6 +1159,8 @@ static int mtk_ut_raw_of_probe(struct platform_device *pdev,
 						DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
 		if (!link)
 			dev_info(dev, "unable to link smi larb%d\n", i);
+
+		raw->larbs[i] = larb_pdev;
 	}
 
 	raw->fifo_size = roundup_pow_of_two(10 * sizeof(struct ut_raw_msg));
@@ -1280,6 +1289,7 @@ static int mtk_ut_raw_runtime_suspend(struct device *dev)
 	for (i = 0; i < raw->num_clks; i++)
 		clk_disable_unprepare(raw->clks[i]);
 
+	mtk_smi_larb_disable(&raw->larbs[0]->dev);
 	return 0;
 }
 
@@ -1288,6 +1298,7 @@ static int mtk_ut_raw_runtime_resume(struct device *dev)
 	struct mtk_ut_raw_device *raw = dev_get_drvdata(dev);
 	int i, ret;
 
+	mtk_smi_larb_enable(&raw->larbs[0]->dev);
 	for (i = 0; i < raw->num_clks; i++) {
 		ret = clk_prepare_enable(raw->clks[i]);
 		if (ret) {
@@ -1459,9 +1470,18 @@ static int mtk_ut_yuv_of_probe(struct platform_device *pdev,
 
 	larbs = of_count_phandle_with_args(
 					pdev->dev.of_node, "mediatek,larbs", NULL);
-	dev_info(dev, "larb_num:%d\n", larbs);
 
-	for (i = 0; i < larbs; i++) {
+	drvdata->num_larbs = (larbs < 0) ? 0 : larbs;
+	dev_info(dev, "larb_num:%d\n", larbs);
+	if (drvdata->num_larbs) {
+		drvdata->larbs = devm_kcalloc(dev,
+					     drvdata->num_larbs, sizeof(*drvdata->larbs),
+					     GFP_KERNEL);
+		if (!drvdata->larbs)
+			return -ENOMEM;
+	}
+
+	for (i = 0; i < drvdata->num_larbs; i++) {
 		larb_node = of_parse_phandle(
 					pdev->dev.of_node, "mediatek,larbs", i);
 		if (!larb_node) {
@@ -1481,6 +1501,8 @@ static int mtk_ut_yuv_of_probe(struct platform_device *pdev,
 						DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
 		if (!link)
 			dev_info(dev, "unable to link smi larb%d\n", i);
+
+		drvdata->larbs[i] = larb_pdev;
 	}
 
 	return 0;
@@ -1569,6 +1591,9 @@ static int mtk_ut_yuv_runtime_suspend(struct device *dev)
 
 	for (i = 0; i < raw->num_clks; i++)
 		clk_disable_unprepare(raw->clks[i]);
+
+
+	mtk_smi_larb_disable(&raw->larbs[0]->dev);
 	return 0;
 }
 
@@ -1577,6 +1602,7 @@ static int mtk_ut_yuv_runtime_resume(struct device *dev)
 	struct mtk_ut_yuv_device *raw = dev_get_drvdata(dev);
 	int i, ret;
 
+	mtk_smi_larb_enable(&raw->larbs[0]->dev);
 	for (i = 0; i < raw->num_clks; i++) {
 		ret = clk_prepare_enable(raw->clks[i]);
 		if (ret) {

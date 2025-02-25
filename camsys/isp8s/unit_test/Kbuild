@@ -2,6 +2,7 @@
 #
 #ccflags-y += \
 #		 -I$(DEVICE_MODULES_PATH)/drivers/rpmsg/ \
+#		 -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/smi/ \
 #		 -I$(DEVICE_MODULES_PATH)/drivers/remoteproc/ \
 #		 -I$(DEVICE_MODULES_PATH)/include/ \
 #		 -I$(srctree)/drivers/rpmsg/ \

@@ -1921,13 +1921,51 @@ static int mtk_cam_ut_pm_resume(struct device *dev)
 
 static int mtk_cam_ut_runtime_suspend(struct device *dev)
 {
-	dev_dbg(dev, "- %s\n", __func__);
+	struct mtk_cam_ut *ut = dev_get_drvdata(dev);
+	int i;
+
+	dev_info(dev, "%s:suspend\n", __func__);
+
+	dev_info(dev,"%s++: get main cg0 cg1:0x%x/0x%x", __func__,
+		readl_relaxed(ut->base + 0x00),
+		readl_relaxed(ut->base + 0x4c));
+
+	for (i = ut->num_clks - 1; i >= 0; i--) {
+		if (!ut->clks[i])
+			continue;
+
+		clk_disable_unprepare(ut->clks[i]);
+	}
+
+	dev_info(dev,"%s--: get main cg0 cg1:0x%x/0x%x", __func__,
+		readl_relaxed(ut->base + 0x00),
+		readl_relaxed(ut->base + 0x4c));
 	return 0;
 }
 
 static int mtk_cam_ut_runtime_resume(struct device *dev)
 {
-	dev_dbg(dev, "- %s\n", __func__);
+	struct mtk_cam_ut *ut = dev_get_drvdata(dev);
+	int i, ret;
+
+	dev_info(dev, "%s: resume\n", __func__);
+
+	dev_info(dev,"%s++: get main cg0 cg1:0x%x/0x%x", __func__,
+		readl_relaxed(ut->base + 0x00),
+		readl_relaxed(ut->base + 0x4c));
+
+	for (i = 0; i < ut->num_clks; i++) {
+		if (!ut->clks[i])
+			continue;
+
+		ret = clk_prepare_enable(ut->clks[i]);
+		if (ret)
+			dev_info(dev, "%s:i=%d check this", __func__, i);
+	}
+
+	dev_info(dev,"%s--: get main cg0 cg1:0x%x/0x%x", __func__,
+		readl_relaxed(ut->base + 0x00),
+		readl_relaxed(ut->base + 0x4c));
 	return 0;
 }
 
@@ -1964,6 +2002,7 @@ static const struct of_device_id mtk_cam_vcore_of_ids[] = {
 #ifdef CAMSYS_ISP8_MT6991
 		{.compatible = "mediatek,mt6991-camisp-vcore",},
 #endif
+	    {.compatible = "mediatek,mt6993-camisp-vcore",},
 #ifdef CAMSYS_ISP8_MT6899
 		{.compatible = "mediatek,mt6899-camisp-vcore",},
 #endif
@@ -1977,6 +2016,7 @@ static struct platform_driver mtk_cam_ut_driver = {
 	.driver		= {
 		.name	= "mtk-cam ut",
 		.of_match_table = of_match_ptr(cam_ut_driver_dt_match),
+		.pm     = &mtk_cam_pm_ops,
 	}
 };
 

@@ -60,6 +60,9 @@ struct mtk_ut_raw_device {
 	void __iomem *rms_base;
 	unsigned int num_clks;
 	struct clk **clks;
+	/* larb */
+	unsigned int num_larbs;
+	struct platform_device **larbs;
 
 	struct ut_event_source event_src;
 	struct engine_ops ops;
@@ -119,6 +122,9 @@ struct mtk_ut_yuv_device {
 	void __iomem *dma_base;
 	unsigned int num_clks;
 	struct clk **clks;
+	/* larb */
+	unsigned int num_larbs;
+	struct platform_device **larbs;
 
 	struct engine_ops ops;
 };
@@ -279,7 +285,7 @@ extern struct platform_driver mtk_ut_seninf_driver;
 #define WITH_CAMSV_DRIVER 1
 #define SUPPORT_PM 0
 #define SUPPORT_RAWB 0
-#define WITH_POWER_DRIVER 0
+#define WITH_POWER_DRIVER 1
 extern struct platform_driver mtk_ut_larb_driver;
 extern const struct mtk_cam_ut_data *cur_platform;
 

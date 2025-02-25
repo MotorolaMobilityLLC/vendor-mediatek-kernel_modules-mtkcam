@@ -14,6 +14,7 @@
 #include "mtk_cam_ut-event.h"
 #include "mtk_cam_ut-seninf.h"
 #include "mtk_cam_ut-utils.h"
+#include <soc/mediatek/smi.h>
 
 #define IPI_FRAME_BUF_SIZE		ALIGN(sizeof(struct mtkcam_ipi_frame_param), SZ_1K)
 #define IPI_FRAME_BUF_NUM		3
