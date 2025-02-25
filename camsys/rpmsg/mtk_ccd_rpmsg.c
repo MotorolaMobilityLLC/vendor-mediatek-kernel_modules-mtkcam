@@ -44,12 +44,14 @@ void __ept_release(struct kref *kref)
 	struct mtk_ccd_rpmsg_endpoint *mept = to_mtk_rpmsg_endpoint(ept);
 	struct mtk_rpmsg_rproc_subdev *mtk_subdev = mept->mtk_subdev;
 	struct rpmsg_device *rpdev = ept->rpdev;
+	bool clear_rpdev = (ept == rpdev->ept);
 
-	dev_info(&mtk_subdev->pdev->dev, "%s: %p at %d-%d\n", __func__,
-		mept, mtk_subdev->id, ept->addr);
+	dev_info(&mtk_subdev->pdev->dev, "%s: %p at %d-%d, clear_rpdev:%d\n",
+		__func__, mept, mtk_subdev->id, ept->addr, clear_rpdev);
 	kfree(to_mtk_rpmsg_endpoint(ept));
 
-	rpdev->ept = NULL;
+	if (clear_rpdev)
+		rpdev->ept = NULL;
 	put_device(&rpdev->dev);
 }
 
@@ -83,6 +85,11 @@ __rpmsg_create_ept(struct mtk_rpmsg_rproc_subdev *mtk_subdev,
 	init_waitqueue_head(&mept->worker_readwq);
 	atomic_set(&mept->ccd_cmd_sent, 0);
 	atomic_set(&mept->ccd_mep_state, CCD_MENDPOINT_CREATED);
+
+	if (rpdev->ept)  /* rpdev->ept would be overwritten after this function */
+		dev_info(&pdev->dev,
+			"%s: prev ept(%p) is alive at %d-%d\n", __func__,
+			rpdev->ept, mtk_subdev->id, ept->addr);
 
 	dev_info(&pdev->dev, "%s: %p at %d-%d\n", __func__,
 		mept, mtk_subdev->id, ept->addr);
