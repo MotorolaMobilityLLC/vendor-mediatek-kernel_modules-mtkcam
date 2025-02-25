@@ -3228,7 +3228,12 @@ void imgsys_cmdq_isc_task_cb_plat8s(struct cmdq_cb_data data)
 	cookie = isc->isc_cookie;
 
 	if (cookie == 2) {
-		if ((isc->imgsys_dev->isc_irq > 0) && (!data.err)) {
+
+		if (isc_irq_enabled == 1) {
+
+			pr_info("%s: isc irq already enabled(%d)\n", __func__, isc_irq_enabled);
+
+		} else if ((isc->imgsys_dev->isc_irq > 0) && (!data.err)) {
 			enable_irq(isc->imgsys_dev->isc_irq);
 			isc_irq_enabled = 1;
 		}
