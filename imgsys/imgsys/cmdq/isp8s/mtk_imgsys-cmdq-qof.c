@@ -1584,7 +1584,7 @@ static void imgsys_qof_dbg_print_trace(int mod)
 	ret = snprintf(buf, sizeof(buf),
 		"qof_mod_%d",
 		mod);
-	if (ret < 0 || mod < 0 || mod >= QOF_TOTAL_MODULE) {
+	if (ret < 0 || mod < 0 || mod >= ISP8S_PWR_NUM) {
 		pr_err("snprintf failed\n");
 		return;
 	}
