@@ -1073,7 +1073,7 @@ struct mtk_cam_uapi_meta_raw_stats_cfg {
 	struct mtk_cam_uapi_ltms_param ltms_param;
 	struct mtk_cam_uapi_dflk_param dflk_param;
 
-	__u8 bytes[47568];
+	__u8 bytes[47572];
 };
 
 struct mtk_cam_uapi_meta_raw_stats_rawb_cfg {
@@ -1159,7 +1159,7 @@ struct mtk_cam_uapi_meta_camsv_stats_0 {
 };
 
 #define MTK_CAM_META_VERSION_MAJOR 1
-#define MTK_CAM_META_VERSION_MINOR 6
+#define MTK_CAM_META_VERSION_MINOR 7
 #define MTK_CAM_META_PLATFORM_NAME "isp8s"
 #define MTK_CAM_META_CHIP_NAME "mt6993"
 
