@@ -120,6 +120,7 @@ const struct mtk_imgsys_init_array
 void __iomem *gpqdipRegBA[PQDIP_HW_SET] = {0L};
 unsigned int gPQDIPRegBase[PQDIP_HW_SET] = {0x34250000 , 0x34540000};
 static unsigned int g_RegBaseAddrPQ = PQDIP_BASE_ADDR;
+static void __iomem *gVcoreRegBA;
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Public Functions
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -143,6 +144,12 @@ void imgsys_pqdip_set_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 		g_RegBaseAddrPQ = PQDIP_BASE_ADDR_P;
 		gPQDIPRegBase[0] = 0x15210000;
 		gPQDIPRegBase[1] = 0x15510000;
+	}
+
+	gVcoreRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_IMG_VCORE);
+	if (!gVcoreRegBA) {
+		pr_info("%s:unable to iomap Vcore reg, devnode()\n",
+			__func__);
 	}
 }
 
@@ -569,6 +576,21 @@ void imgsys_pqdip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 			(unsigned int)ioread32((void *)(pqdipRegBA + PQ_TCC_DBG_OUT_OFST)));
 		}
 	}
+	pr_info("[gals_tx dgb addr] 0x34780048 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x48)));
+	pr_info("[gals_tx dgb addr] 0x3478004C = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x4C)));
+	pr_info("[gals_tx dgb addr] 0x34780050 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x50)));
+	pr_info("[gals_tx dgb addr] 0x34780054 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x54)));
+	pr_info("[ACK dgb addr] 0x347800C4 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC4)));
+	pr_info("[ACK dgb addr] 0x347800C8 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
+	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
+
 	dev_info(imgsys_dev->dev, "%s: -\n", __func__);
 }
 
@@ -579,6 +601,11 @@ void imgsys_pqdip_uninit(struct mtk_imgsys_dev *imgsys_dev)
 	for (i = 0; i < PQDIP_HW_SET; i++) {
 		iounmap(gpqdipRegBA[i]);
 		gpqdipRegBA[i] = 0L;
+	}
+
+	if (gVcoreRegBA) {
+		iounmap(gVcoreRegBA);
+		gVcoreRegBA = 0L;
 	}
 }
 
@@ -946,6 +973,20 @@ int imgsys_pqdip_tfault_callback(int port, //YWTBD tf
 	}
 #endif
 
+	pr_info("[gals_tx dgb addr] 0x34780048 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x48)));
+	pr_info("[gals_tx dgb addr] 0x3478004C = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x4C)));
+	pr_info("[gals_tx dgb addr] 0x34780050 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x50)));
+	pr_info("[gals_tx dgb addr] 0x34780054 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x54)));
+	pr_info("[ACK dgb addr] 0x347800C4 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC4)));
+	pr_info("[ACK dgb addr] 0x347800C8 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
+	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
 	smi_isp_wpe1_eis_put((void *)&is_qof);
 	pr_info("%s: -. is_qof=%d\n", __func__, is_qof);
 

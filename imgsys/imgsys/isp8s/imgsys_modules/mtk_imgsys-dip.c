@@ -256,6 +256,7 @@ struct mtk_imgsys_dip_dtable {
 #define SW_RST   (0x000C)
 
 static void __iomem *gdipRegBA[DIP_HW_SET] = {0L};
+static void __iomem *gVcoreRegBA;
 static unsigned int g_RegBaseAddr = DIP_TOP_ADDR;
 static unsigned int g_RegBaseAddrTop = DIP_TOP_ADDR;
 static unsigned int g_RegBaseAddrNr1 = DIP_NR1_ADDR;
@@ -347,6 +348,22 @@ int imgsys_dip_tfault_callback(int port, //YWTBD tf
 		}
 	}
 
+	pr_info("[gals_tx dgb addr] 0x34780048 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x48)));
+	pr_info("[gals_tx dgb addr] 0x3478004C = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x4C)));
+	pr_info("[gals_tx dgb addr] 0x34780050 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x50)));
+	pr_info("[gals_tx dgb addr] 0x34780054 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x54)));
+
+	pr_info("[ACK dgb addr] 0x347800C4 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC4)));
+	pr_info("[ACK dgb addr] 0x347800C8 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
+	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
+
 	smi_isp_dip_put((void *)&is_qof);
 	pr_info("%s: -\n", __func__);
 	return 1;
@@ -365,6 +382,12 @@ void imgsys_dip_set_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 				__func__, hw_idx);
 			continue;
 		}
+	}
+	/* iomap registers */
+	gVcoreRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_IMG_VCORE);
+	if (!gVcoreRegBA) {
+		pr_info("%s:unable to iomap Vcore reg, devnode()\n",
+			__func__);
 	}
 
 	if (imgsys_dev->dev_ver == 1) {
@@ -1439,6 +1462,21 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	/* FPNR_D1 debug data */
 	imgsys_dip_dump_fpnr(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
 
+	pr_info("[gals_tx dgb addr] 0x34780048 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x48)));
+	pr_info("[gals_tx dgb addr] 0x3478004C = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x4C)));
+	pr_info("[gals_tx dgb addr] 0x34780050 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x50)));
+	pr_info("[gals_tx dgb addr] 0x34780054 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x54)));
+	pr_info("[ACK dgb addr] 0x347800C4 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC4)));
+	pr_info("[ACK dgb addr] 0x347800C8 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
+	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
+
 	pr_info("%s: -\n", __func__);
 
 }
@@ -1451,7 +1489,8 @@ void imgsys_dip_uninit(struct mtk_imgsys_dev *imgsys_dev)
 		iounmap(gdipRegBA[i]);
 		gdipRegBA[i] = 0L;
 	}
-
+	iounmap(gVcoreRegBA);
+	gVcoreRegBA = 0L;
 }
 
 bool imgsys_dip_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine)

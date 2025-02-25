@@ -49,6 +49,7 @@ static void __iomem *g_drzh2nRegBA;
 static void __iomem *g_fmRegBA;
 static void __iomem *g_dfp2topRegBA;
 static void __iomem *g_dvgfRegBA;
+static void __iomem *gVcoreRegBA;
 
 int imgsys_dfp_tfault_callback(int port, dma_addr_t mva, void *data)
 {
@@ -106,6 +107,21 @@ int imgsys_dfp_tfault_callback(int port, dma_addr_t mva, void *data)
 		(unsigned int)ioread32((void *)(dvgfRegBA + (i+0xC))));
 	}
 
+	pr_info("[gals_tx dgb addr] 0x34780048 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x48)));
+	pr_info("[gals_tx dgb addr] 0x3478004C = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x4C)));
+	pr_info("[gals_tx dgb addr] 0x34780050 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x50)));
+	pr_info("[gals_tx dgb addr] 0x34780054 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x54)));
+	pr_info("[ACK dgb addr] 0x347800C4 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC4)));
+	pr_info("[ACK dgb addr] 0x347800C8 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
+	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
+
 	smi_isp_wpe3_lite_put((void *)&is_qof);
 
 	return 1;
@@ -125,6 +141,12 @@ void imgsys_dfp_set_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 	g_fmRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_DFP_FM);
 	g_dfp2topRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_DFP2_TOP);
 	g_dvgfRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_DFP2_DVGF);
+	/* iomap registers */
+	gVcoreRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_IMG_VCORE);
+	if (!gVcoreRegBA) {
+		pr_info("%s:unable to iomap Vcore reg, devnode()\n",
+			__func__);
+	}
 
 	pr_info("%s: -\n", __func__);
 }
@@ -160,6 +182,11 @@ void imgsys_dfp_uninit(struct mtk_imgsys_dev *imgsys_dev)
 	if (g_dvgfRegBA) {
 		iounmap(g_dvgfRegBA);
 		g_dvgfRegBA = 0L;
+	}
+
+	if (gVcoreRegBA) {
+		iounmap(gVcoreRegBA);
+		gVcoreRegBA = 0L;
 	}
 }
 //EXPORT_SYMBOL(imgsys_dfp_uninit);
@@ -285,6 +312,20 @@ void imgsys_dfp_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 		(unsigned int)ioread32((void *)(dvgfRegBA + (i+0x8))),
 		(unsigned int)ioread32((void *)(dvgfRegBA + (i+0xC))));
 	}
+	pr_info("[gals_tx dgb addr] 0x34780048 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x48)));
+	pr_info("[gals_tx dgb addr] 0x3478004C = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x4C)));
+	pr_info("[gals_tx dgb addr] 0x34780050 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x50)));
+	pr_info("[gals_tx dgb addr] 0x34780054 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x54)));
+	pr_info("[ACK dgb addr] 0x347800C4 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC4)));
+	pr_info("[ACK dgb addr] 0x347800C8 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
+	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
 }
 EXPORT_SYMBOL(imgsys_dfp_debug_dump);
 

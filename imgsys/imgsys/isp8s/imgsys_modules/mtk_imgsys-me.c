@@ -118,6 +118,7 @@ void imgsys_me_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 //static struct ipesys_me_device *me_dev;
 static void __iomem *g_meRegBA;
 static void __iomem *g_mmgRegBA;
+static void __iomem *gVcoreRegBA;
 
 int imgsys_me_tfault_callback(int port, dma_addr_t mva, void *data)
 {
@@ -166,6 +167,22 @@ int imgsys_me_tfault_callback(int port, dma_addr_t mva, void *data)
 		(unsigned int)ioread32((void *)(mmgRegBA + (i+0xC))));
 	}
 
+	pr_info("[gals_tx dgb addr] 0x34780048 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x48)));
+	pr_info("[gals_tx dgb addr] 0x3478004C = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x4C)));
+	pr_info("[gals_tx dgb addr] 0x34780050 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x50)));
+	pr_info("[gals_tx dgb addr] 0x34780054 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x54)));
+	pr_info("[ACK dgb addr] 0x347800C4 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC4)));
+	pr_info("[ACK dgb addr] 0x347800C8 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
+	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
+
+
 	smi_isp_wpe2_tnr_put((void *)&is_qof);
 
 	return 1;
@@ -202,6 +219,21 @@ int imgsys_mmg_tfault_callback(int port, dma_addr_t mva, void *data)
 		(unsigned int)ioread32((void *)(mmgRegBA + (i+0xC))));
 	}
 
+	pr_info("[gals_tx dgb addr] 0x34780048 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x48)));
+	pr_info("[gals_tx dgb addr] 0x3478004C = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x4C)));
+	pr_info("[gals_tx dgb addr] 0x34780050 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x50)));
+	pr_info("[gals_tx dgb addr] 0x34780054 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x54)));
+	pr_info("[ACK dgb addr] 0x347800C4 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC4)));
+	pr_info("[ACK dgb addr] 0x347800C8 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
+	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
+
 	smi_isp_wpe2_tnr_put((void *)&is_qof);
 
 	return 1;
@@ -218,6 +250,12 @@ void imgsys_me_set_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 	g_meRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_ME);
 	g_mmgRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_ME_MMG);
 
+	gVcoreRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_IMG_VCORE);
+	if (!gVcoreRegBA) {
+		pr_info("%s:unable to iomap Vcore reg, devnode()\n",
+			__func__);
+	}
+
 	pr_info("%s: -\n", __func__);
 }
 //EXPORT_SYMBOL(imgsys_me_set_initial_value);
@@ -231,6 +269,10 @@ void imgsys_me_uninit(struct mtk_imgsys_dev *imgsys_dev)
 	if (g_mmgRegBA) {
 		iounmap(g_mmgRegBA);
 		g_mmgRegBA = 0L;
+	}
+	if (gVcoreRegBA) {
+		iounmap(gVcoreRegBA);
+		gVcoreRegBA = 0L;
 	}
 }
 //EXPORT_SYMBOL(ipesys_me_uninit);
@@ -301,6 +343,21 @@ void imgsys_me_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 		if(written < 0)
 			pr_debug("Failed to write ME register values to AEE buffer\n");
 	}
+
+	pr_info("[gals_tx dgb addr] 0x34780048 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x48)));
+	pr_info("[gals_tx dgb addr] 0x3478004C = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x4C)));
+	pr_info("[gals_tx dgb addr] 0x34780050 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x50)));
+	pr_info("[gals_tx dgb addr] 0x34780054 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x54)));
+	pr_info("[ACK dgb addr] 0x347800C4 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC4)));
+	pr_info("[ACK dgb addr] 0x347800C8 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
+	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
 }
 //EXPORT_SYMBOL(ipesys_me_debug_dump);
 

@@ -131,6 +131,7 @@ static unsigned int g_RegBaseAddr = TRAW_A_BASE_ADDR;
 static void __iomem *g_trawRegBA, *g_ltrawRegBA, *g_ispMainRegBA;
 
 static unsigned int g_IOMMUDumpPort;
+static void __iomem *gVcoreRegBA;
 
 #if IF_0_DEFINE //YWTBD K DBG
 static unsigned int ExeDbgCmd(struct mtk_imgsys_dev *a_pDev,
@@ -739,6 +740,21 @@ int imgsys_traw_tfault_callback(int port, dma_addr_t mva, void *cb_data)
 			(unsigned int)ioread32((void *)(g_trawRegBA + i + 12))) > 0)
 			pr_info("%s\n", DbgStr);
 	}
+
+	pr_info("[gals_tx dgb addr] 0x34780048 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x48)));
+	pr_info("[gals_tx dgb addr] 0x3478004C = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x4C)));
+	pr_info("[gals_tx dgb addr] 0x34780050 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x50)));
+	pr_info("[gals_tx dgb addr] 0x34780054 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x54)));
+	pr_info("[ACK dgb addr] 0x347800C4 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC4)));
+	pr_info("[ACK dgb addr] 0x347800C8 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
+	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
 	smi_isp_traw_put((void *)&is_qof);
 
 	return 0;
@@ -780,6 +796,20 @@ int imgsys_ltraw_tfault_callback(int port, dma_addr_t mva, void *cb_data)
 			pr_info("%s\n", DbgStr);
 	}
 
+	pr_info("[gals_tx dgb addr] 0x34780048 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x48)));
+	pr_info("[gals_tx dgb addr] 0x3478004C = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x4C)));
+	pr_info("[gals_tx dgb addr] 0x34780050 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x50)));
+	pr_info("[gals_tx dgb addr] 0x34780054 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x54)));
+	pr_info("[ACK dgb addr] 0x347800C4 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC4)));
+	pr_info("[ACK dgb addr] 0x347800C8 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
+	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
 	return 0;
 }
 
@@ -888,6 +918,12 @@ void imgsys_traw_set_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 	g_trawRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_TRAW);
 	g_ltrawRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_LTRAW);
 	g_ispMainRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_TOP);
+
+	gVcoreRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_IMG_VCORE);
+	if (!gVcoreRegBA) {
+		pr_info("%s:unable to iomap Vcore reg, devnode()\n",
+			__func__);
+	}
 	//imgsys_traw_reg_iommu_cb();
 	/* Register IOMMU Callback */
 	g_IOMMUDumpPort = 0;
@@ -1125,6 +1161,21 @@ void imgsys_traw_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	imgsys_traw_dump_module(imgsys_dev, trawRegBA, TRAW_PLNW_T1_SEL, TRAW_PLNW_T1_OUT);
 #endif
 err_debug_dump:
+
+	pr_info("[gals_tx dgb addr] 0x34780048 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x48)));
+	pr_info("[gals_tx dgb addr] 0x3478004C = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x4C)));
+	pr_info("[gals_tx dgb addr] 0x34780050 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x50)));
+	pr_info("[gals_tx dgb addr] 0x34780054 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x54)));
+	pr_info("[ACK dgb addr] 0x347800C4 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC4)));
+	pr_info("[ACK dgb addr] 0x347800C8 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
+	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
 	pr_info("%s: -\n", __func__);
 }
 
@@ -1177,5 +1228,9 @@ void imgsys_traw_uninit(struct mtk_imgsys_dev *imgsys_dev)
 	if (g_ispMainRegBA) {
 		iounmap(g_ispMainRegBA);
 		g_ispMainRegBA = 0L;
+	}
+	if (gVcoreRegBA) {
+		iounmap(gVcoreRegBA);
+		gVcoreRegBA = 0L;
 	}
 }

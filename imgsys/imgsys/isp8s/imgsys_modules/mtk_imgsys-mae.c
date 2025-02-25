@@ -18,6 +18,7 @@
  * Global Define
  *******************************************************************************/
 static void __iomem *g_maeRegBA;
+static void __iomem *gVcoreRegBA;
 
 #define MAE_BASE  0x34320000
 // 0x1000 MAE_CTRL_CENTER
@@ -205,7 +206,6 @@ static void __iomem *g_maeRegBA;
 // module param
 int g_imgsys_debug_opt;
 module_param(g_imgsys_debug_opt, int, 0644);
-
 /*******************************************************************************
 * static Functions
 *******************************************************************************/
@@ -839,6 +839,21 @@ int MAE_TranslationFault_callback(int port, dma_addr_t mva, void *data)
 		(unsigned int)(MAE_BASE + MAE_reg_00E4_MAE_DRV),
 		(unsigned int)ioread32((void *)(maeRegBA + MAE_reg_00E4_MAE_DRV)));
 
+	pr_info("[gals_tx dgb addr] 0x34780048 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x48)));
+	pr_info("[gals_tx dgb addr] 0x3478004C = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x4C)));
+	pr_info("[gals_tx dgb addr] 0x34780050 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x50)));
+	pr_info("[gals_tx dgb addr] 0x34780054 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x54)));
+	pr_info("[ACK dgb addr] 0x347800C4 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC4)));
+	pr_info("[ACK dgb addr] 0x347800C8 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
+	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
+
 	return 1;
 }
 
@@ -847,6 +862,12 @@ void imgsys_mae_init(struct mtk_imgsys_dev *imgsys_dev)
 	pr_info("%s: +\n", __func__);
 
 	g_maeRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_MAE);
+	/* iomap registers */
+	gVcoreRegBA = of_iomap(imgsys_dev->dev->of_node, REG_MAP_E_IMG_VCORE);
+	if (!gVcoreRegBA) {
+		pr_info("%s:unable to iomap Vcore reg, devnode()\n",
+			__func__);
+	}
 }
 
 void imgsys_mae_set(struct mtk_imgsys_dev *imgsys_dev)
@@ -875,6 +896,21 @@ void imgsys_mae_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 {
 	dev_info(imgsys_dev->dev, "%s: dump mae regs\n", __func__);
 	mae_reg_dump();
+
+	pr_info("[gals_tx dgb addr] 0x34780048 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x48)));
+	pr_info("[gals_tx dgb addr] 0x3478004C = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x4C)));
+	pr_info("[gals_tx dgb addr] 0x34780050 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x50)));
+	pr_info("[gals_tx dgb addr] 0x34780054 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x54)));
+	pr_info("[ACK dgb addr] 0x347800C4 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC4)));
+	pr_info("[ACK dgb addr] 0x347800C8 = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
+	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
+		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
 }
 
 bool imgsys_mae_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine)
@@ -902,5 +938,9 @@ void imgsys_mae_uninit(struct mtk_imgsys_dev *imgsys_dev)
 	if (g_maeRegBA) {
 		iounmap(g_maeRegBA);
 		g_maeRegBA = 0L;
+	}
+	if (gVcoreRegBA) {
+		iounmap(gVcoreRegBA);
+		gVcoreRegBA = 0L;
 	}
 }
