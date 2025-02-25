@@ -5378,7 +5378,7 @@ static int mtk_cam_sv_df_mgr_init(struct mtk_cam_sv_df_mgr *sv_df_mgr,
 {
 	int ret = 0, i, j;
 
-	mutex_lock(&sv_df_mgr->op_lock);
+	mutex_init(&sv_df_mgr->op_lock);
 
 	sv_df_mgr->avai_fifo_num = 0;
 
@@ -5403,8 +5403,6 @@ static int mtk_cam_sv_df_mgr_init(struct mtk_cam_sv_df_mgr *sv_df_mgr,
 			sv_df_mgr->dev_info[i].pending_action.actions[j].req_num = 0;
 		}
 	}
-
-	mutex_unlock(&sv_df_mgr->op_lock);
 
 	return ret;
 }
