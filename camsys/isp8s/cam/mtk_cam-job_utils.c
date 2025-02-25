@@ -2342,7 +2342,8 @@ int handle_sv_tag(struct mtk_cam_job *job)
 			return 1;
 		mraw_pipe = &ctx->cam->pipelines.mraw[mraw_pipe_idx];
 		mraw_sink = &job->req->mraw_data[mraw_pipe_idx].sink;
-		meta_tag_param.tag_idx = mtk_cam_get_sv_meta_tag(meta_num, mraw_pipe->seninf_padidx);
+		meta_tag_param.tag_idx = mtk_cam_get_sv_meta_tag(meta_num,
+			mraw_pipe->seninf_padidx);
 		meta_tag_param.seninf_padidx = mraw_pipe->seninf_padidx;
 		meta_tag_param.tag_order = mtk_cam_seninf_get_tag_order(
 			job->seninf, mraw_sink->mbus_code, mraw_pipe->seninf_padidx);

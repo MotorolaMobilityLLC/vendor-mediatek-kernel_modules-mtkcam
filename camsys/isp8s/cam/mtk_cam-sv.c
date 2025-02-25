@@ -1730,6 +1730,15 @@ int mtk_cam_get_sv_meta_tag(int meta_tag_num, int pad_id)
 			return SVTAG_6;
 		else
 			return SVTAG_5;
+	case 4:
+		if (pad_id == PAD_SRC_PDAF1)
+			return SVTAG_4;
+		else if (pad_id == PAD_SRC_PDAF3)
+			return SVTAG_5;
+		else if (pad_id == PAD_SRC_PDAF2)
+			return SVTAG_6;
+		else
+			return SVTAG_7;
 	default:
 		break;
 	}
