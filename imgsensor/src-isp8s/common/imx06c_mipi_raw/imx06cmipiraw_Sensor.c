@@ -124,7 +124,6 @@ struct subdrv_static_ctx_ext_ops static_ext_ops = {
 
 	.mcss_update_subdrv_para = imx06c_mcss_update_subdrv_para,
 	.cust_get_linetime_in_us = imx06c_get_linetime_in_ns,
-	.cycle_base_ratio = 16,
 	.mcss_init = imx06c_mcss_init,
 #ifdef IMX06C_ISF_DBG
 	.debug_check_with_exist_s_ctx = &imx06c_legacy_s_ctx,

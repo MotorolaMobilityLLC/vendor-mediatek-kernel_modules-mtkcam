@@ -106,6 +106,7 @@ struct fw_eeprom_infos {
 /* --- sensor global info section --- */
 
 #define MAX_EXPOSURE_CNT 5
+#define MAX_LUT_CNT 5
 
 #define REG_ADDR_MAXCNT 4
 struct fw_reg_ {
@@ -118,6 +119,18 @@ struct fw_mtk_sensor_saturation_info {
 	u32 saturation_level;
 	u32 adc_bit;
 	u32 ob_bm;
+} __packed;
+
+struct fw_mtk_sensor_ctle_param {
+	u8 eq_latch_en;
+	u8 eq_dg1_en;
+	u8 eq_dg0_en;
+	int eq_offset;
+	u8 cdr_delay;
+	u8 eq_is;
+	u8 eq_bw;
+	u8 eq_sr0;
+	u8 eq_sr1;
 } __packed;
 
 struct fw_reg_setting_values {
@@ -135,7 +148,9 @@ struct fw_reg_setting_entry {
 struct fw_sensor_global_info_dynamic_size {
 	u32 *ana_gain_table;
 	struct fw_mtk_sensor_saturation_info *saturation_info;
+	struct fw_mtk_sensor_ctle_param *ctle_param;
 	struct fw_reg_setting_entry *init_setting_table;
+	u16 *i3c_precfg_setting_table;
 	char *cust_global_data;
 } __packed;
 
@@ -170,8 +185,10 @@ struct fw_sensor_global_info {
 	u32 exposure_step;
 	u8 exposure_margin;
 	u8 has_saturation_info;
+	u8 has_ctle_param;
 
 	u32 frame_length_max;
+	u32 frame_length_max_without_lshift;
 	u8 ae_effective_frame;
 	u8 frame_time_delay_frame; /* EX: sony => 3 ; non-sony => 2 */
 	u32 start_exposure_offset;
@@ -194,8 +211,11 @@ struct fw_sensor_global_info {
 	u16 reg_addr_mirror_flip;
 	struct fw_reg_ reg_addr_exposure[MAX_EXPOSURE_CNT];
 	struct fw_reg_ reg_addr_exposure_in_lut[MAX_EXPOSURE_CNT];
+	u8 fll_lshift_max;
+	u8 cit_lshift_max;
 	u16 long_exposure_support;
 	u16 reg_addr_exposure_lshift;
+	u16 reg_addr_frame_length_lshift;
 	struct fw_reg_ reg_addr_ana_gain[MAX_EXPOSURE_CNT];
 	struct fw_reg_ reg_addr_ana_gain_in_lut[MAX_EXPOSURE_CNT];
 	struct fw_reg_ reg_addr_dig_gain[MAX_EXPOSURE_CNT];
@@ -227,6 +247,10 @@ struct fw_sensor_global_info {
 	u8 streaming_ctrl_imp;
 	u64 custom_stream_ctrl_delay;
 
+	u32 cycle_base_ratio;
+	u32 stagger_rg_order;
+	u32 stagger_fl_type;
+
 	u8 use_mcss_gph_sync;
 	u16 reg_addr_mcss_slave_add_en_2nd;
 	u16 reg_addr_mcss_slave_add_acken_2nd;
@@ -240,6 +264,8 @@ struct fw_sensor_global_info {
 	u16 reg_addr_mcss_mc_frm_lp_en;
 	u16 reg_addr_mcss_frm_length_reflect_timing;
 	u16 reg_addr_mcss_mc_frm_mask_num;
+
+	u32 i3c_precfg_setting_len;
 
 	u32 cust_global_data_len;
 
@@ -373,10 +399,32 @@ struct fw_dcg_info_struct {
 	u32 *dcg_gain_table;
 } __packed;
 
+struct fw_mode_lut_static_info {
+	u64 pclk;
+	u32 linelength;
+	u32 framelength;
+	u32 readout_length;
+	u32 read_margin;
+	u32 framelength_step;
+	u32 min_vblanking_line;
+} __packed;
+
+struct fw_multiexp_static_info {
+	u8 belong_to_lut_id;
+	u32 coarse_integ_step;
+	u32 exposure_margin;
+	u32 ae_binning_ratio;
+	int fine_integ_line;
+	u32 dig_gain_min;
+	u32 dig_gain_max;
+	u32 dig_gain_step;
+} __packed;
+
 struct fw_mode_info_dynamic_size {
 	struct fw_set_pd_block_info_t *imgsensor_pd_info;
 	struct fw_mtk_sensor_saturation_info *saturation_info;
 	struct fw_dcg_info_struct *dcg_info;
+	struct fw_mtk_sensor_ctle_param *ctle_param;
 	struct fw_mtk_mbus_frame_desc_entry_csi2 *frame_desc;
 	u16 *mode_setting_table;
 	u16 *mode_setting_table_for_md;
@@ -428,14 +476,18 @@ struct fw_mode_info {
 	u8 has_imgsensor_pd_info;
 	u8 has_saturation_info;
 	u8 has_dcg_info;
+	u8 has_ctle_param;
 	struct fw_u32_min_max multi_exposure_ana_gain_range[MAX_EXPOSURE_CNT];
 	struct fw_u64_min_max multi_exposure_shutter_range[MAX_EXPOSURE_CNT];
+	struct fw_multiexp_static_info multiexp_s_info[MAX_EXPOSURE_CNT];
+	struct fw_mode_lut_static_info mode_lut_s_info[MAX_LUT_CNT];
 
 	u8 aov_mode;
 	u8 rosc_mode;
 	u8 s_dummy_support;
 	u32 ae_ctrl_support;
 	u32 exposure_order_in_lbmf;
+	u32 exposure_order_in_dcg;
 	u32 mode_type_in_lbmf;
 	u32 sw_fl_delay;
 	u8 support_mcss;

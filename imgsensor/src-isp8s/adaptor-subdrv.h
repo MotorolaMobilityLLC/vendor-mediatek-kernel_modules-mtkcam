@@ -285,7 +285,7 @@ struct mode_lut_static_info {
 	/* line_time is calculated by pclk and linelength */
 
 	u32 readout_length;
-	u8 read_margin;
+	u32 read_margin;
 	u32 framelength_step;
 	u32 min_vblanking_line;
 };
@@ -354,7 +354,7 @@ struct subdrv_mode_struct {
 	u8 sensor_output_dataformat;
 	enum ACDK_SENSOR_OUTPUT_FORMAT_CELL_TYPE sensor_output_dataformat_cell_type;
 	//u32 ana_gain_min; // Deprecated, use multi_exposure_ana_gain_range instead
-	u32 ana_gain_max; // FIXME: Deprecated, use multi_exposure_ana_gain_range instead
+	//u32 ana_gain_max; // Deprecated, use multi_exposure_ana_gain_range instead
 	u32 dig_gain_min;
 	u32 dig_gain_max;
 	u32 dig_gain_step;
@@ -586,7 +586,6 @@ struct subdrv_static_ctx_ext_ops {
 	int (*mcss_update_subdrv_para)(void *arg, int scenario_id);
 	int (*cust_get_linetime_in_us)(void *arg, u32 scenario_id,
 		u32 *linetime_in_ns, enum GET_LINETIME_ENUM linetime_type);
-	u32 cycle_base_ratio;
 
 	/* customed function pointer by sensor mode */
 	struct subdrv_static_ctx_mode_ext_ops *mode_ext_ops_list;
@@ -667,7 +666,7 @@ struct subdrv_ctx {
 	u16 dummy_line; /* current dummline */
 	u16 current_fps; /* current max fps */
 	u32 readout_length; /* current readoutlength */
-	u8 read_margin; /* current read margin */
+	u32 read_margin; /* current read margin */
 	int autoflicker_en; /* record autoflicker enable or disable */
 	u8 test_pattern; /* record test pattern mode or not */
 	u8 ihdr_mode; /* ihdr enable or disable */
