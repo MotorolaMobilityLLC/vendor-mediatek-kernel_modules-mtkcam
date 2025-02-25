@@ -210,7 +210,7 @@ static bool rtff_init(u32 mod)
 	return true;
 }
 
-static bool rtff_uninit(enum QOF_SUPPORT_MODULE mod)
+static bool rtff_uninit(u32 mod)
 {
 	//Main
 	write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x118, BIT(1), 0xffffffff);
