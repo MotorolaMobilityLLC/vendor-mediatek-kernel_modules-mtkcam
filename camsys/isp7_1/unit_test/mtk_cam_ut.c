@@ -845,7 +845,7 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		struct mtkcam_ipi_config_param *pParam;
 		struct mtk_ccd *ccd;
 		int i, j, exp_no = 1, exp_shift = 0;
-		bool is_dc;
+		bool is_dc = false;
 
 		if (copy_from_user(&config, (void *)arg,
 				   sizeof(config)) != 0) {
