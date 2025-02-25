@@ -407,7 +407,7 @@ bool qof_check_module_cg_status(u32 pwr)
 	return true;
 }
 
-static int qof_smi_isp_module_get_if_in_use(void *data, int module)
+static int qof_smi_isp_module_get_if_in_use(void *data, enum ISP8S_IMG_PWR module)
 {
 	int get_result = -1;
 	unsigned long flag;
@@ -431,7 +431,7 @@ static int qof_smi_isp_module_get_if_in_use(void *data, int module)
 	} else {
 		if (is_qof_engine_enabled(module)) {
 			if (g_qof_smi_cnt == 0) {
-				for (int i = 0; i < ISP8S_PWR_NUM; i ++)
+				for (unsigned int i = ISP8S_PWR_START; i < ISP8S_PWR_NUM; i ++)
 					QOF_WRITE_VAL(qof_reg_table[i][QOF_REG_IMG_SCP_SET], 0x1);
 			}
 			g_qof_smi_cnt++;
@@ -474,7 +474,7 @@ RETURN_FLOW:
 }
 
 #ifndef CONFIG_FPGA_EARLY_PORTING
-static int qof_smi_isp_module_get(void *data, int module)
+static int qof_smi_isp_module_get(void *data, enum ISP8S_IMG_PWR module)
 {
 	unsigned long flag;
 	if (g_qof_ver == 0)
