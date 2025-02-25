@@ -3429,8 +3429,7 @@ static int mtk_cam_seninf_set_ctrl(struct v4l2_ctrl *ctrl)
 					/* array size of aov_ctx[] is
 					 * AOV_SENINF_NUM: most number of sensors support
 					 */
-					if (g_aov_ctrl[aov_csi_port].aov_param.sensor_idx >= 0 &&
-						g_aov_ctrl[aov_csi_port].aov_param.sensor_idx < AOV_SENINF_NUM) {
+					if (g_aov_ctrl[aov_csi_port].aov_param.sensor_idx < AOV_SENINF_NUM) {
 						g_aov_ctrl[aov_csi_port].aov_ctx = NULL;
 						memset(&g_aov_ctrl[aov_csi_port].aov_param, 0,
 							sizeof(struct mtk_seninf_aov_param));
@@ -3521,7 +3520,14 @@ static int seninf_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	struct seninf_ctx *ctx = sd_to_ctx(sd);
 	unsigned int i;
 	int aov_csi_port = ctx->port;
-	int sensor_id = g_aov_ctrl[ctx->port].aov_sensor_idx;
+	int sensor_id = -1;
+
+	if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
+		pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
+		return -1;
+	}
+
+	sensor_id = g_aov_ctrl[aov_csi_port].aov_sensor_idx;
 
 	if (ctx->is_aov_enable) {
 		dev_info(ctx->dev, "[%s]Warning: sensor_id(%d) aov_runtime_resume by seninf\n",
