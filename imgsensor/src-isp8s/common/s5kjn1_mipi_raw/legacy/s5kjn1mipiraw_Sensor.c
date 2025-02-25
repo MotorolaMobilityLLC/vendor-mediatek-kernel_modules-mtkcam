@@ -115,7 +115,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 			.hsize = 0x0FF0, //4080
 			.vsize = 0x0BF4, //3060
 			.user_data_desc = VC_STAGGER_NE,
-			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST,
 		},
 	},
 	{
@@ -126,6 +126,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 			.vsize = 0x0BF0, //3056
 			.user_data_desc = VC_PDAF_STATS,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
 		},
 	},
 };
@@ -138,7 +139,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 			.hsize = 0x0FF0, //4080
 			.vsize = 0x0BF4, //3060
 			.user_data_desc = VC_STAGGER_NE,
-			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST,
 		},
 	},
 	{
@@ -149,6 +150,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 			.vsize = 0x0BF0, //3056
 			.user_data_desc = VC_PDAF_STATS,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST
 		},
 	},
 };
@@ -161,7 +163,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.hsize = 0x0FF0, //4080
 			.vsize = 0x09F6, //2550
 			.user_data_desc = VC_STAGGER_NE,
-			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST,
 		},
 	},
 	{
@@ -172,6 +174,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.vsize = 0x09E0, //2528
 			.user_data_desc = VC_PDAF_STATS,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST
 		},
 	},
 };
@@ -184,7 +187,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
 			.hsize = 0x0F00, //3840
 			.vsize = 0x0870, //2160
 			.user_data_desc = VC_STAGGER_NE,
-			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST
 		},
 	},
 	{
@@ -195,6 +198,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
 			.vsize = 0x0860, //2144
 			.user_data_desc = VC_PDAF_STATS,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST
 		},
 	},
 };
@@ -449,7 +453,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pclk = 560000000,
 		.linelength = 4584,
 		.framelength = 4054,
-		.max_framerate = 300,
+		.max_framerate = 301,
 		.mipi_pixel_rate = 662400000, //DPHY: 1656M*4(lane)/10(raw bit)
 		.readout_length = 0,
 		.read_margin = 0,
@@ -651,6 +655,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mipi_pixel_rate = 662400000, //DPHY: 1656M*4(lane)/10(raw bit)
 		.readout_length = 0,
 		.read_margin = 0,
+		.coarse_integ_step = 2,
 		.imgsensor_winsize_info = {
 			.full_w = 8160,
 			.full_h = 6144,
@@ -672,7 +677,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.aov_mode = 0,
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info_2bin,
-		.ae_binning_ratio = 1000,
+		.ae_binning_ratio = 4000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
 		.csi_param = {0},
@@ -700,6 +705,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mipi_pixel_rate = 662400000, //DPHY: 1656M*4(lane)/10(raw bit)
 		.readout_length = 0,
 		.read_margin = 0,
+		.coarse_integ_step = 2,
 		.imgsensor_winsize_info = {
 			.full_w = 8160,
 			.full_h = 6144,
@@ -721,7 +727,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.aov_mode = 0,
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info_2bin,
-		.ae_binning_ratio = 1000,
+		.ae_binning_ratio = 4000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
 		.csi_param = {0},
@@ -749,6 +755,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.mipi_pixel_rate = 662400000, //DPHY: 1656M*4(lane)/10(raw bit)
 		.readout_length = 0,
 		.read_margin = 0,
+		.coarse_integ_step = 2,
 		.imgsensor_winsize_info = {
 			.full_w = 8160,
 			.full_h = 6144,
@@ -770,7 +777,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.aov_mode = 0,
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info_2bin,
-		.ae_binning_ratio = 1000,
+		.ae_binning_ratio = 4000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
 		.csi_param = {0},
