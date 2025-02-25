@@ -1640,12 +1640,8 @@ static void raw_handle_skip_frame(struct mtk_raw_device *raw_dev,
 	if (err_status & FBIT(CAMCTL_P1_SKIP_FRAME_DC_STAG_INT_ST)) {
 		mtk_cam_main_dbg_dump(raw_dev->cam);
 		mtk_cam_isp8s_bwr_dbg_dump(raw_dev->cam->bwr);
-#ifdef SKIP_IN_FPGA_EP
 		mmdvfs_debug_status_dump(NULL);
-#if KERNEL_VERSION(6, 7, 0) >= LINUX_VERSION_CODE
 		mmqos_hrt_dump();
-#endif
-#endif
 
 		if (DISABLE_RECOVER_FLOW || raw_dev->lock_done_ctrl)
 			do_engine_callback(raw_dev->engine_cb, dump_request,
@@ -2220,12 +2216,8 @@ static void raw_handle_tg_overrun_err(struct mtk_raw_device *raw_dev,
 	else if (cnt == (OVERRUN_DUMP_CNT + raw_dev->sub_sensor_ctrl_en * 10)) {
 		mtk_cam_main_dbg_dump(raw_dev->cam);
 		mtk_cam_isp8s_bwr_dbg_dump(raw_dev->cam->bwr);
-#ifdef SKIP_IN_FPGA_EP
 		mmdvfs_debug_status_dump(NULL);
-#if KERNEL_VERSION(6, 7, 0) >= LINUX_VERSION_CODE
 		mmqos_hrt_dump();
-#endif
-#endif
 		do_engine_callback(raw_dev->engine_cb, reset_sensor,
 				   raw_dev->cam, CAMSYS_ENGINE_RAW, raw_dev->id,
 				   fh_cookie);

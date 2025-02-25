@@ -50,7 +50,7 @@
 
 #define CSI_POWER_STATE
 #ifdef CSI_POWER_STATE
-#include "subsys/swpm_isp_wrapper.h"
+#include "swpm_isp_wrapper.h"
 #endif
 
 #define is_irq_ready 1

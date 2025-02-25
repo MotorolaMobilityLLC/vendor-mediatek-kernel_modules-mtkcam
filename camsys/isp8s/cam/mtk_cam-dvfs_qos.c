@@ -25,7 +25,7 @@
 #include "mtk_cam-plat.h"
 #include "mtk_cam-bwr.h"
 #include "mtk_cam-sv-df.h"
-#include "subsys/swpm_isp_wrapper.h"
+#include "swpm_isp_wrapper.h"
 
 #define BOOST_DVFS_OPP    2
 #define ICCPATH_NAME_SIZE 32

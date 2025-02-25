@@ -47,7 +47,7 @@
 #include "mtk_cam-trace.h"
 #include "mtk_cam-ufbc-def.h"
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
-#include <slbc/slbc_ops.h>
+#include <slbc_ops.h>
 
 #ifdef CAMSYS_TF_DUMP_7S
 #include <dt-bindings/memory/mt6985-larb-port.h>

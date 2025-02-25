@@ -14,6 +14,9 @@ define_mgk_ko(
         "//vendor/mediatek/kernel_modules/mtkcam:public_headers",
     ],
     deps = [
-        "//vendor/mediatek/kernel_modules/mtkcam/camsys:camsys",
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-isp7s",
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-isp7sp",
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-isp8",
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-isp8s",
     ],
 )

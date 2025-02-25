@@ -15,4 +15,4 @@ SIZE_STATIC_ASSERT(struct mtk_cam_request, 2 * 1024);
 SIZE_STATIC_ASSERT(struct mtk_cam_ctx, 11 * 1024);
 //PRINT_SIZE(struct mtk_cam_ctx);
 SIZE_STATIC_ASSERT(struct mtk_cam_job, 2 * 1024);
-//PRINT_SIZE(struct mtk_cam_job);
+PRINT_SIZE(struct mtk_cam_job);

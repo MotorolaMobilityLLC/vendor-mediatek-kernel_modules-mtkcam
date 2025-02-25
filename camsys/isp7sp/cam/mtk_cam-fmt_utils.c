@@ -6,7 +6,7 @@
 #include <media/v4l2-common.h>
 #include <uapi/linux/media-bus-format.h>
 
-#include <camsys/common/mtk_cam-fmt.h>
+#include "../../common/mtk_cam-fmt.h"
 
 #include "mtk_cam-fmt_utils.h"
 #include "mtk_cam-ipi.h"

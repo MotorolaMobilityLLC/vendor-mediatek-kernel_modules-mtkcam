@@ -30,7 +30,7 @@ define_mgk_ko(
 
     deps = [
         "//vendor/mediatek/kernel_modules/mtkcam/img_frm_sync:mtk-img-frm-sync",
-        "//vendor/mediatek/kernel_modules/mtkcam/camsys:camsys",
+        "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-isp8",
     ],
 
     outs = mgk_dpe_outs,
