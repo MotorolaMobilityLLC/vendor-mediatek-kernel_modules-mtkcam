@@ -392,50 +392,17 @@ static int init_sensor_mode(struct adaptor_ctx *ctx)
 	return 0;
 }
 
-static void control_sensor(struct adaptor_ctx *ctx)
-{
-	MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT image_window;
-	MSDK_SENSOR_CONFIG_STRUCT sensor_config_data;
-	u64 data[4];
-	u32 len;
-
-	if (ctx == NULL) {
-		adaptor_loge(ctx, "null pointer ctx is invalid\n");
-		return;
-	}
-
-
-	adaptor_logm(ctx,
-		"+ is_sensor_scenario_inited(%u),is_streaming(%u)\n",
-		ctx->is_sensor_scenario_inited, ctx->is_streaming);
-
-	if (!ctx->is_sensor_scenario_inited && !ctx->is_streaming) {
-		subdrv_call(ctx, control,
-				ctx->cur_mode->id,
-				&image_window,
-				&sensor_config_data);
-
-		data[0] = ctx->cur_mode->id;
-		subdrv_call(ctx, feature_control,
-				SENSOR_FEATURE_SET_DESKEW_CTRL,
-				(u8 *)data, &len);
-		subdrv_call(ctx, feature_control,
-				SENSOR_FEATURE_SET_CPHY_LRTE_MODE,
-				(u8 *)data, &len);
-		ctx->is_sensor_scenario_inited = 1;
-	}
-
-	adaptor_logm(ctx, "-\n");
-}
-
 static int set_sensor_mode(struct adaptor_ctx *ctx,
 		struct sensor_mode *mode, char update_ctrl_defs)
 {
 	s64 min, max, def;
 
 	if (ctx->cur_mode == mode) {
-		if (update_ctrl_defs)
-			control_sensor(ctx);
+		/*
+		 * Do scenario setting by V4L2_CID_MTK_SENSOR_WRITE_MODE_SETTING
+		 */
+		//if (update_ctrl_defs)
+		//	control_sensor(ctx);
 		return 0;
 	}
 
@@ -461,8 +428,10 @@ static int set_sensor_mode(struct adaptor_ctx *ctx,
 		max = ctx->subctx.max_frame_length - mode->height;
 		__v4l2_ctrl_modify_range(ctx->vblank, min, max, 1, def);
 
-		/* init sensor scenario setting */
-		control_sensor(ctx);
+		/*
+		 * Do scenario setting by V4L2_CID_MTK_SENSOR_WRITE_MODE_SETTING
+		 */
+		//control_sensor(ctx);
 	}
 
 	adaptor_logd(ctx, "select %dx%d@%d %dx%d px %d\n",
@@ -699,9 +668,14 @@ static int imgsensor_set_pad_format(struct v4l2_subdev *sd,
 		ctx->try_format_mode = mode;
 	} else {
 
-		ADAPTOR_SYSTRACE_BEGIN("imgsensor::init_sensor");
-		adaptor_sensor_init(ctx);
-		ADAPTOR_SYSTRACE_END();
+		/*
+		 * Do scenario setting by
+		 * V4L2_CID_MTK_SENSOR_WRITE_MODE_SETTING,
+		 * so do note sensor init setting when set fmt
+		 */
+		//ADAPTOR_SYSTRACE_BEGIN("imgsensor::init_sensor");
+		//adaptor_sensor_init(ctx);
+		//ADAPTOR_SYSTRACE_END();
 
 		ADAPTOR_SYSTRACE_BEGIN("imgsensor::set_mode_%u", mode->id);
 		set_sensor_mode(ctx, mode, 1);

@@ -2325,6 +2325,15 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 				ret);
 		}
 		break;
+	case V4L2_CID_MTK_SENSOR_WRITE_MODE_SETTING:
+		adaptor_logm(ctx, "V4L2_CID_MTK_SENSOR_WRITE_MODE_SETTING val = %d\n", ctrl->val);
+		if (ctrl->val) {
+			/* make sure sensor inited before scenario setting */
+			adaptor_sensor_init(ctx);
+			/* mocenario setting */
+			control_sensor(ctx);
+		}
+		break;
 	}
 
 imgsensor_set_ctrl_trace_end:
@@ -2933,13 +2942,65 @@ static const struct v4l2_ctrl_config cfg_mtkcam_standby_mode_switch = {
 	.step = 1,
 };
 
+static const struct v4l2_ctrl_config cfg_sensor_write_mode_setting = {
+	.ops = &ctrl_ops,
+	.id = V4L2_CID_MTK_SENSOR_WRITE_MODE_SETTING,
+	.name = "sensor_write_mode_setting",
+	.type = V4L2_CTRL_TYPE_BOOLEAN,
+	.flags = V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
+	.max = 1,
+	.step = 1,
+};
+
 void adaptor_sensor_init(struct adaptor_ctx *ctx)
 {
 	adaptor_logm(ctx, "+\n");
 
 	if (ctx && !ctx->is_sensor_inited) {
+		ADAPTOR_SYSTRACE_BEGIN("imgsensor::init_sensor");
 		subdrv_call(ctx, open);
 		ctx->is_sensor_inited = 1;
+		ADAPTOR_SYSTRACE_END();
+	}
+
+	adaptor_logm(ctx, "-\n");
+}
+
+void control_sensor(struct adaptor_ctx *ctx)
+{
+	MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT image_window;
+	MSDK_SENSOR_CONFIG_STRUCT sensor_config_data;
+	u64 data[4];
+	u32 len;
+
+	if (ctx == NULL) {
+		adaptor_loge(ctx, "null pointer ctx is invalid\n");
+		return;
+	}
+
+	adaptor_logm(ctx,
+		"+ is_sensor_scenario_inited(%u),is_streaming(%u)\n",
+		ctx->is_sensor_scenario_inited, ctx->is_streaming);
+
+	if (!ctx->is_sensor_scenario_inited && !ctx->is_streaming) {
+		ADAPTOR_SYSTRACE_BEGIN("imgsensor::write_mode_%u_setting",
+				ctx->cur_mode->id);
+
+		subdrv_call(ctx, control,
+				ctx->cur_mode->id,
+				&image_window,
+				&sensor_config_data);
+
+		data[0] = ctx->cur_mode->id;
+		subdrv_call(ctx, feature_control,
+				SENSOR_FEATURE_SET_DESKEW_CTRL,
+				(u8 *)data, &len);
+		subdrv_call(ctx, feature_control,
+				SENSOR_FEATURE_SET_CPHY_LRTE_MODE,
+				(u8 *)data, &len);
+		ctx->is_sensor_scenario_inited = 1;
+
+		ADAPTOR_SYSTRACE_END();
 	}
 
 	adaptor_logm(ctx, "-\n");
@@ -3314,6 +3375,7 @@ int adaptor_init_ctrls(struct adaptor_ctx *ctx)
 	v4l2_ctrl_new_custom(ctrl_hdlr, &cfg_sensor_set_aov_mclk, NULL);
 	v4l2_ctrl_new_custom(ctrl_hdlr, &cfg_mtkcam_standby_mode_query, NULL);
 	v4l2_ctrl_new_custom(ctrl_hdlr, &cfg_mtkcam_standby_mode_switch, NULL);
+	v4l2_ctrl_new_custom(ctrl_hdlr, &cfg_sensor_write_mode_setting, NULL);
 
 	if (ctrl_hdlr->error) {
 		ret = ctrl_hdlr->error;
