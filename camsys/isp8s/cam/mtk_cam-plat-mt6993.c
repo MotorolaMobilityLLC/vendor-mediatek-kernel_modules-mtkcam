@@ -188,20 +188,18 @@ static int set_meta_stat0_info(struct mtk_cam_uapi_meta_raw_stats_0 *stats,
 				dflkbo_size, &offset);
 	set_payload(&stats->tsf_stats.tsfo_r1_buf,
 		    MTK_CAM_UAPI_TSFSO_SIZE, &offset);
-#ifdef SKIP_IN_FPGA_EP
-	set_payload(&stats->tsf_stats.tsfo_r2_buf,
-		    MTK_CAM_UAPI_TSFSO_SIZE, &offset);
-	set_payload(&stats->tsf_stats.tsfo_r3_buf,
-		    MTK_CAM_UAPI_TSFSO_SIZE, &offset);
-	set_payload(&stats->tsf_stats.tsfo_r4_buf,
-		    MTK_CAM_UAPI_TSFSO_SIZE, &offset);
-#endif
+	if (cfg->tsfs_r2_enable)
+		set_payload(&stats->tsf_stats.tsfo_r2_buf,
+				MTK_CAM_UAPI_TSFSO_SIZE, &offset);
+	if (cfg->tsfs_r3_enable)
+		set_payload(&stats->tsf_stats.tsfo_r3_buf,
+				MTK_CAM_UAPI_TSFSO_SIZE, &offset);
+	if (cfg->tsfs_r4_enable)
+		set_payload(&stats->tsf_stats.tsfo_r4_buf,
+				MTK_CAM_UAPI_TSFSO_SIZE, &offset);
 	set_payload(&stats->tcys_stats.tcyso_buf,
 		    MTK_CAM_UAPI_TCYSO_SIZE, &offset);
-	// TODO: FIX PDE
-#ifdef SKIP_IN_FPGA_EP
 	set_payload(&stats->pde_stats.pdo_buf, pdo_size, &offset);
-#endif
 
 	if (offset > size) {
 		pr_info("%s: required %zu > buffer size %zu\n",
