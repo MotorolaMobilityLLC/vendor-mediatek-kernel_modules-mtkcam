@@ -463,6 +463,11 @@ int ut_mtk_cam_sv_dmao_config(
 	unsigned int stride;
 	struct mtk_ut_camsv_device *sv_dev = dev_get_drvdata(dev);
 
+	if (ut_mtk_cam_sv_xsize_cal(cfg_in_param) == 0) {
+		dev_info(dev, "warning: xsize is 0\n");
+		ret = -1;
+		goto EXIT;
+	}
 	/* imgo dma setting */
 	CAMSV_WRITE_REG(sv_dev->base + REG_CAMSV_IMGO_XSIZE,
 		ut_mtk_cam_sv_xsize_cal(cfg_in_param) - 1);
@@ -508,7 +513,7 @@ int ut_mtk_cam_sv_dmao_config(
 	}
 
 	/* imgo con */
-	if (sv_dev->id >= 0 && sv_dev->id < 10) {
+	if (sv_dev->id < 10) {
 		CAMSV_WRITE_REG(sv_dev->base + REG_CAMSV_IMGO_CON0, 0x10000300);
 		CAMSV_WRITE_REG(sv_dev->base + REG_CAMSV_IMGO_CON1, 0x00C00060);
 		CAMSV_WRITE_REG(sv_dev->base + REG_CAMSV_IMGO_CON2, 0x01800120);

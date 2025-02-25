@@ -346,9 +346,17 @@ static int mtk_mraw_call_set_fmt(struct v4l2_subdev *sd,
 
 	if (!mtk_mraw_try_fmt(sd, fmt)) {
 		mf = get_mraw_fmt(pipe, state, fmt->pad, fmt->which);
+		if (!mf) {
+			dev_info(sd->v4l2_dev->dev, "sd:%s no format\n", sd->name);
+			return -EINVAL;
+		}
 		fmt->format = *mf;
 	} else {
 		mf = get_mraw_fmt(pipe, state, fmt->pad, fmt->which);
+		if (!mf) {
+			dev_info(sd->v4l2_dev->dev, "sd:%s no format\n", sd->name);
+			return -EINVAL;
+		}
 		*mf = fmt->format;
 		dev_info(mraw->cam_dev,
 			"sd:%s pad:%d set format w/h/code %d/%d/0x%x\n",

@@ -735,7 +735,7 @@ static int fill_sv_img_fp_working_buffer(struct req_buffer_helper *helper,
 	struct mtk_camsv_device *sv_dev;
 	struct mtkcam_ipi_img_output *out;
 	struct mtkcam_ipi_uid uid;
-	unsigned int tag_idx;
+	int tag_idx;
 	unsigned int job_exp_no = 0;
 	int ret = 0;
 
