@@ -13,7 +13,7 @@
 	"power1", \
 	"power2", \
 	"power3", \
-	"mux_sel_ctrl", \
+	"mux-sel-ctrl", \
 
 enum {
 	ADAPTOR_CORE_REGULATOR_POWER_SUPPLY_1 = 0,

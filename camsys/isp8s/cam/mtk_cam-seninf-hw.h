@@ -34,19 +34,19 @@
 
 /*ULPS-mode support*/
 #undef CDPHY_ULPS_MODE_SUPPORT
-// #define CDPHY_ULPS_MODE_SUPPORT
+//#define CDPHY_ULPS_MODE_SUPPORT
 
 /*Dphy LRTE support*/
 #undef DPHY_LRTE_SUPPORT
-// #define DPHY_LRTE_SUPPORT
+#define DPHY_LRTE_SUPPORT
 
 /*Dphy ALP support*/
 #undef DPHY_ALP_SUPPORT
-// #define DPHY_ALP_SUPPORT
+#define DPHY_ALP_SUPPORT
 
 /*Cphy ALP support*/
 #undef CPHY_ALP_SUPPORT
-// #define CPHY_ALP_SUPPORT
+#define CPHY_ALP_SUPPORT
 
 /*init deskew define*/
 #define INIT_PERIODIC_DESKEW_SUPPORT

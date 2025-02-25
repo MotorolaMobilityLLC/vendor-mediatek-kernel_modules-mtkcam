@@ -4930,7 +4930,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		base_ana = ctx->reg_ana_csi_rx[csi_port];
 
 		seninf_logi(ctx,
-			"MipiRx_ANA%d:CDPHY_RX_ANA_SETTING_1:(0x%08x),CDPHY_RX_ANA_0/_1/_2/_3/_4/_5/_6/_7/_8:(0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)\n",
+			"MipiRx_ANA%d:CDPHY_RX_ANA_SETTING_1:(0x%08x),CDPHY_RX_ANA_0(0x%08x)/_1(0x%08x)/_2(0x%08x)/_3(0x%08x)/_4(0x%08x)/_5(0x%08x)/_6(0x%08x)/_7(0x%08x)/_8(0x%08x)\n",
 			csi_port - CSI_PORT_0A,
 			SENINF_READ_REG(base_ana, CDPHY_RX_ANA_SETTING_1),
 			SENINF_READ_REG(base_ana, CDPHY_RX_ANA_0),
@@ -4943,7 +4943,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 			SENINF_READ_REG(base_ana, CDPHY_RX_ANA_7),
 			SENINF_READ_REG(base_ana, CDPHY_RX_ANA_8));
 		seninf_logi(ctx,
-			"MipiRx_ANA%d:CDPHY_RX_ANA_AD_0/_1:(0x%x)/(0x%x),AD_HS_0/_1/_2:(0x%x)/(0x%x)/(0x%x)\n",
+			"MipiRx_ANA%d:CDPHY_RX_ANA_AD_0/_1:(0x%x)/(0x%x),AD_HS_0(0x%x)/_1(0x%x)/_2(0x%x)\n",
 			csi_port - CSI_PORT_0A,
 			SENINF_READ_REG(base_ana, CDPHY_RX_ANA_AD_0),
 			SENINF_READ_REG(base_ana, CDPHY_RX_ANA_AD_1),
@@ -4952,7 +4952,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 			SENINF_READ_REG(base_ana, CDPHY_RX_ANA_AD_HS_2));
 		if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
 			seninf_logi(ctx,
-				"MipiRx_ANA%d:CDPHY_RX_ASYM_AFIFO_CTRL_0/_1:(0x%x)/(0x%x)\n",
+				"MipiRx_ANA%d:CDPHY_RX_ASYM_AFIFO_CTRL_0(0x%x)/_1(0x%x)\n",
 				csi_port - CSI_PORT_0A,
 				SENINF_READ_REG(base_ana, CDPHY_RX_ASYM_AFIFO_CTRL_0),
 				SENINF_READ_REG(base_ana, CDPHY_RX_ASYM_AFIFO_CTRL_1));
@@ -4972,7 +4972,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		dphy_irq = SENINF_READ_REG(base_dphy, DPHY_RX_IRQ_STATUS);
 
 		seninf_logi(ctx,
-			"Csi%d_Dphy_Top:LANE_EN/_SELECT:(0x%x)/(0x%x),CLK_LANE0_HS/1_HS:(0x%x)/(0x%x),DATA_LANE0_HS/1_HS/2_HS/3_HS:(0x%x)/(0x%x)/(0x%x)/(0x%x),DPHY_RX_SPARE0:(0x%x)\n",
+			"Csi%d_Dphy_Top:LANE_EN/_SELECT:(0x%x)/(0x%x),CLK_LANE0_HS/1_HS:(0x%x)/(0x%x),DATA_LANE0_HS(0x%x)/1_HS(0x%x)/2_HS(0x%x)/3_HS(0x%x),DPHY_RX_SPARE0:(0x%x)\n",
 			csi_port,
 			SENINF_READ_REG(base_dphy, DPHY_RX_LANE_EN),
 			SENINF_READ_REG(base_dphy, DPHY_RX_LANE_SELECT),
@@ -4991,7 +4991,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 			SENINF_READ_REG(base_dphy,
 					DPHY_RX_SPARE0));
 		seninf_logi(ctx,
-			"Csi%d_Dphy_Top:DPHY_RX_DESKEW_CTRL/_TIMING_CTRL/_LANE0_CTRL/_LANE1_CTRL/_LANE2_CTRL/_LANE3_CTRL:(0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)\n",
+			"Csi%d_Dphy_Top:DPHY_RX_DESKEW_CTRL(0x%08x)/_TIMING_CTRL(0x%08x)/_LANE0_CTRL(0x%08x)/_LANE1_CTRL(0x%08x)/_LANE2_CTRL(0x%08x)/_LANE3_CTRL(0x%08x)\n",
 			csi_port,
 			SENINF_READ_REG(base_dphy, DPHY_RX_DESKEW_CTRL),
 			SENINF_READ_REG(base_dphy, DPHY_RX_DESKEW_TIMING_CTRL),
@@ -5004,7 +5004,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 			SENINF_READ_REG(base_dphy,
 					DPHY_RX_DESKEW_LANE3_CTRL));
 		seninf_logi(ctx,
-			"Csi%d_Dphy_Top:DPHY_RX_DESKEW_IRQ_EN/_CLR/_STATUS:(0x%08x)/(0x%08x)/(0x%08x),DPHY_RX_IRQ_EN/_STATUS:(0x%08x)/(0x%08x)\n",
+			"Csi%d_Dphy_Top:DPHY_RX_DESKEW_IRQ_EN(0x%08x)/_CLR(0x%08x)/_STATUS(0x%08x),DPHY_RX_IRQ_EN(0x%08x)/_STATUS:(0x%08x)\n",
 			csi_port,
 			SENINF_READ_REG(base_dphy, DPHY_RX_DESKEW_IRQ_EN),
 			SENINF_READ_REG(base_dphy, DPHY_RX_DESKEW_IRQ_CLR),
@@ -5012,7 +5012,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 			SENINF_READ_REG(base_dphy, DPHY_RX_IRQ_EN),
 			dphy_irq);
 		seninf_logi(ctx,
-			"Csi%d_Cphy_Top:CPHY_RX_CTRL:(0x%x),CPHY_RX_DETECT_CTRL_POST:(0x%x),CPHY_RX_IRQ_EN/_CLR:(0x%08x)/(0x%08x)\n",
+			"Csi%d_Cphy_Top:CPHY_RX_CTRL:(0x%x),CPHY_RX_DETECT_CTRL_POST:(0x%x),CPHY_RX_IRQ_EN(0x%08x)/_CLR(0x%08x)\n",
 			csi_port,
 			SENINF_READ_REG(base_cphy, CPHY_RX_CTRL),
 			SENINF_READ_REG(base_cphy, CPHY_RX_DETECT_CTRL_POST),
@@ -5085,7 +5085,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 
 						irq_st = mtk_cam_seninf_get_outmux_irq_st(ctx, used_outmux, 0);
 						seninf_logi(ctx,
-							"dump outmux%d,tag%u,CFG_M/PIX_M/CFG0_out-in/CFG1_out-in/CFG2_out-in/SRC_out-in/CFG_DONE/CFG_CTL/CFG_RDY/DBG_PORT0/DBG_PORT1:(0x%x/0x%x/0x%x-0x%x/0x%x-0x%x/0x%x-0x%x/0x%x-0x%x/0x%x/0x%x/0x%x/0x%x/0x%x),filt_out/in=(0x%x/0x%x),expSize=0x%x,dbgRecSize=0x%x,irq=0x%x\n",
+							"dump outmux%d,tag%u,CFG_M(0x%x)/PIX_M(0x%x)/CFG0_out-in(0x%x-0x%x)/CFG1_out-in(0x%x-0x%x)/CFG2_out-in(0x%x-0x%x)/SRC_out-in(0x%x-0x%x)/CFG_DONE(0x%x)/CFG_CTL(0x%x)/CFG_RDY(0x%x)/DBG_PORT0(0x%x)/DBG_PORT1(0x%x),filt_out/in=(0x%x/0x%x),expSize=0x%x,dbgRecSize=0x%x,irq=0x%x\n",
 							i, used_tag,
 							seninf_get_outmux_rg_val(ctx, used_outmux,
 								SENINF_OUTMUX_SW_CONFIG_MODE),
@@ -5130,7 +5130,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		rdy = seninf_get_outmux_rg_val(ctx, j, SENINF_OUTMUX_CAM_CFG_RDY);
 		if (ctx->outmux_force_disable_list[j]) {
 			seninf_logi(ctx,
-				 "outmux%d marked disable but not cfg done: CFG_M/PIX_M/CFG0/CFG1/CFG2/SRC/CFG_DONE/CFG_CTL/CFG_RDY/DBG_PORT0/DBG_PORT1:(0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x),irq=0x%x\n",
+				 "outmux%d marked disable but not cfg done: CFG_M(0x%x)/PIX_M(0x%x)/CFG0(0x%x)/CFG1(0x%x)/CFG2(0x%x)/SRC(0x%x)/CFG_DONE(0x%x)/CFG_CTL(0x%x)/CFG_RDY(0x%x)/DBG_PORT0(0x%x)/DBG_PORT1(0x%x)/irq=0x%x\n",
 				 j,
 				 seninf_get_outmux_rg_val(ctx, j,
 							  SENINF_OUTMUX_SW_CONFIG_MODE),
@@ -5175,7 +5175,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 	SENINF_WRITE_REG(base_csi_mac, CSIRX_CSI2_IRQ_MULTI_ERR_FRAME_SYNC_STATUS, temp);
 
 	seninf_logi(ctx,
-		"CSI-%d,CSIRX_MAC_CSI2_EN/_OPT/_IRQ_STATUS/_MULTI_ERR_F_STATUS:(0x%x)/(0x%x)/(0x%x)/(0x%x),SENINF_ASYNC%d_OVERRUN:(0x%x),CSIRX_MAC_CSI2_RESYNC_MERGE_CTRL:(0x%x)\n",
+		"CSI-%d,CSIRX_MAC_CSI2_EN(0x%x)/_OPT(0x%x)/_IRQ_STATUS(0x%x)/_MULTI_ERR_F_STATUS(0x%x),SENINF_ASYNC%d_OVERRUN:(0x%x),CSIRX_MAC_CSI2_RESYNC_MERGE_CTRL:(0x%x)\n",
 		(uint32_t)ctx->portNum,
 		SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_EN),
 		SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_OPT),
@@ -5221,7 +5221,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		/* Bit Error Rate (BER) */
 		calculate_bit_error_rate(ctx);
 		seninf_logi(ctx,
-			"CSI-%d,CSIRX_MAC_CSI2_BIT_ERR_CTRL/MIN_CYCLE/MAX_CYCLE:(0x%08x)/(0x%08x%08x)/(%08x%08x)\n",
+			"CSI-%d,CSIRX_MAC_CSI2_BIT_ERR_CTRL(0x%08x)/MIN_CYCLE(0x%08x%08x)/MAX_CYCLE(%08x%08x)\n",
 			(uint32_t)ctx->portNum, ctx->ber.bit_err_ctrl,
 			ctx->ber.min_cycle_msb, ctx->ber.min_cycle_lsb,
 			ctx->ber.max_cycle_msb, ctx->ber.max_cycle_lsb);
@@ -5238,7 +5238,8 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 			calculate_cphy_lrte_spacer(ctx);
 			seninf_logi(ctx, "CSI-%d,cphy_lrte_spacer(%u) vc(0x%02x) dt(0x%02x)\n",
 				(uint32_t)ctx->portNum, ctx->lrte_sd.spacer, ctx->lrte_sd.vc, ctx->lrte_sd.dt);
-			seninf_logi(ctx, "CSI-%d,valid_cnt/num_hs1/num_hs2/wc/trio: %u/%u/%u/%u/%u\n",
+			seninf_logi(ctx,
+				"CSI-%d,valid_cnt(%u)/num_hs1(%u)/num_hs2(%u)/wc(%u)/trio(%u)\n",
 				(uint32_t)ctx->portNum, ctx->lrte_sd.valid_cnt,
 				ctx->lrte_sd.num_hs1, ctx->lrte_sd.num_hs2, ctx->lrte_sd.wc, ctx->lrte_sd.trio);
 		}
@@ -5300,7 +5301,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 	}
 
 	seninf_logi(ctx,
-		"CSI-%d_CSI2_IRQ_STATUS/_MULTI_ERR_F_STATUS:(0x%x)/(0x%x),SENINF_ASYNC%d_OVERRUN:(0x%x),C/DPHY_RX_IRQ_STATUS:(0x%x)/(0x%x)\n",
+		"CSI-%d_CSI2_IRQ_STATUS(0x%x)/_MULTI_ERR_F_STATUS(0x%x),SENINF_ASYNC%d_OVERRUN:(0x%x),C/DPHY_RX_IRQ_STATUS:(0x%x)/(0x%x)\n",
 		ctx->portNum, mac_irq, temp, ctx->seninfAsyncIdx, seninf_irq, cphy_irq, dphy_irq);
 	if ((mac_irq & 0xD0) || seninf_irq)
 		ret = -2; //multi lanes sync error, crc error, ecc error
@@ -5349,7 +5350,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 
 						irq_st = mtk_cam_seninf_get_outmux_irq_st(ctx, used_outmux, 0);
 						seninf_logi(ctx,
-							"dump outmux%d,tag%u,CFG_M/PIX_M/CFG0_out-in/CFG1_out-in/CFG2_out-in/SRC_out-in/CFG_DONE/CFG_CTL/CFG_RDY/DBG_PORT0/DBG_PORT1:(0x%x/0x%x/0x%x-0x%x/0x%x-0x%x/0x%x-0x%x/0x%x-0x%x/0x%x/0x%x/0x%x/0x%x/0x%x),filt_out/in=(0x%x/0x%x),expSize=0x%x,dbgRecSize=0x%x,irq=0x%x\n",
+							"dump outmux%d,tag%u,CFG_M(0x%x)/PIX_M(0x%x)/CFG0_out-in(0x%x-0x%x)/CFG1_out-in(0x%x-0x%x)/CFG2_out-in(0x%x-0x%x)/SRC_out-in(0x%x-0x%x)/CFG_DONE(0x%x)/CFG_CTL(0x%x)/CFG_RDY(0x%x)/DBG_PORT0(0x%x)/DBG_PORT1(0x%x),filt_out/in=(0x%x/0x%x),expSize=0x%x,dbgRecSize=0x%x,irq=0x%x\n",
 							i, used_tag,
 							seninf_get_outmux_rg_val(ctx, used_outmux,
 								SENINF_OUTMUX_SW_CONFIG_MODE),
@@ -5394,7 +5395,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		rdy = seninf_get_outmux_rg_val(ctx, j, SENINF_OUTMUX_CAM_CFG_RDY);
 		if (ctx->outmux_force_disable_list[j]) {
 			seninf_logi(ctx,
-				 "outmux%d marked disable but not cfg done: CFG_M/PIX_M/CFG0/CFG1/CFG2/SRC/CFG_DONE/CFG_CTL/CFG_RDY/DBG_PORT0/DBG_PORT1:(0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x),irq=0x%x\n",
+				 "outmux%d marked disable but not cfg done: CFG_M(0x%x)/PIX_M(0x%x)/CFG0(0x%x)/CFG1(0x%x)/CFG2(0x%x)/SRC(0x%x)/CFG_DONE(0x%x)/CFG_CTL(0x%x)/CFG_RDY(0x%x)/DBG_PORT0(0x%x)/DBG_PORT1(0x%x),irq=0x%x\n",
 				 j,
 				 seninf_get_outmux_rg_val(ctx, j,
 							  SENINF_OUTMUX_SW_CONFIG_MODE),
@@ -8055,22 +8056,22 @@ static int mtk_cam_csi_mac_hv_hb_get_result_by_line(struct seninf_ctx *ctx,
 	case 1:
 		mtk_cam_csi_mac_hv_hb_wait_measure_done(ctx, measure_req);
 		pInfo->probes[1].measure_HV_cnt = SENINF_READ_BITS(pCsi2_mac,
-											CSIRX_MAC_MIPI_MEASUREMENT4,
-											RO_CSI2_H_VALID_CNT1);
+							CSIRX_MAC_MIPI_MEASUREMENT4,
+							RO_CSI2_H_VALID_CNT1);
 
 		pInfo->probes[1].measure_HB_cnt = SENINF_READ_BITS(pCsi2_mac,
-											CSIRX_MAC_MIPI_MEASUREMENT7,
-											RO_CSI2_H_BLANKING_CNT1);
+							CSIRX_MAC_MIPI_MEASUREMENT7,
+							RO_CSI2_H_BLANKING_CNT1);
 		break;
 	default:
 		mtk_cam_csi_mac_hv_hb_wait_measure_done(ctx, measure_req);
 		pInfo->probes[0].measure_HV_cnt = SENINF_READ_BITS(pCsi2_mac,
-											CSIRX_MAC_MIPI_MEASUREMENT2,
-											RO_CSI2_H_VALID_CNT0);
+							CSIRX_MAC_MIPI_MEASUREMENT2,
+							RO_CSI2_H_VALID_CNT0);
 
 		pInfo->probes[0].measure_HB_cnt = SENINF_READ_BITS(pCsi2_mac,
-											CSIRX_MAC_MIPI_MEASUREMENT6,
-											RO_CSI2_H_BLANKING_CNT0);
+							CSIRX_MAC_MIPI_MEASUREMENT6,
+							RO_CSI2_H_BLANKING_CNT0);
 		break;
 	}
 

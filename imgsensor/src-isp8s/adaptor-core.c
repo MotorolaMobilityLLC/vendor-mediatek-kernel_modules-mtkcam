@@ -88,6 +88,11 @@ static int unset_regulator(u32 idx, u32 min_v, u32 max_v)
 
 	reg = ctx.regulator[idx];
 
+	if (unlikely(reg == NULL)) {
+		ADAPTOR_DRV_CORE_LOG_ERR("%s regulator is NULL\n", reg_names[idx]);
+		return -EINVAL;
+	}
+
 	ADAPTOR_DRV_CORE_LOG_MSG("+ idx(%u),val(%u)\n", idx, min_v);
 
 	ret = regulator_disable(reg);

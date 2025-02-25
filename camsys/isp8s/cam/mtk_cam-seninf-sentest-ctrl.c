@@ -584,7 +584,7 @@ static int seninf_sentest_ops_after_sensor_seamless(struct seninf_ctx *ctx)
 {
 	struct v4l2_ctrl *ctrl;
 	struct v4l2_subdev *sensor_sd = ctx->sensor_sd;
-	unsigned int sof_cnt = ctx->sentest_irq_counter;
+	struct mtk_sof_info sof_info;
 
 	if (unlikely(ctx == NULL)) {
 		pr_info("[Error][%s] ctx is NULL", __func__);
@@ -607,7 +607,11 @@ static int seninf_sentest_ops_after_sensor_seamless(struct seninf_ctx *ctx)
 			sensor_sd->name);
 		return -EFAULT;
 	}
-	v4l2_ctrl_s_ctrl(ctrl, sof_cnt);
+
+	sof_info.cnt = ctx->sentest_irq_counter;
+	sof_info.ts = ktime_get_boottime_ns();
+
+	v4l2_ctrl_s_ctrl_compound(ctrl, V4L2_CTRL_TYPE_U32, &sof_info);
 	seninf_sentest_watchingdog_en(&ctx->sentest_watchdog, false);
 
 	ctx->sentest_seamless_ut_en = false;

@@ -1111,7 +1111,7 @@ static int mtk_cam_seninf_rdy_mask_list_install(struct seninf_core *core)
 	u32 i = 0;
 	struct device *dev = core->dev;
 
-	if (core->rdy_msk_grp_id_end > SENINF_OUTMUX_NUM) {
+	if (core->rdy_msk_grp_id_end >= SENINF_OUTMUX_NUM) {
 		dev_err(dev, "[%s] rdy_msk_grp_id_end(%u) is invalid\n",
 			__func__, core->rdy_msk_grp_id_end);
 		return -EINVAL;

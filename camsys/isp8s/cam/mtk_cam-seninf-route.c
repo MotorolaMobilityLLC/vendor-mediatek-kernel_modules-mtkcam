@@ -1513,9 +1513,20 @@ int _mtk_cam_seninf_set_camtg_with_dest_idx(struct v4l2_subdev *sd,
 		return -EINVAL;
 	}
 
+	if (unlikely((dest_set < 0 || dest_set >= MAX_DEST_NUM))) {
+		pr_info("dest_set is invalid: %d\n", dest_set);
+		return -EINVAL;
+	}
+
+	if (unlikely(pad_id >= PAD_MAXCNT)) {
+		pr_info("pad_id is invalid: %d\n", pad_id);
+		return -EINVAL;
+	}
+
 	ctx->pad2cam[pad_id][dest_set] = cfg->camtg;
 	ctx->pad_tag_id[pad_id][dest_set] = cfg->tag_id;
 	ctx->rdy_msk_config = cfg->rdy_msk_cfg;
+	vc->enable = true;
 
 	dest = &vc->dest[dest_set];
 	dest->outmux = cfg->camtg;
@@ -1575,7 +1586,7 @@ static int _mtk_cam_seninf_reset_outmux_outer(struct seninf_ctx *ctx, int pad_id
 
 	vc = mtk_cam_seninf_get_vc_by_pad(ctx, pad_id);
 	if (!vc) {
-		seninf_logd(ctx, "no such vc by pad id:%d\n", pad_id);
+		seninf_logi(ctx, "no such vc by pad id:%d\n", pad_id);
 		return -EINVAL;
 	}
 
@@ -1664,7 +1675,7 @@ int _mtk_cam_seninf_set_camtg(struct v4l2_subdev *sd,
 		return -EINVAL;
 	}
 
-	if (camtg_cfg->camtg < 0 || camtg_cfg->camtg == 0xff) {
+	if (camtg_cfg->camtg == 0xff) {
 		/* disable all dest */
 		mutex_unlock(&core->cammux_page_ctrl_mutex);
 		return _mtk_cam_seninf_reset_outmux_outer(ctx, camtg_cfg->pad_id);
@@ -1732,7 +1743,7 @@ static int mtk_cam_seninf_set_camtg_for_stream_mux(struct mtk_cam_seninf_mux_par
 	int i, ret = 0;
 
 	if (unlikely(param == NULL)) {
-		dev_info(ctx->dev, "[%s][ERR] param is NULL\n", __func__);
+		pr_info("[%s][ERR] param is NULL\n", __func__);
 		return -EINVAL;
 	}
 
@@ -2347,9 +2358,10 @@ mtk_cam_seninf_streaming_mux_change(struct mtk_cam_seninf_mux_param *param, bool
 			outmux_continue_used_list[camtg] = true;
 
 		// log
-		num = snprintf(strptr, remind, "(pad %d -> outmux %d), ",
+		num = snprintf(strptr, remind, "(pad %d -> outmux %d, enable %d), ",
 			       param->settings[i].source,
-			       param->settings[i].camtg);
+			       param->settings[i].camtg,
+			       param->settings[i].enable);
 		if (num < 0) {
 			dev_info(ctx->dev, "snprintf retuns error ret = %d\n", num);
 			break;
@@ -2477,16 +2489,14 @@ mtk_cam_seninf_streaming_mux_change(struct mtk_cam_seninf_mux_param *param, bool
 			ctx->outmux_force_disable_list[camtg] = true;
 	}
 
-	if (ctx) {
-		/* (seamless only) reset all selected outmux firstly*/
-		mtk_cam_seninf_outmux_reset_all(ctx, &outmux_cfgs, 1);
+	/* (seamless only) reset all selected outmux firstly*/
+	mtk_cam_seninf_outmux_reset_all(ctx, &outmux_cfgs, 1);
 
-		/* enable all selected outmux */
-		mtk_cam_seninf_outmux_config_all(ctx, &outmux_cfgs, true);
+	/* enable all selected outmux */
+	mtk_cam_seninf_outmux_config_all(ctx, &outmux_cfgs, true);
 
-		/* Free list */
-		mtk_cam_seninf_outmux_release_all(ctx, &outmux_cfgs);
-	}
+	/* Free list */
+	mtk_cam_seninf_outmux_release_all(ctx, &outmux_cfgs);
 
 SENINF_MUX_CHANGE_LOG_AND_EXIT:
 	dev_info(ctx->dev,
