@@ -64,14 +64,8 @@ static bool is_multi_plane_node(struct mtk_cam_video_device *node)
 {
 	if (!node)
 		return false;
-	/*
-	 * MTKCAM_SUBDEV_RAW_START equals to 0,
-	 * compare 0 with unsigned int is not allowed for coverity
-	 */
-	if (/*node->uid.pipe_id >= MTKCAM_SUBDEV_RAW_START &&*/
-	    node->uid.pipe_id < MTKCAM_SUBDEV_RAW_END &&
-	    (node->desc.id == MTK_RAW_RAWI_2_IN ||
-	    node->desc.id == MTK_RAW_PURE_RAW_OUT))
+
+	if (node->desc.multi_plane)
 		return true;
 
 	return false;
@@ -349,8 +343,8 @@ static int refine_valid_selection(struct mtk_cam_video_device *node,
 			return -1;
 		}
 		if (CAM_DEBUG_ENABLED(V4L2))
-			pr_info("%s: remote %s node %s: sel (%d,%d %ux%u)\n",
-				__func__,
+			pr_info("%s:%s remote %s node %s: sel (%d,%d %ux%u)\n",
+				__func__, node->desc.name,
 				remote_pad->entity->name, node->desc.name,
 				s->r.left, s->r.top, s->r.width, s->r.height);
 
@@ -362,8 +356,8 @@ static int refine_valid_selection(struct mtk_cam_video_device *node,
 		sink_h = sink_pad->mbus_fmt.height;
 
 		if (!check_valid_selection(sink_w, sink_h, &s->r)) {
-			pr_info("%s: warn. wrong selection: %d, %d, %ux%u, sink %dx%d\n",
-				__func__,
+			pr_info("%s:%s: warn. wrong selection: %d, %d, %ux%u, sink %dx%d\n",
+				__func__, node->desc.name,
 				s->r.left, s->r.top, s->r.width, s->r.height,
 				sink_w, sink_h);
 

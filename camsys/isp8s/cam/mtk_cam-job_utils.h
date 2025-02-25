@@ -107,11 +107,8 @@ int fill_mp_img_in_hdr(struct mtkcam_ipi_img_input *ii,
 		       unsigned int plane_per_exp,
 		       unsigned int plane_buf_offset);
 int fill_img_in_by_exposure(struct req_buffer_helper *helper,
-	struct mtk_cam_buffer *buf,
-	struct mtk_cam_video_device *node);
-int fill_m2m_rawi_to_img_in_ipi(struct req_buffer_helper *helper,
-	struct mtk_cam_buffer *buf,
-	struct mtk_cam_video_device *node);
+			    struct mtk_cam_buffer *buf,
+			    struct mtk_cam_video_device *node);
 int fill_imgo_out_subsample(struct req_buffer_helper *helper,
 			    struct mtkcam_ipi_img_output *io,
 			    struct mtk_cam_buffer *buf,
@@ -162,8 +159,6 @@ bool is_dcg_sensor_merge(struct mtk_cam_job *job);
 bool is_dcg_ap_merge(struct mtk_cam_job *job);
 bool is_dcg_with_vs(struct mtk_cam_job *job);
 bool is_m2m(struct mtk_cam_job *job);
-bool is_m2m_apu(struct mtk_cam_job *job);
-bool is_m2m_apu_dc(struct mtk_cam_job *job);
 bool is_stagger_lbmf(struct mtk_cam_job *job);
 bool is_stagger_dol(struct mtk_cam_job *job);
 bool is_camsv_16p(struct mtk_cam_job *job);

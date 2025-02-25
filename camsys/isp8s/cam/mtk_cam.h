@@ -77,12 +77,6 @@ extern void set_task_ls(int pid);
 
 #define CAM_MAX_CTX_NUM 8
 
-struct mtk_cam_adl_work {
-	struct work_struct work;
-	struct mtk_raw_device *raw_dev;
-	bool is_dc;
-};
-
 struct mtk_cam_kthread_pack {
 	char name[32];
 	struct task_struct *worker_task;
@@ -175,13 +169,6 @@ struct mtk_cam_ctx {
 	unsigned int slb_size;
 	unsigned int slb_used_size;
 	unsigned int ring_start_offset;
-
-	unsigned int set_adl_aid;
-
-	/* cmdq */
-	bool cmdq_enabled;
-
-	struct mtk_cam_adl_work adl_work;
 
 	/* TODO:
 	 * life-cycle of work buffer during switch
@@ -441,18 +428,6 @@ struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 void mtk_cam_stop_ctx(struct mtk_cam_ctx *ctx, struct media_entity *entity);
 int mtk_cam_sv_set_fifo_detect_status(struct mtk_cam_engines *eng,
 					unsigned long engine_mask, unsigned int is_hsf_enable);
-static inline bool mtk_cam_ctx_is_adl_flow(struct mtk_cam_ctx *ctx)
-{
-	return !!ctx->adl_work.raw_dev;
-}
-
-static inline void mtk_cam_ctx_flush_adl_work(struct mtk_cam_ctx *ctx)
-{
-	struct mtk_cam_adl_work *adl_work = &ctx->adl_work;
-
-	if (adl_work->raw_dev)
-		flush_work(&adl_work->work);
-}
 
 int mtk_cam_power_ctrl_ccu(struct device *dev, int on_off);
 

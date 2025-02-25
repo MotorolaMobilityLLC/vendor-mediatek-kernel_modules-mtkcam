@@ -2435,48 +2435,6 @@ void mtk_cam_ctrl_start(struct mtk_cam_ctrl *cam_ctrl, struct mtk_cam_ctx *ctx)
 	dev_info(ctx->cam->dev, "[%s] ctx:%d\n", __func__, ctx->stream_id);
 }
 
-static bool ctrl_is_state_list_empty(struct mtk_cam_ctrl *ctrl)
-{
-	bool empty;
-
-	read_lock(&ctrl->list_lock);
-	empty = list_empty(&ctrl->camsys_state_list);
-	read_unlock(&ctrl->list_lock);
-
-	return empty;
-}
-
-static void mtk_cam_ctrl_wait_list_empty(struct mtk_cam_ctrl *ctrl)
-{
-	int timeout_ms = 200;
-	long ret;
-
-	ret = wait_event_interruptible_timeout(ctrl->state_list_wq,
-					ctrl_is_state_list_empty(ctrl),
-					msecs_to_jiffies(timeout_ms));
-	if (ret == 0)
-		pr_info("%s: error: wait for list empty: %dms timeout\n",
-			__func__, timeout_ms);
-	else if (ret < 0)
-		pr_info("%s: error: interrupted by signal\n", __func__);
-	else
-		return;
-}
-
-#ifdef TO_BE_REMOVE
-void disable_adlrd(struct mtk_cam_ctx *ctx)
-{
-	/* set ADLRD trigger src to local */
-	writel(1, ctx->cam->adlrd_base + 0x0888);
-	/* set ADLRD enable to 0 */
-	writel(0, ctx->cam->adlrd_base + 0x0804);
-	/* toggle DB */
-	writel(1, ctx->cam->adlrd_base + 0x088C);
-
-	mtk_cam_bwr_clr_bw(ctx->cam->bwr, ENGINE_CAM_MAIN, MDP0_PORT);
-}
-#endif
-
 void mtk_cam_ctrl_stop(struct mtk_cam_ctrl *cam_ctrl)
 {
 	struct mtk_cam_ctx *ctx = cam_ctrl->ctx;
@@ -2485,13 +2443,7 @@ void mtk_cam_ctrl_stop(struct mtk_cam_ctrl *cam_ctrl)
 	struct list_head job_list;
 
 	mtk_cam_ctrl_wake_up_on_event(cam_ctrl, CAMSYS_EVENT_OFF);
-	// if adl flow, await all job done to avoid hw abnormal issue
-	if (mtk_cam_ctx_is_adl_flow(ctx)) {
-		mtk_cam_ctrl_wait_list_empty(cam_ctrl);
-#ifdef TO_BE_REMOVE
-		disable_adlrd(ctx);
-#endif
-	}
+
 	/* should wait stream-on/seamless switch finished before stopping */
 	kthread_flush_worker(&ctx->kthread_packs[MTK_CAM_KTHREAD_FLOW].kworker);
 
@@ -2506,7 +2458,6 @@ void mtk_cam_ctrl_stop(struct mtk_cam_ctrl *cam_ctrl)
 	atomic_set(&cam_ctrl->stopped, 1);
 	wake_up_interruptible(&cam_ctrl->done_wq);
 	mtk_cam_ctx_slc_stream(ctx, false, 0xFF);
-	mtk_cam_ctx_flush_adl_work(ctx);
 	mtk_cam_ctx_engine_off(ctx);
 
 	/* disable irq first */

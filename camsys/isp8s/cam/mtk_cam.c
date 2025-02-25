@@ -3869,11 +3869,6 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 
 	mtk_cam_ctx_raw_qof_disable(ctx);
 
-	if (ctx->set_adl_aid) {
-		mtk_cam_hsf_aid(ctx, 0, AID_VAINR, ctx->used_engine);
-		ctx->set_adl_aid = 0;
-	}
-
 	mtk_cam_fmon_unbind(&ctx->cam->fmon,
 			bit_map_subset_of(MAP_HW_RAW, ctx->used_engine));
 }

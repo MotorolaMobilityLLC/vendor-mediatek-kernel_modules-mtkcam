@@ -198,23 +198,14 @@ void stream_on(struct mtk_raw_device *dev, int on, bool reset_at_off);
 void immediate_stream_off(struct mtk_raw_device *dev);
 void trigger_rawi_r2(struct mtk_raw_device *dev);
 void trigger_rawi_r5(struct mtk_raw_device *dev);
-void trigger_adl(struct mtk_raw_device *dev);
 
 /* m2m only */
 void m2m_update_sof_state(struct mtk_raw_device *dev);
-
-struct cmdq_pkt;
-void write_pkt_trigger_apu_dc(struct mtk_raw_device *dev, struct cmdq_pkt *pkt);
-void write_pkt_trigger_apu_frame_mode(struct mtk_raw_device *dev,
-				      struct cmdq_pkt *pkt);
 
 int raw_dump_debug_status(struct mtk_raw_device *dev, int dma_debug_dump);
 
 /* reset */
 void reset(struct mtk_raw_device *dev);
-#ifdef TO_BE_REMOVE
-void adlrd_reset(struct mtk_cam_device *dev);
-#endif
 void clear_reg(struct mtk_raw_device *dev);
 
 /* workaround */

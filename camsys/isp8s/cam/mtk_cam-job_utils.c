@@ -321,23 +321,7 @@ int get_hw_scenario(struct mtk_cam_job *job)
 	case MTK_CAM_SCEN_ODT_NORMAL:
 	case MTK_CAM_SCEN_M2M_NORMAL:
 	case MTK_CAM_SCEN_TIMESHARE:
-		if (is_m2m_apu(job)) {
-			struct mtk_raw_ctrl_data *ctrl;
-
-			ctrl = get_raw_ctrl_data(job);
-			if (WARN_ON(!ctrl || !ctrl->valid_apu_info))
-				return -1;
-
-			if (ctrl->apu_info.apu_path == APU_FRAME_MODE)
-				hard_scenario = MTKCAM_IPI_HW_PATH_OFFLINE_ADL;
-			else if (ctrl->apu_info.apu_path == APU_DC_RAW)
-				hard_scenario = MTKCAM_IPI_HW_PATH_DC_ADL;
-			else {
-				pr_info("%s: error. apu_path = %d\n",
-					__func__, ctrl->apu_info.apu_path);
-				return -1;
-			}
-		} else if (is_vhdr(job) && !is_dcg_sensor_merge(job))
+		if (is_vhdr(job) && !is_dcg_sensor_merge(job))
 			hard_scenario = MTKCAM_IPI_HW_PATH_OFFLINE_STAGGER;
 		else
 			hard_scenario = MTKCAM_IPI_HW_PATH_OFFLINE;
@@ -1504,32 +1488,6 @@ int fill_img_in_by_exposure(struct req_buffer_helper *helper,
 	return ret;
 }
 
-int fill_m2m_rawi_to_img_in_ipi(struct req_buffer_helper *helper,
-	struct mtk_cam_buffer *buf,
-	struct mtk_cam_video_device *node)
-{
-	int ret = 0;
-	struct mtk_cam_job *job = helper->job;
-	bool is_apu;
-
-#ifdef RUN_ADL_FRAME_MODE_FROM_RAWI
-	is_apu = is_m2m_apu_dc(job);
-#else
-	is_apu = is_m2m_apu(job);
-#endif
-	if (is_apu) {
-		struct mtkcam_ipi_frame_param *fp = helper->fp;
-		struct mtkcam_ipi_img_input *in;
-
-		in = &fp->img_ins[helper->ii_idx++];
-
-		ret = fill_img_in(in, buf, node, MTKCAM_IPI_RAW_IPUI);
-	} else
-		ret = fill_img_in_by_exposure(helper, buf, node);
-
-	return ret;
-}
-
 struct mtkcam_ipi_crop
 v4l2_rect_to_ipi_crop(const struct v4l2_rect *r)
 {
@@ -2083,29 +2041,6 @@ bool is_dcg_with_vs(struct mtk_cam_job *job)
 bool is_m2m(struct mtk_cam_job *job)
 {
 	return scen_is_m2m(&job->job_scen);
-}
-
-bool is_m2m_apu(struct mtk_cam_job *job)
-{
-	struct mtk_raw_ctrl_data *ctrl;
-
-	ctrl = get_raw_ctrl_data(job);
-	if (!ctrl || !ctrl->valid_apu_info)
-		return 0;
-
-	return scen_is_m2m_apu(&job->job_scen, &ctrl->apu_info);
-}
-
-bool is_m2m_apu_dc(struct mtk_cam_job *job)
-{
-	struct mtk_raw_ctrl_data *ctrl;
-
-	ctrl = get_raw_ctrl_data(job);
-	if (!ctrl || !ctrl->valid_apu_info)
-		return 0;
-
-	return scen_is_m2m_apu(&job->job_scen, &ctrl->apu_info)
-		&& apu_info_is_dc(&ctrl->apu_info);
 }
 
 bool is_stagger_lbmf(struct mtk_cam_job *job)

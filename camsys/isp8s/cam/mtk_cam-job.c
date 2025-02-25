@@ -2249,45 +2249,6 @@ static int _apply_cq(struct mtk_cam_job *job)
 	return 0;
 }
 
-#ifdef TO_BE_REMOVE
-#define ADLRD_CTRL_4 0x810
-static void init_ADLRD_settings(struct mtk_cam_device *cam, int raw_id)
-{
-	int adlrd_grp;
-	int adlrd_grp_reg;
-
-	if (IS_ERR_OR_NULL(cam->adlrd_base)) {
-		if (CAM_DEBUG_ENABLED(JOB))
-			dev_info(cam->dev, "%s: skipped\n", __func__);
-		return;
-	}
-
-	/* rawA front: 0, rawA rear: 1, */
-	/* rawB front: 2, rawB rear: 3, */
-	/* rawC front: 4, rawC rear: 5  */
-	adlrd_grp = raw_id << 1;
-	adlrd_grp_reg = adlrd_grp | adlrd_grp << 3 | adlrd_grp << 6 | adlrd_grp << 9 |
-			adlrd_grp << 12 | adlrd_grp << 15 | adlrd_grp << 18;
-	if (CAM_DEBUG_ENABLED(JOB))
-		dev_info(cam->dev, "adlrd_grp: 0x%x, adlrd_grp_reg: 0x%x",
-			 adlrd_grp, adlrd_grp_reg);
-	writel(adlrd_grp_reg, cam->adlrd_base + ADLRD_CTRL_4);
-}
-#endif
-
-static int _m2m_apply_cq(struct mtk_cam_job *job)
-{
-#ifdef TO_BE_REMOVE
-	struct mtk_cam_ctx *ctx = job->src_ctx;
-	struct mtk_cam_device *cam = ctx->cam;
-	int raw_id = get_master_raw_id(job->used_engine);
-
-	if (is_m2m_apu(job))
-		init_ADLRD_settings(cam, raw_id);
-#endif
-
-	return _apply_cq(job);
-}
 static int _ts_m2m_apply_cq(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -2323,63 +2284,6 @@ static int _ts_m2m_apply_cq(struct mtk_cam_job *job)
 	return 0;
 }
 
-static void adl_cmdq_worker(struct work_struct *work)
-{
-	(void) work;
-#ifdef SKIP_IN_FPGA_EP
-	struct mtk_cam_adl_work *adl_work =
-		container_of(work, struct mtk_cam_adl_work, work);
-	struct mtk_cam_ctx *ctx =
-		container_of(adl_work, struct mtk_cam_ctx, adl_work);
-	struct cmdq_client *client = NULL;
-	struct cmdq_pkt *pkt = NULL;
-
-	client = ctx->cam->cmdq_clt;
-	if (WARN_ON_ONCE(!client))
-		return;
-
-	pkt = cmdq_pkt_create(client);
-
-	if (WARN_ON(!pkt))
-		return;
-
-	if (adl_work->is_dc)
-		write_pkt_trigger_apu_dc(adl_work->raw_dev, pkt);
-	else
-		write_pkt_trigger_apu_frame_mode(adl_work->raw_dev, pkt);
-
-	cmdq_pkt_flush(pkt);
-	cmdq_pkt_destroy(pkt);
-#endif
-}
-
-static void trigger_adl_by_work(struct mtk_cam_ctx *ctx,
-				struct mtk_raw_device *raw_dev,
-				bool is_apu_dc)
-{
-	struct mtk_cam_adl_work *adl_work = &ctx->adl_work;
-
-	mtk_cam_ctx_flush_adl_work(ctx);
-
-	INIT_WORK(&adl_work->work, adl_cmdq_worker);
-	adl_work->raw_dev = raw_dev;
-	adl_work->is_dc = is_apu_dc;
-
-	queue_work(system_highpri_wq, &adl_work->work);
-}
-
-static int update_adl_aid(struct mtk_cam_ctx *ctx, bool is_apu_dc)
-{
-	if (ctx->set_adl_aid == is_apu_dc)
-		return 0;
-
-	mtk_cam_hsf_aid(ctx, is_apu_dc, AID_VAINR, ctx->used_engine);
-	ctx->set_adl_aid = is_apu_dc;
-
-	return 0;
-}
-
-#define ADL_FRAME_MODE_BY_CMDQ
 static int trigger_m2m(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -2387,14 +2291,6 @@ static int trigger_m2m(struct mtk_cam_job *job)
 	int raw_id = get_master_raw_id(job->used_engine);
 	struct mtk_raw_device *raw_dev =
 		dev_get_drvdata(cam->engines.raw_devs[raw_id]);
-	bool is_apu;
-	bool is_apu_dc;
-
-#ifdef RUN_ADL_FRAME_MODE_FROM_RAWI
-	is_apu = is_m2m_apu_dc(job);
-#else
-	is_apu = is_m2m_apu(job);
-#endif
 
 	mtk_cam_event_frame_sync(&ctx->cam_ctrl, job->req_seq);
 
@@ -2402,25 +2298,10 @@ static int trigger_m2m(struct mtk_cam_job *job)
 
 	m2m_update_sof_state(raw_dev);
 
-	if (is_apu) {
-		is_apu_dc = is_m2m_apu_dc(job);
+	trigger_rawi_r5(raw_dev);
 
-		update_adl_aid(ctx, is_apu_dc);
-
-#ifdef ADL_FRAME_MODE_BY_CMDQ
-		trigger_adl_by_work(ctx, raw_dev, is_apu_dc);
-#else
-		if (is_apu_dc)
-			trigger_adl_by_work(ctx, raw_dev, 1);
-		else
-			trigger_adl(raw_dev);
-#endif
-	} else
-		trigger_rawi_r5(raw_dev);
-
-	dev_info(raw_dev->dev, "%s [ctx:%d] seq 0x%x%s\n",
-		 __func__, ctx->stream_id, job->frame_seq_no,
-		 is_apu ? (is_apu_dc ? " apu_dc" : " apu") : "");
+	dev_info(raw_dev->dev, "%s [ctx:%d] seq 0x%x\n",
+		 __func__, ctx->stream_id, job->frame_seq_no);
 
 	return 0;
 }
@@ -3377,13 +3258,6 @@ _job_pack_m2m(struct mtk_cam_job *job,
 
 int master_raw_set_m2m(struct mtk_cam_job *job, struct device *dev)
 {
-#ifdef TO_BE_REMOVE
-	struct mtk_raw_device *raw = dev_get_drvdata(dev);
-
-	if (is_m2m_apu(job))
-		adlrd_reset(raw->cam);
-#endif
-
 	return 0;
 }
 
@@ -3475,7 +3349,7 @@ static int fill_raw_img_buffer_to_ipi_frame(
 			pr_info("%s:req:%s bypass pure raw node\n",
 				__func__, job->req->debug_str);
 		if (is_timeshare)
-			fill_m2m_rawi_to_img_in_ipi(helper, buf, node);
+			fill_img_in_by_exposure(helper, buf, node);
 	} else if (V4L2_TYPE_IS_CAPTURE(buf->vbb.vb2_buf.type)) {
 		struct mtkcam_ipi_img_output *out;
 		/* main-stream + pure raw + others*/
@@ -4386,7 +4260,7 @@ static struct mtk_cam_job_ops m2m_job_ops = {
 	.stream_on = 0,
 	//.reset
 	.apply_sensor = 0,
-	.apply_isp = _m2m_apply_cq,
+	.apply_isp = _apply_cq,
 	.trigger_isp = trigger_m2m,
 	.mark_afo_done = job_mark_afo_done,
 	.mark_engine_done = job_mark_engine_done,
@@ -4514,7 +4388,7 @@ static struct pack_job_ops_helper extisp_pack_helper = {
 static struct pack_job_ops_helper m2m_pack_helper = {
 	.pack_job = _job_pack_m2m,
 	.update_raw_bufs_to_ipi = fill_raw_img_buffer_to_ipi_frame,
-	.update_raw_rawi_to_ipi = fill_m2m_rawi_to_img_in_ipi,
+	.update_raw_rawi_to_ipi = fill_img_in_by_exposure,
 	.update_raw_imgo_to_ipi = NULL,
 	.update_raw_yuvo_to_ipi = NULL,
 	.append_work_buf_to_ipi = NULL,
@@ -5539,30 +5413,6 @@ static int map_ipi_bin_flag(int bin)
 	return bin_flag;
 }
 
-static int update_adl_param(struct mtk_cam_job *job,
-			    struct mtk_raw_ctrl_data *ctrl,
-			    struct mtkcam_ipi_adl_frame_param *adl_fp)
-{
-	struct mtk_cam_ctx *ctx = job->src_ctx;
-	struct mtk_cam_apu_info *apu_info = &ctrl->apu_info;
-
-	adl_fp->vpu_i_point = map_ipi_vpu_point(apu_info->vpu_i_point);
-	adl_fp->vpu_o_point = map_ipi_vpu_point(apu_info->vpu_o_point);
-	adl_fp->sysram_en = apu_info->sysram_en;
-	adl_fp->block_y_size = apu_info->block_y_size;
-	adl_fp->slb_addr = (__u64)ctx->slb_addr;
-	adl_fp->slb_size = ctx->slb_size;
-
-	if (CAM_DEBUG_ENABLED(IPI_BUF))
-		pr_info("%s: vpu i/o %d/%d sram %d ysize %d\n",
-			__func__,
-			adl_fp->vpu_i_point,
-			adl_fp->vpu_o_point,
-			adl_fp->sysram_en,
-			adl_fp->block_y_size);
-	return 0;
-}
-
 static int update_job_raw_param_to_ipi_frame(struct mtk_cam_job *job,
 					     struct mtkcam_ipi_frame_param *fp)
 {
@@ -5579,9 +5429,6 @@ static int update_job_raw_param_to_ipi_frame(struct mtk_cam_job *job,
 	p->bin_flag = map_ipi_bin_flag(ctrl->resource.user_data.raw_res.bin);
 	p->exposure_num = job_exp_num(job);
 	p->previous_exposure_num = job_prev_exp_num(job);
-
-	if (is_m2m_apu(job))
-		update_adl_param(job, ctrl, &fp->adl_param);
 
 	if (CAM_DEBUG_ENABLED(IPI_BUF))
 		pr_info("[%s] job_type:%d scen:%d exp:%d/%d raw_path:%d hw_scene:%d", __func__,

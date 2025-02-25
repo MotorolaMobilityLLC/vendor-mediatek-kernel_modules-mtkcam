@@ -107,6 +107,7 @@ struct mtk_cam_dev_node_desc {
 	u8 smem_alloc:1;
 	u8 image:1;
 	u8 num_fmts;
+	u8 multi_plane:1;
 	u8 default_fmt_idx;
 	u8 max_buf_count;
 	const struct v4l2_ioctl_ops *ioctl_ops;

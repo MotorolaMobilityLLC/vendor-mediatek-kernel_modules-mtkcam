@@ -292,19 +292,6 @@ static void dump_rms_reg(struct mtk_raw_device *dev)
 		bpc_r2_pcrop, cbm_r1_pcrop);
 }
 
-#ifdef TO_BE_REMOVE
-static void init_ADLWR_settings(struct mtk_cam_device *cam)
-{
-	if (IS_ERR_OR_NULL(cam->adlwr_base)) {
-		if (CAM_DEBUG_ENABLED(JOB))
-			dev_info(cam->dev, "%s: skipped\n", __func__);
-		return;
-	}
-	/* CAMADLWR_CAMADLWR_ADL_CTRL_FIELD_ID_GROUP_2 */
-	writel_relaxed(0x440, cam->adlwr_base + 0x350);
-}
-#endif
-
 static void dump_ae_reg(struct mtk_raw_device *dev, bool force)
 {
 	u32 ae_stat_en, ae_win_org, ae_win_size, ae_win_pit, ae_win_num;
@@ -545,9 +532,7 @@ void initialize(struct mtk_raw_device *dev, struct engine_callback *cb,
 	mtk_cam_raw_reset_msgfifo(dev);
 
 	init_raw_settings(dev, is_srt, frm_time_us);
-#ifdef TO_BE_REMOVE
-	init_ADLWR_settings(dev->cam);
-#endif
+
 #ifdef RAW_DEBUG_INIT
 	dump_topdebug_rdyreq_status(dev);
 #endif
@@ -1241,93 +1226,6 @@ void trigger_rawi_r5(struct mtk_raw_device *dev)
 	trigger_rawi(dev, FBIT(CAMCTL_RAWI_R5_TRIG));
 }
 
-#define CAM_MAIN_ADLRD_CTRL 0x32c
-void trigger_adl(struct mtk_raw_device *dev)
-{
-	int adlrd_ctrl;
-
-	adlrd_ctrl =
-		(dev->id << 1) | /* ADLRD_MUX_SEL */
-		0x1; /* ADLRD_EN */
-
-	raw_writel(adlrd_ctrl, dev, dev->cam->base, CAM_MAIN_ADLRD_CTRL);
-	trigger_rawi(dev, FBIT(CAMCTL_APU_TRIG) | FBIT(CAMCTL_RAW_TRIG));
-}
-
-#ifdef SKIP_IN_FPGA_EP
-static void write_pkt_apu_raw(struct mtk_raw_device *dev,
-			      struct cmdq_pkt *pkt,
-			      bool is_apu_dc)
-{
-	int raw_id = dev->id;
-	int adlrd_ctrl;
-	int trig;
-	struct adl_cmdq_worker_param *param = NULL;
-
-	CALL_PLAT_HW(query_adl_cmdq_worker_param, &param);
-	if (WARN_ON(!param))
-		return;
-
-	adlrd_ctrl =
-		(raw_id << 1) | /* ADLRD_MUX_SEL */
-		0x1; /* ADLRD_EN */
-
-	trig = is_apu_dc ?
-		FBIT(CAMCTL_APU_TRIG) :
-		(FBIT(CAMCTL_APU_TRIG) | FBIT(CAMCTL_RAW_TRIG));
-	if (param) {
-		cmdq_pkt_write(
-				pkt, NULL, param->apu_dc_larb_base,
-				is_apu_dc ? 0xf0000 : 0x00001, 0xffffffff);
-
-		/* CAM_MAIN_ADLRD_CTRL */
-		cmdq_pkt_write(
-				pkt, NULL,
-				param->cam_main_adlrd_ctrl_base, adlrd_ctrl, 0xffffffff);
-	}
-	/* CAMCTL_RAWI_TRIG: CAMCTL_APU_TRIG */
-	cmdq_pkt_write(pkt, NULL, dev->base_reg_addr + REG_CAMCTL_RAW_TRIG, trig,
-		       0xffffffff);
-
-	if (CAM_DEBUG_ENABLED(RAW_INT))
-		dev_info(dev->dev, "dc %d adlrd_ctrl 0x%x RAWI_TRIG 0x%x\n",
-			 is_apu_dc, adlrd_ctrl, trig);
-}
-#endif
-
-void write_pkt_trigger_apu_dc(struct mtk_raw_device *dev,
-			      struct cmdq_pkt *pkt)
-{
-#define APU_SW_EVENT (675)
-
-	struct adl_cmdq_worker_param *param = NULL;
-
-	CALL_PLAT_HW(query_adl_cmdq_worker_param, &param);
-	if (WARN_ON(!param))
-		return;
-
-#ifdef SKIP_IN_FPGA_EP
-	/* wait APU ready */
-	cmdq_pkt_wfe(pkt, APU_SW_EVENT);
-#endif
-
-#ifdef SKIP_IN_FPGA_EP
-	write_pkt_apu_raw(dev, pkt, true /* is_apu_dc */);
-
-	/* trigger APU */
-	if (param)
-		cmdq_pkt_write(pkt, NULL, param->apu_mbox_dc_mode_base, 0x1, 0xffffffff);
-#endif
-}
-
-#ifdef SKIP_IN_FPGA_EP
-void write_pkt_trigger_apu_frame_mode(struct mtk_raw_device *dev,
-				      struct cmdq_pkt *pkt)
-{
-	write_pkt_apu_raw(dev, pkt, false /* is_apu_dc */);
-}
-#endif
-
 bool is_rawi_ufdi_rdone_zero(struct mtk_raw_device *dev)
 {
 	u32 rawi_r2_dbg, ufdi_r2_dbg, rawi_r5_dbg, ufdi_r5_dbg;
@@ -1493,43 +1391,6 @@ RESET_FAILURE:
 
 	wmb(); /* make sure committed */
 }
-
-#ifdef TO_BE_REMOVE
-#define ADLRD_RESET  0x0800
-#define ADLRD_CTRL_1 0x0804
-#define ADLRD_CTRL_2 0x0808
-void adlrd_reset(struct mtk_cam_device *cam_dev)
-{
-	int sw_ctl;
-	int ret;
-
-	if (IS_ERR_OR_NULL(cam_dev->adlrd_base)) {
-		dev_info(cam_dev->dev, "%s: skipped\n", __func__);
-		return;
-	}
-
-	writel(0x0, cam_dev->adlrd_base + ADLRD_RESET);
-	writel(0x1, cam_dev->adlrd_base + ADLRD_RESET);
-	wmb(); /* make sure committed */
-	ret = readx_poll_timeout(readl, cam_dev->adlrd_base + ADLRD_RESET,
-				 sw_ctl,
-				 sw_ctl & BIT(2),
-				 1 /* delay, us */,
-				 5000 /* timeout, us */);
-	if (ret < 0) {
-		dev_info(cam_dev->dev, "%s: error: timeout!\n", __func__);
-		return;
-	}
-
-	/* do hw rst */
-	writel(BIT(4), cam_dev->adlrd_base + ADLRD_RESET);
-	writel(0, cam_dev->adlrd_base + ADLRD_RESET);
-
-	wmb(); /* make sure committed */
-
-	dev_info(cam_dev->dev, "adl reset done\n");
-}
-#endif
 
 int mtk_cam_raw_reset_msgfifo(struct mtk_raw_device *dev)
 {

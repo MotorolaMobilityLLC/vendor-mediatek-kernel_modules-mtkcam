@@ -910,18 +910,6 @@ static int query_yuv_dma_list(size_t *num, struct reg_to_dump **reg_list)
 	return 0;
 }
 
-static struct adl_cmdq_worker_param adl_worker_param = {
-	0x3a003380,
-	0x3a00032c,
-	0x4c260000,
-};
-
-static int query_adl_cmdq_worker_param(struct adl_cmdq_worker_param **param)
-{
-	*param = &adl_worker_param;
-	return 0;
-}
-
 static int module_base[] = {
 	[CAM_VCORE]     = 0x3C80D000,
 	[CAM_MAIN_RAWA] = 0x3a7d0000,
@@ -1026,7 +1014,6 @@ static const struct plat_data_hw mt6993_hw_data = {
 
 	.query_caci_size = query_caci_size,
 	.query_max_exp_support = query_max_exp_support,
-	.query_adl_cmdq_worker_param = query_adl_cmdq_worker_param,
 	.query_module_base = query_module_base,
 	.dcif_slb_support = false,
 	.bwr_support = true,
