@@ -3976,7 +3976,7 @@ int mtk_raw_set_src_pad_selection_yuv(struct v4l2_subdev *sd,
 		prev_yuv = tmp_sel;
 	}
 
-	if (prev_yuv) {
+	if (prev_yuv && source_sel) {
 		if (source_sel->width != prev_yuv->width) {
 			source_sel->width = prev_yuv->width;
 			/* may need some log */

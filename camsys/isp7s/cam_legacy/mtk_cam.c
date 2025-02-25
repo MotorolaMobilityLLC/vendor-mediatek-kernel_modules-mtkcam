@@ -8709,7 +8709,7 @@ struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 	struct media_entity *entity = &node->vdev.entity;
 	struct media_pipeline_pad *ppad;
 	struct media_entity *entity_walked[32];
-	struct mtk_ccd *ccd;
+	struct mtk_ccd *ccd = NULL;
 	int last_entity_walked = 0;
 	bool walked;
 
