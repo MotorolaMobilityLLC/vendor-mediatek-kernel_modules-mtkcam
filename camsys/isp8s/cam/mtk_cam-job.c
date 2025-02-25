@@ -2163,7 +2163,9 @@ static int apply_engines_cq(struct mtk_cam_job *job,
 		if (ctx->hw_sv)
 			sv_dev = dev_get_drvdata(ctx->hw_sv);
 	}
-	mtk_cam_sv_run_df_actions(sv_dev);
+
+	if (sv_dev != NULL)
+		mtk_cam_sv_run_df_actions(sv_dev);
 
 	ctx->cam_ctrl.frame_sync_id = job->req_info_id;
 	dev_info(ctx->cam->dev, "[%s] ctx-%d CQ-0x%x(%d) cq_eng 0x%lx used_eng 0x%lx (%s)[rms_dis:%d] cq_thr(%llu) ts(%llu) ref_sof(%llu);%s\n",

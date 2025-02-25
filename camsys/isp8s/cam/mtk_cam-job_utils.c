@@ -2265,12 +2265,13 @@ int handle_sv_tag(struct mtk_cam_job *job)
 	bool is_dcg_vs, is_fusion;
 	int meta_num = 0;
 
-	if (ctx->hw_sv) {
-		sv_dev = dev_get_drvdata(ctx->hw_sv);
-		CALL_PLAT_V4L2(
-			get_sv_max_pixel_mode, sv_dev->id, &max_pixel_mode);
-		sv_dev->is_buf_early_return = false;
-	}
+	if (ctx->hw_sv == NULL)
+		return 0;
+
+	sv_dev = dev_get_drvdata(ctx->hw_sv);
+	CALL_PLAT_V4L2(
+		get_sv_max_pixel_mode, sv_dev->id, &max_pixel_mode);
+	sv_dev->is_buf_early_return = false;
 
 	/* reset tag info */
 	mtk_cam_sv_reset_tag_info(job);
@@ -2479,12 +2480,13 @@ int handle_sv_tag_display_ic(struct mtk_cam_job *job)
 	unsigned int req_amount;
 	int ret = 0, i, sv_pipe_idx;
 
-	if (ctx->hw_sv) {
-		sv_dev = dev_get_drvdata(ctx->hw_sv);
-		CALL_PLAT_V4L2(
-			get_sv_max_pixel_mode, sv_dev->id, &max_pixel_mode);
-		sv_dev->is_buf_early_return = false;
-	}
+	if (ctx->hw_sv == NULL)
+		return 0;
+
+	sv_dev = dev_get_drvdata(ctx->hw_sv);
+	CALL_PLAT_V4L2(
+		get_sv_max_pixel_mode, sv_dev->id, &max_pixel_mode);
+	sv_dev->is_buf_early_return = false;
 
 	/* reset tag info */
 	mtk_cam_sv_reset_tag_info(job);
@@ -2614,12 +2616,13 @@ int handle_sv_tag_non_comb_ic(struct mtk_cam_job *job)
 	unsigned int req_amount;
 	int ret = 0, i, sv_pipe_idx;
 
-	if (ctx->hw_sv) {
-		sv_dev = dev_get_drvdata(ctx->hw_sv);
-		CALL_PLAT_V4L2(
-			get_sv_max_pixel_mode, sv_dev->id, &max_pixel_mode);
-		sv_dev->is_buf_early_return = false;
-	}
+	if (ctx->hw_sv == NULL)
+		return 0;
+
+	sv_dev = dev_get_drvdata(ctx->hw_sv);
+	CALL_PLAT_V4L2(
+		get_sv_max_pixel_mode, sv_dev->id, &max_pixel_mode);
+	sv_dev->is_buf_early_return = false;
 
 	/* reset tag info */
 	mtk_cam_sv_reset_tag_info(job);
@@ -2686,12 +2689,13 @@ int handle_sv_tag_only_sv(struct mtk_cam_job *job)
 	unsigned int tag_idx, sv_pipe_idx, max_pixel_mode = 3;
 	int ret = 0, i;
 
-	if (ctx->hw_sv) {
-		sv_dev = dev_get_drvdata(ctx->hw_sv);
-		CALL_PLAT_V4L2(
-			get_sv_max_pixel_mode, sv_dev->id, &max_pixel_mode);
-		sv_dev->is_buf_early_return = false;
-	}
+	if (ctx->hw_sv == NULL)
+		return 0;
+
+	sv_dev = dev_get_drvdata(ctx->hw_sv);
+	CALL_PLAT_V4L2(
+		get_sv_max_pixel_mode, sv_dev->id, &max_pixel_mode);
+	sv_dev->is_buf_early_return = false;
 
 	/* reset tag info */
 	mtk_cam_sv_reset_tag_info(job);

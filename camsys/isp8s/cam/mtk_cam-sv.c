@@ -1491,8 +1491,13 @@ EXIT:
 
 int mtk_cam_sv_run_df_actions(struct mtk_camsv_device *sv_dev)
 {
-	struct mtk_cam_device *cam_dev = sv_dev->cam;
 	int ret = 0, i;
+	struct mtk_cam_device *cam_dev;
+
+	if (sv_dev == NULL)
+		goto EXIT;
+
+	cam_dev = sv_dev->cam;
 
 	if (disable_camsv_df_mode || sv_dev->id >= MAX_SV_DF_HW_NUM)
 		goto EXIT;
