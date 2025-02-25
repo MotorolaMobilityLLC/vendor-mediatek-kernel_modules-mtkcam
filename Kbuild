@@ -23,7 +23,7 @@ obj-$(CONFIG_VIDEO_MTK_ISP_IMGSYS) += mtk-ipesys-me/
 obj-$(CONFIG_MTK_CAMERA_FD_ISP7S_ISP7SP)	+= mtk-aie/
 obj-$(CONFIG_MTK_CAMERA_MAE_SUPPORT) += mtk-mae/
 
-#obj-$(CONFIG_MTK_CAMERA_DPE_ISP7SP)	 += mtk-dpe/
+obj-$(CONFIG_MTK_CAMERA_DPE_ISP7SP)	 += mtk-dpe/
 #obj-$(CONFIG_MTK_CAMERA_ISP_PDA_SUPPORT) += mtk-pda/
 #obj-$(CONFIG_MTK_C2PS) += sched/
 obj-y += imgsensor/
