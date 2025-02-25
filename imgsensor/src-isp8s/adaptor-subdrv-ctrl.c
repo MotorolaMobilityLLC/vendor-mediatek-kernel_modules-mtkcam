@@ -3544,6 +3544,12 @@ void streaming_control(struct subdrv_ctx *ctx, bool enable)
 		return;
 	}
 
+	if (_adaptor_ctx->standby_mode_info == STANDBY_MODE_HW) {
+		DRV_LOGE(ctx, "still in hw standby mode, can't stream control\n");
+		WRAP_AEE_EXCEPTION("stream control in hw standby mode", "Err");
+		return;
+	}
+
 	if (enable) {
 		/* MCSS low power mode update para */
 		if (ctx->s_ctx.mcss_update_subdrv_para != NULL)

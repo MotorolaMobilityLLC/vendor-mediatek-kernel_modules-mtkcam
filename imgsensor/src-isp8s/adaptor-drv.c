@@ -1730,6 +1730,7 @@ static int imgsensor_probe(struct i3c_i2c_device *client)
 	ctx->p_set_ctrl_unlock_flag = &set_ctrl_unlock;
 	ctx->aov_pm_ops_flag = 0;
 	ctx->aov_mclk_ulposc_flag = 0;
+	ctx->standby_mode_info = STANDBY_MODE_NONE_HW;
 
 	if (!of_property_read_u32(
 		dev->of_node, "cust-aov-csi-clk", &ctx->cust_aov_csi_clk))

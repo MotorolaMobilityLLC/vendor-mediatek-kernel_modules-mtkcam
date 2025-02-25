@@ -54,6 +54,8 @@ struct fw_pw_seq {
 	struct fw_subdrv_pw_seq_entry *pw_seq;
 	int aov_pw_seq_cnt;
 	struct fw_subdrv_pw_seq_entry *aov_pw_seq;
+	int hw2sw_standby_pw_seq_cnt;
+	struct fw_subdrv_pw_seq_entry *hw2sw_standby_pw_seq;
 } __packed;
 
 /* --- eeprom info section --- */

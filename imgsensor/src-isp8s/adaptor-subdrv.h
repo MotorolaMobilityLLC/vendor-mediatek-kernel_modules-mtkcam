@@ -788,6 +788,8 @@ struct subdrv_entry {
 	int pw_seq_cnt;
 	const struct subdrv_pw_seq_entry *aov_pw_seq;
 	int aov_pw_seq_cnt;
+	const struct subdrv_pw_seq_entry *hw2sw_standby_pw_seq;
+	int hw2sw_standby_pw_seq_cnt;
 	unsigned int fw_major_ver;
 	unsigned int fw_revision;
 	unsigned long long fw_modified_ts;

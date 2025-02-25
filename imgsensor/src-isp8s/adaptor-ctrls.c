@@ -3,6 +3,7 @@
 
 #include <linux/pm_runtime.h>
 #include <linux/thermal.h>
+#include <linux/delay.h>
 
 #include "kd_imgsensor_define_v4l2.h"
 #include "adaptor.h"
@@ -1354,6 +1355,78 @@ int get_sof_timeout(struct adaptor_ctx *ctx, const struct sensor_mode *mode)
 	return timeout;
 }
 
+static int _standby_mode_switch_ops(struct v4l2_ctrl *ctrl)
+{
+	struct adaptor_ctx *ctx = ctrl_to_ctx(ctrl);
+	int ret = 0;
+	int i, ppw_seq_cnt = 0;
+	const struct subdrv_pw_seq_entry *ent, *ent_base;
+	struct adaptor_hw_ops *op;
+
+	if (ctx->subdrv->hw2sw_standby_pw_seq) {
+		ppw_seq_cnt = ctx->subdrv->hw2sw_standby_pw_seq_cnt;
+		ent_base = &ctx->subdrv->hw2sw_standby_pw_seq[0];
+	} else {
+		adaptor_logi(ctx,
+			"skip ops due to no standby_pw_seq exist\n");
+		return ret;
+	}
+
+	switch (ctrl->val) {
+	case STANDBY_MODE_NONE_HW:
+		{
+			if (ctx->standby_mode_info == STANDBY_MODE_HW) {
+				// flow to new rst seq to high voltage and set sensor init
+				for (i = 0; i < ppw_seq_cnt; i++) {
+					ent = (ent_base + i);
+					op = &ctx->hw_ops[ent->id];
+					if (!op->set) {
+						adaptor_logi(ctx, "cannot set comp %d para (%d,%d)\n",
+							ent->id, ent->val.para1, ent->val.para2);
+						continue;
+					}
+					op->set(ctx, op->data, &ent->val);
+
+					if (ent->delay)
+						udelay(ent->delay);
+				}
+				subdrv_call(ctx, open);
+				ctx->standby_mode_info = STANDBY_MODE_NONE_HW;
+			} else
+				adaptor_logi(ctx,
+					"STANDBY_MODE_NONE_HW already,why set again?\n");
+		}
+		break;
+	case STANDBY_MODE_HW:
+		{
+			if (ctx->is_streaming) {
+				adaptor_loge(ctx,
+					"standby_mode_switch must after streaming off(fail)\n");
+				return -EINVAL;
+			}
+			// flow to new rst seq to low voltage
+			for (i = ppw_seq_cnt - 1; i >= 0; i--) {
+				ent = (ent_base + i);
+				op = &ctx->hw_ops[ent->id];
+				if (!op->unset)
+					continue;
+				op->unset(ctx, op->data, &ent->val);
+			}
+			ctx->standby_mode_info = STANDBY_MODE_HW;
+		}
+		break;
+	default:
+		{
+			adaptor_loge(ctx,
+				"function not support(%d)\n",
+				ctrl->val);
+			return -EINVAL;
+		}
+	}
+
+	return ret;
+}
+
 static int ext_ctrl(struct adaptor_ctx *ctx, struct v4l2_ctrl *ctrl, struct sensor_mode *mode)
 {
 	int ret = 0;
@@ -1437,6 +1510,12 @@ static int ext_ctrl(struct adaptor_ctx *ctx, struct v4l2_ctrl *ctrl, struct sens
 		break;
 	case V4L2_CID_MTK_DO_NOT_POWER_ON:
 		ctrl->val = ctx->forbid_idx;
+		break;
+	case V4L2_CID_MTK_STANDBY_MODE_QUERY:
+		adaptor_logi(ctx,
+			"V4L2_CID_MTK_STANDBY_MODE_QUERY standby_mode_info(%u)\n",
+			ctx->standby_mode_info);
+		ctrl->val = ctx->standby_mode_info;
 		break;
 	default:
 		break;
@@ -2220,6 +2299,32 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 				ctx->streamon_1sof_vsync_ts_info.target_timing_us);
 		}
 		break;
+	case V4L2_CID_MTK_STANDBY_MODE_SWITCH:
+		{
+			dev_info(dev,
+				"V4L2_CID_MTK_STANDBY_MODE_SWITCH val(%d)\n",
+				ctrl->val);
+			if (!(ctx->power_refcnt > 0)) {
+				adaptor_loge(ctx,
+					"power ref cnt(%d),standby_mode_switch must after power on\n",
+					ctx->power_refcnt);
+				WRAP_AEE_EXCEPTION("V4L2_CID_MTK_STANDBY_MODE_SWITCH", "Err");
+				return -EINVAL;
+			}
+
+			ret = _standby_mode_switch_ops(ctrl);
+			if (ret < 0) {
+				adaptor_loge(ctx,
+					"_standby_mode_switch_ops(fail),ret(%d)\n",
+					ret);
+				WRAP_AEE_EXCEPTION("_standby_mode_switch_ops", "Err");
+				return -EINVAL;
+			}
+			adaptor_logi(ctx,
+				"_standby_mode_switch_ops(correct),ret(%d)\n",
+				ret);
+		}
+		break;
 	}
 
 imgsensor_set_ctrl_trace_end:
@@ -2808,6 +2913,25 @@ static const struct v4l2_ctrl_config cfg_fsync_hw_mcss_maskframe = {
 	.dims = {sizeof_u32(struct mtk_fsync_hw_mcss_mask_frm_info)},
 };
 
+static const struct v4l2_ctrl_config cfg_mtkcam_standby_mode_query = {
+	.ops = &ctrl_ops,
+	.id = V4L2_CID_MTK_STANDBY_MODE_QUERY,
+	.name = "standby_mode_query",
+	.type = V4L2_CTRL_TYPE_INTEGER,
+	.flags = V4L2_CTRL_FLAG_READ_ONLY | V4L2_CTRL_FLAG_VOLATILE,
+	.max = 0xffff,
+	.step = 1,
+};
+
+static const struct v4l2_ctrl_config cfg_mtkcam_standby_mode_switch = {
+	.ops = &ctrl_ops,
+	.id = V4L2_CID_MTK_STANDBY_MODE_SWITCH,
+	.name = "standby_mode_switch",
+	.type = V4L2_CTRL_TYPE_INTEGER,
+	.flags = V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
+	.max = 0xffff,
+	.step = 1,
+};
 
 void adaptor_sensor_init(struct adaptor_ctx *ctx)
 {
@@ -3188,6 +3312,8 @@ int adaptor_init_ctrls(struct adaptor_ctx *ctx)
 	v4l2_ctrl_new_custom(ctrl_hdlr, &cfg_sensor_reset_s_stream, NULL);
 	v4l2_ctrl_new_custom(ctrl_hdlr, &cfg_sensor_reset_by_user, NULL);
 	v4l2_ctrl_new_custom(ctrl_hdlr, &cfg_sensor_set_aov_mclk, NULL);
+	v4l2_ctrl_new_custom(ctrl_hdlr, &cfg_mtkcam_standby_mode_query, NULL);
+	v4l2_ctrl_new_custom(ctrl_hdlr, &cfg_mtkcam_standby_mode_switch, NULL);
 
 	if (ctrl_hdlr->error) {
 		ret = ctrl_hdlr->error;

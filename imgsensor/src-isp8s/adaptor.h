@@ -287,6 +287,9 @@ struct adaptor_ctx {
 
 	/* restore ctrls list */
 	struct list_head restore_ctrls_list;
+
+	/* standby mode info */
+	unsigned int standby_mode_info;
 };
 
 #endif

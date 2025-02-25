@@ -430,6 +430,25 @@ static int init_pw_seq_section(struct adaptor_ctx *ctx,
 
 		memcpy(pdata->aov_pw_seq, data,
 		       sizeof(struct fw_subdrv_pw_seq_entry) * pdata->aov_pw_seq_cnt);
+		data += sizeof(struct fw_subdrv_pw_seq_entry) * pdata->aov_pw_seq_cnt;
+	}
+
+	/* hw2sw_standby power seq */
+	memcpy(&pdata->hw2sw_standby_pw_seq_cnt, data,
+		sizeof(pdata->hw2sw_standby_pw_seq_cnt));
+	data += sizeof(pdata->hw2sw_standby_pw_seq_cnt);
+
+	if (pdata->hw2sw_standby_pw_seq_cnt) {
+		pdata->hw2sw_standby_pw_seq = ctx_fw_kcalloc(ctx, sensor_fw,
+			pdata->hw2sw_standby_pw_seq_cnt,
+			sizeof(struct fw_subdrv_pw_seq_entry),
+			GFP_KERNEL);
+		if (!pdata->hw2sw_standby_pw_seq)
+			return -ENOMEM;
+
+		memcpy(pdata->hw2sw_standby_pw_seq, data,
+			sizeof(struct fw_subdrv_pw_seq_entry) * pdata->hw2sw_standby_pw_seq_cnt);
+		data += sizeof(struct fw_subdrv_pw_seq_entry) * pdata->hw2sw_standby_pw_seq_cnt;
 	}
 
 	return ret;
@@ -470,7 +489,7 @@ static int update_subdrv_entry_pw_seq(struct adaptor_ctx *ctx,
 			pseq->delay = pfw->delay;
 		}
 
-		ctx->subdrv->pw_seq_cnt = fw_struct->pw_seq_cnt,
+		ctx->subdrv->pw_seq_cnt = fw_struct->pw_seq_cnt;
 		ctx->subdrv->pw_seq = pw_seq;
 
 		/* AOV power seq */
@@ -491,8 +510,30 @@ static int update_subdrv_entry_pw_seq(struct adaptor_ctx *ctx,
 				pseq->delay = pfw->delay;
 			}
 
-			ctx->subdrv->aov_pw_seq_cnt = fw_struct->aov_pw_seq_cnt,
+			ctx->subdrv->aov_pw_seq_cnt = fw_struct->aov_pw_seq_cnt;
 			ctx->subdrv->aov_pw_seq = aov_pw_seq;
+		}
+
+		/* HW2SW power seq */
+		if (fw_struct->hw2sw_standby_pw_seq_cnt) {
+			struct subdrv_pw_seq_entry *hw2sw_standby_pw_seq = ctx_fw_kzalloc(ctx, sensor_fw,
+					sizeof(struct subdrv_pw_seq_entry) * fw_struct->hw2sw_standby_pw_seq_cnt,
+					GFP_KERNEL);
+
+			if (!hw2sw_standby_pw_seq)
+				return -ENOMEM;
+
+			for (i = 0, pfw = fw_struct->hw2sw_standby_pw_seq, pseq = hw2sw_standby_pw_seq;
+			     i < fw_struct->hw2sw_standby_pw_seq_cnt;
+			     i++, pfw++, pseq++) {
+				pseq->id = pfw->id;
+				pseq->val.para1 = pfw->val.para1;
+				pseq->val.para2 = pfw->val.para2;
+				pseq->delay = pfw->delay;
+			}
+
+			ctx->subdrv->hw2sw_standby_pw_seq_cnt = fw_struct->hw2sw_standby_pw_seq_cnt;
+			ctx->subdrv->hw2sw_standby_pw_seq = hw2sw_standby_pw_seq;
 		}
 	}
 
@@ -521,6 +562,10 @@ static int release_pw_seq_section(struct adaptor_ctx *ctx,
 	if (pdata->aov_pw_seq) {
 		ctx_fw_kfree(ctx, sensor_fw, pdata->aov_pw_seq);
 		pdata->aov_pw_seq = NULL;
+	}
+	if (pdata->hw2sw_standby_pw_seq) {
+		ctx_fw_kfree(ctx, sensor_fw, pdata->hw2sw_standby_pw_seq);
+		pdata->hw2sw_standby_pw_seq = NULL;
 	}
 
 	adaptor_logi(ctx, "resource release done\n");
