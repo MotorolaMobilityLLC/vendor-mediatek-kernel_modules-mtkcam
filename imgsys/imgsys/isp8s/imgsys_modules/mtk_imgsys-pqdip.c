@@ -111,6 +111,7 @@ const struct mtk_imgsys_init_array
 	{0x0248, 0x11},		/* DIPCQ_P1A_REG_DIPCQ_CQ_THR4_CTL */
 	{0x0258, 0x11},		/* DIPCQ_P1A_REG_DIPCQ_CQ_THR5_CTL */
 	{0x0020, 0x1},		/* PQDIPCTL_P1A_REG_PQDIPCTL_MUX_SEL */
+	{0x0114, 0x1},		/* PQDIPCTL_P1A_PQDIPCTL_TIF_DL_EN */
 };
 
 

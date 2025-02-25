@@ -23,6 +23,7 @@
 const struct mtk_imgsys_init_array mtk_imgsys_dip_init_ary[] = {
 	{0x0B0, 0x00000001}, /* DIPCTL_D1A_DIPCTL_INT0_EN */
 	{0x240, 0x00000001}, /* DIPCTL_QOF_CTL */
+	{0x018, 0x00000007}, /* WIF_TIF_DL_EN */
 };
 
 static struct DIPRegDumpInfo g_DIPRegDumpTopIfo[] = {
@@ -243,9 +244,6 @@ static struct DIPDmaDebugInfo g_DMANrDbgIfo[] = {
 	{"YUFETO1", DIP_ULC_WDMA_DEBUG, 0x4D},
 	{"YUFETCO1", DIP_ULC_WDMA_DEBUG, 0x4E},
 	{"FHO1", DIP_ULC_WDMA_DEBUG, 0x4F},
-	{"CNRO", DIP_ULC_WDMA_DEBUG, 0x3A},//
-	{"CNRO_N", DIP_ULC_WDMA_DEBUG, 0x103A},//
-	{"CNRBO", DIP_ULC_WDMA_DEBUG, 0x3B},//
 };
 
 struct mtk_imgsys_dip_dtable {
@@ -852,6 +850,13 @@ static void imgsys_dip_dump_dl(struct mtk_imgsys_dev *a_pDev,
 	DbgLineCntReg = (DbgData & 0xFFFF0000) >> 16;
 	pr_info("[mcrp_d2_debug]pix_cnt_reg(0x%X),line_cnt_reg(0x%X)\n",
 		DbgData & 0xFFFF, DbgLineCntReg);
+
+	/* r2b_d3_debug */
+	pr_info("[r2b_d3_debug]\n");
+	DbgCmd = 0x00020401;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
+	DbgCmd = 0x00030401;
+	DbgData = ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 
 }
 
