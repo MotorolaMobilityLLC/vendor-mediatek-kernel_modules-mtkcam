@@ -921,7 +921,6 @@ static void qof_cmdq_set_module_rst(struct mtk_imgsys_dev *imgsys_dev,
 			imgsys_dev->modules[IMGSYS_MOD_OMC].cmdq_set(imgsys_dev, pkt, REG_MAP_E_OMC_LITE);
 		else
 			QOF_LOGE("cmdq_set function pointer is null");
-		break;
 		if (imgsys_dev->modules[IMGSYS_MOD_DFP].cmdq_set)
 			imgsys_dev->modules[IMGSYS_MOD_DFP].cmdq_set(imgsys_dev, pkt, REG_MAP_E_DFP_TOP);
 		else
