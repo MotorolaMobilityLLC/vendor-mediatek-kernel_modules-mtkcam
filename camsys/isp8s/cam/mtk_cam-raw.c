@@ -1246,90 +1246,28 @@ bool is_rawi_ufdi_rdone_zero(struct mtk_raw_device *dev)
 	return false;
 }
 
-/// TODO: DMA_SOFT_RST_STAT has been changed
 /* check again for rawi dcif case */
 bool is_all_dma_idle(struct mtk_raw_device *dev)
 {
-#ifdef SKIP_IN_FPGA_EP
 	struct mtk_yuv_device *yuv = get_yuv_dev(dev);
 
-	u32 chasing_stat = raw_readl(dev, dev->dmatop_base, REG_CAMRAWDMATOP_DC_DBG_CHASING_STATUS);
-	u32 chasing_stat2 = raw_readl(dev, dev->dmatop_base, REG_CAMRAWDMATOP_DC_DBG_CHASING_STATUS2);
-	u32 raw_rst_stat = raw_readl(dev, dev->dmatop_base, REG_CAMRAWDMATOP_DMA_SOFT_RST_STAT);
-	u32 raw_rst_stat2 = raw_readl(dev, dev->dmatop_base, REG_CAMRAWDMATOP_DMA_SOFT_RST_STAT2);
-	u32 yuv_rst_stat = raw_readl(dev, yuv->dmatop_base, REG_CAMYUVDMATOP_DMA_SOFT_RST_STAT);
+	u32 raw_rst_stat =
+		raw_readl(dev, dev->dmatop_base, REG_CAMRAWDMATOP_DMA_SOFT_RST_STAT);
+	u32 yuv_rst_stat =
+		raw_readl(dev, yuv->dmatop_base, REG_CAMYUVDMATOP_DMA_SOFT_RST_STAT);
 
-	if (READ_FIELD(raw_rst_stat,
-			CAMRAWDMATOP_RAWI_R2_SOFT_RST_STAT) == 0 &&
-		(READ_FIELD(chasing_stat,
-			CAMRAWDMATOP_DC_DBG_CHASING_STATUS_RAWI_R2) & BIT(0)) == 0)
-		SET_FIELD(&raw_rst_stat, CAMRAWDMATOP_RAWI_R2_SOFT_RST_STAT, 1);
-
-	if (READ_FIELD(raw_rst_stat,
-			CAMRAWDMATOP_UFDI_R2_SOFT_RST_STAT) == 0 &&
-		(READ_FIELD(chasing_stat,
-			CAMRAWDMATOP_DC_DBG_CHASING_STATUS_UFDI_R2) & BIT(0)) == 0)
-		SET_FIELD(&raw_rst_stat, CAMRAWDMATOP_UFDI_R2_SOFT_RST_STAT, 1);
-
-	if (READ_FIELD(raw_rst_stat,
-			CAMRAWDMATOP_RAWI_R3_SOFT_RST_STAT) == 0 &&
-		(READ_FIELD(chasing_stat,
-			CAMRAWDMATOP_DC_DBG_CHASING_STATUS_RAWI_R3) & BIT(0)) == 0)
-		SET_FIELD(&raw_rst_stat, CAMRAWDMATOP_RAWI_R3_SOFT_RST_STAT, 1);
-
-	if (READ_FIELD(raw_rst_stat,
-			CAMRAWDMATOP_UFDI_R3_SOFT_RST_STAT) == 0 &&
-		(READ_FIELD(chasing_stat,
-			CAMRAWDMATOP_DC_DBG_CHASING_STATUS_UFDI_R3) & BIT(0)) == 0)
-		SET_FIELD(&raw_rst_stat, CAMRAWDMATOP_UFDI_R3_SOFT_RST_STAT, 1);
-
-	if (READ_FIELD(raw_rst_stat2,
-			CAMRAWDMATOP_RAWI_R4_SOFT_RST_STAT) == 0 &&
-		(READ_FIELD(chasing_stat2,
-			CAMRAWDMATOP_DC_DBG_CHASING_STATUS_RAWI_R4) & BIT(0)) == 0)
-		SET_FIELD(&raw_rst_stat2, CAMRAWDMATOP_RAWI_R4_SOFT_RST_STAT, 1);
-
-	if (READ_FIELD(raw_rst_stat2,
-			CAMRAWDMATOP_UFDI_R4_SOFT_RST_STAT) == 0 &&
-		(READ_FIELD(chasing_stat2,
-			CAMRAWDMATOP_DC_DBG_CHASING_STATUS_UFDI_R4) & BIT(0)) == 0)
-		SET_FIELD(&raw_rst_stat2, CAMRAWDMATOP_UFDI_R4_SOFT_RST_STAT, 1);
-
-	if (READ_FIELD(raw_rst_stat,
-			CAMRAWDMATOP_RAWI_R5_SOFT_RST_STAT) == 0 &&
-		(READ_FIELD(chasing_stat2,
-			CAMRAWDMATOP_DC_DBG_CHASING_STATUS_RAWI_R5) & BIT(0)) == 0)
-		SET_FIELD(&raw_rst_stat, CAMRAWDMATOP_RAWI_R5_SOFT_RST_STAT, 1);
-
-	if (READ_FIELD(raw_rst_stat,
-			CAMRAWDMATOP_UFDI_R5_SOFT_RST_STAT) == 0 &&
-		(READ_FIELD(chasing_stat2,
-			CAMRAWDMATOP_DC_DBG_CHASING_STATUS_UFDI_R5) & BIT(0)) == 0)
-		SET_FIELD(&raw_rst_stat, CAMRAWDMATOP_UFDI_R5_SOFT_RST_STAT, 1);
-
-	if (raw_rst_stat == REG_CAMRAWDMATOP_DMA_SOFT_RST_STAT_MASK &&
-		raw_rst_stat2 == REG_CAMRAWDMATOP_DMA_SOFT_RST2_STAT_MASK &&
-		yuv_rst_stat == REG_CAMYUVDMATOP_DMA_SOFT_RST_STAT_MASK)
-		return is_rawi_ufdi_rdone_zero(dev);
-
-	return false;
-#endif
-	return true;
+	return (raw_rst_stat == 0x1FFFF) && (yuv_rst_stat == 0xFF);
 }
 
-/// TODO: DMA_SOFT_RST_STAT has been changed
 void dump_dma_soft_rst_stat(struct mtk_raw_device *dev)
 {
-#ifdef SKIP_IN_FPGA_EP
 	struct mtk_yuv_device *yuv = get_yuv_dev(dev);
 
 	int raw_rst_stat = raw_readl(dev, dev->dmatop_base, REG_CAMRAWDMATOP_DMA_SOFT_RST_STAT);
-	int raw_rst_stat2 = raw_readl(dev, dev->dmatop_base, REG_CAMRAWDMATOP_DMA_SOFT_RST_STAT2);
 	int yuv_rst_stat = raw_readl(dev, yuv->dmatop_base, REG_CAMYUVDMATOP_DMA_SOFT_RST_STAT);
 
-	dev_info(dev->dev, "%s: rst_stat: 0x%08x 0x%08x 0x%08x\n",
-		 __func__, raw_rst_stat, raw_rst_stat2, yuv_rst_stat);
-#endif
+	dev_info(dev->dev, "%s: rst_stat: raw 0x%08x yuv 0x%08x\n",
+		 __func__, raw_rst_stat, yuv_rst_stat);
 }
 
 void reset(struct mtk_raw_device *dev)
