@@ -443,6 +443,9 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 	int pixel_mode;
 	int pattern;
 
+	if(WARN_ON(!dev) || WARN_ON(!seninf))
+		return -1;
+
 	width = testmdl->width;
 	height = testmdl->height;
 	pattern = testmdl->pattern;

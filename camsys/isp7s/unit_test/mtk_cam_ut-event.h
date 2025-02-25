@@ -32,7 +32,8 @@ struct ut_event_source {
 
 static inline void init_event_source(struct ut_event_source *src)
 {
-	WARN_ON(!src);
+	if(WARN_ON(!src))
+		return ;
 
 	INIT_LIST_HEAD(&src->listeners);
 };
@@ -43,10 +44,13 @@ static inline void add_listener(struct ut_event_source *src,
 {
 	struct ut_event_linstener_entry *entry;
 
-	WARN_ON(!src || !listener);
+	if(WARN_ON(!src || !listener))
+		return ;
 
 	entry = kzalloc(sizeof(*entry), GFP_KERNEL);
-	WARN_ON(!entry);
+
+	if(WARN_ON(!entry))
+		return ;
 
 	entry->listener = listener;
 	entry->filter = event;
@@ -59,7 +63,8 @@ static inline void remove_listener(struct ut_event_source *src,
 {
 	struct ut_event_linstener_entry *entry;
 
-	WARN_ON(!src || !listener);
+	if(WARN_ON(!src || !listener))
+		return ;
 
 	list_for_each_entry(entry, &src->listeners, list) {
 		if (entry->listener == listener) {
@@ -76,11 +81,14 @@ static inline void send_event(struct ut_event_source *src,
 	struct ut_event_linstener_entry *entry;
 	struct ut_event masked_event;
 
-	WARN_ON(!src);
+	if(WARN_ON(!src))
+		return ;
 
 	list_for_each_entry(entry, &src->listeners, list) {
 
-		WARN_ON(!entry->listener);
+		if(WARN_ON(!entry->listener))
+			return ;
+
 		masked_event.mask = entry->filter.mask & event.mask;
 
 		//pr_info("entry with mask 0x%x, f_notify %x\n",

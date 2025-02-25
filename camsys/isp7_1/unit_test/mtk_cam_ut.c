@@ -517,6 +517,8 @@ static int dequeue_buffer(struct mtk_cam_ut *ut, unsigned int timeout_ms)
 	return 0;
 }
 
+#define MAX_N_MAPS 6
+
 static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct mtk_cam_ut *ut = filp->private_data;
@@ -533,6 +535,8 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		ut->is_dcif_camsv = 0;
 		ut->with_testmdl = 0;
 		ut->used_sv_pipes = 0;
+		if(WARN_ON(!ut->seninf))
+			return -1;
 
 		if (copy_from_user(&testmdl, (void *)arg,
 				   sizeof(struct cam_ioctl_set_testmdl)) != 0) {
@@ -891,13 +895,15 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		ut->subsample = config.config_param.input.subsample;
 
 		dev_info(dev, "config.config_param.n_maps=%d\n", config.config_param.n_maps);
-		for (i = 0; i < config.config_param.n_maps; i++) {
-			dev_info(dev, "maps[%d], dev_mask 0x%x pipe_id %d exp_order %d\n",
-				i,
-				config.config_param.maps[i].dev_mask,
-				config.config_param.maps[i].pipe_id,
-				config.config_param.maps[i].exp_order);
-		}
+
+		if(config.config_param.n_maps < MAX_N_MAPS)
+			for (i = 0; i < config.config_param.n_maps; i++) {
+				dev_info(dev, "maps[%d], dev_mask 0x%x pipe_id %d exp_order %d\n",
+					i,
+					config.config_param.maps[i].dev_mask,
+					config.config_param.maps[i].pipe_id,
+					config.config_param.maps[i].exp_order);
+			}
 
 		event.cmd_id = CAM_CMD_CONFIG;
 		event.cookie = config.cookie;

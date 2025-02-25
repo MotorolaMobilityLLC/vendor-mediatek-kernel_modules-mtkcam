@@ -40,7 +40,7 @@ struct ut_raw_status {
 	u32 drop;
 	u32 ofl;
 	u32 cq_done;
-	u32 cq_done2;
+	// u32 cq_done2;
 };
 
 struct ut_debug_cmd {
@@ -418,12 +418,11 @@ static void raw_dump_stx(struct mtk_ut_raw_device *raw)
 	statusx.drop = readl_relaxed(CAM_REG_CTL_RAW_INT4_STATUSX(base));
 	statusx.ofl = readl_relaxed(CAM_REG_CTL_RAW_INT5_STATUSX(base));
 	statusx.cq_done = readl_relaxed(CAM_REG_CTL_RAW_INT6_STATUSX(base));
-	statusx.cq_done2 = readl_relaxed(CAM_REG_CTL_RAW_INT7_STATUSX(base));
 
 	dev_info(raw->dev,
-		 "STATUSX INT1-7 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		 "STATUSX INT1-6 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
 		 statusx.irq, statusx.wdma, statusx.rdma, statusx.drop,
-		 statusx.ofl, statusx.cq_done, statusx.cq_done2);
+		 statusx.ofl, statusx.cq_done);
 }
 
 static void raw_dump_fbc(struct mtk_ut_raw_device *raw)
@@ -472,7 +471,6 @@ static irqreturn_t mtk_ut_raw_irq(int irq, void *data)
 	status.drop = readl_relaxed(CAM_REG_CTL_RAW_INT4_STATUS(base));
 	status.ofl = readl_relaxed(CAM_REG_CTL_RAW_INT5_STATUS(base));
 	status.cq_done = readl_relaxed(CAM_REG_CTL_RAW_INT6_STATUS(base));
-	//status.cq_done2 = readl_relaxed(CAM_REG_CTL_RAW_INT7_STATUS(base));
 
 	event->mask = 0;
 	cmd->any_debug = 0;
@@ -543,9 +541,10 @@ static irqreturn_t mtk_ut_raw_irq(int irq, void *data)
 
 nomem:
 
-	dev_info(raw->dev, "INT1-7 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+	dev_info(raw->dev, "INT1-6 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
 		 status.irq, status.wdma, status.rdma, status.drop,
-		 status.ofl, status.cq_done, status.cq_done2);
+		 status.ofl, status.cq_done);
+
 
 	return wake_thread ? IRQ_WAKE_THREAD : IRQ_HANDLED;
 }
