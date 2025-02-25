@@ -2387,9 +2387,6 @@ static void mtk_cam_sv_set_pdp_concatenation_fmt(
 				__func__, param->mbn_spar_pow);
 			return;
 		}
-		// concatenated
-		*tg_width_temp *= param->mbn_spar_fac;
-		*tg_height_temp /= param->mbn_spar_fac;
 
 		// vertical binning
 		*tg_height_temp /= mtk_cam_sv_pdp_powi(2, param->mbn_spar_pow);
@@ -2402,9 +2399,6 @@ static void mtk_cam_sv_set_pdp_concatenation_fmt(
 				__func__, param->cpi_spar_pow);
 			return;
 		}
-		// concatenated
-		*tg_width_temp *= param->cpi_spar_fac;
-		*tg_height_temp /= param->cpi_spar_fac;
 
 		// vertical binning
 		*tg_height_temp /= mtk_cam_sv_pdp_powi(2, param->cpi_spar_pow);
@@ -2474,7 +2468,6 @@ void mtk_cam_sv_get_pdp_mbn_size(struct mtk_cam_device *cam, unsigned int pipe_i
 	struct mraw_stats_cfg_param *param = &pipe->res_config.stats_cfg_param;
 
 	mtk_cam_sv_get_pdp_mqe_size(cam, pipe_id, width, height);
-
 	switch (param->mbn_dir) {
 	case MBN_POW_VERTICAL:
 	case MBN_POW_HORIZONTAL:
@@ -2766,7 +2759,7 @@ static void mtk_cam_sv_set_meta_stats_info(
 	void *pdp_header, void *pda_header, struct dma_info *info,
 	bool pdp_support, bool pda_support)
 {
-	if (pdp_support)
+	if (pdp_header)
 		CALL_PLAT_V4L2(
 				set_mraw_meta_stats_info, MTKCAM_IPI_MRAW_META_STATS_0, pdp_header, info,
 				pdp_support, pda_support);

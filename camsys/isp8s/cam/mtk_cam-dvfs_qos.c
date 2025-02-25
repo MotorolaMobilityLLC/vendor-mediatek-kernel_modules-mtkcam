@@ -734,6 +734,7 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 	struct mtk_camsv_device *sv_dev;
 	unsigned int i, x_size, img_h, sv_id;
 	u64 avg_bw, peak_bw, stash_avg_bw, stash_peak_bw, total_peak_bw = 0;
+	u64 pd_avg_bw, pd_peak_bw;
 	unsigned int sv_port_num = 0;
 	bool is_smmu_enabled = true;
 	unsigned int strideLCM;
@@ -800,12 +801,12 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 			}
 
 		} else {
-			avg_bw =
+			pd_avg_bw =
 				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb);
-			peak_bw =
+			pd_peak_bw =
 				calc_bw(x_size * img_h, linet, sensor_h);
-			total_peak_bw += peak_bw;
-			if (avg_bw || peak_bw) {
+			total_peak_bw += pd_peak_bw;
+			if (pd_avg_bw || pd_peak_bw) {
 				if (x_size == 0) {
 					dev_err(ctx->cam->dev,
 						"%s: Invalid x_size: division by zero", __func__);
@@ -823,6 +824,8 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 		if (sv_port_num == SMI_PORT_SV_TYPE0_NUM) {
 			job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw += avg_bw;
 			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += peak_bw;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw += pd_avg_bw;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += pd_peak_bw;
 			if (is_smmu_enabled) {
 				job->sv_mmqos[SMI_PORT_SV_STG_0].avg_bw += stash_avg_bw;
 				job->sv_mmqos[SMI_PORT_SV_STG_0].peak_bw += stash_peak_bw;
@@ -832,6 +835,10 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += peak_bw / 2;
 			job->sv_mmqos[SMI_PORT_SV_WDMA_1].avg_bw += avg_bw / 2;
 			job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw += peak_bw / 2;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw += pd_avg_bw / 2;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += pd_peak_bw / 2;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_1].avg_bw += pd_avg_bw / 2;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw += pd_peak_bw / 2;
 			if (is_smmu_enabled) {
 				job->sv_mmqos[SMI_PORT_SV_STG_0].avg_bw += stash_avg_bw / 2;
 				job->sv_mmqos[SMI_PORT_SV_STG_0].peak_bw += stash_peak_bw / 2;
@@ -845,6 +852,11 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 			job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw += peak_bw / 3;
 			job->sv_mmqos[SMI_PORT_SV_WDMA_2].avg_bw += avg_bw / 3;
 			job->sv_mmqos[SMI_PORT_SV_WDMA_2].peak_bw += peak_bw / 3;
+			/* pd data only output dma 0 & dma 1*/
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw += pd_avg_bw / 2;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += pd_peak_bw / 2;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_1].avg_bw += pd_avg_bw / 2;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw += pd_peak_bw / 2;
 			if (is_smmu_enabled) {
 				job->sv_mmqos[SMI_PORT_SV_STG_0].avg_bw += stash_avg_bw / 3;
 				job->sv_mmqos[SMI_PORT_SV_STG_0].peak_bw += stash_peak_bw / 3;
