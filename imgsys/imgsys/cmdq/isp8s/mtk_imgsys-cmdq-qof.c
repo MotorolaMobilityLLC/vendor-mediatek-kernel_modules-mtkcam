@@ -331,7 +331,7 @@ static unsigned int get_thread_id_by_pwr_id(u32 pwr)
 	return th_id;
 }
 
-bool is_qof_engine_enabled(int mod)
+bool is_qof_engine_enabled(enum ISP8S_IMG_PWR mod)
 {
 	int bit_mod = mod + MOD_BIT_OFST;
 	int addr = qof_reg_table[mod][QOF_REG_IMG_QOF_ENG_EN].addr;
