@@ -1489,6 +1489,7 @@ static void notify_fsync_mgr_bcast_event_re_ctrl_fl(struct adaptor_ctx *ctx,
 	const unsigned int mode_id = ctx->subctx.current_scenario_id;
 	long long curr_sys_ts = 0;
 	unsigned int ret;
+	unsigned long long wake_up_time = 0, excution_time = 0;
 
 	/* not expected case */
 	if (unlikely(ctx->fsync_mgr == NULL)) {
@@ -1546,8 +1547,13 @@ static void notify_fsync_mgr_bcast_event_re_ctrl_fl(struct adaptor_ctx *ctx,
 	ctx->fsync_mgr->fs_update_shutter(&pf_ctrl);
 
 	curr_sys_ts = ktime_get_boottime_ns();
+	wake_up_time = p_info->wakeup_work_ts_ns - p_info->queue_work_ts_ns;
+	excution_time = curr_sys_ts - p_info->wakeup_work_ts_ns;
+
 	FSYNC_MGR_LOGI(ctx,
-		"ctx:(fl:(%u,lut:%u/%u/%u)/RG:(%u,%u/%u/%u/%u/%u)), bc_info(type:%u(%u), s_idx:%u/inf:%u, req_id:%u, ts(sof:%llu, worker:(%llu(sof:+%llums)/%llu(+%lluus)))), curr_ts:%llu(dur:+%lluus)",
+		"[inf:%d] idx:%d ctx:(fl:(%u,lut:%u/%u/%u)/RG:(%u,%u/%u/%u/%u/%u)/fsync(%d):(%u,%u/%u/%u/%u/%u)), bc_caller(type:%u(%u),s_idx:%u/inf:%u,req_id:%u,sof:%llu),work(sof:%llu,que:%llu(sof+%llums)/wake:%llu(+%lluus)/curr:%llu(+%lluus))))\n",
+		ctx->seninf_idx,
+		ctx->idx,
 		ctx->subctx.frame_length,
 		ctx->subctx.frame_length_in_lut[0],
 		ctx->subctx.frame_length_in_lut[1],
@@ -1558,18 +1564,26 @@ static void notify_fsync_mgr_bcast_event_re_ctrl_fl(struct adaptor_ctx *ctx,
 		ctx->subctx.frame_length_in_lut_rg[2],
 		ctx->subctx.frame_length_in_lut_rg[3],
 		ctx->subctx.frame_length_in_lut_rg[4],
+		ctx->needs_fsync_assign_fl,
+		ctx->fsync_out_fl,
+		ctx->fsync_out_fl_arr[0],
+		ctx->fsync_out_fl_arr[1],
+		ctx->fsync_out_fl_arr[2],
+		ctx->fsync_out_fl_arr[3],
+		ctx->fsync_out_fl_arr[4],
 		p_info->type,
 		p_info->need_broadcast_to_itself,
 		p_info->sensor_idx,
 		p_info->seninf_idx,
 		p_info->req_id,
 		p_info->sof_timestamp,
+		ctx->sys_ts_update_sof_cnt,
 		p_info->queue_work_ts_ns,
-		(p_info->queue_work_ts_ns - p_info->sof_timestamp)/1000000,
+		(p_info->queue_work_ts_ns - ctx->sys_ts_update_sof_cnt)/1000000,
 		p_info->wakeup_work_ts_ns,
-		(p_info->wakeup_work_ts_ns - p_info->queue_work_ts_ns)/1000,
+		(wake_up_time / 1000),
 		curr_sys_ts,
-		(curr_sys_ts - p_info->wakeup_work_ts_ns)/1000);
+		(excution_time / 1000));
 }
 
 void notify_fsync_mgr_get_broadcast_event(struct adaptor_ctx *ctx,

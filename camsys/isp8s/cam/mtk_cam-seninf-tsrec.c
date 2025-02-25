@@ -584,6 +584,7 @@ static inline unsigned int g_tsrec_exp_trig_src(void)
 struct kthread_worker *mtk_cam_seninf_tsrec_g_kthread(
 	const unsigned int tsrec_no, const char *caller)
 {
+#ifndef FS_UT
 	/* check case / error handling */
 	if (unlikely((chk_tsrec_hw_cnt(tsrec_no, caller) != 0)
 			|| (chk_tsrec_n_regs_arr_valid(caller) != 0))) {
@@ -598,6 +599,9 @@ struct kthread_worker *mtk_cam_seninf_tsrec_g_kthread(
 	}
 
 	return &tsrec_worker.kthreads[tsrec_no]->kthread;
+#else
+	return NULL;
+#endif
 }
 
 

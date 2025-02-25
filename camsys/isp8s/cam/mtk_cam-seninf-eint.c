@@ -73,7 +73,7 @@ struct eint_event_st {
 };
 
 struct eint_irq_info {
-	int index;
+	unsigned int index;
 	int seq_no;
 	int is_streaming;
 	unsigned long long tick;
@@ -87,7 +87,7 @@ struct eint_n_timestamp_st {
 };
 
 struct eint_dts_info_st {
-	int eint_no; /* Max to 3, options:{1, 2, 3} */
+	unsigned int eint_no; /* Max to 3, options:{1, 2, 3} */
 	unsigned int gpio_num; /* from dts */
 	unsigned int reg_address; /* from dts */
 	unsigned int reg_size; /* from dts */
@@ -109,7 +109,7 @@ struct mtk_seninf_eint_pin {
 	struct seninf_ctx *inf_ctx;
 	unsigned int tsrec_idx;
 	struct kthread_worker *worker;
-	int irq_num;
+	unsigned int irq_num;
 
 	struct eint_event_st event_st;
 	struct eint_dts_info_st dts_info;
@@ -165,9 +165,9 @@ static int chk_eint_idx_valid(const unsigned int idx, const char *caller)
 	return 0;
 }
 
-static int get_eint_idx_by_irq(int irq)
+static unsigned int get_eint_idx_by_irq(int irq)
 {
-	int i;
+	unsigned int i;
 
 	for(i = 0; i < EINT_NUM_MAX; i++) {
 		if(seninf_eint.eints[i].irq_num == irq)
@@ -176,13 +176,13 @@ static int get_eint_idx_by_irq(int irq)
 	return -1;
 }
 
-static inline unsigned int eint_check_info_msgfifo_not_empty(int index)
+static inline unsigned int eint_check_info_msgfifo_not_empty(unsigned int index)
 {
 	return (kfifo_len(&seninf_eint.eints[index].event_st.msg_fifo)
 		>= sizeof(struct eint_irq_info));
 }
 
-static inline void eint_pop_irq_info_msgfifo(struct eint_irq_info *irq_info, int index)
+static inline void eint_pop_irq_info_msgfifo(struct eint_irq_info *irq_info, unsigned int index)
 {
 	unsigned int len;
 
@@ -190,7 +190,7 @@ static inline void eint_pop_irq_info_msgfifo(struct eint_irq_info *irq_info, int
 		&seninf_eint.eints[index].event_st.msg_fifo, irq_info, sizeof(struct eint_irq_info));
 }
 
-static void push_irq_inifo_into_msgfifo(int index,
+static void push_irq_inifo_into_msgfifo(unsigned int index,
 	unsigned long long tick,
 	unsigned long long sys_ts,
 	unsigned long long sys_ts_mono,
@@ -217,7 +217,7 @@ static void push_irq_inifo_into_msgfifo(int index,
 		&irq_info, sizeof(struct eint_irq_info));
 }
 
-static inline void reset_eint_info(int index, u32 en)
+static inline void reset_eint_info(unsigned int index, u32 en)
 {
 	if (en) {
 		struct kthread_worker *worker = NULL;
@@ -236,10 +236,10 @@ static inline void reset_eint_info(int index, u32 en)
 		0, sizeof(struct eint_n_timestamp_st));
 }
 
-static void config_hw_latch(int index, u32 en)
+static void config_hw_latch(unsigned int index, u32 en)
 {
 	/* config HW to latch which specified GPIO */
-	int idx = index;
+	unsigned int idx = index;
 	u32 val, before, after, code, mask;
 	void __iomem *base = seninf_eint.eints[index].dts_info.base;
 
@@ -262,11 +262,11 @@ static void config_hw_latch(int index, u32 en)
 	spin_unlock(&eint_cfg_concurrency_lock);
 
 	EINT_INF(
-		"index:%d en:%u (before=0x%X after=0x%X val=0x%X(mask=0x%X code=0x%X))\n",
+		"index:%u en:%u (before=0x%X after=0x%X val=0x%X(mask=0x%X code=0x%X))\n",
 		index, en, before, after, val, mask, code);
 }
 
-static u64 read_eint_reg_tick(int index)
+static u64 read_eint_reg_tick(unsigned int index)
 {
 	int i;
 	u64 cnt_h, cnt_l, tmp_h, val;
@@ -287,7 +287,7 @@ static u64 read_eint_reg_tick(int index)
 	return val;
 }
 
-static void update_ticks_data(int index, struct eint_irq_info *irq_info)
+static void update_ticks_data(unsigned int index, struct eint_irq_info *irq_info)
 {
 	u64 tick = irq_info->tick;
 	unsigned int curr_idx =
@@ -299,7 +299,7 @@ static void update_ticks_data(int index, struct eint_irq_info *irq_info)
 	seninf_eint.eints[index].status.eint_n_timestamp_st.curr_idx = curr_idx;
 }
 
-static void setup_eint_timestamp_info_st(int index, void *data,
+static void setup_eint_timestamp_info_st(unsigned int index, void *data,
 	struct eint_irq_info *irq_info,
 	struct mtk_cam_seninf_eint_timestamp_info *eint_timestamp_info)
 {
@@ -420,7 +420,7 @@ eint_work_handler_end:
 }
 
 static void eint_work_init_and_queue(
-	int index,
+	unsigned int index,
 	struct eint_work_request *req)
 {
 	struct kthread_worker *p_worker = NULL;
@@ -550,7 +550,7 @@ int mtk_cam_seninf_eint_register_irq_cb(struct v4l2_subdev *sd,
 	const struct mtk_cam_seninf_eint_irq_cb_info *p_cb_info)
 {
 	struct seninf_ctx *ctx = sd_to_ctx(sd);
-	int index = ctx->eint_idx;
+	unsigned int index = ctx->eint_idx;
 
 	/* error case */
 	if (unlikely(chk_eint_idx_valid(index, __func__)))
@@ -572,7 +572,7 @@ int mtk_cam_seninf_eint_unregister_irq_cb(struct v4l2_subdev *sd,
 	const enum mtk_cam_seninf_eint_irq_cb_uid id)
 {
 	struct seninf_ctx *ctx = sd_to_ctx(sd);
-	int index = ctx->eint_idx;
+	unsigned int index = ctx->eint_idx;
 
 	/* error case */
 	if (unlikely(chk_eint_idx_valid(index, __func__)))
@@ -607,7 +607,7 @@ static int chk_ticks_val_not_zero(struct eint_irq_info *irq_info)
 	return 0;
 }
 
-static int chk_xvs_for_preshutter(int index, struct eint_irq_info *irq_info)
+static int chk_xvs_for_preshutter(unsigned int index, struct eint_irq_info *irq_info)
 {
 	/* specail case, there are one more xvs before 1SOF */
 	int i, flag = 0;
@@ -654,7 +654,7 @@ static int chk_xvs_for_preshutter(int index, struct eint_irq_info *irq_info)
 	return 0;
 }
 
-static int chk_eint_intr_en(int index, struct eint_irq_info *irq_info)
+static int chk_eint_intr_en(unsigned int index, struct eint_irq_info *irq_info)
 {
 	if (seninf_eint.eints[index].status.intr_en == 0) {
 		EINT_INF("WARNING: EINT is not enabled! idx:%u ts:%lluus(%llu/%u) sys_ts:(%llu|%llu)\n",
@@ -687,7 +687,7 @@ static int chk_imgsensor_is_streaming(struct eint_irq_info *irq_info)
 	return 0;
 }
 
-static int chk_eint_irq_info_status(int index,
+static int chk_eint_irq_info_status(unsigned int index,
 	struct eint_irq_info *irq_info)
 {
 	if (chk_ticks_val_not_zero(irq_info))
@@ -705,7 +705,7 @@ static int chk_eint_irq_info_status(int index,
 	return 0;
 }
 
-static inline void update_seq_no(int index)
+static inline void update_seq_no(unsigned int index)
 {
 	atomic_inc(&seninf_eint.eints[index].status.seq_no);
 }
@@ -741,7 +741,7 @@ static void eint_notify_irq_to_others(struct eint_irq_info *irq_info)
 static void eint_irq_handler(int irq, void *data,
 	struct eint_irq_info *irq_info)
 {
-	int index = irq_info->index;
+	unsigned int index = irq_info->index;
 
 	if (chk_eint_idx_valid(index, __func__))
 		return;
@@ -763,7 +763,7 @@ static irqreturn_t mtk_eint_irq(int irq, void *data)
 {
 	unsigned long long start, start_mono, tick;
 	int seq_no, is_streaming;
-	int index = get_eint_idx_by_irq(irq);
+	unsigned int index = get_eint_idx_by_irq(irq);
 
 	if (chk_eint_idx_valid(index, __func__))
 		return IRQ_HANDLED;
@@ -787,7 +787,7 @@ static irqreturn_t mtk_eint_irq(int irq, void *data)
 
 static irqreturn_t mtk_thread_eint_irq(int irq, void *data)
 {
-	int index = get_eint_idx_by_irq(irq);
+	unsigned int index = get_eint_idx_by_irq(irq);
 	struct eint_irq_info irq_info;
 
 	if (chk_eint_idx_valid(index, __func__))
@@ -874,7 +874,7 @@ int eint_cb_handler(const int eint_no,
 static void eint_setup_cb_func_info_of_sensor(struct seninf_ctx *inf_ctx,
 	const unsigned int is_start)
 {
-	int index = inf_ctx->eint_idx;
+	unsigned int index = inf_ctx->eint_idx;
 	struct mtk_cam_seninf_eint_cb_info cb_info = {0};
 
 	if (chk_eint_idx_valid(index, __func__))
@@ -913,7 +913,7 @@ static void eint_setup_cb_func_info_of_sensor(struct seninf_ctx *inf_ctx,
 /******************************************************************************
  * EINT APIs --- seninf cid
  *****************************************************************************/
-static void eint_notify_adaptor_enable_irq(int index, u32 en)
+static void eint_notify_adaptor_enable_irq(unsigned int index, u32 en)
 {
 	struct seninf_ctx *seninf_ctx = NULL;
 	struct mtk_cam_seninf_eint_irq_en_info info;
@@ -947,9 +947,9 @@ static void eint_notify_adaptor_enable_irq(int index, u32 en)
 }
 
 
-static void eint_irq_line_en(int index, u32 en)
+static void eint_irq_line_en(unsigned int index, u32 en)
 {
-	int irq = seninf_eint.eints[index].irq_num;
+	unsigned int irq = seninf_eint.eints[index].irq_num;
 	int seq_no;
 
 	if(!irq) {
@@ -980,9 +980,9 @@ static void eint_irq_line_en(int index, u32 en)
 	EINT_INF("eintidx:%d en:%u seq_no:(before:%d->after:0)", index, en, seq_no);
 }
 
-static void eint_irq_ctrl(int index, u32 en)
+static void eint_irq_ctrl(unsigned int index, u32 en)
 {
-	int irq = seninf_eint.eints[index].irq_num;
+	unsigned int irq = seninf_eint.eints[index].irq_num;
 
 	if(!irq) {
 		EINT_INF("ERROR: irq == 0\n");
@@ -1003,7 +1003,7 @@ static void eint_irq_ctrl(int index, u32 en)
 
 int mtk_cam_seninf_eint_irq_en(struct seninf_ctx *ctx, u32 en)
 {
-	int index = ctx->eint_idx;
+	unsigned int index = ctx->eint_idx;
 
 	if (chk_eint_idx_valid(index, __func__))
 		return -EINVAL;
@@ -1019,7 +1019,7 @@ int mtk_cam_seninf_eint_irq_en(struct seninf_ctx *ctx, u32 en)
  *****************************************************************************/
 int mtk_cam_seninf_eint_start(struct seninf_ctx *ctx)
 {
-	int index = ctx->eint_idx;
+	unsigned int index = ctx->eint_idx;
 
 	if (chk_eint_idx_valid(index, __func__))
 		return 0;
@@ -1033,7 +1033,7 @@ int mtk_cam_seninf_eint_start(struct seninf_ctx *ctx)
 
 int mtk_cam_seninf_eint_reset(struct seninf_ctx *ctx)
 {
-	int index = ctx->eint_idx;
+	unsigned int index = ctx->eint_idx;
 
 	if (chk_eint_idx_valid(index, __func__))
 		return 0;
@@ -1198,7 +1198,7 @@ int mtk_cam_seninf_eint_core_uninit(void)
 /******************************************************************************
  * Functions for EINT init/uninit @ seninf_probe/seninf_remove
  *****************************************************************************/
-static int get_eint_num(struct device *dev, int *eint_no)
+static int get_eint_num(struct device *dev, unsigned int *eint_no)
 {
 	int ret = 0;
 
@@ -1272,7 +1272,7 @@ static int get_dts_hw_info(struct platform_device *pdev,
 	struct mtk_seninf_eint_pin *pin)
 {
 	int ret;
-	int eint_no;
+	unsigned int eint_no;
 	u32 gpio_num;
 	struct device *dev = &pdev->dev;
 
@@ -1308,7 +1308,7 @@ static int get_dts_hw_info(struct platform_device *pdev,
 
 static int init_eint_info(struct platform_device *pdev, struct mtk_seninf_eint_pin *pin)
 {
-	int index = pin->dts_info.eint_no;
+	unsigned int index = pin->dts_info.eint_no;
 
 	mutex_init(&seninf_eint.eints[index].eint_intr_en_lock);
 	memcpy( seninf_eint.eints + index, pin, sizeof(struct mtk_seninf_eint_pin));
@@ -1324,7 +1324,7 @@ static int init_eint_info(struct platform_device *pdev, struct mtk_seninf_eint_p
 	return 0;
 }
 
-static int init_eint_regs_iomem(struct platform_device *pdev, int index)
+static int init_eint_regs_iomem(struct platform_device *pdev, unsigned int index)
 {
 	int ret = 0;
 	void __iomem *reg_base = NULL;
@@ -1343,7 +1343,7 @@ static int init_eint_regs_iomem(struct platform_device *pdev, int index)
 	return ret;
 }
 
-static int init_eint_irq(struct platform_device *pdev, int index)
+static int init_eint_irq(struct platform_device *pdev, unsigned int index)
 {
 	int irq, ret = 0;
 	struct device *dev = &pdev->dev;
@@ -1372,25 +1372,25 @@ static int init_eint_irq(struct platform_device *pdev, int index)
 	}
 
 	seninf_eint.eints[index].irq_num = irq;
-	EINT_INF("registered seninf-eint-irq=%d seninf_eint.eints[%d].irq_num=%d\n",
+	EINT_INF("registered seninf-eint-irq=%d seninf_eint.eints[%d].irq_num=%u\n",
 		irq, index, seninf_eint.eints[index].irq_num);
 
 	return ret;
 }
 
-static inline void uninit_eint_regs_iomem(int index)
+static inline void uninit_eint_regs_iomem(unsigned int index)
 {
 	void __iomem *base;
 
 	base = seninf_eint.eints[index].dts_info.base;
 }
 
-static inline void uninit_eint_info(int index)
+static inline void uninit_eint_info(unsigned int index)
 {
 	memset(&(seninf_eint.eints[index]), 0, sizeof(struct mtk_seninf_eint_pin));
 }
 
-static void init_eint_event_st(struct platform_device *pdev, int index)
+static void init_eint_event_st(struct platform_device *pdev, unsigned int index)
 {
 	struct device *dev = &pdev->dev;
 	int ret = 0;
@@ -1420,7 +1420,7 @@ static void init_eint_event_st(struct platform_device *pdev, int index)
 	}
 }
 
-static void uninit_eint_event_st(struct platform_device *pdev, int index)
+static void uninit_eint_event_st(struct platform_device *pdev, unsigned int index)
 {
 	kfifo_free(&seninf_eint.eints[index].event_st.msg_fifo);
 
@@ -1468,7 +1468,7 @@ int mtk_cam_seninf_eint_init(struct platform_device *pdev,
 int mtk_cam_seninf_eint_uninit(struct platform_device *pdev,
 	struct seninf_ctx *ctx)
 {
-	int index = ctx->eint_idx;
+	unsigned int index = ctx->eint_idx;
 
 	if (chk_eint_idx_valid(index, __func__))
 		return -EINVAL;

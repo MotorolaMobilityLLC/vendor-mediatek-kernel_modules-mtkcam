@@ -14,6 +14,9 @@
 static inline void adaptor_eint_cb_ctrl_info_setup(struct adaptor_ctx *ctx,
 	struct mtk_cam_seninf_eint_cb_info *info, const unsigned int flag)
 {
+	if (unlikely(ctx == NULL))
+		return;
+
 	if (flag) {
 		/* set */
 		ctx->eint_cb_ctrl.cb_info = *info;
@@ -28,11 +31,21 @@ static inline int adaptor_eint_cb_ctrl_execute(struct adaptor_ctx *ctx,
 	int ret;
 	int *is_streaming = NULL;
 
+	if (unlikely(ctx == NULL))
+		return -EINVAL;
+
+	if (unlikely(arg == NULL)) {
+		adaptor_logi(ctx,
+			"[%s] ERROR: idx:%d, invalid arg:(nullptr)\n",
+			caller, ctx->idx);
+		return -EINVAL;
+	}
+
 	is_streaming = (int *)arg;
 
 	/* error case, eint cb function pointer is NULL */
 	if (unlikely(ctx->eint_cb_ctrl.cb_info.eint_cb_handler == NULL))
-		return -1;
+		return -EINVAL;
 
 
 	ret = ctx->eint_cb_ctrl.cb_info.eint_cb_handler(
@@ -45,6 +58,9 @@ static inline int adaptor_eint_cb_ctrl_execute(struct adaptor_ctx *ctx,
 static inline int notify_seninf_eint_streaming(struct adaptor_ctx *ctx, int flag)
 {
 	int is_streaming = flag ? 1 : 0;
+
+	if (unlikely(ctx == NULL))
+		return -EINVAL;
 
 	adaptor_logi(ctx, "eint_no:%d, eint is_start:%u, is_streaming:%d\n",
 		ctx->eint_cb_ctrl.cb_info.eint_no,
