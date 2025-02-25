@@ -32,12 +32,6 @@
 #include "mtk-smi-dbg.h"
 #include "mtk-smi-user.h"
 
-#ifdef CONFIG_PM_WAKELOCKS
-struct wakeup_source *aov_wake_lock;
-#else
-struct wake_lock aov_wake_lock;
-#endif
-
 uint32_t g_aov_start;
 /* smi full dump */
 struct device *uisp_larb_dev;
@@ -172,11 +166,6 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 		if (g_aov_start == 0) {
 			vmm_isp_ctrl_notify(1);
 			mtk_mmdvfs_aov_enable(1);
-#ifdef CONFIG_PM_WAKELOCKS
-			__pm_stay_awake(aov_wake_lock);
-#else
-			wake_lock(&aov_wake_lock);
-#endif
 		}
 		g_aov_start += 1;
 
@@ -248,11 +237,6 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 			vmm_isp_ctrl_notify(0);
 			mtk_mmdvfs_aov_enable(0);
 			dev_info(aov_dev->dev, "AOV disable vmm-\n");
-#ifdef CONFIG_PM_WAKELOCKS
-			__pm_relax(aov_wake_lock);
-#else
-			wake_unlock(&aov_wake_lock);
-#endif
 		}
 
 		dev_info(aov_dev->dev, "AOV stop-(%d)\n", ret);
@@ -345,11 +329,6 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 		if (g_aov_start == 0) {
 			vmm_isp_ctrl_notify(1);
 			mtk_mmdvfs_aov_enable(1);
-#ifdef CONFIG_PM_WAKELOCKS
-			__pm_stay_awake(aov_wake_lock);
-#else
-			wake_lock(&aov_wake_lock);
-#endif
 		}
 		g_aov_start += 1;
 
@@ -394,11 +373,6 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 			vmm_isp_ctrl_notify(0);
 			mtk_mmdvfs_aov_enable(0);
 			dev_info(aov_dev->dev, "AOV disable vmm-\n");
-#ifdef CONFIG_PM_WAKELOCKS
-			__pm_relax(aov_wake_lock);
-#else
-			wake_unlock(&aov_wake_lock);
-#endif
 		}
 
 		dev_info(aov_dev->dev, "AOV stop sensor-(%d)\n", ret);
@@ -467,11 +441,6 @@ static int mtk_aov_release(struct inode *inode, struct file *file)
 		vmm_isp_ctrl_notify(0);
 		mtk_mmdvfs_aov_enable(0);
 		dev_info(aov_dev->dev, "AOV force disable vmm-\n");
-#ifdef CONFIG_PM_WAKELOCKS
-		__pm_relax(aov_wake_lock);
-#else
-		wake_unlock(&aov_wake_lock);
-#endif
 	}
 	atomic_set(&(core_info->aov_start_in_used[0]), 0);
 	atomic_set(&(core_info->aov_start_in_used[1]), 0);
@@ -625,12 +594,6 @@ static int mtk_aov_probe(struct platform_device *pdev)
 
 	aov_aee_init(aov_dev);
 	aov_core_init(aov_dev);
-
-#ifdef CONFIG_PM_WAKELOCKS
-	aov_wake_lock = wakeup_source_register(aov_dev->dev, "aov_wakelock");
-#else
-	wake_lock_init(&aov_wake_lock, WAKE_LOCK_SUSPEND, "aov_wakelock");
-#endif
 
 	platform_set_drvdata(pdev, aov_dev);
 	dev_set_drvdata(&pdev->dev, aov_dev);
