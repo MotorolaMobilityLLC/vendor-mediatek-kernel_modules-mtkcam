@@ -98,21 +98,6 @@ static inline bool scen_is_vhdr(const struct mtk_cam_scen *scen)
 	return 0;
 }
 
-static inline bool scen_support_rgbw(const struct mtk_cam_scen *scen)
-{
-	if (scen_is_normal(scen))
-		return !!(scen->scen.normal.w_chn_supported);
-
-	return false;
-}
-
-static inline bool scen_is_rgbw(const struct mtk_cam_scen *scen)
-{
-	if (scen_is_normal(scen))
-		return !!(scen->scen.normal.w_chn_enabled);
-
-	return false;
-}
 static inline bool scen_is_extisp(const struct mtk_cam_scen *scen)
 {
 	return (scen->id == MTK_CAM_SCEN_EXT_ISP);

@@ -164,7 +164,6 @@ struct mtk_cam_ctx {
 	 * scenario dependent
 	 */
 	bool scenario_init;
-	struct mtk_cam_device_refcnt_buf *w_caci_buf;
 
 	/* ltmsgo/ltmscti buffer */
 	struct mtk_ltms_buf_pool *ltms_buf;
@@ -485,9 +484,6 @@ int mtk_cam_ctx_queue_tuning_worker(struct mtk_cam_ctx *ctx,
 int mtk_cam_ctx_fetch_pda_devices(struct mtk_cam_ctx *ctx, unsigned long engines);
 int mtk_cam_ctx_fetch_devices(struct mtk_cam_ctx *ctx, unsigned long engines);
 void mtk_cam_ctx_clean_img_pool(struct mtk_cam_ctx *ctx);
-
-int mtk_cam_ctx_alloc_rgbw_caci_buf(struct mtk_cam_ctx *ctx, int w, int h);
-void mtk_cam_ctx_clean_rgbw_caci_buf(struct mtk_cam_ctx *ctx);
 
 int mtk_cam_ctx_flush_session(struct mtk_cam_ctx *ctx);
 

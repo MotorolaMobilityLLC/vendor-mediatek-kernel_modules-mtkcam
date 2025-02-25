@@ -375,7 +375,6 @@ struct mtk_cam_job {
 	/* for raw switch */
 	struct mtk_cam_pool_wrapper *img_wbuf_pool_wrapper;
 	struct mtk_cam_pool_wrapper *img_wbuf_pool_wrapper_prev;
-	struct mtk_cam_device_refcnt_buf *w_caci_buf;
 
 	struct mtkcam_ipi_frame_ack_result cq_rst;
 	unsigned int used_engine;
@@ -564,9 +563,6 @@ enum MTK_CAMSYS_JOB_TYPE {
 	//RAW_JOB_DC_MSTREAM,
 	//RAW_JOB_DC_STAGGER,
 	//RAW_JOB_OFFLINE_STAGGER,
-	//RAW_JOB_OTF_RGBW,
-	//RAW_JOB_DC_RGBW,
-	//RAW_JOB_OFFLINE_RGBW,
 	//RAW_JOB_HW_TIMESHARED,
 };
 

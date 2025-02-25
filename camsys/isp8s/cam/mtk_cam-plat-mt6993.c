@@ -32,18 +32,11 @@
 	(RAW_STAT_0_STRUCT_SIZE + \
 	 RAW_STAT_0_BUF_SIZE_STATIC)
 
-#define RAW_STATS_0_SIZE_RGBW \
-	(RAW_STAT_0_STRUCT_SIZE + \
-	 RAW_STAT_0_BUF_SIZE_STATIC * 2)
-
 #define RAW_STATS_1_SIZE_HEADER \
 	ALIGN(sizeof(struct mtk_cam_uapi_meta_raw_stats_1), SZ_4K)
 
 #define RAW_STATS_1_SIZE \
 	(RAW_STATS_1_SIZE_HEADER + MTK_CAM_UAPI_AFO_MAX_BUF_SIZE)
-
-#define RAW_STATS_1_SIZE_RGBW \
-	(RAW_STATS_1_SIZE_HEADER + MTK_CAM_UAPI_AFO_MAX_BUF_SIZE * 2)
 
 #define SV_STATS_0_SIZE \
 	sizeof(struct mtk_cam_uapi_meta_camsv_stats_0)

@@ -292,7 +292,6 @@ int get_hw_scenario(struct mtk_cam_job *job)
 {
 	struct mtk_cam_scen *scen = &job->job_scen;
 	int is_dc = is_dc_mode(job);
-	int is_w = is_rgbw(job);
 	int hard_scenario = MTKCAM_IPI_HW_PATH_ON_THE_FLY;
 	int is_sv_only = job->job_type == JOB_TYPE_ONLY_SV;
 
@@ -303,10 +302,7 @@ int get_hw_scenario(struct mtk_cam_job *job)
 
 	switch (scen->id) {
 	case MTK_CAM_SCEN_NORMAL:
-		if (is_w) {
-			hard_scenario = (is_dc) ? MTKCAM_IPI_HW_PATH_DC_RGBW :
-				MTKCAM_IPI_HW_PATH_OTF_RGBW;
-		} else if (scen->scen.normal.exp_num > 1) {
+		if (scen->scen.normal.exp_num > 1) {
 			if (is_dc) {
 				hard_scenario = MTKCAM_IPI_HW_PATH_DC_STAGGER;
 			} else if (is_dcg_ap_merge(job) && !is_dcg_with_vs(job)) {
@@ -341,8 +337,6 @@ int get_hw_scenario(struct mtk_cam_job *job)
 					__func__, ctrl->apu_info.apu_path);
 				return -1;
 			}
-		} else if (is_w) {
-			hard_scenario = MTKCAM_IPI_HW_PATH_OFFLINE_RGBW;
 		} else if (is_vhdr(job) && !is_dcg_sensor_merge(job))
 			hard_scenario = MTKCAM_IPI_HW_PATH_OFFLINE_STAGGER;
 		else
@@ -796,23 +790,6 @@ static const int dc_3exp_rawi[3] = {
 static const int dc_3exp_simple[3] = {
 	MTKCAM_IPI_RAW_RAWI_2, 0, MTKCAM_IPI_RAW_RAWI_5
 };
-
-int raw_video_id_w_port(int rawi_id)
-{
-	switch (rawi_id) {
-	case MTKCAM_IPI_RAW_IMGO:
-		return MTKCAM_IPI_RAW_IMGO_W;
-	case MTKCAM_IPI_RAW_RAWI_2:
-		return MTKCAM_IPI_RAW_RAWI_2_W;
-	case MTKCAM_IPI_RAW_RAWI_3:
-		return MTKCAM_IPI_RAW_RAWI_3_W;
-	case MTKCAM_IPI_RAW_RAWI_5:
-		return MTKCAM_IPI_RAW_RAWI_5_W;
-	default:
-		WARN_ON(1);
-		return MTKCAM_IPI_RAW_RAWI_2_W;
-	}
-}
 
 static int fill_sv_to_rawi_wbuf(struct req_buffer_helper *helper,
 		__u8 pipe_id, __u8 ipi, int exp_no, bool is_w,
@@ -1479,16 +1456,6 @@ int get_buf_plane(int exp_order_ipi, int exp_seq_num)
 	return idx_off_tbl[exp_seq_num];
 }
 
-int get_plane_per_exp(bool is_rgbw)
-{
-	return (is_rgbw) ? 2 : 1;
-}
-
-int get_plane_buf_offset(bool w_path)
-{
-	return (w_path) ? 1 : 0;
-}
-
 int get_buf_offset_idx(int plane, int plane_per_exp, int plane_buf_offset,
 		       bool is_valid_mp_buf)
 {
@@ -1517,7 +1484,6 @@ int fill_img_in_by_exposure(struct req_buffer_helper *helper,
 	struct mtkcam_ipi_frame_param *fp = helper->fp;
 	struct mtkcam_ipi_img_input *in;
 	struct mtk_cam_job *job = helper->job;
-	bool is_w = is_rgbw(job) ? true : false;//for coverity...
 	const int *rawi_table = NULL;
 	int i = 0, rawi_cnt = 0;
 	int exp_order = get_exp_order(&job->job_scen);
@@ -1532,18 +1498,7 @@ int fill_img_in_by_exposure(struct req_buffer_helper *helper,
 
 		/* handle mdaddr */
 		ret = fill_mp_img_in_hdr(in, buf, node, rawi_table[i],
-					 get_buf_plane(exp_order, i),
-					 get_plane_per_exp(is_w),
-					 get_plane_buf_offset(false));
-
-		if (!ret && is_w) {
-			in = &fp->img_ins[helper->ii_idx++];
-			ret = fill_mp_img_in_hdr(in, buf, node,
-						 raw_video_id_w_port(rawi_table[i]),
-						 get_buf_plane(exp_order, i),
-						 get_plane_per_exp(is_w),
-						 get_plane_buf_offset(true));
-		}
+					 get_buf_plane(exp_order, i), 1, 0);
 	}
 
 	return ret;
@@ -1842,15 +1797,6 @@ int fill_img_out(struct req_buffer_helper *helper,
 	return  _fill_mp_img_out(helper, io, buf, node, node->uid.id, 0, 0);
 }
 
-int fill_img_out_w(struct req_buffer_helper *helper,
-		   struct mtkcam_ipi_img_output *io,
-		   struct mtk_cam_buffer *buf,
-		   struct mtk_cam_video_device *node)
-{
-	return _fill_mp_img_out(helper, io, buf, node,
-				raw_video_id_w_port(node->uid.id), 0, buf->image_info.size[0]);
-}
-
 static int fill_sv_mp_fp(
 	struct req_buffer_helper *helper, struct mtk_cam_buffer *buf,
 	struct mtk_cam_video_device *node, unsigned int tag_idx,
@@ -1917,10 +1863,10 @@ int fill_sv_img_fp(
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_cam_scen *scen = &job->job_scen;
 	struct mtk_camsv_device *sv_dev;
-	unsigned int pipe_id, exp_no, buf_cnt = 0;
+	unsigned int pipe_id, exp_no;
 	int exp_order = get_exp_order(&job->job_scen);
-	int tag_idx, i, j, ret = 0;
-	bool is_w, is_mstream = false, is_fusion;
+	int tag_idx, i, ret = 0;
+	bool is_mstream = false, is_fusion, is_dcg_vs;
 
 	if (!is_pure_raw_node(job, node))
 		goto EXIT;
@@ -1933,54 +1879,39 @@ int fill_sv_img_fp(
 
 	if (is_stagger_2_exposure(scen)) {
 		exp_no = 2;
-		buf_cnt = is_rgbw(job) ? 2 : 1;
 	} else if (is_stagger_3_exposure(scen)) {
 		exp_no = 3;
-		buf_cnt = 1;
-		if (is_rgbw(job)) {
-			ret = -1;
-			pr_info("%s: rgbw not supported under 3-exp stagger case",
-				__func__);
-			goto EXIT;
-		}
 	} else if (is_mstream_2_exposure(scen)) {
 		exp_no = 2;
-		buf_cnt = 1;
 		is_mstream = true;
 	} else {
 		exp_no = 1;
-		buf_cnt = is_rgbw(job) ? 2 : 1;
 	}
 
+	is_fusion = (job_sensor_exp_num(job) == job_exp_num(job)) ? true : false;
+	is_dcg_vs = is_dcg_with_vs(job);
 	for (i = 0; i < exp_no; i++) {
-		if (!is_sv_pure_raw(job) &&
-			!is_dc_mode(job) &&
-			!is_offline_timeshare(job) &&
-			(i + 1) == exp_no)
+		if (!is_sv_pure_raw(job) && !is_dc_mode(job) &&
+		    !is_offline_timeshare(job) && ((i + 1) == exp_no))
 			continue;
+
 		/* skip first exp under mstream case */
-		if (is_mstream &&
-			exp_no == 2 &&
-			i == 0)
+		if (is_mstream && (exp_no == 2) && (i == 0))
 			continue;
-		for (j = 0; j < buf_cnt; j++) {
-			is_w = (j % 2) ? true : false;
-			is_fusion = job_sensor_exp_num(job) == job_exp_num(job) ? true : false;
-			tag_idx = (exp_no > 1 && (i + 1) == exp_no) ?
-				get_sv_tag_idx(exp_no, MTKCAM_IPI_ORDER_LAST_TAG, is_w,
-					is_dcg_with_vs(job), is_fusion) :
-				get_sv_tag_idx(exp_no, i, is_w, is_dcg_with_vs(job), is_fusion);
-			if (tag_idx == -1) {
-				ret = -1;
-				pr_info("%s: tag_idx not found(exp_no:%d is_w:%d)",
-					__func__, exp_no, (is_w) ? 1 : 0);
-				goto EXIT;
-			}
-			ret = fill_sv_mp_fp(helper, buf, node, tag_idx, pipe_id,
-					get_buf_plane(exp_order, i),
-					get_plane_per_exp((buf_cnt == 2)),
-					get_plane_buf_offset(is_w));
+
+		tag_idx = (exp_no > 1 && (i + 1) == exp_no) ?
+			get_sv_tag_idx(exp_no, MTKCAM_IPI_ORDER_LAST_TAG, false,
+				       is_dcg_vs, is_fusion) :
+			get_sv_tag_idx(exp_no, i, false, is_dcg_vs, is_fusion);
+		if (tag_idx == -1) {
+			ret = -1;
+			pr_info("%s: tag_idx not found(exp_no:%d)",
+				__func__, exp_no);
+			goto EXIT;
 		}
+
+		ret = fill_sv_mp_fp(helper, buf, node, tag_idx, pipe_id,
+				    get_buf_plane(exp_order, i), 1, 0);
 	}
 
 EXIT:
@@ -1994,9 +1925,8 @@ int fill_imgo_buf_as_working_buf(
 	struct mtkcam_ipi_frame_param *fp = helper->fp;
 	struct mtkcam_ipi_img_output *out;
 	struct mtk_cam_job *job = helper->job;
-	bool is_w = is_rgbw(job);
 	bool is_otf = !is_dc_mode(job);
-	int ii_inc = 0, plane_inc;
+	int ii_inc = 0;
 	int ret = 0;
 	bool sv_pure_raw;
 
@@ -2013,20 +1943,12 @@ int fill_imgo_buf_as_working_buf(
 	ii_inc = helper->ii_idx;
 	fill_img_in_by_exposure(helper, buf, node);  /* handle mdaddr */
 	ii_inc = helper->ii_idx - ii_inc;
-	plane_inc = ii_inc / get_plane_per_exp(is_w);
 
 	if (is_otf && !sv_pure_raw) {
 		// OTF, raw outputs last exp
 		out = &fp->img_outs[helper->io_idx++];
 		ret = fill_mp_img_out_hdr(helper, out, buf, node, MTKCAM_IPI_RAW_IMGO,
-					  (is_w ? 2 : 1), plane_inc, 0);
-
-		if (!ret && is_w) {
-			out = &fp->img_outs[helper->io_idx++];
-			ret = fill_mp_img_out_hdr(helper, out, buf, node,
-						  raw_video_id_w_port(MTKCAM_IPI_RAW_IMGO),
-						  2, plane_inc, 1);
-		}
+					  1, ii_inc, 0);
 	}
 
 	if (sv_pure_raw && CAM_DEBUG_ENABLED(JOB))
@@ -2136,11 +2058,6 @@ bool is_2raw_flow(struct mtk_cam_job *job)
 {
 	return job_exp_num(job) == 2 &&
 		get_sensor_data_pattern(job) == MTK_CAM_PATTERN_16CELL;
-}
-
-bool is_rgbw(struct mtk_cam_job *job)
-{
-	return scen_is_rgbw(&job->job_scen);
 }
 
 bool is_extisp(struct mtk_cam_job *job)
@@ -2427,7 +2344,6 @@ int handle_sv_tag(struct mtk_cam_job *job)
 	if (job->job_scen.id == MTK_CAM_SCEN_NORMAL &&
 		cfg_exp_no == 2) {
 		exp_no = req_amount = 2;
-		req_amount *= is_rgbw(job) ? 2 : 1;
 		hw_scen = is_dc_mode(job) ?
 			(1 << HWPATH_ID(MTKCAM_IPI_HW_PATH_DC_STAGGER)) :
 			(1 << HWPATH_ID(MTKCAM_IPI_HW_PATH_STAGGER));
@@ -2437,23 +2353,17 @@ int handle_sv_tag(struct mtk_cam_job *job)
 	} else if (job->job_scen.id == MTK_CAM_SCEN_NORMAL &&
 		cfg_exp_no == 3) {
 		exp_no = req_amount = 3;
-		if (is_rgbw(job)) {
-			pr_info("[%s] rgbw not supported under 3-exp stagger case",
-				__func__);
-			return 1;
-		}
 		hw_scen = is_dc_mode(job) ?
 			(1 << HWPATH_ID(MTKCAM_IPI_HW_PATH_DC_STAGGER)) :
 			(1 << HWPATH_ID(MTKCAM_IPI_HW_PATH_STAGGER));
 	} else {
 		exp_no = req_amount = 1;
-		req_amount *= is_rgbw(job) ? 2 : 1;
 		hw_scen = is_dc_mode(job) ?
 			(1 << HWPATH_ID(MTKCAM_IPI_HW_PATH_DC_STAGGER)) :
 			(1 << HWPATH_ID(MTKCAM_IPI_HW_PATH_ON_THE_FLY));
 	}
 	pr_info("[%s] hw_scen:%d exp_no:%d req_amount:%d",
-			__func__, hw_scen, exp_no, req_amount);
+		__func__, hw_scen, exp_no, req_amount);
 	is_dcg_vs = is_dcg_with_vs(job);
 	is_fusion = job_sensor_exp_num(job) == job_exp_num(job) ? true : false;
 	if (mtk_cam_sv_get_tag_param(img_tag_param, hw_scen, exp_no, req_amount,

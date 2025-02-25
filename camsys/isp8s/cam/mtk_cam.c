@@ -2056,34 +2056,6 @@ static void _destroy_pool(struct mtk_cam_device_buf *buf,
 	mtk_cam_device_buf_uninit(buf);
 }
 
-int mtk_cam_ctx_alloc_rgbw_caci_buf(struct mtk_cam_ctx *ctx, int w, int h)
-{
-	struct device *dev_to_attach;
-
-	size_t caci_size = 0;
-
-	dev_to_attach = get_dev_to_attach(ctx);
-
-	if (CALL_PLAT_HW(query_caci_size, w, h, &caci_size) || caci_size == 0)
-		return -EINVAL;
-
-	ctx->w_caci_buf = mtk_cam_device_refcnt_buf_create(dev_to_attach,
-						 "CAM_W_CACI_ID",
-						 caci_size);
-	if (ctx->w_caci_buf)
-		return 0;
-	else
-		return -ENOMEM;
-}
-
-void mtk_cam_ctx_clean_rgbw_caci_buf(struct mtk_cam_ctx *ctx)
-{
-	if (ctx->w_caci_buf) {
-		mtk_cam_device_refcnt_buf_put(ctx->w_caci_buf);
-		ctx->w_caci_buf = NULL;
-	}
-}
-
 static void mtk_cam_ctx_reset_slb(struct mtk_cam_ctx *ctx)
 {
 	ctx->slb_uid = 0;
@@ -3056,7 +3028,6 @@ void mtk_cam_ctx_unprepare(struct mtk_cam_ctx *ctx)
 	mtk_cam_ctx_destroy_sensor_meta_pool(ctx);
 	mtk_cam_ctx_destroy_pool(ctx);
 	mtk_cam_ctx_clean_img_pool(ctx);
-	mtk_cam_ctx_clean_rgbw_caci_buf(ctx);
 	mtk_cam_ctx_release_slb(ctx);
 	mtk_cam_ctx_release_slc(ctx);
 
@@ -3111,18 +3082,7 @@ int mtk_cam_ctx_init_scenario(struct mtk_cam_ctx *ctx)
 	res = &ctrl_data->resource.user_data.raw_res;
 	scen = &res->scen;
 
-	if (scen_support_rgbw(scen)) {
-		int sink_w, sink_h;
-
-		sink_w = raw_pipe->pad_cfg[MTK_RAW_SINK].mbus_fmt.width;
-		sink_h = raw_pipe->pad_cfg[MTK_RAW_SINK].mbus_fmt.height;
-
-		ret = mtk_cam_ctx_alloc_rgbw_caci_buf(ctx, sink_w, sink_h);
-		if (ret)
-			dev_info(cam->dev, "%s: failed to alloc for caci buf\n",
-				 __func__);
-
-	} else if (ctrl_data->valid_apu_info &&
+	if (ctrl_data->valid_apu_info &&
 		   scen_is_m2m_apu(scen, &ctrl_data->apu_info)) {
 
 		ret = mtk_cam_ctx_request_slb(ctx, UID_SH_P1, false, NULL);

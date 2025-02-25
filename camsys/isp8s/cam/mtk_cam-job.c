@@ -137,11 +137,6 @@ void mtk_cam_ctx_job_finish(struct mtk_cam_job *job)
 		job->img_wbuf_pool_wrapper = NULL;
 	}
 
-	if (job->w_caci_buf) {
-		mtk_cam_device_refcnt_buf_put(job->w_caci_buf);
-		job->w_caci_buf = NULL;
-	}
-
 	mtk_cam_job_return(job);
 }
 
@@ -472,7 +467,6 @@ static int mtk_cam_job_pack_init(struct mtk_cam_job *job,
 	job->src_ctx = ctx;
 	job->img_wbuf_pool_wrapper = NULL;
 	job->img_wbuf_pool_wrapper_prev = NULL;
-	job->w_caci_buf = NULL;
 	job->first_job = !ctx->not_first_job;
 	ctx->not_first_job = true;
 
@@ -3521,28 +3515,6 @@ static int fill_imgo_buf_to_ipi_normal(struct req_buffer_helper *helper,
 	return ret;
 }
 
-static int fill_m2m_imgo_to_img_out_ipi(struct req_buffer_helper *helper,
-	struct mtk_cam_buffer *buf,
-	struct mtk_cam_video_device *node)
-{
-	struct mtk_cam_job *job = helper->job;
-	bool is_w = is_rgbw(job);
-	int ret = 0;
-
-	ret = fill_raw_img_buffer_to_ipi_frame(helper, buf, node);
-
-	if (!ret && is_w) {
-		struct mtkcam_ipi_frame_param *fp = helper->fp;
-		struct mtkcam_ipi_img_output *out;
-
-		out = &fp->img_outs[helper->io_idx++];
-
-		ret = fill_img_out_w(helper, out, buf, node);
-	}
-
-	return ret;
-}
-
 int fill_imgo_buf_to_ipi_mstream(
 	struct req_buffer_helper *helper, struct mtk_cam_buffer *buf,
 	struct mtk_cam_video_device *node)
@@ -3563,9 +3535,7 @@ int fill_imgo_buf_to_ipi_mstream(
 	// RAWI is always the first exp
 	in = &fp->img_ins[helper->ii_idx++];
 	fill_mp_img_in_hdr(in, buf, node, MTKCAM_IPI_RAW_RAWI_2,
-			   get_buf_plane(exp_order, 0),
-			   get_plane_per_exp(0),
-			   get_plane_buf_offset(0));
+			   get_buf_plane(exp_order, 0), 1, 0);
 
 	if (is_pure_imgo && is_sv_pure_raw(job)) {
 		/* pure raw */
@@ -3576,9 +3546,7 @@ int fill_imgo_buf_to_ipi_mstream(
 		// IMGO is used as the second exp
 		out = &fp->img_outs[helper->io_idx++];
 		fill_mp_img_out_hdr(helper, out, buf, node, MTKCAM_IPI_RAW_IMGO,
-				    get_buf_plane(exp_order, 1),
-				    get_plane_per_exp(0),
-				    get_plane_buf_offset(0));
+				    get_buf_plane(exp_order, 1), 1, 0);
 	}
 
 	/* fill sv image fp */
@@ -4547,7 +4515,7 @@ static struct pack_job_ops_helper m2m_pack_helper = {
 	.pack_job = _job_pack_m2m,
 	.update_raw_bufs_to_ipi = fill_raw_img_buffer_to_ipi_frame,
 	.update_raw_rawi_to_ipi = fill_m2m_rawi_to_img_in_ipi,
-	.update_raw_imgo_to_ipi = fill_m2m_imgo_to_img_out_ipi,
+	.update_raw_imgo_to_ipi = NULL,
 	.update_raw_yuvo_to_ipi = NULL,
 	.append_work_buf_to_ipi = NULL,
 };
@@ -4827,15 +4795,14 @@ static void update_job_wbuf_pool_wrapper(struct mtk_cam_job *job)
 static int update_job_raw_switch(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
-	struct mtk_raw_pipeline *raw_pipe;
 	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
-	struct mtk_cam_resource_raw_v2 *res;
 	bool raw_switch = false;
 	int r;
-	int sink_w, sink_h;
+
 	/* No sensor change happened */
 	if (!is_sensor_changed(job))
 		goto EXIT_SET_RAW_SWITCH;
+
 	dev_info(ctx->cam->dev,
 		 "%s:ctx(%d): change sensor:(%s) --> (%s/%s)\n", __func__,
 		 ctx->stream_id, job->seninf_prev->entity.name,
@@ -4853,24 +4820,13 @@ static int update_job_raw_switch(struct mtk_cam_job *job)
 	 * after streaming off the ISP to avoid M4U violation issue
 	 */
 	job->img_wbuf_pool_wrapper_prev = ctx->pack_job_img_wbuf_pool_wrapper;
-	mtk_cam_ctx_clean_rgbw_caci_buf(ctx);
 
 	/* sensor changed, create the new image buf pool and save in job */
 	if (ctx->has_raw_subdev && ctrl_data) {
 		if (mtk_cam_ctx_alloc_img_pool(ctx, ctrl_data))
 			goto EXIT_CLEAN;
-		res = &ctrl_data->resource.user_data.raw_res;
-		if (scen_support_rgbw(&res->scen)) {
-			raw_pipe = &ctx->cam->pipelines.raw[ctx->raw_subdev_idx];
-			sink_w = raw_pipe->pad_cfg[MTK_RAW_SINK].mbus_fmt.width;
-			sink_h = raw_pipe->pad_cfg[MTK_RAW_SINK].mbus_fmt.height;
-			if (mtk_cam_ctx_alloc_rgbw_caci_buf(ctx, sink_w, sink_h)) {
-				dev_info(ctx->cam->dev, "%s: failed to alloc for caci buf\n",
-					 __func__);
-				goto EXIT_CLEAN_PACK_JOB_IMG_POOL;
-			}
-		}
 	}
+
 	/* The user changed the sensor in the first request */
 	if (!ctx->used_engine) {
 		/* It is not real raw switch, just update the ctx' sensor */
@@ -4886,18 +4842,11 @@ EXIT_SET_RAW_SWITCH:
 	job->img_wbuf_pool_wrapper = ctx->pack_job_img_wbuf_pool_wrapper;
 	if (job->img_wbuf_pool_wrapper)
 		mtk_cam_pool_wrapper_get(job->img_wbuf_pool_wrapper);
-	job->w_caci_buf = ctx->w_caci_buf;
-	if (job->w_caci_buf)
-		mtk_cam_device_refcnt_buf_get(job->w_caci_buf);
 	return 0;
-EXIT_CLEAN_PACK_JOB_IMG_POOL:
-	if (job->img_wbuf_pool_wrapper)
-		mtk_cam_pool_wrapper_put(job->img_wbuf_pool_wrapper);
-	mtk_cam_ctx_clean_img_pool(ctx);
+
 EXIT_CLEAN:
 	ctx->pack_job_img_wbuf_pool_wrapper = NULL;
 	job->img_wbuf_pool_wrapper = NULL;
-	job->w_caci_buf = NULL;
 	job->raw_switch = false;
 	return -EBUSY;
 }
@@ -5465,14 +5414,6 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 		config->ois_compensation = is_ois_compensation(job);
 		config->all_exp_in_slc = is_all_exp_in_slc(job);
 		config->is_2raw_flow = is_2raw_flow(job);
-
-		if (scen_support_rgbw(&job->job_scen)) {
-			if (WARN_ON(!job->w_caci_buf))
-				return -1;
-
-			config->w_cac_table.iova = job->w_caci_buf->buf.daddr;
-			config->w_cac_table.size = job->w_caci_buf->buf.size;
-		}
 
 		raw_set_ipi_input_param(input, sink,
 			ctrl->resource.tgo_pxl_mode,
@@ -6105,8 +6046,6 @@ static int fill_raw_meta_header(struct req_buffer_helper *helper)
 
 		res = &raw_data->ctrl.resource.user_data;
 		p.bin_ratio = bin_ratio(res->raw_res.bin);
-
-		p.rgbw = is_rgbw(job);
 
 		p.raws = bit_map_subset_of(MAP_HW_RAW, job->used_engine);
 

@@ -187,8 +187,6 @@ struct set_meta_stats_info_param {
 
 	int bin_ratio; /* 1/2/3/... */
 
-	int rgbw;
-
 	unsigned int raws;
 };
 

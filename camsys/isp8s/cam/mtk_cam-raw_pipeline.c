@@ -400,25 +400,6 @@ static int max_num_conti_bits(u8 bits)
 	return count;
 }
 
-static int mtk_raw_calc_raw_mask_chk_scen(struct mtk_cam_device *cam,
-					  struct mtk_cam_resource_raw_v2 *r)
-{
-	// RGBW requires a minimum of 2 raw
-	if (scen_is_rgbw(&r->scen)) {
-		int raws_must_cnt = max_num_conti_bits(r->raws_must);
-
-		if (r->raws_must && raws_must_cnt != 2) {
-			dev_info(cam->dev, "w_chn_enabled, wrong raws_must 0x%x\n",
-				 r->raws_must);
-			return -1;
-		}
-
-		r->raws_max_num = 2;
-	}
-
-	return 0;
-}
-
 static bool scenario_disable_twin(int scenario_id, bool is_dc)
 {
 	return is_dc ?
@@ -436,12 +417,6 @@ static void mtk_raw_calc_num_raw_max_min(struct mtk_cam_resource_raw_v2 *r,
 {
 	struct mtk_cam_scen *scen = &r->scen;
 	int scen_id = scen->id;
-
-	if (scen_is_rgbw(scen)) {
-		*n_min = 2;
-		*n_max = 2;
-		return;
-	}
 
 	if (scenario_disable_twin(scen_id, res_raw_is_dc_mode(r) ? true : false)) {
 		*n_min = 1;
@@ -689,8 +664,7 @@ static int mtk_raw_calc_raw_resource(struct mtk_raw_pipeline *pipeline,
 	}
 
 	ret = mtk_raw_calc_raw_mask_chk(cam->dev, cam->engines.num_raw_devices,
-				       &r->raws, &r->raws_must, &r->raws_max_num)
-		|| mtk_raw_calc_raw_mask_chk_scen(cam, r);
+					&r->raws, &r->raws_must, &r->raws_max_num);
 
 	if (ret)
 		return -EINVAL;
@@ -2119,12 +2093,6 @@ static struct mtk_cam_format_desc meta_cfg_fmts[] = {
 			.buffersize = 0,
 		},
 	},
-	{
-		.vfmt.fmt.meta = {
-			.dataformat = V4L2_META_FMT_MTISP_PARAMS_RGBW,
-			.buffersize = 0,
-		},
-	},
 };
 
 static struct mtk_cam_format_desc meta_stats0_fmts[] = {
@@ -2134,24 +2102,12 @@ static struct mtk_cam_format_desc meta_stats0_fmts[] = {
 			.buffersize = 0,
 		},
 	},
-	{
-		.vfmt.fmt.meta = {
-			.dataformat = V4L2_META_FMT_MTISP_3A_RGBW,
-			.buffersize = 0,
-		},
-	},
 };
 
 static struct mtk_cam_format_desc meta_stats1_fmts[] = {
 	{
 		.vfmt.fmt.meta = {
 			.dataformat = V4L2_META_FMT_MTISP_AF,
-			.buffersize = 0,
-		},
-	},
-	{
-		.vfmt.fmt.meta = {
-			.dataformat = V4L2_META_FMT_MTISP_AF_RGBW,
 			.buffersize = 0,
 		},
 	},

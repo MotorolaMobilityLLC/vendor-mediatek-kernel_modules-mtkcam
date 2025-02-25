@@ -90,13 +90,7 @@ int fill_img_out(struct req_buffer_helper *helper,
 		 struct mtkcam_ipi_img_output *io,
 		 struct mtk_cam_buffer *buf,
 		 struct mtk_cam_video_device *node);
-int fill_img_out_w(struct req_buffer_helper *helper,
-		   struct mtkcam_ipi_img_output *io,
-		   struct mtk_cam_buffer *buf,
-		   struct mtk_cam_video_device *node);
 int get_buf_plane(int exp_order_ipi, int exp_seq_num);
-int get_plane_per_exp(bool is_rgbw);
-int get_plane_buf_offset(bool w_path);
 int get_buf_offset_idx(int plane, int plane_per_exp, int plane_buf_offset,
 		       bool is_valid_mp_buf);
 int fill_mp_img_out_hdr(struct req_buffer_helper *helper,
@@ -163,7 +157,6 @@ bool is_all_exp_in_slc(struct mtk_cam_job *job);
 bool is_2raw_flow(struct mtk_cam_job *job);
 bool is_sv_pure_raw(struct mtk_cam_job *job);
 bool is_offline_timeshare(struct mtk_cam_job *job);
-bool is_rgbw(struct mtk_cam_job *job);
 bool is_extisp(struct mtk_cam_job *job);
 bool is_dcg_sensor_merge(struct mtk_cam_job *job);
 bool is_dcg_ap_merge(struct mtk_cam_job *job);
@@ -174,7 +167,6 @@ bool is_m2m_apu_dc(struct mtk_cam_job *job);
 bool is_stagger_lbmf(struct mtk_cam_job *job);
 bool is_stagger_dol(struct mtk_cam_job *job);
 bool is_camsv_16p(struct mtk_cam_job *job);
-int raw_video_id_w_port(int rawi_id);
 void get_stagger_rawi_table(struct mtk_cam_job *job,
 	const int **rawi_table, int *cnt);
 
