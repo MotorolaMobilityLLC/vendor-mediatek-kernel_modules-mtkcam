@@ -263,6 +263,18 @@ void c2ps_regulator_bgpolicy_um_stable_default(struct regulator_req *req)
 			guided_index = (guided_index == C2PS_GUIDED_INDEX_IDLE) ?
 				 C2PS_GUIDED_INDEX_IDLE_AND_RUNNABLE : C2PS_GUIDED_INDEX_RUNNABLE;
 		}
+		/*
+		 * Ensure that um is only updated once
+		 * within the same idle rate monitor period
+		 */
+		if (guided_index == C2PS_GUIDED_INDEX_IDLE) {
+			if (req->glb_info->um_updated_by_idle) {
+				decrease_um = false;
+				increase_um = false;
+			} else {
+				req->glb_info->um_updated_by_idle = true;
+			}
+		}
 	}
 	if (increase_um)
 		curr_um += um_step;

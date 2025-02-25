@@ -12,6 +12,10 @@ inline enum c2ps_env_status c2ps_stat_selector_v1(struct global_info *glb_info)
 {
 	u8 _cluster_index = 0;
 
+	if (unlikely(glb_info->overwrite_util_margin ||
+				glb_info->decided_um_placeholder_val))
+		return C2PS_STAT_TRANSIENT;
+
 	C2PS_LOGD("fast_lxf_est: %llu, slow_lxf_est: %llu",
 		glb_info->fast_lxf_est[0].est_val, glb_info->slow_lxf_est[0].est_val);
 
@@ -37,6 +41,9 @@ inline enum c2ps_env_status c2ps_stat_selector_v1(struct global_info *glb_info)
 
 inline enum c2ps_env_status c2ps_stat_selector_v2(struct global_info *glb_info)
 {
+	if (unlikely(glb_info->overwrite_util_margin ||
+				glb_info->decided_um_placeholder_val))
+		return C2PS_STAT_TRANSIENT;
 	if (glb_info->has_anchor_spec &&
 		glb_info->runnable_count_signal == C2PS_RUNNABLE_DANGER)
 		return C2PS_STAT_RUNNABLE_BOOST;
@@ -47,6 +54,9 @@ enum c2ps_env_status determine_cur_system_state(struct global_info *glb_info)
 {
 	switch (stat_selector_mode) {
 	case C2PS_STAT_SELECTOR_STABLE:
+		if (unlikely(glb_info->overwrite_util_margin ||
+				glb_info->decided_um_placeholder_val))
+			return C2PS_STAT_TRANSIENT;
 		return C2PS_STAT_STABLE;
 	case C2PS_STAT_SELECTOR_V1:
 		return c2ps_stat_selector_v1(glb_info);

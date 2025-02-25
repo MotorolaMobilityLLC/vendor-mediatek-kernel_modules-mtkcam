@@ -215,6 +215,7 @@ struct global_info {
 	u32 last_runnable_count_sum;
 	enum c2ps_runnable_signal runnable_count_signal;
 	int available_cpus;
+	bool um_updated_by_idle;
 
 	/**
 	 * need_update_bg definition:

@@ -1573,6 +1573,7 @@ void update_cpu_idle_rate(void)
 								_total_idlerate/_total_num_of_cpu);
 		}
 		glb_info->last_sum_idle_rate = _total_idlerate;
+		glb_info->um_updated_by_idle = false;
 	}
 
 	if (unlikely(!g_cpu_info))
@@ -1645,7 +1646,6 @@ void update_cpu_idle_rate(void)
 	}
 
 	if (enable_runnable_monitor) {
-		glb_info->need_update_bg[0] = 1;
 		glb_info->runnable_count_signal = C2PS_RUNNABLE_NORMAL;
 
 		if (runnable_count_sum >= glb_info->available_cpus)
@@ -1656,6 +1656,9 @@ void update_cpu_idle_rate(void)
 				runnable_count_sum < (glb_info->available_cpus >> 1))
 			glb_info->runnable_count_signal = C2PS_RUNNABLE_DEC;
 		glb_info->last_runnable_count_sum = runnable_count_sum;
+
+		if (glb_info->runnable_count_signal != C2PS_RUNNABLE_NORMAL)
+			glb_info->need_update_bg[0] = 1;
 		c2ps_systrace_c(9999, runnable_count_sum, "runtime runnable sum");
 	}
 
