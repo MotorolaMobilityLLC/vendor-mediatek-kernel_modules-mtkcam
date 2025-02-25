@@ -45,7 +45,7 @@
 //module_param(debug_dump_fbc, int, 0644);
 //MODULE_PARM_DESC(debug_dump_fbc, "debug: dump fbc");
 
-static int debug_ddren_sw_mode = 1;
+static int debug_ddren_sw_mode;
 module_param(debug_ddren_sw_mode, int, 0644);
 MODULE_PARM_DESC(debug_ddren_sw_mode, "debug: 1 : active sw mode");
 
