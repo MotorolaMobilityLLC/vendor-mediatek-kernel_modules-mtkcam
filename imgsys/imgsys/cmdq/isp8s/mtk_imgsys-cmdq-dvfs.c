@@ -460,7 +460,8 @@ void mtk_imgsys_mmdvfs_mmqos_cal_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 						smvr_freq_floor = IMGSYS_SMVR_FREQ_FLOOR1;
 				} else
 					smvr_freq_floor = IMGSYS_SMVR_FREQ_FLOOR3;
-				if (pixel_total_max < smvr_freq_floor)
+				if ((pixel_total_max < smvr_freq_floor) ||
+					(fps_smvr == IMGSYS_SMVR_FPS_FLOOR1))
 					freq = smvr_freq_floor;
 				else
 					freq = pixel_total_max;
@@ -511,7 +512,8 @@ void mtk_imgsys_mmdvfs_mmqos_cal_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 						smvr_freq_floor = IMGSYS_SMVR_FREQ_FLOOR1;
 				} else
 					smvr_freq_floor = IMGSYS_SMVR_FREQ_FLOOR3;
-				if (pixel_total_max < smvr_freq_floor)
+				if ((pixel_total_max < smvr_freq_floor) ||
+					(fps_smvr == IMGSYS_SMVR_FPS_FLOOR1))
 					freq = smvr_freq_floor;
 				else
 					freq = pixel_total_max;
