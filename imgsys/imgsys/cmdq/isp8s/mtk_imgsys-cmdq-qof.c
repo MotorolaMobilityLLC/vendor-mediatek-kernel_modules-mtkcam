@@ -856,9 +856,6 @@ static void imgsys_cmdq_qof_init_pwr_thread(struct mtk_imgsys_dev *imgsys_dev)
 			QOF_LOGI(
 				"%s: cmdq_mbox_create pwr_thd(%d, 0x%lx)",
 				__func__, thd_idx, (unsigned long)imgsys_pwr_clt[thd_idx - IMGSYS_NOR_THD]);
-		} else {
-			imgsys_pwr_clt[thd_idx - IMGSYS_NOR_THD] = NULL;
-			QOF_LOGI("qof thread indexs (%u) are not match !", thd_idx);
 		}
 	}
 }
