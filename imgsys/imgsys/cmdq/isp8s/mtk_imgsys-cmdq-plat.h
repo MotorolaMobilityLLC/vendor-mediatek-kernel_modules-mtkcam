@@ -12,6 +12,8 @@
 #include "mtk_imgsys-cmdq.h"
 #include "mtk_imgsys-engine-isp8s.h"
 
+#define IMGSYS_KTHREAD_USE_VIP (1)
+
 #define IMGSYS_QOS_SET_BY_SCEN (1)
 
 #ifndef CONFIG_FPGA_EARLY_PORTING
@@ -1468,5 +1470,10 @@ bool imgsy_isc_xfd_dbg_enable_plat8s(void);
 bool imgsys_iova_dbg_enable_plat8s(void);
 u32 imgsys_iova_dbg_port_plat8s(void);
 u32 imgsys_cmdq_is_stream_off(void);
+
+#if IMGSYS_KTHREAD_USE_VIP
+extern void set_task_priority_based_vip(int pid, int prio);
+extern void set_task_ls(int pid);
+#endif
 
 #endif /* _MTK_IMGSYS_CMDQ_PLAT_8S_H_ */

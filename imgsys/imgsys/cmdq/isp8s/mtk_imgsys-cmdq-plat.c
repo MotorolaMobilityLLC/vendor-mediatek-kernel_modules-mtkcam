@@ -100,13 +100,21 @@ void imgsys_cmdq_init_plat8s(struct mtk_imgsys_dev *imgsys_dev, const int nr_img
 		imgsys_cmdq_kworker_task = kthread_run(kthread_worker_fn,
 			&imgsys_cmdq_worker, "imgsys-cmdqcb");
 		if (IS_ERR(imgsys_cmdq_kworker_task)) {
-			dev_info(dev, "%s: failed to start imgsys_cmdqcb kthread worker\n",
+			dev_info(dev, "%s: failed to start imgsys-cmdqcb kthread worker\n",
 				__func__);
 			imgsys_cmdq_kworker_task = NULL;
 		} else {
-			struct sched_param param = {.sched_priority = 98 };
-
+			#if IMGSYS_KTHREAD_USE_VIP
+			dev_info(dev, "%s: imgsys-cmdqcb kthread worker set to VIP\n", __func__);
+			set_user_nice(imgsys_cmdq_kworker_task,-20);
+			set_task_priority_based_vip(imgsys_cmdq_kworker_task->pid,1);
+			set_task_ls(imgsys_cmdq_kworker_task->pid);
+			#else
+			#define CAM_RT_PRIORITY 98
+			struct sched_param param = {
+			.sched_priority = (99 - CAM_RT_PRIORITY) };
 			sched_setscheduler(imgsys_cmdq_kworker_task, SCHED_RR, &param);
+			#endif
 		}
 #else
 		imgsys_cmdq_wq = alloc_ordered_workqueue("%s",
