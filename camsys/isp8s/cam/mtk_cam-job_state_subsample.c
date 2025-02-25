@@ -181,8 +181,8 @@ static const struct mtk_cam_job_state_ops subsample_state_ops = {
 };
 
 int mtk_cam_job_state_init_subsample(struct mtk_cam_job_state *s,
-				 const struct mtk_cam_job_state_cb *cb,
-				 int with_sensor_ctrl)
+				     const struct mtk_cam_job_state_cb *cb,
+				     int with_sensor_ctrl)  /* from sensor or raw */
 {
 	s->ops = &subsample_state_ops;
 

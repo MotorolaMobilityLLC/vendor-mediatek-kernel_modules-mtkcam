@@ -501,8 +501,11 @@ static void mtk_cam_vb2_buf_finish(struct vb2_buffer *vb)
 			 node->desc.id == MTK_RAW_META_OUT_1)
 			offset = GET_PLAT_V4L2(meta_stats1_header_size);
 		else if (is_mraw_subdev(node->uid.pipe_id) &&
-			 node->desc.id == MTK_RAW_META_OUT_1)
+			 node->desc.id == MTK_MRAW_META_OUT)
 			offset = GET_PLAT_V4L2(meta_mraw_ext_size);
+		else if (is_mraw_subdev(node->uid.pipe_id) &&
+			 node->desc.id == MTK_MRAW_PDA_OUT)
+			offset = GET_PLAT_V4L2(meta_pda_ext_size);
 		else
 			offset = 0;
 

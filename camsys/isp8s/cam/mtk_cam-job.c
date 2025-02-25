@@ -831,7 +831,8 @@ update_job_type_feature(struct mtk_cam_job *job)
 			return -1;
 
 		job->job_scen = ctrl->resource.user_data.raw_res.scen;
-		scen_to_str(job->scen_str, sizeof(job->scen_str), &job->job_scen);
+		if (CAM_DEBUG_ENABLED(JOB))  /* update if it is required */
+			scen_to_str(job->scen_str, sizeof(job->scen_str), &job->job_scen);
 		/* once in one frame */
 		if (ctrl->req_info.req_type == NORMAL_REQUEST ||
 			ctrl->req_info.req_type == SENSOR_REQUEST) {
@@ -1523,6 +1524,124 @@ _apply_sensor_extisp(struct mtk_cam_job *job)
 }
 
 /* kthread context */
+static int apply_raw_ctrl_sensor(struct mtk_cam_job *job,
+				 struct mtk_cam_request *req /* req_sensor or req_normal */)
+{
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	struct device *dev = ctx->cam->dev;
+	struct mtk_raw_sensor_data *sensor_data;
+	struct mtk_raw_request_data *raw_data;
+	struct mtk_cam_packed_sensor_ctrl *packed_ctrl;
+
+	raw_data = req_get_raw_data(ctx, req);
+	if (!raw_data) {
+		dev_info(dev, "%s failed to get raw_data\n", __func__);
+		return -1;
+	}
+
+	packed_ctrl = &raw_data->ctrl.packed_snesor_ctrl;
+	sensor_data = &ctx->cam->pipelines.raw[ctx->raw_subdev_idx].sensor_data;
+
+	/* ae ctrl */
+	if (sensor_data->ae_ctrl &&
+	    (packed_ctrl->exposure.shutter > 0) &&
+	    (packed_ctrl->exposure.gain > 0)) {
+		struct mtk_hdr_ae ae;
+
+		ae.exposure.le_exposure = packed_ctrl->exposure.shutter;
+		ae.gain.le_gain = packed_ctrl->exposure.gain;
+		ae.req_id = packed_ctrl->req_id;
+		v4l2_ctrl_s_ctrl_compound(sensor_data->ae_ctrl,
+					  V4L2_CTRL_TYPE_U32, &ae);
+		if (CAM_DEBUG_ENABLED(JOB_ACTION))
+			dev_info(dev, "%s ae ctrl %u/%u", __func__,
+				packed_ctrl->exposure.shutter,
+				packed_ctrl->exposure.gain);
+	}
+
+	/* awb gain */
+	if (sensor_data->awb_ctrl &&
+	    packed_ctrl->valid_awb_gain) {
+		struct mtk_awb_gain awb;
+
+		awb.abs_gain_gr = packed_ctrl->awb_gain.abs_gain_gr;
+		awb.abs_gain_r = packed_ctrl->awb_gain.abs_gain_r;
+		awb.abs_gain_b = packed_ctrl->awb_gain.abs_gain_b;
+		awb.abs_gain_gb = packed_ctrl->awb_gain.abs_gain_gb;
+		v4l2_ctrl_s_ctrl_compound(sensor_data->awb_ctrl,
+					  V4L2_CTRL_TYPE_U32, &awb);
+		if (CAM_DEBUG_ENABLED(JOB_ACTION))
+			dev_info(dev, "%s awb ctrl %u/%u/%u/%u", __func__,
+				packed_ctrl->awb_gain.abs_gain_gr,
+				packed_ctrl->awb_gain.abs_gain_r,
+				packed_ctrl->awb_gain.abs_gain_b,
+				packed_ctrl->awb_gain.abs_gain_gb);
+	}
+
+	/* flicker */
+	if (sensor_data->flicker_ctrl &&
+	    packed_ctrl->valid_flicker) {
+		v4l2_ctrl_s_ctrl(sensor_data->flicker_ctrl,
+				 packed_ctrl->flicker_adjustment);
+		if (CAM_DEBUG_ENABLED(JOB_ACTION))
+			dev_info(dev, "%s flicker ctrl %d", __func__,
+				packed_ctrl->flicker_adjustment);
+	}
+
+	return 0;
+}
+
+static int
+_apply_sensor_subsample(struct mtk_cam_job *job)
+{
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	struct mtk_cam_device *cam = ctx->cam;
+	struct mtk_cam_request *req = job->req;
+	bool has_ctrls_from_sensor = job->sensor_hdl_obj;
+	struct v4l2_ctrl *ctrl;
+
+	if (job->req_sensor)
+		req = job->req_sensor;
+
+	frame_sync_start(job);
+
+	update_sensor_fmt(job);
+	ctx->cam_ctrl.sensor_sync_id= job->req_info_id;
+	ctx->cam_ctrl.sensor_seq = job->req_seq;
+
+	if (job->is_raw_trigger_sensor)
+		apply_raw_ctrl_sensor(job, req);
+
+	if (has_ctrls_from_sensor)
+		v4l2_ctrl_request_setup(&req->req, job->sensor->ctrl_handler);
+
+	job->local_apply_sensor_ts = local_clock();
+
+	frame_sync_end(job);
+
+	mtk_cam_job_state_set(&job->job_state, SENSOR_STATE, S_SENSOR_APPLIED);
+
+	if (has_ctrls_from_sensor)
+		job_complete_sensor_ctrl_obj(job);
+
+	if (CAM_DEBUG_ENABLED(JOB_ACTION))
+		dev_info(cam->dev,
+			 "[%s] ctx:%d seq %#x sensor_ctrl_obj:%d is_raw_trigger:%d\n",
+			 __func__, ctx->stream_id, job->frame_seq_no,
+			 has_ctrls_from_sensor, job->is_raw_trigger_sensor);
+
+	if (CAM_DEBUG_ENABLED(SENSOR)) {
+		list_for_each_entry(ctrl, &job->sensor->ctrl_handler->ctrls, node) {
+			dev_info(cam->dev,
+				"[%s] ctx:%d req:%s ctrl_id = %d, ctrl_name = %s, ctrl_val = %d\n",
+				__func__, ctx->stream_id, req->debug_str,
+				ctrl->id, ctrl->name, ctrl->val);
+		}
+	}
+
+	return 0;
+}
+
 static int
 _apply_sensor(struct mtk_cam_job *job)
 {
@@ -2347,6 +2466,8 @@ static void trigger_error_dump(struct mtk_cam_job *job,
 	struct device *dev = ctx->cam->dev;
 	char warn_desc[64];
 
+	if(!CAM_DEBUG_ENABLED(JOB))
+		scen_to_str(job->scen_str, sizeof(job->scen_str), &job->job_scen);
 	job_print_warn_desc(job, desc, warn_desc);
 	dev_info(dev, "%s: [%s] desc=%s warn_desc=%s\n", __func__,
 		 job->scen_str, desc, warn_desc);
@@ -4285,6 +4406,23 @@ static struct mtk_cam_job_ops basic_job_ops = {
 	.seamless_ops = &common_seamless,
 };
 
+static struct mtk_cam_job_ops subsample_job_ops = {
+	.cancel = job_cancel,
+	.dump = job_dump,
+	.finalize = job_finalize,
+	.compose_done = _compose_done,
+	.compose = _compose,
+	.stream_on = _stream_on,
+	//.reset
+	.apply_sensor = _apply_sensor_subsample,
+	.apply_isp = _apply_cq,
+	.mark_afo_done = job_mark_afo_done,
+	.mark_engine_done = job_mark_engine_done,
+	.dump_aa_info = job_dump_aa_info,
+	.sw_recovery = job_sw_recovery,
+	.seamless_ops = &common_seamless,
+};
+
 static struct mtk_cam_job_ops stagger_job_ops = {
 	.cancel = job_cancel,
 	.dump = job_dump,
@@ -4506,6 +4644,8 @@ static void update_job_sensor(struct mtk_cam_job *job)
 	if (ctrl_data && ctrl_data->sensor && ctrl_data->seninf) {
 		raw->seninf = ctrl_data->seninf;
 		raw->sensor = ctrl_data->sensor;
+		mtk_raw_update_sensor_data(&raw->sensor_data,
+					   raw->sensor->ctrl_handler);
 	}
 
 	job->sensor = raw->sensor;
@@ -4940,6 +5080,21 @@ static void update_tuning_param(struct mtk_cam_job *job)
 	job->is_error = (job->first_job || job->seamless_switch) ? 0 : 1;
 }
 
+static bool check_is_raw_trigger_sensor(struct mtk_cam_job *job)
+{
+	struct mtk_cam_packed_sensor_ctrl *packed_ctrl;
+	struct mtk_raw_request_data *raw_data =
+		req_get_raw_data(job->src_ctx, job->req);
+
+	if (!raw_data || !raw_data->ctrl.valid_packed_sensor_ctrl)
+		return false;
+
+	packed_ctrl = &raw_data->ctrl.packed_snesor_ctrl;
+
+	return packed_ctrl->valid_flicker || packed_ctrl->valid_awb_gain ||
+		(packed_ctrl->exposure.shutter > 0 && packed_ctrl->exposure.gain > 0);
+}
+
 static int job_sen_req_pack(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -4967,6 +5122,7 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 	job->first_frm_switch = false;
 	job->scq_period = SCQ_DEADLINE_US(get_sensor_interval_us(job)) / 1000;
 	job->do_pending_aid_config = false;
+	job->is_raw_trigger_sensor = check_is_raw_trigger_sensor(job);
 
 	init_completion(&job->compose_completion);
 	init_completion(&job->cq_exe_completion);
@@ -5007,9 +5163,10 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 		break;
 	case JOB_TYPE_HW_SUBSAMPLE:
 		mtk_cam_job_state_init_subsample(&job->job_state, &sf_state_cb,
-					     !!job->sensor_hdl_obj);
+						 (!!job->sensor_hdl_obj ||
+						  job->is_raw_trigger_sensor));
 		pack_helper = &subsample_pack_helper;
-		job->ops = &basic_job_ops;
+		job->ops = &subsample_job_ops;
 		job->init_params = &subsample_init;
 		break;
 	case JOB_TYPE_ONLY_SV:
@@ -5034,32 +5191,36 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 		pr_info("%s: job type %d not ready\n", __func__, job->job_type);
 		break;
 	}
+
 	if (WARN_ON(!pack_helper))
 		return -1;
 	if (pack_helper->job_init && pack_helper->job_init(job))
 		return -1;
+
 	/* switch scenario */
-	sensor_change = is_sensor_changed(job);
 	/* determine if it is a raw switch job */
 	if (update_job_raw_switch(job))
 		return -1;
+
 	if (job->job_type != JOB_TYPE_M2M) {
+		sensor_change = is_sensor_changed(job);
 		job->first_frm_switch =
 			(job->first_job || sensor_change) && is_sensor_mode_update(job);
 		job->seamless_switch =
 			(!job->first_job && !sensor_change) && is_sensor_mode_update(job);
 	}
+
 	update_sensor_fl_low_latency(job);
 	update_sen_expo_diff(job);
 	update_tuning_param(job);
 	update_job_exp_ns(job);
 
 	if (CAM_DEBUG_ENABLED(JOB))
-		pr_info("[%s] ctx:%d|type:%d|%s|exp(cur:%d,prev:%d)|sw/scene:%d/%d, req_id:%d",
-				__func__,
-				ctx->stream_id, job->job_type, job->scen_str,
-				job_exp_num(job), job_prev_exp_num(job),
-				get_sw_feature(job), get_hw_scenario(job), job->req_info_id);
+		pr_info("[%s] ctx:%d|type:%d|%s|exp(cur:%d,prev:%d)|sw/scene:%d/%d, req_id:%d, sensor:%d/%d",
+			__func__, ctx->stream_id, job->job_type, job->scen_str,
+			job_exp_num(job), job_prev_exp_num(job),
+			get_sw_feature(job), get_hw_scenario(job), job->req_info_id,
+			!!job->sensor_hdl_obj, job->is_raw_trigger_sensor);
 
 	return ret;
 }
@@ -5114,9 +5275,11 @@ static int job_isp_req_pack(struct mtk_cam_job *job)
 
 	if (WARN_ON(!pack_helper))
 		return -1;
+
 	/* determine if it is a raw change job */
 	if (update_job_raw_change(job))
 		return -1;
+
 	/* determine img wbuf is needed */
 	update_job_wbuf_pool_wrapper(job);
 
@@ -6417,6 +6580,8 @@ static int job_sw_recovery(struct mtk_cam_job *job)
 	if (!is_dc_mode(job))
 		return 0;
 
+	if(!CAM_DEBUG_ENABLED(JOB))
+		scen_to_str(job->scen_str, sizeof(job->scen_str), &job->job_scen);
 	pr_info("%s: ctx-%d cq-0x%x eng 0x%08x (%s)\n",
 		__func__, ctx->stream_id,
 		job->frame_seq_no, job->used_engine, job->scen_str);

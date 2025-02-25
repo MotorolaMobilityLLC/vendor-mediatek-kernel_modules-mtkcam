@@ -399,9 +399,6 @@ void mtk_cam_vb2_sync_for_cpu(struct vb2_buffer *vb)
 	struct sg_table *sgt;
 	unsigned int plane;
 
-	if (CAM_DEBUG_ENABLED(V4L2))
-		pr_info("%s: %s\n", __func__, node->desc.name);
-
 	for (plane = 0; plane < vb->num_planes; ++plane) {
 		buf = vb->planes[plane].mem_priv;
 		sgt = buf->dma_sgt;
@@ -410,6 +407,10 @@ void mtk_cam_vb2_sync_for_cpu(struct vb2_buffer *vb)
 			continue;
 
 		if (buf->sync) {
+			if (CAM_DEBUG_ENABLED(V4L2))
+				pr_info("%s: %s size:%zu\n",
+					__func__, node->desc.name, buf->size);
+
 			dma_sync_sgtable_for_cpu(
 				mtk_buf->is_acp ? buf->dev :
 				vb->vb2_queue->alloc_devs[plane] ? : vb->vb2_queue->dev,

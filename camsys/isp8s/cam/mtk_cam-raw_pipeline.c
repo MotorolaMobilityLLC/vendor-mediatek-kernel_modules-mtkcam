@@ -828,6 +828,7 @@ static int mtk_raw_try_ctrl(struct v4l2_ctrl *ctrl)
 	/* skip control value checks */
 	case V4L2_CID_MTK_CAM_RAW_RESOURCE_UPDATE:
 	case V4L2_CID_MTK_CAM_MSTREAM_EXPOSURE:
+	case V4L2_CID_MTK_CAM_PACKED_SENSOR_CTRL:
 	case V4L2_CID_MTK_CAM_APU_INFO:
 	case V4L2_CID_MTK_CAM_RAW_PATH_SELECT:
 	case V4L2_CID_MTK_CAM_SYNC_ID:
@@ -953,6 +954,24 @@ static int mtk_raw_set_ctrl(struct v4l2_ctrl *ctrl)
 				 ctrl_data->mstream_exp.exposure[1].shutter,
 				 ctrl_data->mstream_exp.exposure[1].gain);
 
+		break;
+	case V4L2_CID_MTK_CAM_PACKED_SENSOR_CTRL:
+		ctrl_data->packed_snesor_ctrl =
+			*(struct mtk_cam_packed_sensor_ctrl *)ctrl->p_new.p;
+		ctrl_data->valid_packed_sensor_ctrl = 1;
+
+		if (CAM_DEBUG_ENABLED(V4L2))
+			dev_info(dev, "%s: packed sensor ctrl. req:%d (%u,%u) %d:(%u,%u,%u,%u) %d:(%u)\n",
+				 __func__, ctrl_data->packed_snesor_ctrl.req_id,
+				 ctrl_data->packed_snesor_ctrl.exposure.shutter,
+				 ctrl_data->packed_snesor_ctrl.exposure.gain,
+				 ctrl_data->packed_snesor_ctrl.valid_awb_gain,
+				 ctrl_data->packed_snesor_ctrl.awb_gain.abs_gain_gr,
+				 ctrl_data->packed_snesor_ctrl.awb_gain.abs_gain_r,
+				 ctrl_data->packed_snesor_ctrl.awb_gain.abs_gain_b,
+				 ctrl_data->packed_snesor_ctrl.awb_gain.abs_gain_gb,
+				 ctrl_data->packed_snesor_ctrl.valid_flicker,
+				 ctrl_data->packed_snesor_ctrl.flicker_adjustment);
 		break;
 	case V4L2_CID_MTK_CAM_APU_INFO:
 		{
@@ -1254,6 +1273,18 @@ static const struct v4l2_ctrl_config mstream_exposure = {
 	.dims = {sizeof_u32(struct mtk_cam_mstream_exposure)},
 };
 
+static const struct v4l2_ctrl_config cfg_packed_sensor_ctrl = {
+	.ops = &cam_ctrl_ops,
+	.id = V4L2_CID_MTK_CAM_PACKED_SENSOR_CTRL,
+	.name = "bypassed sensor control",
+	.type = V4L2_CTRL_TYPE_U32,
+	.flags = V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
+	.max = 0xFFFFFFFF,
+	.step = 1,
+	.def = 0,
+	.dims = {sizeof_u32(struct mtk_cam_packed_sensor_ctrl)},
+};
+
 static const struct v4l2_ctrl_config cfg_apu_info = {
 	.ops = &cam_ctrl_ops,
 	.id = V4L2_CID_MTK_CAM_APU_INFO,
@@ -1432,6 +1463,27 @@ static void mtk_raw_reset_ctrls(struct mtk_raw_pipeline *pipeline)
 
 	/* mark apu info as invalid */
 	ctrl_data->valid_apu_info = 0;
+
+	/* mark packed sensor ctrl as invalid */
+	ctrl_data->valid_packed_sensor_ctrl = 0;
+}
+
+void mtk_raw_update_sensor_data(struct mtk_raw_sensor_data *sensor_data,
+				struct v4l2_ctrl_handler *sensor_ctrl_handler)
+{
+	sensor_data->ae_ctrl =
+		v4l2_ctrl_find(sensor_ctrl_handler, V4L2_CID_MTK_STAGGER_AE_CTRL);
+	sensor_data->awb_ctrl =
+		v4l2_ctrl_find(sensor_ctrl_handler, V4L2_CID_MTK_AWB_GAIN);
+	sensor_data->flicker_ctrl =
+		v4l2_ctrl_find(sensor_ctrl_handler, V4L2_CID_MTK_ANTI_FLICKER);
+}
+
+void mtk_raw_reset_sensor_data(struct mtk_raw_sensor_data *sensor_data)
+{
+	sensor_data->ae_ctrl = NULL;
+	sensor_data->awb_ctrl = NULL;
+	sensor_data->flicker_ctrl = NULL;
 }
 
 static int mtk_raw_sd_s_stream(struct v4l2_subdev *sd, int enable)
@@ -1454,8 +1506,13 @@ static int mtk_raw_sd_s_stream(struct v4l2_subdev *sd, int enable)
 		if (!pipe->sensor || !pipe->seninf)
 			dev_info(dev, "%s:pipe(%d) seninf/ sensor not enabled\n",
 					 __func__, pipe->id);
+
+		if (pipe->sensor)
+			mtk_raw_update_sensor_data(&pipe->sensor_data,
+						   pipe->sensor->ctrl_handler);
 	} else {
 		mtk_raw_reset_ctrls(pipe);
+		mtk_raw_reset_sensor_data(&pipe->sensor_data);
 		pipe->sensor = NULL;
 		pipe->seninf = NULL;
 	}
@@ -3805,7 +3862,7 @@ static void mtk_raw_pipeline_ctrl_setup(struct mtk_raw_pipeline *pipe)
 	int ret = 0;
 
 	ctrl_hdlr = &pipe->ctrl_handler;
-	ret = v4l2_ctrl_handler_init(ctrl_hdlr, 8);
+	ret = v4l2_ctrl_handler_init(ctrl_hdlr, 32);
 	if (ret) {
 		pr_info("%s: v4l2_ctrl_handler init failed\n", __func__);
 		return;
@@ -3843,6 +3900,8 @@ static void mtk_raw_pipeline_ctrl_setup(struct mtk_raw_pipeline *pipe)
 		ctrl->flags |= V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
 
 	v4l2_ctrl_new_custom(ctrl_hdlr, &mstream_exposure, NULL);
+
+	v4l2_ctrl_new_custom(ctrl_hdlr, &cfg_packed_sensor_ctrl, NULL);
 
 	/* APU */
 	v4l2_ctrl_new_custom(ctrl_hdlr, &cfg_apu_info, NULL);

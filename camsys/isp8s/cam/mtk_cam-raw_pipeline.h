@@ -124,6 +124,9 @@ struct mtk_raw_ctrl_data {
 	struct mtk_cam_mstream_exposure mstream_exp;
 	bool valid_mstream_exp;
 
+	struct mtk_cam_packed_sensor_ctrl packed_snesor_ctrl;
+	bool valid_packed_sensor_ctrl;
+
 	struct mtk_cam_apu_info apu_info;
 	bool valid_apu_info;
 
@@ -141,6 +144,12 @@ struct mtk_raw_ctrl_data {
 	u8 slc_mode;
 
 	struct mtk_raw_ctrl_data_read_clear rc_data;
+};
+
+struct mtk_raw_sensor_data {
+	struct v4l2_ctrl *ae_ctrl;
+	struct v4l2_ctrl *awb_ctrl;
+	struct v4l2_ctrl *flicker_ctrl;
 };
 
 struct mtk_raw_sink_data {
@@ -190,6 +199,7 @@ struct mtk_raw_pipeline {
 	 */
 	struct v4l2_subdev *sensor;
 	struct v4l2_subdev *seninf;
+	struct mtk_raw_sensor_data sensor_data;
 };
 
 static inline struct mtk_raw_pipeline *
@@ -241,5 +251,8 @@ void mtk_raw_hdr_tsfifo_pop(struct mtk_raw_pipeline *pipe,
 
 void mtk_raw_reset_early_slb(struct mtk_raw_pipeline *pipe);
 void mtk_raw_reset_early_slc(struct mtk_raw_pipeline *pipe);
+
+void mtk_raw_update_sensor_data(struct mtk_raw_sensor_data *sensor_data,
+				struct v4l2_ctrl_handler *sensor_ctrl_handler);
 
 #endif /*__MTK_CAM_RAW_PIPELINE_H*/

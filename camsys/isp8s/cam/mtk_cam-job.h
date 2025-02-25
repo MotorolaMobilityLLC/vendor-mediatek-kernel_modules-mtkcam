@@ -430,6 +430,7 @@ struct mtk_cam_job {
 	struct v4l2_subdev *sensor;
 	struct v4l2_subdev *seninf; /* for raw switch */
 	struct v4l2_subdev *seninf_prev; /* TODO: (Fred) check if we can remove it */
+	bool is_raw_trigger_sensor;
 
 	bool is_sv_pure_raw;
 	bool need_copy_ltmsgo;

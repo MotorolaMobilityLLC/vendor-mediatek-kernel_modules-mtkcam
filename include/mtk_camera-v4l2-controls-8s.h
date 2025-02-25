@@ -40,6 +40,7 @@
 #define V4L2_CID_MTK_CAM_STABLE_FRM_LEN (V4L2_CID_USER_MTK_CAM_BASE + 33)
 #define V4L2_CID_MTK_CAM_SV_BUF_EARLY_RETURN (V4L2_CID_USER_MTK_CAM_BASE + 34)
 #define V4L2_CID_MTK_CAM_SV_RESOURCE_CALC (V4L2_CID_USER_MTK_CAM_BASE + 35)
+#define V4L2_CID_MTK_CAM_PACKED_SENSOR_CTRL (V4L2_CID_USER_MTK_CAM_BASE + 36)
 
 #define V4L2_CID_MTK_CAM_RAW_RESOURCE_CALC_TEST                                \
 	(V4L2_CID_USER_MTK_CAM_BASE + 47)
@@ -57,9 +58,25 @@ struct mtk_cam_shutter_gain {
 	__u32 shutter;
 	__u32 gain;
 };
+struct mtk_cam_awb_gain {
+	__u32 abs_gain_gr;
+	__u32 abs_gain_r;
+	__u32 abs_gain_b;
+	__u32 abs_gain_gb;
+};
 struct mtk_cam_mstream_exposure {
 	struct mtk_cam_shutter_gain exposure[2];
 	int req_id;
+};
+struct mtk_cam_packed_sensor_ctrl {
+	int req_id;
+	struct mtk_cam_shutter_gain exposure;
+
+	bool valid_awb_gain;
+	struct mtk_cam_awb_gain awb_gain;
+
+	bool valid_flicker;
+	int flicker_adjustment;
 };
 enum mtk_cam_scen_id {
 	MTK_CAM_SCEN_NORMAL,
