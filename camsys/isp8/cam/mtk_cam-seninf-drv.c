@@ -4905,37 +4905,8 @@ int mtk_cam_seninf_aov_runtime_resume(unsigned int sensor_id,
 			return -EINVAL;
 		}
 		/* SCP side to AP */
-		if (core->aov_csi_clk_switch_flag == CSI_CLK_130) {
-			/* set the parent of clk as parent_clk */
-			if (core->clk[ctx->clk_index] && core->clk[ctx->clk_src_index]) {
-				ret = clk_set_parent(
-					core->clk[ctx->clk_index],
-					core->clk[ctx->clk_src_index]);
-				if (ret < 0) {
-					dev_info(ctx->dev,
-						"[%s] clk[%u]:%s set_parent clk_src[%u]:%s(fail),ret(%d)\n",
-						__func__,
-						ctx->clk_index, clk_names[ctx->clk_index],
-						ctx->clk_src_index,
-						clk_names[ctx->clk_src_index],
-						ret);
-					mutex_unlock(&core->mutex);
-					return ret;
-				}
-				dev_info(ctx->dev,
-					"[%s] clk[%u]:%s set_parent clk_src[%u]:%s(correct),ret(%d)\n",
-					__func__,
-					ctx->clk_index, clk_names[ctx->clk_index],
-					ctx->clk_src_index, clk_names[ctx->clk_src_index],
-					ret);
-			} else {
-				dev_info(ctx->dev,
-					"[%s] Please check clk get whether NULL?\n",
-					__func__);
-				mutex_unlock(&core->mutex);
-				return -EINVAL;
-			}
-		}
+		dev_info(ctx->dev, "[%s] set csi_ck in power on.\n", __func__);
+
 		/* set phya clk source */
 		set_phya_clk(ctx);
 	}
