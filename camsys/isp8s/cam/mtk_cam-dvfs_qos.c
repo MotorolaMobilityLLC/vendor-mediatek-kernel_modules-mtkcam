@@ -344,7 +344,7 @@ int mtk_cam_dvfs_switch_begin(struct mtk_camsys_dvfs *dvfs, int stream_id, int r
 			      unsigned int freq_hz, bool boostable)
 {
 	if (is_dvc_support())
-		return mtk_cam_dvc_vote(&dvfs->dvc, raw_id, freq_to_oppidx(dvfs, freq_hz), boostable);
+		return mtk_cam_dvc_vote(&dvfs->dvc, raw_id, freq_to_oppidx(dvfs, freq_hz), 1);
 	else
 		return dvfs_update(dvfs, stream_id, freq_hz, boostable, true,
 		   __func__);

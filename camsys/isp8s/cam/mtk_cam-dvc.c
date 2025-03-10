@@ -249,7 +249,8 @@ void mtk_cam_dvc_unint(struct mtk_camsys_dvc *dvc, u32 raw_id)
 		readl(base + REG_DVC_CAM_HW_DVC_MAX_OPP_HIGH_TM));
 }
 
-#define BOOST_DVFS_OPP    2
+#define MAX_DVFS_OPP_IDX       4
+#define BOOST_DVFS_OPP         2
 int mtk_cam_dvc_vote(struct mtk_camsys_dvc *dvc, u32 raw_id, u32 opp, bool boost)
 {
 	void __iomem *base = get_dvc_base(dvc, raw_id);
@@ -262,7 +263,8 @@ int mtk_cam_dvc_vote(struct mtk_camsys_dvc *dvc, u32 raw_id, u32 opp, bool boost
 		return 0;
 
 	SET_FIELD(&val, DVC_CAM_SW_REQ, 1);
-	SET_FIELD(&val, DVC_CAM_SW_OPP_VAL, boost ? opp + BOOST_DVFS_OPP : opp);
+	SET_FIELD(&val, DVC_CAM_SW_OPP_VAL,
+			boost ? min(opp + BOOST_DVFS_OPP, MAX_DVFS_OPP_IDX) : opp);
 	writel(val, base + REG_DVC_CAM_SW_VOTER);
 
 	pr_info("%s: raw_id:%d index:%d, sw_vote:0x%x\n",
