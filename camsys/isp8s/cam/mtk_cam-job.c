@@ -6095,7 +6095,7 @@ static int fill_raw_meta_header(struct req_buffer_helper *helper)
 		if (!vaddr)
 			return -1;
 		p.cfg_dataformat = buf->meta_info.v4l2_pixelformat;
-		p.meta_cfg = vaddr;
+		p.meta_cfg = (struct mtk_cam_uapi_meta_raw_stats_cfg *)vaddr;
 		p.meta_cfg_size = buf->meta_info.buffersize;
 
 		raw_data = req_get_raw_data(job->src_ctx, job->req);

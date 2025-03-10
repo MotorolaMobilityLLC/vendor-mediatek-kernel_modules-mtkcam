@@ -14,6 +14,8 @@
 #define MULTI_SMI_SV_HW_NUM 3
 #define DMA_GROUP_SIZE 4
 
+struct mtk_cam_uapi_meta_raw_stats_cfg;
+
 enum camsys_module_id {
 	CAM_VCORE = 0,
 	CAM_MAIN_RAWA,
@@ -178,7 +180,7 @@ struct dma_info {
 
 struct set_meta_stats_info_param {
 	unsigned int cfg_dataformat;
-	void *meta_cfg;
+	struct mtk_cam_uapi_meta_raw_stats_cfg *meta_cfg;
 	size_t meta_cfg_size;
 
 	/* raw input size */
