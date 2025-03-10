@@ -1557,6 +1557,41 @@ static int dynamic_raw_change_stream_on(struct mtk_cam_job *job, int unit_engs)
 	return 0;
 }
 
+static void mtk_cam_ctrl_pda_unint_flow(struct mtk_cam_job *job)
+{
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	struct mtk_cam_ctrl *ctrl = &ctx->cam_ctrl;
+	unsigned long pda_engine_uninit = job->uninit_pda_engine;
+	struct device *dev = ctx->cam->dev;
+	int prev_seq;
+
+	prev_seq = prev_frame_seq(job->frame_seq_no);
+	dev_info(dev, "[%s] wait engines done req:0x%x\n",
+			__func__, prev_seq);
+	if (mtk_cam_ctrl_wait_event(ctrl, check_done, &prev_seq, 30000)) {
+		dev_info(dev, "[%s] check for pda unint timeout: prev_seq=0x%x\n",
+			 __func__, prev_seq);
+		goto PDA_UNINT_FAILURE;
+	}
+	if (mtk_cam_job_uninit_pda_engine(job, pda_engine_uninit)) {
+		dev_info(dev, "[%s] uninit engine failed, uninit pda:0x%lx\n",
+			__func__, job->uninit_pda_engine);
+		goto PDA_UNINT_FAILURE;
+	}
+
+	if (pda_engine_uninit)
+		mtk_cam_event_pda_resource_ready(&ctx->cam_ctrl, pda_engine_uninit);
+	dev_info(dev, "[%s] finish, uninit engines:0x%lx\n",
+		__func__, pda_engine_uninit);
+
+	return;
+
+PDA_UNINT_FAILURE:
+	dev_info(dev, "[%s] failed: ctx-%d job %d frame_seq 0x%x\n",
+		__func__, ctx->stream_id, job->req_seq, job->frame_seq_no);
+
+}
+
 static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -2120,6 +2155,8 @@ static void mtk_cam_ctrl_queue_for_flow_control(struct mtk_cam_ctrl *ctrl,
 		func = mtk_cam_ctrl_seamless_switch_flow;
 	else if (job->raw_change)
 		func = mtk_cam_ctrl_dynamic_raws_change_flow;
+	else if (job->uninit_pda_engine)
+		func = mtk_cam_ctrl_pda_unint_flow;
 
 	if (job->raw_switch)
 		func = mtk_cam_ctrl_raw_switch_flow;
