@@ -20,6 +20,8 @@ struct module_ops {
 			unsigned int mode);
 	void (*cmdq_set)(struct mtk_imgsys_dev *imgsys_dev,
 			void *pkt, int hw_idx);
+	int (*chk_pwr)(struct mtk_imgsys_dev *imgsys_dev,
+			struct img_swfrm_info *user_info, unsigned int mode);
 	void (*dump)(struct mtk_imgsys_dev *imgsys_dev, unsigned int engine);
 	bool (*done_chk)(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine);
 	void (*uninit)(struct mtk_imgsys_dev *imgsys_dev);
