@@ -640,6 +640,10 @@ int mtk_imgsys_hw_streamon(struct mtk_imgsys_pipe *pipe);
 
 unsigned int mtkdip_mem_info_to_memory_mode(struct mem_info *mem_info);
 
+int mtk_imgsys_suspend(struct mtk_imgsys_dev *imgsys_dev);
+
+int mtk_imgsys_resume(struct mtk_imgsys_dev *imgsys_dev);
+
 static inline struct mtk_imgsys_pipe*
 mtk_imgsys_dev_get_pipe(struct mtk_imgsys_dev *imgsys_dev, unsigned int pipe_id)
 {

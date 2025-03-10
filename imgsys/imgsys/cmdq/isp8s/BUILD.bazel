@@ -57,6 +57,8 @@ define_mgk_ddk_ko(
         "//vendor/mediatek/kernel_modules/mtkcam/img_frm_sync:mtk-img-frm-sync",
         "//vendor/mediatek/kernel_modules/mtkcam/imgsys/common:imgsys_common",
         "//vendor/mediatek/kernel_modules/mtkcam/ccusys:mtk_ccuv",
+        "//kernel_device_modules-{}/drivers/misc/mediatek/vmm:mtk-vmm-notifier-mt6993".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/memory:mtk-smi".format(kernel_version),
         "//kernel_device_modules-{}/drivers/misc/mediatek/mtk-interconnect:mtk-icc-core".format(kernel_version),
         "//kernel_device_modules-{}/drivers/misc/mediatek/smi:mtk-smi-dbg".format(kernel_version),
         "//kernel_device_modules-{}/drivers/misc/mediatek/iommu:mtk_iommu_util".format(kernel_version),

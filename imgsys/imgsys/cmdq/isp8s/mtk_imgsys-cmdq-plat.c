@@ -3924,6 +3924,12 @@ void mtk_imgsys_power_ctrl_plat8s(struct mtk_imgsys_dev *imgsys_dev, bool isPowe
 			cmdq_mbox_enable(imgsys_clt[0]->chan);
 
 			imgsys_dev->sw_pm_flow_cnt |= PRE_PWR_ON_2;
+			pm_ret = mtk_imgsys_resume(imgsys_dev);
+			if (pm_ret < 0) {
+				dev_err(imgsys_dev->dev,
+					"%s: [ERROR] mtk_imgsys_resume FAIL: %d\n", __func__, pm_ret);
+				return;
+			}
 			pm_ret = pm_runtime_get_sync(imgsys_dev->dev);
 			if (pm_ret < 0) {
 				dev_err(imgsys_dev->dev,
@@ -3980,6 +3986,12 @@ void mtk_imgsys_power_ctrl_plat8s(struct mtk_imgsys_dev *imgsys_dev, bool isPowe
 			mtk_imgsys_mod_put(imgsys_dev);
 
 			imgsys_dev->sw_pm_flow_cnt |= PRE_PWR_OFF_2;
+			pm_ret = mtk_imgsys_suspend(imgsys_dev);
+			if (pm_ret < 0) {
+				dev_err(imgsys_dev->dev,
+					"%s: [ERROR] mtk_imgsys_suspend FAIL: %d\n", __func__, pm_ret);
+				return;
+			}
 			pm_ret = pm_runtime_put_sync(imgsys_dev->dev);
 			if (pm_ret < 0) {
 				dev_err(imgsys_dev->dev,

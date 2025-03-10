@@ -194,6 +194,73 @@ void mtk_imgsys_mod_get(struct mtk_imgsys_dev *imgsys_dev)
 	kref_get(kref);
 }
 
+int mtk_imgsys_suspend(struct mtk_imgsys_dev *imgsys_dev)
+{
+	int ret, i;
+
+	vmm_disable_cvfs(MTK_IMGSYS_VMM_CVFS_USR_ID, MTK_IMGSYS_VMM_CVFS_SEL_IPE);
+	vmm_disable_cvfs(MTK_IMGSYS_VMM_CVFS_USR_ID, MTK_IMGSYS_VMM_CVFS_SEL_IMG);
+
+	clk_bulk_disable_unprepare(imgsys_dev->num_clks,
+				   imgsys_dev->clks);
+
+	if (imgsys_cmdq_dbg_enable())
+		dev_dbg(imgsys_dev->dev, "%s: disabled imgsys clks\n", __func__);
+
+	if (imgsys_dev->hwccf_apply) {
+		for (i = 0; i < imgsys_dev->larbs_num; i++) {
+			ret = mtk_smi_larb_disable(imgsys_dev->larbs[i]);
+			if (ret) {
+				dev_err(imgsys_dev->dev,
+					"%s: [ERROR] mtk_smi_larb_disable[%d] fail: %d\n",
+					__func__, i, ret);
+				return ret;
+			}
+		}
+	}
+
+	return 0;
+}
+
+int mtk_imgsys_resume(struct mtk_imgsys_dev *imgsys_dev)
+{
+	int ret, i;
+
+	if (imgsys_dev->hwccf_apply) {
+		for (i = 0; i < imgsys_dev->larbs_num; i++) {
+			ret = mtk_smi_larb_enable(imgsys_dev->larbs[i]);
+			if (ret) {
+				dev_err(imgsys_dev->dev,
+					"%s: [ERROR] mtk_smi_larb_enable[%d] fail: %d\n",
+					__func__, i, ret);
+				return ret;
+			}
+		}
+	}
+
+	ret = clk_bulk_prepare_enable(imgsys_dev->num_clks,
+				      imgsys_dev->clks);
+
+	if (imgsys_cmdq_dbg_enable())
+		dev_dbg(imgsys_dev->dev, "%s: enabled imgsys clks\n", __func__);
+
+
+	if (ret) {
+		dev_info(imgsys_dev->dev,
+			"%s: failed to enable dip clks(%d)\n",
+			__func__, ret);
+		clk_bulk_disable_unprepare(imgsys_dev->num_clks,
+					   imgsys_dev->clks);
+
+		return ret;
+	}
+
+	vmm_enable_cvfs(MTK_IMGSYS_VMM_CVFS_USR_ID, MTK_IMGSYS_VMM_CVFS_SEL_IMG);
+	vmm_enable_cvfs(MTK_IMGSYS_VMM_CVFS_USR_ID, MTK_IMGSYS_VMM_CVFS_SEL_IPE);
+
+	return 0;
+}
+
 /*####*/
 
 void imgsys_cmdq_init(struct mtk_imgsys_dev *imgsys_dev, const int nr_imgsys_dev)

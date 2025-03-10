@@ -3480,6 +3480,7 @@ EXPORT_SYMBOL(mtk_imgsys_shutdown);
 
 int mtk_imgsys_runtime_suspend(struct device *dev)
 {
+#ifdef IMGSYS_PM_RUNTIME
 	struct mtk_imgsys_dev *imgsys_dev = dev_get_drvdata(dev);
 	int ret, i;
 
@@ -3503,13 +3504,14 @@ int mtk_imgsys_runtime_suspend(struct device *dev)
 			}
 		}
 	}
-
+#endif
 	return 0;
 }
 EXPORT_SYMBOL(mtk_imgsys_runtime_suspend);
 
 int mtk_imgsys_runtime_resume(struct device *dev)
 {
+#ifdef IMGSYS_PM_RUNTIME
 	struct mtk_imgsys_dev *imgsys_dev = dev_get_drvdata(dev);
 	int ret, i;
 
@@ -3544,7 +3546,7 @@ int mtk_imgsys_runtime_resume(struct device *dev)
 
 	vmm_enable_cvfs(MTK_IMGSYS_VMM_CVFS_USR_ID, MTK_IMGSYS_VMM_CVFS_SEL_IMG);
 	vmm_enable_cvfs(MTK_IMGSYS_VMM_CVFS_USR_ID, MTK_IMGSYS_VMM_CVFS_SEL_IPE);
-
+#endif
 	return 0;
 }
 EXPORT_SYMBOL(mtk_imgsys_runtime_resume);
