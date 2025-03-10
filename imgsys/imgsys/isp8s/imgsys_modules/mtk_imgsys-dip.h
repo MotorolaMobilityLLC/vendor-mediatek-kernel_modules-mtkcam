@@ -33,6 +33,8 @@
 #define IMGSYS_DIP_BASE		(0x34100000)
 #define IMGSYS_DIP_BASE_P	(0x15100000)//YWTBD
 
+#define DIPNR2_CINE_SEL		0x0070//bit24
+
 #define DIP_DBG_SEL		0x210
 #define DIP_DBG_OUT		0x214
 #define DIP_DMATOP_DBG_SEL	0x1020
@@ -116,6 +118,8 @@
 #define DIP_CQ_DESC_NUM		343 // align with userspace
 #define DIP_REG_SIZE		(0x2D000) // align with userspace
 #define DIP_TDR_BUF_MAXSZ 163840 // align with userspace //YWTBD
+#define DIP_CQ_DESC_SIZE		(0x102C) //align with userspace
+#define DIP_CINE_SEL_VA_OFST		(DIP_CQ_DESC_SIZE + 0x17070)
 /********************************************************************
  * Enum Define
  ********************************************************************/
@@ -158,4 +162,6 @@ void imgsys_dip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 int imgsys_dip_tfault_callback(int port,
 			dma_addr_t mva, void *data);
 bool imgsys_dip_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine);
+int imgsys_dip_check_power_domain(struct mtk_imgsys_dev *imgsys_dev,
+			struct img_swfrm_info *user_info, unsigned int mode);
 #endif /* _MTK_DIP_DIP_H_ */

@@ -498,6 +498,32 @@ void imgsys_dip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 	}
 }
 
+int imgsys_dip_check_power_domain(struct mtk_imgsys_dev *imgsys_dev,
+			struct img_swfrm_info *user_info, unsigned int mode)
+{
+	const struct mtk_hcp_ops *hcp_ops = mtk_hcp_fetch_ops(imgsys_dev->scp_pdev);
+	uint32_t *cq_desc = NULL, *cine_sel = NULL;
+	void *cq_base = NULL;
+
+	if (hcp_ops && hcp_ops->fetch_dip_cq_mb_virt)
+		cq_base = hcp_ops->fetch_dip_cq_mb_virt(imgsys_dev->scp_pdev, mode);
+
+	if (cq_base == NULL)
+		return 0;
+
+	if (user_info->priv[IMGSYS_HW_DIP].desc_offset == 0xffffffff)
+		return 0;
+
+	cq_desc = (uint32_t *)((void *)(cq_base +
+		user_info->priv[IMGSYS_HW_DIP].desc_offset));
+
+	cine_sel = cq_desc + (DIP_CINE_SEL_VA_OFST / sizeof(uint32_t));
+	if (*cine_sel & 0x1000000)
+		return 1; // DIP_CINE enable
+	else
+		return 0;
+}
+
 void imgsys_dip_cmdq_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev, void *pkt, int hw_idx)
 {
 	unsigned int ofset;
@@ -1292,6 +1318,7 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	unsigned int CtlDdbSel = DIP_DBG_SEL;
 	unsigned int CtlDbgOut = DIP_DBG_OUT;
 	char DMANrPort = 0;
+	unsigned int CineSel = 0;
 
 	pr_info("%s: +\n", __func__);
 
@@ -1378,20 +1405,25 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 				pr_debug("Failed to write DIP register values to AEE buffer\n");
 		}
 	}
+	/* cine_sel check */
+	CineSel = (((unsigned int)ioread32((void *)(dipRegBA + DIPNR2_CINE_SEL))
+			& (1 << 24)) ? 1 : 0);
 
-	/* 0x341D0000~ */
-	dipRegBA = gdipRegBA[3];
+	if (CineSel == 1) {
+		/* 0x341D0000~ */
+		dipRegBA = gdipRegBA[3];
 
-	/* cine reg */
-	for (j = 0; j < sizeof(g_DIPRegDumpCineIfo)/sizeof(struct DIPRegDumpInfo); j++) {
-		k = g_DIPRegDumpCineIfo[j].oft & 0xFFF0;
-		for (i = k; i <= g_DIPRegDumpCineIfo[j].end; i += 0x10) {
-			pr_info("[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X",
-				(unsigned int)(g_RegBaseAddrCine + i),
-				(unsigned int)ioread32((void *)(dipRegBA + i)),
-				(unsigned int)ioread32((void *)(dipRegBA + i + 0x4)),
-				(unsigned int)ioread32((void *)(dipRegBA + i + 0x8)),
-				(unsigned int)ioread32((void *)(dipRegBA + i + 0xc)));
+		/* cine reg */
+		for (j = 0; j < sizeof(g_DIPRegDumpCineIfo)/sizeof(struct DIPRegDumpInfo); j++) {
+			k = g_DIPRegDumpCineIfo[j].oft & 0xFFF0;
+			for (i = k; i <= g_DIPRegDumpCineIfo[j].end; i += 0x10) {
+				pr_info("[0x%08X] 0x%08X 0x%08X 0x%08X 0x%08X",
+					(unsigned int)(g_RegBaseAddrCine + i),
+					(unsigned int)ioread32((void *)(dipRegBA + i)),
+					(unsigned int)ioread32((void *)(dipRegBA + i + 0x4)),
+					(unsigned int)ioread32((void *)(dipRegBA + i + 0x8)),
+					(unsigned int)ioread32((void *)(dipRegBA + i + 0xc)));
+			}
 		}
 	}
 
@@ -1455,12 +1487,14 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	/* VDCE_D1 debug data */
 	imgsys_dip_dump_vdce(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
 
-	dipRegBA = gdipRegBA[3];
-	g_RegBaseAddr = g_RegBaseAddrCine;
-	/* BOK_D1 debug data */
-	imgsys_dip_dump_bok(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
-	/* FPNR_D1 debug data */
-	imgsys_dip_dump_fpnr(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+	if (CineSel == 1) {
+		dipRegBA = gdipRegBA[3];
+		g_RegBaseAddr = g_RegBaseAddrCine;
+		/* BOK_D1 debug data */
+		imgsys_dip_dump_bok(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+		/* FPNR_D1 debug data */
+		imgsys_dip_dump_fpnr(imgsys_dev, dipRegBA, CtlDdbSel, CtlDbgOut);
+	}
 
 	pr_info("[gals_tx dgb addr] 0x34780048 = 0x%08X",
 		(unsigned int)ioread32((void *)(gVcoreRegBA + 0x48)));
