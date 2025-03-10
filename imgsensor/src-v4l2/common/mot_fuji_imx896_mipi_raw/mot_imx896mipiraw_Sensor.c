@@ -39,6 +39,10 @@ static int imx896_set_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 #if  ENABLE_IMX896_LONG_EXPOSURE
 static int imx896_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 #endif
+static int imx896_set_multi_shutter_frame_length(struct subdrv_ctx *ctx, u64 *shutters, u16 exp_cnt, u16 frame_length);
+static int imx896_set_hdr_tri_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int imx896_set_multi_gain(struct subdrv_ctx *ctx, u32 *gains, u16 exp_cnt);
+static int imx896_set_hdr_tri_gain(struct subdrv_ctx *ctx, u8 *para, u32* len);
 
 
 /* STRUCT */
@@ -50,6 +54,8 @@ static struct subdrv_feature_control feature_control_list[] = {
 #if  ENABLE_IMX896_LONG_EXPOSURE
 	{SENSOR_FEATURE_SET_ESHUTTER, imx896_set_shutter},
 #endif
+	{SENSOR_FEATURE_SET_HDR_SHUTTER, imx896_set_hdr_tri_shutter},	//for 2exp staggerHDR
+	{SENSOR_FEATURE_SET_DUAL_GAIN, imx896_set_hdr_tri_gain},	//for 2exp staggerHDR
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
@@ -245,6 +251,39 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
 	},
 };
 
+
+static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2b,
+			.hsize = 0x1000,
+			.vsize = 0x0c00,
+			.user_data_desc = VC_STAGGER_NE,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 1,
+			.data_type = 0x2b,
+			.hsize = 0x1000,
+			.vsize = 0x0c00,
+			.user_data_desc = VC_STAGGER_ME,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x0200,
+			.vsize = 0x02F0,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
+		},
+	},
+};
+
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 0,
@@ -260,7 +299,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4LeFirst = 0,
 	.i4Crop = {
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 	},
 	.i4ModeIndex = 3,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
@@ -319,8 +358,8 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 	.i4Crop = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
-		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
-		{0, 0}, {0, 384}, {0, 0}, {0, }, {0, 0},
+		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5> <cust6>
+		{0, 0}, {0, 384}, {0, 0}, {0, 0}, {0, 0},{0, 0},
 	},
 	.i4BlockNumX = 508,
 	.i4BlockNumY = 94,
@@ -350,6 +389,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.seamless_switch_group = 1,
 		.seamless_switch_mode_setting_table = imx896_seamless_preview,
 		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx896_seamless_preview),
+		.hdr_mode = HDR_NONE,
 		.pclk = 1360000000,
 		.linelength = 11904,
 		.framelength = 3791,
@@ -402,6 +442,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
 		.pclk = 1360000000,
 		.linelength = 11904,
 		.framelength = 3791,
@@ -451,9 +492,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_vid),
 		.mode_setting_table = imx896_normal_video_setting,
 		.mode_setting_len = ARRAY_SIZE(imx896_normal_video_setting),
-		.seamless_switch_group = PARAM_UNDEFINED,
-		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
-		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.seamless_switch_group = 2,
+		.seamless_switch_mode_setting_table = imx896_seamless_normal_video,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx896_seamless_normal_video),
+		.hdr_mode = HDR_NONE,
 		.pclk = 1360000000,
 		.linelength = 11904,
 		.framelength = 3791,
@@ -506,6 +548,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
 		.pclk = 1360000000,
 		.linelength = 4264,
 		.framelength = 2630,
@@ -558,6 +601,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
 		.pclk = 1360000000,
 		.linelength = 11904,
 		.framelength = 3791,
@@ -717,6 +761,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_cus3),
 		.mode_setting_table = addr_data_pair_custom3,
 		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom3),
+		.hdr_mode = HDR_NONE,
 		.pclk = 1360000000,
 		.linelength = 4264,
 		.framelength = 1314,
@@ -870,7 +915,65 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.cphy_settle = 73,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
-	}
+	},
+	{ //cus6
+		.frame_desc = frame_desc_cus6,
+		.num_entries = ARRAY_SIZE(frame_desc_cus6),
+		.mode_setting_table = addr_data_pair_custom6,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom6),
+		.seamless_switch_group = 2,
+		.seamless_switch_mode_setting_table = imx896_seamless_custom6,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx896_seamless_custom6),
+		.pclk = 1360000000,
+		.linelength = 7072,
+		.framelength = 3200 * 2,
+		.max_framerate = 300,
+		.hdr_mode = HDR_RAW_STAGGER,
+		.raw_cnt = 2,
+		.exp_cnt = 2,
+		.mipi_pixel_rate = 1645710000,
+		.readout_length = 3115 * 2,   //(85+6143+1)/2
+		.read_margin = 24 * 2,         //24*2
+		.framelength_step = 4 * 2,		// multiple of 4 for 2DOL
+		.coarse_integ_step = 2 * 2,		// multiple of 2 for 2DOL
+		.min_exposure_line = 4 * 2,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4*2,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4*2,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 0x3FFF*2,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = 0x3FFF*2,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 0,
+			.w0_size = 8192,
+			.h0_size = 6144,
+			.scale_w = 4096,
+			.scale_h = 3072,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 3072,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 3072,
+		},
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_cus2_info,
+		.ae_binning_ratio = 1428,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.ana_gain_min = 1*BASEGAIN,
+		.ana_gain_max = 64*BASEGAIN,
+		.dig_gain_min = 1*BASEGAIN,
+		.dig_gain_max = 1*BASEGAIN,
+		.dig_gain_step = 4,
+		.csi_param = {
+			.cphy_settle = 73,
+		},
+		.dpc_enabled = true, /* reg 0x0b06 */
+	},
 };
 
 static struct subdrv_static_ctx static_ctx = {
@@ -911,10 +1014,11 @@ static struct subdrv_static_ctx static_ctx = {
 	.frame_length_max = 0xFFFC,
 	.ae_effective_frame = 2,
 	.frame_time_delay_frame = 2,
+	.hdr_type = HDR_SUPPORT_STAGGER_FDOL,
 #ifdef IMGSENSOR_FUSION_TEST_WORKAROUND
 	.start_exposure_offset_custom = 2115600,
 #endif
-	.start_exposure_offset = 500000,
+	.start_exposure_offset = 2336000,
 	.pdaf_type = PDAF_SUPPORT_CAMSV_QPD,
 	.g_gain2reg = get_gain2reg,
 	.s_gph = set_group_hold,
@@ -1179,15 +1283,279 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 	return 0;
 }
 
+static int imx896_set_hdr_tri_gain(struct subdrv_ctx *ctx, u8 *para, u32* len)
+{
+	int i = 0;
+	u32 values[3] = {0};
+	u16 exp_cnt = 2;
+	u64 *feature_data = (u64 *) para;
+
+	if (feature_data != NULL) {
+		for (i = 0; i < 3; i++)
+			values[i] = (u32) *(feature_data + i);
+	}
+
+	imx896_set_multi_gain(ctx, values, exp_cnt);
+
+	return ERROR_NONE;
+}
+
+static int imx896_set_multi_gain(struct subdrv_ctx *ctx, u32 *gains, u16 exp_cnt)
+{
+	int i = 0;
+	u16 rg_gains[3] = {0};
+	u8 has_gains[3] = {0};
+	bool gph = !ctx->is_seamless && (ctx->s_ctx.s_gph != NULL);
+
+	if (exp_cnt > ARRAY_SIZE(ctx->ana_gain)) {
+		DRV_LOGE(ctx, "invalid exp_cnt:%u>%lu\n", exp_cnt, ARRAY_SIZE(ctx->ana_gain));
+		exp_cnt = ARRAY_SIZE(ctx->ana_gain);
+	}
+	for (i = 0; i < exp_cnt; i++) {
+		/* check boundary of gain */
+		gains[i] = max(gains[i],
+			ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[i].min);
+		gains[i] = min(gains[i],
+			ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[i].max);
+		/* mapping of gain to register value */
+		if (ctx->s_ctx.g_gain2reg != NULL)
+			gains[i] = ctx->s_ctx.g_gain2reg(gains[i]);
+		else
+			gains[i] = gain2reg(gains[i]);
+	}
+	/* restore gain */
+	memset(ctx->ana_gain, 0, sizeof(ctx->ana_gain));
+	for (i = 0; i < exp_cnt; i++)
+		ctx->ana_gain[i] = gains[i];
+	/* group hold start */
+	if (gph && !ctx->ae_ctrl_gph_en)
+		ctx->s_ctx.s_gph((void *)ctx, 1);
+	/* write gain */
+	memset(has_gains, 1, sizeof(has_gains));
+
+	switch (exp_cnt) {
+	case 2:
+		rg_gains[0] = gains[0];
+		has_gains[1] = 0;
+		rg_gains[2] = gains[1];
+		break;
+	case 3:
+		rg_gains[0] = gains[0];
+		rg_gains[1] = gains[1];
+		rg_gains[2] = gains[2];
+		break;
+	default:
+		has_gains[0] = 0;
+		has_gains[1] = 0;
+		has_gains[2] = 0;
+		break;
+	}
+	for (i = 0; i < 3; i++) {
+		if (has_gains[i]) {
+			if (i == 2 && exp_cnt == 2)
+			{
+				//set gain for 2nd frame
+				set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[1].addr[0],
+					(rg_gains[i] >> 8) & 0x3F);
+				set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[1].addr[1],
+					rg_gains[i] & 0xFF);
+			}else {
+				// set gain for 1st frame
+				set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[i].addr[0],
+					(rg_gains[i] >> 8) & 0x3F);
+				set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[i].addr[1],
+					rg_gains[i] & 0xFF);
+			}
+
+		}
+	}
+	DRV_LOG(ctx, "exp gain rg[lg/mg/sg]: 0x%x 0x%x 0x%x\n", rg_gains[0], rg_gains[1], rg_gains[2]);
+	if (gph)
+		ctx->s_ctx.s_gph((void *)ctx, 0);
+	commit_i2c_buffer(ctx);
+	/* group hold end */
+
+	return ERROR_NONE;
+}
+
+static int imx896_set_hdr_tri_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	int i = 0;
+	u64 values[3] = {0};
+	u16 exp_cnt = 2;
+	u64 *feature_data = (u64 *) para;
+
+	if (feature_data != NULL) {
+		for (i = 0; i < 3; i++)
+			values[i] = (u64) *(feature_data + i);
+	}
+
+	imx896_set_multi_shutter_frame_length(ctx, values, exp_cnt, 0);
+
+	return ERROR_NONE;
+}
+
+static int imx896_set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
+		u64 *shutters, u16 exp_cnt,	u16 frame_length)
+{
+	int i = 0;
+	int fine_integ_line = 0;
+	u16 last_exp_cnt = 1;
+	u32 calc_fl[3] = {0};
+	int readout_diff = 0;
+	bool gph = !ctx->is_seamless && (ctx->s_ctx.s_gph != NULL);
+	u32 rg_shutters[3] = {0};
+	u32 cit_step = 0;
+
+	ctx->frame_length = frame_length ? frame_length : ctx->min_frame_length;
+	if (exp_cnt > ARRAY_SIZE(ctx->exposure)) {
+		DRV_LOGE(ctx, "invalid exp_cnt:%u>%lu\n", exp_cnt, ARRAY_SIZE(ctx->exposure));
+		exp_cnt = ARRAY_SIZE(ctx->exposure);
+	}
+	check_current_scenario_id_bound(ctx);
+	/* check boundary of shutter */
+	for (i = 1; i < ARRAY_SIZE(ctx->exposure); i++)
+		last_exp_cnt += ctx->exposure[i] ? 1 : 0;
+	fine_integ_line = ctx->s_ctx.mode[ctx->current_scenario_id].fine_integ_line;
+	cit_step = ctx->s_ctx.mode[ctx->current_scenario_id].coarse_integ_step;
+	for (i = 0; i < exp_cnt; i++) {
+		shutters[i] = FINE_INTEG_CONVERT(shutters[i], fine_integ_line);
+		shutters[i] = max_t(u64, shutters[i],
+			(u64)ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_shutter_range[i].min);
+		shutters[i] = min_t(u64, shutters[i],
+			(u64)ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_shutter_range[i].max);
+		if (cit_step)
+			shutters[i] = roundup(shutters[i], cit_step);
+	}
+
+        /*check   CIT>= CIT_S*/
+        if(exp_cnt == 2)
+        {
+            if(shutters[1] > shutters[0])
+            {
+               shutters[1] = shutters[0];
+            }
+        }
+
+	/* check boundary of framelength */
+	/* - (1) previous se + previous me + current le */
+	calc_fl[0] = (u32) shutters[0];
+	for (i = 1; i < last_exp_cnt; i++)
+		calc_fl[0] += ctx->exposure[i];
+	calc_fl[0] += ctx->s_ctx.exposure_margin*exp_cnt*exp_cnt;
+
+	/* - (2) current se + current me + current le */
+	calc_fl[1] = (u32) shutters[0];
+	for (i = 1; i < exp_cnt; i++)
+		calc_fl[1] += (u32) shutters[i];
+	calc_fl[1] += ctx->s_ctx.exposure_margin*exp_cnt*exp_cnt;
+	/* - (3) readout time cannot be overlapped */
+	calc_fl[2] =
+		(ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+		ctx->s_ctx.mode[ctx->current_scenario_id].read_margin);
+	if (last_exp_cnt == exp_cnt)
+		for (i = 1; i < exp_cnt; i++) {
+			readout_diff = ctx->exposure[i] - (u32) shutters[i];
+			calc_fl[2] += readout_diff > 0 ? readout_diff : 0;
+		}
+	for (i = 0; i < ARRAY_SIZE(calc_fl); i++)
+		ctx->frame_length = max(ctx->frame_length, calc_fl[i]);
+
+
+	ctx->frame_length =	max(ctx->frame_length, ctx->min_frame_length);
+	ctx->frame_length =	min(ctx->frame_length, ctx->s_ctx.frame_length_max);
+
+	/* restore shutter */
+	memset(ctx->exposure, 0, sizeof(ctx->exposure));
+	for (i = 0; i < exp_cnt; i++)
+		ctx->exposure[i] = (u32) shutters[i];
+	/* group hold start */
+	if (gph)
+		ctx->s_ctx.s_gph((void *)ctx, 1);
+
+	/* enable auto extend */
+	if (ctx->s_ctx.reg_addr_auto_extend)
+		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_auto_extend, 0x01);
+	/* write framelength */
+	if (set_auto_flicker(ctx, 0) || frame_length || !ctx->s_ctx.reg_addr_auto_extend)
+		write_frame_length(ctx, ctx->frame_length);
+
+	/* write shutter */
+	switch (exp_cnt) {
+	case 1:
+		rg_shutters[0] = (u32) shutters[0] / exp_cnt;
+		break;
+	case 2:
+		rg_shutters[0] = (u32) shutters[0] / exp_cnt;
+		rg_shutters[2] = (u32) shutters[1] / exp_cnt;
+		break;
+	case 3:
+		rg_shutters[0] = (u32) shutters[0] / exp_cnt;
+		rg_shutters[1] = (u32) shutters[1] / exp_cnt;
+		rg_shutters[2] = (u32) shutters[2] / exp_cnt;
+		break;
+	default:
+		break;
+	}
+
+	if (ctx->s_ctx.reg_addr_exposure_lshift != PARAM_UNDEFINED) {
+		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure_lshift, 0);
+		ctx->l_shift = 0;
+	}
+
+	for (i = 0; i < 3; i++)
+	{
+		if (rg_shutters[i])
+		{
+			// for 2nd frame exp
+			if (i == 2 && exp_cnt == 2)
+			{
+				// set shutter for 0x0224 0x0225
+				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[1].addr[0],
+							   (rg_shutters[i] >> 8) & 0xFF);
+				set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[1].addr[1],
+							   rg_shutters[i] & 0xFF);
+
+			} else {
+			        if(exp_cnt == 2)
+			        {
+					// set shutter for 1st frame exp
+					set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[0],
+							   (rg_shutters[i] >> 8) & 0xFF);
+					set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[1],
+							   rg_shutters[i] & 0xFF);
+				} else {
+					set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[0],
+							   (rg_shutters[i] >> 8) & 0xFF);
+					set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure[i].addr[1],
+							   rg_shutters[i] & 0xFF);
+				}
+			}
+		}
+	}
+
+	DRV_LOG(ctx, "set shutter fll. exp[0x%x/0x%x/0x%x], fll(input/output):%u/%u, flick_en:%d\n",
+		rg_shutters[0], rg_shutters[1], rg_shutters[2],
+		frame_length, ctx->frame_length, ctx->autoflicker_en);
+	if (!ctx->ae_ctrl_gph_en) {
+		if (gph)
+			ctx->s_ctx.s_gph((void *)ctx, 0);
+		commit_i2c_buffer(ctx);
+	}
+	/* group hold end */
+
+	return ERROR_NONE;
+}
+
 static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt)
 {
-	DRV_LOG(ctx, "sof_cnt(%u) ctx->ref_sof_cnt(%u) ctx->fast_mode_on(%d)",
+	DRV_LOG_MUST(ctx, "sof_cnt(%u) ctx->ref_sof_cnt(%u) ctx->fast_mode_on(%d)",
 		sof_cnt, ctx->ref_sof_cnt, ctx->fast_mode_on);
 	if (ctx->fast_mode_on && (sof_cnt > ctx->ref_sof_cnt)) {
 		ctx->fast_mode_on = FALSE;
 		ctx->ref_sof_cnt = 0;
 		DRV_LOG(ctx, "seamless_switch disabled.");
-		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_prsh_mode, 0x00);
+		// subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_prsh_mode, 0x00);
 		set_i2c_buffer(ctx, 0x3010, 0x00);
 		commit_i2c_buffer(ctx);
 	}
@@ -1322,7 +1690,7 @@ static int imx896_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 		DRV_LOG(ctx, "no ae_ctrl input");
 
 	check_current_scenario_id_bound(ctx);
-	DRV_LOG(ctx, "E: set seamless switch %u %u\n", ctx->current_scenario_id, scenario_id);
+	DRV_LOG_MUST(ctx, "E: set seamless switch %u %u\n", ctx->current_scenario_id, scenario_id);
 	if (!ctx->extend_frame_length_en)
 		DRV_LOG(ctx, "please extend_frame_length before seamless_switch!\n");
 	ctx->extend_frame_length_en = FALSE;
@@ -1356,6 +1724,10 @@ static int imx896_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 
 	if (ae_ctrl) {
 		switch (ctx->s_ctx.mode[scenario_id].hdr_mode) {
+		case HDR_RAW_STAGGER:
+			imx896_set_multi_shutter_frame_length(ctx, (u64 *)&ae_ctrl->exposure, exp_cnt, 0);
+			imx896_set_multi_gain(ctx, (u32 *)&ae_ctrl->gain, exp_cnt);
+			break;
 		case HDR_RAW_DCG_RAW:
 			set_shutter(ctx, ae_ctrl->exposure.le_exposure);
 			if (ctx->s_ctx.mode[scenario_id].dcg_info.dcg_gain_mode
@@ -1365,7 +1737,7 @@ static int imx896_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 				set_gain(ctx, ae_ctrl->gain.le_gain);
 			break;
 		default:
-			set_shutter(ctx, ae_ctrl->exposure.le_exposure);
+			imx896_set_shutter(ctx, (u8 *)&ae_ctrl->exposure.le_exposure, 0);
 			set_gain(ctx, ae_ctrl->gain.le_gain);
 			break;
 		}
