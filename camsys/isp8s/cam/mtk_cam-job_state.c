@@ -31,10 +31,12 @@ const char *str_event(int event)
 
 		[CAMSYS_EVENT_ENQUE] = "enq",
 		[CAMSYS_EVENT_ACK] = "ack",
+		[CAMSYS_EVENT_SENSOR_APPLIED] = "sensor applied",
 		[CAMSYS_EVENT_IRQ_EXTMETA_SOF] = "extisp meta sof",
 		[CAMSYS_EVENT_IRQ_EXTMETA_CQ_DONE] = "extisp cq done",
 		[CAMSYS_EVENT_IRQ_EXTMETA_FRAME_DONE] = "extisp frame done",
 		[CAMSYS_EVENT_IRQ_TRY_TS_TRIGGER] = "ts try trigger",
+		[CAMSYS_EVENT_IRQ_XVS] = "xvs",
 
 		[CAMSYS_EVENT_HW_HANG] = "hw hang",
 	};

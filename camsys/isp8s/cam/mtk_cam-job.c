@@ -12,6 +12,7 @@
 #include "mtk_cam-fmt_utils.h"
 #include "mtk_cam.h"
 #include "mtk_cam-ipi.h"
+#include "mtk_cam-ctrl.h"
 #include "mtk_cam-job.h"
 #include "mtk_cam-job_state.h"
 #include "mtk_cam-job_utils.h"
@@ -28,6 +29,7 @@
 #include "mtk_cam-raw_ctrl.h"
 #include "mtk_cam-topctrl.h"
 #include "mtk_cam_vb2-dma-contig.h"
+#include "mtk_cam-seninf-if.h"
 
 // place below all other include
 #include "mtk_cam-virt-isp.h"
@@ -1517,6 +1519,7 @@ _apply_sensor_extisp(struct mtk_cam_job *job)
 	/* mtk_cam_tg_flash_req_setup(ctx, s_data); */
 
 	mtk_cam_job_state_set(&job->job_state, SENSOR_STATE, S_SENSOR_APPLIED);
+	mtk_cam_ctrl_send_event(&ctx->cam_ctrl, CAMSYS_EVENT_SENSOR_APPLIED);
 
 	job_complete_sensor_ctrl_obj(job);
 
@@ -1655,6 +1658,8 @@ _apply_sensor(struct mtk_cam_job *job)
 			 __func__, ctx->stream_id, job->frame_seq_no);
 		ctx->cam_ctrl.sensor_sync_id= job->req_info_id;
 		ctx->cam_ctrl.sensor_seq = job->req_seq;
+		mtk_cam_seninf_frame_event_notify(job->seninf,
+			ctx->cam_ctrl.sensor_seq, ctx->cam_ctrl.sensor_sync_id);
 		return 0;
 	}
 	if (job->req_sensor)
@@ -1666,8 +1671,10 @@ _apply_sensor(struct mtk_cam_job *job)
 		mtk_cam_set_sensor_mstream_mode(ctx, 0);
 
 	update_sensor_fmt(job);
-	ctx->cam_ctrl.sensor_sync_id= job->req_info_id;
+	ctx->cam_ctrl.sensor_sync_id = job->req_info_id;
 	ctx->cam_ctrl.sensor_seq = job->req_seq;
+	mtk_cam_seninf_frame_event_notify(job->seninf,
+		ctx->cam_ctrl.sensor_seq, ctx->cam_ctrl.sensor_sync_id);
 	v4l2_ctrl_request_setup(&req->req, job->sensor->ctrl_handler);
 	job->local_apply_sensor_ts = local_clock();
 
@@ -4656,6 +4663,8 @@ static void update_job_state_init_sensor_param(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctrl *ctrl = &job->src_ctx->cam_ctrl;
 	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
+	u8 sen_ctrl =
+		ctrl_data->resource.user_data.raw_res.sen_apply_ctrl;
 
 	// NOTE: update FL with 'stable_frm_len_ns' for this sensor request
 	if (ctrl_data && ctrl_data->rc_data.stable_frm_len_ns != 0)
@@ -4671,9 +4680,13 @@ static void update_job_state_init_sensor_param(struct mtk_cam_job *job)
 		job->job_state.s_params.i2c_thres_ns =
 			infer_i2c_deadline_ns(job, ctrl->frame_interval_ns);
 
-	job->job_state.s_params.latched_timing =
-		(is_stagger_lbmf(job) || is_dcg_with_vs(job)) ?
+	if (sen_ctrl == MTK_CAM_SEN_APPLY_BY_XVS)
+		job->job_state.s_params.latched_timing = SENSOR_LATCHED_XVS;
+	else
+		job->job_state.s_params.latched_timing =
+			(is_stagger_lbmf(job) || is_dcg_with_vs(job)) ?
 			SENSOR_LATCHED_L_SOF : SENSOR_LATCHED_F_SOF;
+
 	job->job_state.s_params.subsample =
 		get_subsample_ratio(&job->job_scen);
 
@@ -4693,12 +4706,13 @@ static void update_job_state_init_sensor_param(struct mtk_cam_job *job)
 
 	if (CAM_DEBUG_ENABLED(JOB) ||
 		job->src_ctx->last_req_exposue.long_exposure_flow)
-		pr_info("%s: job i2c_thres_ns %llu, latched_timing:%d, cq_trigger_thres:%llu always:%d\n",
+		pr_info("%s: i2c_thres %llu latch:%d cq_thres:%llu always:%d sen_ctrl:%u\n",
 			__func__,
 			job->job_state.s_params.i2c_thres_ns,
 			job->job_state.s_params.latched_timing,
 			job->job_state.cq_trigger_thres_ns,
-			job->job_state.s_params.always_allow);
+			job->job_state.s_params.always_allow,
+			sen_ctrl);
 }
 
 bool mtk_cam_job_is_dcif_required(struct mtk_cam_job *job)
@@ -5098,6 +5112,7 @@ static bool check_is_raw_trigger_sensor(struct mtk_cam_job *job)
 static int job_sen_req_pack(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
+	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
 	struct pack_job_ops_helper *pack_helper = NULL;
 	bool sensor_change;
 	int ret = 0;
@@ -5120,9 +5135,14 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 	job->raw_change = JOB_RAW_NO_CHANGE;
 	job->raw_change_uninit_engine = 0;
 	job->first_frm_switch = false;
-	job->scq_period = SCQ_DEADLINE_US(get_sensor_interval_us(job)) / 1000;
 	job->do_pending_aid_config = false;
 	job->is_raw_trigger_sensor = check_is_raw_trigger_sensor(job);
+
+	if (ctrl_data->resource.user_data.raw_res.sen_apply_ctrl ==
+		MTK_CAM_SEN_APPLY_BY_XVS)
+		job->scq_period = -1;
+	else
+		job->scq_period = SCQ_DEADLINE_US(get_sensor_interval_us(job)) / 1000;
 
 	init_completion(&job->compose_completion);
 	init_completion(&job->cq_exe_completion);
@@ -6952,5 +6972,14 @@ int mtk_cam_job_config_raw_slc(struct mtk_cam_job *job, int enable)
 bool mtk_cam_job_not_support_qof(struct mtk_cam_job *job)
 {
 	return (is_stagger_dol(job) || is_dc_mode(job));
+}
+
+bool mtk_cam_job_enable_cq_rdy_mask(struct mtk_cam_job *job)
+{
+	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
+	u8 sen_ctrl =
+		ctrl_data->resource.user_data.raw_res.sen_apply_ctrl;
+
+	return (sen_ctrl == MTK_CAM_SEN_APPLY_BY_XVS);
 }
 

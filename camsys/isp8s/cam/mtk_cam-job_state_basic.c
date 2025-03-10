@@ -196,6 +196,81 @@ static const struct state_accessor_ops _acc_ops = {
 	.cur_isp_state = sf_cur_isp_state,
 };
 
+static struct state_transition STATE_TRANS(xvs_sensor, S_SENSOR_NOT_SET)[] = {
+	{
+		S_SENSOR_APPLYING, CAMSYS_EVENT_ENQUE,
+		guard_apply_sensor_xvs, ACTION_APPLY_SENSOR
+	},
+	{
+		S_SENSOR_APPLYING, CAMSYS_EVENT_IRQ_L_CQ_DONE,
+		guard_apply_sensor_xvs, ACTION_APPLY_SENSOR
+	},
+	{
+		S_SENSOR_APPLYING, CAMSYS_EVENT_IRQ_XVS,
+		guard_apply_sensor_xvs, ACTION_APPLY_SENSOR
+	},
+};
+
+static struct state_transition STATE_TRANS(xvs_sensor, S_SENSOR_APPLIED)[] = {
+	{
+		S_SENSOR_LATCHED, CAMSYS_EVENT_IRQ_XVS,
+		NULL, 0
+	},
+};
+
+static struct transitions_entry xvs_sensor_entries[NR_S_SENSOR_STATE] = {
+	ADD_TRANS_ENTRY(xvs_sensor, S_SENSOR_NOT_SET),
+	ADD_TRANS_ENTRY(xvs_sensor, S_SENSOR_APPLIED),
+};
+
+struct state_table xvs_sensor_tbl = {
+	.entries = xvs_sensor_entries,
+	.size = ARRAY_SIZE(xvs_sensor_entries),
+};
+
+static struct state_transition STATE_TRANS(xvs_isp, S_ISP_COMPOSING)[] = {
+	{
+		S_ISP_APPLYING, CAMSYS_EVENT_ACK,
+		guard_apply_isp_xvs, ACTION_APPLY_ISP
+	},
+	{
+		S_ISP_COMPOSED, CAMSYS_EVENT_ACK,
+		guard_ack_eq, 0
+	},
+};
+
+static struct state_transition STATE_TRANS(xvs_isp, S_ISP_COMPOSED)[] = {
+	{
+		S_ISP_APPLYING, CAMSYS_EVENT_IRQ_XVS,
+		guard_apply_isp_xvs, ACTION_APPLY_ISP,
+	},
+	{
+		S_ISP_APPLYING, CAMSYS_EVENT_IRQ_L_SOF,
+		guard_apply_isp_xvs, ACTION_APPLY_ISP,
+	},
+	{
+		S_ISP_APPLYING, CAMSYS_EVENT_SENSOR_APPLIED,
+		guard_apply_isp_xvs, ACTION_APPLY_ISP,
+	},
+};
+
+static struct transitions_entry xvs_isp_entries[NR_S_ISP_STATE] = {
+	ADD_TRANS_ENTRY(basic, S_ISP_NOT_SET),
+	ADD_TRANS_ENTRY(xvs_isp, S_ISP_COMPOSING),
+	ADD_TRANS_ENTRY(xvs_isp, S_ISP_COMPOSED),
+	ADD_TRANS_ENTRY(basic, S_ISP_APPLYING),
+	ADD_TRANS_ENTRY(basic, S_ISP_OUTER),
+	ADD_TRANS_ENTRY(basic, S_ISP_PROCESSING),
+	ADD_TRANS_ENTRY(basic, S_ISP_SENSOR_MISMATCHED),
+	//ADD_TRANS_ENTRY(basic, S_ISP_DONE),
+	//ADD_TRANS_ENTRY(basic, S_ISP_DONE_MISMATCHED),
+};
+
+struct state_table xvs_isp_tbl = {
+	.entries = xvs_isp_entries,
+	.size = ARRAY_SIZE(xvs_isp_entries),
+};
+
 static int basic_send_event(struct mtk_cam_job_state *s,
 			    struct transition_param *p)
 {
@@ -257,10 +332,16 @@ int mtk_cam_job_state_init_basic(struct mtk_cam_job_state *s,
 	s->compose_by_fsm = 1;
 	s->bypass_by_aewa = 0;
 
-	if (s->s_params.latched_timing == SENSOR_LATCHED_L_SOF)
+	if (s->s_params.latched_timing == SENSOR_LATCHED_L_SOF) {
 		s->sensor_tbl = &basic_sensor_l_tbl;
-	else
+		s->isp_tbl = &basic_isp_tbl;
+	} else if (s->s_params.latched_timing == SENSOR_LATCHED_XVS) {
+		s->sensor_tbl = &xvs_sensor_tbl;
+		s->isp_tbl = &xvs_isp_tbl;
+	} else {
 		s->sensor_tbl = &basic_sensor_tbl;
+		s->isp_tbl = &basic_isp_tbl;
+	}
 
 	return 0;
 }

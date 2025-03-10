@@ -139,10 +139,13 @@ enum mtk_camsys_event_type {
 
 	CAMSYS_EVENT_ENQUE,
 	CAMSYS_EVENT_ACK,
+	CAMSYS_EVENT_SENSOR_APPLIED,
 	CAMSYS_EVENT_IRQ_EXTMETA_SOF, /* extisp meta's vsync */
 	CAMSYS_EVENT_IRQ_EXTMETA_CQ_DONE, /* extisp meta's cq done */
 	CAMSYS_EVENT_IRQ_EXTMETA_FRAME_DONE, /* extisp meta's frame done */
 	CAMSYS_EVENT_IRQ_TRY_TS_TRIGGER, /* extisp meta's frame done */
+
+	CAMSYS_EVENT_IRQ_XVS, /* MCSS XVS in */
 
 	CAMSYS_EVENT_OFF, /* stop event for flow worker quit */
 	CAMSYS_EVENT_HW_HANG, /* hw unrecoverable error */
@@ -170,6 +173,9 @@ struct mtk_cam_ctrl_runtime_info {
 	u64 sof_l_ts_mono_ns;
 	u64 sv_p1_done_ts_ns;
 	u64 pda_p1_done_ts_ns;
+
+	u64 xvs_ts_ns;
+
 	bool ae_wa_enable;
 	int timeshare_enable; /* timeshare used */
 	int extisp_enable; /* extisp used */
@@ -179,6 +185,7 @@ struct mtk_cam_ctrl_runtime_info {
 enum mtk_cam_sensor_latch {
 	SENSOR_LATCHED_F_SOF,
 	SENSOR_LATCHED_L_SOF,
+	SENSOR_LATCHED_XVS,
 };
 
 struct sensor_apply_params {
@@ -262,6 +269,7 @@ struct mtk_cam_job_state {
 	u64 cq_trigger_thres_ns; /* cq valid period from vsync */
 	u64 reference_sof_ns; /* for eg. MCSS reflect sync */
 	struct state_table *sensor_tbl;
+	struct state_table *isp_tbl;
 	/* for extisp */
 	int tg_cnt;
 	u64 extisp_data_timestamp[NR_EXTISP_DATA]; /* extisp used */
@@ -749,4 +757,6 @@ bool mtk_cam_job_not_support_qof(struct mtk_cam_job *job);
 
 int mtk_cam_job_uninit_pda_engine(struct mtk_cam_job *job,
 	unsigned long unit_engs);
+bool mtk_cam_job_enable_cq_rdy_mask(struct mtk_cam_job *job);
+
 #endif //__MTK_CAM_JOB_H

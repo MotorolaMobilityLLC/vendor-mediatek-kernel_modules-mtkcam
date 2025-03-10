@@ -26,6 +26,8 @@
 #include "mtk_cam-bwr.h"
 #include "mtk_cam-job_utils.h"
 #include "mtk_cam-raw_ctrl.h"
+#include "mtk_cam-seninf-eint-cb-def.h"
+#include "mtk_cam-seninf-if.h"
 
 // place below all other include
 #include "mtk_cam-virt-isp.h"
@@ -489,6 +491,7 @@ static const int waitable_event =
 	BIT(CAMSYS_EVENT_IRQ_FRAME_DONE) |
 	BIT(CAMSYS_EVENT_IRQ_L_CQ_DONE) |
 	BIT(CAMSYS_EVENT_ACK) |
+	BIT(CAMSYS_EVENT_IRQ_XVS) |
 	BIT(CAMSYS_EVENT_OFF);
 
 static void mtk_cam_ctrl_wake_up_on_event(struct mtk_cam_ctrl *ctrl, int event)
@@ -510,12 +513,14 @@ static void mtk_cam_ctrl_wake_up_on_event(struct mtk_cam_ctrl *ctrl, int event)
 struct seamless_check_args {
 	int expect_inner;
 	int expect_ack;
+	bool check_xvs;
 };
 
 static bool check_for_seamless(struct mtk_cam_ctrl *ctrl, void *arg)
 {
 	struct seamless_check_args *args = arg;
 	u64 last_sof_ts, first_sof_ts;
+	u64 last_xvs_ts;
 	int inner_seq;
 	int ack_seq;
 	u64 ts;
@@ -526,6 +531,7 @@ static bool check_for_seamless(struct mtk_cam_ctrl *ctrl, void *arg)
 	last_sof_ts = ctrl->r_info.sof_l_ts_ns;
 	first_sof_ts = ctrl->r_info.sof_ts_ns;
 	ack_seq = ctrl->r_info.ack_seq_no;
+	last_xvs_ts = ctrl->r_info.xvs_ts_ns;
 	spin_unlock(&ctrl->info_lock);
 
 	if (atomic_read(&ctrl->ctx->streaming) == 0)
@@ -542,7 +548,10 @@ static bool check_for_seamless(struct mtk_cam_ctrl *ctrl, void *arg)
 		ts_margin = VALID_SWITCH_PERIOD_60FPS_FROM_VSYNC_MS;
 	else
 		ts_margin = VALID_SWITCH_PERIOD_30FPS_FROM_VSYNC_MS;
-	if (ts - last_sof_ts >= ts_margin)
+	if (args->check_xvs) {
+		if (ts - last_xvs_ts >= ts_margin)
+			return 0;
+	} else if (ts - last_sof_ts >= ts_margin)
 		return 0;
 	/*
 	 * check if already got ack
@@ -614,7 +623,7 @@ static int mtk_cam_ctrl_wait_event(struct mtk_cam_ctrl *ctrl,
 	return 0;
 }
 
-static int mtk_cam_ctrl_send_event(struct mtk_cam_ctrl *ctrl, int event)
+int mtk_cam_ctrl_send_event(struct mtk_cam_ctrl *ctrl, int event)
 {
 	struct mtk_cam_ctrl_runtime_info local_info;
 	struct transition_param p;
@@ -1422,6 +1431,8 @@ static int mtk_cam_ctrl_stream_on_job(struct mtk_cam_job *job)
 	ctrl->r_info.sof_l_ts_ns = ktime_get_boottime_ns();
 	ctrl->fs_event_subframe_cnt = job->frame_cnt;
 
+	ctrl->r_info.xvs_ts_ns = ktime_get_boottime_ns();
+
 	call_jobop(job, stream_on, true);
 	if (ctrl->r_info.extisp_enable || !ctx->has_raw_subdev)
 		mtk_cam_event_extisp_camsys_ready(ctrl);
@@ -1726,6 +1737,9 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 	int raw_uninit = bit_map_subset_of(MAP_HW_RAW, engine_uninit);
 	int raw_all = raw_after_change | raw_uninit;
 	bool is_fusion;
+	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
+	u8 sen_ctrl =
+		ctrl_data->resource.user_data.raw_res.sen_apply_ctrl;
 
 	dev_info(dev, "[%s] begin waiting switch no:%d seq 0x%x\n",
 		__func__, job->req_seq, job->frame_seq_no);
@@ -1733,6 +1747,7 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 	prev_seq = prev_frame_seq(job->frame_seq_no);
 	check_args.expect_inner = prev_seq;
 	check_args.expect_ack = job->frame_seq_no;
+	check_args.check_xvs = (sen_ctrl == MTK_CAM_SEN_APPLY_BY_XVS);
 
 	for (i = 0; i < cam->engines.num_raw_devices; i++) {
 		if (BIT(i) & raw_all) {
@@ -1834,6 +1849,8 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 	//		mtk_cam_query_interval_from_sensor(ctx->sensor);
 	ctrl->r_info.sof_ts_ns = ktime_get_boottime_ns();
 	ctrl->r_info.sof_l_ts_ns = ctrl->r_info.sof_ts_ns;
+
+	ctrl->r_info.xvs_ts_ns = ktime_get_boottime_ns();
 
 	for (i = 0; i < cam->engines.num_raw_devices; i++) {
 		bool is_master = false;
@@ -2203,6 +2220,8 @@ void mtk_cam_ctrl_sensor_job_enque(struct mtk_cam_ctrl *cam_ctrl,
 	if (!job->sensor_hdl_obj) {
 		cam_ctrl->sensor_sync_id= job->req_info_id;
 		cam_ctrl->sensor_seq = job->req_seq;
+		mtk_cam_seninf_frame_event_notify(job->seninf,
+			cam_ctrl->sensor_seq, cam_ctrl->sensor_sync_id);
 		pr_info("no sensor obj: #%d , sync_id:%d\n",
 				job->req_seq, job->req_info_id);
 	}
@@ -3275,4 +3294,45 @@ int mtk_cam_ctrl_notify_hw_hang(struct mtk_cam_device *cam,
 	mtk_cam_job_put(current_job);
 
 	return 0;
+}
+
+void seninf_xvs_in_callback(
+	const struct mtk_cam_seninf_eint_irq_notify_info *p_info,
+	void *p_data)
+{
+	struct mtk_cam_ctrl *cam_ctrl = (struct mtk_cam_ctrl *)p_data;
+
+	spin_lock(&cam_ctrl->info_lock);
+	cam_ctrl->r_info.xvs_ts_ns = p_info->sys_ts_ns;
+	spin_unlock(&cam_ctrl->info_lock);
+
+	if (CAM_DEBUG_ENABLED(RAW_INT))
+		dev_info(cam_ctrl->ctx->cam->dev, "%s: xvs_ts %llu cur %llu",
+				 __func__, p_info->sys_ts_ns, ktime_get_boottime_ns());
+
+	mtk_cam_ctrl_send_event(cam_ctrl, CAMSYS_EVENT_IRQ_XVS);
+}
+
+void mtk_cam_ctrl_register_xvs_cb(struct mtk_cam_ctx *ctx)
+{
+	int ret;
+	struct mtk_cam_seninf_eint_irq_cb_info cb_info;
+
+	cb_info.func_ptr = seninf_xvs_in_callback;
+	cb_info.p_data = &ctx->cam_ctrl;
+
+	ret = mtk_cam_seninf_eint_register_irq_cb(ctx->seninf,
+		SENINF_EINT_IRQ_CB_UID_CAMSYS, &cb_info);
+
+	if (CAM_DEBUG_ENABLED(CTRL))
+		pr_info("%s: ret=%d", __func__, ret);
+}
+
+void mtk_cam_ctrl_unregister_xvs_cb(struct mtk_cam_ctx *ctx)
+{
+	mtk_cam_seninf_eint_unregister_irq_cb(ctx->seninf,
+		SENINF_EINT_IRQ_CB_UID_CAMSYS);
+
+	if (CAM_DEBUG_ENABLED(CTRL))
+		pr_info("%s is called", __func__);
 }

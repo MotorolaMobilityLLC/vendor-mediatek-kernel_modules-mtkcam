@@ -3351,7 +3351,8 @@ static int _config_only_sv_cam_mux(struct mtk_cam_job *job)
 		cnt++;
 	}
 
-	if (_apply_mux_setting("config_only_sv", job, &settings[0], cnt, 0)) {
+	if (_apply_mux_setting("config_only_sv", job, &settings[0], cnt,
+						   mtk_cam_job_enable_cq_rdy_mask(job))) {
 		dev_info(ctx->cam->dev, "%s, apply mux setup failed, %d/%lu",
 			__func__, cnt, ARRAY_SIZE(settings));
 		return -1;
@@ -3463,7 +3464,8 @@ static int _config_1exp_cam_mux(struct mtk_cam_job *job, bool disable_prev_mux)
 				   sv_max_pixel_mode))
 		goto WARN_EXIT;
 
-	if (_apply_mux_setting("config_1exp", job, &settings[0], cnt, 0)) {
+	if (_apply_mux_setting("config_1exp", job, &settings[0], cnt,
+						   mtk_cam_job_enable_cq_rdy_mask(job))) {
 		dev_info(ctx->cam->dev, "%s, apply mux setup failed, %d/%lu",
 			__func__, cnt, ARRAY_SIZE(settings));
 		return -1;
@@ -3616,7 +3618,8 @@ static int _config_2exp_cam_mux(struct mtk_cam_job *job, bool disable_prev_mux)
 				   sv_max_pixel_mode))
 		goto WARN_EXIT;
 
-	if (_apply_mux_setting("config_2exp", job, &settings[0], cnt, 0)) {
+	if (_apply_mux_setting("config_2exp", job, &settings[0], cnt,
+						   mtk_cam_job_enable_cq_rdy_mask(job))) {
 		dev_info(ctx->cam->dev, "%s, apply mux setup failed, %d/%lu",
 			__func__, cnt, ARRAY_SIZE(settings));
 		return -1;
@@ -3779,6 +3782,8 @@ int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job, int seninf_pad_bitmask)
 		return -EPERM;
 	}
 
+	mtk_cam_ctrl_register_xvs_cb(ctx);
+
 	MTK_CAM_TRACE_END(BASIC);
 	return ret;
 }
@@ -3797,6 +3802,8 @@ int ctx_stream_off_seninf_sensor(struct mtk_cam_ctx *ctx)
 
 	if (!ctx->seninf)
 		return ret;
+
+	mtk_cam_ctrl_unregister_xvs_cb(ctx);
 
 	ret = mtk_cam_subdev_s_stream(ctx->seninf, 0);
 

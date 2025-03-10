@@ -199,6 +199,7 @@ enum mtk_cam_slc_mode {
 enum mtk_cam_sen_apply_ctrl {
 	MTK_CAM_SEN_APPLY_NORMAL,
 	MTK_CAM_SEN_APPLY_DIRECT_APPLY,
+	MTK_CAM_SEN_APPLY_BY_XVS,
 };
 struct mtk_cam_resource_sensor_v2 {
 	__u32 width;

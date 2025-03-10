@@ -247,6 +247,24 @@ static inline bool bypass_guard_check(struct transition_param *p)
 	return p->s_params->always_allow;
 }
 
+static inline bool valid_i2c_period_xvs(struct transition_param *p)
+{
+	int ret = false;
+	u64 xvs_ts;
+
+	if (unlikely(!p->s_params))
+		return false;
+	spin_lock(p->info_lock);
+	xvs_ts = p->info->xvs_ts_ns;
+	ret = ((p->event_ts - p->info->xvs_ts_ns) < p->s_params->i2c_thres_ns);
+	spin_unlock(p->info_lock);
+
+	if (ret == false)
+		pr_info("%s: xvs %llu - event ts %llu", __func__, xvs_ts, p->event_ts);
+
+	return ret;
+}
+
 static inline bool valid_i2c_period(struct transition_param *p)
 {
 	int ret = false;
@@ -322,6 +340,32 @@ static inline bool valid_cq_execution_subsample(
 	return ret;
 }
 
+static inline bool valid_first_last_sof_order(struct transition_param *p)
+{
+	return (p->info->sof_ts_ns <= p->info->sof_l_ts_ns);
+}
+
+static inline bool valid_cq_thres_from_first_sof(struct transition_param *p)
+{
+	return ((p->event_ts - p->info->sof_ts_ns) < p->cq_trigger_thres);
+}
+
+static inline bool valid_cq_thres_from_last_sof(struct transition_param *p)
+{
+	return ((p->event_ts - p->info->sof_l_ts_ns) < SQC_THRES_FROM_L_SOF_NS);
+}
+
+static inline bool valid_cq_thres_from_ref_sof(struct transition_param *p)
+{
+	// ref sof from MW, not ready mask
+	return ((p->event_ts < (p->cq_trigger_thres + p->reference_sof_ns)));
+}
+
+static inline bool valid_cq_thres_from_xvs(struct transition_param *p)
+{
+	return ((p->event_ts < (p->cq_trigger_thres + p->info->xvs_ts_ns)));
+}
+
 static inline bool valid_cq_execution(struct transition_param *p)
 {
 	bool ret = false;
@@ -331,9 +375,8 @@ static inline bool valid_cq_execution(struct transition_param *p)
 	/* check if ack between camsv/raw and mraw sof */
 	/* for sentest/dual stream: large NE -> SE duration over 25ms case*/
 	spin_lock(p->info_lock);
-	ret = (p->info->sof_ts_ns <= p->info->sof_l_ts_ns) &&
-	(((p->event_ts - p->info->sof_ts_ns) < p->cq_trigger_thres) ||
-	((p->event_ts - p->info->sof_l_ts_ns) < SQC_THRES_FROM_L_SOF_NS));
+	ret = valid_first_last_sof_order(p) &&
+		(valid_cq_thres_from_first_sof(p) || valid_cq_thres_from_last_sof(p));
 
 	if (ret == false)
 		pr_info("[%s] event/l_sof/cq:%llu/%llu/%llu sof:%llu(%llu)",
@@ -359,9 +402,8 @@ static inline bool valid_cq_execution_ref_sof(struct transition_param *p)
 	/* check if ack between camsv/raw and mraw sof */
 	/* for sentest NE -> SE duration 25ms case*/
 	spin_lock(p->info_lock);
-	ret = (p->info->sof_ts_ns <= p->info->sof_l_ts_ns) &&
-		(((p->event_ts < (p->cq_trigger_thres + p->reference_sof_ns))) ||
-	((p->event_ts - p->info->sof_l_ts_ns) < SQC_THRES_FROM_L_SOF_NS));
+	ret = valid_first_last_sof_order(p) &&
+		(valid_cq_thres_from_ref_sof(p)|| valid_cq_thres_from_last_sof(p));
 	if (ret == false)
 		pr_info("[mtk-cam:valid_cq_execution] event/l_sof/cq:%llu/%llu/%llu sof:%llu(%llu) ref:%llu",
 			p->event_ts, p->info->sof_l_ts_ns, p->cq_trigger_thres, p->info->sof_ts_ns,
@@ -370,6 +412,26 @@ static inline bool valid_cq_execution_ref_sof(struct transition_param *p)
 
 	return ret;
 }
+
+static inline bool valid_cq_execution_xvs(struct transition_param *p)
+{
+	bool ret = false;
+
+	if (unlikely(!p->s_params))
+		return false;
+
+	spin_lock(p->info_lock);
+	ret = valid_first_last_sof_order(p) && valid_cq_thres_from_xvs(p);
+	if (ret == false)
+		pr_info("[mtk-cam:%s] event/xvs/cq_thres:%llu/%llu/%llu now:%llu",
+			__func__, p->event_ts, p->info->xvs_ts_ns, p->cq_trigger_thres,
+			ktime_get_boottime_ns());
+	spin_unlock(p->info_lock);
+
+	return ret;
+}
+
+#define SCQ_THRES_FOR_AEWA 27000000
 
 static inline bool valid_cq_execution_avoid_race_with_topirq(
 	struct state_accessor *s_acc, struct transition_param *p)
@@ -436,6 +498,15 @@ static inline int guard_apply_sensor_subsample(struct state_accessor *s_acc,
 		allow_subsample_4_i2c_by_inner(s_acc, p));
 }
 
+static inline int guard_apply_sensor_xvs(struct state_accessor *s_acc,
+				     struct transition_param *p)
+{
+	return allow_applying_hw(s_acc) &&
+		(bypass_guard_check(p) ||
+		 (ops_call(s_acc, prev_allow_apply_sensor) &&
+		  valid_i2c_period_xvs(p)));
+}
+
 static inline int guard_apply_sensor(struct state_accessor *s_acc,
 				     struct transition_param *p)
 {
@@ -483,6 +554,31 @@ static inline bool current_sensor_ready(struct state_accessor *s_acc)
 	int s_state = ops_call(s_acc, cur_sensor_state);
 
 	return is_sensor_set(s_state) || s_state == S_SENSOR_NONE;
+}
+
+static inline bool current_sensor_applied(struct state_accessor *s_acc)
+{
+	int s_state = ops_call(s_acc, cur_sensor_state);
+
+	return is_sensor_ge_applied(s_state) || s_state == S_SENSOR_NONE;
+}
+
+static inline int guard_apply_isp_xvs(struct state_accessor *s_acc,
+				  struct transition_param *p)
+{
+	return allow_applying_hw(s_acc) &&
+		ops_call(s_acc, prev_allow_apply_isp) &&
+		current_sensor_applied(s_acc) &&
+		// TODO: remove valid_cq_execution_xvs after ready mask support
+		valid_cq_execution_xvs(p);
+}
+
+static inline int guard_apply_isp_valid_cq(struct state_accessor *s_acc,
+				  struct transition_param *p) {
+	return allow_applying_hw(s_acc) &&
+		ops_call(s_acc, prev_allow_apply_isp) &&
+			valid_cq_execution(p) &&
+			valid_cq_execution_threaded_irq_race_with_topirq(s_acc, p);
 }
 
 static inline int guard_apply_isp(struct state_accessor *s_acc,

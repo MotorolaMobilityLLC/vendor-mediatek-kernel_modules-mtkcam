@@ -229,4 +229,9 @@ int vsync_update_extisp(struct mtk_cam_ctrl *ctrl,
 		  int engine_type, int irq_type, int idx,
 		  struct vsync_result *res);
 
+void mtk_cam_ctrl_register_xvs_cb(struct mtk_cam_ctx *ctx);
+void mtk_cam_ctrl_unregister_xvs_cb(struct mtk_cam_ctx *ctx);
+
+int mtk_cam_ctrl_send_event(struct mtk_cam_ctrl *ctrl, int event);
+
 #endif
