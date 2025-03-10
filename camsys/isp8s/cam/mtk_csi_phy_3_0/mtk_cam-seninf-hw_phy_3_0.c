@@ -647,6 +647,9 @@ static int mtk_cam_seninf_disable_outmux(struct seninf_ctx *ctx, int outmux, boo
 	/* restore config mode to 0 */
 	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_SW_CONFIG_MODE, SENINF_OUTMUX_CONFIG_MODE, 0);
 
+	/* set out mux grp en to 0 to avoid interference other outmux drop frame */
+	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_CSR_CFG_CTRL, SENINF_OUTMUX_CAM_RDY_GRP_EN, 0);
+
 	/* clear tags */
 	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_TAG_VCDT_FILT_0, SENINF_OUTMUX_FILT_EN_0, 0);
 	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_TAG_VCDT_FILT_1, SENINF_OUTMUX_FILT_EN_1, 0);

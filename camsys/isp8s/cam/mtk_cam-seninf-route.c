@@ -2405,6 +2405,14 @@ mtk_cam_seninf_streaming_mux_change(struct mtk_cam_seninf_mux_param *param, bool
 			continue;
 		}
 
+		/* for out mux which no longer be used --> add to force disable list */
+		if (outmux_to_be_disable_list[camtg] == true &&
+			outmux_continue_used_list[camtg] == false) {
+			ctx->outmux_force_disable_list[camtg] = true;
+			dev_info(ctx->dev, "[%s] add camtg %d to force_disable_list\n",
+				__func__, camtg);
+		}
+
 		if (param->settings[i].enable == false) {
 			dev_info(ctx->dev, "[%s] due to enable= %d, no need to set camtg pad_id %d camtg %d\n",
 				__func__,
@@ -2482,11 +2490,6 @@ mtk_cam_seninf_streaming_mux_change(struct mtk_cam_seninf_mux_param *param, bool
 			mtk_cam_seninf_outmux_release_all(ctx, &outmux_cfgs);
 			goto SENINF_MUX_CHANGE_LOG_AND_EXIT;
 		}
-
-		/* for out mux which no longer be used --> add to force disable list */
-		if (outmux_to_be_disable_list[camtg] == true &&
-			outmux_continue_used_list[camtg] == false)
-			ctx->outmux_force_disable_list[camtg] = true;
 	}
 
 	/* (seamless only) reset all selected outmux firstly*/
