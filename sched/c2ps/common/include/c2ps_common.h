@@ -63,6 +63,7 @@ extern bool enable_runnable_monitor;
 extern bool enable_dyna_isolation;
 extern int c2ps_pwr_eff_threshold;
 extern int long_period_idle;
+extern int cpu_on_off_energy;
 
 enum c2ps_env_status : int {
 	C2PS_STAT_NODEF = 0,
@@ -272,6 +273,7 @@ struct cpu_info {
 	u32 m_core_max_util;
 	u32 b_core_max_util;
 	int cluster_first_cpu[MAX_NUMBER_OF_CLUSTERS];
+	int nr_cluster_cpus[MAX_NUMBER_OF_CLUSTERS];
 };
 
 struct cpu_isolation_info {

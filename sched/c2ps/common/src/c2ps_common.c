@@ -54,7 +54,11 @@ int long_period_idle = 2;
 bool enable_app_vip = true;
 // c2ps cpu isolation
 bool enable_dyna_isolation = true;
+bool disable_b_core_dyna_isolation = true;
 int cpu_idlerate_thres_to_isolation = 15;
+int cpu_on_off_energy;
+int cpu_on_off_th = 3;
+int cpu_on_um_th = 90;
 
 module_param(proc_time_window_size, int, 0644);
 module_param(debug_log_on, int, 0644);
@@ -69,7 +73,10 @@ module_param(long_period_idle, int, 0644);
 module_param(enable_runnable_monitor, bool, 0644);
 module_param(enable_app_vip, bool, 0644);
 module_param(enable_dyna_isolation, bool, 0644);
+module_param(disable_b_core_dyna_isolation, bool, 0644);
 module_param(cpu_idlerate_thres_to_isolation, int, 0644);
+module_param(cpu_on_off_th, int, 0644);
+module_param(cpu_on_um_th, int, 0644);
 
 #if !(IS_ENABLED(CONFIG_MTK_SCHED_GROUP_AWARE) && IS_ENABLED(CONFIG_MTK_SCHED_FAST_LOAD_TRACKING))
 bool flt_ctrl_force_get(void)
@@ -1693,7 +1700,6 @@ void check_cpu_on_condition(void)
 	int average_idle_rate;
 	int cluster_pwr_eff[3];  // only 3 clusters are used in the following code
 	int _cluster_index = 0;
-	bool need_update_available_cpus = false;
 
 	if (unlikely(!glb_info || !g_cpu_info || !g_cpu_isolation_info))
 		return;
@@ -1708,30 +1714,31 @@ void check_cpu_on_condition(void)
 		cluster_pwr_eff[_cluster_index] =
 			pd_get_freq_pwr_eff(g_cpu_info->cluster_first_cpu[_cluster_index], _freq);
 	}
-
-	if (current_um > c2ps_regulator_um_min &&
-			(cluster_pwr_eff[0] - cluster_pwr_eff[1]) > c2ps_pwr_eff_threshold &&
+	if (current_um >= cpu_on_um_th &&
 			average_idle_rate <= cpu_idlerate_thres_to_isolation) {
-		g_cpu_isolation_info->set_cores[1] =
-			max(0, min(c2ps_get_nr_cpus_of_cluster(1), g_cpu_isolation_info->set_cores[1] + 1));
-		core_ctl_set_min_cpus(1, g_cpu_isolation_info->set_cores[1], 2, 1);
-		need_update_available_cpus = true;
+		cpu_on_off_energy++;
+		cpu_on_off_energy = max(-cpu_on_off_th, min(cpu_on_off_energy, cpu_on_off_th));
+		if (cpu_on_off_energy >= cpu_on_off_th) {
+			g_cpu_isolation_info->set_cores[1] =
+				max(0, min(g_cpu_info->nr_cluster_cpus[1], g_cpu_isolation_info->set_cores[1] + 1));
+			core_ctl_set_min_cpus(1, g_cpu_isolation_info->set_cores[1], 2, 1);
+			update_available_cpus();
+			cpu_on_off_energy -= 2;
+		}
 	}
-	if ((cluster_pwr_eff[1] - cluster_pwr_eff[2]) > c2ps_pwr_eff_threshold) {
+	if (!disable_b_core_dyna_isolation && (cluster_pwr_eff[1] - cluster_pwr_eff[2]) > c2ps_pwr_eff_threshold) {
 		g_cpu_isolation_info->set_cores[2] =
-			max(0, min(c2ps_get_nr_cpus_of_cluster(2), g_cpu_isolation_info->set_cores[2] + 1));
+			max(0, min(g_cpu_info->nr_cluster_cpus[2], g_cpu_isolation_info->set_cores[2] + 1));
 		core_ctl_set_min_cpus(2, g_cpu_isolation_info->set_cores[2], 2, 1);
-		need_update_available_cpus = true;
+		update_available_cpus();
 	}
 
-	if (need_update_available_cpus)
-		update_available_cpus();
-
-	c2ps_main_systrace("%s um: %u, l pwr_eff: %d, m pwr_eff: %d, idle rate: %d, set min cpus: c1=%d, c2=%d",
-		__func__, current_um, cluster_pwr_eff[0], cluster_pwr_eff[1], average_idle_rate,
+	c2ps_main_systrace(
+		"%s um=%u, cpu_on_um_th=%d, idle rate=%d, cpu_on_off_energy=%d, set min cpus: c1=%d, c2=%d",
+		__func__, current_um, cpu_on_um_th, average_idle_rate, cpu_on_off_energy,
 		g_cpu_isolation_info->set_cores[1], g_cpu_isolation_info->set_cores[2]);
-	C2PS_LOGD("um: %u, l pwr_eff: %d, m pwr_eff: %d, b pwr_eff: %d, idle rate: %d, set min cpus: c1=%d, c2=%d",
-		current_um, cluster_pwr_eff[0], cluster_pwr_eff[1], cluster_pwr_eff[2], average_idle_rate,
+	C2PS_LOGD("um=%u, cpu_on_um_th=%d, idle rate=%d, cpu_on_off_energy=%d, set min cpus: c1=%d, c2=%d",
+		current_um, cpu_on_um_th, average_idle_rate, cpu_on_off_energy,
 		g_cpu_isolation_info->set_cores[1], g_cpu_isolation_info->set_cores[2]);
 }
 
@@ -1740,8 +1747,8 @@ void check_cpu_off_condition(void)
 	int current_um;
 	int average_idle_rate;
 	int m_freq, b_freq;
-	bool need_update_available_cpus = false;
-	int freq_margin = 1000;
+	// the margin indicates approximately an 80% chance of staying at MCPU lowest freq.
+	int freq_margin = 20000;
 
 	if (unlikely(!glb_info || !g_cpu_info || !g_cpu_isolation_info))
 		return;
@@ -1757,28 +1764,31 @@ void check_cpu_off_condition(void)
 
 	if (current_um <= c2ps_regulator_um_min && m_freq <= glb_info->scn_cpu_freq_floor[1] + freq_margin &&
 			average_idle_rate > cpu_idlerate_thres_to_isolation) {
-		g_cpu_isolation_info->set_cores[1] =
-			max(0, min(c2ps_get_nr_cpus_of_cluster(1), g_cpu_isolation_info->set_cores[1] - 1));
-		core_ctl_set_min_cpus(1, g_cpu_isolation_info->set_cores[1], 2, 1);
-		need_update_available_cpus = true;
+		cpu_on_off_energy--;
+		cpu_on_off_energy = max(-cpu_on_off_th, min(cpu_on_off_energy, cpu_on_off_th));
+		if (cpu_on_off_energy <= -cpu_on_off_th) {
+			g_cpu_isolation_info->set_cores[1] =
+				max(0, min(g_cpu_info->nr_cluster_cpus[1], g_cpu_isolation_info->set_cores[1] - 1));
+			core_ctl_set_min_cpus(1, g_cpu_isolation_info->set_cores[1], 2, 1);
+			update_available_cpus();
+			cpu_on_off_energy += 2;
+		}
 	}
-	if (pd_get_freq_pwr_eff(g_cpu_info->cluster_first_cpu[2], b_freq) -
+	if (!disable_b_core_dyna_isolation && pd_get_freq_pwr_eff(g_cpu_info->cluster_first_cpu[2], b_freq) -
 			pd_get_freq_pwr_eff(g_cpu_info->cluster_first_cpu[1], m_freq) > c2ps_pwr_eff_threshold) {
 		g_cpu_isolation_info->set_cores[2] =
-			max(0, min(c2ps_get_nr_cpus_of_cluster(1), g_cpu_isolation_info->set_cores[2] - 1));
+			max(0, min(g_cpu_info->nr_cluster_cpus[2], g_cpu_isolation_info->set_cores[2] - 1));
 		core_ctl_set_min_cpus(2, g_cpu_isolation_info->set_cores[2], 2, 1);
-		need_update_available_cpus = true;
+		update_available_cpus();
 	}
 
-	if (need_update_available_cpus)
-		update_available_cpus();
-
-	c2ps_main_systrace("%s um: %u, m freq: %d, idle rate: %d, set min cpus: c1=%d, c2=%d",
-		__func__, current_um, m_freq, average_idle_rate,
-		g_cpu_isolation_info->set_cores[1], g_cpu_isolation_info->set_cores[2]);
-	C2PS_LOGD("um: %u, m freq: %d, idle rate: %d, set min cpus: c1=%d, c2=%d",
-		current_um, m_freq, average_idle_rate,
-		g_cpu_isolation_info->set_cores[1], g_cpu_isolation_info->set_cores[2]);
+	c2ps_main_systrace(
+		"%s um=%u, m freq=%d, freq_th=%d, idle rate=%d, cpu_on_off_energy=%d, set min cpus: c1=%d, c2=%d",
+		__func__, current_um, m_freq, glb_info->scn_cpu_freq_floor[1] + freq_margin, average_idle_rate,
+		cpu_on_off_energy, g_cpu_isolation_info->set_cores[1], g_cpu_isolation_info->set_cores[2]);
+	C2PS_LOGD("um=%u, m freq=%d, freq_th=%d, idle rate=%d, cpu_on_off_energy=%d, set min cpus=c1=%d, c2=%d",
+		current_um, m_freq, glb_info->scn_cpu_freq_floor[1] + freq_margin, average_idle_rate,
+		cpu_on_off_energy, g_cpu_isolation_info->set_cores[1], g_cpu_isolation_info->set_cores[2]);
 }
 
 inline void cancel_dyna_core_isolation(void)
@@ -2315,6 +2325,7 @@ int init_c2ps_common(int cfg_camfps)
 		c2ps_init_kf(&(glb_info->freq_est[_cluster_idx]), FREQ_KF_QVAL,
 			FREQ_KF_MEAS_ERR, FREQ_KF_MIN_EST_ERR);
 		g_cpu_info->cluster_first_cpu[_cluster_idx] = c2ps_get_first_cpu_of_cluster(_cluster_idx);
+		g_cpu_info->nr_cluster_cpus[_cluster_idx] = c2ps_get_nr_cpus_of_cluster(_cluster_idx);
 		g_cpu_isolation_info->set_cores[_cluster_idx] = c2ps_get_nr_cpus_of_cluster(_cluster_idx);
 		if (g_cpu_info->cluster_first_cpu[_cluster_idx] < 0)
 			return -1;
@@ -2325,6 +2336,7 @@ int init_c2ps_common(int cfg_camfps)
 	g_cpu_info->b_core_max_util = pd_get_freq_util(g_cpu_info->cluster_first_cpu[2], INT_MAX);
 
 	g_cpu_isolation_info->camera_control_isolation = enable_dyna_isolation ? true: false;
+	cpu_on_off_energy = 0;
 
 	ret = c2ps_sysfs_create_dir(NULL, "common", &common_base_kobj);
 

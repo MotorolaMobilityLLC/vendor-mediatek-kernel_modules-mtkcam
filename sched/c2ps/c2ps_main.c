@@ -94,7 +94,7 @@ inline bool need_update_process_round(void)
 		(enable_runnable_monitor && bg_timer_info->min_duration > runnable_duration) ||
 		(enable_dyna_isolation && (
 			bg_timer_info->dynamic_core_on_monitor_duration != background_monitor_duration ||
-			bg_timer_info->dynamic_core_off_monitor_duration != 3 * background_monitor_duration)) ||
+			bg_timer_info->dynamic_core_off_monitor_duration != background_monitor_duration)) ||
 		(!enable_runnable_monitor && bg_timer_info->min_duration == runnable_duration))
 		return true;
 	return false;
@@ -118,7 +118,7 @@ void decide_timer_callback_process_round(void)
 	// determine the count to process dynamic cpu isolation
 	if (enable_dyna_isolation) {
 		bg_timer_info->dynamic_core_on_monitor_duration = background_monitor_duration;
-		bg_timer_info->dynamic_core_off_monitor_duration = 3 * background_monitor_duration;
+		bg_timer_info->dynamic_core_off_monitor_duration = background_monitor_duration;
 		bg_timer_info->min_duration = min(bg_timer_info->min_duration,
 			min(bg_timer_info->dynamic_core_on_monitor_duration,
 				bg_timer_info->dynamic_core_off_monitor_duration));
