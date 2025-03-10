@@ -42,6 +42,7 @@
 enum {
 	I2C_DT_ADDR_16_DATA_8 = 0,
 	I2C_DT_ADDR_16_DATA_16,
+	I2C_DT_ADDR_8_DATA_8,
 	I2C_DT_MAXCNT,
 };
 
@@ -65,6 +66,9 @@ enum {
  *   to sequential addresses
  *   (addr1_16 + data1_8 + data2_8 + data3_8)
  *   it's equal to (addr1_16 + data1_8) + ({next_addr_of_addr1_16} + data2_8)
+ * I2C_TABLE_DT_ADDR_8_DATA_8:
+ *   write with a list of 8-bit address and 8-bit data
+ *   (addr1_8 + data1_8) + (addr2_8 + data2_8)
  */
 enum {
 	I2C_TABLE_DT_ADDR_16_DATA_8 = 0,
@@ -72,6 +76,7 @@ enum {
 	I2C_TABLE_DT_ADDR_16_DATA_8_BURST,
 	I2C_TABLE_DT_ADDR_16_DATA_16_BURST,
 	I2C_TABLE_DT_ADDR_16_DATA_8_SEQ,
+	I2C_TABLE_DT_ADDR_8_DATA_8,
 	I2C_TABLE_DT_MAXCNT,
 };
 
@@ -818,6 +823,14 @@ struct subdrv_entry {
 	__val; \
 })
 
+#define subdrv_i2c_rd_u8_u8(subctx, reg) \
+({ \
+	u8 __val = 0xff; \
+	adaptor_i2c_rd_u8_u8(subctx->i2c_client, \
+		subctx->i2c_write_id >> 1, reg, &__val); \
+	__val; \
+})
+
 #define subdrv_i2c_rd_u16(subctx, reg) \
 ({ \
 	u16 __val = 0xffff; \
@@ -828,6 +841,10 @@ struct subdrv_entry {
 
 #define subdrv_i2c_wr_u8(subctx, reg, val) \
 	adaptor_i2c_wr_u8(subctx->i2c_client, \
+		subctx->i2c_write_id >> 1, reg, val)
+
+#define subdrv_i2c_wr_u8_u8(subctx, reg, val) \
+	adaptor_i2c_wr_u8_u8(subctx->i2c_client, \
 		subctx->i2c_write_id >> 1, reg, val)
 
 #define subdrv_i2c_wr_u16(subctx, reg, val) \
@@ -848,6 +865,10 @@ struct subdrv_entry {
 
 #define subdrv_i2c_wr_regs_u8(subctx, list, len) \
 	adaptor_i2c_wr_regs_u8(subctx->i2c_client, \
+		subctx->i2c_write_id >> 1, list, len)
+
+#define subdrv_i2c_wr_regs_u8_u8(subctx, list, len) \
+	adaptor_i2c_wr_regs_u8_u8(subctx->i2c_client, \
 		subctx->i2c_write_id >> 1, list, len)
 
 #define subdrv_i2c_wr_regs_u16(subctx, list, len) \
@@ -892,6 +913,10 @@ struct subdrv_entry {
 
 #define subdrv_ixc_wr_regs_u8(subctx, list, len) \
 	adaptor_ixc_wr_regs_u8(&subctx->ixc_client, \
+		subctx->i2c_write_id >> 1, list, len)
+
+#define subdrv_ixc_wr_regs_u8_u8(subctx, list, len) \
+	adaptor_ixc_wr_regs_u8_u8(&subctx->ixc_client, \
 		subctx->i2c_write_id >> 1, list, len)
 
 #define subdrv_ixc_wr_regs_u16(subctx, list, len) \

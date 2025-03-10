@@ -94,6 +94,39 @@ int adaptor_i2c_rd_u8(struct i2c_client *i2c_client,
 	return 0;
 }
 
+int adaptor_i2c_rd_u8_u8(struct i2c_client *i2c_client,
+		u16 addr, u8 reg, u8 *val)
+{
+	int ret;
+	u8 buf[1];
+	struct i2c_msg msg[2];
+
+	if (i2c_client == NULL)
+		return -ENODEV;
+
+	buf[0] = reg;
+
+	msg[0].addr = addr;
+	msg[0].flags = i2c_client->flags;
+	msg[0].buf = buf;
+	msg[0].len = sizeof(buf);
+
+	msg[1].addr = addr;
+	msg[1].flags = i2c_client->flags | I2C_M_RD;
+	msg[1].buf = buf;
+	msg[1].len = 1;
+
+	ret = i2c_transfer(i2c_client->adapter, msg, 2);
+	if (ret < 0) {
+		dev_info(&i2c_client->dev, "i2c transfer failed (%d)\n", ret);
+		return ret;
+	}
+
+	*val = buf[0];
+
+	return 0;
+}
+
 int adaptor_i2c_rd_u16(struct i2c_client *i2c_client,
 		u16 addr, u16 reg, u16 *val)
 {
@@ -203,6 +236,33 @@ int adaptor_i2c_wr_u8(struct i2c_client *i2c_client,
 		dev_info(&i2c_client->dev, "i2c transfer failed (%d)\n", ret);
 
 	return ret;
+}
+
+int adaptor_i2c_wr_u8_u8(struct i2c_client *i2c_client,
+		u16 addr, u8 reg, u8 val)
+{
+	int ret;
+	u8 buf[2];
+	struct i2c_msg msg;
+
+	if (i2c_client == NULL)
+		return -ENODEV;
+
+	buf[0] = reg;
+	buf[1] = val;
+
+	msg.addr = addr;
+	msg.flags = i2c_client->flags;
+	msg.buf = buf;
+	msg.len = sizeof(buf);
+
+	ret = i2c_transfer(i2c_client->adapter, &msg, 1);
+	if (ret < 0) {
+		dev_info(&i2c_client->dev, "i2c transfer failed (%d)\n", ret);
+		return ret;
+	}
+
+	return 0;
 }
 
 int adaptor_i2c_wr_u16(struct i2c_client *i2c_client,
@@ -444,6 +504,67 @@ int adaptor_i2c_wr_regs_u8(struct i2c_client *i2c_client,
 
 			plist += 2;
 			pbuf += 3;
+			pmsg++;
+		}
+
+		ret = i2c_transfer(i2c_client->adapter, pmem->msg, cnt);
+		if (ret != cnt) {
+			dev_info(&i2c_client->dev,
+				"i2c transfer failed (%d)\n", ret);
+			kfree(pmem);
+			return -EIO;
+		}
+
+		sent += cnt;
+	}
+
+	kfree(pmem);
+
+	return 0;
+}
+
+int adaptor_i2c_wr_regs_u8_u8(struct i2c_client *i2c_client,
+		u16 addr, u16 *list, u32 len)
+{
+	struct cache_wr_regs_u8_u8 *pmem;
+	struct i2c_msg *pmsg;
+	u8 *pbuf;
+	u16 *plist;
+	int i, ret, sent, total, cnt;
+
+	if (i2c_client == NULL)
+		return -ENODEV;
+
+	pmem = kmalloc(sizeof(*pmem), GFP_KERNEL);
+	if (!pmem)
+		return -ENOMEM;
+
+	/* each msg contains 2 bytes: addr(u8) + val(u8) */
+	sent = 0;
+	total = len >> 1;
+	plist = list;
+
+	while (sent < total) {
+
+		cnt = total - sent;
+		if (cnt > ARRAY_SIZE(pmem->msg))
+			cnt = ARRAY_SIZE(pmem->msg);
+
+		pbuf = pmem->buf;
+		pmsg = pmem->msg;
+
+		for (i = 0; i < cnt; i++) {
+
+			pbuf[0] = plist[0] & 0xff;
+			pbuf[1] = plist[1] & 0xff;
+
+			pmsg->addr = addr;
+			pmsg->flags = i2c_client->flags;
+			pmsg->len = 2;
+			pmsg->buf = pbuf;
+
+			plist += 2;
+			pbuf += 2;
 			pmsg++;
 		}
 
@@ -937,6 +1058,69 @@ int adaptor_ixc_wr_regs_u8(struct i3c_i2c_device *client,
 
 			plist += 2;
 			pbuf += 3;
+			pmsg++;
+		}
+
+		ret = i3c_i2c_transfer(client, pmem->msg, cnt);
+		if (ret < 0){
+			dev_info(dev, "[%s]ixc transfer failed (%d)\n", __func__,ret);
+			kfree(pmem);
+			return -EIO;
+		}
+
+		sent += cnt;
+	}
+
+	kfree(pmem);
+
+	return 0;
+}
+
+int adaptor_ixc_wr_regs_u8_u8(struct i3c_i2c_device *client,
+		u16 addr, u16 *list, u32 len)
+{
+	struct cache_wr_regs_u8_u8_ixc *pmem;
+	struct i3c_i2c_xfer *pmsg;
+	struct device *dev = adaptor_ixc_get_dev(client);
+	u8 *pbuf;
+	u16 *plist;
+	int i, ret, sent, total, cnt;
+
+	if (client == NULL)
+		return -ENODEV;
+
+	pmem = kmalloc(sizeof(*pmem), GFP_KERNEL);
+	if (!pmem)
+		return -ENOMEM;
+
+	/* each msg contains 2 bytes: addr(u8) + val(u8) */
+	sent = 0;
+	total = len >> 1;
+	plist = list;
+
+	while (sent < total) {
+
+		cnt = total - sent;
+		if (cnt > ARRAY_SIZE(pmem->msg))
+			cnt = ARRAY_SIZE(pmem->msg);
+
+		pbuf = pmem->buf;
+		pmsg = pmem->msg;
+
+		for (i = 0; i < cnt; i++) {
+
+			pbuf[0] = plist[0] & 0xff;
+			pbuf[1] = plist[1] & 0xff;
+
+			if (client->protocol == I2C_PROTOCOL)
+				pmsg->addr = addr;
+
+			pmsg->flags = 0;
+			pmsg->len = 2;
+			pmsg->buf = pbuf;
+
+			plist += 2;
+			pbuf += 2;
 			pmsg++;
 		}
 

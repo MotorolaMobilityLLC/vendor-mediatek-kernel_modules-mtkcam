@@ -52,6 +52,9 @@ void i2c_table_write(struct subdrv_ctx *ctx, u16 *list, u32 len)
 	case I2C_DT_ADDR_16_DATA_16:
 		subdrv_i2c_wr_regs_u16(ctx, list, len);
 		break;
+	case I2C_DT_ADDR_8_DATA_8:
+		subdrv_i2c_wr_regs_u8_u8(ctx, list, len);
+		break;
 	case I2C_DT_ADDR_16_DATA_8:
 	default:
 		subdrv_i2c_wr_regs_u8(ctx, list, len);
@@ -67,6 +70,9 @@ u64 ixc_table_write(struct subdrv_ctx *ctx, u16 *list, u32 len)
 	switch (ctx->s_ctx.i2c_transfer_data_type) {
 	case I2C_DT_ADDR_16_DATA_16:
 		subdrv_ixc_wr_regs_u16(ctx, list, len);
+		break;
+	case I2C_DT_ADDR_8_DATA_8:
+		subdrv_ixc_wr_regs_u8_u8(ctx, list, len);
 		break;
 	case I2C_DT_ADDR_16_DATA_8:
 	default:
@@ -115,6 +121,9 @@ u64 ixc_table_write_with_entry(struct subdrv_ctx *ctx, struct reg_setting_entry 
 		break;
 	case I2C_TABLE_DT_ADDR_16_DATA_16:
 		subdrv_ixc_wr_regs_u16(ctx, list_16, len);
+		break;
+	case I2C_TABLE_DT_ADDR_8_DATA_8:
+		subdrv_ixc_wr_regs_u8_u8(ctx, list_16, len);
 		break;
 	case I2C_TABLE_DT_ADDR_16_DATA_8:
 	default:
