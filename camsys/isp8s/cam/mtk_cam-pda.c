@@ -33,7 +33,77 @@ MODULE_DEVICE_TABLE(of, mtk_pda_of_ids);
 
 int mtk_pda_translation_fault_callback(int port, dma_addr_t mva, void *data)
 {
-	//struct mtk_pda_device *pda_dev = (struct mtk_pda_device *)data;
+	struct mtk_pda_device *pda_dev = (struct mtk_pda_device *)data;
+	unsigned int sel_index = 0;
+	unsigned int Debug_Sel[] = {0x00008120, 0x0000400e, 0x0000c000};
+	unsigned int Length_Arr = sizeof(Debug_Sel)/sizeof(*Debug_Sel);
+
+	dev_info(pda_dev->dev, "%s:check buffer information\n", __func__);
+
+	dev_info(pda_dev->dev, "CFG_0/1/2/3/4/5/6: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_0),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_1),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_2),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_3),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_4),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_5),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_6));
+	dev_info(pda_dev->dev, "CFG_14~18: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_14),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_15),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_16),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_17),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_18));
+	dev_info(pda_dev->dev, "CFG_19~22: 0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_19),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_20),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_21),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_22));
+	dev_info(pda_dev->dev, "DCIF DEBUG0~7: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA0),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA1),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA2),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA3),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA4),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA5),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA6),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA7));
+	dev_info(pda_dev->dev, "I_P1/TI_P1/I_P2/TI_P2/Out: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P1_BASE_ADDR),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P1_BASE_ADDR),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P2_BASE_ADDR),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P2_BASE_ADDR),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAO_P1_BASE_ADDR));
+	dev_info(pda_dev->dev, "[MSB]I_P1/TI_P1/I_P2/TI_P2/Out: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P1_BASE_ADDR_MSB),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P1_BASE_ADDR_MSB),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P2_BASE_ADDR_MSB),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P2_BASE_ADDR_MSB),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAO_P1_BASE_ADDR_MSB));
+	dev_info(pda_dev->dev, "ERR_STAT_EN/ERR_STAT/TOP_CTL/DCIF_CTL: 0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_ERR_STAT_EN),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_ERR_STAT),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_TOP_CTL),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DCIF_CTL));
+	dev_info(pda_dev->dev, "[ERR_STAT]I_P1/TI_P1/I_P2/TI_P2/Out: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P1_ERR_STAT),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P1_ERR_STAT),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P2_ERR_STAT),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P2_ERR_STAT),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAO_P1_ERR_STAT));
+	dev_info(pda_dev->dev, "pack_mode/dilation: 0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PACK_MODE),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DILATION_CFG));
+	dev_info(pda_dev->dev, "DMA_EN(0x1f): 0x%x\n",
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DMA_EN));
+
+	// check debug data
+	for (sel_index = 0; sel_index < Length_Arr; ++sel_index) {
+		writel_relaxed(Debug_Sel[sel_index], pda_dev->base + REG_PDA_PDA_DEBUG_SEL);
+		dev_info(pda_dev->dev, "DEBUG_SEL/DEBUG_DATA: 0x%x/0x%x\n",
+			readl_relaxed(pda_dev->base + REG_PDA_PDA_DEBUG_SEL),
+			readl_relaxed(pda_dev->base + REG_PDA_PDA_DEBUG_DATA));
+	}
 
 	return 0;
 }
@@ -388,6 +458,18 @@ int mtk_cam_pda_dev_config(struct mtk_pda_device *pda_dev)
 		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA5),
 		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA6),
 		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA7));
+	dev_info(pda_dev->dev, "I_P1/TI_P1/I_P2/TI_P2/Out: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P1_BASE_ADDR),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P1_BASE_ADDR),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P2_BASE_ADDR),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P2_BASE_ADDR),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAO_P1_BASE_ADDR));
+	dev_info(pda_dev->dev, "[MSB]I_P1/TI_P1/I_P2/TI_P2/Out: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P1_BASE_ADDR_MSB),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P1_BASE_ADDR_MSB),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P2_BASE_ADDR_MSB),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P2_BASE_ADDR_MSB),
+		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAO_P1_BASE_ADDR_MSB));
 	dev_info(pda_dev->dev, "[ERR_STAT]I_P1/TI_P1/I_P2/TI_P2/Out: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
 		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P1_ERR_STAT),
 		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P1_ERR_STAT),
@@ -633,8 +715,8 @@ static int mtk_pda_of_probe(struct platform_device *pdev,
 
 		dev_info(dev, "registered irq=%d, ret = %d\n", pda_dev->irq[i], ret);
 
-		//disable_irq(pda_dev->irq[i]);
-		//dev_info(dev, "%s:disable irq %d\n", __func__, pda_dev->irq[i]);
+		disable_irq(pda_dev->irq[i]);
+		dev_info(dev, "%s:disable irq %d\n", __func__, pda_dev->irq[i]);
 	}
 
 
@@ -828,6 +910,9 @@ int mtk_pda_runtime_suspend(struct device *dev)
 	struct mtk_pda_device *pda_dev = dev_get_drvdata(dev);
 	int i;
 	dev_info(dev, "%s +\n", __func__);
+
+	pda_reset(pda_dev);
+
 	//-------- setting ofl mode ---------
 	// 0x9:
 	// PDA_OTF_otf_db_load_combine = 1
@@ -845,7 +930,6 @@ int mtk_pda_runtime_suspend(struct device *dev)
 		disable_irq(pda_dev->irq[i]);
 		dev_info(dev, "%s:disable irq %d\n", __func__, pda_dev->irq[i]);
 	}
-	pda_reset(pda_dev);
 
 	dev_dbg(dev, "%s:disable clock\n", __func__);
 
