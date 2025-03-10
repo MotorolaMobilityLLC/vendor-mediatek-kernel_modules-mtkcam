@@ -2361,7 +2361,7 @@ static void mtk_cam_sv_set_pda_frame_param_dmao(
 		info[pdao_m1].stride *
 		info[pdao_m1].height;
 
-	dev_info(ctx->cam->dev, "%s:dmao_id:%d iova:0x%llx stride:0x%x height:0x%x\n size:%d offset:%lu",
+	dev_dbg(ctx->cam->dev, "%s:dmao_id:%d iova:0x%llx stride:0x%x height:0x%x\n size:%d offset:%lu",
 		__func__, pdao_m1, out->buf[0][0].iova,
 		info[pdao_m1].stride , info[pdao_m1].height, out->buf[0][0].size, offset);
 }

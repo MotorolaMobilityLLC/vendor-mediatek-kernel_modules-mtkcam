@@ -13,6 +13,7 @@
 
 #define MULTI_SMI_SV_HW_NUM 3
 #define DMA_GROUP_SIZE 4
+#define MTK_CAM_UAPI_PDA_DC_MAX_CFG_NUM (128)
 
 struct mtk_cam_uapi_meta_raw_stats_cfg;
 
@@ -94,6 +95,7 @@ struct mraw_stats_cfg_param {
 	u32 imgo_sel;
 
 	u32 lm_mode_ctrl;
+	u32 pda_cfg[MTK_CAM_UAPI_PDA_DC_MAX_CFG_NUM];
 };
 
 struct sv_dma_th_setting {

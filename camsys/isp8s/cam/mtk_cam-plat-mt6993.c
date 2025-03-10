@@ -749,6 +749,7 @@ static int get_mraw_stats_cfg_param(
 	param->pda_stride = stats_cfg->pda_dc_param.stride;
 	param->pda_width = stats_cfg->pda_dc_param.width;
 	param->pda_height = stats_cfg->pda_dc_param.height;
+	memcpy(param->pda_cfg, stats_cfg->pda_dc_param.cfg, sizeof(param->pda_cfg));
 
 	param->mqe_en = stats_cfg->mqe_enable;
 	param->mobc_en = stats_cfg->mobc_enable;

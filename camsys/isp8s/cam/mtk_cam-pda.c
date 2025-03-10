@@ -546,9 +546,6 @@ static irqreturn_t mtk_irq_pda(int irq, void *data)
 
 	pda_status = readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_ERR_STAT);
 
-	dev_info(pda_dev->dev, "pda-%d: pda_status:0x%x",
-		pda_dev->id, pda_status);
-
 	// Check if it's an error IRQ
 	if (pda_status & PDA_OTF_PDA_DONE_ST) {
 		pda_dev->ts_ns = ktime_get_boottime_ns();
@@ -931,6 +928,9 @@ int mtk_pda_runtime_suspend(struct device *dev)
 		dev_info(dev, "%s:disable irq %d\n", __func__, pda_dev->irq[i]);
 	}
 
+	mtk_cam_isp8s_bwr_clr_bw(pda_dev->cam->bwr, ENGINE_PDA, CAM2_PORT);
+
+	mtk_cam_reset_qos(dev, &pda_dev->qos);
 	dev_dbg(dev, "%s:disable clock\n", __func__);
 
 	for (i = pda_dev->num_clks - 1; i >= 0; i--)

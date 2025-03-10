@@ -773,9 +773,9 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 
 		if (i < SVTAG_IMG_END) {
 			avg_bw =
-				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb) * 3 / 2;
+				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb);
 			peak_bw =
-				calc_bw(x_size * img_h, linet, sensor_h) * 3 / 2;
+				calc_bw(x_size * img_h, linet, sensor_h);
 			total_peak_bw += peak_bw;
 			if (ipifmt_is_raw_ufo(in->fmt.format)) {
 				/* compression ratio: 0.7x */
@@ -802,9 +802,9 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 
 		} else {
 			pd_avg_bw =
-				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb) * 3 / 2;
+				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb);
 			pd_peak_bw =
-				calc_bw(x_size * img_h, linet, sensor_h) * 3 / 2;
+				calc_bw(x_size * img_h, linet, sensor_h);
 			total_peak_bw += pd_peak_bw;
 			if (is_smmu_enabled) {
 				if (pd_avg_bw || pd_peak_bw) {
@@ -911,6 +911,138 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 	return 0;
 }
 
+static int fill_pda_qos(struct mtk_cam_job *job,
+						struct mtkcam_ipi_frame_param *fp)
+{
+	struct mraw_stats_cfg_param *mraw_param;
+	struct mtk_mraw_pipeline *mraw_pipe;
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	unsigned int mraw_pipe_idx;
+	int i;
+
+	// ---- any platform needs to be confirmed ----
+	unsigned int out_byte_per_ROI = 1200;
+	unsigned int img_bit = 16;
+	unsigned int tbl_bit = 1;
+	unsigned int Frame_Rate = 30;
+	// --------------------------------------------
+	unsigned int ROInum = 0;
+	unsigned int FOV = 0;
+	unsigned int width_roi = 0, height_roi = 0;
+	unsigned int total_area = 0;
+	unsigned int nbx_roi = 0, nby_roi = 0;
+	unsigned int total_roi = 0;
+
+	unsigned int Inter_Frame_Size_Width = 0;
+	unsigned int Inter_Frame_Size_Height = 0;
+	unsigned int Inter_Frame_Size = 0;
+	unsigned int Inter_Frame_Size_FOV = 0;
+	unsigned int WDMA_Data = 0, RDMA_Data = 0;
+	unsigned int WDMA_PEAK_BW = 0, WDMA_AVG_BW = 0;
+	unsigned int IMAGE_TABLE_RDMA_PEAK_BW = 0;
+	unsigned int IMAGE_TABLE_RDMA_AVG_BW = 0;
+
+	for (i = 0; i < ctx->num_mraw_subdevs; i++) {
+		mraw_pipe_idx = ctx->mraw_subdev_idx[i];
+		if (mraw_pipe_idx >= ctx->cam->pipelines.num_mraw)
+			return 1;
+		mraw_pipe = &ctx->cam->pipelines.mraw[mraw_pipe_idx];
+		mraw_param = &mraw_pipe->res_config.stats_cfg_param;
+		if (mraw_param->pda_dc_en)
+			break;
+	}
+
+	if (!mraw_param || !mraw_param->pda_dc_en)
+		return 0;
+
+	Inter_Frame_Size_Width = (mraw_param->pda_cfg[0] & 0xFFFF);
+	Inter_Frame_Size_Height = (mraw_param->pda_cfg[0] >> 16);
+
+	if (Inter_Frame_Size_Width == 0 || Inter_Frame_Size_Height == 0) {
+		pr_info("%s failed: Frame size is zero, width/height: %d/%d\n",
+			__func__, Inter_Frame_Size_Width, Inter_Frame_Size_Height);
+		return -EINVAL;
+	}
+
+	ROInum = (mraw_param->pda_cfg[2] & 0x1fc0) >> 6;
+
+	if (CAM_DEBUG_ENABLED(MMQOS))
+		pr_info("%s frame width/height/ROI num: %d %d %d\n",
+			__func__,
+			Inter_Frame_Size_Width,
+			Inter_Frame_Size_Height,
+			ROInum);
+
+	if (ROInum == 0 || ROInum > 24) {
+		pr_info("%s failed: ROI num(%d) is invalid\n", __func__, ROInum);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < ROInum; ++i) {
+		width_roi = (mraw_param->pda_cfg[20 + i * 4] & 0xFFFF);
+		height_roi = (mraw_param->pda_cfg[20 + i * 4] >> 16);
+
+		nbx_roi = ((mraw_param->pda_cfg[21 + i * 4] >> 16) & 0x3F);
+		nby_roi = ((mraw_param->pda_cfg[21 + i * 4] >> 22) & 0x3F);
+		total_roi += nbx_roi * nby_roi;
+		total_area += width_roi * height_roi * nbx_roi * nby_roi;
+
+		if (CAM_DEBUG_ENABLED(MMQOS))
+			pr_info("%s ROI:%d, w/h/nbx/nby:%d/%d/%d/%d, total_area/total_roi:%d/%d\n",
+				__func__, i, width_roi, height_roi, nbx_roi, nby_roi,
+				total_area, total_roi);
+	}
+	FOV = total_area * 100 / (Inter_Frame_Size_Width * Inter_Frame_Size_Height);
+
+	if (CAM_DEBUG_ENABLED(MMQOS))
+		pr_info("%s FOV:%d\n", __func__, FOV);
+
+	if (total_roi > 1024) {
+		pr_info("%s failed: total ROI num(%d) is out of range, max ROI num is 1024\n",
+			__func__, total_roi);
+		total_roi = 1024;
+	}
+
+	if (FOV > 200) {
+		pr_info("%s failed: FOV(%d) is out of range, max FOV is 200\n",
+			__func__, FOV);
+		FOV = 200;
+	}
+
+	Inter_Frame_Size = Inter_Frame_Size_Width * Inter_Frame_Size_Height;
+
+	Inter_Frame_Size_FOV = Inter_Frame_Size * FOV / 100;
+
+	WDMA_Data = out_byte_per_ROI * total_roi;
+	RDMA_Data = Inter_Frame_Size_FOV * (img_bit + tbl_bit) * 2 / 8;
+
+	// WDMA BW estimate (KB/s)
+	WDMA_AVG_BW = WDMA_Data * Frame_Rate / 1024;
+
+	// Total RDMA BW (KB/s) (include LR image and table)
+	IMAGE_TABLE_RDMA_AVG_BW = RDMA_Data * Frame_Rate / 1024;
+
+	// pda is not HRT engine, no need to set HRT bw
+	IMAGE_TABLE_RDMA_PEAK_BW = 0;
+	WDMA_PEAK_BW = 0;
+
+	if (CAM_DEBUG_ENABLED(MMQOS))
+		pr_info("%s Total RDMA/WDMA BW (KB/s): %d/%d\n",
+			__func__,
+			IMAGE_TABLE_RDMA_AVG_BW,
+			WDMA_AVG_BW);
+
+	// one port only supports reading one image and one table, so divide by 2
+	job->pda_mmqos[SMI_PORT_PDA_RDMA0].avg_bw = IMAGE_TABLE_RDMA_AVG_BW / 2;
+	job->pda_mmqos[SMI_PORT_PDA_RDMA1].avg_bw = IMAGE_TABLE_RDMA_AVG_BW / 2;
+	job->pda_mmqos[SMI_PORT_PDA_RDMA2].avg_bw = 0;
+	job->pda_mmqos[SMI_PORT_PDA_RDMA3].avg_bw = 0;
+	job->pda_mmqos[SMI_PORT_PDA_RDMA4].avg_bw = 0;
+	job->pda_mmqos[SMI_PORT_PDA_WDMA].avg_bw = WDMA_AVG_BW;
+
+	return 0;
+}
+
 static void update_sensor_active_info(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -983,6 +1115,9 @@ void mtk_cam_fill_qos(struct req_buffer_helper *helper)
 
 	/* camsv */
 	fill_sv_qos(job, fp, sensor_h, senser_vb, avg_linet, sensor_fps);
+
+	/* pda */
+	fill_pda_qos(job, fp);
 }
 
 static bool apply_qos_chk(
@@ -1212,6 +1347,70 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 	}
 }
 
+static void apply_pda_qos(struct mtk_cam_job *job)
+{
+	u32 a_bw, p_bw;
+	struct mtk_pda_device *pda_dev = NULL;
+	int i, port_num = 0;
+	bool apply, apply_bwr = false;
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	struct mtk_cam_device *cam = ctx->cam;
+	unsigned int pda_rdma_totalbw = 0, pda_wdma_totalbw = 0;
+	unsigned int ttl_bw_temp = 0;
+
+	for (i = 0; i < ARRAY_SIZE(ctx->hw_pda); i++) {
+		if (ctx->hw_pda[i])
+			pda_dev = dev_get_drvdata(ctx->hw_pda[i]);
+	}
+
+	if (!pda_dev)
+		return;
+
+	port_num = pda_dev->qos.n_path ? pda_dev->qos.n_path : 0;
+	for (i = 0; i < port_num; i++) {
+		a_bw = job->pda_mmqos[i].avg_bw;
+		if (i == (port_num - 1))
+			pda_wdma_totalbw += a_bw;
+		else
+			pda_rdma_totalbw += a_bw;
+		p_bw = 0;
+		apply = apply_qos_chk(a_bw, p_bw,
+			&pda_dev->qos.cam_path[i].applied_bw,
+			&pda_dev->qos.cam_path[i].pending_bw);
+		if (apply) {
+			//report bw to mmqos
+			mtk_icc_set_bw(pda_dev->qos.cam_path[i].path, a_bw, p_bw);
+			apply_bwr = true;
+		}
+		if (CAM_DEBUG_ENABLED(MMQOS))
+			pr_info("%s: req_seq:%d %s pda-%d icc_path:%s avg/peak:%uKB/s, %uKB/s applied/pending:%lldKB/s, %lldKB/s\n",
+					__func__, job->req_seq,
+					apply ? "APPLY" : "BYPASS", pda_dev->id,
+					pda_dev->qos.cam_path[i].name, a_bw, p_bw,
+					pda_dev->qos.cam_path[i].applied_bw,
+					pda_dev->qos.cam_path[i].pending_bw);
+	}
+
+
+	if (apply_bwr) {
+		//report bw to bwr, unit: KB/s to MB/s
+		pda_rdma_totalbw /= 1024;
+		pda_wdma_totalbw /= 1024;
+
+		mtk_cam_isp8s_bwr_set_chn_bw(cam->bwr, ENGINE_PDA, CAM2_PORT,
+			(int)(pda_rdma_totalbw), (int)(pda_wdma_totalbw), 0, 0, true);
+
+		ttl_bw_temp = (pda_rdma_totalbw + pda_wdma_totalbw);
+
+		mtk_cam_isp8s_bwr_set_ttl_bw(cam->bwr, ENGINE_PDA,
+			(int)(ttl_bw_temp), 0, true);
+		if (CAM_DEBUG_ENABLED(MMQOS))
+			pr_info("Total RDMA/WDMA BW (MB/s): %d/%d\n",
+				pda_rdma_totalbw, pda_wdma_totalbw);
+	}
+
+}
+
 /* threaded irq context */
 int mtk_cam_apply_qos(struct mtk_cam_job *job)
 {
@@ -1223,6 +1422,7 @@ int mtk_cam_apply_qos(struct mtk_cam_job *job)
 	qof_mtcmos_voter(&cam->engines, job->used_engine, false);
 
 	apply_sv_qos(job);
+	apply_pda_qos(job);
 
 	if (CAM_DEBUG_ENABLED(MMQOS))
 		mtk_cam_isp8s_bwr_dbg_dump(cam->bwr);
