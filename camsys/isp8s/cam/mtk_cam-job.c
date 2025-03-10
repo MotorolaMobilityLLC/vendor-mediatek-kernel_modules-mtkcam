@@ -4702,7 +4702,7 @@ static void update_job_state_init_sensor_param(struct mtk_cam_job *job)
 	struct mtk_cam_ctrl *ctrl = &job->src_ctx->cam_ctrl;
 	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
 	u8 sen_ctrl =
-		ctrl_data->resource.user_data.raw_res.sen_apply_ctrl;
+		ctrl_data != NULL ? ctrl_data->resource.user_data.raw_res.sen_apply_ctrl : 0;
 
 	// NOTE: update FL with 'stable_frm_len_ns' for this sensor request
 	if (ctrl_data && ctrl_data->rc_data.stable_frm_len_ns != 0)
@@ -5199,7 +5199,7 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 	job->do_pending_aid_config = false;
 	job->is_raw_trigger_sensor = check_is_raw_trigger_sensor(job);
 
-	if (ctrl_data->resource.user_data.raw_res.sen_apply_ctrl ==
+	if (ctrl_data && ctrl_data->resource.user_data.raw_res.sen_apply_ctrl ==
 		MTK_CAM_SEN_APPLY_BY_XVS)
 		job->scq_period = -1;
 	else
@@ -7053,6 +7053,10 @@ bool mtk_cam_job_not_support_qof(struct mtk_cam_job *job)
 bool mtk_cam_job_enable_cq_rdy_mask(struct mtk_cam_job *job)
 {
 	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
+
+	if (!ctrl_data)
+		return false;
+
 	u8 sen_ctrl =
 		ctrl_data->resource.user_data.raw_res.sen_apply_ctrl;
 
