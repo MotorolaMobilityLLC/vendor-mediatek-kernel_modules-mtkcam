@@ -7292,7 +7292,7 @@ static int imx06c_mcss_update_subdrv_para(void *arg, int scenario_id)
 	}
 
 	/* cycle_base_v1_linetime formula to get linetime to calculate framerate */
-	common_get_cycle_base_v1_linetime_in_ns(ctx, ctx->current_scenario_id, &linetime_in_ns, 0);
+	common_get_cycle_base_v1_linetime_in_ns(ctx, scenario_id, &linetime_in_ns, 0);
 
 	ctx->min_frame_length = max(ctx->min_frame_length, ctx->s_ctx.mode[scenario_id].framelength);
 	ctx->frame_length = ctx->s_ctx.mode[scenario_id].framelength;

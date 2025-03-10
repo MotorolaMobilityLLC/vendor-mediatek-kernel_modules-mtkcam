@@ -1419,7 +1419,7 @@ static int g_exp_line_by_scenario(struct adaptor_ctx *ctx, void *arg)
 static int g_linetime_by_scenario(struct adaptor_ctx *ctx, void *arg)
 {
 	struct mtk_linetime_by_scenario *info = arg;
-	u32 scenario_id = ctx->subctx.current_scenario_id;
+	u32 scenario_id = info->scenario_id;
 
 	if (ctx->subctx.s_ctx.cust_get_linetime_in_us != NULL) {
 		ctx->subctx.s_ctx.cust_get_linetime_in_us((void *)&ctx->subctx,
@@ -1431,7 +1431,7 @@ static int g_linetime_by_scenario(struct adaptor_ctx *ctx, void *arg)
 	}
 
 	adaptor_logi(ctx, "[%s] scenario(%d) get_linetime(%d)ns\n",
-		__func__, (u32)info->scenario_id, info->linetime_in_ns);
+		__func__, (u32)scenario_id, info->linetime_in_ns);
 
 	return 0;
 }
