@@ -84,7 +84,12 @@
 
 /* BWL & OSTDBL EN register */
 #define MON_BMAN2_OFT                        0x044
-#define AXI_LIMITER_EN                       (BIT(0) | BIT(1) | BIT(10) | BIT(11))
+#define RLIMITER_EN 0
+#define WLIMITER_EN 1
+#define REG_BRSTL_EN 10
+#define REG_BW_LMT_EN 11
+#define AXI_LIMITER_EN	(BIT(RLIMITER_EN) | BIT(WLIMITER_EN) | \
+			BIT(REG_BRSTL_EN))
 
 /* BWL register */
 #define MON_BWLMTE1_OFT                      0x0D0
