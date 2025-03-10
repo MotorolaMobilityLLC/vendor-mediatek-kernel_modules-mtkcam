@@ -82,133 +82,28 @@ SENINF_BITS(ptr, CSIRX_MAC_CSI2_SIZE_CHK_ERRSIZE##num, RO_CSI2_CHK_ERR_VSIZE_SET
 SENINF_BITS(ptr, CSIRX_MAC_CSI2_IRQ_STATUS, RO_CSI2_HVSIZE_ERR_SET##num##_IRQ, 1); \
 } while (0)
 
-#define DUMP_MAC_CHECKER_V1(ctx, ptr, num) { \
-seninf_logi(ctx, "CSIRX_MAC_CSI2_SIZE_CHK_CTRL/_EXP/_RCV/_ERR:[%d](0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)\n", \
-	num, \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_CTRL##num), \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_EXP##num), \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_RCV##num), \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_ERRSIZE##num)); \
-}
 
-#define DUMP_CUR_MAC_CHECKER_V1(ctx, num) { \
-seninf_logi(ctx, "CSIRX_MAC_CSI2_SIZE_CHK_CTRL/_EXP/_RCV/_ERR:[%d](0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)\n", \
-	num, \
-	ctx->debug_cur_mac_csi2_size_chk_ctrl##num, \
-	ctx->debug_cur_mac_csi2_size_chk_exp##num, \
-	ctx->debug_cur_mac_csi2_size_chk_rcv##num, \
-	ctx->debug_cur_mac_csi2_size_chk_err##num); \
-}
-
-#define READ_CUR_MAC_CHECKER_V1(ptr, num) do { \
-ctx->debug_cur_mac_csi2_size_chk_ctrl##num =  SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_CTRL##num); \
-ctx->debug_cur_mac_csi2_size_chk_exp##num =  SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_EXP##num); \
-ctx->debug_cur_mac_csi2_size_chk_rcv##num =  SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_RCV##num); \
-ctx->debug_cur_mac_csi2_size_chk_err##num =  SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_ERRSIZE##num); \
-} while (0)
 
 #define SHOW_MAC_CHECKER_V1(buf, len, ptr, num) { \
-SHOW(buf, len, "csirx_mac_csi2 SIZE_CHK_CTRL/_EXP/_RCV/_ERR:[%d](0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)\n", \
+SHOW(buf, len, "csirx_mac_csi2 CTRL/_EXP/_RCV/_ERR:[%d](0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)\n", \
+num, \
+SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_CTRL##num), \
+SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_EXP##num), \
+SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_RCV##num), \
+SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_ERRSIZE##num)); \
+}
+
+#define DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, ptr, num, is_clear) do { \
+seninf_logi(ctx, "CSIRX_MAC_CSI2_CTRL/_EXP/_RCV/_ERR:[%d](0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)\n", \
 	num, \
 	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_CTRL##num), \
 	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_EXP##num), \
 	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_RCV##num), \
 	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SIZE_CHK_ERRSIZE##num)); \
-}
-
-#define SET_MAC_CHECKER_V2(ptr, num, vc, dt, hsize, vsize) do { \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_CTRL##num, RG_CSI2_SENINF_CHK_VC_SEL_SET##num, vc); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_CTRL##num, RG_CSI2_SENINF_CHK_DT_SEL_SET##num, dt); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_EXP##num, RG_CSI2_SENINF_CHK_EXP_HSIZE_SET##num, hsize); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_EXP##num, RG_CSI2_SENINF_CHK_EXP_VSIZE_SET##num, vsize); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_CTRL##num, RG_CSI2_SENINF_CHK_VC_EN_SET##num, 1); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_CTRL##num, RG_CSI2_SENINF_CHK_DT_EN_SET##num, 1); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_EN, RG_CSI2_SENINF_VHS_ERR_SET##num##_IRQ_EN, 1); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_EN, RG_CSI2_SENINF_VS_LEN1_ERR_SET##num##_IRQ_EN, 1); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_EN, RG_CSI2_SENINF_VS_LEN4_ERR_SET##num##_IRQ_EN, 1); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_EN, RG_CSI2_SENINF_VS_LEN8_ERR_SET##num##_IRQ_EN, 1); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_EN, RG_CSI2_SENINF_HVSIZE_ERR_SET##num##_IRQ_EN, 1); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_EN, RG_CSI2_SENINF_LP_HS_ERR_SET##num##_IRQ_EN, 1); \
-} while (0)
-
-#define RESET_MAC_CHECKER_V2(ptr, num) do { \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_CTRL##num, RG_CSI2_SENINF_CHK_VC_EN_SET##num, 0); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_CTRL##num, RG_CSI2_SENINF_CHK_DT_EN_SET##num, 0); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_CTRL##num, RG_CSI2_SENINF_CHK_VC_SEL_SET##num, 0); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_CTRL##num, RG_CSI2_SENINF_CHK_DT_SEL_SET##num, 0); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_EXP##num, RG_CSI2_SENINF_CHK_EXP_HSIZE_SET##num, 0); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_EXP##num, RG_CSI2_SENINF_CHK_EXP_VSIZE_SET##num, 0); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_EN, RG_CSI2_SENINF_VHS_ERR_SET##num##_IRQ_EN, 0); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_EN, RG_CSI2_SENINF_VS_LEN1_ERR_SET##num##_IRQ_EN, 0); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_EN, RG_CSI2_SENINF_VS_LEN4_ERR_SET##num##_IRQ_EN, 0); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_EN, RG_CSI2_SENINF_VS_LEN8_ERR_SET##num##_IRQ_EN, 0); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_EN, RG_CSI2_SENINF_HVSIZE_ERR_SET##num##_IRQ_EN, 0); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_EN, RG_CSI2_SENINF_LP_HS_ERR_SET##num##_IRQ_EN, 0); \
-} while (0)
-
-#define CLEAR_MAC_CHECKER_IRQ_V2(ptr, num) do { \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_RCV##num, RO_CSI2_SENINF_CHK_RCV_HSIZE_SET##num, 0xffff); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_RCV##num, RO_CSI2_SENINF_CHK_RCV_VSIZE_SET##num, 0xffff); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_ERRSIZE##num, RO_CSI2_SENINF_CHK_ERR_HSIZE_SET##num, 0xffff); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_ERRSIZE##num, RO_CSI2_SENINF_CHK_ERR_VSIZE_SET##num, 0xffff); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_IRQ_STATUS, RO_CSI2_HVSIZE_ERR_SET##num##_IRQ, 1); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_STATUS, RO_CSI2_SENINF_VHS_ERR_SET##num##_IRQ, 1); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_STATUS, RO_CSI2_SENINF_VS_LEN1_ERR_SET##num##_IRQ, 1); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_STATUS, RO_CSI2_SENINF_VS_LEN4_ERR_SET##num##_IRQ, 1); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_STATUS, RO_CSI2_SENINF_VS_LEN8_ERR_SET##num##_IRQ, 1); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_STATUS, RO_CSI2_SENINF_HVSIZE_ERR_SET##num##_IRQ, 1); \
-SENINF_BITS(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_STATUS, RO_CSI2_SENINF_LP_HS_ERR_SET##num##_IRQ, 1); \
-} while (0)
-
-#define DUMP_MAC_CHECKER_V2(ctx, ptr, num) \
-seninf_logi(ctx, "CSIRX_MAC_CSI2_SENINF_SIZE_CHK_CTRL/_EXP/_RCV/_ERR/_IRQ_EN/_IRQ_STATUS:"\
-	"[%d](0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)\n", \
-	num, \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_CTRL##num), \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_EXP##num), \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_RCV##num), \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_ERRSIZE##num), \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_EN), \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_STATUS))
-
-#define DUMP_CUR_MAC_CHECKER_V2(ctx, num) { \
-seninf_logi(ctx, "CSIRX_MAC_CSI2_SENINF_SIZE_CHK_CTRL/_EXP/_RCV/_ERR/_IRQ_EN/_IRQ_STATUS:"\
-	"[%d](0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)\n", \
-	num, \
-	ctx->debug_cur_mac_csi2_size_chk_ctrl##num, \
-	ctx->debug_cur_mac_csi2_size_chk_exp##num, \
-	ctx->debug_cur_mac_csi2_size_chk_rcv##num, \
-	ctx->debug_cur_mac_csi2_size_chk_err##num, \
-	ctx->debug_cur_mac_csi2_size_irq_en##num, \
-	ctx->debug_cur_mac_csi2_size_irq##num); \
-}
-
-#define READ_CUR_MAC_CHECKER_V2(ptr, num) do { \
-ctx->debug_cur_mac_csi2_size_chk_ctrl##num = \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_CTRL##num); \
-ctx->debug_cur_mac_csi2_size_chk_exp##num = \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_EXP##num); \
-ctx->debug_cur_mac_csi2_size_chk_rcv##num = \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_RCV##num); \
-ctx->debug_cur_mac_csi2_size_chk_err##num = \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_ERRSIZE##num); \
-ctx->debug_cur_mac_csi2_size_irq_en##num = \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_EN); \
-ctx->debug_cur_mac_csi2_size_irq##num = \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_STATUS); \
-} while (0)
-
-#define SHOW_MAC_CHECKER_V2(buf, len, ptr, num) { \
-SHOW(buf, len, "csirx_mac_csi2 SENINF_SIZE_CHK_CTRL/_EXP/_RCV/_ERR/_IRQ_EN/_IRQ_STATUS:"\
-	"[%d](0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)/(0x%08x)\n", \
-	num, \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_CTRL##num), \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_EXP##num), \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_RCV##num), \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_SIZE_CHK_ERRSIZE##num), \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_EN), \
-	SENINF_READ_REG(ptr, CSIRX_MAC_CSI2_SENINF_CHK_IRQ_SET##num##_STATUS)); \
-}
+	if (is_clear) {	\
+		CLEAR_MAC_CHECKER_IRQ_V1(ptr, num);\
+	} \
+}while(0)
 
 #define SET_CSI_CHK_CTRL(ptr, chk_id, vc, dt) do { \
 	SENINF_BITS(ptr, CSIRX_MAC_CSI2_SIZE_CHK_CTRL##chk_id, \
@@ -690,10 +585,10 @@ static int mtk_cam_seninf_get_outmux_irq_st(struct seninf_ctx *ctx, int outmux_i
 
 	pSeninf_outmux = ctx->reg_if_outmux[outmux_idx];
 
-	val = SENINF_READ_REG(pSeninf_outmux, SENINF_OUTMUX_IRQ_STATUS);
+	val = SENINF_READ_REG(pSeninf_outmux, SENINF_OUTMUX_IRQ_STATUSX);
 
 	if (clear)
-		SENINF_WRITE_REG(pSeninf_outmux, SENINF_OUTMUX_IRQ_STATUS, val);
+		SENINF_WRITE_REG(pSeninf_outmux, SENINF_OUTMUX_IRQ_STATUSX, val);
 
 	seninf_logd(ctx, "get outmux%d irq_st 0x%x clear(%d)\n",
 		outmux_idx, val, clear);
@@ -1212,6 +1107,7 @@ static int mtk_cam_seninf_set_outmux_rdy_msk_sw_rdy_status(
 	pSeninf_outmux = ctx->reg_if_outmux[outmux];
 
 	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_CAM_CFG_RDY, SENINF_OUTMUX_CAM_CFG_RDY, rdy_status);
+	seninf_logi(ctx, "[%s] set rdy_status %d done", __func__, rdy_status);
 
 	return 0;
 }
@@ -2202,34 +2098,6 @@ static int csirx_mac_csi_checker_v1(struct seninf_ctx *ctx)
 
 	return 0;
 }
-
-// static int csirx_mac_csi_checker_v2(struct seninf_ctx *ctx)
-// {
-//void *csirx_mac_csi = ctx->reg_csirx_mac_csi[(uint32_t)ctx->port];
-
-///* Reset VC/DT selection and disable */
-//RESET_MAC_CHECKER_V2(csirx_mac_csi, 0);
-//RESET_MAC_CHECKER_V2(csirx_mac_csi, 1);
-//RESET_MAC_CHECKER_V2(csirx_mac_csi, 2);
-//RESET_MAC_CHECKER_V2(csirx_mac_csi, 3);
-//RESET_MAC_CHECKER_V2(csirx_mac_csi, 5);
-
-///* Clear status and IRQ status */
-//CLEAR_MAC_CHECKER_IRQ_V2(csirx_mac_csi, 0);
-//CLEAR_MAC_CHECKER_IRQ_V2(csirx_mac_csi, 1);
-//CLEAR_MAC_CHECKER_IRQ_V2(csirx_mac_csi, 2);
-//CLEAR_MAC_CHECKER_IRQ_V2(csirx_mac_csi, 3);
-//CLEAR_MAC_CHECKER_IRQ_V2(csirx_mac_csi, 5);
-
-///* Set VC/DT selection and enable */
-//SET_MAC_CHECKER_V2(csirx_mac_csi, 0, 0, 0x2b, 0, 0);
-//SET_MAC_CHECKER_V2(csirx_mac_csi, 1, 1, 0x2b, 0, 0);
-//SET_MAC_CHECKER_V2(csirx_mac_csi, 2, 2, 0x2b, 0, 0);
-//SET_MAC_CHECKER_V2(csirx_mac_csi, 3, 0, 0x30, 0, 0);
-//SET_MAC_CHECKER_V2(csirx_mac_csi, 5, 1, 0x30, 0, 0);
-
-//return 0;
-// }
 
 static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 {
@@ -4628,20 +4496,12 @@ static ssize_t mtk_cam_seninf_show_status(struct device *dev,
 		//	SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_IRQ_G1_STATUS, RO_CSI2_B2P_WC_MISMATCH_IRQ, 1);
 		//jayer porting page 29 read only
 
-		if (!strcasecmp(_seninf_ops->iomem_ver, MT6993_IOMOM_VERSIONS)) {
-			SHOW_MAC_CHECKER_V1(buf, len, csi_mac, 0);
-			SHOW_MAC_CHECKER_V1(buf, len, csi_mac, 1);
-			SHOW_MAC_CHECKER_V1(buf, len, csi_mac, 2);
-			SHOW_MAC_CHECKER_V1(buf, len, csi_mac, 3);
-			SHOW_MAC_CHECKER_V1(buf, len, csi_mac, 4);
-			SHOW_MAC_CHECKER_V1(buf, len, csi_mac, 5);
-		//} else if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
-		//SHOW_MAC_CHECKER_V2(buf, len, csi_mac, 0);
-		//SHOW_MAC_CHECKER_V2(buf, len, csi_mac, 1);
-		//SHOW_MAC_CHECKER_V2(buf, len, csi_mac, 2);
-		//SHOW_MAC_CHECKER_V2(buf, len, csi_mac, 3);
-		//SHOW_MAC_CHECKER_V2(buf, len, csi_mac, 5);
-		}
+		SHOW_MAC_CHECKER_V1(buf, len, csi_mac, 0);
+		SHOW_MAC_CHECKER_V1(buf, len, csi_mac, 1);
+		SHOW_MAC_CHECKER_V1(buf, len, csi_mac, 2);
+		SHOW_MAC_CHECKER_V1(buf, len, csi_mac, 3);
+		SHOW_MAC_CHECKER_V1(buf, len, csi_mac, 4);
+		SHOW_MAC_CHECKER_V1(buf, len, csi_mac, 5);
 
 		if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
 			/* Bit Error Rate (BER) */
@@ -4915,6 +4775,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 	unsigned int temp = 0;
 	void *pSeninf_top = ctx->reg_if_top;
 	void *pSeninf_asytop = ctx->reg_if_async;
+	void *pSeninf_outmux = NULL;
 
 	mtk_cam_sensor_get_frame_cnt(ctx, &frame_cnt1);
 
@@ -5079,6 +4940,8 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 					if ((used_outmux == i) && mtk_cam_seninf_is_outmux_used(ctx, i)) {
 						u32 filt, filt_in, res, exp_sz, irq_st;
 
+						pSeninf_outmux = ctx->reg_if_outmux[used_outmux];
+
 						filt = mtk_cam_seninf_get_outmux_vcdt_filt(ctx, used_outmux,
 								used_tag, false);
 						filt_in = mtk_cam_seninf_get_outmux_vcdt_filt(ctx, used_outmux,
@@ -5088,7 +4951,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 
 						irq_st = mtk_cam_seninf_get_outmux_irq_st(ctx, used_outmux, 0);
 						seninf_logi(ctx,
-							"dump outmux%d,tag%u,CFG_M(0x%x)/PIX_M(0x%x)/CFG0_out-in(0x%x-0x%x)/CFG1_out-in(0x%x-0x%x)/CFG2_out-in(0x%x-0x%x)/SRC_out-in(0x%x-0x%x)/CFG_DONE(0x%x)/CFG_CTL(0x%x)/CFG_RDY(0x%x)/DBG_PORT0(0x%x)/DBG_PORT1(0x%x),filt_out/in=(0x%x/0x%x),expSize=0x%x,dbgRecSize=0x%x,irq=0x%x\n",
+							"dump outmux%d,tag%u,CFG_M(0x%x)/PIX_M(0x%x)/CFG0_out-in(0x%x-0x%x)/CFG1_out-in(0x%x-0x%x)/CFG2_out-in(0x%x-0x%x)/SRC_out-in(0x%x-0x%x)/CFG_DONE(0x%x)/CFG_CTL(0x%x)/CFG_RDY(0x%x)/DBG_PORT0(0x%x)/DBG_PORT1(0x%x),filt_out/in=(0x%x/0x%x),expSize=0x%x,dbgRecSize=0x%x,rdy_msk(grp_en=0x%x/grp_sel=0x%x/cq_en=0x%x/cq_rdy_status=0x%x/sw_en=0x%x/sw_rdy_status=0x%x)irq=0x%x\n",
 							i, used_tag,
 							seninf_get_outmux_rg_val(ctx, used_outmux,
 								SENINF_OUTMUX_SW_CONFIG_MODE),
@@ -5120,7 +4983,26 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 								SENINF_OUTMUX_PATH_DBG_PORT_0),
 							seninf_get_outmux_rg_val(ctx, used_outmux,
 								SENINF_OUTMUX_PATH_DBG_PORT_1),
-							filt, filt_in, exp_sz, res, irq_st);
+							filt, filt_in, exp_sz, res,
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CSR_CFG_CTRL,
+								SENINF_OUTMUX_CAM_RDY_GRP_EN),
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CAM_RDY_GRP_SEL,
+								SENINF_OUTMUX_CAM_RDY_GRP_SEL),
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CSR_CFG_CTRL3,
+								SENINF_OUTMUX_CAM_CFG_RDY_CQ_EN),
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CAM_CFG_RDY_CQ_STATUS,
+								SENINF_OUTMUX_CAM_CFG_RDY_CQ_STATUS),
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CSR_CFG_CTRL,
+								SENINF_OUTMUX_CAM_CFG_RDY_EN),
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CAM_CFG_RDY,
+								SENINF_OUTMUX_CAM_CFG_RDY),
+							irq_st);
 					}
 				}
 			}
@@ -5188,37 +5070,13 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		seninf_irq,
 		SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_RESYNC_MERGE_CTRL));
 
-	/* Set mac checker */
-	if (!strcasecmp(_seninf_ops->iomem_ver, MT6993_IOMOM_VERSIONS)) {
-		/* Dump MAC CHECKER status and IRQ status */
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 0);
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 1);
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 2);
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 3);
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 4);
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 5);
-		/* Clear MAC CHECKER status and IRQ status */
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 0);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 1);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 2);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 3);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 4);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 5);
-	//} else if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
-	///* Dump MAC CHECKER status and IRQ status */
-	//DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 0);
-	//DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 1);
-	//DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 2);
-	//DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 3);
-	//DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 5);
-	///* Clear MAC CHECKER status and IRQ status */
-	//CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 0);
-	//CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 1);
-	//CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 2);
-	//CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 3);
-	//CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 5);
-	} else
-		seninf_logi(ctx, "warning: iomem_ver is invalid. mac checker is not set.\n");
+	/* Dump MAC CHECKER status and IRQ status */
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 0, true);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 1, true);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 2, true);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 3, true);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 4, true);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 5, true);
 
 	if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
 		/* Bit Error Rate (BER) */
@@ -5315,23 +5173,12 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		ret = 0;
 	}
 
-	if (!strcasecmp(_seninf_ops->iomem_ver, MT6993_IOMOM_VERSIONS)) {
-		/* Dump MAC CHECKER status and IRQ status */
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 0);
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 1);
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 2);
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 3);
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 4);
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 5);
-	//} else if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
-	///* Dump MAC CHECKER status and IRQ status */
-	//DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 0);
-	//DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 1);
-	//DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 2);
-	//DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 3);
-	//DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 5);
-	} else
-		seninf_logi(ctx, "[%s] warning: iomem_ver is invalid. mac checker is not set.\n", __func__);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 0, false);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 1, false);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 2, false);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 3, false);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 4, false);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 5, false);
 
 	/* check OUTMUX irq status */
 	for (j = 0; j < ctx->vcinfo.cnt; j++) {
@@ -5344,6 +5191,8 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 					if ((used_outmux == i) && mtk_cam_seninf_is_outmux_used(ctx, i)) {
 						u32 filt, filt_in, res, exp_sz, irq_st;
 
+						pSeninf_outmux = ctx->reg_if_outmux[used_outmux];
+
 						filt = mtk_cam_seninf_get_outmux_vcdt_filt(ctx, used_outmux,
 								used_tag, false);
 						filt_in = mtk_cam_seninf_get_outmux_vcdt_filt(ctx, used_outmux,
@@ -5353,7 +5202,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 
 						irq_st = mtk_cam_seninf_get_outmux_irq_st(ctx, used_outmux, 0);
 						seninf_logi(ctx,
-							"dump outmux%d,tag%u,CFG_M(0x%x)/PIX_M(0x%x)/CFG0_out-in(0x%x-0x%x)/CFG1_out-in(0x%x-0x%x)/CFG2_out-in(0x%x-0x%x)/SRC_out-in(0x%x-0x%x)/CFG_DONE(0x%x)/CFG_CTL(0x%x)/CFG_RDY(0x%x)/DBG_PORT0(0x%x)/DBG_PORT1(0x%x),filt_out/in=(0x%x/0x%x),expSize=0x%x,dbgRecSize=0x%x,irq=0x%x\n",
+							"dump outmux%d,tag%u,CFG_M(0x%x)/PIX_M(0x%x)/CFG0_out-in(0x%x-0x%x)/CFG1_out-in(0x%x-0x%x)/CFG2_out-in(0x%x-0x%x)/SRC_out-in(0x%x-0x%x)/CFG_DONE(0x%x)/CFG_CTL(0x%x)/CFG_RDY(0x%x)/DBG_PORT0(0x%x)/DBG_PORT1(0x%x),filt_out/in=(0x%x/0x%x),expSize=0x%x,dbgRecSize=0x%x,rdy_msk(grp_en=0x%x/grp_sel=0x%x/cq_en=0x%x/cq_rdy_status=0x%x/sw_en=0x%x/sw_rdy_status=0x%x)irq=0x%x\n",
 							i, used_tag,
 							seninf_get_outmux_rg_val(ctx, used_outmux,
 								SENINF_OUTMUX_SW_CONFIG_MODE),
@@ -5385,7 +5234,26 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 								SENINF_OUTMUX_PATH_DBG_PORT_0),
 							seninf_get_outmux_rg_val(ctx, used_outmux,
 								SENINF_OUTMUX_PATH_DBG_PORT_1),
-							filt, filt_in, exp_sz, res, irq_st);
+							filt, filt_in, exp_sz, res,
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CSR_CFG_CTRL,
+								SENINF_OUTMUX_CAM_RDY_GRP_EN),
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CAM_RDY_GRP_SEL,
+								SENINF_OUTMUX_CAM_RDY_GRP_SEL),
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CSR_CFG_CTRL3,
+								SENINF_OUTMUX_CAM_CFG_RDY_CQ_EN),
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CAM_CFG_RDY_CQ_STATUS,
+								SENINF_OUTMUX_CAM_CFG_RDY_CQ_STATUS),
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CSR_CFG_CTRL,
+								SENINF_OUTMUX_CAM_CFG_RDY_EN),
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CAM_CFG_RDY,
+								SENINF_OUTMUX_CAM_CFG_RDY),
+							irq_st);
 					}
 				}
 			}
@@ -5452,21 +5320,13 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		ctx->debug_cur_mac_irq,
 		ctx->debug_cur_temp,
 		ctx->debug_cur_seninf_irq);
-		if (!strcasecmp(_seninf_ops->iomem_ver, MT6993_IOMOM_VERSIONS)) {
-			DUMP_CUR_MAC_CHECKER_V1(ctx, 0);
-			DUMP_CUR_MAC_CHECKER_V1(ctx, 1);
-			DUMP_CUR_MAC_CHECKER_V1(ctx, 2);
-			DUMP_CUR_MAC_CHECKER_V1(ctx, 3);
-			DUMP_CUR_MAC_CHECKER_V1(ctx, 4);
-			DUMP_CUR_MAC_CHECKER_V1(ctx, 5);
-		//} else if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
-		//DUMP_CUR_MAC_CHECKER_V2(ctx, 0);
-		//DUMP_CUR_MAC_CHECKER_V2(ctx, 1);
-		//DUMP_CUR_MAC_CHECKER_V2(ctx, 2);
-		//DUMP_CUR_MAC_CHECKER_V2(ctx, 3);
-		//DUMP_CUR_MAC_CHECKER_V2(ctx, 5);
-		} else
-			seninf_logi(ctx, "[%s] warning: iomem_ver is invalid. mac checker is not set.\n", __func__);
+
+		DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 0, false);
+		DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 1, false);
+		DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 2, false);
+		DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 3, false);
+		DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 4, false);
+		DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 5, false);
 	}
 
 	return ret;
@@ -5475,12 +5335,18 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 static int mtk_cam_seninf_debug_current_status(struct seninf_ctx *ctx)
 {
 	void *base_ana, *base_cphy, *base_dphy, *base_csi_mac;
-	int i, ret = 0;
+	int i, j, k, ret = 0;
 	enum CSI_PORT csi_port = CSI_PORT_0;
 	char *fmeter_dbg = kzalloc(sizeof(char) * 256, GFP_KERNEL);
 	void *pSeninf_asytop = ctx->reg_if_async;
+	void *pSeninf_outmux = NULL;
+	static unsigned long long last_caller_ts;
+	const unsigned long long dump_duration  = 33000000; // 33ms
 
 	ctx->debug_cur_sys_time_in_ns = ktime_get_boottime_ns();
+
+	if (ctx->debug_cur_sys_time_in_ns - last_caller_ts < dump_duration)
+		return 0;
 
 	if (fmeter_dbg && mtk_cam_dbg_fmeter(ctx->core, fmeter_dbg, sizeof(char) * 256) == 0)
 		seninf_logi(ctx, "%s\n", fmeter_dbg);
@@ -5600,43 +5466,12 @@ static int mtk_cam_seninf_debug_current_status(struct seninf_ctx *ctx)
 		ctx->debug_cur_seninf_irq,
 		SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_RESYNC_MERGE_CTRL));
 
-	if (!strcasecmp(_seninf_ops->iomem_ver, MT6993_IOMOM_VERSIONS)) {
-		READ_CUR_MAC_CHECKER_V1(base_csi_mac, 0);
-		READ_CUR_MAC_CHECKER_V1(base_csi_mac, 1);
-		READ_CUR_MAC_CHECKER_V1(base_csi_mac, 2);
-		READ_CUR_MAC_CHECKER_V1(base_csi_mac, 3);
-		READ_CUR_MAC_CHECKER_V1(base_csi_mac, 4);
-		READ_CUR_MAC_CHECKER_V1(base_csi_mac, 5);
-		DUMP_CUR_MAC_CHECKER_V1(ctx, 0);
-		DUMP_CUR_MAC_CHECKER_V1(ctx, 1);
-		DUMP_CUR_MAC_CHECKER_V1(ctx, 2);
-		DUMP_CUR_MAC_CHECKER_V1(ctx, 3);
-		DUMP_CUR_MAC_CHECKER_V1(ctx, 4);
-		DUMP_CUR_MAC_CHECKER_V1(ctx, 5);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 0);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 1);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 2);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 3);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 4);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 5);
-	// } else if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
-	//READ_CUR_MAC_CHECKER_V2(base_csi_mac, 0);
-	//READ_CUR_MAC_CHECKER_V2(base_csi_mac, 1);
-	//READ_CUR_MAC_CHECKER_V2(base_csi_mac, 2);
-	//READ_CUR_MAC_CHECKER_V2(base_csi_mac, 3);
-	//READ_CUR_MAC_CHECKER_V2(base_csi_mac, 5);
-	//DUMP_CUR_MAC_CHECKER_V2(ctx, 0);
-	//DUMP_CUR_MAC_CHECKER_V2(ctx, 1);
-	//DUMP_CUR_MAC_CHECKER_V2(ctx, 2);
-	//DUMP_CUR_MAC_CHECKER_V2(ctx, 3);
-	//DUMP_CUR_MAC_CHECKER_V2(ctx, 5);
-	//CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 0);
-	//CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 1);
-	//CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 2);
-	//CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 3);
-	//CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 5);
-	} else
-		seninf_logi(ctx, "warning: iomem_ver is invalid. mac checker is not set.\n");
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 0, true);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 1, true);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 2, true);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 3, true);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 4, true);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 5, true);
 
 	if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
 		/* Bit Error Rate (BER) */
@@ -5705,42 +5540,93 @@ static int mtk_cam_seninf_debug_current_status(struct seninf_ctx *ctx)
 				 SENINF_ASYTOP_AFIFO_BIST_RST_5));
 
 	/* dump all outmux */
-	for (i = 0; i < _seninf_ops->outmux_num; i++) {
-		u32 irq_st = mtk_cam_seninf_get_outmux_irq_st(ctx, i, 1);
+	for (j = 0; j < ctx->vcinfo.cnt; j++) {
+		if (ctx->vcinfo.vc[j].enable) {
+			for (k = 0; k < ctx->vcinfo.vc[j].dest_cnt; k++) {
+				unsigned int used_outmux = ctx->vcinfo.vc[j].dest[k].outmux;
+				unsigned int used_tag = ctx->vcinfo.vc[j].dest[k].tag;
 
-		seninf_logi(ctx,
-			 "dump outmux%d with irq clear,CFG_M/PIX_M/CFG0_out-in/CFG1_out-in/CFG2_out-in/SRC_out-in/CFG_DONE/CFG_CTL/CFG_RDY/DBG_PORT0/DBG_PORT1:(0x%x/0x%x/0x%x-0x%x/0x%x-0x%x/0x%x-0x%x/0x%x-0x%x/0x%x/0x%x/0x%x/0x%x/0x%x),tag0_filt_out-in/exp(0x%x-0x%x/0x%x-0x%x),tag1_filt_out-in/exp(0x%x-0x%x/0x%x-0x%x),tag4_filt_out-in/exp(0x%x-0x%x/0x%x-0x%x),irq=0x%x\n",
-			 i,
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_SW_CONFIG_MODE),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_PATH_CFG),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_SOURCE_CONFIG_0),
-			 seninf_get_outmux_rg_val_inner(ctx, i, SENINF_OUTMUX_SOURCE_CONFIG_0),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_SOURCE_CONFIG_1),
-			 seninf_get_outmux_rg_val_inner(ctx, i, SENINF_OUTMUX_SOURCE_CONFIG_1),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_SOURCE_CONFIG_2),
-			 seninf_get_outmux_rg_val_inner(ctx, i, SENINF_OUTMUX_SOURCE_CONFIG_2),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_SRC_SEL),
-			 seninf_get_outmux_rg_val_inner(ctx, i, SENINF_OUTMUX_SRC_SEL),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_SW_CFG_DONE_STATUS),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_CSR_CFG_CTRL),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_CAM_CFG_RDY),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_PATH_DBG_PORT_0),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_PATH_DBG_PORT_1),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_TAG_VCDT_FILT_0),
-			 seninf_get_outmux_rg_val_inner(ctx, i, SENINF_OUTMUX_TAG_VCDT_FILT_0),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_TAG_EXP_SIZE_0),
-			 seninf_get_outmux_rg_val_inner(ctx, i, SENINF_OUTMUX_TAG_EXP_SIZE_0),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_TAG_VCDT_FILT_1),
-			 seninf_get_outmux_rg_val_inner(ctx, i, SENINF_OUTMUX_TAG_VCDT_FILT_1),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_TAG_EXP_SIZE_1),
-			 seninf_get_outmux_rg_val_inner(ctx, i, SENINF_OUTMUX_TAG_EXP_SIZE_1),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_TAG_VCDT_FILT_4),
-			 seninf_get_outmux_rg_val_inner(ctx, i, SENINF_OUTMUX_TAG_VCDT_FILT_4),
-			 seninf_get_outmux_rg_val(ctx, i, SENINF_OUTMUX_TAG_EXP_SIZE_4),
-			 seninf_get_outmux_rg_val_inner(ctx, i, SENINF_OUTMUX_TAG_EXP_SIZE_4),
-			 irq_st);
+				for (i = 0; i < _seninf_ops->outmux_num; i++) {
+					if ((used_outmux == i) && mtk_cam_seninf_is_outmux_used(ctx, i)) {
+						u32 filt, filt_in, res, exp_sz, irq_st;
+
+						pSeninf_outmux = ctx->reg_if_outmux[used_outmux];
+
+						filt = mtk_cam_seninf_get_outmux_vcdt_filt(ctx, used_outmux,
+								used_tag, false);
+						filt_in = mtk_cam_seninf_get_outmux_vcdt_filt(ctx, used_outmux,
+								used_tag, true);
+						res = mtk_cam_seninf_get_outmux_res(ctx, used_outmux, used_tag);
+						exp_sz = mtk_cam_seninf_get_outmux_exp(ctx, used_outmux, used_tag);
+
+						irq_st = mtk_cam_seninf_get_outmux_irq_st(ctx, used_outmux, 0);
+						seninf_logi(ctx,
+							"dump outmux%d,tag%u,CFG_M(0x%x)/PIX_M(0x%x)/CFG0_out-in(0x%x-0x%x)/CFG1_out-in(0x%x-0x%x)/CFG2_out-in(0x%x-0x%x)/SRC_out-in(0x%x-0x%x)/CFG_DONE(0x%x)/CFG_CTL(0x%x)/CFG_RDY(0x%x)/DBG_PORT0(0x%x)/DBG_PORT1(0x%x),filt_out/in=(0x%x/0x%x),expSize=0x%x,dbgRecSize=0x%x,rdy_msk(grp_en=0x%x/grp_sel=0x%x/cq_en=0x%x/cq_rdy_status=0x%x/sw_en=0x%x/sw_rdy_status=0x%x)irq=0x%x\n",
+							i, used_tag,
+							seninf_get_outmux_rg_val(ctx, used_outmux,
+								SENINF_OUTMUX_SW_CONFIG_MODE),
+							seninf_get_outmux_rg_val(ctx, used_outmux,
+								SENINF_OUTMUX_PATH_CFG),
+							seninf_get_outmux_rg_val(ctx, used_outmux,
+								SENINF_OUTMUX_SOURCE_CONFIG_0),
+							seninf_get_outmux_rg_val_inner(ctx, used_outmux,
+								SENINF_OUTMUX_SOURCE_CONFIG_0),
+							seninf_get_outmux_rg_val(ctx, used_outmux,
+								SENINF_OUTMUX_SOURCE_CONFIG_1),
+							seninf_get_outmux_rg_val_inner(ctx, used_outmux,
+								SENINF_OUTMUX_SOURCE_CONFIG_1),
+							seninf_get_outmux_rg_val(ctx, used_outmux,
+								SENINF_OUTMUX_SOURCE_CONFIG_2),
+							seninf_get_outmux_rg_val_inner(ctx, used_outmux,
+								SENINF_OUTMUX_SOURCE_CONFIG_2),
+							seninf_get_outmux_rg_val(ctx, used_outmux,
+								SENINF_OUTMUX_SRC_SEL),
+							seninf_get_outmux_rg_val_inner(ctx, used_outmux,
+								SENINF_OUTMUX_SRC_SEL),
+							seninf_get_outmux_rg_val(ctx, used_outmux,
+								SENINF_OUTMUX_SW_CFG_DONE_STATUS),
+							seninf_get_outmux_rg_val(ctx, used_outmux,
+								SENINF_OUTMUX_CSR_CFG_CTRL),
+							seninf_get_outmux_rg_val(ctx, used_outmux,
+								SENINF_OUTMUX_CAM_CFG_RDY),
+							seninf_get_outmux_rg_val(ctx, used_outmux,
+								SENINF_OUTMUX_PATH_DBG_PORT_0),
+							seninf_get_outmux_rg_val(ctx, used_outmux,
+								SENINF_OUTMUX_PATH_DBG_PORT_1),
+							filt, filt_in, exp_sz, res,
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CSR_CFG_CTRL,
+								SENINF_OUTMUX_CAM_RDY_GRP_EN),
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CAM_RDY_GRP_SEL,
+								SENINF_OUTMUX_CAM_RDY_GRP_SEL),
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CSR_CFG_CTRL3,
+								SENINF_OUTMUX_CAM_CFG_RDY_CQ_EN),
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CAM_CFG_RDY_CQ_STATUS,
+								SENINF_OUTMUX_CAM_CFG_RDY_CQ_STATUS),
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CSR_CFG_CTRL,
+								SENINF_OUTMUX_CAM_CFG_RDY_EN),
+							SENINF_READ_BITS(pSeninf_outmux,
+								SENINF_OUTMUX_CAM_CFG_RDY,
+								SENINF_OUTMUX_CAM_CFG_RDY),
+							irq_st);
+					}
+				}
+			}
+		}
 	}
+
+	/* reset all out mux irq status */
+	for (i = 0; i < _seninf_ops->outmux_num; i++)
+		mtk_cam_seninf_get_outmux_irq_st(ctx, i, 1);
+
+
 	seninf_logi(ctx, "ret = %d", ret);
+
+	last_caller_ts = ctx->debug_cur_sys_time_in_ns;
 
 	return ret;
 }
@@ -7899,37 +7785,14 @@ static int mtk_cam_show_mac_chk_status(struct seninf_ctx *ctx, int is_clear)
 {
 	void *base_csi_mac = ctx->reg_csirx_mac_csi[(uint32_t)ctx->port];
 
-	/* Set mac checker */
-	if (!strcasecmp(_seninf_ops->iomem_ver, MT6993_IOMOM_VERSIONS)) {
-		/* Dump MAC CHECKER status and IRQ status */
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 0);
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 1);
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 2);
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 3);
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 4);
-		DUMP_MAC_CHECKER_V1(ctx, base_csi_mac, 5);
-		/* Clear MAC CHECKER status and IRQ status */
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 0);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 1);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 2);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 3);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 4);
-		CLEAR_MAC_CHECKER_IRQ_V1(base_csi_mac, 5);
-	// } else if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
-	///* Dump MAC CHECKER status and IRQ status */
-	//DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 0);
-	//DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 1);
-	//DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 2);
-	//DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 3);
-	//DUMP_MAC_CHECKER_V2(ctx, base_csi_mac, 5);
-	///* Clear MAC CHECKER status and IRQ status */
-	//CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 0);
-	//CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 1);
-	//CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 2);
-	//CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 3);
-	//CLEAR_MAC_CHECKER_IRQ_V2(base_csi_mac, 5);
-	} else
-		seninf_logi(ctx, "warning: iomem_ver is invalid. mac checker is not set.\n");
+	/* Dump MAC CHECKER status and IRQ status */
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 0, true);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 1, true);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 2, true);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 3, true);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 4, true);
+	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 5, true);
+
 	return 0;
 }
 
