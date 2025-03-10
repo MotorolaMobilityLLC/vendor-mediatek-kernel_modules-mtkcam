@@ -2247,6 +2247,7 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 	bool isTimeShared = 0;
 	u32 log_sz = 0;
 	u32 cb_param_cnt = 0;
+	bool need_dip_cine = false;
 #ifdef IMGSYS_MAE_WRITE_BACK_SUPPORT
 	struct mtk_imgsys_hw_info mae_info = {0};
 #endif
@@ -2488,7 +2489,10 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 #endif
 					MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
 						mtk_imgsys_cmdq_qof_add(pkt, qof_need_sub,
-						frm_info->user_info[frm_idx].hw_comb);
+							frm_info->user_info[frm_idx].hw_comb,
+							&frm_info->user_info[frm_idx],
+							frm_info->memory_mode,
+							&need_dip_cine, is_qof_sec_mode);
 					);
 			} else {
 				//enable all mtcmos
@@ -2496,7 +2500,10 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					mtk_imgsys_cmdq_qof_add(pkt, qof_need_sub,
 					pwr_group[ISP8S_PWR_DIP] | pwr_group[ISP8S_PWR_TRAW] |
 					pwr_group[ISP8S_PWR_WPE_1_EIS] | pwr_group[ISP8S_PWR_WPE_2_TNR] |
-					pwr_group[ISP8S_PWR_WPE_3_LITE]);
+					pwr_group[ISP8S_PWR_WPE_3_LITE],
+					&frm_info->user_info[frm_idx],
+					frm_info->memory_mode,
+					&need_dip_cine, is_qof_sec_mode);
 				);
 			}
 
@@ -2784,7 +2791,9 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					(is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM))))
 #endif
 					MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
-						mtk_imgsys_cmdq_qof_sub(pkt, qof_need_sub);
+						mtk_imgsys_cmdq_qof_sub(pkt, qof_need_sub,
+							&frm_info->user_info[frm_idx],
+							frm_info->memory_mode, &need_dip_cine);
 					);
 
 #ifdef IMGSYS_CMDQ_PKT_REUSE

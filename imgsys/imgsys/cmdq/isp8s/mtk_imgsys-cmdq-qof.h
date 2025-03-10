@@ -10,7 +10,7 @@
 #include "mtk_imgsys-dev.h"
 #include "mtk_imgsys-cmdq.h"
 
-
+#define QOF_DYNAMIC_DIP_CINE
 /**
  * @brief Record every mtcmos status
  *		such as number of users who are
@@ -55,8 +55,10 @@ void mtk_imgsys_cmdq_get_non_qof_module(u32 *non_qof_modules);
 void mtk_imgsys_cmdq_qof_stream_on(struct mtk_imgsys_dev *imgsys_dev);
 void mtk_imgsys_cmdq_qof_stream_off(struct mtk_imgsys_dev *imgsys_dev);
 
-void mtk_imgsys_cmdq_qof_add(struct cmdq_pkt *pkt, bool *qof_need_sub, u32 hw_comb);
-void mtk_imgsys_cmdq_qof_sub(struct cmdq_pkt *pkt, bool *qof_need_sub);
+void mtk_imgsys_cmdq_qof_add(struct cmdq_pkt *pkt, bool *qof_need_sub, u32 hw_comb,
+		struct img_swfrm_info *user_info, unsigned int mode, bool *need_cine, bool sec);
+void mtk_imgsys_cmdq_qof_sub(struct cmdq_pkt *pkt, bool *qof_need_sub,
+		struct img_swfrm_info *user_info, unsigned int mode, bool *need_cine);
 void mtk_imgsys_cmdq_qof_dump(uint32_t hwcomb, bool need_dump_cg);
 int smi_isp_dip_get_if_in_use(void *data);
 int smi_isp_dip_put(void *data);

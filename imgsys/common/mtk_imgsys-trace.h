@@ -82,6 +82,8 @@ void ftrace_imgsys_qof_mod4(const char *fmt, ...);
 
 DEFINE_IMGSYS_QOF_EVENT(DIP);
 void ftrace_imgsys_qof_DIP(const char *fmt, ...);
+DEFINE_IMGSYS_QOF_EVENT(DIP_CINE);
+void ftrace_imgsys_qof_DIP_CINE(const char *fmt, ...);
 DEFINE_IMGSYS_QOF_EVENT(TRAW);
 void ftrace_imgsys_qof_TRAW(const char *fmt, ...);
 DEFINE_IMGSYS_QOF_EVENT(EIS);
