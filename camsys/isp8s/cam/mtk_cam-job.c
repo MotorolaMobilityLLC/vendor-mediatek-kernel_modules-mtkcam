@@ -4369,7 +4369,6 @@ int mtk_cam_job_uninit_engine(struct mtk_cam_job *job, int unit_engs)
 				qof_setup_ctrl(raw_dev, false);
 				qof_reset_mtcmos_raw_voter(raw_dev);
 				qof_hwccf_link(raw_dev, true);
-				qof_reset(raw_dev);
 			}
 
 			disable_irq(raw_dev->irq);

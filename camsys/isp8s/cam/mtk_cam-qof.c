@@ -420,7 +420,10 @@ int qof_enable(struct mtk_raw_device *raw, bool enable)
 	}
 
 	qof_config_pm(raw, en);
-	qof_reset(raw);
+
+	if (en)
+		qof_reset(raw);
+
 	qof_int_en(raw, en);
 	mtk_cam_enable_itc(raw, en);
 
@@ -584,8 +587,12 @@ static int qof_polling_xpc_vote(struct mtk_raw_device *raw)
 					 50 /* delay, us */, PWR_STATE_POLLING_TIMEOUT_LONG_US);
 					// TODO: timeout of xpc vote
 
-		if (ret < 0)
+		if (ret < 0) {
 			dev_info(raw->dev, "[%s] ERROR: xpc vote polling timeout", __func__);
+			dev_info(raw->dev, "[%s] expect 0x%x xpc_state 0x%x",
+					 __func__, expect, xpc_state);
+			qof_force_dump_all(raw);
+		}
 	}
 
 	if (CAM_DEBUG_ENABLED(QOF) || FORCE_DUMP(raw->id))
@@ -594,23 +601,27 @@ static int qof_polling_xpc_vote(struct mtk_raw_device *raw)
 	return ret;
 }
 
-int qof_hwccf_link(struct mtk_raw_device *dev, bool enable)
+int qof_hwccf_link(struct mtk_raw_device *raw, bool enable)
 {
 	if (enable) {
 		// link -> unvote CG GROUP 51 to unmask
 		hwccf_multi_voter_ctrl(MM_HWCCF, HW_CCF_CG_GRP_51, HWCCF_UNVOTE,
-							   qof_raw_to_bit[dev->id].mask_cg_mtcmos_link);
-		qof_xpc_vote_raw(dev, false);
-		qof_xpc_vote_rms(dev, false);
-		qof_polling_xpc_vote(dev);
+							   qof_raw_to_bit[raw->id].mask_cg_mtcmos_link);
+		qof_xpc_vote_raw(raw, false);
+		qof_xpc_vote_rms(raw, false);
+		qof_polling_xpc_vote(raw);
 	} else {
-		qof_xpc_vote_raw(dev, true);
-		qof_xpc_vote_rms(dev, true);
-		qof_polling_xpc_vote(dev);
+		qof_xpc_vote_raw(raw, true);
+		qof_xpc_vote_rms(raw, true);
+		qof_polling_xpc_vote(raw);
 		// unlink -> vote CG GROUP 51 to mask
 		hwccf_multi_voter_ctrl(MM_HWCCF, HW_CCF_CG_GRP_51, HWCCF_VOTE,
-							   qof_raw_to_bit[dev->id].mask_cg_mtcmos_link);
+							   qof_raw_to_bit[raw->id].mask_cg_mtcmos_link);
 	}
+
+	qof_set_force_dump(raw, true);
+	qof_dump_spare(raw);
+	qof_set_force_dump(raw, false);
 
 	// TODO: dump status
 
@@ -1350,13 +1361,25 @@ void qof_dump_hw_timer(struct mtk_raw_device *raw)
 
 void qof_dump_int_en_addr(struct mtk_raw_device *raw)
 {
-	dev_info(raw->dev, "%s: %p %p %p", __func__, raw->io_ops, &qof_enabled_io_ops, qof_disabled_io_ops);
+	if (CAM_DEBUG_ENABLED(QOF) || FORCE_DUMP(raw->id)) {
+		dev_info(raw->dev, "%s: %p %p %p", __func__, raw->io_ops, &qof_enabled_io_ops, qof_disabled_io_ops);
 
-	dev_info(raw->dev, "qof: %s: INT_ADDR_2/9/12_ADDR 0x%x 0x%x 0x%x",
-		__func__,
-		readl_relaxed(raw->qof_base + REG_QOF_CAM_A_INT2_STATUS_ADDR),
-		 readl_relaxed(raw->qof_base + REG_QOF_CAM_A_INT9_STATUS_ADDR),
-		 readl_relaxed(raw->qof_base + REG_QOF_CAM_A_INT12_STATUS_ADDR));
+		dev_info(raw->dev, "qof: %s: INT_ADDR_2/9/12_ADDR 0x%x 0x%x 0x%x",
+			__func__,
+			readl_relaxed(raw->qof_base + REG_QOF_CAM_A_INT2_STATUS_ADDR),
+			 readl_relaxed(raw->qof_base + REG_QOF_CAM_A_INT9_STATUS_ADDR),
+			 readl_relaxed(raw->qof_base + REG_QOF_CAM_A_INT12_STATUS_ADDR));
+	}
+}
+
+void qof_dump_spare(struct mtk_raw_device *raw)
+{
+	if (CAM_DEBUG_ENABLED(QOF) || FORCE_DUMP(raw->id)) {
+		dev_info(raw->dev, "qof: %s: spare1 0x%x spare2 0x%x",
+			__func__,
+			readl_relaxed(raw->qof_base + REG_QOF_CAM_A_QOF_SPARE1),
+			readl_relaxed(raw->qof_base + REG_QOF_CAM_A_QOF_SPARE2));
+	}
 }
 
 void qof_dump_cq_addr(struct mtk_raw_device *raw)
@@ -1439,6 +1462,7 @@ void qof_force_dump_all(struct mtk_raw_device *raw)
 	qof_dump_voter(raw);
 	qof_dump_trigger_cnt(raw);
 	qof_dump_int_en_addr(raw);
+	qof_dump_spare(raw);
 
 	dev_info(raw->dev, "[%s] QOF CQ_START_MAX:0x%08x\n",
 				 __func__, readl(raw->qof_base + REG_QOF_CAM_A_QOF_CQ_START_MAX));

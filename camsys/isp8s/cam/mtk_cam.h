@@ -293,6 +293,7 @@ struct mtk_cam_device {
 	void __iomem *yuva_cg_con;
 	void __iomem *yuvb_cg_con;
 	void __iomem *yuvc_cg_con;
+
 	struct v4l2_device v4l2_dev;
 	struct v4l2_async_notifier notifier;
 	struct media_device media_dev;

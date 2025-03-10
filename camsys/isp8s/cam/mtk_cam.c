@@ -3890,7 +3890,6 @@ static void mtk_cam_ctx_raw_qof_disable(struct mtk_cam_ctx *ctx)
 			continue;
 		raw = dev_get_drvdata(ctx->hw_raw[i]);
 		qof_hwccf_link(raw, true);
-		qof_reset(raw);
 	}
 }
 
@@ -5232,9 +5231,9 @@ REGISTER_LARB_FAIL:
 }
 
 #define QOF_PWR_OFF_ACCESS_MASK	\
-	(FBIT(QOF_CAM_TOP_MTC_CYC_OV_INT_ST_1) | \
-	 FBIT(QOF_CAM_TOP_MTC_CYC_OV_INT_ST_2) | \
-	 FBIT(QOF_CAM_TOP_MTC_CYC_OV_INT_ST_3))
+	(FBIT(QOF_CAM_TOP_PWR_OFF_ACCESS_INT_ST_1) | \
+	 FBIT(QOF_CAM_TOP_PWR_OFF_ACCESS_INT_ST_2) | \
+	 FBIT(QOF_CAM_TOP_PWR_OFF_ACCESS_INT_ST_3))
 
 static irqreturn_t __maybe_unused mtk_irq_qof(int irq, void *data)
 {
