@@ -6241,6 +6241,18 @@ static void reset_dcif_param(struct mtkcam_ipi_dcif_ring_param *p)
 	memset(p, 0, sizeof(*p));
 }
 
+static void update_cq_hw_rdy_param(struct mtk_cam_job *job,
+	struct mtkcam_ipi_frame_param *fp)
+{
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	int tag_idx;
+
+	if (!ctx->hw_sv)
+		return;
+	for (tag_idx = SVTAG_START; tag_idx < SVTAG_META_END; tag_idx++)
+		fp->camsv_param[0][tag_idx].cq_hw_rdy_enable = 1;
+}
+
 static int mtk_cam_job_fill_ipi_frame(struct mtk_cam_job *job,
 	struct pack_job_ops_helper *job_helper)
 {
@@ -6251,6 +6263,8 @@ static int mtk_cam_job_fill_ipi_frame(struct mtk_cam_job *job,
 
 	reset_img_ufd_io_param(fp);
 	reset_dcif_param(&fp->dcif_param);
+
+	update_cq_hw_rdy_param(job, fp);
 
 	ret = update_cq_buffer_to_ipi_frame(&job->cq, fp)
 		|| update_job_raw_param_to_ipi_frame(job, fp)

@@ -199,6 +199,8 @@ struct mtkcam_ipi_camsv_frame_param {
 	__u32	sensor_exposure_num;
 	__u32	previous_sensor_exposure_num;
 	__u32	peak_bw;
+	__u8	cq_hw_rdy_enable;
+
 	struct mtkcam_ipi_meta_input pdp_meta_inputs;
 	struct mtkcam_ipi_img_output camsv_img_outputs[CAMSV_MAX_IMAGE_OUTPUT];
 } __packed;
