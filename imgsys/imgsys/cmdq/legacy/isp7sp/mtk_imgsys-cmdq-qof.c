@@ -12,6 +12,8 @@
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
 #include <linux/kernel.h>
 #include <linux/delay.h>
+#include <linux/string.h>
+#include <linux/slab.h>
 
 #include "vcp_status.h"
 #include <mtk_imgsys-engine.h>
@@ -1081,8 +1083,8 @@ int mtk_query_qof_status(const char *val, const struct kernel_param *kp)
 	int ret;
 	int reserved = 0;
 
-	ret = sscanf(val, "%d", &reserved);
-	if (ret <= 0) {
+	ret = kstrtou32(val, 0, &reserved);
+	if (ret != 0) {
 		pr_err("[%s] param fail, plz check ! \n", __func__);
 		return 0;
 	}
@@ -1105,6 +1107,38 @@ module_param_cb(query_qof_status, &query_qof_status_ops, NULL, 0644);
 MODULE_PARM_DESC(query_qof_status,
 	"query_qof_status");
 
+int parse_values(const char *val, unsigned int *var1, unsigned int *var2, unsigned int *var3)
+{
+	char *token;
+	char *buffer;
+	char *orig_buffer;
+	int ret = 0;
+	unsigned int *values[3] = {var1, var2, var3};
+	int i = 0;
+
+	buffer = kstrdup(val, GFP_KERNEL);
+	if (!buffer)
+		return -ENOMEM;
+
+	orig_buffer = buffer;
+
+	for (i = 0; i < 3; i++) {
+		token = strsep(&buffer, " ");
+		if (token) {
+			ret = kstrtou32(token, 0, values[i]);
+			if (ret)
+				goto out;
+		} else {
+			ret = -EINVAL;
+			goto out;
+		}
+	}
+
+out:
+	kfree(orig_buffer);
+	return ret;
+}
+
 int mtk_qof_gce_set_reg(const char *val, const struct kernel_param *kp)
 {
 	int ret;
@@ -1114,8 +1148,8 @@ int mtk_qof_gce_set_reg(const char *val, const struct kernel_param *kp)
 	unsigned int value = 0;
 	unsigned mode = 0;
 
-	ret = sscanf(val, "%u %u %u", &mode, &addr, &value);
-	if (ret <= 0) {
+	ret = parse_values(val, &mode, &addr, &value);
+	if (ret != 0) {
 		pr_err("[%s] param fail, plz check ! \n", __func__);
 		return 0;
 	}
@@ -1152,8 +1186,8 @@ int mtk_qof_dbg_ctrl(const char *val, const struct kernel_param *kp)
 {
 	int ret;
 
-	ret = sscanf(val, "%u %u %u", &g_dbg_log_on, &g_disable_qof, &g_force_dump_vcp);
-	if (ret <= 0) {
+	ret = parse_values(val, &g_dbg_log_on, &g_disable_qof, &g_force_dump_vcp);
+	if (ret != 0) {
 		pr_err("[%s] param fail, plz check ! \n", __func__);
 		return 0;
 	}

@@ -14,6 +14,8 @@
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
 #include <linux/kernel.h>
 #include <linux/delay.h>
+#include <linux/string.h>
+#include <linux/slab.h>
 #include "vcp_status.h"
 #include "mtk_imgsys-engine-isp8.h"
 #include "mtk_imgsys-cmdq.h"
@@ -2182,16 +2184,48 @@ static void imgsys_qof_set_dbg_thread(bool enable)
 	}
 }
 
+int parse_values(const char *val, unsigned int *level, unsigned int *ver, unsigned int *time)
+{
+	char *token;
+	char *buffer;
+	char *orig_buffer;
+	int ret = 0;
+	unsigned int *values[3] = {level, ver, time};
+	int i = 0;
+
+	buffer = kstrdup(val, GFP_KERNEL);
+	if (!buffer)
+		return -ENOMEM;
+
+	orig_buffer = buffer;
+
+	for (i = 0; i < 3; i++) {
+		token = strsep(&buffer, " ");
+		if (token) {
+			ret = kstrtou32(token, 0, values[i]);
+			if (ret)
+				goto out;
+		} else {
+			ret = -EINVAL;
+			goto out;
+		}
+	}
+
+out:
+	kfree(orig_buffer);
+	return ret;
+}
+
 int mtk_imgsys_qof_ctrl(const char *val, const struct kernel_param *kp)
 {
 	int ret;
-	ret = sscanf(val, "%u %u %u", &g_qof_debug_level, &g_qof_ver, &g_ftrace_time);
+	ret = parse_values(val, &g_qof_debug_level, &g_qof_ver, &g_ftrace_time);
 	QOF_LOGI("g_qof_debug_level[%u], force ver:g_qof_ver[%u], g_ftrace_time[%u]\n",
 		g_qof_debug_level,
 		g_qof_ver,
 		g_ftrace_time);
-	if (ret <= 0) {
-		QOF_LOGE("sscanf ret is wrong %d\n", ret);
+	if (ret != 0) {
+		QOF_LOGE("parse_values ret is wrong %d\n", ret);
 		return 0;
 	}
 	if (g_qof_debug_level == QOF_DEBUG_MODE_IMMEDIATE_DUMP)
