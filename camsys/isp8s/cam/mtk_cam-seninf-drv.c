@@ -39,6 +39,7 @@
 #include "mtk_cam-seninf-event-handle.h"
 #include "mtk_cam-seninf-tsrec.h"
 #include "imgsensor-user.h"
+#include "mtk_cam-seninf-fakesensor.h"
 #include "mtk_cam-seninf-ca.h"
 #include "mtk_cam-seninf-pkvm.h"
 #include "mtk_cam-seninf_control-8s.h"
@@ -2086,7 +2087,7 @@ static int config_hw_csi(struct seninf_ctx *ctx)
 	}
 
 	if (ctx->fake_sensor_info.is_fake_sensor)
-		g_seninf_ops->_set_test_model_fake_sensor(ctx, ctx->seninfAsyncIdx);
+		seninf_fakesensor_set_testmdl(ctx);
 
 	if (set_ctle_param(ctx))
 		dev_info(ctx->dev, "[%s][Error] set_ctle_param ret(%d)\n", __func__, ret);
@@ -3014,26 +3015,6 @@ long mtk_cam_seninf_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	return ret;
 }
 
-static int get_fake_sensor_info(struct seninf_ctx *ctx)
-{
-	struct mtk_fake_sensor_info fake_sensor_info;
-
-	if (ctx->sensor_sd == NULL) {
-		dev_err(ctx->dev, "[%s] ctx->sensor_sd is NULL\n", __func__);
-		return -EINVAL;
-	}
-
-	ctx->sensor_sd->ops->core->command(ctx->sensor_sd,
-						V4L2_CMD_G_SENSOR_FAKE_SENSOR_INFO,
-						&fake_sensor_info);
-
-	memcpy(&(ctx->fake_sensor_info), &fake_sensor_info, sizeof(struct mtk_fake_sensor_info));
-
-	if (ctx->fake_sensor_info.is_fake_sensor)
-		dev_info(ctx->dev, "%s is fake sensor\n", ctx->sensor_sd->name);
-	return 0;
-}
-
 static const struct v4l2_subdev_pad_ops seninf_subdev_pad_ops = {
 	// .link_validate = mtk_cam_seninf_link_validate,
 #if (KERNEL_VERSION(6, 7, 0) >= LINUX_VERSION_CODE)
@@ -3084,7 +3065,7 @@ static int seninf_link_setup(struct media_entity *entity,
 				ctx->sensor_sd =
 					media_entity_to_v4l2_subdev(remote->entity);
 
-				get_fake_sensor_info(ctx);
+				seninf_fakesensor_link_info(ctx, g_seninf_ops);
 
 				ctx->sensor_pad_idx = remote->index;
 				mtk_cam_seninf_get_vcinfo(ctx);

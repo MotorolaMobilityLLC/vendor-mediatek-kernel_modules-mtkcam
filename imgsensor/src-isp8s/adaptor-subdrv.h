@@ -554,6 +554,8 @@ struct subdrv_static_ctx {
 	u32 cust_global_data_len;
 	char *cust_global_data;
 
+	int (*fake_sensor_cb_init)(void *arg);
+
 	/* stagger behavior by vendor type */
 	enum IMGSENSOR_STAGGER_RG_ORDER stagger_rg_order;
 	enum IMGSENSOR_STAGGER_FL_TYPE stagger_fl_type;

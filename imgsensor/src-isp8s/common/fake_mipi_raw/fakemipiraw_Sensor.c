@@ -31,9 +31,16 @@ static int control(struct subdrv_ctx *ctx,
 			MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 			MSDK_SENSOR_CONFIG_STRUCT *sensor_config_data);
 static int get_fake_sensor_frame_count(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int fake_cb_init(void *arg);
+static int fake_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int fake_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int fake_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 
 static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_GET_FRAME_CNT, get_fake_sensor_frame_count},
+	{SENSOR_FEATURE_SEAMLESS_SWITCH, fake_seamless_switch},
+	{SENSOR_FEATURE_SET_GAIN, fake_set_gain},
+	{SENSOR_FEATURE_SET_ESHUTTER, fake_set_shutter},
 };
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4OffsetX = 0,
@@ -75,17 +82,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0c00,
 			.user_data_desc = VC_STAGGER_NE,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW16,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
-		},
-	},
-	{
-		.bus.csi2 = {
-			.channel = 0,
-			.data_type = 0x30,
-			.hsize = 0x1000,
-			.vsize = 0x0010,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
 };
@@ -99,17 +97,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0c00,
 			.user_data_desc = VC_STAGGER_NE,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW16,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
-		},
-	},
-	{
-		.bus.csi2 = {
-			.channel = 0,
-			.data_type = 0x30,
-			.hsize = 0x1000,
-			.vsize = 0x0010,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
 };
@@ -121,17 +110,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0900,
 			.user_data_desc = VC_STAGGER_NE,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW16,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
-		},
-	},
-	{
-		.bus.csi2 = {
-			.channel = 0,
-			.data_type = 0x30,
-			.hsize = 0x1000,
-			.vsize = 0x0010,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
 };
@@ -144,17 +124,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0900,
 			.user_data_desc = VC_STAGGER_NE,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW16,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
-		},
-	},
-	{
-		.bus.csi2 = {
-			.channel = 0,
-			.data_type = 0x30,
-			.hsize = 0x1000,
-			.vsize = 0x0010,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
 };
@@ -167,17 +138,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0900,
 			.user_data_desc = VC_STAGGER_NE,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW16,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
-		},
-	},
-	{
-		.bus.csi2 = {
-			.channel = 0,
-			.data_type = 0x30,
-			.hsize = 0x1000,
-			.vsize = 0x0010,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
 };
@@ -196,17 +158,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus1[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0c00,
 			.user_data_desc = VC_STAGGER_NE,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW16,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST,
-		},
-	},
-	{
-		.bus.csi2 = {
-			.channel = 0,
-			.data_type = 0x30,
-			.hsize = 0x1000,
-			.vsize = 0x0010,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
 	{
@@ -216,17 +169,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus1[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0c00,
 			.user_data_desc = VC_STAGGER_ME,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW16,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
-		},
-	},
-	{
-		.bus.csi2 = {
-			.channel = 1,
-			.data_type = 0x30,
-			.hsize = 0x1000,
-			.vsize = 0x0010,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS_ME_PIX_1,
 		},
 	},
 };
@@ -238,17 +182,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = {
 			.hsize = 0x0780,
 			.vsize = 0x0438,
 			.user_data_desc = VC_STAGGER_NE,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW16,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
-		},
-	},
-	{
-		.bus.csi2 = {
-			.channel = 0,
-			.data_type = 0x30,
-			.hsize = 0x1000,
-			.vsize = 0x0010,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
 };
@@ -262,17 +197,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus3[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0c00,
 			.user_data_desc = VC_STAGGER_NE,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW16,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST,
-		},
-	},
-	{
-		.bus.csi2 = {
-			.channel = 0,
-			.data_type = 0x30,
-			.hsize = 0x1000,
-			.vsize = 0x0010,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
 	{
@@ -282,17 +208,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus3[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0c00,
 			.user_data_desc = VC_STAGGER_ME,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW16,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
-		},
-	},
-	{
-		.bus.csi2 = {
-			.channel = 1,
-			.data_type = 0x30,
-			.hsize = 0x1000,
-			.vsize = 0x0010,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS_ME_PIX_1,
 		},
 	},
 };
@@ -306,17 +223,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus4[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0c00,
 			.user_data_desc = VC_STAGGER_NE,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW16,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST,
-		},
-	},
-	{
-		.bus.csi2 = {
-			.channel = 0,
-			.data_type = 0x30,
-			.hsize = 0x1000,
-			.vsize = 0x0010,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 		},
 	},
 	{
@@ -326,17 +234,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus4[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0c00,
 			.user_data_desc = VC_STAGGER_ME,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW16,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
-		},
-	},
-	{
-		.bus.csi2 = {
-			.channel = 1,
-			.data_type = 0x30,
-			.hsize = 0x1000,
-			.vsize = 0x0010,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS_ME_PIX_1,
 		},
 	},
 };
@@ -396,7 +295,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_cap),
 		.mode_setting_table = fake_capture_setting,
 		.mode_setting_len = ARRAY_SIZE(fake_capture_setting),
-		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_group = 1,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.hdr_mode = HDR_NONE,
@@ -442,7 +341,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_vid),
 		.mode_setting_table = fake_normal_video_setting,
 		.mode_setting_len = ARRAY_SIZE(fake_normal_video_setting),
-		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_group = 1,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.hdr_mode = HDR_NONE,
@@ -488,7 +387,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_hs_vid),
 		.mode_setting_table = fake_hs_video_setting,
 		.mode_setting_len = ARRAY_SIZE(fake_hs_video_setting),
-		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_group = 1,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.hdr_mode = HDR_NONE,
@@ -534,7 +433,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_slim_vid),
 		.mode_setting_table = fake_slim_video_setting,
 		.mode_setting_len = ARRAY_SIZE(fake_slim_video_setting),
-		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_group = 1,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.hdr_mode = HDR_NONE,
@@ -580,7 +479,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_cus1),
 		.mode_setting_table = fake_custom1_setting,
 		.mode_setting_len = ARRAY_SIZE(fake_custom1_setting),
-		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_group = 1,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.hdr_mode = HDR_RAW_STAGGER,
@@ -629,7 +528,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_cus2),
 		.mode_setting_table = fake_custom2_setting,
 		.mode_setting_len = ARRAY_SIZE(fake_custom2_setting),
-		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_group = 1,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.hdr_mode = HDR_NONE,
@@ -669,13 +568,15 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = -2973,
 		.delay_frame = 3,
 		.csi_param = {},
+		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2, /* tetra */
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 	},
 	{
 		.frame_desc = frame_desc_cus3,
 		.num_entries = ARRAY_SIZE(frame_desc_cus3),
 		.mode_setting_table = fake_custom3_setting,
 		.mode_setting_len = ARRAY_SIZE(fake_custom3_setting),
-		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_group = 1,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.hdr_mode = HDR_RAW_LBMF,
@@ -726,7 +627,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_cus4),
 		.mode_setting_table = fake_custom4_setting,
 		.mode_setting_len = ARRAY_SIZE(fake_custom4_setting),
-		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_group = 1,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.hdr_mode = HDR_RAW_DCG_RAW,
@@ -853,6 +754,8 @@ static struct subdrv_static_ctx static_ctx = {
 	.chk_s_off_end = 0,
 
 	.checksum_value = 0xecaae2a0,
+
+	.fake_sensor_cb_init = fake_cb_init,
 };
 
 static struct subdrv_ops ops = {
@@ -1008,6 +911,75 @@ static int get_fake_sensor_frame_count(struct subdrv_ctx *ctx, u8 *para, u32 *le
 	fake_framecnt ++;
 	*((u8 *)para) = fake_framecnt;
 	DRV_LOG(ctx, " fake frame_cnt:%u", *((u8 *)para) );
+
+	return 0;
+}
+
+static fake_sensor_cb_handler_func_ptr fake_sensor_cb_handler;
+static inline int fake_cb_init(void *arg)
+{
+	fake_sensor_cb_handler =
+		(fake_sensor_cb_handler_func_ptr)(arg);
+
+	return 0;
+}
+
+
+static int fake_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	u64 *feature_data = (u64 *) para;
+
+	if (!fake_sensor_cb_handler) {
+		DRV_LOGE(ctx, "cb_func is NULL");
+		return 0;
+	}
+
+	fake_sensor_cb_handler(FAKE_SENSOR_SET_GAIN, para, __func__);
+	DRV_LOG_MUST(ctx, "FAKE_SENSOR_SET_GAIN gain:%llu\n", *feature_data);
+
+	return 0;
+}
+
+
+static int fake_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	u64 *feature_data = (u64 *) para;
+
+	if (!fake_sensor_cb_handler) {
+		DRV_LOGE(ctx, "cb_func is NULL");
+		return 0;
+	}
+
+	fake_sensor_cb_handler(FAKE_SENSOR_SET_ESHUTTER, para, __func__);
+	DRV_LOG_MUST(ctx, "FAKE_SENSOR_SET_ESHUTTER exp:%llu\n", *feature_data);
+
+	return 0;
+}
+
+
+static int fake_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	struct mtk_fake_sensor_info p_info;
+	enum SENSOR_SCENARIO_ID_ENUM scenario_id;
+	u64 *feature_data = (u64 *)para;
+
+	if (!fake_sensor_cb_handler) {
+		DRV_LOGE(ctx, "cb_func is NULL");
+		return 0;
+	}
+
+	scenario_id = *feature_data;
+	p_info.is_fake_sensor = 1;
+	p_info.fps = ctx->s_ctx.mode[scenario_id].max_framerate;
+	p_info.hdr_mode = ctx->s_ctx.mode[scenario_id].hdr_mode;
+	p_info.sensor_output_dataformat =
+		ctx->s_ctx.mode[scenario_id].sensor_output_dataformat;
+	p_info.sensor_output_dataformat_cell_type =
+		ctx->s_ctx.mode[scenario_id].sensor_output_dataformat_cell_type;
+
+
+	fake_sensor_cb_handler(FAKE_SENSOR_SEAMLESS_SWITCH, &p_info, __func__);
+	DRV_LOG_MUST(ctx, "FAKE_SENSOR_SEAMLESS_SWITCH scenario_id:%u\n", scenario_id);
 
 	return 0;
 }

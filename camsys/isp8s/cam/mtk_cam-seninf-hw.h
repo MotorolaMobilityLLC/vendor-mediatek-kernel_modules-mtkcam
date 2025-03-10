@@ -221,7 +221,8 @@ struct mtk_cam_seninf_ops {
 	int (*_set_outmux_rdy_msk_sw_rdy_status)(struct seninf_ctx *ctx, u8 outmux, bool rdy_status);
 	int (*_set_outmux_rdy_msk_cq_rdy_en)(struct seninf_ctx *ctx, u8 outmux, bool cq_rdy_en);
 	int (*_set_outmux_rdy_msk_grp_en)(struct seninf_ctx *ctx, u8 outmux, bool grp_en);
-	int (*_set_test_model_fake_sensor)(struct seninf_ctx *ctx, int intf);
+	int (*_set_test_model_fake_sensor)(struct seninf_ctx *ctx, int intf,
+		struct seninf_fakesensor_tm_param *tm_param, u8 is_switch);
 	int (*_set_test_model)(struct seninf_ctx *ctx, int intf, const int bit_depth);
 	int (*_get_async_irq_st)(struct seninf_ctx *ctx, int async, bool clear);
 	int (*_set_csi_mipi)(struct seninf_ctx *ctx);

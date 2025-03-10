@@ -91,6 +91,10 @@ static int g_cmd_fake_sensor_info(struct adaptor_ctx *ctx, void *arg)
 	p_info->is_fake_sensor = (ctx->subctx.s_ctx.sensor_id == 0x00) ? 1 : 0;
 	p_info->fps = ctx->subctx.s_ctx.mode[ctx->cur_mode->id].max_framerate;
 	p_info->hdr_mode = ctx->subctx.s_ctx.mode[ctx->cur_mode->id].hdr_mode;
+	p_info->sensor_output_dataformat =
+		ctx->subctx.s_ctx.mode[ctx->cur_mode->id].sensor_output_dataformat;
+	p_info->sensor_output_dataformat_cell_type =
+		ctx->subctx.s_ctx.mode[ctx->cur_mode->id].sensor_output_dataformat_cell_type;
 
 	return ret;
 };
@@ -736,6 +740,23 @@ static int s_cmd_sensor_aov_dualsync(struct adaptor_ctx *ctx, void *arg)
 	return 0;
 }
 
+
+static int set_cb_func_of_fake_sensor(struct adaptor_ctx *ctx, void *arg)
+{
+	int ret = 0;
+
+	/* unexpected case, arg is nullptr */
+	if (unlikely((chk_input_arg(ctx, arg, &ret, __func__)) != 0))
+		return ret;
+
+	if (ctx->subctx.s_ctx.fake_sensor_cb_init != NULL)
+		ctx->subctx.s_ctx.fake_sensor_cb_init((void *) arg);
+
+	adaptor_logi(ctx, "[%s] arg:%p", __func__, arg);
+
+	return ret;
+}
+
 static int g_cmd_ctle_param(struct adaptor_ctx *ctx, void *arg)
 {
 	struct mtk_sensor_ctle_param *input_ctle_param = NULL;
@@ -807,6 +828,7 @@ static const struct command_entry command_list[] = {
 	{V4L2_CMD_G_SENSOR_CTLE_PARAM, g_cmd_ctle_param},
 
 	/* SET */
+	{V4L2_CMD_SET_CB_FUNC_OF_FAKE_SENSOR, set_cb_func_of_fake_sensor},
 	{V4L2_CMD_FSYNC_SYNC_FRAME_START_END, s_cmd_fsync_sync_frame_start_end},
 	{V4L2_CMD_TSREC_NOTIFY_VSYNC, s_cmd_tsrec_notify_vsync},
 	{V4L2_CMD_TSREC_NOTIFY_SENSOR_HW_PRE_LATCH,

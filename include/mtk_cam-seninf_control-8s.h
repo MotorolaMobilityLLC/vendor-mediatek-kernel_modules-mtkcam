@@ -148,6 +148,18 @@ struct mtk_seninf_aov_status_check {
 	__u32 ctx_is_null;
 };
 
+struct seninf_fakesensor_tm_param {
+	u32 clr_value;
+	u32 width_tm;
+	u32 tm_height;
+	u32 vs_diff;
+	u32 width_tm_bit;
+	u8 c_clk_div_cnt;
+	u16 c_dummy_pxl;
+	u16 c_dum_vsync;
+	u8 tm_core_fmt;
+};
+
 /* SET */
 
 #define VIDIOC_MTK_S_SENINF_SENTEST_CTRL \

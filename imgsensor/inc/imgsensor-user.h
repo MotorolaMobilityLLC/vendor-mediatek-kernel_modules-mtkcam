@@ -740,6 +740,8 @@ struct mtk_fake_sensor_info {
 	__u32 is_fake_sensor;
 	__u32 fps; /* 300 -> 30 FPS */
 	enum IMGSENSOR_HDR_MODE_ENUM hdr_mode;
+	u8 sensor_output_dataformat;
+	enum ACDK_SENSOR_OUTPUT_FORMAT_CELL_TYPE sensor_output_dataformat_cell_type;
 };
 
 struct mtk_dcg_ratio_group_by_scenario {

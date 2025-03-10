@@ -396,6 +396,9 @@ struct mtk_cam_broadcast_info {
 #define V4L2_CMD_EINT_NOTIFY_FORCE_MASKFRAME \
 	(V4L2_CMD_USER_MTK_SENSOR_BASE + 27)
 
+#define V4L2_CMD_SET_CB_FUNC_OF_FAKE_SENSOR \
+	(V4L2_CMD_USER_MTK_SENSOR_BASE + 28)
+
 
 /**
  * EINT
@@ -526,6 +529,20 @@ struct mtk_cam_seninf_tsrec_cb_info {
 	__u32 tsrec_no;
 	tsrec_cb_handler_func_ptr tsrec_cb_handler;
 };
+
+
+
+enum mtk_cam_seninf_fake_sensor_cb_cmd {
+	FAKE_SENSOR_SET_GAIN,
+	FAKE_SENSOR_SET_ESHUTTER,
+	FAKE_SENSOR_SEAMLESS_SWITCH,
+};
+
+/* call back function prototype */
+typedef int (*fake_sensor_cb_handler_func_ptr)(
+	const unsigned int cmd,
+	void *arg,
+	const char *caller);
 
 
 /* S E N I N F */

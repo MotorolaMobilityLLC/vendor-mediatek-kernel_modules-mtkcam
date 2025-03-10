@@ -971,6 +971,9 @@ int mtk_cam_seninf_fill_bit_depth_to_vc(struct seninf_vc *vc,
 	case MTK_MBUS_FRAME_DESC_REMAP_TO_RAW14:
 		vc->bit_depth = 14;
 		break;
+	case MTK_MBUS_FRAME_DESC_REMAP_TO_RAW16:
+		vc->bit_depth = 16;
+		break;
 	default:
 		break;
 	}
