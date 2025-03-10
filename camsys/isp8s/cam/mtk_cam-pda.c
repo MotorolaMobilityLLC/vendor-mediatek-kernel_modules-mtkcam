@@ -841,6 +841,10 @@ int mtk_pda_runtime_suspend(struct device *dev)
 	dev_info(pda_dev->dev, "REG_E_PDA_OTF_DCIF_CTL(0x6b8) = 0x%x  (expected 0x8)\n",
 		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DCIF_CTL));
 
+	for (i = 0; i < PDA_IRQ_NUM; i++) {
+		disable_irq(pda_dev->irq[i]);
+		dev_info(dev, "%s:disable irq %d\n", __func__, pda_dev->irq[i]);
+	}
 	pda_reset(pda_dev);
 
 	dev_dbg(dev, "%s:disable clock\n", __func__);
@@ -898,10 +902,10 @@ int mtk_pda_runtime_resume(struct device *dev)
 	dev_info(pda_dev->dev, "REG_E_PDA_OTF_DCIF_CTL(0x6b8) = 0x%x  (expected 0x8)\n",
 		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DCIF_CTL));
 
-	//for (i = 0; i < PDA_IRQ_NUM; i++) {
-	//	enable_irq(pda_dev->irq[i]);
-	//	dev_info(dev, "%s:enable irq %d\n", __func__, pda_dev->irq[i]);
-	//}
+	for (i = 0; i < PDA_IRQ_NUM; i++) {
+		enable_irq(pda_dev->irq[i]);
+		dev_info(dev, "%s:enable irq %d\n", __func__, pda_dev->irq[i]);
+	}
 
 	dev_info(dev, "%s -\n", __func__);
 	return 0;
