@@ -125,7 +125,7 @@ enum camsv_tag_idx {
 	SVTAG_SENSOR_META = SVTAG_7,
 	SVTAG_META_END,
 	SVTAG_END = SVTAG_META_END,
-	SVTAG_UNKNOWN, // always put at the end
+	SVTAG_UNKNOWN = SVTAG_END, // always put at the end
 };
 
 enum camsv_fmt {

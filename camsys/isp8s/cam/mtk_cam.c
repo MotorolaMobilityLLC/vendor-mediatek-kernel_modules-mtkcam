@@ -3252,8 +3252,8 @@ _add_mraw_mux_setting(struct mtk_cam_job *job,
 			return -1;
 		}
 
-		if (*cnt >= MUX_SETTING_NUM) {
-			dev_err(cam->dev, "%s lack of mux settings", __func__);
+		if (*cnt >= MUX_SETTING_NUM || mraw_idx >= MRAW_PIPELINE_NUM) {
+			dev_err(cam->dev, "%s lack of mux settings or out of mraw tag idx", __func__);
 			return -1;
 		}
 
@@ -3337,8 +3337,8 @@ static int _config_only_sv_cam_mux(struct mtk_cam_job *job)
 	CALL_PLAT_V4L2(get_sv_max_pixel_mode, sv_dev->id, &sv_max_pixel_mode);
 
 	for (sv_tag_idx = 0; sv_tag_idx < ctx->num_sv_subdevs; sv_tag_idx++) {
-		if (cnt >= MUX_SETTING_NUM) {
-			dev_err(ctx->cam->dev, "%s lack of mux settings", __func__);
+		if (cnt >= MUX_SETTING_NUM || sv_tag_idx >= SVTAG_END) {
+			dev_err(ctx->cam->dev, "%s lack of mux settings or out of camsv tag idx", __func__);
 			return -1;
 		}
 
@@ -4131,15 +4131,12 @@ int mtk_cam_ctx_send_sv_event(struct mtk_cam_ctx *ctx,
 int mtk_cam_ctx_send_mraw_event(struct mtk_cam_ctx *ctx,
 			       struct v4l2_event *event)
 {
-	int i;
 	unsigned int mraw_pipe_idx;
 	struct v4l2_subdev *sd = NULL;
 
-	for (i = 0; i < ctx->num_mraw_subdevs; i++) {
-		mraw_pipe_idx = ctx->mraw_subdev_idx[i];
-		sd = &ctx->cam->pipelines.mraw[mraw_pipe_idx].subdev;
-		break;
-	}
+	mraw_pipe_idx = ctx->mraw_subdev_idx[0];
+	sd = &ctx->cam->pipelines.mraw[mraw_pipe_idx].subdev;
+
 	v4l2_event_queue(sd->devnode, event);
 	return 0;
 }
