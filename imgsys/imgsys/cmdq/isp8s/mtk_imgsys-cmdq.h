@@ -81,6 +81,7 @@ struct mtk_imgsys_cb_param {
 #endif
 	struct cmdq_pkt *pkt;
 	struct swfrm_info_t *frm_info;
+	struct mtk_imgsys_pipe *pipe;
 	struct mtk_imgsys_cmdq_timestamp cmdqTs;
 	struct mtk_imgsys_dev *imgsys_dev;
 	struct cmdq_client *clt;

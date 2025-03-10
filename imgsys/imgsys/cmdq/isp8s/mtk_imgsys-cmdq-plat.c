@@ -901,7 +901,7 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 		if (is_stream_off == 1)
 			pr_info("%s: [ERROR] cb(%p) pipe had been turned off(%d)!\n",
 				__func__, cb_param, is_stream_off);
-		pipe = (struct mtk_imgsys_pipe *)cb_param->frm_info->pipe;
+		pipe = cb_param->pipe;
 		if (!pipe->streaming) {
 			/* is_stream_off = 1; */
 			pr_info("%s: [ERROR] cb(%p) pipe already streamoff(%d)\n",
@@ -1665,7 +1665,7 @@ int imgsys_cmdq_task_aee_cb_plat8s(struct cmdq_cb_data data)
 	if (is_stream_off == 1)
 		pr_info("%s: [ERROR] cb(%p) pipe had been turned off(%d)!\n",
 			__func__, cb_param, is_stream_off);
-	pipe = (struct mtk_imgsys_pipe *)cb_param->frm_info->pipe;
+	pipe = cb_param->pipe;
 	if (!pipe->streaming) {
 		/* is_stream_off = 1; */
 		pr_info("%s: [ERROR] cb(%p) pipe already streamoff(%d)\n",
@@ -2663,6 +2663,7 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 #endif
 				cb_param->pkt = pkt;
 				cb_param->frm_info = frm_info;
+				cb_param->pipe = (struct mtk_imgsys_pipe *)frm_info->pipe;
 				cb_param->req_fd = frm_info->request_fd;
 				cb_param->req_no = frm_info->request_no;
 				cb_param->frm_no = frm_info->frame_no;
