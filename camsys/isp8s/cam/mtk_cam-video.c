@@ -795,11 +795,10 @@ static long mtk_cam_v4l2_file_ioctl(struct file *file,
 				    unsigned int cmd,
 				    unsigned long arg)
 {
-	if (!file) {
+	if (!file || !file->private_data) {
 		pr_info("%s: null file pointer", __func__);
-		return 0;
+		return -1;
 	}
-
 
 	if (cmd != VIDIOC_STREAMON && cmd != VIDIOC_STREAMOFF)
 		return video_ioctl2(file, cmd, arg);
