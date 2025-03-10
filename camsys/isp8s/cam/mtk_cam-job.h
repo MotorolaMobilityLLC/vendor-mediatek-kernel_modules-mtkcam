@@ -502,6 +502,8 @@ struct mtk_cam_job {
 	/* pda status */
 	bool pda_status;
 	unsigned long uninit_pda_engine;
+
+	bool long_exp_cq_rdy_mask;
 };
 
 static inline struct mtk_cam_job *mtk_cam_job_get(struct mtk_cam_job *job)

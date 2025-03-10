@@ -208,6 +208,40 @@ static void mtk_cam_tuning_work(struct kthread_work *work)
 	mtk_cam_job_put(job);
 }
 
+/* TODO: refactor duplicate looping camtg function */
+static void set_engines_cq_rdy_mask_en(struct mtk_cam_ctx *ctx,
+				  struct v4l2_subdev *seninf,
+				  unsigned long engines, bool ready)
+{
+	struct mtk_cam_device *cam = ctx->cam;
+	struct mtk_camsv_device *sv_dev;
+	unsigned long mask;
+	int i, raw_id, raw_tg_idx;
+
+	/* raw */
+	mask = bit_map_subset_of(MAP_HW_RAW, engines);
+	for (i = 0; i < cam->engines.num_raw_devices && mask; i++) {
+		if (!(mask & BIT(i)))
+			continue;
+
+		raw_id = get_master_raw_id(BIT(i));  /* get raw itself */
+		raw_tg_idx = raw_to_tg_idx(raw_id);
+		mtk_cam_seninf_set_mux_cq_en(seninf, raw_tg_idx, ready);
+	}
+
+	/* camsv */
+	mask = bit_map_subset_of(MAP_HW_CAMSV, engines);
+	for (i = 0; i < cam->engines.num_camsv_devices && mask; i++) {
+		if (!(mask & BIT(i)))
+			continue;
+
+		sv_dev = dev_get_drvdata(cam->engines.sv_devs[i]);
+		mtk_cam_seninf_set_mux_cq_en(seninf, sv_dev->cammux_id, ready);
+	}
+
+	dev_info(ctx->cam->dev, "%s %d engines:%#lx", __func__, ready, engines);
+}
+
 static int handle_cq_done(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -232,6 +266,10 @@ static int handle_cq_done(struct mtk_cam_job *job)
 		qof_mtcmos_voter(&cam->engines, job->used_engine, false);
 		pr_info("%s: back to qof %x", __func__, job->used_engine);
 	}
+
+	if (atomic_sub_and_test(1, &job->src_ctx->cq_rdy_mask_en_cnt))
+		set_engines_cq_rdy_mask_en(job->src_ctx,
+			job->seninf, job->used_engine, false);
 
 EXIT:
 	return ret;
@@ -536,6 +574,8 @@ static int mtk_cam_job_pack_init(struct mtk_cam_job *job,
 	job->longest_exp_ns = 0;
 
 	job->uninit_pda_engine = 0;
+
+	job->long_exp_cq_rdy_mask = false;
 
 	if (raw_data &&
 		raw_data->ctrl.req_info.req_type == SENSOR_REQUEST) {
@@ -4961,6 +5001,22 @@ static void update_job_exp_ns(struct mtk_cam_job *job)
 	job->longest_exp_ns = longest_exp_ns;
 }
 
+static void update_preframe_cq_rdy_mask_en(struct mtk_cam_job *job)
+{
+	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
+
+	if (!job->seamless_switch && ctrl_data &&
+		ctrl_data->rc_data.exp_ns.long_exposure_flow) {
+		job->long_exp_cq_rdy_mask = true;
+
+		if (atomic_add_return(1,
+				&job->src_ctx->cq_rdy_mask_en_cnt) == 1) {
+			set_engines_cq_rdy_mask_en(job->src_ctx,
+				job->seninf, job->used_engine, true);
+		}
+	}
+}
+
 static void update_sensor_fl_low_latency(struct mtk_cam_job *job)
 {
 	struct mtk_raw_request_data *raw_data = req_get_raw_data(job->src_ctx, job->req);
@@ -5239,6 +5295,7 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 	update_sen_expo_diff(job);
 	update_tuning_param(job);
 	update_job_exp_ns(job);
+	update_preframe_cq_rdy_mask_en(job);
 
 	if (CAM_DEBUG_ENABLED(JOB))
 		pr_info("[%s] ctx:%d|type:%d|%s|exp(cur:%d,prev:%d)|sw/scene:%d/%d, req_id:%d, sensor:%d/%d",
