@@ -117,14 +117,14 @@ static struct fmon_settings fmon_map
 	},
 	/* pipe-a,b dc */
 	[FPIPE_SV][FPIPE_SV][FPIPE_NONE] = {
-		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
+		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
 		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
 		{ .tx_mux = 4, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
 		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
 	},
 	/* pipe-b,c dc */
 	[FPIPE_NONE][FPIPE_SV][FPIPE_SV] = {
-		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
+		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
 		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
@@ -138,7 +138,7 @@ static struct fmon_settings fmon_map
 	},
 	/* pipe-a,b,c dc */
 	[FPIPE_SV][FPIPE_SV][FPIPE_SV] = {
-		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
+		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
 		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
 		{ .tx_mux = 4, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
 		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
@@ -392,6 +392,8 @@ OUT:
 }
 
 /* once by cam-main pwr on */
+#define FMON_TRIG_START_MASK 0x00000F0F
+#define FMON_TRIG_STOP_MASK  0x000000F0
 void mtk_cam_fmon_enable(struct mtk_fmon_device *fmon)
 {
 	u32 val = 0;
@@ -463,7 +465,7 @@ void mtk_cam_fmon_enable(struct mtk_fmon_device *fmon)
 
 	/* enable fifo monitor */
 	val = readl(fmon->base + REG_CAM_FMON_SETTING_2);
-	writel(val | 0xFFF, fmon->base + REG_CAM_FMON_SETTING_2);
+	writel(val | FMON_TRIG_START_MASK | FMON_TRIG_STOP_MASK, fmon->base + REG_CAM_FMON_SETTING_2);
 	val = readl(fmon->base + REG_CAM_FMON_SETTING);
 	SET_FIELD(&val, CAM_FMON_FIFO_MON_EN, 1);
 	SET_FIELD(&val, CAM_FMON_ELA_BUS_SEL, 1);
@@ -502,16 +504,25 @@ void mtk_cam_fmon_disable(struct mtk_fmon_device *fmon)
 	//reset to default
 	writel(0x1e1eff, fmon->base + REG_CAM_FMON_SETTING_3);
 	writel(0x80f000, fmon->base + REG_CAM_FMON_SETTING);
-	writel(0, fmon->cti_ctrl);
 
 	memset(&fmon->pipes, 0, sizeof(fmon->pipes));
 	mutex_unlock(&fmon->op_lock);
 
-	pr_info("%s: fmon_setting:0x%x, ela_ctrl:0x%x\n", __func__,
-		readl(fmon->base + REG_CAM_FMON_SETTING),
-		readl(fmon->ela_ctrl));
-
 	disable_irq(fmon->irq);
+
+	/* toggle cti stop if start is trigged but stop didn't */
+	val = readl(fmon->base + REG_CAM_FMON_SETTING_2);
+	if ((val & FMON_TRIG_START_MASK) != FMON_TRIG_START_MASK &&
+		(val & FMON_TRIG_STOP_MASK) == FMON_TRIG_STOP_MASK) {
+		writel(1, fmon->cti_ctrl);
+		pr_info("%s: trigger cti stop, fmon_setting_2:0x%x cti_ctrl:0x%x\n",
+			 __func__, val, readl(fmon->cti_ctrl));
+	}
+	writel(0, fmon->cti_ctrl);
+
+	pr_info("%s: fmon_setting:0x%x, ela_ctrl:0x%x cti_ctrl:0x%x\n", __func__,
+		readl(fmon->base + REG_CAM_FMON_SETTING),
+		readl(fmon->ela_ctrl), readl(fmon->cti_ctrl));
 }
 
 void mtk_cam_fmon_dump(struct mtk_fmon_device *fmon)
