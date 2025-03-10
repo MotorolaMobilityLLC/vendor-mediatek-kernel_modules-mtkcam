@@ -424,8 +424,13 @@ int qof_enable(struct mtk_raw_device *raw, bool enable)
 	if (en)
 		qof_reset(raw);
 
-	qof_int_en(raw, en);
-	mtk_cam_enable_itc(raw, en);
+	if (en) {
+		mtk_cam_enable_itc(raw, en);
+		qof_int_en(raw, en);
+	} else {
+		qof_int_en(raw, en);
+		mtk_cam_enable_itc(raw, en);
+	}
 
 	if (en)
 		qof_setup_pwr_th(raw);
