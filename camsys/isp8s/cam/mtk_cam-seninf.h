@@ -546,6 +546,12 @@ struct seninf_ctx {
 	u32 debug_cur_mac_csi2_size_irq3;
 	u32 debug_cur_mac_csi2_size_irq4;
 	u32 debug_cur_mac_csi2_size_irq5;
+
+	/* Vsync in*/
+	struct mutex mutex_vsync_in;
+	u32 sensor_sequence;
+	u32 sensor_sync_id;
+	u32 vsync_in_frame_seq_no;
 };
 
 struct mtk_cam_seninf_irq_event_st {

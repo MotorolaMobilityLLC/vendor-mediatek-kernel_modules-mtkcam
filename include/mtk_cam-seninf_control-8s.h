@@ -24,6 +24,7 @@
 #define __MTK_CAM_SENINF_CONTROL_8_H__
 
 #include <linux/videodev2.h>
+#include "mtk_cam-aov-data-isp8s.h"
 
 #define MAX_OUTMUX_DEBUG_RESULT 15
 

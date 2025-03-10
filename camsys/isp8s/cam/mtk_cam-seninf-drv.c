@@ -47,6 +47,7 @@
 #include "mtk_cam-seninf-aov-sentest-ioctrl.h"
 #include "mtk_cam-seninf-aov-sentest-ctrl.h"
 #include "mtk_cam-seninf-eint.h"
+#include "mtk_cam-seninf-v4l2-event.h"
 
 #define CSI_POWER_STATE
 #ifdef CSI_POWER_STATE
@@ -1568,17 +1569,6 @@ static int get_csi_port(struct device *dev, int *port)
 	return -1;
 }
 
-static int seninf_subscribe_event(struct v4l2_subdev *sd,
-				  struct v4l2_fh *fh,
-				  struct v4l2_event_subscription *sub)
-{
-	switch (sub->type) {
-	case V4L2_EVENT_CTRL:
-		return v4l2_ctrl_subdev_subscribe_event(sd, fh, sub);
-	default:
-		return -EINVAL;
-	}
-}
 
 static void init_fmt(struct seninf_ctx *ctx)
 {
@@ -2884,6 +2874,7 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 	}
 
 	seninf_csi_s_stream(sd, enable);
+	mtk_cam_seninf_eint_event_handle_cb_register(sd, enable);
 
 	if (ctx->streaming == enable) {
 		dev_info(ctx->dev,
@@ -3057,7 +3048,7 @@ static const struct v4l2_subdev_video_ops seninf_subdev_video_ops = {
 };
 
 static const struct v4l2_subdev_core_ops seninf_subdev_core_ops = {
-	.subscribe_event	= seninf_subscribe_event,
+	.subscribe_event	= mtk_cam_seninf_subscribe_event,
 	.unsubscribe_event	= v4l2_event_subdev_unsubscribe,
 	.ioctl = mtk_cam_seninf_ioctl,
 };
@@ -3893,6 +3884,7 @@ static int seninf_probe(struct platform_device *pdev)
 	ctx->open_refcnt = 0;
 	mutex_init(&ctx->mutex);
 	mutex_init(&ctx->stream_mutex);
+	mutex_init(&ctx->mutex_vsync_in);
 
 	ret = get_csi_port(dev, &port);
 	if (ret) {

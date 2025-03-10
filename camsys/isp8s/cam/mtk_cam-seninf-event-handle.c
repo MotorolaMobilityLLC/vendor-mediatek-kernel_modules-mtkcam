@@ -681,3 +681,19 @@ void notify_sensor_set_fl_prolong(struct v4l2_subdev *sd,
 			"ERROR: v4l2 subdev ops core command not exist\n");
 	}
 }
+
+void mtk_cam_seninf_frame_event_notify(struct v4l2_subdev *sd,
+	u32 sensor_sequence, u32 sensor_sync_id)
+{
+	struct seninf_ctx *ctx = container_of(sd, struct seninf_ctx, subdev);
+
+	if (unlikely(ctx == 0)) {
+		pr_info("[error] ctx is NULL\n");
+		return;
+	}
+
+	mutex_lock(&ctx->mutex_vsync_in);
+	ctx->sensor_sequence = sensor_sequence;
+	ctx->sensor_sync_id = sensor_sync_id;
+	mutex_unlock(&ctx->mutex_vsync_in);
+}
