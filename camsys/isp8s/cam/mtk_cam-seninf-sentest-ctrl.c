@@ -562,11 +562,15 @@ static int is_target_vsync(struct seninf_ctx *ctx,
 			mask_shift_cnt++;
 	}
 
+	if (unlikely(mask_shift_cnt == 0)) {
+		pr_err("[%s], mask_shift_cnt should not be 0\n", __func__);
+		return -EFAULT;
+	}
+
 	if (vsync_type == SENTEST_FIRST_VSYNC) {
 		ret = (p_info->vsync_status & 0x01)? true : false;
 	} else {
 		mask = (mask << (mask_shift_cnt - 1));
-
 		ret = (p_info->vsync_status & mask)? true : false;
 	}
 

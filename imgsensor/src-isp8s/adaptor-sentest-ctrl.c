@@ -241,7 +241,7 @@ int sentest_get_sensor_setting_info(struct adaptor_ctx *ctx,
 	switch (info->type) {
 	case SENTEST_SENSOR_SETTING:
 		if (info->table_length <
-		sizeof(ctx->subctx.s_ctx.mode[info->scenario].mode_setting_table)) {
+		sizeof(*ctx->subctx.s_ctx.mode[info->scenario].mode_setting_table)) {
 			pr_info("[%s][ERROR] user table len is smaller than src table\n", __func__);
 			return -EINVAL;
 		}
@@ -249,13 +249,14 @@ int sentest_get_sensor_setting_info(struct adaptor_ctx *ctx,
 		info->table_length = ctx->subctx.s_ctx.mode[info->scenario].mode_setting_len;
 		ret = copy_to_user(info->param_ptr,
 				ctx->subctx.s_ctx.mode[info->scenario].mode_setting_table,
-				sizeof(ctx->subctx.s_ctx.mode[info->scenario].mode_setting_table));
+				sizeof(*ctx->subctx.s_ctx.mode[info->scenario].mode_setting_table));
 
 		break;
 
 	case SENTEST_SEAMLESS_SETTING:
 		if (info->table_length <
-		sizeof(ctx->subctx.s_ctx.mode[info->scenario].seamless_switch_mode_setting_table)) {
+		sizeof(
+		*ctx->subctx.s_ctx.mode[info->scenario].seamless_switch_mode_setting_table)) {
 			pr_info("[%s][ERROR] user table len is smaller than src table\n", __func__);
 			return -EINVAL;
 		}
@@ -264,7 +265,7 @@ int sentest_get_sensor_setting_info(struct adaptor_ctx *ctx,
 		ctx->subctx.s_ctx.mode[info->scenario].seamless_switch_mode_setting_len;
 		ret = copy_to_user(info->param_ptr,
 		ctx->subctx.s_ctx.mode[info->scenario].seamless_switch_mode_setting_table,
-		sizeof(ctx->subctx.s_ctx.mode[info->scenario].seamless_switch_mode_setting_table));
+		sizeof(*ctx->subctx.s_ctx.mode[info->scenario].seamless_switch_mode_setting_table));
 		break;
 
 	case SENTEST_IGNORE_SETTING: {
