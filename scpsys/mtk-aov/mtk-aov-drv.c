@@ -557,6 +557,34 @@ static int mtk_aov_probe(struct platform_device *pdev)
 				uisp_larb_dev = &dep_pdev->dev;
 		}
 
+		// sensor-i2c
+		num_node = of_count_phandle_with_args(
+						pdev->dev.of_node, "sensor-i2c", NULL);
+		num_node = (num_node < 0) ? 0 : num_node;
+		dev_info(&pdev->dev, "num of sensor i2c:%d\n", num_node);
+
+		for (i = 0; i < num_node; i++) {
+			dep_node = of_parse_phandle(
+						pdev->dev.of_node, "sensor-i2c", i);
+			if (!dep_node) {
+				dev_info(&pdev->dev, "failed to get i2c node(%d).\n", i);
+				continue;
+			}
+
+			dep_pdev = of_find_device_by_node(dep_node);
+			if (WARN_ON(!dep_pdev)) {
+				of_node_put(dep_node);
+				dev_info(&pdev->dev, "failed to get i2c pdev(%d)\n", i);
+				continue;
+			}
+			of_node_put(dep_node);
+
+			link = device_link_add(&pdev->dev, &dep_pdev->dev,
+							DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
+			if (!link)
+				dev_info(&pdev->dev, "failed to link i2c pdev(%d)\n", i);
+		}
+
 		// seninf device link
 		num_node = of_count_phandle_with_args(
 						pdev->dev.of_node, "depend-on", NULL);
@@ -583,8 +611,6 @@ static int mtk_aov_probe(struct platform_device *pdev)
 							DL_FLAG_AUTOREMOVE_CONSUMER);
 			if (!link)
 				dev_info(&pdev->dev, "unable to link aov dependency %d\n", i);
-			else
-				uisp_larb_dev = &dep_pdev->dev;
 		}
 	} else {
 		aov_dev->op_mode = 0;
@@ -717,8 +743,8 @@ static int aov_runtime_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops mtk_aov_pm_ops = {
-	.suspend_noirq = aov_runtime_suspend,
-	.resume_noirq = aov_runtime_resume,
+	.suspend_late = aov_runtime_suspend,
+	.resume_early = aov_runtime_resume,
 
 };
 

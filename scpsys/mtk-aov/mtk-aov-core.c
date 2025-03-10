@@ -980,8 +980,12 @@ int aov_core_send_cmd(struct mtk_aov *aov_dev, uint32_t cmd,
 		ret = slbc_status(&slb);
 		if (ret > 0) {
 			dev_info(aov_dev->dev,
-				"%s: still have slb user at resume. ref count: %d\n",
+				"%s: still have slb user at resume. ref count: %d, release in kernel\n",
 				__func__, ret);
+			ret = slbc_release(&slb);
+			if (ret < 0)
+				dev_info(aov_dev->dev, "%s: failed to release slb buffer\n",
+					__func__);
 		}
 #endif  // AOV_SLB_ALLOC_FREE
 	} else if ((cmd == AOV_SCP_CMD_NOTIFY) || (cmd == AOV_SCP_CMD_SET_APU) || (cmd == AOV_SCP_CMD_CLEAR_APU)) {
