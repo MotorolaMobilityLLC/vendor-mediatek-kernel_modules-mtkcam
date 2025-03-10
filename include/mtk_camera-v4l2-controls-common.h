@@ -390,6 +390,12 @@ struct mtk_cam_broadcast_info {
 #define V4L2_CMD_SET_SENSOR_FRAME_LENGTH \
 	(V4L2_CMD_USER_MTK_SENSOR_BASE + 25)
 
+#define V4L2_CMD_EINT_NOTIFY_FORCE_EN_XVS \
+	(V4L2_CMD_USER_MTK_SENSOR_BASE + 26)
+
+#define V4L2_CMD_EINT_NOTIFY_FORCE_MASKFRAME \
+	(V4L2_CMD_USER_MTK_SENSOR_BASE + 27)
+
 
 /**
  * EINT
@@ -425,7 +431,7 @@ struct mtk_cam_seninf_eint_timestamp_info {
 };
 
 /* call back function prototype, see mtk_cam-seninf-eint.c */
-typedef int (*eint_cb_handler_func_ptr)(const int eint_no,
+typedef int (*eint_cb_handler_func_ptr)(const unsigned int eint_no,
 	const unsigned int cmd,
 	void *arg,
 	const char *caller);

@@ -20,11 +20,17 @@
 #include "mtk_cam-seninf.h"
 #include "imgsensor-user.h"
 
+unsigned int eint_log_ctrl;
+
 #define PFX "SenIfEINT"
 #define EINT_INF(format, args...) \
 	pr_info(PFX "[%s] " format, __func__, ##args)
 #define EINT_DBG(format, args...) \
-	pr_debug(PFX "[%s] " format, __func__, ##args)
+do { \
+	if (unlikely(eint_log_ctrl)) { \
+		pr_info(PFX "[%s] " format, __func__, ##args); \
+	} \
+} while (0)
 
 #define sd_to_ctx(__sd) container_of(__sd, struct seninf_ctx, subdev)
 
@@ -41,11 +47,24 @@
 #define TIMER_LATCH_L(n)   (0x0C24 + n * 8)
 #define TIMER_LATCH_H(n)   (0x0C28 + n * 8)
 
-#define EINT_NUM_MAX 3
+#define EINT_NUM_MAX         (3)
+#define EINT_IDX_INVALID     (0x87)
+#define EINT_DTS_NUM_INVALID (0x87 + 1) /* dts idx start from 1 (using 1,2,3) */
 
+#define EINT_CON_CMD_ID_BASE        (100000000)
+#define EINT_CON_CMD_ID_MOD         (100)
+#define EINT_CON_CMD_VAL_BASE       (1)
+#define EINT_CON_CMD_VAL_MOD        (100000000)
 
 DEFINE_SPINLOCK(eint_cfg_concurrency_lock);
 
+enum eint_console_cmd_id {
+	EINT_CON_FORCE_TO_EN_USING_XVS = 1,
+	EINT_CON_FORCE_TO_EN_USING_MASKFRAME = 2,
+
+	/* last cmd id (42) */
+	EINT_CON_CMD_LOG_CTRL = 42,
+};
 
 struct reg_address_size_pair {
 	u32 address;
@@ -157,7 +176,8 @@ static void find_seninf_ctx_by_tsrec_no(const unsigned int tsrec_no,
 static int chk_eint_idx_valid(const unsigned int idx, const char *caller)
 {
 	if (idx >= EINT_NUM_MAX) {
-		EINT_INF("[%s] int idx invalid\n", caller);
+		EINT_INF("[%s] eint_idx invalid, idx:%u EINT_IDX_INVALID:%u\n",
+			caller, idx, EINT_IDX_INVALID);
 		return -EINVAL;
 	}
 
@@ -227,7 +247,7 @@ static inline void reset_eint_info(unsigned int index, u32 en)
 		if (worker)
 			seninf_eint.eints[index].worker = worker;
 		else
-			EINT_INF("ERROR: get tsrec kthread failed\n");
+			EINT_INF("ERROR: get tsrec kthread failed   [index:%u]\n", index);
 	}
 
 	seninf_eint.eints[index].status.is_start = en;
@@ -243,7 +263,7 @@ static void config_hw_latch(unsigned int index, u32 en)
 	void __iomem *base = seninf_eint.eints[index].dts_info.base;
 
 	if (base == NULL) {
-		EINT_INF("ERROR: base is null\n");
+		EINT_INF("ERROR: base is null   [index:%u]\n", index);
 		return;
 	}
 
@@ -426,7 +446,7 @@ static void eint_work_init_and_queue(
 
 	p_worker = seninf_eint.eints[index].worker;
 	if (p_worker == NULL) {
-		EINT_INF("ERROR: g_tsrec_worker_st failed\n");
+		EINT_INF("ERROR: g_tsrec_worker_st failed   [index:%u]\n", index);
 		return;
 	}
 
@@ -459,8 +479,9 @@ void eint_work_setup(int irq, void *data, struct eint_irq_info *irq_info)
 
 	if (unlikely(req == NULL)) {
 		EINT_INF(
-			"ERROR: work request:%p dynamic alloc mem failed, return\n",
-			req);
+			"ERROR: work request:%p dynamic alloc mem failed, return   [index:%d]\n",
+			req,
+			index);
 		return;
 	}
 
@@ -621,14 +642,15 @@ static int chk_xvs_for_preshutter(unsigned int index, struct eint_irq_info *irq_
 
 	if ((seq_no == 1) && (flag == 0)) {
 		EINT_INF(
-			"NOTICE: filter 1st XVS (preshutter) before 1 SOF idx:%u ts:%lluus(%llu/%u) seq_no:%d sys_ts:(%llu|%llu)\n",
+			"NOTICE: filter 1st XVS (preshutter) before 1 SOF idx:%u ts:%lluus(%llu/%u) seq_no:%d sys_ts:(%llu|%llu)   [index:%u]\n",
 			irq_info->index,
 			irq_info->tick / EINT_TICK_FACTOR,
 			irq_info->tick,
 			EINT_TICK_FACTOR,
 			seq_no,
 			irq_info->sys_ts,
-			irq_info->sys_ts_mono);
+			irq_info->sys_ts_mono,
+			index);
 		return -EINVAL;
 	}
 
@@ -637,14 +659,15 @@ static int chk_xvs_for_preshutter(unsigned int index, struct eint_irq_info *irq_
 		atomic_set(&seninf_eint.eints[index].status.is_seamless_switch, 0);
 
 		EINT_INF(
-			"NOTICE: filter 1st XVS (preshutter) for seamless switch idx:%u ts:%lluus(%llu/%u) seq_no:%d sys_ts:(%llu|%llu)\n",
+			"NOTICE: filter 1st XVS (preshutter) for seamless switch idx:%u ts:%lluus(%llu/%u) seq_no:%d sys_ts:(%llu|%llu)   [index:%u]\n",
 			irq_info->index,
 			irq_info->tick / EINT_TICK_FACTOR,
 			irq_info->tick,
 			EINT_TICK_FACTOR,
 			seq_no,
 			irq_info->sys_ts,
-			irq_info->sys_ts_mono);
+			irq_info->sys_ts_mono,
+			index);
 		return -EINVAL;
 	}
 
@@ -654,13 +677,14 @@ static int chk_xvs_for_preshutter(unsigned int index, struct eint_irq_info *irq_
 static int chk_eint_intr_en(unsigned int index, struct eint_irq_info *irq_info)
 {
 	if (seninf_eint.eints[index].status.intr_en == 0) {
-		EINT_INF("WARNING: EINT is not enabled! idx:%u ts:%lluus(%llu/%u) sys_ts:(%llu|%llu)\n",
+		EINT_INF("WARNING: EINT is not enabled! idx:%u ts:%lluus(%llu/%u) sys_ts:(%llu|%llu)   [index:%u]\n",
 			irq_info->index,
 			irq_info->tick / EINT_TICK_FACTOR,
 			irq_info->tick,
 			EINT_TICK_FACTOR,
 			irq_info->sys_ts,
-			irq_info->sys_ts_mono);
+			irq_info->sys_ts_mono,
+			index);
 		return -EINVAL;
 	}
 
@@ -808,10 +832,13 @@ static irqreturn_t mtk_thread_eint_irq(int irq, void *data)
 /******************************************************************************
  * EINT call back handler entry
  *****************************************************************************/
-static int eint_cb_notify_streamon(const int eint_no,
+static int eint_cb_notify_streamon(const unsigned int eint_no,
 	void *arg, const char *caller)
 {
 	int *is_streaming = NULL;
+
+	if (chk_eint_idx_valid(eint_no, __func__))
+		return -EINVAL;
 
 	is_streaming = (int *)arg;
 	atomic_set(&seninf_eint.eints[eint_no].status.is_streaming, *is_streaming);
@@ -819,10 +846,13 @@ static int eint_cb_notify_streamon(const int eint_no,
 	return 0;
 }
 
-static int eint_cb_notify_seamless_switch(const int eint_no,
+static int eint_cb_notify_seamless_switch(const unsigned int eint_no,
 	void *arg, const char *caller)
 {
 	int *is_seamless_switch = NULL;
+
+	if (chk_eint_idx_valid(eint_no, __func__))
+		return -EINVAL;
 
 	is_seamless_switch = (int *)arg;
 	atomic_set(&seninf_eint.eints[eint_no].status.is_seamless_switch, *is_seamless_switch);
@@ -837,7 +867,7 @@ static int eint_cb_notify_seamless_switch(const int eint_no,
 
 struct eint_cb_cmd_entry {
 	unsigned int cmd;
-	int (*func)(const int eint_no, void *arg, const char *caller);
+	int (*func)(const unsigned int eint_no, void *arg, const char *caller);
 };
 
 static const struct eint_cb_cmd_entry eint_cb_cmd_list[] = {
@@ -846,7 +876,7 @@ static const struct eint_cb_cmd_entry eint_cb_cmd_list[] = {
 	{EINT_CB_CMD_NOTIFY_SEAMLESS_SWITCH, eint_cb_notify_seamless_switch},
 };
 
-int eint_cb_handler(const int eint_no,
+int eint_cb_handler(const unsigned int eint_no,
 	const unsigned int cmd, void *arg, const char *caller)
 {
 	int i, is_cmd_found = 0, ret = 0;
@@ -884,7 +914,7 @@ static void eint_setup_cb_func_info_of_sensor(struct seninf_ctx *inf_ctx,
 			&& inf_ctx->sensor_sd->ops
 			&& inf_ctx->sensor_sd->ops->core
 			&& inf_ctx->sensor_sd->ops->core->command))) {
-		EINT_INF("[%s] cannot get sensor core ops\n", __func__);
+		EINT_INF("[%s] cannot get sensor core ops   [index:%u]\n", __func__, index);
 		return;
 	}
 
@@ -899,11 +929,12 @@ static void eint_setup_cb_func_info_of_sensor(struct seninf_ctx *inf_ctx,
 		V4L2_CMD_EINT_SETUP_CB_FUNC_OF_SENSOR,
 		&cb_info);
 
-	EINT_INF("tsrec_idx:%u eint_no:%d is_start:%u eint_cb_handler:%p\n",
+	EINT_INF("tsrec_idx:%u eint_no:%d is_start:%u eint_cb_handler:%p   [index:%u]\n",
 		cb_info.tsrec_idx,
 		cb_info.eint_no,
 		cb_info.is_start,
-		cb_info.eint_cb_handler);
+		cb_info.eint_cb_handler,
+		index);
 }
 
 
@@ -915,9 +946,12 @@ static void eint_notify_adaptor_enable_irq(unsigned int index, u32 en)
 	struct seninf_ctx *seninf_ctx = NULL;
 	struct mtk_cam_seninf_eint_irq_en_info info;
 
+	if (chk_eint_idx_valid(index, __func__))
+		return;
+
 	seninf_ctx = seninf_eint.eints[index].inf_ctx;
 	if (unlikely(seninf_ctx == NULL)) {
-		EINT_INF("[%s] seninf_ctx == NULL\n", __func__);
+		EINT_INF("[%s] seninf_ctx == NULL   [index:%u]\n", __func__, index);
 		return;
 	}
 
@@ -925,7 +959,7 @@ static void eint_notify_adaptor_enable_irq(unsigned int index, u32 en)
 			&& seninf_ctx->sensor_sd->ops
 			&& seninf_ctx->sensor_sd->ops->core
 			&& seninf_ctx->sensor_sd->ops->core->command))) {
-		EINT_INF("ERROR: can not get sensor ops or core ops\n");
+		EINT_INF("ERROR: can not get sensor ops or core ops   [index:%u]\n", index);
 		return;
 	}
 
@@ -937,20 +971,26 @@ static void eint_notify_adaptor_enable_irq(unsigned int index, u32 en)
 	seninf_ctx->sensor_sd->ops->core->command(
 		seninf_ctx->sensor_sd, V4L2_CMD_EINT_NOTIFY_IRQ_EN, &info);
 
-	EINT_INF("eint_no:%u tsrec_idx:%u flag:%u\n",
+	EINT_INF("eint_no:%u tsrec_idx:%u flag:%u   [index:%u]\n",
 		info.eint_no,
 		info.tsrec_idx,
-		info.flag);
+		info.flag,
+		index);
 }
 
 
 static void eint_irq_line_en(unsigned int index, u32 en)
 {
-	unsigned int irq = seninf_eint.eints[index].irq_num;
+	unsigned int irq;
 	int seq_no;
 
+	if (chk_eint_idx_valid(index, __func__))
+		return;
+
+	irq = seninf_eint.eints[index].irq_num;
+
 	if(!irq) {
-		EINT_INF("ERROR: irq == 0\n");
+		EINT_INF("ERROR: irq == 0   [index:%u]\n", index);
 		return;
 	}
 
@@ -979,10 +1019,14 @@ static void eint_irq_line_en(unsigned int index, u32 en)
 
 static void eint_irq_ctrl(unsigned int index, u32 en)
 {
-	unsigned int irq = seninf_eint.eints[index].irq_num;
+	unsigned int irq;
 
+	if (chk_eint_idx_valid(index, __func__))
+		return;
+
+	irq = seninf_eint.eints[index].irq_num;
 	if(!irq) {
-		EINT_INF("ERROR: irq == 0\n");
+		EINT_INF("ERROR: irq == 0   [index:%u]\n", index);
 		return;
 	}
 
@@ -1042,6 +1086,243 @@ int mtk_cam_seninf_eint_reset(struct seninf_ctx *ctx)
 	reset_eint_info(index, 0);
 
 	return 0;
+}
+
+
+/*---------------------------------------------------------------------------*/
+// eint debugging functions
+/*---------------------------------------------------------------------------*/
+static void eint_notify_sensor_force_using_eint(const unsigned int index, const unsigned int en)
+{
+	struct seninf_ctx *seninf_ctx = NULL;
+	struct mtk_fsync_hw_mcss_init_info info;
+
+	if (chk_eint_idx_valid(index, __func__))
+		return;
+
+	seninf_ctx = seninf_eint.eints[index].inf_ctx;
+	if (unlikely(seninf_ctx == NULL)) {
+		EINT_INF("[%s] seninf_ctx == NULL   [index:%u]\n", __func__, index);
+		return;
+	}
+
+	if (unlikely(!(seninf_ctx->sensor_sd
+			&& seninf_ctx->sensor_sd->ops
+			&& seninf_ctx->sensor_sd->ops->core
+			&& seninf_ctx->sensor_sd->ops->core->command))) {
+		EINT_INF("ERROR: can not get sensor ops or core ops   [index:%u]\n", index);
+		return;
+	}
+
+	info.enable_mcss = en ? 1 : 0;
+	info.is_mcss_master = en ? 1 : 0;
+
+	/* call v4l2_subdev_core_ops command to sensor adaptor */
+	seninf_ctx->sensor_sd->ops->core->command(
+		seninf_ctx->sensor_sd, V4L2_CMD_EINT_NOTIFY_FORCE_EN_XVS, &info);
+
+	EINT_INF("index:%u en:%u info.enable_mcss:%u info.is_mcss_master:%u\n",
+		index,
+		en,
+		info.enable_mcss,
+		info.is_mcss_master);
+}
+
+static void eint_notify_sensor_force_using_maskframe(const unsigned int index, const unsigned int num)
+{
+	struct seninf_ctx *seninf_ctx = NULL;
+	struct mtk_fsync_hw_mcss_mask_frm_info info;
+
+	if (chk_eint_idx_valid(index, __func__))
+		return;
+
+	seninf_ctx = seninf_eint.eints[index].inf_ctx;
+	if (unlikely(seninf_ctx == NULL)) {
+		EINT_INF("[%s] seninf_ctx == NULL   [index:%u]\n", __func__, index);
+		return;
+	}
+
+	if (unlikely(!(seninf_ctx->sensor_sd
+			&& seninf_ctx->sensor_sd->ops
+			&& seninf_ctx->sensor_sd->ops->core
+			&& seninf_ctx->sensor_sd->ops->core->command))) {
+		EINT_INF("ERROR: can not get sensor ops or core ops   [index:%u]\n", index);
+		return;
+	}
+
+	info.mask_frm_num = num;
+	info.is_critical = 1;
+
+	/* call v4l2_subdev_core_ops command to sensor adaptor */
+	seninf_ctx->sensor_sd->ops->core->command(
+		seninf_ctx->sensor_sd, V4L2_CMD_EINT_NOTIFY_FORCE_MASKFRAME, &info);
+
+	EINT_INF("index:%u num:%u info.mask_frm_num:%u info.is_critical:%u\n",
+		index,
+		num,
+		info.mask_frm_num,
+		info.is_critical);
+}
+
+static void eint_force_en_irq_and_notify_sensor(const unsigned int index, const unsigned int en)
+{
+	if (chk_eint_idx_valid(index, __func__))
+		return;
+
+	eint_notify_sensor_force_using_eint(index, en);
+	eint_irq_ctrl(index, en);
+}
+
+static void eint_trigger_force_en(const unsigned int val)
+{
+	int i;
+	unsigned int en;
+
+	for(i=0; i<EINT_NUM_MAX; i++) {
+		en = (((1UL << i) & val) != 0);
+		eint_force_en_irq_and_notify_sensor(i, en);
+	}
+}
+
+static void eint_trigger_force_en_maskframe(const unsigned int val)
+{
+	int i;
+	unsigned int num;
+
+	for(i=0; i<EINT_NUM_MAX; i++) {
+		num = (((1UL << i) & val) != 0);
+		eint_notify_sensor_force_using_maskframe(i, num);
+	}
+}
+
+/*---------------------------------------------------------------------------*/
+// eint console framework functions
+/*---------------------------------------------------------------------------*/
+static inline unsigned int eint_con_mgr_decode_cmd_value(const unsigned int cmd,
+	const unsigned int base, const unsigned int mod)
+{
+	unsigned int ret = 0;
+
+	ret = (base != 0) ? (cmd / base) : 0;
+	ret %= mod;
+
+	return ret;
+}
+
+static inline enum eint_console_cmd_id eint_con_mgr_g_cmd_id(
+	const unsigned int cmd)
+{
+	return (enum eint_console_cmd_id)eint_con_mgr_decode_cmd_value(cmd,
+		EINT_CON_CMD_ID_BASE, EINT_CON_CMD_ID_MOD);
+}
+
+static inline void eint_con_mgr_s_cmd_value(const unsigned int cmd,
+	unsigned int *p_val)
+{
+	*p_val = eint_con_mgr_decode_cmd_value(cmd,
+		EINT_CON_CMD_VAL_BASE, EINT_CON_CMD_VAL_MOD);
+}
+
+static void eint_con_mgr_process_cmd(const unsigned int cmd)
+{
+	enum eint_console_cmd_id cmd_id = 0;
+
+	cmd_id = eint_con_mgr_g_cmd_id(cmd);
+	switch (cmd_id) {
+	case EINT_CON_FORCE_TO_EN_USING_XVS:
+		{
+			unsigned int eint_force_en_ctrl;
+
+			eint_con_mgr_s_cmd_value(cmd, &eint_force_en_ctrl);
+			eint_trigger_force_en(eint_force_en_ctrl);
+		}
+		break;
+
+	case EINT_CON_FORCE_TO_EN_USING_MASKFRAME:
+		{
+			unsigned int eint_maskframe_ctrl;
+
+			eint_con_mgr_s_cmd_value(cmd, &eint_maskframe_ctrl);
+			eint_trigger_force_en_maskframe(eint_maskframe_ctrl);
+		}
+		break;
+
+	case EINT_CON_CMD_LOG_CTRL:
+		eint_con_mgr_s_cmd_value(cmd, &eint_log_ctrl);
+		break;
+	default:
+		break;
+	}
+}
+
+static ssize_t seninf_eint_console_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	int len = 0;
+
+	return len;
+}
+
+static ssize_t seninf_eint_console_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int cmd = 0;
+	int ret = 0;
+
+	/* convert string to unsigned int */
+	ret = kstrtouint(buf, 0, &cmd);
+	if (ret != 0) {
+		/*
+		 *	SHOW(str_buf, len,
+		 *		"\n\t[fsync_console]: kstrtoint failed, input:%s, cmd:%u, ret:%d\n",
+		 *		buf,
+		 *		cmd,
+		 *		ret);
+		 */
+	}
+
+	eint_con_mgr_process_cmd(cmd);
+
+	return count;
+}
+
+
+static DEVICE_ATTR_RW(seninf_eint_console);
+/*---------------------------------------------------------------------------*/
+// eint sysfs framwwork functions
+/*---------------------------------------------------------------------------*/
+static void mtk_cam_seninf_eint_create_sysfs_file(struct device *dev)
+{
+	int ret = 0;
+
+	/* case handling (unexpected case) */
+	if (unlikely(dev == NULL)) {
+		EINT_INF(
+			"ERROR: failed to create sysfs file, dev is NULL, return\n");
+		return;
+	}
+
+	/* !!! create each sysfs file you want !!! */
+	ret = device_create_file(dev, &dev_attr_seninf_eint_console);
+	if (ret) {
+		EINT_INF(
+			"ERROR: call device_create_file() failed, ret:%d\n",
+			ret);
+	}
+}
+
+
+static void mtk_cam_seninf_eint_remove_sysfs_file(struct device *dev)
+{
+	/* case handling (unexpected case) */
+	if (unlikely(dev == NULL)) {
+		EINT_INF(
+			"ERROR: *dev is NULL, abort process device_remove_file, return\n");
+		return;
+	}
+
+	/* !!! remove each sysfs file you created !!! */
+	device_remove_file(dev, &dev_attr_seninf_eint_console);
 }
 
 /******************************************************************************
@@ -1161,6 +1442,8 @@ int mtk_cam_seninf_eint_core_init(struct device *dev, struct seninf_core *core)
 {
 	seninf_eint.seninf_dev = dev;
 	seninf_eint.core = core;
+
+	mtk_cam_seninf_eint_create_sysfs_file(seninf_eint.seninf_dev);
 	get_eint_info(dev);
 
 	return 0;
@@ -1168,6 +1451,7 @@ int mtk_cam_seninf_eint_core_init(struct device *dev, struct seninf_core *core)
 
 int mtk_cam_seninf_eint_core_uninit(void)
 {
+	mtk_cam_seninf_eint_remove_sysfs_file(seninf_eint.seninf_dev);
 	seninf_eint.seninf_dev = NULL;
 	seninf_eint.core = NULL;
 	seninf_eint.address_size_pairs = NULL;
@@ -1187,8 +1471,10 @@ static int get_eint_num(struct device *dev, unsigned int *eint_no)
 	int ret = 0;
 
 	ret = of_property_read_u32(dev->of_node, "eint-no", eint_no);
-	if (ret)
-		EINT_INF("NOTICE: cannot read eint-no ret:%u\n", ret);
+	if (ret) {
+		*eint_no = EINT_DTS_NUM_INVALID;
+		EINT_INF("NOTICE: cannot read eint-no, ret:%u, assigned EINT_DTS_NUM_INVALID:%u\n", ret, *eint_no);
+	}
 
 	return ret;
 }
@@ -1199,7 +1485,7 @@ static int get_gpio_num(struct device *dev, u32 *gpio_num)
 
 	ret = of_property_read_u32(dev->of_node, "gpio-num", gpio_num);
 	if (ret)
-		EINT_INF("ERROR: cannot read gpio-num ret:%u\n", ret);
+		EINT_INF("NOTICE: cannot read gpio-num ret:%u\n", ret);
 
 	return ret;
 }
@@ -1261,25 +1547,21 @@ static int get_dts_hw_info(struct platform_device *pdev,
 	struct device *dev = &pdev->dev;
 
 	ret = get_eint_num(dev, &eint_no);
-	EINT_INF("get_eint_num eint_no:%d\n", eint_no);
-	if (ret)
-		return ret;
+	EINT_INF("get_eint_num from dts, eint_no:%d, ret:%d\n", eint_no, ret);
 
-	ret = get_gpio_num(dev, &gpio_num);
-	EINT_INF("get_gpio_num gpio_num:%u\n", gpio_num);
-	if (ret)
-		return ret;
+	ret |= get_gpio_num(dev, &gpio_num);
+	EINT_INF("get_gpio_num from dts, gpio_num:%u, ret:%d\n", gpio_num, ret);
 
-	ret = get_eint_info_by_gpio_num(dev, gpio_num, pin);
-	if (ret)
-		return ret;
+	ret |= get_eint_info_by_gpio_num(dev, gpio_num, pin);
+	EINT_INF("get_eint_info_by_gpio_num from dts, ret:%d\n", ret);
+
 
 	pin->inf_ctx = ctx;
 	pin->tsrec_idx = ctx->tsrec_idx;
 	pin->dts_info.eint_no = eint_no - 1; /* dts using 1, 2, 3 */
 	pin->dts_info.gpio_num = gpio_num;
 	EINT_INF(
-		"eint_no:%d gpio_num:%u, pins id:%u hw_latch_code:%u address: %#x size: %#x\n",
+		"eint_no:%u gpio_num:%u, pins id:%u hw_latch_code:%u address: %#x size: %#x\n",
 		pin->dts_info.eint_no,
 		pin->dts_info.gpio_num,
 		pin->dts_info.id,
@@ -1293,6 +1575,9 @@ static int get_dts_hw_info(struct platform_device *pdev,
 static int init_eint_info(struct platform_device *pdev, struct mtk_seninf_eint_pin *pin)
 {
 	unsigned int index = pin->dts_info.eint_no;
+
+	if (chk_eint_idx_valid(index, __func__))
+		return -EINVAL;
 
 	memcpy( seninf_eint.eints + index, pin, sizeof(struct mtk_seninf_eint_pin));
 	mutex_init(&seninf_eint.eints[index].eint_intr_en_lock);
@@ -1313,17 +1598,21 @@ static int init_eint_regs_iomem(struct platform_device *pdev, unsigned int index
 {
 	int ret = 0;
 	void __iomem *reg_base = NULL;
+
+	if (chk_eint_idx_valid(index, __func__))
+		return -EINVAL;
+
 	u32 address = seninf_eint.eints[index].dts_info.reg_address;
 	u32 size = seninf_eint.eints[index].dts_info.reg_size;
 
 	reg_base = ioremap(address, size);
 	if (!reg_base) {
-		EINT_INF("ERROR: Failed to map I/O memory\n");
+		EINT_INF("ERROR: Failed to map I/O memory   [index:%u]\n", index);
 		return -ENOMEM;
 	}
 
 	seninf_eint.eints[index].dts_info.base = reg_base;
-	EINT_INF("of_iomap success get reg_base:%p\n", reg_base);
+	EINT_INF("of_iomap success get reg_base:%p   [index:%u]\n", reg_base, index);
 
 	return ret;
 }
@@ -1333,14 +1622,17 @@ static int init_eint_irq(struct platform_device *pdev, unsigned int index)
 	int irq, ret = 0;
 	struct device *dev = &pdev->dev;
 
+	if (chk_eint_idx_valid(index, __func__))
+		return -EINVAL;
+
 	if(!dev) {
-		EINT_INF("ERROR: dev == NULL\n");
+		EINT_INF("ERROR: dev == NULL   [index:%u]\n", index);
 		return -1;
 	}
 
 	irq = irq_of_parse_and_map(dev->of_node, 0);
 	if (irq <= 0) {
-		EINT_INF("ERROR: failed to get irq number, ret:%d\n", irq);
+		EINT_INF("ERROR: failed to get irq number, ret:%d   [index:%u]\n", irq, index);
 		return -1;
 	}
 
@@ -1352,13 +1644,13 @@ static int init_eint_irq(struct platform_device *pdev, unsigned int index)
 		seninf_eint.core);
 
 	if (ret) {
-		EINT_INF("ERROR: Request %s failed\n", "seninf-eint");
+		EINT_INF("ERROR: Request %s failed   [index:%u]\n", "seninf-eint", index);
 		return ret;
 	}
 
 	seninf_eint.eints[index].irq_num = irq;
-	EINT_INF("registered seninf-eint-irq=%d seninf_eint.eints[%d].irq_num=%u\n",
-		irq, index, seninf_eint.eints[index].irq_num);
+	EINT_INF("registered seninf-eint-irq=%d seninf_eint.eints[%d].irq_num=%u   [index:%u]\n",
+		irq, index, seninf_eint.eints[index].irq_num, index);
 
 	return ret;
 }
@@ -1367,11 +1659,17 @@ static inline void uninit_eint_regs_iomem(unsigned int index)
 {
 	void __iomem *base;
 
+	if (chk_eint_idx_valid(index, __func__))
+		return;
+
 	base = seninf_eint.eints[index].dts_info.base;
 }
 
 static inline void uninit_eint_info(unsigned int index)
 {
+	if (chk_eint_idx_valid(index, __func__))
+		return;
+
 	memset(&(seninf_eint.eints[index]), 0, sizeof(struct mtk_seninf_eint_pin));
 }
 
@@ -1379,6 +1677,9 @@ static void init_eint_event_st(struct platform_device *pdev, unsigned int index)
 {
 	struct device *dev = &pdev->dev;
 	int ret = 0;
+
+	if (chk_eint_idx_valid(index, __func__))
+		return;
 
 	/* init/setup fifo size for below dynamic mem alloc using */
 	seninf_eint.eints[index].event_st.fifo_size =
@@ -1389,7 +1690,7 @@ static void init_eint_event_st(struct platform_device *pdev, unsigned int index)
 			devm_kzalloc(dev, seninf_eint.eints[index].event_st.fifo_size, GFP_ATOMIC);
 
 		if (unlikely(seninf_eint.eints[index].event_st.msg_buffer == NULL))
-			EINT_INF("ERROR: kfifo_init failed\n");
+			EINT_INF("ERROR: kfifo_init failed   [index:%u]\n", index);
 	}
 
 	atomic_set(&seninf_eint.eints[index].event_st.is_fifo_overflow, 0);
@@ -1407,6 +1708,9 @@ static void init_eint_event_st(struct platform_device *pdev, unsigned int index)
 
 static void uninit_eint_event_st(struct platform_device *pdev, unsigned int index)
 {
+	if (chk_eint_idx_valid(index, __func__))
+		return;
+
 	kfifo_free(&seninf_eint.eints[index].event_st.msg_fifo);
 
 	if (likely(seninf_eint.eints[index].event_st.msg_buffer != NULL))

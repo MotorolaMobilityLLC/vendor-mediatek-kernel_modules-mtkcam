@@ -539,6 +539,58 @@ static int s_cmd_eint_setup_cb_info(struct adaptor_ctx *ctx, void *arg)
 	return ret;
 }
 
+static int s_cmd_eint_notify_force_maskframe(struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_fsync_hw_mcss_mask_frm_info *info = NULL;
+	unsigned long long sys_ts;
+	int ret = 0;
+
+	/* unexpected case, arg is nullptr */
+	if (unlikely((chk_input_arg(ctx, arg, &ret, __func__)) != 0))
+		return ret;
+
+	info = (struct mtk_fsync_hw_mcss_mask_frm_info *)arg;
+	sys_ts = ktime_get_boottime_ns();
+
+	subdrv_call(ctx, mcss_set_mask_frame, info->mask_frm_num, info->is_critical);
+	ctx->mask_frm_num_last = info->mask_frm_num;
+
+	adaptor_logi(ctx,
+		"V4L2_CMD_EINT_NOTIFY_FORCE_MASKFRAME mask_frm_num:%u, is_critical:%u ctx->mask_frm_num_last:%u sys_ts:%llu\n",
+		info->mask_frm_num,
+		info->is_critical,
+		ctx->mask_frm_num_last,
+		sys_ts);
+
+	return ret;
+}
+
+static int s_cmd_eint_notify_force_en_xvs(struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_fsync_hw_mcss_init_info *info = NULL;
+	unsigned long long sys_ts;
+	int ret = 0;
+
+	/* unexpected case, arg is nullptr */
+	if (unlikely((chk_input_arg(ctx, arg, &ret, __func__)) != 0))
+		return ret;
+
+	info = (struct mtk_fsync_hw_mcss_init_info *)arg;
+	sys_ts = ktime_get_boottime_ns();
+
+	memset(&(ctx->subctx.mcss_init_info), 0, sizeof(struct mtk_fsync_hw_mcss_init_info));
+	memcpy(&(ctx->subctx.mcss_init_info),
+		info, sizeof(struct mtk_fsync_hw_mcss_init_info));
+
+	adaptor_logi(ctx,
+		"V4L2_CMD_EINT_NOTIFY_FORCE_EN_XVS enable_mcss:%u, is_mcss_master:%u sys_ts:%llu\n",
+		ctx->subctx.mcss_init_info.enable_mcss,
+		ctx->subctx.mcss_init_info.is_mcss_master,
+		sys_ts);
+
+	return ret;
+}
+
 static int s_cmd_tsrec_send_timestamp_info(struct adaptor_ctx *ctx, void *arg)
 {
 	struct mtk_cam_seninf_tsrec_timestamp_info *buf = NULL;
@@ -759,10 +811,12 @@ static const struct command_entry command_list[] = {
 	{V4L2_CMD_TSREC_NOTIFY_VSYNC, s_cmd_tsrec_notify_vsync},
 	{V4L2_CMD_TSREC_NOTIFY_SENSOR_HW_PRE_LATCH,
 		s_cmd_tsrec_notify_sensor_hw_pre_latch},
+	{V4L2_CMD_TSREC_SEND_TIMESTAMP_INFO, s_cmd_tsrec_send_timestamp_info},
 	{V4L2_CMD_EINT_NOTIFY_VSYNC, s_cmd_eint_notify_vsync},
 	{V4L2_CMD_EINT_NOTIFY_IRQ_EN, s_cmd_eint_notify_irq_en},
 	{V4L2_CMD_EINT_SETUP_CB_FUNC_OF_SENSOR, s_cmd_eint_setup_cb_info},
-	{V4L2_CMD_TSREC_SEND_TIMESTAMP_INFO, s_cmd_tsrec_send_timestamp_info},
+	{V4L2_CMD_EINT_NOTIFY_FORCE_EN_XVS, s_cmd_eint_notify_force_en_xvs},
+	{V4L2_CMD_EINT_NOTIFY_FORCE_MASKFRAME, s_cmd_eint_notify_force_maskframe},
 	{V4L2_CMD_SENSOR_PARSE_EBD, s_cmd_sensor_parse_ebd},
 	{V4L2_CMD_TSREC_SETUP_CB_FUNC_OF_SENSOR, s_cmd_tsrec_setup_cb_info},
 	{V4L2_CMD_SET_SENSOR_FL_PROLONG, s_cmd_sensor_fl_prolong},

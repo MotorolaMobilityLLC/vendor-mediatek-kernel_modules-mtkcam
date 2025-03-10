@@ -3310,10 +3310,10 @@ static int mtk_cam_seninf_set_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	case V4L2_CID_MTK_SENINF_EINT_IRQ_EN:
-		ret = mtk_cam_seninf_eint_irq_en(ctx, ctrl->val);
 		dev_info(ctx->dev,
 			"[%s] V4L2_CID_MTK_SENINF_EINT_IRQ_EN, eint_idx:%u, en:%u\n",
 			__func__, ctx->eint_idx, ctrl->val);
+		ret = mtk_cam_seninf_eint_irq_en(ctx, ctrl->val);
 		break;
 	case V4L2_CID_TEST_PATTERN:
 		ret = seninf_test_pattern(ctx, ctrl->val);
