@@ -3248,7 +3248,8 @@ _add_mraw_mux_setting(struct mtk_cam_job *job,
 	struct mtk_cam_device *cam = ctx->cam;
 	int mraw_idx, tag_idx;
 
-	for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs; mraw_idx++) {
+	for (mraw_idx = 0; mraw_idx < ctx->num_mraw_subdevs &&
+		mraw_idx < MAX_MRAW_PIPES_PER_STREAM; mraw_idx++) {
 		tag_idx = mtk_cam_get_sv_tag_index(job->tag_info,
 			ctx->mraw_subdev_idx[mraw_idx] + MTKCAM_SUBDEV_MRAW_START);
 		if (tag_idx == SVTAG_UNKNOWN) {
@@ -3256,8 +3257,8 @@ _add_mraw_mux_setting(struct mtk_cam_job *job,
 			return -1;
 		}
 
-		if (*cnt >= MUX_SETTING_NUM || mraw_idx >= MRAW_PIPELINE_NUM) {
-			dev_err(cam->dev, "%s lack of mux settings or out of mraw tag idx", __func__);
+		if (*cnt >= MUX_SETTING_NUM) {
+			dev_err(cam->dev, "%s lack of mux settings", __func__);
 			return -1;
 		}
 

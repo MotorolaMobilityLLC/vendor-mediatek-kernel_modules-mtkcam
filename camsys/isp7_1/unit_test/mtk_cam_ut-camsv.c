@@ -462,19 +462,20 @@ int ut_mtk_cam_sv_dmao_config(
 	int ret = 0;
 	unsigned int stride;
 	struct mtk_ut_camsv_device *sv_dev = dev_get_drvdata(dev);
+	unsigned int xsize_cal = ut_mtk_cam_sv_xsize_cal(cfg_in_param);
 
-	if (ut_mtk_cam_sv_xsize_cal(cfg_in_param) == 0) {
-		dev_info(dev, "warning: xsize is 0\n");
+	if (xsize_cal == 0) {
+		dev_info(dev, "warning: xsize_cal is 0\n");
 		ret = -1;
 		goto EXIT;
 	}
 	/* imgo dma setting */
 	CAMSV_WRITE_REG(sv_dev->base + REG_CAMSV_IMGO_XSIZE,
-		ut_mtk_cam_sv_xsize_cal(cfg_in_param) - 1);
+		xsize_cal - 1);
 	CAMSV_WRITE_REG(sv_dev->base + REG_CAMSV_IMGO_YSIZE,
 		cfg_in_param->in_crop.s.h - 1);
 	CAMSV_WRITE_REG(sv_dev->base + REG_CAMSV_IMGO_STRIDE,
-		ut_mtk_cam_sv_xsize_cal(cfg_in_param));
+		xsize_cal);
 
 	dev_info(dev, "xsize:%d\n",
 		CAMSV_READ_REG(sv_dev->base + REG_CAMSV_IMGO_XSIZE));
