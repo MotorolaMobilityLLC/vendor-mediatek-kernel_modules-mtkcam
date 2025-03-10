@@ -250,19 +250,20 @@ static int imx06c_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	exp_cnt = ctx->s_ctx.mode[scenario_id].exp_cnt;
 	ctx->is_seamless = TRUE;
 
-	subdrv_i2c_wr_u8(ctx, 0x0104, 0x01);
-	subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_fast_mode, 0x02);
+	set_i2c_buffer(ctx, 0x0104, 0x01);
+	set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_fast_mode, 0x02);
 
 	update_mode_info_seamless_switch(ctx, scenario_id);
-	i2c_table_write(ctx,
+	set_table_to_buffer(ctx,
 		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_table,
 		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_len);
 
 	if (ctx->s_ctx.reg_addr_fast_mode_in_lbmf &&
 		(ctx->s_ctx.mode[scenario_id].hdr_mode == HDR_RAW_LBMF ||
 		ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_LBMF))
-		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_fast_mode_in_lbmf, 0x4);
+		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_fast_mode_in_lbmf, 0x4);
 
+	ctx->ae_ctrl_gph_en = 1;
 	if (ae_ctrl) {
 		switch (ctx->s_ctx.mode[scenario_id].hdr_mode) {
 		case HDR_RAW_STAGGER:
@@ -288,7 +289,10 @@ static int imx06c_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 			break;
 		}
 	}
-	subdrv_i2c_wr_u8(ctx, 0x0104, 0x00);
+
+	set_i2c_buffer(ctx, 0x0104, 0x00);
+	ctx->ae_ctrl_gph_en = 0;
+	commit_i2c_buffer(ctx);
 
 	ctx->fast_mode_on = TRUE;
 	ctx->ref_sof_cnt = ctx->sof_cnt;
@@ -296,7 +300,6 @@ static int imx06c_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	DRV_LOG(ctx, "X: set seamless switch done\n");
 	return ERROR_NONE;
 }
-
 static int imx06c_cphy_lrte_mode(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	enum SENSOR_SCENARIO_ID_ENUM scenario_id;

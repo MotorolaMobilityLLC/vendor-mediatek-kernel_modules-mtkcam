@@ -1210,12 +1210,13 @@ static int imx06a_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	pre_seamless_scenario_id = ctx->current_scenario_id;
 	update_mode_info_seamless_switch(ctx, scenario_id);
 
-	subdrv_i2c_wr_u8(ctx, 0x0104, 0x01);
-	subdrv_i2c_wr_u8(ctx, 0x3010, 0x02); //FAST_MODETRANSIT_CTL
-	i2c_table_write(ctx,
+	set_i2c_buffer(ctx, 0x0104, 0x01);
+	set_i2c_buffer(ctx, 0x3010, 0x02); //FAST_MODETRANSIT_CTL
+	set_table_to_buffer(ctx,
 		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_table,
 		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_len);
 
+	ctx->ae_ctrl_gph_en = 1;
 	if (ae_ctrl) {
 		switch (ctx->s_ctx.mode[scenario_id].hdr_mode) {
 		case HDR_RAW_STAGGER:
@@ -1230,26 +1231,28 @@ static int imx06a_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	}
 
 	if (ctx->s_ctx.seamless_switch_prsh_length_lc > 0) {
-		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_prsh_mode, 0x01);
+		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_prsh_mode, 0x01);
 
-		subdrv_i2c_wr_u8(ctx,
+		set_i2c_buffer(ctx,
 				ctx->s_ctx.reg_addr_prsh_length_lines.addr[0],
 				(ctx->s_ctx.seamless_switch_prsh_length_lc >> 24) & 0x07);
-		subdrv_i2c_wr_u8(ctx,
+		set_i2c_buffer(ctx,
 				ctx->s_ctx.reg_addr_prsh_length_lines.addr[1],
 				(ctx->s_ctx.seamless_switch_prsh_length_lc >> 16)  & 0xFF);
-		subdrv_i2c_wr_u8(ctx,
+		set_i2c_buffer(ctx,
 				ctx->s_ctx.reg_addr_prsh_length_lines.addr[2],
 				(ctx->s_ctx.seamless_switch_prsh_length_lc >> 8) & 0xFF);
-		subdrv_i2c_wr_u8(ctx,
+		set_i2c_buffer(ctx,
 				ctx->s_ctx.reg_addr_prsh_length_lines.addr[3],
 				(ctx->s_ctx.seamless_switch_prsh_length_lc) & 0xFF);
 
 		DRV_LOG_MUST(ctx, "seamless switch pre-shutter set(%u)\n", ctx->s_ctx.seamless_switch_prsh_length_lc);
 	} else
-		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_prsh_mode, 0x00);
+		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_prsh_mode, 0x00);
 
-	subdrv_i2c_wr_u8(ctx, 0x0104, 0x00);
+	set_i2c_buffer(ctx, 0x0104, 0x00);
+	ctx->ae_ctrl_gph_en = 0;
+	commit_i2c_buffer(ctx);
 
 	ctx->fast_mode_on = TRUE;
 	ctx->ref_sof_cnt = ctx->sof_cnt;

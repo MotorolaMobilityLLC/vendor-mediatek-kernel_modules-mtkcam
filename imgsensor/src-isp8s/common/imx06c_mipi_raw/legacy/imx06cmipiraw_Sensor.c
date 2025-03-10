@@ -2706,6 +2706,150 @@ static struct mtk_mbus_frame_desc_entry frame_desc_custom58[] = {
 #endif
 };
 
+//custom59_frame_desc
+static struct mtk_mbus_frame_desc_entry frame_desc_custom59[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2c,
+			.hsize = 0x1000,
+			.vsize = 0xa00,
+			.user_data_desc = VC_STAGGER_NE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x1000,
+			.vsize = 0x280,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+		},
+	},
+#if IMX06C_EMBEDDED_DATA_EN
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x12,
+			.hsize = 0x1000,
+			.vsize = 0x2,
+			.user_data_desc = VC_GENERAL_EMBEDDED,
+			.ebd_parsing_type = MTK_EBD_PARSING_TYPE_MIPI_RAW12,
+		},
+	},
+#endif
+};
+
+//custom60_frame_desc
+static struct mtk_mbus_frame_desc_entry frame_desc_custom60[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2d,
+			.hsize = 0x1000,
+			.vsize = 0xa00,
+			.user_data_desc = VC_STAGGER_NE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x1000,
+			.vsize = 0x280,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+		},
+	},
+#if IMX06C_EMBEDDED_DATA_EN
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x12,
+			.hsize = 0x1000,
+			.vsize = 0x2,
+			.user_data_desc = VC_GENERAL_EMBEDDED,
+			.ebd_parsing_type = MTK_EBD_PARSING_TYPE_MIPI_RAW14,
+		},
+	},
+#endif
+};
+
+//custom61_frame_desc
+static struct mtk_mbus_frame_desc_entry frame_desc_custom61[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2c,
+			.hsize = 0x1000,
+			.vsize = 0xa00,
+			.user_data_desc = VC_STAGGER_NE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x800,
+			.vsize = 0x500,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+		},
+	},
+#if IMX06C_EMBEDDED_DATA_EN
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x12,
+			.hsize = 0x1000,
+			.vsize = 0x2,
+			.user_data_desc = VC_GENERAL_EMBEDDED,
+			.ebd_parsing_type = MTK_EBD_PARSING_TYPE_MIPI_RAW12,
+		},
+	},
+#endif
+};
+
+//custom62_frame_desc
+static struct mtk_mbus_frame_desc_entry frame_desc_custom62[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2d,
+			.hsize = 0x1000,
+			.vsize = 0xa00,
+			.user_data_desc = VC_STAGGER_NE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x800,
+			.vsize = 0x500,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+		},
+	},
+#if IMX06C_EMBEDDED_DATA_EN
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x12,
+			.hsize = 0x1000,
+			.vsize = 0x2,
+			.user_data_desc = VC_GENERAL_EMBEDDED,
+			.ebd_parsing_type = MTK_EBD_PARSING_TYPE_MIPI_RAW14,
+		},
+	},
+#endif
+};
+
 static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_preview,
@@ -2754,9 +2898,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -2808,9 +2950,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -2863,9 +3003,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -2917,9 +3055,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -2971,9 +3107,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -3029,9 +3163,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -3087,9 +3219,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -3145,9 +3275,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -3203,9 +3331,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -3258,9 +3384,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -3313,9 +3437,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -3368,9 +3490,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -3423,9 +3543,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -3479,9 +3597,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -3535,8 +3651,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -3652,8 +3766,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(0),
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(0),
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.dpc_enabled = true,
@@ -3707,8 +3819,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(0),
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(0),
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.dpc_enabled = true,
@@ -3761,9 +3871,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -4519,9 +4627,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -4576,8 +4682,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(0),
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(0),
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.dpc_enabled = true,
@@ -4632,8 +4736,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(0),
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(0),
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.dpc_enabled = true,
@@ -4686,9 +4788,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -4743,8 +4843,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(0),
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(0),
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.dpc_enabled = true,
@@ -4797,9 +4895,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -4852,9 +4948,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -4909,8 +5003,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(0),
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(0),
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.dpc_enabled = true,
@@ -4964,8 +5056,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(0),
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(0),
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.dpc_enabled = true,
@@ -5018,9 +5108,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -5138,8 +5226,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(0),
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(0),
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = REG2GAIN_ROUNDUP(0),
@@ -5697,9 +5783,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -5752,9 +5836,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -5808,8 +5890,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(0),
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(0),
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.dpc_enabled = true,
@@ -5863,8 +5943,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(0),
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(0),
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.dpc_enabled = true,
@@ -5919,8 +5997,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_lrte_support = 0,
 		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(0),
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(0),
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.dpc_enabled = true,
@@ -5973,9 +6049,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -6032,9 +6106,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -6091,9 +6163,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -6146,9 +6216,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.cphy_lrte_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -6332,9 +6400,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.delay_frame = 2,
 		.csi_param = {
 			.dphy_init_deskew_support = 0,
-		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(4916),//1.43x
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16320),//256x
+				},
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(4916),//1.43x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16320),//256x
 		.dpc_enabled = true,
@@ -6388,10 +6454,272 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.dphy_init_deskew_support = 0,
 		},
-		.ana_gain_min = REG2GAIN_ROUNDUP(0),
-		.ana_gain_max = REG2GAIN_ROUNDDOWN(16128),//64x
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(0),
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16128),//64x
+		.dpc_enabled = true,
+	},
+	{
+		.frame_desc = frame_desc_custom59,
+		.num_entries = ARRAY_SIZE(frame_desc_custom59),
+		.mode_setting_table = imx06c_custom59_setting,
+		.mode_setting_len = ARRAY_SIZE(imx06c_custom59_setting),
+		.seamless_switch_group = 2,
+		.seamless_switch_mode_setting_table = imx06c_seamless_custom59,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx06c_seamless_custom59),
+		.hdr_mode = HDR_RAW_DCG_COMPOSE,
+		.raw_cnt = 1,
+		.exp_cnt = 2,
+		.pclk = 2928000000,
+		.linelength = 14560,
+		.framelength = 6664,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 2564570000,
+		.readout_length = 0,
+		.read_margin = 4,
+		.framelength_step = 4,
+		.coarse_integ_step = 4,
+		.min_exposure_line = 4,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 512,
+			.w0_size = 8192,
+			.h0_size = 5120,
+			.scale_w = 4096,
+			.scale_h = 2560,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2560,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2560,
+		},
+		.pdaf_cap = TRUE,
+		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW12_B,
+		.imgsensor_pd_info  = &imgsensor_pd_info,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {
+			.cphy_lrte_support = 0,
+		},
+		.saturation_info = &imgsensor_saturation_info,
+		.dcg_info = {
+			.dcg_mode = IMGSENSOR_DCG_COMPOSE,
+			.dcg_gain_mode = IMGSENSOR_DCG_RATIO_MODE,
+			.dcg_gain_ratio_min = 4000,
+			.dcg_gain_ratio_max = 4000,
+			.dcg_gain_ratio_step = 0,
+			.dcg_gain_table = imx06c_dcg_ratio_table_12bit,
+			.dcg_gain_table_size = sizeof(imx06c_dcg_ratio_table_12bit),
+		},
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(13520),
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16292),
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = REG2GAIN_ROUNDUP(4928),
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = REG2GAIN_ROUNDDOWN(16016),
+		.dpc_enabled = true,
+	},
+	{
+		.frame_desc = frame_desc_custom60,
+		.num_entries = ARRAY_SIZE(frame_desc_custom60),
+		.mode_setting_table = imx06c_custom60_setting,
+		.mode_setting_len = ARRAY_SIZE(imx06c_custom60_setting),
+		.seamless_switch_group = 2,
+		.seamless_switch_mode_setting_table = imx06c_seamless_custom60,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx06c_seamless_custom60),
+		.hdr_mode = HDR_RAW_DCG_COMPOSE,
+		.raw_cnt = 1,
+		.exp_cnt = 2,
+		.pclk = 2928000000,
+		.linelength = 14560,
+		.framelength = 6664,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 2198200000,
+		.readout_length = 0,
+		.read_margin = 4,
+		.framelength_step = 4,
+		.coarse_integ_step = 4,
+		.min_exposure_line = 4,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 512,
+			.w0_size = 8192,
+			.h0_size = 5120,
+			.scale_w = 4096,
+			.scale_h = 2560,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2560,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2560,
+		},
+		.pdaf_cap = TRUE,
+		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW14_B,
+		.imgsensor_pd_info  = &imgsensor_pd_info,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {
+			.cphy_lrte_support = 0,
+		},
+		.saturation_info = &imgsensor_saturation_info,
+		.dcg_info = {
+			.dcg_mode = IMGSENSOR_DCG_COMPOSE,
+			.dcg_gain_mode = IMGSENSOR_DCG_RATIO_MODE,
+			.dcg_gain_ratio_min = 16000,
+			.dcg_gain_ratio_max = 16000,
+			.dcg_gain_ratio_step = 0,
+			.dcg_gain_table = imx06c_dcg_ratio_table_14bit,
+			.dcg_gain_table_size = sizeof(imx06c_dcg_ratio_table_14bit),
+		},
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(15660),
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16292),
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = REG2GAIN_ROUNDUP(4800),
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = REG2GAIN_ROUNDDOWN(14912),
+		.dpc_enabled = true,
+	},
+	{
+		.frame_desc = frame_desc_custom61,
+		.num_entries = ARRAY_SIZE(frame_desc_custom61),
+		.mode_setting_table = imx06c_custom61_setting,
+		.mode_setting_len = ARRAY_SIZE(imx06c_custom61_setting),
+		.seamless_switch_group = 2,
+		.seamless_switch_mode_setting_table = imx06c_seamless_custom61,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx06c_seamless_custom61),
+		.hdr_mode = HDR_RAW_DCG_COMPOSE,
+		.raw_cnt = 1,
+		.exp_cnt = 2,
+		.pclk = 2928000000,
+		.linelength = 18672,
+		.framelength = 5194,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 2564570000,
+		.readout_length = 0,
+		.read_margin = 4,
+		.framelength_step = 4,
+		.coarse_integ_step = 4,
+		.min_exposure_line = 4,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 2048,
+			.y0_offset = 1792,
+			.w0_size = 4096,
+			.h0_size = 2560,
+			.scale_w = 4096,
+			.scale_h = 2560,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2560,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2560,
+		},
+		.pdaf_cap = TRUE,
+		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW12_B,
+		.imgsensor_pd_info  = &imgsensor_pd_info,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {
+			.cphy_lrte_support = 0,
+		},
+		.saturation_info = &imgsensor_saturation_info,
+		.dcg_info = {
+			.dcg_mode = IMGSENSOR_DCG_COMPOSE,
+			.dcg_gain_mode = IMGSENSOR_DCG_RATIO_MODE,
+			.dcg_gain_ratio_min = 4000,
+			.dcg_gain_ratio_max = 4000,
+			.dcg_gain_ratio_step = 0,
+			.dcg_gain_table = imx06c_dcg_ratio_table_12bit,
+			.dcg_gain_table_size = sizeof(imx06c_dcg_ratio_table_12bit),
+		},
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(13520),
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16292),
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = REG2GAIN_ROUNDUP(4928),
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = REG2GAIN_ROUNDDOWN(16016),
+		.dpc_enabled = true,
+	},
+	{
+		.frame_desc = frame_desc_custom62,
+		.num_entries = ARRAY_SIZE(frame_desc_custom62),
+		.mode_setting_table = imx06c_custom62_setting,
+		.mode_setting_len = ARRAY_SIZE(imx06c_custom62_setting),
+		.seamless_switch_group = 2,
+		.seamless_switch_mode_setting_table = imx06c_seamless_custom62,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx06c_seamless_custom62),
+		.hdr_mode = HDR_RAW_DCG_COMPOSE,
+		.raw_cnt = 1,
+		.exp_cnt = 2,
+		.pclk = 2928000000,
+		.linelength = 18672,
+		.framelength = 5194,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 2198200000,
+		.readout_length = 0,
+		.read_margin = 4,
+		.framelength_step = 4,
+		.coarse_integ_step = 4,
+		.min_exposure_line = 4,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 2048,
+			.y0_offset = 1792,
+			.w0_size = 4096,
+			.h0_size = 2560,
+			.scale_w = 4096,
+			.scale_h = 2560,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2560,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2560,
+		},
+		.pdaf_cap = TRUE,
+		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW14_B,
+		.imgsensor_pd_info  = &imgsensor_pd_info,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {
+			.cphy_lrte_support = 0,
+		},
+		.saturation_info = &imgsensor_saturation_info,
+		.dcg_info = {
+			.dcg_mode = IMGSENSOR_DCG_COMPOSE,
+			.dcg_gain_mode = IMGSENSOR_DCG_RATIO_MODE,
+			.dcg_gain_ratio_min = 16000,
+			.dcg_gain_ratio_max = 16000,
+			.dcg_gain_ratio_step = 0,
+			.dcg_gain_table = imx06c_dcg_ratio_table_14bit,
+			.dcg_gain_table_size = sizeof(imx06c_dcg_ratio_table_14bit),
+		},
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = REG2GAIN_ROUNDUP(15660),
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = REG2GAIN_ROUNDDOWN(16292),
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = REG2GAIN_ROUNDUP(4800),
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = REG2GAIN_ROUNDDOWN(14912),
 		.dpc_enabled = true,
 	},
 };
@@ -6408,11 +6736,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 	.i2c_transfer_data_type = I2C_DT_ADDR_16_DATA_8,
 	.eeprom_info = eeprom_info,
 	.eeprom_num = ARRAY_SIZE(eeprom_info),
-	.resolution = {8192, 6144},
 	.mirror = IMAGE_HV_MIRROR,
-	.mclk = 24,
-	.aov_mclk = 26,
-	.isp_driving_current = ISP_DRIVING_4MA,
 	.sensor_interface_type = SENSOR_INTERFACE_TYPE_MIPI,
 	.mipi_sensor_type = MIPI_CPHY,
 	.mipi_lane_num = SENSOR_MIPI_3_LANE,
@@ -6812,19 +7136,20 @@ static int imx06c_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	exp_cnt = ctx->s_ctx.mode[scenario_id].exp_cnt;
 	ctx->is_seamless = TRUE;
 
-	subdrv_i2c_wr_u8(ctx, 0x0104, 0x01);
-	subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_fast_mode, 0x02);
+	set_i2c_buffer(ctx, 0x0104, 0x01);
+	set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_fast_mode, 0x02);
 
 	update_mode_info_seamless_switch(ctx, scenario_id);
-	i2c_table_write(ctx,
+	set_table_to_buffer(ctx,
 		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_table,
 		ctx->s_ctx.mode[scenario_id].seamless_switch_mode_setting_len);
 
 	if (ctx->s_ctx.reg_addr_fast_mode_in_lbmf &&
 		(ctx->s_ctx.mode[scenario_id].hdr_mode == HDR_RAW_LBMF ||
 		ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_LBMF))
-		subdrv_i2c_wr_u8(ctx, ctx->s_ctx.reg_addr_fast_mode_in_lbmf, 0x4);
+		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_fast_mode_in_lbmf, 0x4);
 
+	ctx->ae_ctrl_gph_en = 1;
 	if (ae_ctrl) {
 		switch (ctx->s_ctx.mode[scenario_id].hdr_mode) {
 		case HDR_RAW_STAGGER:
@@ -6850,7 +7175,10 @@ static int imx06c_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 			break;
 		}
 	}
-	subdrv_i2c_wr_u8(ctx, 0x0104, 0x00);
+
+	set_i2c_buffer(ctx, 0x0104, 0x00);
+	ctx->ae_ctrl_gph_en = 0;
+	commit_i2c_buffer(ctx);
 
 	ctx->fast_mode_on = TRUE;
 	ctx->ref_sof_cnt = ctx->sof_cnt;
