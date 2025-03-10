@@ -1129,7 +1129,7 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 	unsigned int raw_id;
 	bool apply, apply_sv_th = false, apply_bwr = false;
 	int sv_avg_bw_w = 0, sv_peak_bw_w = 0, sv_avg_diff_bw_w = 0, sv_peak_diff_bw_w = 0;
-	unsigned int sv_output_port;
+	int sv_output_port;
 
 	if (ctx->has_raw_subdev) {
 		raw_id = get_master_raw_id(job->used_engine);
@@ -1170,13 +1170,13 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 		}
 
 		if (apply_bwr) {
-			int a_bw_w_KB = KBps_to_bwr(sv_avg_bw_w);
-			int p_bw_w_KB = KBps_to_bwr(sv_peak_bw_w);
+			int a_bw_w_MB = KBps_to_bwr(sv_avg_bw_w);
+			int p_bw_w_MB = KBps_to_bwr(sv_peak_bw_w);
 
-			sv_avg_diff_bw_w = a_bw_w_KB - sv_dev->sv_avg_applied_bw_w;
-			sv_peak_diff_bw_w = p_bw_w_KB - sv_dev->sv_peak_applied_bw_w;
-			sv_dev->sv_avg_applied_bw_w = a_bw_w_KB;
-			sv_dev->sv_peak_applied_bw_w = p_bw_w_KB;
+			sv_avg_diff_bw_w = a_bw_w_MB - sv_dev->sv_avg_applied_bw_w;
+			sv_peak_diff_bw_w = p_bw_w_MB - sv_dev->sv_peak_applied_bw_w;
+			sv_dev->sv_avg_applied_bw_w = a_bw_w_MB;
+			sv_dev->sv_peak_applied_bw_w = p_bw_w_MB;
 			sv_output_port = get_sv_axi_port_num(sv_dev->id);
 			for (i = 0; i < sv_output_port; i++) {
 				mtk_cam_isp8s_bwr_set_chn_bw(cam->bwr,
