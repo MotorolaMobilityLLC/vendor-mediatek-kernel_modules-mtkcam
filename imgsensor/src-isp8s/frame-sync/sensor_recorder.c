@@ -1085,9 +1085,7 @@ static unsigned int frec_calc_lbmf_valid_min_fl_lc_for_shutters_by_fdelay(
 		curr_rec->margin_lc, mode_exp_cnt, __func__);
 	const unsigned int based_min_fl_lc =
 		curr_rec->readout_len_lc + curr_rec->read_margin_lc;
-	const unsigned int total_min_fl_lc = (target_min_fl_lc > 0)
-		? target_min_fl_lc : (fdelay == 3)
-			? prev_rec->framelength_lc : curr_rec->framelength_lc;
+	const unsigned int total_min_fl_lc = (target_min_fl_lc > 0) ? target_min_fl_lc : 0;
 	unsigned int exp_cas[2*FS_HDR_MAX] = {0}, fl_cas[2*FS_HDR_MAX] = {0};
 	unsigned int equiv_min_fl_lc = 0;
 	unsigned int i;
@@ -1613,8 +1611,11 @@ static unsigned int frec_predict_fl_lc_by_curr_rec(const unsigned int idx,
 		break;
 	case 2:
 		/* N+1 type, e.g., non-SONY sensor */
-		next_fl_lc = (min_fl_lc > curr_rec->framelength_lc)
-			? min_fl_lc : curr_rec->framelength_lc;
+		if (curr_rec->m_exp_type == MULTI_EXP_TYPE_LBMF)
+			next_fl_lc = min_fl_lc;
+		else
+			next_fl_lc = (min_fl_lc > curr_rec->framelength_lc)
+				? min_fl_lc : curr_rec->framelength_lc;
 		break;
 	}
 
