@@ -3224,6 +3224,7 @@ mtk_cam_dev_node_desc output_queues[] = {
 		.default_fmt_idx = 0,
 		.max_buf_count = 16,
 		.ioctl_ops = &mtk_cam_v4l2_meta_out_ioctl_ops,
+		.support_acp = true,
 	},
 	{
 		.id = MTK_RAW_RAWI_2_IN,
@@ -3644,6 +3645,7 @@ mtk_cam_dev_node_desc capture_queues[] = {
 		.default_fmt_idx = 0,
 		.max_buf_count = 16,
 		.ioctl_ops = &mtk_cam_v4l2_meta_cap_ioctl_ops,
+		.support_acp = true,
 	},
 	{
 		.id = MTK_RAW_META_OUT_1,
@@ -3659,6 +3661,7 @@ mtk_cam_dev_node_desc capture_queues[] = {
 		.default_fmt_idx = 0,
 		.max_buf_count = 16,
 		.ioctl_ops = &mtk_cam_v4l2_meta_cap_ioctl_ops,
+		.support_acp = true,
 	},
 	{
 		.id = MTK_RAW_META_SV_OUT_0,

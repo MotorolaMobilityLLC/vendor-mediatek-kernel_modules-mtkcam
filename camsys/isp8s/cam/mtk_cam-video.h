@@ -115,6 +115,7 @@ struct mtk_cam_dev_node_desc {
 	const struct v4l2_frmsizeenum *frmsizes;
 	struct mtk_cam_pad_ops *pad_ops;
 	u8 hsf_en;
+	u8 support_acp:1;
 };
 
 /*

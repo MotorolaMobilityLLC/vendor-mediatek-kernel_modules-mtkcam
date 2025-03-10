@@ -396,6 +396,7 @@ mtk_cam_dev_node_desc mraw_capture_queues[] = {
 		.default_fmt_idx = 1,
 		.max_buf_count = 16,
 		.ioctl_ops = &mtk_mraw_v4l2_meta_cap_ioctl_ops,
+		.support_acp = true,
 	}
 };
 

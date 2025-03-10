@@ -254,6 +254,11 @@ static void mtk_cam_vb2_detach_dmabuf(void *mem_priv)
 	kfree(buf);
 }
 
+static inline bool node_support_acp(struct mtk_cam_video_device *node)
+{
+	return node && node->desc.support_acp;
+}
+
 static bool region_heap_is_prot(struct dma_buf *dbuf)
 {
 	if (strstr(dbuf->exp_name, "prot"))
@@ -279,22 +284,21 @@ static void *mtk_cam_vb2_attach_dmabuf(
 	buf = kzalloc(sizeof(*buf), GFP_KERNEL);
 	if (!buf)
 		return ERR_PTR(-ENOMEM);
+
+	buf->dev = dev;  /* alloc_devs[], smmu_dev */
+	mtk_buf->is_acp = 0;
+
 	/* acp - io coherence buffer */
-	if (cam->smmu_dev_acp &&
-		(mtk_buf->flags & FLAG_NO_CACHE_CLEAN ||
-		mtk_buf->flags & FLAG_NO_CACHE_INVALIDATE) &&
-		(node->desc.dma_port == MTKCAM_IPI_RAW_META_STATS_CFG ||
-		node->desc.dma_port == MTKCAM_IPI_RAW_META_STATS_0 ||
-		node->desc.dma_port == MTKCAM_IPI_RAW_META_STATS_1) &&
-		(!region_heap_is_prot(dbuf))) {
+	if (cam->smmu_dev_acp && node_support_acp(node) &&
+	    (!region_heap_is_prot(dbuf)) &&
+	    (mtk_buf->flags & (FLAG_NO_CACHE_CLEAN | FLAG_NO_CACHE_INVALIDATE))) {
 		buf->dev = cam->smmu_dev_acp;
+		mtk_buf->is_acp = 1;
+
 		dev_info(buf->dev, "%s node:%s flags:0x%x index:%d", __func__,
 			node->desc.name, mtk_buf->flags, mtk_buf->v4l2_buffer_idx);
-		mtk_buf->is_acp = 1;
-	} else {
-		buf->dev = dev;
-		mtk_buf->is_acp = 0;
 	}
+
 	/* create attachment for the dmabuf with the user device */
 	dba = dma_buf_attach(dbuf, buf->dev);
 	if (IS_ERR(dba)) {
@@ -342,13 +346,10 @@ const struct vb2_mem_ops mtk_cam_dma_contig_memops = {
 void mtk_cam_vb2_sync_for_device(struct vb2_buffer *vb)
 {
 	struct mtk_cam_video_device *node = mtk_cam_vbq_to_vdev(vb->vb2_queue);
-	struct mtk_cam_buffer *mtk_buf = mtk_cam_vb2_buf_to_dev_buf(vb);
 	struct mtk_cam_vb2_buf *buf;
 	struct sg_table *sgt;
+	struct device *dev;
 	unsigned int plane;
-
-	if (CAM_DEBUG_ENABLED(V4L2))
-		pr_info("%s: %s\n", __func__, node->desc.name);
 
 	for (plane = 0; plane < vb->num_planes; ++plane) {
 		buf = vb->planes[plane].mem_priv;
@@ -358,10 +359,15 @@ void mtk_cam_vb2_sync_for_device(struct vb2_buffer *vb)
 			continue;
 
 		if (buf->sync) {
-			dma_sync_sgtable_for_device(
-				mtk_buf->is_acp ? buf->dev :
-				vb->vb2_queue->alloc_devs[plane] ? : vb->vb2_queue->dev,
-				sgt, buf->dma_dir);
+			if (CAM_DEBUG_ENABLED(V4L2))
+				pr_info("%s: %s:%d size:%zu\n",
+					__func__, node->desc.name, plane, buf->size);
+
+			if (buf->dev)
+				dev = buf->dev;
+			else
+				dev = vb->vb2_queue->alloc_devs[plane] ? : vb->vb2_queue->dev;
+			dma_sync_sgtable_for_device(dev, sgt, buf->dma_dir);
 		}
 	}
 }
@@ -394,9 +400,9 @@ void mtk_cam_vb2_sync_range_for_device(
 void mtk_cam_vb2_sync_for_cpu(struct vb2_buffer *vb)
 {
 	struct mtk_cam_video_device *node = mtk_cam_vbq_to_vdev(vb->vb2_queue);
-	struct mtk_cam_buffer *mtk_buf = mtk_cam_vb2_buf_to_dev_buf(vb);
 	struct mtk_cam_vb2_buf *buf;
 	struct sg_table *sgt;
+	struct device *dev;
 	unsigned int plane;
 
 	for (plane = 0; plane < vb->num_planes; ++plane) {
@@ -408,13 +414,14 @@ void mtk_cam_vb2_sync_for_cpu(struct vb2_buffer *vb)
 
 		if (buf->sync) {
 			if (CAM_DEBUG_ENABLED(V4L2))
-				pr_info("%s: %s size:%zu\n",
-					__func__, node->desc.name, buf->size);
+				pr_info("%s: %s:%d size:%zu\n",
+					__func__, node->desc.name, plane, buf->size);
 
-			dma_sync_sgtable_for_cpu(
-				mtk_buf->is_acp ? buf->dev :
-				vb->vb2_queue->alloc_devs[plane] ? : vb->vb2_queue->dev,
-				sgt, buf->dma_dir);
+			if (buf->dev)
+				dev = buf->dev;
+			else
+				dev = vb->vb2_queue->alloc_devs[plane] ? : vb->vb2_queue->dev;
+			dma_sync_sgtable_for_cpu(dev, sgt, buf->dma_dir);
 		}
 	}
 }

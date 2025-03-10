@@ -485,7 +485,7 @@ static void mtk_cam_vb2_buf_finish(struct vb2_buffer *vb)
 {
 	struct mtk_cam_video_device *node = mtk_cam_vbq_to_vdev(vb->vb2_queue);
 	struct mtk_cam_buffer *mtk_buf = mtk_cam_vb2_buf_to_dev_buf(vb);
-	unsigned long offset = 0;
+	// unsigned long offset = 0;
 
 	if ((V4L2_TYPE_IS_CAPTURE(vb->type) &&
 	    !(mtk_buf->flags & FLAG_NO_CACHE_INVALIDATE)) || mtk_buf->is_acp) {
@@ -494,6 +494,8 @@ static void mtk_cam_vb2_buf_finish(struct vb2_buffer *vb)
 			dev_info(vb->vb2_queue->dev, "%s: %s: index:%d is_acp:%d\n", __func__,
 				node->desc.name, mtk_buf->v4l2_buffer_idx, mtk_buf->is_acp);
 
+		mtk_cam_vb2_sync_for_cpu(vb);
+/*
 		if (is_raw_subdev(node->uid.pipe_id) &&
 		    node->desc.id == MTK_RAW_META_OUT_0)
 			offset = GET_PLAT_V4L2(meta_stats0_header_size);
@@ -510,6 +512,7 @@ static void mtk_cam_vb2_buf_finish(struct vb2_buffer *vb)
 			offset = 0;
 
 		mtk_cam_vb2_partial_sync_for_cpu(vb, offset);
+*/
 	}
 }
 

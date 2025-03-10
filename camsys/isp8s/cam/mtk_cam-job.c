@@ -4651,8 +4651,6 @@ static void update_job_sensor(struct mtk_cam_job *job)
 	if (ctrl_data && ctrl_data->sensor && ctrl_data->seninf) {
 		raw->seninf = ctrl_data->seninf;
 		raw->sensor = ctrl_data->sensor;
-		mtk_raw_update_sensor_data(&raw->sensor_data,
-					   raw->sensor->ctrl_handler);
 	}
 
 	job->sensor = raw->sensor;
@@ -4875,6 +4873,7 @@ static int update_job_raw_switch(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
+	struct mtk_raw_pipeline *raw;
 	bool raw_switch = false;
 	int r;
 
@@ -4904,6 +4903,12 @@ static int update_job_raw_switch(struct mtk_cam_job *job)
 	if (ctx->has_raw_subdev && ctrl_data) {
 		if (mtk_cam_ctx_alloc_img_pool(ctx, ctrl_data))
 			goto EXIT_CLEAN;
+	}
+
+	raw = &ctx->cam->pipelines.raw[ctx->raw_subdev_idx];
+	if (raw->sensor) {
+		mtk_raw_update_sensor_data(&raw->sensor_data,
+					   raw->sensor->ctrl_handler);
 	}
 
 	/* The user changed the sensor in the first request */
