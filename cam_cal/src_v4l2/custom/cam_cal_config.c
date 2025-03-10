@@ -1088,7 +1088,7 @@ bool get_if_use_legacy(struct EEPROM_DRV_FD_DATA *pdata)
 		cfg = cam_cal_config_list[i];
 		if (pdata->sensor_info.sensor_id == cfg->sensor_id)
 			ret |= cfg->use_legacy;
-		must_log("[%d] current_sensor_id = 0x%x layout type %s sensor_id 0x%x ret %d",
+		debug_log("[%d] current_sensor_id = 0x%x layout type %s sensor_id 0x%x ret %d",
 			i, pdata->sensor_info.sensor_id, cfg->name, cfg->sensor_id, ret);
 	}
 
