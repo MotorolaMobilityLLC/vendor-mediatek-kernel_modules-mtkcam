@@ -3897,7 +3897,6 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 {
 	struct mtk_raw_device *raw_dev;
 	struct mtk_camsv_device *sv_dev;
-	struct mtk_pda_device *pda_dev;
 	int i;
 
 	dev_info(ctx->cam->dev, "%s: ctx-%d pipe 0x%x engine 0x%x\n",
@@ -3905,13 +3904,6 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 		 ctx->used_pipe, ctx->used_engine);
 
 	qof_mtcmos_voter(&ctx->cam->engines, ctx->used_engine, true);
-
-	for (i = 0; i < ARRAY_SIZE(ctx->hw_pda); i++) {
-		if (ctx->hw_pda[i]) {
-			pda_dev = dev_get_drvdata(ctx->hw_pda[i]);
-			pda_reset(pda_dev);
-		}
-	}
 
 	if (ctx->hw_sv) {
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
@@ -4023,7 +4015,6 @@ void mtk_cam_ctx_engine_reset(struct mtk_cam_ctx *ctx)
 {
 	struct mtk_raw_device *raw_dev;
 	struct mtk_camsv_device *sv_dev;
-	struct mtk_pda_device *pda_dev;
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
@@ -4036,13 +4027,6 @@ void mtk_cam_ctx_engine_reset(struct mtk_cam_ctx *ctx)
 	if (ctx->hw_sv) {
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
 		sv_reset(sv_dev);
-	}
-
-	for (i = 0; i < ARRAY_SIZE(ctx->hw_pda); i++) {
-		if (ctx->hw_pda[i]) {
-			pda_dev = dev_get_drvdata(ctx->hw_pda[i]);
-			pda_reset(pda_dev);
-		}
 	}
 }
 

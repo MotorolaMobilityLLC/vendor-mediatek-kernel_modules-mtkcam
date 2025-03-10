@@ -4329,19 +4329,11 @@ static struct mtk_cam_seamless_ops common_seamless = {
 int mtk_cam_job_uninit_pda_engine(struct mtk_cam_job *job, unsigned long unit_engs)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
-	struct mtk_cam_device *cam = ctx->cam;
 	struct device *dev = ctx->cam->dev;
-	struct mtk_pda_device *pda_dev;
-	int i;
 
 	dev_info(dev, "[%s] begin uninit pda:0x%lx\n",
 			 __func__, unit_engs);
-	for (i = 0; i < cam->engines.num_pda_devices; i++) {
-		if (bit_map_bit(MAP_HW_PDA, i) & unit_engs) {
-			pda_dev = dev_get_drvdata(cam->engines.pda_devs[i]);
-			pda_reset(pda_dev);
-		}
-	}
+
 	if (unit_engs)
 		mtk_cam_pm_runtime_engines(&ctx->cam->engines, unit_engs, 0);
 
