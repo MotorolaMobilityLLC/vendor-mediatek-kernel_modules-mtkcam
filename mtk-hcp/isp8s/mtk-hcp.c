@@ -1028,11 +1028,18 @@ static ssize_t mtk_hcp_proc_read(struct file *file, char __user *buf,
 		return ret;
 	}
 
+	// check ppos valid
+	if (*ppos < 0 || *ppos > data->cnt || *ppos >= data->sz) {
+		mutex_unlock(&data->mtx);
+		HCP_PRINT_ERR("Invalid read position: %lld\n", *ppos);
+		return 0;
+	}
+
 	remain = data->cnt - *ppos;
 	len = (remain > lbuf) ? lbuf : remain;
 	if (len == 0) {
 		mutex_unlock(&data->mtx);
-		HCP_PRINT_DBG("Reached end of the device on a read\n");
+		HCP_PRINT_INF("Reached end of the device on a read\n");
 		return 0;
 	}
 
