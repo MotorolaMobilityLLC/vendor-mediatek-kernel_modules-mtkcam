@@ -37,6 +37,7 @@
 #include <mtk_heap.h>
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
 #include <slbc_ops.h>
+#include <mtk-vmm-notifier.h>
 
 #include "mtk_cam.h"
 #include "mtk_cam-plat.h"
@@ -5745,6 +5746,7 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 	mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_CAM);
 	mtk_cam_fmon_disable(&cam_dev->fmon);
 	mtk_cam_vcore_wla20(cam_dev, false);
+	vmm_disable_cvfs(VMM_CVFS_USR_CAMSYS , VMM_CVFS_CAM_SEL);
 
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		dev_dbg(dev, "%s++:get: vcore cg/main cg0 cg1:0x%x/0x%x/0x%x", __func__,
@@ -5813,6 +5815,7 @@ static int mtk_cam_runtime_resume(struct device *dev)
 	mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_CAM);
 	mtk_cam_dvc_top_enable(&cam_dev->dvfs.dvc);
 	mtk_cam_fmon_enable(&cam_dev->fmon);
+	vmm_enable_cvfs(VMM_CVFS_USR_CAMSYS , VMM_CVFS_CAM_SEL);
 
 	enable_irq(cam_dev->qoftop_irq);
 
