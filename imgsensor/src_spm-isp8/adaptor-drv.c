@@ -29,6 +29,7 @@
 #include "adaptor-sentest-ctrl.h"
 #include "imgsensor-glue/imgsensor-glue.h"
 #include "virt-sensor/virt-sensor-entry.h"
+#include "adaptor-util.h"
 
 #undef E
 #define E(__x__) (__x__##_entry)
@@ -2480,8 +2481,8 @@ static int imgsensor_probe(struct i3c_i2c_device *client)
 		adaptor_logi(ctx, "not support to power on with sensor%d\n", ctx->forbid_idx);
 	}
 
-	ret = sscanf(dev->of_node->name, OF_SENSOR_NAME_PREFIX"%d", &ctx->dts_idx);
-	if (ret != 1)
+	ret = get_str_first_int(dev->of_node->name, &ctx->dts_idx);
+	if (ret < 0)
 		adaptor_logi(ctx, "failed to parse %s\n", dev->of_node->name);
 	ctx->idx = ctx->dts_idx;
 

@@ -25,6 +25,7 @@ void adaptor_log_buf_flush(struct adaptor_ctx *ctx, const char *caller,
 int adaptor_log_buf_gather(struct adaptor_ctx *ctx, const char *caller,
 			struct adaptor_log_buf *buf,
 			char *fmt, ...);
+int get_str_first_int(const char *str, int *result);
 
 /* AEE */
 #if IS_ENABLED(CONFIG_MTK_AEE_FEATURE)

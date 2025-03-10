@@ -21,6 +21,7 @@
 #include "adaptor-subdrv-ctrl.h"
 #include "adaptor-fsync-ctrls.h"
 #include "adaptor-tsrec-cb-ctrl-impl.h"
+#include "adaptor-util.h"
 
 
 /*******************************************************************************
@@ -1545,7 +1546,7 @@ int notify_fsync_mgr(struct adaptor_ctx *ctx, const int on)
 	struct SensorInfo info = {0};
 	const char *seninf_port = NULL;
 	int ret, seninf_idx = 0;
-	char c_ab;
+	char c_ab = 0;
 
 	/* setup some sensor info st (w/o seninf idx) for fsync mgr using */
 	info.sensor_id = (ctx->subdrv) ? (ctx->subdrv->id) : 0;
@@ -1580,9 +1581,12 @@ int notify_fsync_mgr(struct adaptor_ctx *ctx, const int on)
 	}
 
 	/* convert seninf-port to seninf-idx */
-	ret = sscanf(seninf_port, "%d%c", &seninf_idx, &c_ab);
+	ret = get_str_first_int(seninf_port, &seninf_idx);
+	if (ret > 0)
+		c_ab = seninf_port[ret];
+
 	seninf_idx <<= 1;
-	seninf_idx += (ret == 2 && (c_ab == 'b' || c_ab == 'B'));
+	seninf_idx += (c_ab == 'b' || c_ab == 'B');
 	ctx->seninf_idx = seninf_idx;
 
 	/* notify frame-sync mgr of sensor-idx and seninf-idx */

@@ -1765,6 +1765,12 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 					info->target_scenario_id);
 				break;
 			}
+			if (info->target_scenario_id >= MODE_MAXCNT) {
+				adaptor_logi(ctx,
+					"X! [error] info->target_scenario_id:%d >= MODE_MAXCNT\n",
+					info->target_scenario_id);
+				break;
+			}
 			subdrv_call(ctx, feature_control,
 				SENSOR_FEATURE_SEAMLESS_SWITCH,
 				para.u8, &len);
@@ -1777,13 +1783,7 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 			memset(&ctx->ae_memento, 0, sizeof(ctx->ae_memento));
 			memcpy(&ctx->ae_memento, &info->ae_ctrl[0],  sizeof(ctx->ae_memento));
 
-			if (info->target_scenario_id < MODE_MAXCNT)
-				ctx->cur_mode = &ctx->mode[info->target_scenario_id];
-			else {
-				adaptor_logi(ctx,
-					"X! [error] info->target_scenario_id:%d >= MODE_MAXCNT\n",
-					info->target_scenario_id);
-			}
+			ctx->cur_mode = &ctx->mode[info->target_scenario_id];
 
 			ctx->exposure->val = FINE_INTEG_CONVERT(info->ae_ctrl[0].exposure.arr[0], ctx->cur_mode->fine_intg_line);
 			ctx->is_sensor_scenario_inited = 1;
