@@ -2538,8 +2538,8 @@ static int aie_config_network(struct mtk_aie_dev *fd,
 			}
 		}
 
-		out_ysize_plus_1 = out_height - 1;
-		temp = (out_height + 1) / 2 - 1;
+		out_ysize_plus_1 = (out_height) ? out_height - 1 : 0;
+		temp = (out_height) ? (out_height + 1) / 2 - 1 : 0;
 		out_ysize_plus_1_stride2 = (temp > 65535) ? 65535 : (u16)temp;
 
 		for (j = 0; j < output_WDMA_WRA_num; j++) {
