@@ -684,6 +684,7 @@ u64 mtk_imgsys_get_kva(struct dma_buf *dma_buf, s32 ionFd,
 	struct mtk_imgsys_dma_buf_iova_get_info *iova_info;
 	bool cache = false;
 	int ret = 0;
+	int coherent_heap_enable;
 
 	spin_lock(&pipe->iova_cache.lock);
 #ifdef LINEAR_CACHE
@@ -757,7 +758,12 @@ u64 mtk_imgsys_get_kva(struct dma_buf *dma_buf, s32 ionFd,
 		goto err_vmap_kva;
 	}
 
-	dev = imgsys_dev->smmu_dev;
+	coherent_heap_enable = is_coherent_heap_dmabuf(dma_buf);
+
+	if (coherent_heap_enable)
+		dev = imgsys_dev->acp_smmu_dev;
+	else
+		dev = imgsys_dev->smmu_dev;
 
 	attach = dma_buf_attach(dma_buf, dev);
 
