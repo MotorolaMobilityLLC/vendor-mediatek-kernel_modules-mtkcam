@@ -23,6 +23,8 @@
 
 #include "iommu_debug.h"
 
+#include "mtk-vmm-notifier.h"
+
 #define OUT_BYTE_PER_ROI 1200
 
 static const struct of_device_id mtk_pda_of_ids[] = {
@@ -325,6 +327,8 @@ static void debug_csr_print(struct mtk_pda_device *pda_dev)
 		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DILATION_CFG));
 	dev_info(pda_dev->dev, "DMA_EN(0x1f): 0x%x\n",
 		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DMA_EN));
+
+	vmm_cvfs_dump();
 }
 
 int mtk_cam_pda_dev_config(struct mtk_pda_device *pda_dev)
@@ -933,6 +937,8 @@ int mtk_pda_runtime_suspend(struct device *dev)
 	mtk_cam_reset_qos(dev, &pda_dev->qos);
 	dev_dbg(dev, "%s:disable clock\n", __func__);
 
+	vmm_disable_cvfs(VMM_CVFS_USR_PDA, VMM_CVFS_CAM_SEL);
+
 	for (i = pda_dev->num_clks - 1; i >= 0; i--)
 		clk_disable_unprepare(pda_dev->clks[i]);
 
@@ -970,6 +976,8 @@ int mtk_pda_runtime_resume(struct device *dev)
 			return ret;
 		}
 	}
+
+	vmm_enable_cvfs(VMM_CVFS_USR_PDA, VMM_CVFS_CAM_SEL);
 
 	pda_reset(pda_dev);
 
