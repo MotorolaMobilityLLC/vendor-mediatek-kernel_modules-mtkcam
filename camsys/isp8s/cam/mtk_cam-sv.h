@@ -17,6 +17,7 @@
 
 #define MAX_SV_HW_GROUPS 4
 #define CAMSV_IRQ_NUM 3
+#define RECORD_FRAME_NUM 4
 
 enum SV_SMI_PORT_ID {
 	SMI_PORT0_SV_CQI = 0,
@@ -217,6 +218,10 @@ struct mtk_camsv_device {
 
 	struct sv_df_action sv_df_action;
 
+	/* for fifo debug info*/
+	u64 fifo_dbg_cnt;
+	unsigned int fifo_dbg[MAX_DMA_CORE][RECORD_FRAME_NUM];
+
 	/* for preisp - for sof counter sync.*/
 	u64 sof_count;
 	int tg_cnt;
@@ -299,6 +304,7 @@ void mtk_cam_sv_copy_user_input_param(struct mtk_cam_ctx *ctx,	struct mtk_cam_jo
 	void *vaddr, struct mtk_mraw_pipeline *mraw_pipe);
 void sv_reset(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_reset_msgfifo(struct mtk_camsv_device *sv_dev);
+void mtk_cam_sv_fifo_dbg_port_config(struct mtk_camsv_device *sv_dev);
 void mtk_cam_sv_fifo_dump(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tags);
 int mtk_cam_sv_dev_config(struct mtk_camsv_device *sv_dev, unsigned int sub_ratio,

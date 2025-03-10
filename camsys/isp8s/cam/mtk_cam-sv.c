@@ -1631,6 +1631,7 @@ int mtk_cam_sv_dev_config(struct mtk_camsv_device *sv_dev,
 	mtk_cam_sv_dmao_common_config(sv_dev, 0, 0, 0, 0, 0, 0);
 	mtk_cam_sv_cq_config(sv_dev, sub_ratio);
 	mtk_cam_sv_ddren_qos_coh_config(sv_dev, frm_time_us);
+	mtk_cam_sv_fifo_dbg_port_config(sv_dev);
 
 	dev_info(sv_dev->dev, "[%s] sub_ratio:%d set seamless check\n", __func__, sub_ratio);
 
@@ -2590,49 +2591,49 @@ void mtk_cam_sv_copy_user_input_param(struct mtk_cam_ctx *ctx, struct mtk_cam_jo
 
 }
 
+void mtk_cam_sv_fifo_dbg_port_config(struct mtk_camsv_device *sv_dev)
+{
+	sv_dev->fifo_dbg_cnt = 0;
+	memset(sv_dev->fifo_dbg, 0, RECORD_FRAME_NUM * sizeof(unsigned int));
+	writel_relaxed(0x3, sv_dev->base_dma + REG_CAMSVDMATOP_DBG_CLR);
+	writel_relaxed(0x0, sv_dev->base_dma + REG_CAMSVDMATOP_DBG_CLR);
+}
+
 void mtk_cam_sv_fifo_dump(struct mtk_camsv_device *sv_dev)
 {
 	unsigned int dbg_port;
-	unsigned int dbg_port1, dbg_port2, dbg_port3, dbg_port4;
-	unsigned int dbg_port5, dbg_port6, dbg_port7, dbg_port8;
+	unsigned int dbg_port1, dbg_port6;
 	unsigned int debug_sel = 0;
 
 	for (int dma_core = 0; dma_core < MAX_DMA_CORE; dma_core++) {
 		debug_sel = 0;
-		debug_sel |= (1 << 7);
+		debug_sel |= (1 << 7); // real time val
 		debug_sel |= (dma_core << 4);
-		for (int sel = 1; sel < 16; sel++) {
+		for (int sel = 7; sel < 9; sel++) {
 			debug_sel &= ~(0xf);
 			debug_sel |= sel;
-			if (sel == 4) {
-				for (int sub_module = 0; sub_module < SVTAG_END; sub_module++) {
-					debug_sel &= ~(0x700);
-					debug_sel |= (sub_module << 8);
-					writel_relaxed(debug_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
-					dbg_port = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
-					dev_info(sv_dev->dev, "tag:%d => crc_of_sram = 0x%x\n", sub_module, dbg_port);
-				}
-			} else {
-				writel_relaxed(debug_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
-				dbg_port = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
-				dev_info(sv_dev->dev, "[core%d] dbg_sel:0x%x => dbg_port = 0x%x\n",
-					dma_core, debug_sel, dbg_port);
-			}
+			writel_relaxed(debug_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
+			dbg_port = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT);
+			dev_info(sv_dev->dev, "[core%d] dbg_sel:0x%x => dbg_port = 0x%x\n",
+				dma_core, debug_sel, dbg_port);
 		}
 
 		dbg_port1 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT1);
-		dbg_port2 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT2);
-		dbg_port3 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT3);
-		dbg_port4 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT4);
-		dbg_port5 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT5);
-		dbg_port6 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT6);
-		dbg_port7 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT7);
-		dbg_port8 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT8);
-
 		dev_info(sv_dev->dev,
-			"[core%d] urg_dur:0x%x glwdata_urg_ult_pult:0x%x_0x%x_0x%x max_fifo 0x%x, dbg_dspch:0x%x dq_img:0x%x dq_len:0x%x\n",
-			dma_core, dbg_port1, dbg_port2, dbg_port3, dbg_port4,
-			dbg_port5, dbg_port6, dbg_port7, dbg_port8);
+			"[core%d] urg_dur:0x%x\n", dma_core, dbg_port1);
+
+		for (int dbg_type = 0; dbg_type < 2; dbg_type++) {
+			debug_sel &= ~(0x40);
+			debug_sel |= dbg_type;
+			dbg_port6 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT6);
+			dev_info(sv_dev->dev,
+				"[core%d] dbg_sel:0x%x => dbg_dspch:0x%x\n", dma_core, debug_sel, dbg_port6);
+		}
+
+		for (int i = 0; i < RECORD_FRAME_NUM; i++) {
+			dev_info(sv_dev->dev,
+			"[core%d] max_fifo %x\n", dma_core, sv_dev->fifo_dbg[dma_core][i]);
+		}
 	}
 
 }
@@ -2966,6 +2967,7 @@ static irqreturn_t mtk_irq_camsv_sof(int irq, void *data)
 	unsigned int irq_sof_status, irq_channel_status, i, m;
 	unsigned int addr_frm_seq_no = REG_CAMSVCENTRAL_FH_SPARE_TAG_1;
 	bool wake_thread = false;
+	unsigned int debug_sel = 0;
 
 	memset(&irq_info, 0, sizeof(irq_info));
 
@@ -2989,6 +2991,16 @@ static irqreturn_t mtk_irq_camsv_sof(int irq, void *data)
 		readl_relaxed(sv_dev->base + REG_CAMSVCENTRAL_SOF_STATUS);
 	irq_channel_status =
 		readl_relaxed(sv_dev->base + REG_CAMSVCENTRAL_CHANNEL_STATUS);
+
+	for (int dma_core = 0; dma_core < MAX_DMA_CORE; dma_core++) {
+		debug_sel = 0;
+		debug_sel |= (1 << 7); // real time val
+		debug_sel |= (dma_core << 4);
+		sv_dev->fifo_dbg[dma_core][(sv_dev->fifo_dbg_cnt % RECORD_FRAME_NUM)] =
+			readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT5);
+	}
+	sv_dev->fifo_dbg_cnt++;
+
 	for (i = 0; i < MAX_SV_HW_GROUPS; i++) {
 		sv_dev->active_group_info[i] =
 			readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_GROUP_TAG0 +
