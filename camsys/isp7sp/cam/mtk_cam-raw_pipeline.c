@@ -1399,8 +1399,10 @@ static int mtk_raw_init_cfg(struct v4l2_subdev *sd,
 		mf = v4l2_subdev_get_try_format(sd, state, i);
 		crop = v4l2_subdev_get_try_crop(sd, state, i);
 #endif
-		*mf = pipe->pad_cfg[i].mbus_fmt;
-		*crop = pipe->pad_cfg[i].crop;
+		if (mf)
+			*mf = pipe->pad_cfg[i].mbus_fmt;
+		if (crop)
+			*crop = pipe->pad_cfg[i].crop;
 	}
 	return 0;
 }
