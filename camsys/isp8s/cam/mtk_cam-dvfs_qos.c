@@ -734,8 +734,9 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 	struct mtkcam_ipi_img_output *in;
 	struct mtk_camsv_device *sv_dev;
 	unsigned int i, x_size, img_h, sv_id;
-	u64 avg_bw, peak_bw, stash_avg_bw, stash_peak_bw, total_peak_bw = 0;
-	u64 pd_avg_bw, pd_peak_bw;
+	u64 avg_bw = 0, peak_bw = 0, total_peak_bw = 0;
+	u64 pd_avg_bw = 0, pd_peak_bw = 0;
+	u64 stash_avg_bw = 0, stash_peak_bw = 0;
 	unsigned int sv_port_num = 0;
 	bool is_smmu_enabled = true;
 
@@ -793,8 +794,9 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 					}
 
 					/* stash */
-					stash_peak_bw = stash_avg_bw = x_size * img_h / 4096 * 16 * (u64)sensor_fps;
-					stash_peak_bw = stash_avg_bw = to_qos_icc(stash_avg_bw);
+					stash_peak_bw = peak_bw * 16 / 4096;
+					stash_avg_bw = x_size * img_h * 16 / 4096 * (u64)sensor_fps;
+					stash_avg_bw = to_qos_icc(stash_avg_bw);
 				}
 			}
 
@@ -804,16 +806,19 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 			pd_peak_bw =
 				calc_bw(x_size * img_h, linet, sensor_h);
 			total_peak_bw += pd_peak_bw;
-			if (pd_avg_bw || pd_peak_bw) {
-				if (x_size == 0) {
-					dev_err(ctx->cam->dev,
-						"%s: Invalid x_size: division by zero", __func__);
-					return -EINVAL;
-				}
+			if (is_smmu_enabled) {
+				if (pd_avg_bw || pd_peak_bw) {
+					if (x_size == 0) {
+						dev_err(ctx->cam->dev,
+							"%s: Invalid x_size: division by zero", __func__);
+						return -EINVAL;
+					}
 
-				/* stash */
-				stash_peak_bw = stash_avg_bw = x_size * img_h / 4096 * 16 * (u64)sensor_fps;
-				stash_peak_bw = stash_avg_bw = to_qos_icc(stash_avg_bw);
+					/* stash */
+					stash_peak_bw = pd_peak_bw * 16 / 4096;
+					stash_avg_bw = x_size * img_h * 16 / 4096 * (u64)sensor_fps;
+					stash_avg_bw = to_qos_icc(stash_avg_bw);
+				}
 			}
 
 		}
@@ -873,7 +878,7 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 				job->sv_mmqos[SMI_PORT_SV_STG_1].avg_bw,
 				job->sv_mmqos[SMI_PORT_SV_WDMA_2].avg_bw,
 				job->sv_mmqos[SMI_PORT_SV_STG_2].avg_bw,
-				peak_bw,
+				peak_bw + pd_peak_bw,
 				job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw,
 				job->sv_mmqos[SMI_PORT_SV_STG_0].peak_bw,
 				job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw,
@@ -890,7 +895,7 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 				job->sv_mmqos[SMI_PORT_SV_STG_1].avg_bw,
 				job->sv_mmqos[SMI_PORT_SV_WDMA_2].avg_bw,
 				job->sv_mmqos[SMI_PORT_SV_STG_2].avg_bw,
-				peak_bw,
+				peak_bw + pd_peak_bw,
 				job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw,
 				job->sv_mmqos[SMI_PORT_SV_STG_0].peak_bw,
 				job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw,
@@ -898,7 +903,7 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 				job->sv_mmqos[SMI_PORT_SV_WDMA_2].peak_bw,
 				job->sv_mmqos[SMI_PORT_SV_STG_2].peak_bw);
 
-		fp->camsv_param[0][i].peak_bw = peak_bw;
+		fp->camsv_param[0][i].peak_bw = peak_bw + pd_peak_bw;
 	}
 
 	mtk_cam_sv_run_df_bw_update(sv_dev, total_peak_bw);

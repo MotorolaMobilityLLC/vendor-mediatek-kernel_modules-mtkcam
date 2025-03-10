@@ -36,8 +36,6 @@
 #define CAMSV_DEBUG 0
 #define FRAME_TIME 33000000
 
-#define ceil(n, d) (((n) < 0) ? (-((-(n))/(d))) : (n)/(d) + ((n)%(d) != 0))
-
 static int debug_cam_sv;
 module_param(debug_cam_sv, int, 0644);
 
@@ -869,28 +867,6 @@ int mtk_cam_sv_fifo_config(struct mtk_camsv_device *sv_dev, unsigned int fifo_co
 	return 0;
 }
 
-void mtk_cam_sv_stg_rst(struct mtk_camsv_device *sv_dev)
-{
-	int ret;
-	int stg_sw_ctl;
-
-	CAMSV_WRITE_REG(sv_dev->base + REG_CAMSVCENTRAL_STG_RST, 0x1);
-
-	ret = readx_poll_timeout(readl, sv_dev->base + REG_CAMSVCENTRAL_STG_RST,
-			stg_sw_ctl,
-			stg_sw_ctl & STG_SOFT_RST_STAT,
-			1 /* delay, us */,
-			100000 /* timeout, us */);
-	if (ret < 0) {
-		dev_info(sv_dev->dev, "%s: timeout\n", __func__);
-		goto RESET_FAILURE;
-	}
-	CAMSV_WRITE_REG(sv_dev->base + REG_CAMSVCENTRAL_STG_RST, 0x0);
-
-RESET_FAILURE:
-	return;
-}
-
 int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 	unsigned int fifo_img_p1, unsigned int fifo_img_p2,
 	unsigned int fifo_img_p3, unsigned int fifo_len_p1,
@@ -1655,7 +1631,6 @@ int mtk_cam_sv_dev_config(struct mtk_camsv_device *sv_dev,
 	mtk_cam_sv_dmao_common_config(sv_dev, 0, 0, 0, 0, 0, 0);
 	mtk_cam_sv_cq_config(sv_dev, sub_ratio);
 	mtk_cam_sv_ddren_qos_coh_config(sv_dev, frm_time_us);
-	mtk_cam_sv_stg_rst(sv_dev);
 
 	dev_info(sv_dev->dev, "[%s] sub_ratio:%d set seamless check\n", __func__, sub_ratio);
 
