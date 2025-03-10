@@ -1003,6 +1003,6 @@ struct subdrv_entry {
 
 #define line2ntime(line, linetime_ns) ((line) * (linetime_ns))
 
-#define ntime2line(ntime, linetime_ns) ((ntime) / (linetime_ns))
+#define ntime2line(ntime, linetime_ns) ((ntime) / ((linetime_ns) ? (linetime_ns) : 1))
 
 #endif
