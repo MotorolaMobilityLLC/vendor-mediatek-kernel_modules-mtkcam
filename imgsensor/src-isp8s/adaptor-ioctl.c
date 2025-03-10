@@ -1509,7 +1509,7 @@ static int g_read_margin_in_us_by_scenario(struct adaptor_ctx *ctx, void *arg)
 			__func__,
 			ctx->subctx.read_margin, info->margin);
 	} else {
-		adaptor_loge(ctx, "[%s] scenario(%d) no read_margin\n",
+		adaptor_logi(ctx, "[%s] scenario(%d) no read_margin\n",
 			__func__, (u32)info->scenario_id);
 	}
 
@@ -1545,7 +1545,7 @@ static int g_exposure_margin_in_us_by_scenario(struct adaptor_ctx *ctx, void *ar
 			__func__,
 			ctx->subctx.s_ctx.exposure_margin, info->margin);
 	} else {
-		adaptor_loge(ctx, "[%s] scenario(%d) no exp_margin\n",
+		adaptor_logi(ctx, "[%s] scenario(%d) no exp_margin\n",
 			__func__, (u32)info->scenario_id);
 	}
 

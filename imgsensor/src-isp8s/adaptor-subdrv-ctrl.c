@@ -5062,7 +5062,7 @@ static void frame_desc_to_vcinfo2(
 			p_saturation_info = ctx->s_ctx.saturation_info;
 
 		} else {
-			DRV_LOGE(ctx, "no saturation info for this sensor, using default value\n");
+			DRV_LOG(ctx, "no saturation info for this sensor, using default value\n");
 			/* used default saturation_info  */
 			p_saturation_info = &default_saturation_info;
 		}
