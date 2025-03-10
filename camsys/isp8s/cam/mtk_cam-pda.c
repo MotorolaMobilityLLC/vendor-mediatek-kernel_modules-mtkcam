@@ -530,6 +530,11 @@ int mtk_cam_pda_debug_dump(struct mtk_pda_device *pda_dev, unsigned int dump_tag
 		//	"PDA didn't change to OFL mode when camsv change mux");
 	}
 
+	if (dump_tags & (1 << PDA_ERR_HANG)) {
+		debug_csr_print(pda_dev);
+		debug_sel_print(pda_dev);
+	}
+
 	// for debug
 	dev_info(pda_dev->dev, "%s -\n", __func__);
 
@@ -543,6 +548,7 @@ static irqreturn_t mtk_irq_pda(int irq, void *data)
 	bool wake_thread = 0;
 
 	unsigned int pda_status = 0;
+	unsigned int dma_i_p1 = 0, dma_ti_p1 = 0, dma_i_p2 = 0, dma_ti_p2 = 0, dma_out = 0;
 
 	pda_dev->ts_ns = 0;
 	pda_dev->irq_type = 0;
@@ -578,8 +584,26 @@ static irqreturn_t mtk_irq_pda(int irq, void *data)
 			dev_info(pda_dev->dev, "PDA didn't change to OFL mode when camsv change mux");
 		}
 	} else if (pda_status == 0) {
-		dev_info(pda_dev->dev, "Not OTF PDA irq");
-		wake_thread = false;
+		dma_i_p1 = readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P1_ERR_STAT);
+		dma_ti_p1 = readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P1_ERR_STAT);
+		dma_i_p2 = readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P2_ERR_STAT);
+		dma_ti_p2 = readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P2_ERR_STAT);
+		dma_out = readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAO_P1_ERR_STAT);
+
+		if ((dma_i_p1 & 0xFFFF) || (dma_ti_p1 & 0xFFFF) || (dma_i_p2 & 0xFFFF) ||
+				(dma_ti_p2 & 0xFFFF) || (dma_out & 0xFFFF)) {
+			// read clear dma status
+			dev_info(pda_dev->dev,
+				"%s pda-%d: [ERR_STAT]I_P1/TI_P1/I_P2/TI_P2/Out: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
+				__func__, pda_dev->id, dma_i_p1, dma_ti_p1, dma_i_p2, dma_ti_p2, dma_out);
+			pda_dev->irq_type |= (1 << PDA_IRQ_ERROR);
+			pda_dev->err_tags |= (1 << PDA_ERR_HANG);
+			dev_info(pda_dev->dev, "DMA error detected\n");
+		} else {
+			dev_info(pda_dev->dev, "pda-%d: pda_status:0x%x, Not OTF PDA irq",
+				pda_dev->id, pda_status);
+			wake_thread = false;
+		}
 	}
 
 	if (pda_dev->irq_type)
