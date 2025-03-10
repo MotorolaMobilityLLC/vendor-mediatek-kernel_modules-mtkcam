@@ -18,9 +18,7 @@
 
 #include "iommu_debug.h"
 
-#ifdef CFG_MTK_VMM_NOTIFIER_SUPPORT
 #include "mtk-vmm-notifier.h"
-#endif
 
 #if IS_ENABLED(CONFIG_MTK_AEE_FEATURE)
 #include <aee.h>
@@ -300,9 +298,7 @@ static inline void PDA_Prepare_Enable_ccf_clock(void)
 
 	pda_clk_prepare_enable();
 
-#ifdef CFG_MTK_VMM_NOTIFIER_SUPPORT
 	vmm_enable_cvfs(VMM_CVFS_USR_PDA, VMM_CVFS_CAM_SEL);
-#endif
 }
 
 static inline void PDA_Disable_Unprepare_ccf_clock(void)
@@ -314,9 +310,7 @@ static inline void PDA_Disable_Unprepare_ccf_clock(void)
 		return;
 	}
 
-#ifdef CFG_MTK_VMM_NOTIFIER_SUPPORT
 	vmm_disable_cvfs(VMM_CVFS_USR_PDA, VMM_CVFS_CAM_SEL);
-#endif
 
 	pda_clk_disable_unprepare();
 
@@ -1348,9 +1342,7 @@ static void TF_dump_log(unsigned int hw_trigger_num)
 	mtk_smi_dbg_hang_detect("PDA device");
 #endif
 
-#ifdef CFG_MTK_VMM_NOTIFIER_SUPPORT
 	vmm_cvfs_dump();
-#endif
 
 	// check debug data
 	for (i = 0; i < hw_trigger_num; i++) {
