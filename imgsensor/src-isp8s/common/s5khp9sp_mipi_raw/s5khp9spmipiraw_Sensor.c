@@ -200,6 +200,7 @@ static int s5khp9sp_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 			break;
 		}
 	}
+	commit_i2c_buffer(ctx);
 	subdrv_ixc_wr_u8(ctx, 0x0104, 0x00);
 
 	ctx->fast_mode_on = TRUE;
