@@ -847,6 +847,7 @@ struct swfrm_info_t {
 	uint8_t is_capture;   /* deprecated */
 	uint32_t memory_mode; /* refer to IMGSYS_MEMORY_MODE_XXX */
 	uint8_t is_ndd;
+	int8_t is_ctrl_cache;
 };
 #define HWTOKEN_MAX 100
 struct cleartoken_info_t {

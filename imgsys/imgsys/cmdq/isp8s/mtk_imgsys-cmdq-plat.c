@@ -17,6 +17,7 @@
 #include <linux/sched.h>
 #include <uapi/linux/sched/types.h>
 #include <linux/mailbox_controller.h>
+#include <linux/delay.h>
 #include <mtk_imgsys-engine-isp8s.h>
 #include "mtk_imgsys-cmdq.h"
 #include "mtk_imgsys-cmdq-plat.h"
@@ -80,6 +81,23 @@ static struct mutex cpr_lock;
 #endif
 
 static int isc_irq_enabled;
+
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+static dma_addr_t g_pkt_reuse_pa[IMGSYS_NOR_THD];
+static u32 *g_pkt_reuse_va[IMGSYS_NOR_THD];
+static struct cmdq_pkt *g_pkt_reuse[IMGSYS_NOR_THD];
+static u32 is_pkt_created[IMGSYS_NOR_THD];
+static u32 cur_cmd_block[IMGSYS_NOR_THD];
+static u32 g_reuse_cmd_num[IMGSYS_NOR_THD];
+static u32 g_reuse_cmd_num_max[IMGSYS_NOR_THD];
+static struct cmdq_reuse g_event_reuse[IMGSYS_NOR_THD][IMGSYS_PKT_EVENT_NUM];
+static u32 g_reuse_event_num[IMGSYS_NOR_THD];
+static u32 g_reuse_event_num_max[IMGSYS_NOR_THD];
+static void *g_reuse_cb_param[IMGSYS_NOR_THD][IMGSYS_PKT_REUSE_CB_NUM];
+static u32 g_cb_idx[IMGSYS_NOR_THD];
+static u32 cur_cb_idx[IMGSYS_NOR_THD];
+static size_t g_pkt_reuse_ofst[IMGSYS_NOR_THD][IMGSYS_PKT_REUSE_POOL_NUM][MAX_FRAME_IN_TASK];
+#endif
 
 u32 imgsys_cmdq_is_stream_off(void)
 {
@@ -262,6 +280,23 @@ void imgsys_cmdq_streamon_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 	g_pkt_mae_va_end = g_pkt_mae_va + SRAM_SIZE / REG_SIZE;
 	mutex_init(&cpr_lock);
 #endif
+
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+	for (idx = 0; idx < IMGSYS_NOR_THD; idx++) {
+		g_pkt_reuse[idx] = NULL;
+		is_pkt_created[idx] = 0;
+		g_pkt_reuse_va[idx] = cmdq_mbox_muti_buf_alloc(
+			imgsys_clt[idx], &g_pkt_reuse_pa[idx], IMGSYS_PKT_REUSE_PAGE_NUM);
+		g_pkt_reuse[idx] = NULL;
+		cur_cmd_block[idx] = 0;
+		g_reuse_cmd_num[idx] = 0;
+		g_reuse_cmd_num_max[idx] = 0;
+		g_reuse_event_num[idx] = 0;
+		g_reuse_event_num_max[idx] = 0;
+		g_cb_idx[idx] = 0;
+		cur_cb_idx[idx] = 0;
+	}
+#endif
 }
 
 void imgsys_cmdq_streamoff_plat8s(struct mtk_imgsys_dev *imgsys_dev)
@@ -289,6 +324,13 @@ void imgsys_cmdq_streamoff_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 	mae_pa = 0;
 	is_mae_read_cmd = 0;
 	#endif
+
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+	for (idx = 0; idx < IMGSYS_NOR_THD; idx++) {
+		cmdq_mbox_muti_buf_free(imgsys_clt[idx], g_pkt_reuse_va[idx],
+			g_pkt_reuse_pa[idx], IMGSYS_PKT_REUSE_PAGE_NUM);
+	}
+#endif
 
 	#if IMGSYS_SECURE_ENABLE
 	mutex_lock(&(imgsys_dev->sec_task_lock));
@@ -467,7 +509,10 @@ static void imgsys_cmdq_cb_work_plat8s(struct work_struct *work)
 #endif
 
 #ifndef CONFIG_FPGA_EARLY_PORTING
-	mtk_imgsys_power_ctrl_plat8s(imgsys_dev, false);
+	#ifdef IMGSYS_CMDQ_PKT_REUSE
+	if (cb_param->isPktReuse == 0)
+	#endif
+		mtk_imgsys_power_ctrl_plat8s(imgsys_dev, false);
 #endif
 
 	if (imgsys_cmdq_ts_enable_plat8s()) {
@@ -542,6 +587,10 @@ static void imgsys_cmdq_cb_work_plat8s(struct work_struct *work)
 		pr_info("%s: [ERROR] cb(%p) pipe already streamoff(%d)!\n",
 			__func__, cb_param, is_stream_off);
 
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+	if (cb_param->isPktReuse == 1)
+		goto imgsys_cmdq_pkt_destroy;
+#endif
 	if (imgsys_cmdq_dbg_enable_plat8s())
 		dev_dbg(imgsys_dev->dev,
 			"%s: req fd/no(%d/%d) frame no(%d) cb(%p)frm_info(%p) isBlkLast(%d) isFrmLast(%d) isECB(%d) isGPLast(%d) isGPECB(%d) for frm(%d/%d)\n",
@@ -677,8 +726,17 @@ static void imgsys_cmdq_cb_work_plat8s(struct work_struct *work)
 		(cb_param->cmdqTs.tsUserCbEnd-cb_param->cmdqTs.tsUserCbStart),
 		(tsDvfsQosEnd-tsDvfsQosStart));
 
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+imgsys_cmdq_pkt_destroy:
+	if ((cb_param->is_ctrl_cache <= 0) ||
+		((cb_param->is_ctrl_cache == 1) && (cb_param->isPktReuse == 1))) {
+		cmdq_pkt_wait_complete(cb_param->pkt);
+		cmdq_pkt_destroy_no_wq(cb_param->pkt);
+	}
+#else
 	cmdq_pkt_wait_complete(cb_param->pkt);
 	cmdq_pkt_destroy_no_wq(cb_param->pkt);
+#endif
 	cb_param->cmdqTs.tsReqEnd = ktime_get_boottime_ns()/1000;
 	IMGSYS_CMDQ_SYSTRACE_END();
 
@@ -729,6 +787,10 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 	u32 read_cnt = 0;
 	struct mtk_imgsys_hw_info *mae_info = NULL;
 #endif
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+	u32 cookie = 0;
+	u32 cb_cnt = 0;
+#endif
 
 	if (imgsys_cmdq_dbg_enable_plat8s())
 		pr_debug("%s: +\n", __func__);
@@ -739,6 +801,34 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 	}
 
 	cb_param = (struct mtk_imgsys_cb_param *)data.data;
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+	if (cb_param->pkt->loop == true) {
+		cookie = cb_param->pkt->cookie;
+		cb_cnt = cb_param->pkt->cookie_diff;
+		if (imgsys_cmdq_dbg_enable_plat8s())
+			pr_info(
+				"%s: [pkt_reuse] cb(%p) thd_idx(%d) cb_idx(%d/%d) cookie(%d) cb_cnt(%d)",
+				__func__, cb_param, cb_param->thd_idx,
+				cur_cb_idx[cb_param->thd_idx], g_cb_idx[cb_param->thd_idx], cookie, cb_cnt);
+		if (g_reuse_cb_param[cb_param->thd_idx][cur_cb_idx[cb_param->thd_idx]] != NULL) {
+			cb_param = g_reuse_cb_param[cb_param->thd_idx][cur_cb_idx[cb_param->thd_idx]];
+			g_reuse_cb_param[cb_param->thd_idx][cur_cb_idx[cb_param->thd_idx]] = NULL;
+			cur_cb_idx[cb_param->thd_idx]++;
+			if (cur_cb_idx[cb_param->thd_idx] == IMGSYS_PKT_REUSE_CB_NUM)
+				cur_cb_idx[cb_param->thd_idx] = 0;
+		} else {
+			pr_info(
+				"%s: [ERROR] No more cb_param is left, run pkt_reuse uninit flow! pkt_cb(%p) error(%d)  gid(%d) for frm(%d/%d) blk(%d/%d) ofst(0x%lx) task(%d/%d/%d) thd_idx(%d) cb_idx(%d/%d)",
+				__func__, cb_param, data.err, cb_param->group_id,
+				cb_param->frm_idx, cb_param->frm_num,
+				cb_param->blk_idx, cb_param->blk_num,
+				cb_param->pkt->err_data.offset,
+				cb_param->task_id, cb_param->task_num, cb_param->task_cnt, cb_param->thd_idx,
+				cur_cb_idx[cb_param->thd_idx], g_cb_idx[cb_param->thd_idx]);
+			goto imgsys_cmdq_queue_cb_work;
+		}
+	}
+#endif
 	cb_param->err = data.err;
 	cb_param->cmdqTs.tsCmdqCbStart = ktime_get_boottime_ns()/1000;
 	imgsys_dev = cb_param->imgsys_dev;
@@ -1289,6 +1379,15 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 				cb_param->pkt->err_data.event, isQOFhang);
 			err_pc = cmdq_pkt_get_pa_by_offset(cb_param->pkt, cb_param->pkt->err_data.offset);
 			cmdq_pkt_dump_buf(cb_param->pkt, err_pc);
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+		} else if ((event >= IMGSYS_CMDQ_PKT_REUSE_BEGIN) &&
+			(event <= IMGSYS_CMDQ_PKT_REUSE_END)) {
+			pr_info(
+				"%s: [ERROR] PKT_REUSE event timeout! wfe(%d) event(%d)",
+				__func__,
+				cb_param->pkt->err_data.wfe_timeout,
+				cb_param->pkt->err_data.event);
+#endif
 		} else if ((event >= IMGSYS_CMDQ_GPR_EVENT_BEGIN) &&
 			(event <= IMGSYS_CMDQ_GPR_EVENT_END)) {
 			isHWhang = 1;
@@ -1465,9 +1564,18 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 				mtk_imgsys_cmdq_qof_dump(cb_param->hw_comb, true);
 			);
 		}
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+	} else {
+		/* Reset timer if pkt reuse case */
+		if ((cb_param->is_ctrl_cache == 1) && (cb_param->isFrmLast == 1))
+			cmdq_thread_reset_timer(imgsys_clt[cb_param->thd_idx]->chan);
+#endif
 	}
 	cb_param->cmdqTs.tsCmdqCbEnd = ktime_get_boottime_ns()/1000;
 
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+imgsys_cmdq_queue_cb_work:
+#endif
 #if CMDQ_CB_KTHREAD
 	kthread_init_work(&cb_param->cmdq_cb_work, imgsys_cmdq_cb_work_plat8s);
 	kthread_queue_work(&imgsys_cmdq_worker, &cb_param->cmdq_cb_work);
@@ -1495,6 +1603,32 @@ int imgsys_cmdq_task_aee_cb_plat8s(struct cmdq_cb_data data)
 
 	err_ofst = cb_param->pkt->err_data.offset;
 	err_idx = 0;
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+	if (pkt->loop == true) {
+		if (g_reuse_cb_param[cb_param->thd_idx][cur_cb_idx[cb_param->thd_idx]] != NULL) {
+			cb_param = g_reuse_cb_param[cb_param->thd_idx][cur_cb_idx[cb_param->thd_idx]];
+			pr_info(
+				"%s: [ERROR] pkt_cb(%p) real_cb(%p) error(%d)  gid(%d) for frm(%d/%d) blk(%d/%d) ofst(0x%lx) erridx(%d/%d) task(%d/%d/%d) thd_idx(%d) cb_idx(%d/%d)",
+				__func__, pkt->user_priv, cb_param, cb_param->err, cb_param->group_id,
+				cb_param->frm_idx, cb_param->frm_num,
+				cb_param->blk_idx, cb_param->blk_num,
+				cb_param->pkt->err_data.offset,
+				err_idx, real_frm_idx,
+				cb_param->task_id, cb_param->task_num, cb_param->task_cnt, cb_param->thd_idx,
+				cur_cb_idx[cb_param->thd_idx], g_cb_idx[cb_param->thd_idx]);
+		} else {
+			pr_info(
+				"%s: [ERROR] No more cb_param is left, run pkt_reuse uninit flow! pkt_cb(%p) error(%d)  gid(%d) for frm(%d/%d) blk(%d/%d) ofst(0x%lx) erridx(%d/%d) task(%d/%d/%d) thd_idx(%d) cb_idx(%d/%d)",
+				__func__, cb_param, cb_param->err, cb_param->group_id,
+				cb_param->frm_idx, cb_param->frm_num,
+				cb_param->blk_idx, cb_param->blk_num,
+				cb_param->pkt->err_data.offset,
+				err_idx, real_frm_idx,
+				cb_param->task_id, cb_param->task_num, cb_param->task_cnt, cb_param->thd_idx,
+				cur_cb_idx[cb_param->thd_idx], g_cb_idx[cb_param->thd_idx]);
+		}
+	}
+#endif
 	for (idx = 0; idx < cb_param->task_cnt; idx++)
 		if (err_ofst > cb_param->pkt_ofst[idx])
 			err_idx++;
@@ -2021,6 +2155,16 @@ int imgsys_cmdq_task_aee_cb_plat8s(struct cmdq_cb_data data)
 			__func__,
 			cb_param->pkt->err_data.wfe_timeout,
 			cb_param->pkt->err_data.event);
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+	} else if ((event >= IMGSYS_CMDQ_PKT_REUSE_BEGIN) &&
+		(event <= IMGSYS_CMDQ_PKT_REUSE_END)) {
+		ret = CMDQ_NO_AEE;
+		pr_info(
+			"%s: [ERROR] PKT_REUSE event timeout! wfe(%d) event(%d)",
+			__func__,
+			cb_param->pkt->err_data.wfe_timeout,
+			cb_param->pkt->err_data.event);
+#endif
 	} else if ((event >= IMGSYS_CMDQ_GPR_EVENT_BEGIN) &&
 		(event <= IMGSYS_CMDQ_GPR_EVENT_END)) {
 		isHWhang = 1;
@@ -2087,7 +2231,8 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 	int ret = 0, ret_flush = 0, ret_sn = 0;
 	u64 tsReqStart = 0;
 	u64 tsDvfsQosStart = 0, tsDvfsQosEnd = 0;
-	u32 frm_num = 0, frm_idx = 0;
+	u32 frm_num = 0;
+	int frm_idx = 0;
 	u32 cmd_ofst = 0;
 	bool isPack = 0;
 	u32 task_idx = 0;
@@ -2105,6 +2250,12 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 #ifdef IMGSYS_MAE_WRITE_BACK_SUPPORT
 	struct mtk_imgsys_hw_info mae_info = {0};
 #endif
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+	u32 reuse_cmd_num = 0;
+	u32 reuse_event_num = 0;
+	u32 reuse_task_idx = 0;
+#endif
+
 	dvfs_info = &imgsys_dev->dvfs_info;
 	/* PMQOS API */
 	tsDvfsQosStart = ktime_get_boottime_ns()/1000;
@@ -2240,13 +2391,49 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 			}
 		}
 
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+		/* ToDo: Temp solution for DIP nonBS w/o pkt reuse */
+		//if ((thd_idx == 6) || (thd_idx == 8))
+			//frm_info->is_ctrl_cache = 0;
+
+		/* This segment deal with scenario change from isCtrlCache=1 to isCtrlCache=0. */
+		/* We need to wait previous pkt done and reset all reuse parameter. */
+		if ((frm_info->is_ctrl_cache <= 0) &&
+			(is_pkt_created[thd_idx] == IMGSYS_PKT_REUSE_POOL_NUM)) {
+			/* Check all callback is done */
+			while ((g_cb_idx[thd_idx] != cur_cb_idx[thd_idx]) &&
+				(g_reuse_cb_param[thd_idx][cur_cb_idx[thd_idx]] != NULL)) {
+				dev_dbg(imgsys_dev->dev,
+					"%s: wait for pkt_reuse job done, thd_idx(%d), cb_idx(%d/%d)\n",
+					__func__, thd_idx, cur_cb_idx[thd_idx], g_cb_idx[thd_idx]);
+				usleep_range(1000, 1050);
+			}
+				cmdq_mbox_stop(imgsys_clt[thd_idx]);
+				is_pkt_created[thd_idx] = 0;
+				g_pkt_reuse[thd_idx] = NULL;
+				cur_cmd_block[thd_idx] = 0;
+				g_reuse_cmd_num[thd_idx] = 0;
+				g_reuse_cmd_num_max[thd_idx] = 0;
+				g_reuse_event_num[thd_idx] = 0;
+				g_reuse_event_num_max[thd_idx] = 0;
+				g_cb_idx[thd_idx] = 0;
+				cur_cb_idx[thd_idx] = 0;
+				for (int pkt_idx = 0; pkt_idx < IMGSYS_PKT_REUSE_POOL_NUM; pkt_idx++) {
+					cmdq_clear_event(imgsys_clt[0]->chan,
+						imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_PKT_REUSE_POOL_0].event +
+						(thd_idx * IMGSYS_PKT_REUSE_POOL_NUM) + pkt_idx);
+				}
+		}
+#endif
+
 		if (imgsys_cmdq_dbg_enable_plat8s())
 			dev_dbg(imgsys_dev->dev,
-				"%s: req fd/no(%d/%d) frame no(%d) frm(%d/%d) cmd_oft(0x%x/0x%x), cmd_len(%d), num(%d), sz_per_cmd(%lu), frm_blk(%d), hw_comb(0x%x), sync_id(%d), gce_thd(%d), gce_clt(0x%lx)\n",
+				"%s: req fd/no(%d/%d) frame no(%d) frm(%d/%d) cmd_oft(0x%x/0x%x), cmd_len(%d), num(%d), sz_per_cmd(%lu), frm_blk(%d), hw_comb(0x%x), sync_id(%d), gce_thd(%d), gce_clt(0x%lx), ctrl_cache(%d)\n",
 				__func__, frm_info->request_fd, frm_info->request_no, frm_info->frame_no,
 				frm_idx, frm_num, cmd_buf->cmd_offset, cmd_ofst, cmd_buf->curr_length,
 				cmd_num, sizeof(struct Command), cmd_buf->frame_block,
-				frm_info->user_info[frm_idx].hw_comb, frm_info->sync_id, thd_idx, (unsigned long)clt);
+				frm_info->user_info[frm_idx].hw_comb, frm_info->sync_id, thd_idx, (unsigned long)clt,
+				frm_info->is_ctrl_cache);
 
 		cmd_idx = 0;
 		if (isTimeShared)
@@ -2255,7 +2442,17 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 			tsReqStart = ktime_get_boottime_ns()/1000;
 			if (isPack == 0) {
 				/* create pkt and hook clt as pkt's private data */
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+				if ((frm_info->is_ctrl_cache <= 0) ||
+					(((frm_info->is_ctrl_cache == 1) &&
+					(is_pkt_created[thd_idx] == 0) &&
+					(frm_idx == 0))))
+					pkt = cmdq_pkt_create(clt);
+				else
+					pkt = g_pkt_reuse[thd_idx];
+#else
 				pkt = cmdq_pkt_create(clt);
+#endif
 				if (pkt == NULL) {
 					pr_info(
 						"%s: [ERROR] cmdq_pkt_create fail in block(%d)!\n",
@@ -2264,6 +2461,17 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 						mutex_unlock(&(imgsys_dev->vss_blk_lock));
 					return -1;
 				}
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+				/* Add wait event for block cmd */
+				if ((frm_info->is_ctrl_cache == 1) &&
+					(is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM) &&
+					(frm_idx == 0)) {
+					cmdq_pkt_wfe(pkt,
+						imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_PKT_REUSE_POOL_0].event +
+						(thd_idx * IMGSYS_PKT_REUSE_POOL_NUM) + is_pkt_created[thd_idx]);
+					cmdq_pkt_jump(pkt, CMDQ_JUMP_PASS);
+				}
+#endif
 				if (imgsys_cmdq_dbg_enable_plat8s())
 					pr_debug(
 						"%s: cmdq_pkt_create success(0x%lx) in block(%d) for frm(%d/%d)\n",
@@ -2273,10 +2481,15 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 			}
 
 			if (is_qof_sec_mode == false) {
-				MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
-					mtk_imgsys_cmdq_qof_add(pkt, qof_need_sub,
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+				if ((frm_info->is_ctrl_cache <= 0) ||
+					(((frm_info->is_ctrl_cache == 1) &&
+					(is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM))))
+#endif
+					MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
+						mtk_imgsys_cmdq_qof_add(pkt, qof_need_sub,
 						frm_info->user_info[frm_idx].hw_comb);
-				);
+					);
 			} else {
 				//enable all mtcmos
 				MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
@@ -2302,10 +2515,15 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 			if (imgsys_cmdq_dbg_enable_plat8s())
 				pr_debug("%s, is_secFrm = %d.",
 					__func__, frm_info->user_info[frm_idx].is_secFrm);
-			MTK_IMGSYS_QOS_ENABLE(imgsys_dev->hwqos_info.hwqos_support,
-				mtk_imgsys_cmdq_hwqos_report(
-					pkt, &imgsys_dev->hwqos_info, &frm_info->fps);
-			);
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+			if ((frm_info->is_ctrl_cache <= 0) ||
+				(((frm_info->is_ctrl_cache == 1) &&
+				(is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM))))
+#endif
+				MTK_IMGSYS_QOS_ENABLE(imgsys_dev->hwqos_info.hwqos_support,
+					mtk_imgsys_cmdq_hwqos_report(
+						pkt, &imgsys_dev->hwqos_info, &frm_info->fps);
+				);
 			ret = imgsys_cmdq_parser_plat8s(imgsys_dev, frm_info, pkt,
 				&cmd[cmd_idx], hw_comb, frm_info->user_info[frm_idx].sw_ridx,
 				(pkt_ts_pa + 4 * pkt_ts_ofst), &pkt_ts_num, thd_idx,
@@ -2332,13 +2550,34 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 
 			/* Check for packing gce task */
 			pkt_ofst[task_cnt] = pkt->cmd_buf_size - CMDQ_INST_SIZE;
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+			if ((frm_info->is_ctrl_cache == 1) &&
+				(is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM)) {
+				g_pkt_reuse_ofst[thd_idx][is_pkt_created[thd_idx]][frm_idx] =
+					pkt_ofst[task_cnt];
+				if (imgsys_cmdq_dbg_enable_plat8s()) {
+					dev_dbg(imgsys_dev->dev,
+						"%s: req fd/no(%d/%d) frame no(%d) frm(%d/%d) g_pkt_reuse_ofst[%d][%d][%d] = 0x%lx\n",
+						__func__,
+						frm_info->request_fd, frm_info->request_no, frm_info->frame_no,
+						frm_idx, frm_num, thd_idx, is_pkt_created[thd_idx], frm_idx,
+						g_pkt_reuse_ofst[thd_idx][is_pkt_created[thd_idx]][frm_idx]);
+				}
+			}
+#endif
 			task_cnt++;
 			if ((frm_info->user_info[frm_idx].is_time_shared)
 				|| (frm_info->user_info[frm_idx].is_secFrm)
 				|| (frm_info->user_info[frm_idx].is_earlycb)
 				|| ((frm_idx + 1) == frm_num)) {
 #ifndef CONFIG_FPGA_EARLY_PORTING
-				mtk_imgsys_power_ctrl_plat8s(imgsys_dev, true);
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+				if ((frm_info->is_ctrl_cache <= 0) ||
+					((frm_info->is_ctrl_cache == 1) && (is_pkt_created[thd_idx] == 0)) ||
+					((frm_info->is_ctrl_cache == 1) && (is_pkt_created[thd_idx] ==
+					IMGSYS_PKT_REUSE_POOL_NUM)))
+#endif
+					mtk_imgsys_power_ctrl_plat8s(imgsys_dev, true);
 #endif
 				/* Prepare cb param */
 #ifdef IMGSYS_CMDQ_CBPARAM_NUM
@@ -2413,8 +2652,10 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 #endif
 				if (imgsys_cmdq_dbg_enable_plat8s())
 					dev_dbg(imgsys_dev->dev,
-						"%s: cb_param kzalloc success cb(%p) in block(%d) for frm(%d/%d)!\n",
-						__func__, cb_param, blk_idx, frm_idx, frm_num);
+						"%s: req fd/no(%d/%d) frame no(%d) thd_idx(%d) cb_param kzalloc success cb(%p) in block(%d) for frm(%d/%d)!\n",
+						__func__,
+						frm_info->request_fd, frm_info->request_no, frm_info->frame_no,
+						thd_idx, cb_param, blk_idx, frm_idx, frm_num);
 
 				task_num++;
 #ifdef IMGSYS_MAE_WRITE_BACK_SUPPORT
@@ -2449,8 +2690,31 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				cb_param->thd_idx = thd_idx;
 				cb_param->clt = clt;
 				cb_param->task_cnt = task_cnt;
-				for (task_idx = 0; task_idx < task_cnt; task_idx++)
+				for (task_idx = 0; task_idx < task_cnt; task_idx++) {
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+					if ((frm_info->is_ctrl_cache <= 0) ||
+						(((frm_info->is_ctrl_cache == 1) &&
+						(is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM))))
+						cb_param->pkt_ofst[task_idx] = pkt_ofst[task_idx];
+					else {
+						reuse_task_idx = frm_idx-task_cnt+1+task_idx;
+						cb_param->pkt_ofst[task_idx] =
+						g_pkt_reuse_ofst[thd_idx][cur_cmd_block[thd_idx]][reuse_task_idx];
+					if (imgsys_cmdq_dbg_enable_plat8s())
+						dev_dbg(imgsys_dev->dev,
+							"%s: req fd/no(%d/%d) frame no(%d) frm(%d/%d) task_cnt(%d) cb_param->pkt_ofst[%d] = 0x%lx; g_pkt_reuse_ofst[%d][%d][%d] = 0x%lx\n",
+							__func__,
+							frm_info->request_fd, frm_info->request_no, frm_info->frame_no,
+							frm_idx, frm_num, task_cnt, task_idx,
+							cb_param->pkt_ofst[task_idx], thd_idx,
+							cur_cmd_block[thd_idx], reuse_task_idx,
+							g_pkt_reuse_ofst[thd_idx][cur_cmd_block[thd_idx]][
+							reuse_task_idx]);
+					}
+#else
 					cb_param->pkt_ofst[task_idx] = pkt_ofst[task_idx];
+#endif
+				}
 				task_cnt = 0;
 				cb_param->task_id = task_id;
 				task_id++;
@@ -2464,6 +2728,8 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				}
 				cb_param->batchnum = frm_info->batchnum;
 				cb_param->memory_mode = frm_info->memory_mode;
+				cb_param->is_ctrl_cache = frm_info->is_ctrl_cache;
+				cb_param->isPktReuse = 0;
 
 				if (imgsys_cmdq_dbg_enable_plat8s())
 					dev_dbg(imgsys_dev->dev,
@@ -2490,9 +2756,17 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				/* flush synchronized, block API */
 				cb_param->cmdqTs.tsFlushStart = ktime_get_boottime_ns()/1000;
 				tsflushStart = cb_param->cmdqTs.tsFlushStart;
-
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+				if ((frm_info->is_ctrl_cache <= 0) ||
+					(((frm_info->is_ctrl_cache == 1) &&
+					(is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM)))) {
+					pkt->aee_cb = imgsys_cmdq_task_aee_cb_plat8s;
+					pkt->user_priv = (void *)cb_param;
+				}
+#else
 				pkt->aee_cb = imgsys_cmdq_task_aee_cb_plat8s;
 				pkt->user_priv = (void *)cb_param;
+#endif
 
 				IMGSYS_CMDQ_SYSTRACE_BEGIN(
 					"%s_%s|Imgsys MWFrame:#%d MWReq:#%d ReqFd:%d fidx:%d hw_comb:0x%x Own:%llx cb(%p) frm(%d/%d) blk(%d/%d)",
@@ -2503,27 +2777,139 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					frm_info->frm_owner, cb_param, frm_idx, frm_num,
 					blk_idx, blk_num);
 
-				MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
-					mtk_imgsys_cmdq_qof_sub(pkt, qof_need_sub);
-				);
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+				if ((frm_info->is_ctrl_cache <= 0) ||
+					(((frm_info->is_ctrl_cache == 1) &&
+					(is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM))))
+#endif
+					MTK_IMGSYS_QOF_NEED_RUN(imgsys_dev->qof_ver,
+						mtk_imgsys_cmdq_qof_sub(pkt, qof_need_sub);
+					);
 
-				ret_flush = cmdq_pkt_flush_async(pkt, imgsys_cmdq_task_cb_plat8s,
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+				if ((frm_info->is_ctrl_cache <= 0) ||
+					((frm_info->is_ctrl_cache == 1) &&
+					(is_pkt_created[thd_idx] == (IMGSYS_PKT_REUSE_POOL_NUM - 1)) &&
+					(cb_param->isFrmLast == 1))) {
+					if (frm_info->is_ctrl_cache == 1) {
+						//cmdq_pkt_eoc(pkt, true);
+						is_pkt_created[thd_idx] = IMGSYS_PKT_REUSE_POOL_NUM;
+						g_reuse_cmd_num_max[thd_idx] = g_reuse_cmd_num[thd_idx];
+						g_reuse_cmd_num[thd_idx] = reuse_cmd_num;
+						g_reuse_event_num_max[thd_idx] = g_reuse_event_num[thd_idx];
+						g_reuse_event_num[thd_idx] = reuse_event_num;
+						pkt->loop = true;
+						pkt->loop_cb_times_by_cookie = true;
+						pkt->skip_add_cookie = false;
+						pr_info(
+						"%s: cmdq_pkt_finalize_loop frame_last pkt(0x%lx) is_pkt(%d) thd_idx(%d) reuse_cmd(%d) reuse_cmd_max(%d) reuse_event(%d) reuse_event_max(%d)\n",
+							__func__, (unsigned long)pkt, is_pkt_created[thd_idx], thd_idx,
+							reuse_cmd_num, g_reuse_cmd_num_max[thd_idx],
+							reuse_event_num, g_reuse_event_num_max[thd_idx]);
+						cmdq_pkt_finalize_loop(pkt);
+						/* Remove user_cb for pkt_reuse removal */
+						cb_param->user_cmdq_cb = NULL;
+						cb_param->user_cmdq_err_cb = NULL;
+						cb_param->isPktReuse = 1;
+					} else
+						pkt->skip_add_cookie = true;
+
+					ret_flush = cmdq_pkt_flush_async(pkt, imgsys_cmdq_task_cb_plat8s,
 								(void *)cb_param);
+					IMGSYS_CMDQ_SYSTRACE_END();
+
+					tsFlushEnd = ktime_get_boottime_ns()/1000;
+				if (ret_flush < 0)
+					pr_info(
+					"%s: cmdq_pkt_flush_async ret(%d) for frm(%d/%d) ts(%lld)!\n",
+					__func__, ret_flush, frm_idx, frm_num,
+					tsFlushEnd - tsflushStart);
+				else {
+					if (imgsys_cmdq_dbg_enable_plat8s())
+						pr_debug(
+						"%s: cmdq_pkt_flush_async success(%d), blk(%d), frm(%d/%d), ts(%lld)!\n",
+						__func__, ret_flush, blk_idx, frm_idx, frm_num,
+						tsFlushEnd - tsflushStart);
+				}
+				} else if ((frm_info->is_ctrl_cache == 1) &&
+					(is_pkt_created[thd_idx] <= (IMGSYS_PKT_REUSE_POOL_NUM - 1))) {
+					if (is_pkt_created[thd_idx] == 0) {
+						g_pkt_reuse[thd_idx] = pkt;
+						g_reuse_cb_param[thd_idx][g_cb_idx[thd_idx]] = (void *)cb_param;
+						g_cb_idx[thd_idx]++;
+						g_cb_idx[thd_idx] = (g_cb_idx[thd_idx] == IMGSYS_PKT_REUSE_CB_NUM) ?
+							0 : g_cb_idx[thd_idx];
+						//if (g_cb_idx[thd_idx] == IMGSYS_PKT_REUSE_CB_NUM)
+							//g_cb_idx[thd_idx] = 0;
+					/* For last frame, not just early callback */
+					if (cb_param->isFrmLast == 1) {
+						reuse_cmd_num = g_reuse_cmd_num[thd_idx];
+						reuse_event_num = g_reuse_event_num[thd_idx];
+						cmdq_set_event(imgsys_clt[0]->chan,
+						imgsys_event[
+						IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_PKT_REUSE_POOL_0].event +
+						(thd_idx * IMGSYS_PKT_REUSE_POOL_NUM) + cur_cmd_block[thd_idx]);
+						cur_cmd_block[thd_idx]++;
+					}
+					} else {
+						/* Release cb_param due to not really using */
+						cb_param->isOccupy = false;
+					}
+					cmdq_pkt_eoc(pkt, true);
+					if (cb_param->isFrmLast == 1) {
+						pr_info(
+						"%s: cmdq_pkt_eoc frame_last pkt(%d)\n",
+							__func__, is_pkt_created[thd_idx]);
+						is_pkt_created[thd_idx]++;
+						// Reset frame idx to repeat cmd
+						task_num = 0; // Reset task_num
+						frm_idx = -1; // Reset frame_idx
+					}
+				} else {
+					/* pkt reuse flow for block cmd */
+					if (g_reuse_cmd_num[thd_idx] == g_reuse_cmd_num_max[thd_idx])
+						g_reuse_cmd_num[thd_idx] = 0;
+					if (g_reuse_event_num[thd_idx] == g_reuse_event_num_max[thd_idx])
+						g_reuse_event_num[thd_idx] = 0;
+
+					g_reuse_cb_param[thd_idx][g_cb_idx[thd_idx]] = (void *)cb_param;
+					g_cb_idx[thd_idx]++;
+					g_cb_idx[thd_idx] = (g_cb_idx[thd_idx] == IMGSYS_PKT_REUSE_CB_NUM) ?
+						0 : g_cb_idx[thd_idx];
+					//if (g_cb_idx[thd_idx] == IMGSYS_PKT_REUSE_CB_NUM)
+						//g_cb_idx[thd_idx] = 0;
+					/* For last frame, not just early callback */
+					if (cb_param->isFrmLast == 1) {
+						cmdq_set_event(imgsys_clt[0]->chan,
+						imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_PKT_REUSE_POOL_0].event +
+						(thd_idx * IMGSYS_PKT_REUSE_POOL_NUM) + cur_cmd_block[thd_idx]);
+						cur_cmd_block[thd_idx]++;
+						cur_cmd_block[thd_idx] =
+							(cur_cmd_block[thd_idx] == IMGSYS_PKT_REUSE_POOL_NUM) ?
+							0 : cur_cmd_block[thd_idx];
+						//if (cur_cmd_block[thd_idx] == IMGSYS_PKT_REUSE_POOL_NUM)
+							//cur_cmd_block[thd_idx] = 0;
+					}
+				}
+#else
+				ret_flush = cmdq_pkt_flush_async(pkt, imgsys_cmdq_task_cb_plat8s,
+					(void *)cb_param);
 				IMGSYS_CMDQ_SYSTRACE_END();
 
 				tsFlushEnd = ktime_get_boottime_ns()/1000;
 				if (ret_flush < 0)
 					pr_info(
 					"%s: cmdq_pkt_flush_async ret(%d) for frm(%d/%d) ts(%lld)!\n",
-						__func__, ret_flush, frm_idx, frm_num,
-						tsFlushEnd - tsflushStart);
+					__func__, ret_flush, frm_idx, frm_num,
+					tsFlushEnd - tsflushStart);
 				else {
 					if (imgsys_cmdq_dbg_enable_plat8s())
 						pr_debug(
-							"%s: cmdq_pkt_flush_async success(%d), blk(%d), frm(%d/%d), ts(%lld)!\n",
-							__func__, ret_flush, blk_idx, frm_idx, frm_num,
-							tsFlushEnd - tsflushStart);
+						"%s: cmdq_pkt_flush_async success(%d), blk(%d), frm(%d/%d), ts(%lld)!\n",
+						__func__, ret_flush, blk_idx, frm_idx, frm_num,
+						tsFlushEnd - tsflushStart);
 				}
+#endif
 				isPack = 0;
 			} else {
 				isPack = 1;
@@ -2602,9 +2988,12 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 	u32 first_read = 1;
 	struct Command *nxt_cmd;
 #endif
+	int is_ctrl_cache;
+
 	req_fd = frm_info->request_fd;
 	req_no = frm_info->request_no;
 	frm_no = frm_info->frame_no;
+	is_ctrl_cache = frm_info->is_ctrl_cache;
 
 	if (imgsys_cmdq_dbg_enable_plat8s())
 		pr_debug("%s: +, cmd(%d)\n", __func__, cmd->opcode);
@@ -2699,9 +3088,22 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				pr_info(
 				"%s: WRITE with addr(0x%08x) value(0x%08x) mask(0x%08x)\n",
 				__func__, cmd->u.address, cmd->u.value, cmd->u.mask);
-
-			cmdq_pkt_write(pkt, NULL, (dma_addr_t)cmd->u.address,
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+			if (is_ctrl_cache <= 0)
+				cmdq_pkt_write(pkt, NULL, (dma_addr_t)cmd->u.address,
 					cmd->u.value, cmd->u.mask);
+			else {
+				if (is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM)
+					cmdq_pkt_mem_move_mask(pkt, NULL,
+						g_pkt_reuse_pa[thd_idx] + (4*(g_reuse_cmd_num[thd_idx])),
+						(dma_addr_t)cmd->u.address, CMDQ_THR_SPR_IDX2, cmd->u.mask);
+				g_pkt_reuse_va[thd_idx][g_reuse_cmd_num[thd_idx]] = cmd->u.value;
+				g_reuse_cmd_num[thd_idx]++;
+			}
+#else
+			cmdq_pkt_write(pkt, NULL, (dma_addr_t)cmd->u.address,
+				cmd->u.value, cmd->u.mask);
+#endif
 			break;
 #ifdef MTK_IOVA_SINK2KERNEL
 		case IMGSYS_CMD_WRITE_FD:
@@ -2847,9 +3249,23 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					(unsigned long)cmd->u.dma_addr,
 					(cur_iova_addr >> cmd->u.right_shift));
 			}
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+			if (is_ctrl_cache <= 0)
+				cmdq_pkt_write(pkt, NULL, cmd->u.dma_addr,
+					(cur_iova_addr >> cmd->u.right_shift), 0xFFFFFFFF);
+			else {
+				if (is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM)
+					cmdq_pkt_mem_move(pkt, NULL,
+						g_pkt_reuse_pa[thd_idx] + (4*(g_reuse_cmd_num[thd_idx])),
+						(dma_addr_t)cmd->u.dma_addr, CMDQ_THR_SPR_IDX2);
+				g_pkt_reuse_va[thd_idx][g_reuse_cmd_num[thd_idx]] =
+					(cur_iova_addr >> cmd->u.right_shift);
+				g_reuse_cmd_num[thd_idx]++;
+			}
+#else
 			cmdq_pkt_write(pkt, NULL, cmd->u.dma_addr,
 				(cur_iova_addr >> cmd->u.right_shift), 0xFFFFFFFF);
-
+#endif
 			if (cmd->u.dma_addr_msb_ofst) {
 				if (imgsys_iova_dbg_enable_plat8s() || iova_dbg) {
 					pr_info(
@@ -2858,9 +3274,26 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 						(unsigned long)cmd->u.dma_addr,
 						(cur_iova_addr>>32));
 				}
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+				if (is_ctrl_cache <= 0)
+					cmdq_pkt_write(pkt, NULL,
+						(cmd->u.dma_addr + cmd->u.dma_addr_msb_ofst),
+						(cur_iova_addr>>32), 0xFFFFFFFF);
+				else {
+					if (is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM)
+						cmdq_pkt_mem_move(pkt, NULL,
+							g_pkt_reuse_pa[thd_idx] + (4*(g_reuse_cmd_num[thd_idx])),
+							(dma_addr_t)(cmd->u.dma_addr + cmd->u.dma_addr_msb_ofst),
+							CMDQ_THR_SPR_IDX2);
+					g_pkt_reuse_va[thd_idx][g_reuse_cmd_num[thd_idx]] =
+						cur_iova_addr>>32;
+					g_reuse_cmd_num[thd_idx]++;
+				}
+#else
 				cmdq_pkt_write(pkt, NULL,
 					(cmd->u.dma_addr + cmd->u.dma_addr_msb_ofst),
 					(cur_iova_addr>>32), 0xFFFFFFFF);
+#endif
 			}
 
 			break;
@@ -3095,9 +3528,13 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					__func__, cmd->u.address, cmd->u.value, cmd->u.mask, addr_msb, gpr_idx,
 					thd_idx);
 			}
-			cmdq_pkt_poll_timeout(pkt, cmd->u.value, SUBSYS_NO_SUPPORT,
-				cmd->u.address, cmd->u.mask, IMGSYS_POLL_TIME_INFINI,
-				CMDQ_GPR_R03+gpr_idx);
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+			if ((is_ctrl_cache <= 0) ||
+				((is_ctrl_cache == 0) && (is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM)))
+#endif
+				cmdq_pkt_poll_timeout(pkt, cmd->u.value, SUBSYS_NO_SUPPORT,
+					cmd->u.address, cmd->u.mask, IMGSYS_POLL_TIME_INFINI,
+					CMDQ_GPR_R03+gpr_idx);
 		}
 			break;
 		case IMGSYS_CMD_WAIT:
@@ -3107,7 +3544,24 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					__func__, cmd->u.event, imgsys_event[cmd->u.event].event,
 					cmd->u.action);
 			if (cmd->u.action == 1) {
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+				if (is_ctrl_cache <= 0)
+					cmdq_pkt_wfe(pkt, imgsys_event[cmd->u.event].event);
+				else {
+					if (is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM)
+						cmdq_pkt_wfe_reuse(pkt, imgsys_event[cmd->u.event].event,
+							&g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]]);
+					else {
+						g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]].val =
+							imgsys_event[cmd->u.event].event;
+						cmdq_pkt_reuse_buf_va(pkt,
+							&g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]], 1);
+					}
+					g_reuse_event_num[thd_idx]++;
+				}
+#else
 				cmdq_pkt_wfe(pkt, imgsys_event[cmd->u.event].event);
+#endif
 				if ((cmd->u.event >= IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_POOL_START) &&
 					(cmd->u.event <= IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_END)) {
 					event = cmd->u.event -
@@ -3121,7 +3575,24 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					event_hist[event].wait.pkt = pkt;
 				}
 			} else if (cmd->u.action == 0) {
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+				if (is_ctrl_cache <= 0)
+					cmdq_pkt_wait_no_clear(pkt, imgsys_event[cmd->u.event].event);
+				else {
+					if (is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM)
+						cmdq_pkt_wait_no_clear_reuse(pkt, imgsys_event[cmd->u.event].event,
+							&g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]]);
+					else {
+						g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]].val =
+							imgsys_event[cmd->u.event].event;
+						cmdq_pkt_reuse_buf_va(pkt,
+							&g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]], 1);
+					}
+					g_reuse_event_num[thd_idx]++;
+				}
+#else
 				cmdq_pkt_wait_no_clear(pkt, imgsys_event[cmd->u.event].event);
+#endif
 			} else
 				pr_info("%s: [ERROR]Not Support wait action(%d)!\n",
 					__func__, cmd->u.action);
@@ -3134,7 +3605,24 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					cmd->u.action);
 			}
 			if (cmd->u.action == 1) {
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+				if (is_ctrl_cache <= 0)
+					cmdq_pkt_set_event(pkt, imgsys_event[cmd->u.event].event);
+				else {
+					if (is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM)
+						cmdq_pkt_set_event_reuse(pkt, imgsys_event[cmd->u.event].event,
+							&g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]]);
+					else {
+						g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]].val =
+							imgsys_event[cmd->u.event].event;
+						cmdq_pkt_reuse_buf_va(pkt,
+							&g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]], 1);
+					}
+					g_reuse_event_num[thd_idx]++;
+				}
+#else
 				cmdq_pkt_set_event(pkt, imgsys_event[cmd->u.event].event);
+#endif
 				if ((cmd->u.event >= IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_POOL_START) &&
 					(cmd->u.event <= IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_END)) {
 					event = cmd->u.event -
@@ -3148,7 +3636,24 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					event_hist[event].set.pkt = pkt;
 				}
 			} else if (cmd->u.action == 0) {
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+				if (is_ctrl_cache <= 0)
+					cmdq_pkt_clear_event(pkt, imgsys_event[cmd->u.event].event);
+				else {
+					if (is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM)
+						cmdq_pkt_clear_event_reuse(pkt, imgsys_event[cmd->u.event].event,
+							&g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]]);
+					else {
+						g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]].val =
+							imgsys_event[cmd->u.event].event;
+						cmdq_pkt_reuse_buf_va(pkt,
+							&g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]], 1);
+					}
+					g_reuse_event_num[thd_idx]++;
+				}
+#else
 				cmdq_pkt_clear_event(pkt, imgsys_event[cmd->u.event].event);
+#endif
 			} else
 				pr_info("%s: [ERROR]Not Support update action(%d)!\n",
 					__func__, cmd->u.action);
@@ -3158,7 +3663,24 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				pr_debug(
 					"%s: ACQUIRE event(%d/%d) action(%d)\n", __func__,
 					cmd->u.event, imgsys_event[cmd->u.event].event, cmd->u.action);
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+			if (is_ctrl_cache <= 0)
+				cmdq_pkt_acquire_event(pkt, imgsys_event[cmd->u.event].event);
+			else {
+				if (is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM)
+					cmdq_pkt_acquire_event_reuse(pkt, imgsys_event[cmd->u.event].event,
+						&g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]]);
+				else {
+					g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]].val =
+						imgsys_event[cmd->u.event].event;
+					cmdq_pkt_reuse_buf_va(pkt,
+						&g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]], 1);
+				}
+				g_reuse_event_num[thd_idx]++;
+			}
+#else
 			cmdq_pkt_acquire_event(pkt, imgsys_event[cmd->u.event].event);
+#endif
 			break;
 		case IMGSYS_CMD_TIME:
 			if (imgsys_cmdq_dbg_enable_plat8s())
