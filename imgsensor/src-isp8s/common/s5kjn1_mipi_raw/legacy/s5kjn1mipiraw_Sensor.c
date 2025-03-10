@@ -1106,7 +1106,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_Gr,
 	.ana_gain_def = BASEGAIN * 4,
 	.ana_gain_min = BASEGAIN * 1,
-	.ana_gain_max = BASEGAIN * 64,
+	.ana_gain_max = BASEGAIN * 16,
 	.ana_gain_type = 2,
 	.ana_gain_step = 32,
 	.ana_gain_table = s5kjn1_ana_gain_table,
@@ -1114,11 +1114,11 @@ static struct subdrv_static_ctx static_ctx = {
 	.tuning_iso_base = 100,
 	.exposure_def = 0x3D0,
 	.exposure_min = 4,
-	.exposure_max = 0xFFFF - 10, //for no lshift
+	.exposure_max = (0xFFFF - 10) << 7,
 	.exposure_step = 1,
 	.exposure_margin = 10,
 
-	.frame_length_max = 0xFFFF,
+	.frame_length_max = 0xFFFF << 7,
 	.ae_effective_frame = 2,
 	.frame_time_delay_frame = 2,
 	.start_exposure_offset = 7389333, //11572000 , PD2241H-[B230408-1259]
@@ -1137,13 +1137,13 @@ static struct subdrv_static_ctx static_ctx = {
 	.reg_addr_exposure_lshift = 0x0704,
 
 	/*when setting a long exp and no autoextend FL, extend frame length related member*/
-	/*
-	 * .reg_addr_frame_length_lshift = 0x0702,
-	 * .fll_lshift_max = 7,
-	 * .cit_lshift_max = 7, //default=7 max=11
-	 * .stagger_rg_orger = IMGSENSOR_STAGGER_RG_SE_FIRST,
-	 * .stagger_fl_type = IMGSENSOR_STAGGER_FL_MANUAL,
-	 */
+	 .reg_addr_frame_length_lshift = 0x0702,
+	 .fll_lshift_max = 7,
+	 .cit_lshift_max = 7, //default=7 max=11
+
+	 /* stagger behavior by vendor type */
+	 .stagger_rg_order = IMGSENSOR_STAGGER_RG_SE_FIRST,
+	 .stagger_fl_type = IMGSENSOR_STAGGER_FL_MANUAL,
 
 	.reg_addr_ana_gain = {{0x0204, 0x0205},},
 	.reg_addr_frame_length = {0x0340, 0x0341},
