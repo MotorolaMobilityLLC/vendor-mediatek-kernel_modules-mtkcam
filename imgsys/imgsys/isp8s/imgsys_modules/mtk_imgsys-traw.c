@@ -62,6 +62,7 @@ const struct mtk_imgsys_init_array
 	{0x00B0, 0x3F}, /* TRAWCTL_INT_STATUS_CLR_EN */
 	{0x00B4, 0x80000000}, /* TRAWCTL_INT1_EN */
 	{0x0348, 0x00000001}, /* TRAWCTL_QOF_DDREN */
+	{0x4034, 0x30000000}, /* TRAWCTL_DMA_DEBUG_EN */
 };
 
 #if IF_0_DEFINE //YWTBD K DBG
@@ -167,26 +168,26 @@ static void imgsys_traw_dump_dma(struct mtk_imgsys_dev *a_pDev,
 	/* Dump DMA Debug Info */
 	for (Idx = 0; Idx < DebugCnt; Idx++) {
 		/* state_checksum */
-		DbgCmd = TRAW_IMGI_STATE_CHECKSUM + Idx;
+		DbgCmd = (0x30000000 | (TRAW_IMGI_STATE_CHECKSUM + Idx));
 		ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 		/* line_pix_cnt_tmp */
-		DbgCmd = TRAW_IMGI_LINE_PIX_CNT_TMP + Idx;
+		DbgCmd = (0x30000000 | (TRAW_IMGI_LINE_PIX_CNT_TMP + Idx));
 		ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 		/* line_pix_cnt */
-		DbgCmd = TRAW_IMGI_LINE_PIX_CNT + Idx;
+		DbgCmd = (0x30000000 | (TRAW_IMGI_LINE_PIX_CNT + Idx));
 		ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 
 		/* even_odd */
 		even_odd = g_DMADbgIfo[Idx].even_odd_mode;
 		if (g_DMADbgIfo[Idx].even_odd_mode) {
 			/* state_checksum */
-			DbgCmd = (TRAW_IMGI_STATE_CHECKSUM|EVEN_ODD_SEL) + Idx;
+			DbgCmd = (0x30000000 | ((TRAW_IMGI_STATE_CHECKSUM|EVEN_ODD_SEL) + Idx));
 			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 			/* line_pix_cnt_tmp */
-			DbgCmd = (TRAW_IMGI_LINE_PIX_CNT_TMP|EVEN_ODD_SEL) + Idx;
+			DbgCmd = (0x30000000 | ((TRAW_IMGI_LINE_PIX_CNT_TMP|EVEN_ODD_SEL) + Idx));
 			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 			/* line_pix_cnt */
-			DbgCmd = (TRAW_IMGI_LINE_PIX_CNT|EVEN_ODD_SEL) + Idx;
+			DbgCmd = (0x30000000 | ((TRAW_IMGI_LINE_PIX_CNT|EVEN_ODD_SEL) + Idx));
 			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 		}
 
@@ -195,7 +196,7 @@ static void imgsys_traw_dump_dma(struct mtk_imgsys_dev *a_pDev,
 		/* important_status */
 		if (DbgTy == TRAW_ULC_RDMA_DEBUG ||
 			DbgTy == TRAW_ULC_WDMA_DEBUG) {
-			DbgCmd = TRAW_IMGI_IMPORTANT_STATUS + Idx;
+			DbgCmd = (0x30000000 | (TRAW_IMGI_IMPORTANT_STATUS + Idx));
 			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut,
 			DbgCmd);
 		}
@@ -204,11 +205,11 @@ static void imgsys_traw_dump_dma(struct mtk_imgsys_dev *a_pDev,
 		if (DbgTy == TRAW_ORI_RDMA_DEBUG ||
 			DbgTy == TRAW_ULC_RDMA_DEBUG ||
 			DbgTy == TRAW_ULC_WDMA_DEBUG) {
-			DbgCmd = TRAW_IMGI_SMI_DEBUG_DATA_CASE0 + Idx;
+			DbgCmd = (0x30000000 | (TRAW_IMGI_SMI_DEBUG_DATA_CASE0 + Idx));
 			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut,
 			DbgCmd);
 			if (even_odd) {
-				DbgCmd = (TRAW_IMGI_SMI_DEBUG_DATA_CASE0|EVEN_ODD_SEL) + Idx;
+				DbgCmd = (0x30000000 | ((TRAW_IMGI_SMI_DEBUG_DATA_CASE0|EVEN_ODD_SEL) + Idx));
 				ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 			}
 		}
@@ -216,10 +217,10 @@ static void imgsys_traw_dump_dma(struct mtk_imgsys_dev *a_pDev,
 		/* ULC_RDMA or ULC_WDMA */
 		if (DbgTy == TRAW_ULC_RDMA_DEBUG ||
 			DbgTy == TRAW_ULC_WDMA_DEBUG) {
-			DbgCmd = TRAW_IMGI_TILEX_BYTE_CNT + Idx;
+			DbgCmd = (0x30000000 | (TRAW_IMGI_TILEX_BYTE_CNT + Idx));
 			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut,
 				DbgCmd);
-			DbgCmd = TRAW_IMGI_TILEY_CNT + Idx;
+			DbgCmd = (0x30000000 | (TRAW_IMGI_TILEY_CNT + Idx));
 			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut,
 				DbgCmd);
 		}
@@ -228,44 +229,53 @@ static void imgsys_traw_dump_dma(struct mtk_imgsys_dev *a_pDev,
 		if (DbgTy == TRAW_ORI_WDMA_DEBUG ||
 			DbgTy == TRAW_ULC_RDMA_DEBUG ||
 			DbgTy == TRAW_ULC_WDMA_DEBUG) {
-			DbgCmd = TRAW_IMGI_BURST_LINE_CNT + Idx;
+			DbgCmd = (0x30000000 | (TRAW_IMGI_BURST_LINE_CNT + Idx));
 			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut,
 				DbgCmd);
 		}
 
 		/* ORI_RDMA */
 		if (DbgTy == TRAW_ORI_RDMA_DEBUG) {
-			DbgCmd = TRAW_IMGI_FIFO_DEBUG_DATA_CASE1 + Idx;
+			DbgCmd = (0x30000000 | (TRAW_IMGI_FIFO_DEBUG_DATA_CASE1 + Idx));
 			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut,
 				DbgCmd);
-			DbgCmd = TRAW_IMGI_FIFO_DEBUG_DATA_CASE3 + Idx;
+			DbgCmd = (0x30000000 | (TRAW_IMGI_FIFO_DEBUG_DATA_CASE3 + Idx));
 			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut,
 				DbgCmd);
 			if (even_odd) {
-				DbgCmd = (TRAW_IMGI_FIFO_DEBUG_DATA_CASE1|EVEN_ODD_SEL) + Idx;
+				DbgCmd = (0x30000000 | ((TRAW_IMGI_FIFO_DEBUG_DATA_CASE1|EVEN_ODD_SEL) + Idx));
 				ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
-				DbgCmd = (TRAW_IMGI_FIFO_DEBUG_DATA_CASE3|EVEN_ODD_SEL) + Idx;
+				DbgCmd = (0x30000000 | ((TRAW_IMGI_FIFO_DEBUG_DATA_CASE3|EVEN_ODD_SEL) + Idx));
 				ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut, DbgCmd);
 			}
 		}
 
 		/* ORI_WDMA */
 		if (DbgTy == TRAW_ORI_WDMA_DEBUG) {
-			DbgCmd = TRAW_YUVO_T1_FIFO_DEBUG_DATA_CASE1 + Idx;
+			DbgCmd = (0x30000000 | (TRAW_YUVO_T1_FIFO_DEBUG_DATA_CASE1 + Idx));
 			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut,
 				DbgCmd);
-			DbgCmd = TRAW_YUVO_T1_FIFO_DEBUG_DATA_CASE3 + Idx;
+			DbgCmd = (0x30000000 | (TRAW_YUVO_T1_FIFO_DEBUG_DATA_CASE3 + Idx));
 			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut,
 				DbgCmd);
 		}
 
 		/* xfer_y_cnt */
 		if (DbgTy == TRAW_ULC_WDMA_DEBUG) {
-			DbgCmd = TRAW_IMGI_XFER_Y_CNT + Idx;
+			DbgCmd = (0x30000000 | (TRAW_IMGI_XFER_Y_CNT + Idx));
 			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut,
 				DbgCmd);
 		}
 	}
+	DbgCmd = (0x30000000 | 0x1101);
+				ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut,
+					DbgCmd);
+	DbgCmd = (0x30000000 | 0x1102);
+			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut,
+				DbgCmd);
+	DbgCmd = (0x30000000 | 0x1103);
+			ExeDbgCmd(a_pDev, a_pRegBA, a_DdbSel, a_DbgOut,
+				DbgCmd);
 }
 
 static void imgsys_traw_dump_cq(struct mtk_imgsys_dev *a_pDev,
@@ -1156,9 +1166,19 @@ void imgsys_traw_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	imgsys_traw_dump_smto(imgsys_dev, trawRegBA, CtlDdbSel, CtlDbgOut);
 	/* RGBBIN_T1 debug data */
 	imgsys_traw_dump_rgbbin(imgsys_dev, trawRegBA, CtlDdbSel, CtlDbgOut);
-
+	imgsys_traw_dump_module(imgsys_dev, trawRegBA, TRAW_UNP_T2_SEL, TRAW_UNP_T2_OUT);
+	imgsys_traw_dump_module(imgsys_dev, trawRegBA, TRAW_UNP_T3_SEL, TRAW_UNP_T3_OUT);
 	imgsys_traw_dump_module(imgsys_dev, trawRegBA, TRAW_PAK_T2_SEL, TRAW_PAK_T2_OUT);
+	imgsys_traw_dump_module(imgsys_dev, trawRegBA, TRAW_PAK_T3_SEL, TRAW_PAK_T3_OUT);
 	imgsys_traw_dump_module(imgsys_dev, trawRegBA, TRAW_PLNW_T1_SEL, TRAW_PLNW_T1_OUT);
+
+	void __iomem *DbgPort = (void *)(trawRegBA + DRZH2N_T3_DBG_RDATA);
+
+	pr_info("[DRZH2N_T3](0x%08X,0x%08X)\n",
+		g_RegBaseAddr+DRZH2N_T3_DBG_RDATA, ioread32(DbgPort));
+	DbgPort = (void *)(trawRegBA + DRZH2N_T5_DBG_RDATA);
+	pr_info("[DRZH2N_T5](0x%08X,0x%08X)\n",
+		g_RegBaseAddr+DRZH2N_T5_DBG_RDATA, ioread32(DbgPort));
 #endif
 err_debug_dump:
 
