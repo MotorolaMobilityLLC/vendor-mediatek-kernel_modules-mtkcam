@@ -19,7 +19,6 @@ define_mgk_ddk_ko(
         "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-isp7s",
         "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-isp7sp",
         "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-isp8",
-        "//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-isp8s",
         "{}/drivers/clk/mediatek:clk-common".format(kernel_path),
         "{}/drivers/dma-buf/heaps:system_heap".format(kernel_path),
         "{}/drivers/memory/mediatek:emi".format(kernel_path),
@@ -30,6 +29,7 @@ define_mgk_ddk_ko(
         "{}/drivers/soc/mediatek:mtk_tinysys_ipi".format(kernel_path),
         "{}/drivers/soc/mediatek:mtk-mmdvfs".format(kernel_path),
     ] +
+    (["//vendor/mediatek/kernel_modules/mtkcam/camsys:mtk-cam-isp8s",] if glob([".flag.mt6993"]) else []) +
     (["{}/drivers/misc/mediatek/vmm:mtk-vmm-notifier-mt6993".format(kernel_path)] if glob([".flag.mt6993"]) else (
       ["{}/drivers/misc/mediatek/vmm:mtk-vmm-notifier-mt6991".format(kernel_path)] if glob([".flag.mt6991"]) else (
         ["{}/drivers/misc/mediatek/vmm:mtk-vmm-notifier".format(kernel_path)]))),
