@@ -773,9 +773,9 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 
 		if (i < SVTAG_IMG_END) {
 			avg_bw =
-				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb);
+				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb) * 3 / 2;
 			peak_bw =
-				calc_bw(x_size * img_h, linet, sensor_h);
+				calc_bw(x_size * img_h, linet, sensor_h) * 3 / 2;
 			total_peak_bw += peak_bw;
 			if (ipifmt_is_raw_ufo(in->fmt.format)) {
 				/* compression ratio: 0.7x */
@@ -802,9 +802,9 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 
 		} else {
 			pd_avg_bw =
-				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb);
+				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb) * 3 / 2;
 			pd_peak_bw =
-				calc_bw(x_size * img_h, linet, sensor_h);
+				calc_bw(x_size * img_h, linet, sensor_h) * 3 / 2;
 			total_peak_bw += pd_peak_bw;
 			if (is_smmu_enabled) {
 				if (pd_avg_bw || pd_peak_bw) {
