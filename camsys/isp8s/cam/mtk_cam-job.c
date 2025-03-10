@@ -1611,6 +1611,13 @@ _apply_sensor_subsample(struct mtk_cam_job *job)
 	bool has_ctrls_from_sensor = job->sensor_hdl_obj;
 	struct v4l2_ctrl *ctrl;
 
+	if (CAM_DEBUG_ENABLED(JOB_ACTION) || 1)
+		dev_info(cam->dev,
+			 "[%s] ctx:%d seq %#x sensor_ctrl_obj:%d is_raw_trigger:%d, %p/%p\n",
+			 __func__, ctx->stream_id, job->frame_seq_no,
+			 has_ctrls_from_sensor, job->is_raw_trigger_sensor,
+			 job->req, job->req_sensor);
+
 	if (job->req_sensor)
 		req = job->req_sensor;
 
@@ -1634,12 +1641,6 @@ _apply_sensor_subsample(struct mtk_cam_job *job)
 
 	if (has_ctrls_from_sensor)
 		job_complete_sensor_ctrl_obj(job);
-
-	if (CAM_DEBUG_ENABLED(JOB_ACTION))
-		dev_info(cam->dev,
-			 "[%s] ctx:%d seq %#x sensor_ctrl_obj:%d is_raw_trigger:%d\n",
-			 __func__, ctx->stream_id, job->frame_seq_no,
-			 has_ctrls_from_sensor, job->is_raw_trigger_sensor);
 
 	if (CAM_DEBUG_ENABLED(SENSOR)) {
 		list_for_each_entry(ctrl, &job->sensor->ctrl_handler->ctrls, node) {

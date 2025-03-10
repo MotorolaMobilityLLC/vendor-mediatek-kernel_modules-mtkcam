@@ -429,6 +429,10 @@ static void mtk_cam_req_free(struct media_request *req)
 {
 	struct mtk_cam_request *cam_req = to_mtk_cam_req(req);
 
+	/* debug only */
+	pr_info("%s:%s:%s:%p",
+		__func__, cam_req->req.debug_str, cam_req->debug_str, cam_req);
+
 	vfree(cam_req);
 }
 
