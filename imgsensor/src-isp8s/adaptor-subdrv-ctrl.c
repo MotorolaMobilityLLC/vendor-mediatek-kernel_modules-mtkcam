@@ -595,7 +595,6 @@ void write_frame_length(struct subdrv_ctx *ctx, u32 fll)
 void write_frame_length_in_lut(struct subdrv_ctx *ctx, u32 fll, u32 *fll_in_lut)
 {
 	int i = 0;
-	u32 frame_length_buf;
 	u32 fll_step = 0;
 
 	check_current_scenario_id_bound(ctx);
@@ -615,8 +614,17 @@ void write_frame_length_in_lut(struct subdrv_ctx *ctx, u32 fll, u32 *fll_in_lut)
 		fll_in_lut[4] = 0;
 		ctx->frame_length_in_lut[0] = fll_in_lut[0];
 		ctx->frame_length_in_lut[1] = fll_in_lut[1];
-		ctx->frame_length =
-			ctx->frame_length_in_lut[0] + ctx->frame_length_in_lut[1];
+		if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+			ctx->frame_length =
+				ctx->frame_length_in_lut[0] +
+				ctx->frame_length_pre_store_in_lut[1];
+		} else if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 3) {
+			ctx->frame_length =
+				ctx->frame_length_in_lut[0] + ctx->frame_length_in_lut[1];
+		} else {
+			DRV_LOGE(ctx, "pls check delay_frame value!\n");
+			return;
+		}
 		break;
 	case 3:
 		if (fll_step) {
@@ -632,17 +640,26 @@ void write_frame_length_in_lut(struct subdrv_ctx *ctx, u32 fll, u32 *fll_in_lut)
 		ctx->frame_length_in_lut[0] = fll_in_lut[0];
 		ctx->frame_length_in_lut[1] = fll_in_lut[1];
 		ctx->frame_length_in_lut[2] = fll_in_lut[2];
-		ctx->frame_length =
-			ctx->frame_length_in_lut[0] +
-			ctx->frame_length_in_lut[1] +
-			ctx->frame_length_in_lut[2];
+		if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+			ctx->frame_length =
+				ctx->frame_length_in_lut[0] +
+				ctx->frame_length_pre_store_in_lut[1] +
+				ctx->frame_length_pre_store_in_lut[2];
+		} else if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 3) {
+			ctx->frame_length =
+				ctx->frame_length_in_lut[0] +
+				ctx->frame_length_in_lut[1] +
+				ctx->frame_length_in_lut[2];
+		} else {
+			DRV_LOGE(ctx, "pls check delay_frame value!\n");
+			return;
+		}
 		break;
 	default:
 		break;
 	}
 
 	if (ctx->extend_frame_length_en == FALSE) {
-		frame_length_buf = 0;
 		for (i = 0; i < 3; i++) {
 			if (fll_in_lut[i]) {
 				if (ctx->s_ctx.reg_addr_frame_length_in_lut[i].addr[2]) {
@@ -665,15 +682,13 @@ void write_frame_length_in_lut(struct subdrv_ctx *ctx, u32 fll, u32 *fll_in_lut)
 				}
 				/* update FL_lut RG value after setting buffer for writing RG */
 				ctx->frame_length_in_lut_rg[i] = fll_in_lut[i];
-				frame_length_buf +=
-					ctx->frame_length_in_lut_rg[i];
 			}
 		}
 		/* update FL RG value simultaneously */
-		ctx->frame_length_rg = frame_length_buf;
+		ctx->frame_length_rg = ctx->frame_length;
 
 		DRV_LOG(ctx,
-			"ctx:(fl(RG):%u,%u/%u/%u/%u/%u), scen_id:%u,fll(input/ctx/output_a/b/c/d/e):0x%x/%x/%x/%x/%x/%x/%x,fll_step:%u\n",
+			"ctx:(fl(RG):%u,%u/%u/%u/%u/%u), scen_id:%u,fll(input/ctx/output_a/b/c/d/e):0x%x/%x/%x/%x/%x/%x/%x,fl(pre_store):%u/%u/%u/%u/%u,fll_step:%u\n",
 			ctx->frame_length_rg,
 			ctx->frame_length_in_lut_rg[0],
 			ctx->frame_length_in_lut_rg[1],
@@ -688,6 +703,11 @@ void write_frame_length_in_lut(struct subdrv_ctx *ctx, u32 fll, u32 *fll_in_lut)
 			fll_in_lut[2],
 			fll_in_lut[3],
 			fll_in_lut[4],
+			ctx->frame_length_pre_store_in_lut[0],
+			ctx->frame_length_pre_store_in_lut[1],
+			ctx->frame_length_pre_store_in_lut[2],
+			ctx->frame_length_pre_store_in_lut[3],
+			ctx->frame_length_pre_store_in_lut[4],
 			fll_step);
 	} else {
 		DRV_LOG(ctx,
@@ -877,7 +897,14 @@ void set_frame_length_in_lut(struct subdrv_ctx *ctx,
 			switch (ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt) {
 			case 2:
 			{
-				if (i == 1 && ctx->frame_length >= ctx->frame_length_in_lut[0]) {
+				if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2 &&
+					i == 0 && ctx->frame_length >= ctx->frame_length_pre_store_in_lut[1]) {
+					/* fll_a = max(fll_a, fll-fll_b) */
+					ctx->frame_length_in_lut[i] =
+						max(ctx->frame_length_in_lut[i],
+							ctx->frame_length - ctx->frame_length_pre_store_in_lut[1]);
+				} else if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 3 &&
+					i == 1 && ctx->frame_length >= ctx->frame_length_in_lut[0]) {
 					/* fll_b = max(fll_b, fll-fll_a) */
 					ctx->frame_length_in_lut[i] =
 						max(ctx->frame_length_in_lut[i],
@@ -887,7 +914,17 @@ void set_frame_length_in_lut(struct subdrv_ctx *ctx,
 				break;
 			case 3:
 			{
-				if (i == 2 && ctx->frame_length >=
+				if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2 &&
+				i == 0 && ctx->frame_length >=
+				(ctx->frame_length_pre_store_in_lut[1] + ctx->frame_length_pre_store_in_lut[2])) {
+					/* fll_a = max(fll_a, fll-fll_b-fll_c) */
+					ctx->frame_length_in_lut[i] =
+						max(ctx->frame_length_in_lut[i],
+							(ctx->frame_length -
+							ctx->frame_length_pre_store_in_lut[1] -
+							ctx->frame_length_pre_store_in_lut[2]));
+				} else if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 3 &&
+				i == 2 && ctx->frame_length >=
 				(ctx->frame_length_in_lut[0] + ctx->frame_length_in_lut[1])) {
 					/* fll_c = max(fll_c, fll-fll_b-fll_a) */
 					ctx->frame_length_in_lut[i] =
@@ -912,8 +949,25 @@ void set_frame_length_in_lut(struct subdrv_ctx *ctx,
 
 	/* update framelength */
 	ctx->frame_length = 0;
-	for (i = 0; i < exp_cnt; i++)
-		ctx->frame_length += ctx->frame_length_in_lut[i];
+	for (i = 0; i < exp_cnt; i++) {
+		if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+			/* frame_length = fll_pre_store_in_lut[1] + fll_pre_store_in_lut[2] +
+			 * fll_pre_store_in_lut[i] + ... + fll_current_cal_in_lut[0]
+			 */
+			if (i == 0)
+				ctx->frame_length += ctx->frame_length_in_lut[i];
+			else
+				ctx->frame_length += ctx->frame_length_pre_store_in_lut[i];
+		} else if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 3) {
+			/* frame_length = fll_current_cal_in_lut[0] + fll_current_cal_in_lut[1] +
+			 * ... + fll_current_cal_in_lut[i]
+			 */
+			ctx->frame_length += ctx->frame_length_in_lut[i];
+		} else {
+			DRV_LOGE(ctx, "pls check delay_frame value!\n");
+			return;
+		}
+	}
 
 	if (gph)
 		ctx->s_ctx.s_gph((void *)ctx, 1);
@@ -922,7 +976,7 @@ void set_frame_length_in_lut(struct subdrv_ctx *ctx,
 		ctx->s_ctx.s_gph((void *)ctx, 0);
 	commit_i2c_buffer(ctx);
 	DRV_LOG(ctx,
-		"sid:%u,fll(input/ctx/output_a/b/c/d/e/min):%u/%u/%u/%u/%u/%u/%u/%u\n",
+		"sid:%u,fll(input/ctx/output_a/b/c/d/e/min):%u/%u/%u/%u/%u/%u/%u/%u,delay_frame:%u\n",
 		ctx->current_scenario_id,
 		frame_length,
 		ctx->frame_length,
@@ -931,7 +985,8 @@ void set_frame_length_in_lut(struct subdrv_ctx *ctx,
 		ctx->frame_length_in_lut[2],
 		ctx->frame_length_in_lut[3],
 		ctx->frame_length_in_lut[4],
-		ctx->min_frame_length);
+		ctx->min_frame_length,
+		ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame);
 }
 
 /**
@@ -1127,6 +1182,7 @@ void set_max_framerate_base100(struct subdrv_ctx *ctx, u16 framerate, bool min_f
 {
 	u32 frame_length = 0, current_fps = 0;
 	u32 linetime_in_ns = 0;
+	u32 frame_length_step;
 
 	if (framerate && ctx->line_length) {
 		if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
@@ -1139,6 +1195,7 @@ void set_max_framerate_base100(struct subdrv_ctx *ctx, u16 framerate, bool min_f
 		}
 	}
 
+	frame_length_step = ctx->s_ctx.mode[ctx->current_scenario_id].framelength_step;
 	ctx->frame_length = max(frame_length, ctx->min_frame_length);
 	/*
 	 * For manual mode:
@@ -1147,63 +1204,161 @@ void set_max_framerate_base100(struct subdrv_ctx *ctx, u16 framerate, bool min_f
 	if (ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_LBMF) {
 		switch (ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt) {
 		case 2:
-			ctx->frame_length_in_lut[0] =
-				max(ctx->frame_length_in_lut[0],
-					ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
-					ctx->s_ctx.mode[ctx->current_scenario_id].read_margin);
-			ctx->frame_length_in_lut[0] =
-				min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
-			ctx->frame_length_in_lut[1] =
-				max(ctx->frame_length_in_lut[1],
-					ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
-					ctx->s_ctx.mode[ctx->current_scenario_id].read_margin);
-			if (ctx->frame_length >= ctx->frame_length_in_lut[0]) {
+		{
+			if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+				ctx->frame_length_in_lut[0] =
+					max(ctx->frame_length_in_lut[0],
+						ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+						ctx->s_ctx.mode[ctx->current_scenario_id].read_margin);
+				if (ctx->frame_length >= ctx->frame_length_pre_store_in_lut[1]) {
+					ctx->frame_length_in_lut[0] =
+						max(ctx->frame_length_in_lut[0],
+							ctx->frame_length - ctx->frame_length_pre_store_in_lut[1]);
+				}
+				ctx->frame_length_in_lut[0] =
+					min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
+				ctx->frame_length_in_lut[0] = frame_length_step ?
+					roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+					ctx->frame_length_in_lut[0];
 				ctx->frame_length_in_lut[1] =
 					max(ctx->frame_length_in_lut[1],
-						ctx->frame_length - ctx->frame_length_in_lut[0]);
+						ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+						ctx->s_ctx.mode[ctx->current_scenario_id].read_margin);
+				ctx->frame_length_in_lut[1] =
+					min(ctx->frame_length_in_lut[1], ctx->s_ctx.frame_length_max);
+				ctx->frame_length_in_lut[1] = frame_length_step ?
+					roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+					ctx->frame_length_in_lut[1];
+				ctx->frame_length_in_lut[2] = 0;
+				ctx->frame_length_in_lut[3] = 0;
+				ctx->frame_length_in_lut[4] = 0;
+				/* update framelength */
+				ctx->frame_length =
+					ctx->frame_length_in_lut[0] + ctx->frame_length_pre_store_in_lut[1];
+			} else if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 3) {
+				ctx->frame_length_in_lut[0] =
+					max(ctx->frame_length_in_lut[0],
+						ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+						ctx->s_ctx.mode[ctx->current_scenario_id].read_margin);
+				ctx->frame_length_in_lut[0] =
+					min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
+				ctx->frame_length_in_lut[0] = frame_length_step ?
+					roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+					ctx->frame_length_in_lut[0];
+				ctx->frame_length_in_lut[1] =
+					max(ctx->frame_length_in_lut[1],
+						ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+						ctx->s_ctx.mode[ctx->current_scenario_id].read_margin);
+				if (ctx->frame_length >= ctx->frame_length_in_lut[0]) {
+					ctx->frame_length_in_lut[1] =
+						max(ctx->frame_length_in_lut[1],
+							ctx->frame_length - ctx->frame_length_in_lut[0]);
+				}
+				ctx->frame_length_in_lut[1] =
+					min(ctx->frame_length_in_lut[1], ctx->s_ctx.frame_length_max);
+				ctx->frame_length_in_lut[1] = frame_length_step ?
+					roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+					ctx->frame_length_in_lut[1];
+				ctx->frame_length_in_lut[2] = 0;
+				ctx->frame_length_in_lut[3] = 0;
+				ctx->frame_length_in_lut[4] = 0;
+				/* update framelength */
+				ctx->frame_length =
+					ctx->frame_length_in_lut[0] + ctx->frame_length_in_lut[1];
+			} else {
+				DRV_LOGE(ctx, "pls check delay_frame value!\n");
+				return;
 			}
-			ctx->frame_length_in_lut[1] =
-				min(ctx->frame_length_in_lut[1], ctx->s_ctx.frame_length_max);
-			ctx->frame_length_in_lut[2] = 0;
-			ctx->frame_length_in_lut[3] = 0;
-			ctx->frame_length_in_lut[4] = 0;
-			/* update framelength */
-			ctx->frame_length =
-				ctx->frame_length_in_lut[0] + ctx->frame_length_in_lut[1];
+		}
 			break;
 		case 3:
-			ctx->frame_length_in_lut[0] =
-				max(ctx->frame_length_in_lut[0],
-					ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
-					ctx->s_ctx.mode[ctx->current_scenario_id].read_margin);
-			ctx->frame_length_in_lut[0] =
-				min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
-			ctx->frame_length_in_lut[1] =
-				max(ctx->frame_length_in_lut[1],
-					ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
-					ctx->s_ctx.mode[ctx->current_scenario_id].read_margin);
-			ctx->frame_length_in_lut[1] =
-				min(ctx->frame_length_in_lut[1], ctx->s_ctx.frame_length_max);
-			ctx->frame_length_in_lut[2] =
-				max(ctx->frame_length_in_lut[2],
-					ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
-					ctx->s_ctx.mode[ctx->current_scenario_id].read_margin);
-			if (ctx->frame_length >=
-				(ctx->frame_length_in_lut[0] + ctx->frame_length_in_lut[1])) {
+		{
+			if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+				ctx->frame_length_in_lut[0] =
+					max(ctx->frame_length_in_lut[0],
+						ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+						ctx->s_ctx.mode[ctx->current_scenario_id].read_margin);
+				if (ctx->frame_length >=
+					(ctx->frame_length_pre_store_in_lut[1] +
+					ctx->frame_length_pre_store_in_lut[2])) {
+					ctx->frame_length_in_lut[0] =
+						max(ctx->frame_length_in_lut[0],
+							(ctx->frame_length - ctx->frame_length_pre_store_in_lut[1] -
+							ctx->frame_length_pre_store_in_lut[2]));
+				}
+				ctx->frame_length_in_lut[0] =
+					min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
+				ctx->frame_length_in_lut[0] = frame_length_step ?
+					roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+					ctx->frame_length_in_lut[0];
+				ctx->frame_length_in_lut[1] =
+					min(ctx->frame_length_in_lut[1], ctx->s_ctx.frame_length_max);
+				ctx->frame_length_in_lut[1] = frame_length_step ?
+					roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+					ctx->frame_length_in_lut[1];
 				ctx->frame_length_in_lut[2] =
 					max(ctx->frame_length_in_lut[2],
-						(ctx->frame_length - ctx->frame_length_in_lut[1] -
-						ctx->frame_length_in_lut[0]));
+						ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+						ctx->s_ctx.mode[ctx->current_scenario_id].read_margin);
+				ctx->frame_length_in_lut[2] =
+					min(ctx->frame_length_in_lut[2], ctx->s_ctx.frame_length_max);
+				ctx->frame_length_in_lut[2] = frame_length_step ?
+					roundup(ctx->frame_length_in_lut[2], frame_length_step) :
+					ctx->frame_length_in_lut[2];
+				ctx->frame_length_in_lut[3] = 0;
+				ctx->frame_length_in_lut[4] = 0;
+				/* update framelength */
+				ctx->frame_length =
+					ctx->frame_length_in_lut[0] +
+					ctx->frame_length_pre_store_in_lut[1] +
+					ctx->frame_length_pre_store_in_lut[2];
+			} else if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 3) {
+				ctx->frame_length_in_lut[0] =
+					max(ctx->frame_length_in_lut[0],
+						ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+						ctx->s_ctx.mode[ctx->current_scenario_id].read_margin);
+				ctx->frame_length_in_lut[0] =
+					min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
+				ctx->frame_length_in_lut[0] = frame_length_step ?
+					roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+					ctx->frame_length_in_lut[0];
+				ctx->frame_length_in_lut[1] =
+					max(ctx->frame_length_in_lut[1],
+						ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+						ctx->s_ctx.mode[ctx->current_scenario_id].read_margin);
+				ctx->frame_length_in_lut[1] =
+					min(ctx->frame_length_in_lut[1], ctx->s_ctx.frame_length_max);
+				ctx->frame_length_in_lut[1] = frame_length_step ?
+					roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+					ctx->frame_length_in_lut[1];
+				ctx->frame_length_in_lut[2] =
+					max(ctx->frame_length_in_lut[2],
+						ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+						ctx->s_ctx.mode[ctx->current_scenario_id].read_margin);
+				if (ctx->frame_length >=
+					(ctx->frame_length_in_lut[0] + ctx->frame_length_in_lut[1])) {
+					ctx->frame_length_in_lut[2] =
+						max(ctx->frame_length_in_lut[2],
+							(ctx->frame_length - ctx->frame_length_in_lut[1] -
+							ctx->frame_length_in_lut[0]));
+				}
+				ctx->frame_length_in_lut[2] =
+					min(ctx->frame_length_in_lut[2], ctx->s_ctx.frame_length_max);
+				ctx->frame_length_in_lut[2] = frame_length_step ?
+					roundup(ctx->frame_length_in_lut[2], frame_length_step) :
+					ctx->frame_length_in_lut[2];
+				ctx->frame_length_in_lut[3] = 0;
+				ctx->frame_length_in_lut[4] = 0;
+				/* update framelength */
+				ctx->frame_length =
+					ctx->frame_length_in_lut[0] +
+					ctx->frame_length_in_lut[1] +
+					ctx->frame_length_in_lut[2];
+			} else {
+				DRV_LOGE(ctx, "pls check delay_frame value!\n");
+				return;
 			}
-			ctx->frame_length_in_lut[2] =
-				min(ctx->frame_length_in_lut[2], ctx->s_ctx.frame_length_max);
-			ctx->frame_length_in_lut[3] = 0;
-			ctx->frame_length_in_lut[4] = 0;
-			/* update framelength */
-			ctx->frame_length =
-				ctx->frame_length_in_lut[0] +
-				ctx->frame_length_in_lut[1] +
-				ctx->frame_length_in_lut[2];
+		}
 			break;
 		default:
 			break;
@@ -1274,7 +1429,7 @@ void set_max_framerate_base100(struct subdrv_ctx *ctx, u16 framerate, bool min_f
 		ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_DCG_RAW_VS ||
 		ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_DCG_COMPOSE_VS)
 		DRV_LOG(ctx,
-			"sid:%u,max_fps(input/output):%u(100base)/%u(10base),min_fl_en:%u,fll(input/ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u/%u\n",
+			"sid:%u,max_fps(input/output):%u(100base)/%u(10base),min_fl_en:%u,fll(input/ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u/%u,fl(pre_store):%u/%u/%u/%u/%u\n",
 			ctx->current_scenario_id,
 			framerate, ctx->current_fps, min_framelength_en,
 			frame_length,
@@ -1283,7 +1438,12 @@ void set_max_framerate_base100(struct subdrv_ctx *ctx, u16 framerate, bool min_f
 			ctx->frame_length_in_lut[1],
 			ctx->frame_length_in_lut[2],
 			ctx->frame_length_in_lut[3],
-			ctx->frame_length_in_lut[4]);
+			ctx->frame_length_in_lut[4],
+			ctx->frame_length_pre_store_in_lut[0],
+			ctx->frame_length_pre_store_in_lut[1],
+			ctx->frame_length_pre_store_in_lut[2],
+			ctx->frame_length_pre_store_in_lut[3],
+			ctx->frame_length_pre_store_in_lut[4]);
 	else
 		DRV_LOG(ctx,
 			"max_fps(input/output-100base/output-10base):%u(100base)/%u(100base)/%u(10base), min_fl_en:%u\n",
@@ -1525,47 +1685,89 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 				return;
 			}
 		}
-		/* fll_a_min = readout + xx lines(margin) */
-		calc_fl_in_lut[0] =
-			ctx->s_ctx.mode[scenario_id].readout_length +
-			ctx->s_ctx.mode[scenario_id].read_margin;
-		/* fll_a = max(readout, previous shutter_b) */
-		calc_fl_in_lut[0] =
-			max(calc_fl_in_lut[0],
-				cit_in_lut[1] +
-				ctx->s_ctx.mode[scenario_id].exposure_margin);
-		/* fll_a = min(fll_a, fll_max) */
-		ctx->frame_length_in_lut[0] =
-			min(calc_fl_in_lut[0], ctx->s_ctx.frame_length_max);
-		ctx->frame_length_in_lut[0] = frame_length_step ?
-			roundup(ctx->frame_length_in_lut[0], frame_length_step) :
-			ctx->frame_length_in_lut[0];
-		/* fll_b_min = readout + xx lines(margin) */
-		calc_fl_in_lut[1] =
-			ctx->s_ctx.mode[scenario_id].readout_length +
-			ctx->s_ctx.mode[scenario_id].read_margin;
-		/* fll_b = max(readout, previous shutter_a) */
-		calc_fl_in_lut[1] =
-			max(calc_fl_in_lut[1], cit_in_lut[0] + ctx->s_ctx.mode[scenario_id].exposure_margin);
-		if (ctx->frame_length >= ctx->frame_length_in_lut[0]) {
-			/* fll_b = max(fll_b, fll_mode_max-fll_a) */
-			calc_fl_in_lut[1] =
-				max(calc_fl_in_lut[1],
-					ctx->frame_length - ctx->frame_length_in_lut[0]);
-		}
-		/* fll_b = min(fll_b, fll_max) */
-		ctx->frame_length_in_lut[1] =
-			min(calc_fl_in_lut[1], ctx->s_ctx.frame_length_max);
-		ctx->frame_length_in_lut[1] = frame_length_step ?
-			roundup(ctx->frame_length_in_lut[1], frame_length_step) :
-			ctx->frame_length_in_lut[1];
-		ctx->frame_length_in_lut[2] = 0;
-		ctx->frame_length_in_lut[3] = 0;
-		ctx->frame_length_in_lut[4] = 0;
-		/* update framelength */
-		ctx->frame_length =
-			ctx->frame_length_in_lut[0] + ctx->frame_length_in_lut[1];
 
+		if (ctx->s_ctx.mode[scenario_id].delay_frame == 2) {
+			/* fll_a_min = readout + xx lines(margin) */
+			calc_fl_in_lut[0] =
+				ctx->s_ctx.mode[scenario_id].readout_length +
+				ctx->s_ctx.mode[scenario_id].read_margin;
+			/* fll_a = max(readout, previous shutter_a) */
+			calc_fl_in_lut[0] =
+				max(calc_fl_in_lut[0], cit_in_lut[0] + ctx->s_ctx.exposure_margin);
+			if (ctx->frame_length >= ctx->frame_length_pre_store_in_lut[1]) {
+				/* fll_a = max(fll_a, fll_mode_max-fll_b) */
+				calc_fl_in_lut[0] =
+					max(calc_fl_in_lut[0],
+						ctx->frame_length - ctx->frame_length_in_lut[1]);
+			}
+			/* fll_a = min(fll_a, fll_max) */
+			ctx->frame_length_in_lut[0] =
+				min(calc_fl_in_lut[0], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[0] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+				ctx->frame_length_in_lut[0];
+			/* fll_b_min = readout + xx lines(margin) */
+			calc_fl_in_lut[1] =
+				ctx->s_ctx.mode[scenario_id].readout_length +
+				ctx->s_ctx.mode[scenario_id].read_margin;
+			/* fll_b = max(readout, previous shutter_b) */
+			calc_fl_in_lut[1] =
+				max(calc_fl_in_lut[1], cit_in_lut[1] + ctx->s_ctx.exposure_margin);
+			/* fll_b = min(fll_b, fll_max) */
+			ctx->frame_length_in_lut[1] =
+				min(calc_fl_in_lut[1], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[1] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+				ctx->frame_length_in_lut[1];
+			ctx->frame_length_in_lut[2] = 0;
+			ctx->frame_length_in_lut[3] = 0;
+			ctx->frame_length_in_lut[4] = 0;
+			/* update framelength */
+			ctx->frame_length =
+				ctx->frame_length_in_lut[0] + ctx->frame_length_pre_store_in_lut[1];
+		} else if (ctx->s_ctx.mode[scenario_id].delay_frame == 3) {
+			/* fll_a_min = readout + xx lines(margin) */
+			calc_fl_in_lut[0] =
+				ctx->s_ctx.mode[scenario_id].readout_length +
+				ctx->s_ctx.mode[scenario_id].read_margin;
+			/* fll_a = max(readout, previous shutter_b) */
+			calc_fl_in_lut[0] =
+				max(calc_fl_in_lut[0], cit_in_lut[1] + ctx->s_ctx.exposure_margin);
+			/* fll_a = min(fll_a, fll_max) */
+			ctx->frame_length_in_lut[0] =
+				min(calc_fl_in_lut[0], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[0] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+				ctx->frame_length_in_lut[0];
+			/* fll_b_min = readout + xx lines(margin) */
+			calc_fl_in_lut[1] =
+				ctx->s_ctx.mode[scenario_id].readout_length +
+				ctx->s_ctx.mode[scenario_id].read_margin;
+			/* fll_b = max(readout, previous shutter_a) */
+			calc_fl_in_lut[1] =
+				max(calc_fl_in_lut[1], cit_in_lut[0] + ctx->s_ctx.exposure_margin);
+			if (ctx->frame_length >= ctx->frame_length_in_lut[0]) {
+				/* fll_b = max(fll_b, fll_mode_max-fll_a) */
+				calc_fl_in_lut[1] =
+					max(calc_fl_in_lut[1],
+						ctx->frame_length - ctx->frame_length_in_lut[0]);
+			}
+			/* fll_b = min(fll_b, fll_max) */
+			ctx->frame_length_in_lut[1] =
+				min(calc_fl_in_lut[1], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[1] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+				ctx->frame_length_in_lut[1];
+			ctx->frame_length_in_lut[2] = 0;
+			ctx->frame_length_in_lut[3] = 0;
+			ctx->frame_length_in_lut[4] = 0;
+			/* update framelength */
+			ctx->frame_length =
+				ctx->frame_length_in_lut[0] + ctx->frame_length_in_lut[1];
+		} else {
+			DRV_LOGE(ctx, "pls check delay_frame value!\n");
+			return;
+		}
 		if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
 			ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
 				ctx->current_scenario_id, &linetime_in_ns, 0);
@@ -1575,10 +1777,9 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 							ctx->frame_length * 10 /
 							ctx->s_ctx.mode[scenario_id].linelength;
 		}
-
 		ctx->min_frame_length = ctx->frame_length;
 		DRV_LOG(ctx,
-			"sid:%u,max_fps(input/output):%u/%u,min_fl_en:1,lut order:%u,fll(input/ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u/%un",
+			"sid:%u,max_fps(input/output):%u/%u,min_fl_en:1,lut order:%u,fll(input/ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u/%u,delay_frame:%u\n",
 			scenario_id,
 			framerate, ctx->current_fps,
 			ctx->s_ctx.mode[scenario_id].exposure_order_in_lbmf,
@@ -1588,7 +1789,8 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 			ctx->frame_length_in_lut[1],
 			ctx->frame_length_in_lut[2],
 			ctx->frame_length_in_lut[3],
-			ctx->frame_length_in_lut[4]);
+			ctx->frame_length_in_lut[4],
+			ctx->s_ctx.mode[scenario_id].delay_frame);
 		if (ctx->s_ctx.mode[scenario_id].exposure_order_in_lbmf ==
 			IMGSENSOR_LBMF_EXPOSURE_SE_FIRST) {
 			if (ctx->s_ctx.reg_addr_auto_extend ||
@@ -1624,63 +1826,123 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 				return;
 			}
 		}
-		/* fll_a_min = readout + xx lines(margin) */
-		calc_fl_in_lut[0] =
-			ctx->s_ctx.mode[scenario_id].readout_length +
-			ctx->s_ctx.mode[scenario_id].read_margin;
-		/* fll_a = max(readout, previous shutter_b) */
-		calc_fl_in_lut[0] =
-			max(calc_fl_in_lut[0],
-				cit_in_lut[1] +
-				ctx->s_ctx.mode[scenario_id].exposure_margin);
-		/* fll_a = min(fll_a, fll_max) */
-		ctx->frame_length_in_lut[0] =
-			min(calc_fl_in_lut[0], ctx->s_ctx.frame_length_max);
-		ctx->frame_length_in_lut[0] = frame_length_step ?
-			roundup(ctx->frame_length_in_lut[0], frame_length_step) :
-			ctx->frame_length_in_lut[0];
-		/* fll_b_min = readout + xx lines(margin) */
-		calc_fl_in_lut[1] =
-			ctx->s_ctx.mode[scenario_id].readout_length +
-			ctx->s_ctx.mode[scenario_id].read_margin;
-		/* fll_b = max(readout, previous shutter_c) */
-		calc_fl_in_lut[1] =
-			max(calc_fl_in_lut[1], cit_in_lut[2] + ctx->s_ctx.mode[scenario_id].exposure_margin);
-		/* fll_b = min(fll_b, fll_max) */
-		ctx->frame_length_in_lut[1] =
-			min(calc_fl_in_lut[1], ctx->s_ctx.frame_length_max);
-		ctx->frame_length_in_lut[1] = frame_length_step ?
-			roundup(ctx->frame_length_in_lut[1], frame_length_step) :
-			ctx->frame_length_in_lut[1];
-		/* fll_c_min = readout + xx lines(margin) */
-		calc_fl_in_lut[2] =
-			ctx->s_ctx.mode[scenario_id].readout_length +
-			ctx->s_ctx.mode[scenario_id].read_margin;
-		/* fll_c = max(readout, previous shutter_a) */
-		calc_fl_in_lut[2] =
-			max(calc_fl_in_lut[2], cit_in_lut[0] + ctx->s_ctx.mode[scenario_id].exposure_margin);
-		if (ctx->frame_length >=
-			(ctx->frame_length_in_lut[0] + ctx->frame_length_in_lut[1])) {
-			/* fll_c = max(fll_c, fll_mode_max-fll_b-fll_a) */
-			calc_fl_in_lut[2] =
-				max(calc_fl_in_lut[2],
-					(ctx->frame_length - ctx->frame_length_in_lut[1] -
-					ctx->frame_length_in_lut[0]));
-		}
-		/* fll_c = min(fll_c, fll_max) */
-		ctx->frame_length_in_lut[2] =
-			min(calc_fl_in_lut[2], ctx->s_ctx.frame_length_max);
-		ctx->frame_length_in_lut[2] = frame_length_step ?
-			roundup(ctx->frame_length_in_lut[2], frame_length_step) :
-			ctx->frame_length_in_lut[2];
-		ctx->frame_length_in_lut[3] = 0;
-		ctx->frame_length_in_lut[4] = 0;
-		/* update framelength */
-		ctx->frame_length =
-			ctx->frame_length_in_lut[0] +
-			ctx->frame_length_in_lut[1] +
-			ctx->frame_length_in_lut[2];
 
+		if (ctx->s_ctx.mode[scenario_id].delay_frame == 2) {
+			/* fll_a_min = readout + xx lines(margin) */
+			calc_fl_in_lut[0] =
+				ctx->s_ctx.mode[scenario_id].readout_length +
+				ctx->s_ctx.mode[scenario_id].read_margin;
+			/* fll_a = max(readout, previous shutter_a) */
+			calc_fl_in_lut[0] =
+				max(calc_fl_in_lut[0], cit_in_lut[0] + ctx->s_ctx.exposure_margin);
+			if (ctx->frame_length >=
+				(ctx->frame_length_pre_store_in_lut[1] +
+				ctx->frame_length_pre_store_in_lut[2])) {
+				/* fll_a = max(fll_a, fll_mode_max-fll_b-fll_c) */
+				calc_fl_in_lut[0] =
+					max(calc_fl_in_lut[0],
+						(ctx->frame_length -
+						ctx->frame_length_pre_store_in_lut[1] -
+						ctx->frame_length_pre_store_in_lut[2]));
+			}
+			/* fll_a = min(fll_a, fll_max) */
+			ctx->frame_length_in_lut[0] =
+				min(calc_fl_in_lut[0], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[0] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+				ctx->frame_length_in_lut[0];
+			/* fll_b_min = readout + xx lines(margin) */
+			calc_fl_in_lut[1] =
+				ctx->s_ctx.mode[scenario_id].readout_length +
+				ctx->s_ctx.mode[scenario_id].read_margin;
+			/* fll_b = max(readout, previous shutter_b) */
+			calc_fl_in_lut[1] =
+				max(calc_fl_in_lut[1], cit_in_lut[1] + ctx->s_ctx.exposure_margin);
+			/* fll_b = min(fll_b, fll_max) */
+			ctx->frame_length_in_lut[1] =
+				min(calc_fl_in_lut[1], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[1] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+				ctx->frame_length_in_lut[1];
+			/* fll_c_min = readout + xx lines(margin) */
+			calc_fl_in_lut[2] =
+				ctx->s_ctx.mode[scenario_id].readout_length +
+				ctx->s_ctx.mode[scenario_id].read_margin;
+			/* fll_c = max(readout, previous shutter_c) */
+			calc_fl_in_lut[2] =
+				max(calc_fl_in_lut[2], cit_in_lut[2] + ctx->s_ctx.exposure_margin);
+			/* fll_c = min(fll_c, fll_max) */
+			ctx->frame_length_in_lut[2] =
+				min(calc_fl_in_lut[2], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[2] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[2], frame_length_step) :
+				ctx->frame_length_in_lut[2];
+			ctx->frame_length_in_lut[3] = 0;
+			ctx->frame_length_in_lut[4] = 0;
+			/* update framelength */
+			ctx->frame_length =
+				ctx->frame_length_in_lut[0] +
+				ctx->frame_length_pre_store_in_lut[1] +
+				ctx->frame_length_pre_store_in_lut[2];
+		} else if (ctx->s_ctx.mode[scenario_id].delay_frame == 3) {
+			/* fll_a_min = readout + xx lines(margin) */
+			calc_fl_in_lut[0] =
+				ctx->s_ctx.mode[scenario_id].readout_length +
+				ctx->s_ctx.mode[scenario_id].read_margin;
+			/* fll_a = max(readout, previous shutter_b) */
+			calc_fl_in_lut[0] =
+				max(calc_fl_in_lut[0], cit_in_lut[1] + ctx->s_ctx.exposure_margin);
+			/* fll_a = min(fll_a, fll_max) */
+			ctx->frame_length_in_lut[0] =
+				min(calc_fl_in_lut[0], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[0] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+				ctx->frame_length_in_lut[0];
+			/* fll_b_min = readout + xx lines(margin) */
+			calc_fl_in_lut[1] =
+				ctx->s_ctx.mode[scenario_id].readout_length +
+				ctx->s_ctx.mode[scenario_id].read_margin;
+			/* fll_b = max(readout, previous shutter_c) */
+			calc_fl_in_lut[1] =
+				max(calc_fl_in_lut[1], cit_in_lut[2] + ctx->s_ctx.exposure_margin);
+			/* fll_b = min(fll_b, fll_max) */
+			ctx->frame_length_in_lut[1] =
+				min(calc_fl_in_lut[1], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[1] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+				ctx->frame_length_in_lut[1];
+			/* fll_c_min = readout + xx lines(margin) */
+			calc_fl_in_lut[2] =
+				ctx->s_ctx.mode[scenario_id].readout_length +
+				ctx->s_ctx.mode[scenario_id].read_margin;
+			/* fll_c = max(readout, previous shutter_a) */
+			calc_fl_in_lut[2] =
+				max(calc_fl_in_lut[2], cit_in_lut[0] + ctx->s_ctx.exposure_margin);
+			if (ctx->frame_length >=
+				(ctx->frame_length_in_lut[0] + ctx->frame_length_in_lut[1])) {
+				/* fll_c = max(fll_c, fll_mode_max-fll_b-fll_a) */
+				calc_fl_in_lut[2] =
+					max(calc_fl_in_lut[2],
+						(ctx->frame_length - ctx->frame_length_in_lut[1] -
+						ctx->frame_length_in_lut[0]));
+			}
+			/* fll_c = min(fll_c, fll_max) */
+			ctx->frame_length_in_lut[2] =
+				min(calc_fl_in_lut[2], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[2] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[2], frame_length_step) :
+				ctx->frame_length_in_lut[2];
+			ctx->frame_length_in_lut[3] = 0;
+			ctx->frame_length_in_lut[4] = 0;
+			/* update framelength */
+			ctx->frame_length =
+				ctx->frame_length_in_lut[0] +
+				ctx->frame_length_in_lut[1] +
+				ctx->frame_length_in_lut[2];
+		} else {
+			DRV_LOGE(ctx, "pls check delay_frame value!\n");
+			return;
+		}
 		if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
 			ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
 				ctx->current_scenario_id, &linetime_in_ns, 0);
@@ -1690,10 +1952,9 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 							ctx->frame_length * 10 /
 							ctx->s_ctx.mode[scenario_id].linelength;
 		}
-
 		ctx->min_frame_length = ctx->frame_length;
 		DRV_LOG(ctx,
-			"sid:%u,max_fps(input/output):%u/%u,min_fl_en:1,lut order:%u,fll(input/ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u/%u\n",
+			"sid:%u,max_fps(input/output):%u/%u,min_fl_en:1,lut order:%u,fll(input/ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u/%u,delay_frame:%u\n",
 			scenario_id,
 			framerate, ctx->current_fps,
 			ctx->s_ctx.mode[scenario_id].exposure_order_in_lbmf,
@@ -1703,7 +1964,8 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 			ctx->frame_length_in_lut[1],
 			ctx->frame_length_in_lut[2],
 			ctx->frame_length_in_lut[3],
-			ctx->frame_length_in_lut[4]);
+			ctx->frame_length_in_lut[4],
+			ctx->s_ctx.mode[scenario_id].delay_frame);
 		if (ctx->s_ctx.mode[scenario_id].exposure_order_in_lbmf ==
 			IMGSENSOR_LBMF_EXPOSURE_SE_FIRST) {
 			if (ctx->s_ctx.reg_addr_auto_extend ||
@@ -1713,7 +1975,7 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 				(ctx->exposure[0] + ctx->s_ctx.mode[scenario_id].read_margin)) ||
 				(ctx->frame_length_in_lut[2] >
 				(ctx->exposure[2] + ctx->s_ctx.mode[scenario_id].read_margin)))
-					set_dummy(ctx);
+				set_dummy(ctx);
 		} else {
 			if (ctx->s_ctx.reg_addr_auto_extend ||
 				(ctx->frame_length_in_lut[0] >
@@ -1722,7 +1984,7 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 				(ctx->exposure[2] + ctx->s_ctx.mode[scenario_id].read_margin)) ||
 				(ctx->frame_length_in_lut[2] >
 				(ctx->exposure[0] + ctx->s_ctx.mode[scenario_id].read_margin)))
-					set_dummy(ctx);
+				set_dummy(ctx);
 		}
 		break;
 	default:
@@ -2422,139 +2684,283 @@ void set_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 
 	switch (ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt) {
 	case 2:
-		/* fll_a_min = readout + xx lines(margin) */
-		calc_fl_in_lut[0] =
-			ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
-			ctx->s_ctx.mode[ctx->current_scenario_id].read_margin;
-		/* fll_a = max(readout, current shutter_b) */
-		calc_fl_in_lut[0] =
-			max(calc_fl_in_lut[0],
-				cit_in_lut[1] +
-				ctx->s_ctx.mode[ctx->current_scenario_id].exposure_margin);
-		/* fll_b_min = readout + xx lines(margin) */
-		calc_fl_in_lut[1] =
-			ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
-			ctx->s_ctx.mode[ctx->current_scenario_id].read_margin;
-		/* fll_b = max(readout, current shutter_a) */
-		calc_fl_in_lut[1] =
-			max(calc_fl_in_lut[1],
-				cit_in_lut[0] +
-				ctx->s_ctx.mode[ctx->current_scenario_id].exposure_margin);
+		if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+			/* fll_a_min = readout + xx lines(margin) */
+			calc_fl_in_lut[0] =
+				ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+				ctx->s_ctx.mode[ctx->current_scenario_id].read_margin;
+			/* fll_a = max(readout, current shutter_a) */
+			calc_fl_in_lut[0] =
+				max(calc_fl_in_lut[0], cit_in_lut[0] + ctx->s_ctx.exposure_margin);
+			/* fll_b_min = readout + xx lines(margin) */
+			calc_fl_in_lut[1] =
+				ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+				ctx->s_ctx.mode[ctx->current_scenario_id].read_margin;
+			/* fll_b = max(readout, current shutter_b) */
+			calc_fl_in_lut[1] =
+				max(calc_fl_in_lut[1], cit_in_lut[1] + ctx->s_ctx.exposure_margin);
 
-		/* fll_a = max(fll_a, userInput_fll_a) */
-		ctx->frame_length_in_lut[0] =
-			max(ctx->frame_length_in_lut[0], calc_fl_in_lut[0]);
-		/* fll_a = min(fll_a, fll_max) */
-		ctx->frame_length_in_lut[0] =
-			min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
-		ctx->frame_length_in_lut[0] = frame_length_step ?
-			roundup(ctx->frame_length_in_lut[0], frame_length_step) :
-			ctx->frame_length_in_lut[0];
-		/* fll_b = max(fll_b, userInput_fll_b) */
-		ctx->frame_length_in_lut[1] =
-			max(ctx->frame_length_in_lut[1], calc_fl_in_lut[1]);
+			/* fll_a = max(fll_a, userInput_fll_a) */
+			ctx->frame_length_in_lut[0] =
+				max(ctx->frame_length_in_lut[0], calc_fl_in_lut[0]);
 
-		if (ctx->frame_length >= ctx->frame_length_in_lut[0]) {
-			/* fll_b = max(fll_b, fll-fll_a) */
+			if (ctx->frame_length >= ctx->frame_length_pre_store_in_lut[1]) {
+				/* fll_a = max(fll_a, fll-fll_b) */
+				ctx->frame_length_in_lut[0] =
+					max(ctx->frame_length_in_lut[0],
+						ctx->frame_length - ctx->frame_length_pre_store_in_lut[1]);
+			}
+
+			/* fll_a = min(fll_a, fll_max) */
+			ctx->frame_length_in_lut[0] =
+				min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[0] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+				ctx->frame_length_in_lut[0];
+
+			/* fll_b = max(fll_b, userInput_fll_b) */
 			ctx->frame_length_in_lut[1] =
-				max(ctx->frame_length_in_lut[1],
-					ctx->frame_length - ctx->frame_length_in_lut[0]);
-		}
+				max(ctx->frame_length_in_lut[1], calc_fl_in_lut[1]);
+			/* fll_b = min(fll_b, fll_max) */
+			ctx->frame_length_in_lut[1] =
+				min(ctx->frame_length_in_lut[1], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[1] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+				ctx->frame_length_in_lut[1];
+			/* lut[2] no use, and assign zero */
+			ctx->frame_length_in_lut[2] = 0;
+			/* lut[3] no use, and assign zero */
+			ctx->frame_length_in_lut[3] = 0;
+			/* lut[4] no use, and assign zero */
+			ctx->frame_length_in_lut[4] = 0;
+		} else if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 3) {
+			/* fll_a_min = readout + xx lines(margin) */
+			calc_fl_in_lut[0] =
+				ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+				ctx->s_ctx.mode[ctx->current_scenario_id].read_margin;
+			/* fll_a = max(readout, current shutter_b) */
+			calc_fl_in_lut[0] =
+				max(calc_fl_in_lut[0], cit_in_lut[1] + ctx->s_ctx.exposure_margin);
+			/* fll_b_min = readout + xx lines(margin) */
+			calc_fl_in_lut[1] =
+				ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+				ctx->s_ctx.mode[ctx->current_scenario_id].read_margin;
+			/* fll_b = max(readout, current shutter_a) */
+			calc_fl_in_lut[1] =
+				max(calc_fl_in_lut[1], cit_in_lut[0] + ctx->s_ctx.exposure_margin);
 
-		/* fll_b = min(fll_b, fll_max) */
-		ctx->frame_length_in_lut[1] =
-			min(ctx->frame_length_in_lut[1], ctx->s_ctx.frame_length_max);
-		ctx->frame_length_in_lut[1] = frame_length_step ?
-			roundup(ctx->frame_length_in_lut[1], frame_length_step) :
-			ctx->frame_length_in_lut[1];
-		/* lut[2] no use, and assign zero */
-		ctx->frame_length_in_lut[2] = 0;
-		/* lut[3] no use, and assign zero */
-		ctx->frame_length_in_lut[3] = 0;
-		/* lut[4] no use, and assign zero */
-		ctx->frame_length_in_lut[4] = 0;
+			/* fll_a = max(fll_a, userInput_fll_a) */
+			ctx->frame_length_in_lut[0] =
+				max(ctx->frame_length_in_lut[0], calc_fl_in_lut[0]);
+			/* fll_a = min(fll_a, fll_max) */
+			ctx->frame_length_in_lut[0] =
+				min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[0] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+				ctx->frame_length_in_lut[0];
+			/* fll_b = max(fll_b, userInput_fll_b) */
+			ctx->frame_length_in_lut[1] =
+				max(ctx->frame_length_in_lut[1], calc_fl_in_lut[1]);
+
+			if (ctx->frame_length >= ctx->frame_length_in_lut[0]) {
+				/* fll_b = max(fll_b, fll-fll_a) */
+				ctx->frame_length_in_lut[1] =
+					max(ctx->frame_length_in_lut[1],
+						ctx->frame_length - ctx->frame_length_in_lut[0]);
+			}
+
+			/* fll_b = min(fll_b, fll_max) */
+			ctx->frame_length_in_lut[1] =
+				min(ctx->frame_length_in_lut[1], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[1] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+				ctx->frame_length_in_lut[1];
+			/* lut[2] no use, and assign zero */
+			ctx->frame_length_in_lut[2] = 0;
+			/* lut[3] no use, and assign zero */
+			ctx->frame_length_in_lut[3] = 0;
+			/* lut[4] no use, and assign zero */
+			ctx->frame_length_in_lut[4] = 0;
+		} else {
+			DRV_LOGE(ctx, "pls check delay_frame value!\n");
+			return;
+		}
 		break;
 	case 3:
-		/* fll_a_min = readout + xx lines(margin) */
-		calc_fl_in_lut[0] =
-			ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
-			ctx->s_ctx.mode[ctx->current_scenario_id].read_margin;
-		/* fll_a = max(readout, current shutter_b) */
-		calc_fl_in_lut[0] =
-			max(calc_fl_in_lut[0],
-				cit_in_lut[1] +
-				ctx->s_ctx.mode[ctx->current_scenario_id].exposure_margin);
-		/* fll_b_min = readout + xx lines(margin) */
-		calc_fl_in_lut[1] =
-			ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
-			ctx->s_ctx.mode[ctx->current_scenario_id].read_margin;
-		/* fll_b = max(readout, current shutter_c) */
-		calc_fl_in_lut[1] =
-			max(calc_fl_in_lut[1],
-				cit_in_lut[2] +
-				ctx->s_ctx.mode[ctx->current_scenario_id].exposure_margin);
-		/* fll_c_min = readout + xx lines(margin) */
-		calc_fl_in_lut[2] =
-			ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
-			ctx->s_ctx.mode[ctx->current_scenario_id].read_margin;
-		/* fll_c = max(readout, current shutter_a) */
-		calc_fl_in_lut[2] =
-			max(calc_fl_in_lut[2],
-			cit_in_lut[0] +
-			ctx->s_ctx.mode[ctx->current_scenario_id].exposure_margin);
+		if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+			/* fll_a_min = readout + xx lines(margin) */
+			calc_fl_in_lut[0] =
+				ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+				ctx->s_ctx.mode[ctx->current_scenario_id].read_margin;
+			/* fll_a = max(readout, current shutter_a) */
+			calc_fl_in_lut[0] =
+				max(calc_fl_in_lut[0], cit_in_lut[0] + ctx->s_ctx.exposure_margin);
+			/* fll_b_min = readout + xx lines(margin) */
+			calc_fl_in_lut[1] =
+				ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+				ctx->s_ctx.mode[ctx->current_scenario_id].read_margin;
+			/* fll_b = max(readout, current shutter_b) */
+			calc_fl_in_lut[1] =
+				max(calc_fl_in_lut[1], cit_in_lut[1] + ctx->s_ctx.exposure_margin);
+			/* fll_c_min = readout + xx lines(margin) */
+			calc_fl_in_lut[2] =
+				ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+				ctx->s_ctx.mode[ctx->current_scenario_id].read_margin;
+			/* fll_c = max(readout, current shutter_c) */
+			calc_fl_in_lut[2] =
+				max(calc_fl_in_lut[2], cit_in_lut[2] + ctx->s_ctx.exposure_margin);
 
-		/* fll_a = max(fll_a, userInput_fll_a) */
-		ctx->frame_length_in_lut[0] =
-			max(ctx->frame_length_in_lut[0], calc_fl_in_lut[0]);
-		/* fll_a = min(fll_a, fll_max) */
-		ctx->frame_length_in_lut[0] =
-			min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
-		ctx->frame_length_in_lut[0] = frame_length_step ?
-			roundup(ctx->frame_length_in_lut[0], frame_length_step) :
-			ctx->frame_length_in_lut[0];
-		/* fll_b = max(fll_b, userInput_fll_b) */
-		ctx->frame_length_in_lut[1] =
-			max(ctx->frame_length_in_lut[1], calc_fl_in_lut[1]);
-		/* fll_b = min(fll_b, fll_max) */
-		ctx->frame_length_in_lut[1] =
-			min(ctx->frame_length_in_lut[1], ctx->s_ctx.frame_length_max);
-		ctx->frame_length_in_lut[1] = frame_length_step ?
-			roundup(ctx->frame_length_in_lut[1], frame_length_step) :
-			ctx->frame_length_in_lut[1];
-		/* fll_c = max(fll_c, userInput_fll_c) */
-		ctx->frame_length_in_lut[2] =
-			max(ctx->frame_length_in_lut[2], calc_fl_in_lut[2]);
+			/* fll_a = max(fll_a, userInput_fll_a) */
+			ctx->frame_length_in_lut[0] =
+				max(ctx->frame_length_in_lut[0], calc_fl_in_lut[0]);
 
-		if (ctx->frame_length >=
-			(ctx->frame_length_in_lut[0] + ctx->frame_length_in_lut[1])) {
-			/* fll_c = max(fll_c, fll-fll_b-fll_a) */
+			if (ctx->frame_length >=
+				(ctx->frame_length_pre_store_in_lut[1] +
+				ctx->frame_length_pre_store_in_lut[2])) {
+				/* fll_a = max(fll_a, fll-fll_b-fll_c) */
+				ctx->frame_length_in_lut[0] =
+					max(ctx->frame_length_in_lut[0],
+						(ctx->frame_length -
+						ctx->frame_length_pre_store_in_lut[1] -
+						ctx->frame_length_pre_store_in_lut[2]));
+			}
+
+			/* fll_a = min(fll_a, fll_max) */
+			ctx->frame_length_in_lut[0] =
+				min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[0] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+				ctx->frame_length_in_lut[0];
+
+			/* fll_b = max(fll_b, userInput_fll_b) */
+			ctx->frame_length_in_lut[1] =
+				max(ctx->frame_length_in_lut[1], calc_fl_in_lut[1]);
+			/* fll_b = min(fll_b, fll_max) */
+			ctx->frame_length_in_lut[1] =
+				min(ctx->frame_length_in_lut[1], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[1] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+				ctx->frame_length_in_lut[1];
+
+			/* fll_c = max(fll_c, userInput_fll_c) */
 			ctx->frame_length_in_lut[2] =
-				max(ctx->frame_length_in_lut[2],
-					(ctx->frame_length - ctx->frame_length_in_lut[1] -
-					ctx->frame_length_in_lut[0]));
-		}
+				max(ctx->frame_length_in_lut[2], calc_fl_in_lut[2]);
+			/* fll_c = min(fll_c, fll_max) */
+			ctx->frame_length_in_lut[2] =
+				min(ctx->frame_length_in_lut[2], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[2] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[2], frame_length_step) :
+				ctx->frame_length_in_lut[2];
+			/* lut[3] no use, and assign zero */
+			ctx->frame_length_in_lut[3] = 0;
+			/* lut[4] no use, and assign zero */
+			ctx->frame_length_in_lut[4] = 0;
+		} else if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 3) {
+			/* fll_a_min = readout + xx lines(margin) */
+			calc_fl_in_lut[0] =
+				ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+				ctx->s_ctx.mode[ctx->current_scenario_id].read_margin;
+			/* fll_a = max(readout, current shutter_b) */
+			calc_fl_in_lut[0] =
+				max(calc_fl_in_lut[0], cit_in_lut[1] + ctx->s_ctx.exposure_margin);
+			/* fll_b_min = readout + xx lines(margin) */
+			calc_fl_in_lut[1] =
+				ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+				ctx->s_ctx.mode[ctx->current_scenario_id].read_margin;
+			/* fll_b = max(readout, current shutter_c) */
+			calc_fl_in_lut[1] =
+				max(calc_fl_in_lut[1], cit_in_lut[2] + ctx->s_ctx.exposure_margin);
+			/* fll_c_min = readout + xx lines(margin) */
+			calc_fl_in_lut[2] =
+				ctx->s_ctx.mode[ctx->current_scenario_id].readout_length +
+				ctx->s_ctx.mode[ctx->current_scenario_id].read_margin;
+			/* fll_c = max(readout, current shutter_a) */
+			calc_fl_in_lut[2] =
+				max(calc_fl_in_lut[2], cit_in_lut[0] + ctx->s_ctx.exposure_margin);
 
-		/* fll_c = min(fll_c, fll_max) */
-		ctx->frame_length_in_lut[2] =
-			min(ctx->frame_length_in_lut[2], ctx->s_ctx.frame_length_max);
-		ctx->frame_length_in_lut[2] = frame_length_step ?
-			roundup(ctx->frame_length_in_lut[2], frame_length_step) :
-			ctx->frame_length_in_lut[2];
-		/* lut[3] no use, and assign zero */
-		ctx->frame_length_in_lut[3] = 0;
-		/* lut[4] no use, and assign zero */
-		ctx->frame_length_in_lut[4] = 0;
+			/* fll_a = max(fll_a, userInput_fll_a) */
+			ctx->frame_length_in_lut[0] =
+				max(ctx->frame_length_in_lut[0], calc_fl_in_lut[0]);
+			/* fll_a = min(fll_a, fll_max) */
+			ctx->frame_length_in_lut[0] =
+				min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[0] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[0], frame_length_step) :
+				ctx->frame_length_in_lut[0];
+			/* fll_b = max(fll_b, userInput_fll_b) */
+			ctx->frame_length_in_lut[1] =
+				max(ctx->frame_length_in_lut[1], calc_fl_in_lut[1]);
+			/* fll_b = min(fll_b, fll_max) */
+			ctx->frame_length_in_lut[1] =
+				min(ctx->frame_length_in_lut[1], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[1] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[1], frame_length_step) :
+				ctx->frame_length_in_lut[1];
+			/* fll_c = max(fll_c, userInput_fll_c) */
+			ctx->frame_length_in_lut[2] =
+				max(ctx->frame_length_in_lut[2], calc_fl_in_lut[2]);
+
+			if (ctx->frame_length >=
+				(ctx->frame_length_in_lut[0] + ctx->frame_length_in_lut[1])) {
+				/* fll_c = max(fll_c, fll-fll_b-fll_a) */
+				ctx->frame_length_in_lut[2] =
+					max(ctx->frame_length_in_lut[2],
+						(ctx->frame_length - ctx->frame_length_in_lut[1] -
+						ctx->frame_length_in_lut[0]));
+			}
+
+			/* fll_c = min(fll_c, fll_max) */
+			ctx->frame_length_in_lut[2] =
+				min(ctx->frame_length_in_lut[2], ctx->s_ctx.frame_length_max);
+			ctx->frame_length_in_lut[2] = frame_length_step ?
+				roundup(ctx->frame_length_in_lut[2], frame_length_step) :
+				ctx->frame_length_in_lut[2];
+			/* lut[3] no use, and assign zero */
+			ctx->frame_length_in_lut[3] = 0;
+			/* lut[4] no use, and assign zero */
+			ctx->frame_length_in_lut[4] = 0;
+		} else {
+			DRV_LOGE(ctx, "pls check delay_frame value!\n");
+			return;
+		}
 		break;
 	default:
 		break;
 	}
 
+	DRV_LOG(ctx,
+		"sid:%u,before update exposure_lut:%u/%u/%u/%u/%u,flInPreStoreLUT(input/ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u/%u\n",
+		ctx->current_scenario_id,
+		ctx->exposure[0], ctx->exposure[1], ctx->exposure[2], ctx->exposure[3], ctx->exposure[4],
+		frame_length, ctx->frame_length,
+		ctx->frame_length_pre_store_in_lut[0],
+		ctx->frame_length_pre_store_in_lut[1],
+		ctx->frame_length_pre_store_in_lut[2],
+		ctx->frame_length_pre_store_in_lut[3],
+		ctx->frame_length_pre_store_in_lut[4]);
+
 	/* restore shutter & update framelength */
 	memset(ctx->exposure, 0, sizeof(ctx->exposure));
 	ctx->frame_length = 0;
 	for (i = 0; i < exp_cnt; i++) {
-		ctx->exposure[i] = shutters[i];
-		ctx->frame_length += ctx->frame_length_in_lut[i];
+		ctx->exposure[i] = (u32) shutters[i];
+		if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+			/* frame_length = fll_pre_store_in_lut[1] + fll_pre_store_in_lut[2] +
+			 * fll_pre_store_in_lut[i] + ... + fll_current_cal_in_lut[0]
+			 */
+			if (i == 0)
+				ctx->frame_length += ctx->frame_length_in_lut[i];
+			else
+				ctx->frame_length += ctx->frame_length_pre_store_in_lut[i];
+		} else if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 3) {
+			/* frame_length = fll_current_cal_in_lut[0] + fll_current_cal_in_lut[1] +
+			 * ... + fll_current_cal_in_lut[i]
+			 */
+			ctx->frame_length += ctx->frame_length_in_lut[i];
+		} else {
+			DRV_LOGE(ctx, "pls check delay_frame value!\n");
+			return;
+		}
 	}
 	/* check boundary of framelength */
 	ctx->frame_length =	max(ctx->frame_length, ctx->min_frame_length);
@@ -2567,6 +2973,11 @@ void set_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 	/* write framelength */
 	set_auto_flicker(ctx, 0);
 	write_frame_length_in_lut(ctx, ctx->frame_length, ctx->frame_length_in_lut);
+	/* update prestore framelength */
+	for (i = 0; i < exp_cnt; i++) {
+		// store fll_current_cal_in_lut into fll_pre_store_in_lut for next calculation
+		ctx->frame_length_pre_store_in_lut[i] = ctx->frame_length_in_lut[i];
+	}
 	/* write shutter: LUT register differs from DOL */
 	if (ctx->s_ctx.reg_addr_exposure_lshift != PARAM_UNDEFINED) {
 		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure_lshift, 0);
@@ -2597,8 +3008,15 @@ void set_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 			}
 		}
 	}
+
+	if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+		spin_lock(&ctx->aeb_ae_ctrl_cnt_lock);
+		ctx->aeb_ae_ctrl_cnt++;
+		spin_unlock(&ctx->aeb_ae_ctrl_cnt_lock);
+	}
+
 	DRV_LOG(ctx,
-		"sid:%u,shutter(input/lut):0x%llx/%llx/%llx,%x/%x/%x,flInLUT(input/ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u/%u,flick_en:%d\n",
+		"sid:%u,shutter(input/lut):0x%llx/%llx/%llx,%x/%x/%x,flInLUT(input/ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u/%u,flick_en:%d,delay_frame:%u,fl(pre_store):%u/%u/%u/%u/%u,aeb_ctrl_cnt:%llu\n",
 		ctx->current_scenario_id,
 		shutters[0], shutters[1], shutters[2],
 		cit_in_lut[0], cit_in_lut[1], cit_in_lut[2],
@@ -2608,7 +3026,14 @@ void set_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 		ctx->frame_length_in_lut[2],
 		ctx->frame_length_in_lut[3],
 		ctx->frame_length_in_lut[4],
-		ctx->autoflicker_en);
+		ctx->autoflicker_en,
+		ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame,
+		ctx->frame_length_pre_store_in_lut[0],
+		ctx->frame_length_pre_store_in_lut[1],
+		ctx->frame_length_pre_store_in_lut[2],
+		ctx->frame_length_pre_store_in_lut[3],
+		ctx->frame_length_pre_store_in_lut[4],
+		ctx->aeb_ae_ctrl_cnt);
 	if (!ctx->ae_ctrl_gph_en) {
 		if (gph)
 			ctx->s_ctx.s_gph((void *)ctx, 0);
@@ -4938,21 +5363,50 @@ int common_open(struct subdrv_ctx *ctx)
 	ctx->sof_cnt = 0;
 	ctx->ref_sof_cnt = 0;
 	ctx->is_streaming = 0;
+	ctx->aeb_ae_ctrl_cnt = 0;
+	ctx->aeb_ae_ctrl_cnt_last = 0;
 	if (ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_LBMF) {
 		memset(ctx->frame_length_in_lut, 0,
 			sizeof(ctx->frame_length_in_lut));
+		memset(ctx->frame_length_pre_store_in_lut, 0,
+			sizeof(ctx->frame_length_pre_store_in_lut));
 
 		switch (ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt) {
 		case 2:
-			ctx->frame_length_in_lut[0] = ctx->readout_length + ctx->read_margin;
-			ctx->frame_length_in_lut[1] = ctx->frame_length -
-				ctx->frame_length_in_lut[0];
+			if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+				ctx->frame_length_in_lut[1] = ctx->readout_length + ctx->read_margin;
+				ctx->frame_length_pre_store_in_lut[1] =
+					ctx->frame_length_in_lut[1];
+				ctx->frame_length_in_lut[0] = ctx->frame_length -
+					ctx->frame_length_in_lut[1];
+				ctx->frame_length_pre_store_in_lut[0] =
+					ctx->frame_length_in_lut[0];
+			} else if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 3) {
+				ctx->frame_length_in_lut[0] = ctx->readout_length + ctx->read_margin;
+				ctx->frame_length_in_lut[1] = ctx->frame_length -
+					ctx->frame_length_in_lut[0];
+			} else
+				DRV_LOGE(ctx, "pls check delay_frame value!\n");
 			break;
 		case 3:
-			ctx->frame_length_in_lut[0] = ctx->readout_length + ctx->read_margin;
-			ctx->frame_length_in_lut[1] = ctx->readout_length + ctx->read_margin;
-			ctx->frame_length_in_lut[2] = ctx->frame_length -
-				ctx->frame_length_in_lut[1] - ctx->frame_length_in_lut[0];
+			if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+				ctx->frame_length_in_lut[2] = ctx->readout_length + ctx->read_margin;
+				ctx->frame_length_pre_store_in_lut[2] =
+					ctx->frame_length_in_lut[2];
+				ctx->frame_length_in_lut[1] = ctx->readout_length + ctx->read_margin;
+				ctx->frame_length_pre_store_in_lut[1] =
+					ctx->frame_length_in_lut[1];
+				ctx->frame_length_in_lut[0] = ctx->frame_length -
+					ctx->frame_length_in_lut[1] - ctx->frame_length_in_lut[2];
+				ctx->frame_length_pre_store_in_lut[0] =
+					ctx->frame_length_in_lut[0];
+			} else if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 3) {
+				ctx->frame_length_in_lut[0] = ctx->readout_length + ctx->read_margin;
+				ctx->frame_length_in_lut[1] = ctx->readout_length + ctx->read_margin;
+				ctx->frame_length_in_lut[2] = ctx->frame_length -
+					ctx->frame_length_in_lut[1] - ctx->frame_length_in_lut[0];
+			} else
+				DRV_LOGE(ctx, "pls check delay_frame value!\n");
 			break;
 		default:
 			break;
@@ -5491,21 +5945,50 @@ void update_mode_info(struct subdrv_ctx *ctx, enum SENSOR_SCENARIO_ID_ENUM scena
 	ctx->autoflicker_en = FALSE;
 	ctx->l_shift = 0;
 	ctx->min_vblanking_line = ctx->s_ctx.mode[scenario_id].min_vblanking_line;
+	ctx->aeb_ae_ctrl_cnt = 0;
+	ctx->aeb_ae_ctrl_cnt_last = 0;
 	if (ctx->s_ctx.mode[scenario_id].hdr_mode == HDR_RAW_LBMF) {
 		memset(ctx->frame_length_in_lut, 0,
 			sizeof(ctx->frame_length_in_lut));
+		memset(ctx->frame_length_pre_store_in_lut, 0,
+			sizeof(ctx->frame_length_pre_store_in_lut));
 
 		switch (ctx->s_ctx.mode[scenario_id].exp_cnt) {
 		case 2:
-			ctx->frame_length_in_lut[0] = ctx->readout_length + ctx->read_margin;
-			ctx->frame_length_in_lut[1] = ctx->frame_length -
-				ctx->frame_length_in_lut[0];
+			if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+				ctx->frame_length_in_lut[1] = ctx->readout_length + ctx->read_margin;
+				ctx->frame_length_pre_store_in_lut[1] =
+					ctx->frame_length_in_lut[1];
+				ctx->frame_length_in_lut[0] = ctx->frame_length -
+					ctx->frame_length_in_lut[1];
+				ctx->frame_length_pre_store_in_lut[0] =
+					ctx->frame_length_in_lut[0];
+			} else if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 3) {
+				ctx->frame_length_in_lut[0] = ctx->readout_length + ctx->read_margin;
+				ctx->frame_length_in_lut[1] = ctx->frame_length -
+					ctx->frame_length_in_lut[0];
+			} else
+				DRV_LOGE(ctx, "pls check delay_frame value!\n");
 			break;
 		case 3:
-			ctx->frame_length_in_lut[0] = ctx->readout_length + ctx->read_margin;
-			ctx->frame_length_in_lut[1] = ctx->readout_length + ctx->read_margin;
-			ctx->frame_length_in_lut[2] = ctx->frame_length -
-				ctx->frame_length_in_lut[1] - ctx->frame_length_in_lut[0];
+			if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+				ctx->frame_length_in_lut[2] = ctx->readout_length + ctx->read_margin;
+				ctx->frame_length_pre_store_in_lut[2] =
+					ctx->frame_length_in_lut[2];
+				ctx->frame_length_in_lut[1] = ctx->readout_length + ctx->read_margin;
+				ctx->frame_length_pre_store_in_lut[1] =
+					ctx->frame_length_in_lut[1];
+				ctx->frame_length_in_lut[0] = ctx->frame_length -
+					ctx->frame_length_in_lut[1] - ctx->frame_length_in_lut[2];
+				ctx->frame_length_pre_store_in_lut[0] =
+					ctx->frame_length_in_lut[0];
+			} else if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 3) {
+				ctx->frame_length_in_lut[0] = ctx->readout_length + ctx->read_margin;
+				ctx->frame_length_in_lut[1] = ctx->readout_length + ctx->read_margin;
+				ctx->frame_length_in_lut[2] = ctx->frame_length -
+					ctx->frame_length_in_lut[1] - ctx->frame_length_in_lut[0];
+			} else
+				DRV_LOGE(ctx, "pls check delay_frame value!\n");
 			break;
 		default:
 			break;
@@ -6243,11 +6726,89 @@ int common_get_csi_param(struct subdrv_ctx *ctx,
 	return 0;
 }
 
+static int check_aeb_ae_ctrl_cnt_if_delay(struct subdrv_ctx *ctx)
+{
+	int i = 0;
+	u64 aeb_ae_ctrl_cnt = 0;
+	u64 aeb_ae_ctrl_cnt_last_orin = 0;
+	u64 aeb_ae_ctrl_cnt_last_update = 0;
+	u32 frame_length_orin = 0;
+	u32 frame_length_update = 0;
+	u32 frame_length_rg_orin = 0;
+	u32 frame_length_rg_update = 0;
+	u32 frame_length_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT] = {0};
+
+	check_current_scenario_id_bound(ctx);
+
+	if (ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode != HDR_RAW_LBMF)
+		return 0;
+
+	if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame != 2)
+		return 0;
+
+	if (ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt > IMGSENSOR_STAGGER_EXPOSURE_CNT) {
+		DRV_LOGE(ctx,
+			"invalid exp_cnt:%u\n",
+			ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt);
+		return 0;
+	}
+
+	spin_lock(&ctx->aeb_ae_ctrl_cnt_lock);
+	/* update local ae ctrl cnt (before) */
+	aeb_ae_ctrl_cnt = ctx->aeb_ae_ctrl_cnt;
+	aeb_ae_ctrl_cnt_last_orin = ctx->aeb_ae_ctrl_cnt_last;
+	/* update local framelength (before) */
+	frame_length_orin = ctx->frame_length;
+	frame_length_rg_orin = ctx->frame_length_rg;
+	/*
+	 * abnormal case: when ae ctrl delay or not do ae ctrl
+	 * ctx framelength will keep same as lut[0]+lut[1] if no aeb_ae_ctrl
+	 */
+	if (ctx->aeb_ae_ctrl_cnt_last == ctx->aeb_ae_ctrl_cnt) {
+		frame_length_update = 0;
+		for (i = 0; i < ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt; i++) {
+			frame_length_in_lut[i] = ctx->frame_length_in_lut[i];
+			frame_length_update += ctx->frame_length_in_lut[i];
+		}
+		/* update ctx framelength & _rg */
+		ctx->frame_length = frame_length_update;
+		ctx->frame_length_rg = ctx->frame_length;
+	}
+	/* update ctx ae ctrl cnt last */
+	ctx->aeb_ae_ctrl_cnt_last = ctx->aeb_ae_ctrl_cnt;
+	/* update local ae ctrl cnt last (after) */
+	aeb_ae_ctrl_cnt_last_update = ctx->aeb_ae_ctrl_cnt_last;
+	/* update local framelength & _rg (after) */
+	frame_length_update = ctx->frame_length;
+	frame_length_rg_update = ctx->frame_length_rg;
+	spin_unlock(&ctx->aeb_ae_ctrl_cnt_lock);
+
+	DRV_LOG(ctx,
+		"aeb_ae_ctrl_cnt/last_orin/last_update:%llu/%llu/%llu,fll(orin/update/a/b/c/d/e):%u/%u/%u/%u/%u/%u/%u,fll_rg(orin/update):%u/%u\n",
+		aeb_ae_ctrl_cnt,
+		aeb_ae_ctrl_cnt_last_orin,
+		aeb_ae_ctrl_cnt_last_update,
+		frame_length_orin,
+		frame_length_update,
+		frame_length_in_lut[0],
+		frame_length_in_lut[1],
+		frame_length_in_lut[2],
+		frame_length_in_lut[3],
+		frame_length_in_lut[4],
+		frame_length_rg_orin,
+		frame_length_rg_update);
+
+	return 0;
+}
+
 int common_update_sof_cnt(struct subdrv_ctx *ctx, u32 sof_cnt)
 {
 	DRV_LOG(ctx, "update ctx->sof_cnt(%u)", sof_cnt);
 	ctx->sof_cnt = sof_cnt;
 	ctx->sof_no++;
+
+	check_aeb_ae_ctrl_cnt_if_delay(ctx);
+
 	return 0;
 }
 

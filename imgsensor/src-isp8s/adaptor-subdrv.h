@@ -662,6 +662,9 @@ struct subdrv_ctx {
 	u32 frame_length_in_lut_rg[IMGSENSOR_STAGGER_EXPOSURE_CNT]; /* current lbmf framelength in RG */
 	u32 frame_length; /* current framelength */
 	u32 frame_length_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT]; /* current lbmf framelength */
+	u32 frame_length_pre_store_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT]; /* previous lbmf framelength */
+	u64 aeb_ae_ctrl_cnt; /* AEB control count */
+	u64 aeb_ae_ctrl_cnt_last; /* AEB control last count */
 	u32 frame_length_next; /* next framelength for sw delay fl */
 	u32 line_length; /* current linelength */
 	u32 min_frame_length; /* current framelength limitation */
@@ -717,6 +720,8 @@ struct subdrv_ctx {
 	struct mtk_fsync_hw_mcss_init_info mcss_init_info;
 
 	struct mutex i2c_buffer_lock;
+
+	spinlock_t aeb_ae_ctrl_cnt_lock; /* AEB control lock */
 };
 
 struct subdrv_feature_control {

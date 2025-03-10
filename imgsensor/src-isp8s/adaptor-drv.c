@@ -1687,6 +1687,7 @@ static int imgsensor_probe(struct i3c_i2c_device *client)
 	mutex_init(&ctx->ebd_lock);
 	mutex_init(&ctx->subctx.i2c_buffer_lock);
 	mutex_init(&ctx->broadcast_lock);
+	spin_lock_init(&ctx->subctx.aeb_ae_ctrl_cnt_lock);
 
 	INIT_LIST_HEAD(&ctx->restore_ctrls_list);
 
