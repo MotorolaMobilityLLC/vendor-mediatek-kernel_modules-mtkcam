@@ -1275,6 +1275,12 @@ _stream_on(struct mtk_cam_job *job, bool on)
 	if (is_ois_compensation(job))
 		mtk_cam_tuning_init(&job->tuning_param);
 
+	if (job->enable_hsf_raw) {
+		/* TODO: separate seninf api to cammux setting and enable */
+		if (job->stream_on_seninf || job->raw_switch)
+			ctx_stream_on_seninf_sensor(job, pad_bitmask, raw_tg_idx);
+	}
+
 	if (job->raw_change && !job->seamless_switch) {
 		disable_seninf_cammux(job);
 		apply_cam_mux_switch(job);
@@ -1325,9 +1331,12 @@ _stream_on(struct mtk_cam_job *job, bool on)
 		}
 	}
 
-	/* TODO: separate seninf api to cammux setting and enable */
-	if (job->stream_on_seninf || job->raw_switch)
-		ctx_stream_on_seninf_sensor(job, pad_bitmask, raw_tg_idx);
+	if (!job->enable_hsf_raw) {
+		/* TODO: separate seninf api to cammux setting and enable */
+		if (job->stream_on_seninf || job->raw_switch)
+			ctx_stream_on_seninf_sensor(job, pad_bitmask, raw_tg_idx);
+	}
+
 
 	return 0;
 }
