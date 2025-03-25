@@ -2393,9 +2393,9 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 		}
 
 #ifdef IMGSYS_CMDQ_PKT_REUSE
-		/* ToDo: Temp solution for DIP nonBS w/o pkt reuse */
-		//if ((thd_idx == 6) || (thd_idx == 8))
-			//frm_info->is_ctrl_cache = 0;
+		/* Bypass pkt reuse flow for smvr big skip */
+		if (frm_info->batchnum != 0)
+			frm_info->is_ctrl_cache = 0;
 
 		/* This segment deal with scenario change from isCtrlCache=1 to isCtrlCache=0. */
 		/* We need to wait previous pkt done and reset all reuse parameter. */
