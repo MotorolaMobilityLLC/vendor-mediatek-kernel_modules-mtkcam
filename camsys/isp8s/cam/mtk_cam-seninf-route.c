@@ -1890,7 +1890,7 @@ int mtk_cam_seninf_get_tag_order(struct v4l2_subdev *sd,
 	int exposure_num = 0;
 	int scenario = 0;
 	int desc;
-	int pad_id;
+	int pad_id = 0;
 
 
 	if (sd == NULL) {
@@ -1905,23 +1905,31 @@ int mtk_cam_seninf_get_tag_order(struct v4l2_subdev *sd,
 		return -EINVAL;
 	}
 
+	/* if test pattern, do default return flow */
+	if (ctx->is_test_model)
+		return (input_pad_id == PAD_SRC_RAW0) ? EXPOSURE_FIRST: EXPOSURE_LAST;
+
 	/*due to PD / W data will use the same VC with raw */
 	switch (input_pad_id) {
 	case PAD_SRC_RAW0:
 	case PAD_SRC_RAW_W0:
+	case PAD_SRC_PDAF0:
 	case PAD_SRC_PDAF1:
+	case PAD_SRC_PDAF2:
 		pad_id = PAD_SRC_RAW0;
 		break;
 
 	case PAD_SRC_RAW1:
 	case PAD_SRC_RAW_W1:
 	case PAD_SRC_PDAF3:
+	case PAD_SRC_PDAF4:
 		pad_id = PAD_SRC_RAW1;
 		break;
 
 	case PAD_SRC_RAW2:
 	case PAD_SRC_RAW_W2:
 	case PAD_SRC_PDAF5:
+	case PAD_SRC_PDAF6:
 		pad_id = PAD_SRC_RAW2;
 		break;
 
@@ -1929,11 +1937,6 @@ int mtk_cam_seninf_get_tag_order(struct v4l2_subdev *sd,
 		pad_id = input_pad_id;
 		break;
 	}
-
-	/* if test pattern, do default return flow */
-	if (ctx->is_test_model)
-		return (pad_id == PAD_SRC_RAW0) ? EXPOSURE_FIRST: EXPOSURE_LAST;
-
 
 	/*The following flow is for real sensor only */
 	sensor_sd = ctx->sensor_sd;
@@ -2011,9 +2014,10 @@ int mtk_cam_seninf_get_tag_order(struct v4l2_subdev *sd,
 
 
 	dev_info(ctx->dev,
-			"[%s] input:pad_id(%d),scen(%d),exp_num(%d) output:tag_order(%d)\n",
+			"[%s]input:pad_id(%d)conv_pad(%d),scen(%d),exp_num(%d)out_tag_order(%d)\n",
 			__func__,
 			input_pad_id,
+			pad_id,
 			scenario,
 			exposure_num,
 			ret);
