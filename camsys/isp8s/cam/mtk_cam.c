@@ -3538,7 +3538,7 @@ static int _config_2exp_cam_mux(struct mtk_cam_job *job, bool disable_prev_mux)
 		settings[cnt].seninf = seninf;
 		settings[cnt].source = PAD_SRC_RAW0;
 		settings[cnt].camtg  = sv_dev_cammux_id;
-		settings[cnt].tag_id = get_sv_tag_idx(2, MTKCAM_IPI_ORDER_FIRST_TAG, false,
+		settings[cnt].tag_id = get_sv_tag_idx(3, MTKCAM_IPI_ORDER_FIRST_TAG, false,
 			is_dcg_with_vs(job), is_fusion);
 		settings[cnt].pixelmode = sv_max_pixel_mode;
 		settings[cnt++].enable = 1;
@@ -3549,18 +3549,18 @@ static int _config_2exp_cam_mux(struct mtk_cam_job *job, bool disable_prev_mux)
 		settings[cnt].seninf = seninf;
 		settings[cnt].source = PAD_SRC_RAW1;
 		settings[cnt].camtg  = sv_dev_cammux_id;
-		settings[cnt].tag_id = get_sv_tag_idx(2, MTKCAM_IPI_ORDER_NORMAL_TAG, false,
+		settings[cnt].tag_id = get_sv_tag_idx(3, MTKCAM_IPI_ORDER_NORMAL_TAG, false,
 			is_dcg_with_vs(job), is_fusion);
 		settings[cnt].pixelmode = sv_max_pixel_mode;
 		settings[cnt++].enable = 1;
 
-		/* 3nd exp, PAD_SRC_RAW1 */
+		/* 3nd exp, PAD_SRC_RAW2 */
 		if (cnt >= MUX_SETTING_NUM)
 			goto WARN_EXIT;
 		settings[cnt].seninf = seninf;
 		settings[cnt].source = PAD_SRC_RAW2;
 		settings[cnt].camtg  = sv_dev_cammux_id;
-		settings[cnt].tag_id = get_sv_tag_idx(2, MTKCAM_IPI_ORDER_LAST_TAG, false,
+		settings[cnt].tag_id = get_sv_tag_idx(3, MTKCAM_IPI_ORDER_LAST_TAG, false,
 			is_dcg_with_vs(job), is_fusion);
 		settings[cnt].pixelmode = sv_max_pixel_mode;
 		settings[cnt++].enable = 1;

@@ -1850,7 +1850,7 @@ int fill_sv_img_fp(
 	is_dcg_vs = is_dcg_with_vs(job);
 	for (i = 0; i < exp_no; i++) {
 		if (!is_sv_pure_raw(job) && !is_dc_mode(job) &&
-		    !is_offline_timeshare(job) && ((i + 1) == exp_no))
+			!is_offline_timeshare(job) && ((i + 1) == exp_no))
 			continue;
 
 		/* skip first exp under mstream case */
@@ -1859,7 +1859,7 @@ int fill_sv_img_fp(
 
 		tag_idx = (exp_no > 1 && (i + 1) == exp_no) ?
 			get_sv_tag_idx(exp_no, MTKCAM_IPI_ORDER_LAST_TAG, false,
-				       is_dcg_vs, is_fusion) :
+				is_dcg_vs, is_fusion) :
 			get_sv_tag_idx(exp_no, i, false, is_dcg_vs, is_fusion);
 		if (tag_idx == -1) {
 			ret = -1;
@@ -1869,7 +1869,7 @@ int fill_sv_img_fp(
 		}
 
 		ret = fill_sv_mp_fp(helper, buf, node, tag_idx, pipe_id,
-				    get_buf_plane(exp_order, i), 1, 0);
+				get_buf_plane(exp_order, i), 1, 0);
 	}
 
 EXIT:
