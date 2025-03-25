@@ -2301,6 +2301,21 @@ bool mtk_cam_seninf_force_disable_out_mux(struct v4l2_subdev *sd)
 	return 0;
 }
 
+
+bool mtk_cam_seninf_check_vs_order_has_change(struct seninf_ctx *ctx, u8 outmux)
+{
+	u8 curr_first_vc = 0;
+	u8 curr_last_vc = 0;
+
+	if (g_seninf_ops->_get_outmux_curr_vs_order(ctx, outmux, &curr_first_vc, &curr_last_vc)) {
+		pr_info("[%s][ERR] _get_outmux_curr_vs_order return failed\n", __func__);
+		return true;
+	}
+
+	return (ctx->cur_first_vs != curr_first_vc || ctx->cur_last_vs != curr_last_vc) ?
+		true : false;
+}
+
 bool
 mtk_cam_seninf_streaming_mux_change(struct mtk_cam_seninf_mux_param *param, bool grp_en)
 {
@@ -2489,8 +2504,10 @@ mtk_cam_seninf_streaming_mux_change(struct mtk_cam_seninf_mux_param *param, bool
 			cfg->tag_cfg[tag_id].exp_vsize = cur_vc->exp_vsize;
 			cfg->tag_cfg[tag_id].bit_depth = cur_vc->bit_depth;
 
-			/* if a mux need to keep using, out mux need reset immedatly */
+			/* if a mux need to keep using and if vc order has change*/
+			/* then need to reset immediate to avoid mux hang issue*/
 			cfg->is_reset_immedate =
+				mtk_cam_seninf_check_vs_order_has_change(ctx, camtg) &&
 				(outmux_continue_used_list[camtg] == true) ? true : false;
 
 		} else {

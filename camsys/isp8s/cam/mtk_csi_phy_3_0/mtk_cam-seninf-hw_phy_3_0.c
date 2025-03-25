@@ -1152,6 +1152,45 @@ static int mtk_cam_seninf_set_outmux_rdy_msk_grp_en(
 	return 0;
 }
 
+static int mtk_cam_seninf_get_outmux_curr_vs_order(struct seninf_ctx *ctx,
+	u8 outmux, u8 *furst_vc, u8 *last_vc)
+{
+	void *pSeninf_outmux = NULL;
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s][Err]ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (unlikely(furst_vc == NULL)) {
+		pr_info("[%s][Err]furst_vc is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (unlikely(last_vc == NULL)) {
+		pr_info("[%s][Err]last_vc is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (unlikely(outmux >= _seninf_ops->outmux_num)) {
+		seninf_logi(ctx, "err outmux %u invalid (0~SENINF_OUTMUX_NUM:%d)\n",
+			outmux, _seninf_ops->outmux_num);
+		return -EINVAL;
+	}
+
+	pSeninf_outmux = ctx->reg_if_outmux[outmux];
+
+	*furst_vc = SENINF_READ_BITS(pSeninf_outmux,
+				SENINF_OUTMUX_SOURCE_CONFIG_0,
+				SENINF_OUTMUX_REF_VC);
+
+	*last_vc = SENINF_READ_BITS(pSeninf_outmux,
+				SENINF_OUTMUX_SOURCE_CONFIG_0,
+				SENINF_OUTMUX_LAST_VC);
+
+	return 0;
+}
+
 static int mtk_cam_seninf_set_async_cg(struct seninf_ctx *ctx, int async, int en)
 {
 	// Always on async cg to avoid write racing between aov scp side
@@ -8426,6 +8465,7 @@ struct mtk_cam_seninf_ops mtk_csi_phy_3_0 = {
 	._set_outmux_rdy_msk_grp_en = mtk_cam_seninf_set_outmux_rdy_msk_grp_en,
 	._set_outmux_rdy_msk_sw_rdy_status = mtk_cam_seninf_set_outmux_rdy_msk_sw_rdy_status,
 	._set_outmux_rdy_msk_cq_rdy_en = mtk_cam_seninf_set_outmux_rdy_msk_cq_rdy_en,
+	._get_outmux_curr_vs_order = mtk_cam_seninf_get_outmux_curr_vs_order,
 	._set_test_model = mtk_cam_seninf_set_test_model,
 	._set_test_model_fake_sensor = mtk_cam_seninf_set_test_model_fake_sensor,
 	._get_async_irq_st = mtk_cam_seninf_get_async_irq_st,
