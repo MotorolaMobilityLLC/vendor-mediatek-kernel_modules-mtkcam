@@ -1330,13 +1330,39 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 		}
 
 		if (apply_sv_th) {
+			unsigned int fifo_core1 = 0, fifo_core2 = 0, fifo_core3 = 0;
+			unsigned int lb_fifo1 = 0, lb_fifo2 = 0, lb_fifo3 = 0;
+
+			/* fifo monitor */
+			fifo_core1 =
+				mtk_cam_sv_df_get_runtime_fifo_size(&cam->sv_df_mgr,
+					sv_dev->id, 0);
+			fifo_core2 =
+				mtk_cam_sv_df_get_runtime_fifo_size(&cam->sv_df_mgr,
+					sv_dev->id, 1);
+			fifo_core3 =
+				mtk_cam_sv_df_get_runtime_fifo_size(&cam->sv_df_mgr,
+					sv_dev->id, 2);
+
+			/* calculate fifo lowerbond */
+			lb_fifo1 = fifo_core1 * 2 / 10;
+			lb_fifo2 = fifo_core2 * 2 / 10;
+			lb_fifo3 = fifo_core3 * 2 / 10;
+
 			/* apply fifo setting according to bandwidth */
 			fifo_img_p1 =
 				job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw * 64 * 12 / 1000000;
 			fifo_img_p2 =
 				job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw * 64 * 12 / 1000000;
+			fifo_img_p3 =
+				job->sv_mmqos[SMI_PORT_SV_WDMA_2].peak_bw * 64 * 12 / 1000000;
 			fifo_len_p1 = fifo_img_p1 / 80;
 			fifo_len_p2 = fifo_img_p2 / 80;
+			fifo_len_p3 = fifo_img_p3 / 80;
+
+			fifo_img_p1 = max(min(fifo_img_p1, fifo_core1), lb_fifo1);
+			fifo_img_p2 = max(min(fifo_img_p2, fifo_core2), lb_fifo2);
+			fifo_img_p3 = max(min(fifo_img_p3, fifo_core3), lb_fifo3);
 
 			mtk_cam_sv_dmao_common_config(sv_dev, fifo_img_p1, fifo_img_p2, fifo_img_p3,
 				fifo_len_p1, fifo_len_p2, fifo_len_p3);
