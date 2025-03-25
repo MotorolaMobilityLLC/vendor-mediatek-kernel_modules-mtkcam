@@ -5175,15 +5175,22 @@ int mtk_camsys_ctrl_start(struct mtk_cam_ctx *ctx)
 	struct v4l2_subdev_frame_interval fi;
 	int fps_factor = 1, sub_ratio = 0;
 
-	fi.pad = 0;
-	v4l2_set_frame_interval_which(fi, V4L2_SUBDEV_FORMAT_ACTIVE);
+	if (ctx->sensor) {
+		fi.pad = 0;
+		v4l2_set_frame_interval_which(fi, V4L2_SUBDEV_FORMAT_ACTIVE);
 #if (KERNEL_VERSION(6, 7, 0) < LINUX_VERSION_CODE)
-	v4l2_subdev_call_state_active(ctx->sensor, pad, get_frame_interval, &fi);
+		v4l2_subdev_call_state_active(ctx->sensor, pad, get_frame_interval, &fi);
 #else
-	v4l2_subdev_call(ctx->sensor, video, g_frame_interval, &fi);
+		v4l2_subdev_call(ctx->sensor, video, g_frame_interval, &fi);
 #endif
-	fps_factor = (fi.interval.numerator > 0) ?
-			(fi.interval.denominator / fi.interval.numerator / 30) : 1;
+	}
+
+	if (fi.interval.numerator <= 0 || fi.interval.denominator <= 0) {
+		fi.interval.denominator = 300;
+		fi.interval.numerator = 10;
+	}
+	fps_factor = fi.interval.denominator / fi.interval.numerator / 30;
+
 	if (mtk_cam_is_ext_isp(ctx)) {
 		ctx->pipe->res_config.interval.denominator = fi.interval.denominator;
 		ctx->pipe->res_config.interval.numerator = fi.interval.numerator;
@@ -5260,13 +5267,18 @@ void mtk_camsys_ctrl_update(struct mtk_cam_ctx *ctx, int sensor_ctrl_factor)
 			fps_factor = sensor_ctrl_factor;
 		} else {
 			v4l2_set_frame_interval_which(fi, V4L2_SUBDEV_FORMAT_ACTIVE);
+			if (ctx->sensor) {
 #if (KERNEL_VERSION(6, 7, 0) < LINUX_VERSION_CODE)
-			v4l2_subdev_call_state_active(ctx->sensor, pad, get_frame_interval, &fi);
+				v4l2_subdev_call_state_active(ctx->sensor, pad, get_frame_interval, &fi);
 #else
-			v4l2_subdev_call(ctx->sensor, video, g_frame_interval, &fi);
+				v4l2_subdev_call(ctx->sensor, video, g_frame_interval, &fi);
 #endif
-			fps_factor = (fi.interval.numerator > 0) ?
-					(fi.interval.denominator / fi.interval.numerator / 30) : 1;
+			}
+			if (fi.interval.numerator <= 0 || fi.interval.denominator <= 0) {
+				fi.interval.denominator = 300;
+				fi.interval.numerator = 10;
+			}
+			fps_factor = fi.interval.denominator / fi.interval.numerator / 30;
 		}
 		sub_ratio =
 			mtk_cam_get_subsample_ratio(ctx->pipe->res_config.raw_feature);

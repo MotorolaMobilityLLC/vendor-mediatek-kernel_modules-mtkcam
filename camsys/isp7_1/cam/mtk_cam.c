@@ -6786,9 +6786,19 @@ void mtk_cam_stop_ctx(struct mtk_cam_ctx *ctx, struct media_entity *entity)
 
 		v4l2_device_for_each_subdev(sd, &cam->v4l2_dev) {
 			if (sd->entity.function == MEDIA_ENT_F_VID_IF_BRIDGE) {
-				int ret;
-
+				int ret = -1;
+#if KERNEL_VERSION(6, 11, 0) <= LINUX_VERSION_CODE
+				if (v4l2_subdev_is_streaming(sd) != 0)
+					ret = v4l2_subdev_call(sd, video, s_stream, 0);
+				else {
+					ret = 0;
+					dev_info(cam->dev,
+							"%s: warning: '%s' already streamoff\n",
+							__func__, sd->name);
+				}
+#else
 				ret = v4l2_subdev_call(sd, video, s_stream, 0);
+#endif
 				if (ret)
 					dev_info(cam->dev,
 						 "failed to streamoff %s:%d\n",
