@@ -4746,8 +4746,8 @@ static void update_job_state_init_sensor_param(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctrl *ctrl = &job->src_ctx->cam_ctrl;
 	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
-	u8 sen_ctrl =
-		ctrl_data != NULL ? ctrl_data->resource.user_data.raw_res.sen_apply_ctrl : 0;
+	u8 sen_ctrl = (ctrl_data == NULL) ? MTK_CAM_SEN_APPLY_NORMAL :
+		ctrl_data->resource.user_data.raw_res.sen_apply_ctrl;
 
 	// NOTE: update FL with 'stable_frm_len_ns' for this sensor request
 	if (ctrl_data && ctrl_data->rc_data.stable_frm_len_ns != 0)

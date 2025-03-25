@@ -1773,7 +1773,7 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 	int raw_all = raw_after_change | raw_uninit;
 	bool is_fusion;
 	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
-	u8 sen_ctrl =
+	u8 sen_ctrl = (!ctrl_data) ? MTK_CAM_SEN_APPLY_NORMAL :
 		ctrl_data->resource.user_data.raw_res.sen_apply_ctrl;
 
 	dev_info(dev, "[%s] begin waiting switch no:%d seq 0x%x\n",
