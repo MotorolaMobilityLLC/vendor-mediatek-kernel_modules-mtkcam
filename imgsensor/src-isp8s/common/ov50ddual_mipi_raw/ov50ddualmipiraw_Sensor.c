@@ -410,7 +410,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 15.5,
 		.dpc_enabled = TRUE,
 		.pdc_enabled = TRUE,
 	},
@@ -458,7 +458,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 15.5,
 		.dpc_enabled = TRUE,
 		.pdc_enabled = TRUE,
 	},
@@ -506,7 +506,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 15.5,
 		.dpc_enabled = TRUE,
 		.pdc_enabled = TRUE,
 	},
@@ -554,7 +554,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 15.5,
 		.dpc_enabled = TRUE,
 		.pdc_enabled = TRUE,
 	},
@@ -602,7 +602,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 15.5,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_SENSING_MODE_RAW_MONO,
 		.dpc_enabled = TRUE,
 		.pdc_enabled = TRUE,
@@ -651,7 +651,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 15.5,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_SENSING_MODE_RAW_MONO,
 		.dpc_enabled = TRUE,
 		.pdc_enabled = TRUE,
@@ -700,7 +700,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 15.5,
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_SENSING_MODE_RAW_MONO,
 		.dpc_enabled = TRUE,
 		.pdc_enabled = TRUE,
@@ -785,20 +785,22 @@ static struct subdrv_ops ops = {
 };
 static struct subdrv_pw_seq_entry pw_seq[] = {
 	{HW_ID_RST, {0}, 0},
+	{HW_ID_DOVDD, {1800000, 1800000}, 1000}, // pmic_ldo/gpio(1.8V ldo) for dovdd
 	{HW_ID_MCLK, {26}, 1000},
 	{HW_ID_MCLK_DRIVING_CURRENT, {8}, 0},
-	{HW_ID_DOVDD, {1800000, 1800000}, 0}, // pmic_ldo/gpio(1.8V ldo) for dovdd
 	{HW_ID_AVDD, {2800000, 2800000}, 0}, // pmic_ldo for avdd
-	{HW_ID_DVDD, {1140000, 1200000}, 1000}, // pmic_ldo for dvdd
+	//{HW_ID_DVDD1, {1200000, 1200000}, 1000},  //pmic_ldo7 for dvdd
+	{HW_ID_DVDD, {1200000, 1200000}, 1000}, //ldo for dvdd
 	{HW_ID_RST, {1}, 5000},
 };
 static struct subdrv_pw_seq_entry aov_pw_seq[] = {
 	{HW_ID_RST, {0}, 0},
+	{HW_ID_DOVDD, {1800000, 1800000}, 1000}, // pmic_ldo/gpio(1.8V ldo) for dovdd
 	{HW_ID_MCLK, {26, MCLK_ULPOSC}, 0}, // temp using normal 26m mclk
 	{HW_ID_MCLK_DRIVING_CURRENT, {8}, 0},
-	{HW_ID_DOVDD, {1800000, 1800000}, 0}, // pmic_ldo/gpio(1.8V ldo) for dovdd
 	{HW_ID_AVDD, {2800000, 2800000}, 0}, // pmic_ldo for avdd
-	{HW_ID_DVDD, {1140000, 1200000}, 1000}, // pmic_ldo for dvdd
+	//{HW_ID_DVDD1, {120000, 1200000}, 1000},  //pmic_ldo7 for dvdd
+	{HW_ID_DVDD, {1200000, 1200000}, 1000}, //ldo for dvdd
 	{HW_ID_RST, {1}, 5000},
 };
 const struct subdrv_entry ov50ddual_mipi_raw_entry = {
