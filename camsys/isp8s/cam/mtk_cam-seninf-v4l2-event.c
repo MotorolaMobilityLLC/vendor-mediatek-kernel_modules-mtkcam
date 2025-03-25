@@ -61,6 +61,7 @@ void mtk_cam_seninf_v4l2_event_sof_notify(
 		return;
 	}
 	memset(&data, 0, sizeof(data));
+	memset(&event, 0, sizeof(event));
 
 	ctx = p_info->inf_ctx;
 	if (unlikely(ctx == NULL)) {
