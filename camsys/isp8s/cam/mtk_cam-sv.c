@@ -2638,6 +2638,162 @@ void mtk_cam_sv_fifo_dump(struct mtk_camsv_device *sv_dev)
 
 }
 
+void mtk_cam_sv_stg_dump(struct mtk_camsv_device *sv_dev)
+{
+	unsigned int tag_idx;
+	unsigned int stg_trig0, stg_trig1, stg_trig2, stg_trig3;
+	unsigned int ctl0, ctl1, ctl2, ctl3, ctl4, ctl5, ctl6, ctl7, ctl8, img_trig;
+	unsigned int len0, len1, len2, len3, len4, len5;
+	// central
+	stg_trig0 = readl_relaxed(sv_dev->base + REG_CAMSVCENTRAL_STG_TRIG0);
+	stg_trig1 = readl_relaxed(sv_dev->base + REG_CAMSVCENTRAL_STG_TRIG1);
+	stg_trig2 = readl_relaxed(sv_dev->base + REG_CAMSVCENTRAL_STG_TRIG2);
+	stg_trig3 = readl_relaxed(sv_dev->base + REG_CAMSVCENTRAL_STG_TRIG3);
+	dev_info(sv_dev->dev, "[stg_camsv-%d] trig:%x_%x_%x_%x",
+		sv_dev->id,	stg_trig0, stg_trig1, stg_trig2, stg_trig3);
+
+	for (tag_idx = SVTAG_START; tag_idx < SVTAG_END; tag_idx++) {
+		if (sv_dev->enabled_tags & (1 << tag_idx)) {
+			// stg img A ctl
+			img_trig = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_TRIG +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl0 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL0 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl1 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL1 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl2 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL2 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl3 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL3 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl4 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL4 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl5 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL5 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl6 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL6 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl7 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL7 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl8 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1A_CTL8 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			dev_info(sv_dev->dev, "[stg_camsv-%d] tag %d, img_trig:%x, A_ctl:%x_%x_%x_%x_%x_%x_%x_%x_%x",
+				sv_dev->id, tag_idx,
+				img_trig, ctl0, ctl1, ctl2, ctl3, ctl4, ctl5, ctl6, ctl7, ctl8);
+			// stg img B ctl
+			ctl0 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL0 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl1 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL1 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl2 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL2 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl3 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL3 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl4 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL4 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl5 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL5 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl6 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL6 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl7 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL7 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl8 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1B_CTL8 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			dev_info(sv_dev->dev, "[stg_camsv-%d] tag %d, B_ctl:%x_%x_%x_%x_%x_%x_%x_%x_%x",
+				sv_dev->id, tag_idx,
+				ctl0, ctl1, ctl2, ctl3, ctl4, ctl5, ctl6, ctl7, ctl8);
+			// stg img C ctl
+			ctl0 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL0 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl1 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL1 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl2 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL2 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl3 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL3 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl4 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL4 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl5 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL5 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl6 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL6 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl7 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL7 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			ctl8 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_IMG_1C_CTL8 +
+				CAMSVSTG_TAG_IMG_SHIFT * tag_idx);
+			dev_info(sv_dev->dev, "[stg_camsv-%d] tag %d, C_ctl:%x_%x_%x_%x_%x_%x_%x_%x_%x",
+				sv_dev->id, tag_idx,
+				ctl0, ctl1, ctl2, ctl3, ctl4, ctl5, ctl6, ctl7, ctl8);
+
+			// stg len A ctl
+			if (tag_idx == 0) {
+				len0 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL0 +
+					CAMSVSTG_TAG_LENA_OFST);
+				len1 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL1 +
+					CAMSVSTG_TAG_LENA_OFST);
+				len2 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL2 +
+					CAMSVSTG_TAG_LENA_OFST);
+				len3 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL3 +
+					CAMSVSTG_TAG_LENA_OFST);
+				len4 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL4 +
+					CAMSVSTG_TAG_LENA_OFST);
+				len5 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL5 +
+					CAMSVSTG_TAG_LENA_OFST);
+				dev_info(sv_dev->dev, "[stg_camsv-%d] tag %d, A_len_ctl:%x_%x_%x_%x_%x_%x",
+					sv_dev->id, tag_idx,
+					len0, len1, len2, len3, len4, len5);
+			} else { // tag_idx > 0
+				len0 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL0 +
+					CAMSVSTG_TAG_LENA_OFST + CAMSVSTG_TAG_LEN_SHIFT * (tag_idx - 1));
+				len1 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL1 +
+					CAMSVSTG_TAG_LENA_OFST + CAMSVSTG_TAG_LEN_SHIFT * (tag_idx - 1));
+				len2 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL2 +
+					CAMSVSTG_TAG_LENA_OFST + CAMSVSTG_TAG_LEN_SHIFT * (tag_idx - 1));
+				len3 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL3 +
+					CAMSVSTG_TAG_LENA_OFST + CAMSVSTG_TAG_LEN_SHIFT * (tag_idx - 1));
+				len4 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL4 +
+					CAMSVSTG_TAG_LENA_OFST + CAMSVSTG_TAG_LEN_SHIFT * (tag_idx - 1));
+				len5 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1A_CTL5 +
+					CAMSVSTG_TAG_LENA_OFST + CAMSVSTG_TAG_LEN_SHIFT * (tag_idx - 1));
+				dev_info(sv_dev->dev, "[stg_camsv-%d] tag %d, A_len_ctl:%x_%x_%x_%x_%x_%x",
+					sv_dev->id, tag_idx,
+					len0, len1, len2, len3, len4, len5);
+			}
+
+			// stg len B ctl
+			len0 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1B_CTL0 +
+				CAMSVSTG_TAG_LEN_SHIFT * tag_idx);
+			len1 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1B_CTL1 +
+				CAMSVSTG_TAG_LEN_SHIFT * tag_idx);
+			len2 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1B_CTL2 +
+				CAMSVSTG_TAG_LEN_SHIFT * tag_idx);
+			len3 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1B_CTL3 +
+				CAMSVSTG_TAG_LEN_SHIFT * tag_idx);
+			len4 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1B_CTL4 +
+				CAMSVSTG_TAG_LEN_SHIFT * tag_idx);
+			len5 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1B_CTL5 +
+				CAMSVSTG_TAG_LEN_SHIFT * tag_idx);
+			dev_info(sv_dev->dev, "[stg_camsv-%d] tag %d, B_len_ctl:%x_%x_%x_%x_%x_%x",
+				sv_dev->id, tag_idx,
+				len0, len1, len2, len3, len4, len5);
+			// stg len C ctl
+			len0 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1C_CTL0 +
+				CAMSVSTG_TAG_LEN_SHIFT * tag_idx);
+			len1 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1C_CTL1 +
+				CAMSVSTG_TAG_LEN_SHIFT * tag_idx);
+			len2 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1C_CTL2 +
+				CAMSVSTG_TAG_LEN_SHIFT * tag_idx);
+			len3 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1C_CTL3 +
+				CAMSVSTG_TAG_LEN_SHIFT * tag_idx);
+			len4 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1C_CTL4 +
+				CAMSVSTG_TAG_LEN_SHIFT * tag_idx);
+			len5 = readl_relaxed(sv_dev->base_stg + REG_CAMSVSTG_LEN_1C_CTL5 +
+				CAMSVSTG_TAG_LEN_SHIFT * tag_idx);
+			dev_info(sv_dev->dev, "[stg_camsv-%d] tag %d, C_len_ctl:%x_%x_%x_%x_%x_%x",
+				sv_dev->id, tag_idx,
+				len0, len1, len2, len3, len4, len5);
+		}
+	}
+}
+
 int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tags)
 {
 	unsigned int i;
@@ -2801,6 +2957,7 @@ void camsv_handle_err(
 		if (DISABLE_RECOVER_FLOW) {
 			mtk_cam_isp8s_bwr_dbg_dump(sv_dev->cam->bwr);
 			mtk_cam_sv_fifo_dump(sv_dev);
+			mtk_cam_sv_stg_dump(sv_dev);
 
 			mmdvfs_debug_status_dump(NULL);
 			mmqos_hrt_dump();
