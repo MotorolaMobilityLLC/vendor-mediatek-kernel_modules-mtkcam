@@ -4925,14 +4925,17 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 
 	if (!in_reset) {
 
-		i2c_is_err = sensor_sd->ops->core->command(
+		if ((!ctx->fake_sensor_info.is_fake_sensor) && (ctx->streaming)) {
+			i2c_is_err = sensor_sd->ops->core->command(
 				sensor_sd, V4L2_CMD_G_SENSOR_CONNECTOR_STATUS, NULL);
 
-		if ((assert_when_error) && (i2c_is_err)) {
-			dev_info(ctx->dev, "[%s][ERR] Sensor socket is disconnect\n", __func__);
-			seninf_aee_print(SENINF_AEE_SENSOR_SOCKER_ERR,
+			if ((assert_when_error) && (i2c_is_err)) {
+				dev_info(ctx->dev, "[%s][ERR] Sensor socket i2c is disconnect\n",
+					__func__);
+				seninf_aee_print(SENINF_AEE_SENSOR_SOCKER_ERR,
 					"Sensor socket is disconnect %d\n", i2c_is_err);
-			asserted = true;
+				asserted = true;
+			}
 		}
 
 		ret = g_seninf_ops->_debug(sd_to_ctx(sd));

@@ -5508,8 +5508,11 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		ret = 0;
 	}
 
-	if (!pkg_cnt_changed &&
+	if ((!ctx->fake_sensor_info.is_fake_sensor) &&
+		(!pkg_cnt_changed) &&
 		!(mac_irq & 0x324) &&
+		(ctx->csi_streaming) &&
+		(ctx->streaming) &&
 		(port_a_lprx_out_status != port_a_lprx_out_mask ||
 		port_b_lprx_out_status != port_b_lprx_out_mask)) {
 		ret = -2;
