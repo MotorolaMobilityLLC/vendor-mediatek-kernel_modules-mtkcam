@@ -10,7 +10,7 @@
 #include "mtk_imgsys-dev.h"
 #include "mtk_imgsys-cmdq.h"
 
-//#define QOF_DYNAMIC_DIP_CINE
+#define QOF_DYNAMIC_DIP_CINE
 /**
  * @brief Record every mtcmos status
  *		such as number of users who are
