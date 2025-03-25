@@ -31,8 +31,6 @@ struct fs_perframe_st imx586_sensor_mode[] = {
 		.min_fl_lc = US_TO_LC(33350, 10469),
 		.shutter_lc = US_TO_LC(19997, 10469),
 		.flicker_en = 0,
-		.pclk = 752000000,
-		.linelength = 7872,
 		.margin_lc = 48,
 		.lineTimeInNs = 10469,
 		.readout_time_us = 31407,
@@ -44,8 +42,6 @@ struct fs_perframe_st imx586_sensor_mode[] = {
 		.min_fl_lc = US_TO_LC(100000, 10469), // 10 FPS
 		.shutter_lc = US_TO_LC(19997, 10469),
 		.flicker_en = 0,
-		.pclk = 752000000,
-		.linelength = 7872,
 		.margin_lc = 48,
 		.lineTimeInNs = 10469,
 		.readout_time_us = 31407,
@@ -57,8 +53,6 @@ struct fs_perframe_st imx586_sensor_mode[] = {
 		.min_fl_lc = US_TO_LC(200000, 10469), // 5 FPS
 		.shutter_lc = US_TO_LC(19997, 10469),
 		.flicker_en = 0,
-		.pclk = 752000000,
-		.linelength = 7872,
 		.margin_lc = 48,
 		.lineTimeInNs = 10469,
 		.readout_time_us = 31407,
@@ -71,8 +65,6 @@ struct fs_perframe_st imx586_sensor_mode[] = {
 		.min_fl_lc = 0,
 		.shutter_lc = 0,
 		.flicker_en = 0,
-		.pclk = 0,
-		.linelength = 0,
 		.margin_lc = 0,
 		.lineTimeInNs = 0,
 		.readout_time_us = 0,
@@ -88,8 +80,6 @@ struct fs_perframe_st s5k3m5sx_sensor_mode[] = {
 		.min_fl_lc = US_TO_LC(33350, 10059),
 		.shutter_lc = US_TO_LC(19997, 10059),
 		.flicker_en = 0,
-		.pclk = 482000000,
-		.linelength = 4848,
 		.margin_lc = 4,
 		.lineTimeInNs = 10059,
 		.readout_time_us = 31384,
@@ -101,8 +91,6 @@ struct fs_perframe_st s5k3m5sx_sensor_mode[] = {
 		.min_fl_lc = US_TO_LC(100000, 10059), // 10 FPS
 		.shutter_lc = US_TO_LC(19997, 10059),
 		.flicker_en = 0,
-		.pclk = 482000000,
-		.linelength = 4848,
 		.margin_lc = 4,
 		.lineTimeInNs = 10059,
 		.readout_time_us = 31384,
@@ -114,8 +102,6 @@ struct fs_perframe_st s5k3m5sx_sensor_mode[] = {
 		.min_fl_lc = US_TO_LC(200000, 10059), // 5 FPS
 		.shutter_lc = US_TO_LC(19997, 10059),
 		.flicker_en = 0,
-		.pclk = 482000000,
-		.linelength = 4848,
 		.margin_lc = 4,
 		.lineTimeInNs = 10059,
 		.readout_time_us = 31384,
@@ -128,8 +114,6 @@ struct fs_perframe_st s5k3m5sx_sensor_mode[] = {
 		.min_fl_lc = 0,
 		.shutter_lc = 0,
 		.flicker_en = 0,
-		.pclk = 0,
-		.linelength = 0,
 		.margin_lc = 0,
 		.lineTimeInNs = 0,
 		.readout_time_us = 0,
@@ -145,8 +129,6 @@ struct fs_perframe_st imx481_sensor_mode[] = {
 		.min_fl_lc = US_TO_LC(33350, 8828),
 		.shutter_lc = US_TO_LC(19997, 8828),
 		.flicker_en = 0,
-		.pclk = 580000000,
-		.linelength = 5120,
 		.margin_lc = 18,
 		.lineTimeInNs = 8828,
 		.readout_time_us = 30863,
@@ -159,8 +141,6 @@ struct fs_perframe_st imx481_sensor_mode[] = {
 		.min_fl_lc = 0,
 		.shutter_lc = 0,
 		.flicker_en = 0,
-		.pclk = 0,
-		.linelength = 0,
 		.margin_lc = 0,
 		.lineTimeInNs = 0,
 		.readout_time_us = 0,
@@ -190,8 +170,6 @@ struct fs_perframe_st imx766_sensor_mode[] = {
 		/* .hdr_exp.min_vblank_lc = 100, */
 		/* .hdr_exp.dol_type = 1, */
 		.flicker_en = 0,
-		.pclk = 1281600000,
-		.linelength = 8816,
 		.margin_lc = 48,
 		.lineTimeInNs = 6879,
 		.readout_time_us = 32000,
@@ -215,8 +193,6 @@ struct fs_perframe_st imx766_sensor_mode[] = {
 		.hdr_exp.readout_len_lc = 4742,
 		.hdr_exp.read_margin_lc = 20,
 		.flicker_en = 0,
-		.pclk = 1281600000,
-		.linelength = 8816,
 		.margin_lc = 48,
 		.lineTimeInNs = 6879,
 		.readout_time_us = 32000,
@@ -240,8 +216,6 @@ struct fs_perframe_st imx766_sensor_mode[] = {
 		.hdr_exp.readout_len_lc = 4742,
 		.hdr_exp.read_margin_lc = 10,
 		.flicker_en = 0,
-		.pclk = 1281600000,
-		.linelength = 8816,
 		.margin_lc = 48,
 		.lineTimeInNs = 6879,
 		.readout_time_us = 32000,
@@ -273,8 +247,6 @@ struct fs_perframe_st imx766_sensor_mode[] = {
 		.hdr_exp.readout_len_lc = 2304,
 		.hdr_exp.read_margin_lc = 48*3,
 		.flicker_en = 0,
-		.pclk = 3513600000,
-		.linelength = 15616,
 		.margin_lc = 48*3,
 		.lineTimeInNs = 4444,
 		.readout_time_us = 10239,
@@ -306,8 +278,6 @@ struct fs_perframe_st imx766_sensor_mode[] = {
 		.hdr_exp.readout_len_lc = 2304,
 		.hdr_exp.read_margin_lc = 48*2,
 		.flicker_en = 0,
-		.pclk = 3513600000,
-		.linelength = 15616,
 		.margin_lc = 48*2,
 		.lineTimeInNs = 4444,
 		.readout_time_us = 10239,
@@ -320,8 +290,6 @@ struct fs_perframe_st imx766_sensor_mode[] = {
 		.min_fl_lc = 0,
 		.shutter_lc = 0,
 		.flicker_en = 0,
-		.pclk = 0,
-		.linelength = 0,
 		.margin_lc = 0,
 		.lineTimeInNs = 0,
 		.readout_time_us = 0,
@@ -337,8 +305,6 @@ struct fs_perframe_st imx516_sensor_mode[] = {
 		.min_fl_lc = US_TO_LC(33350, 1389),
 		.shutter_lc = US_TO_LC(19997, 1389),
 		.flicker_en = 0,
-		.pclk = 1041120000,
-		.linelength = 1446,
 		.margin_lc = 1,
 		.lineTimeInNs = 1389,
 	},
@@ -350,8 +316,6 @@ struct fs_perframe_st imx516_sensor_mode[] = {
 		.min_fl_lc = 0,
 		.shutter_lc = 0,
 		.flicker_en = 0,
-		.pclk = 0,
-		.linelength = 0,
 		.margin_lc = 0,
 		.lineTimeInNs = 0,
 	},
@@ -377,8 +341,6 @@ struct fs_perframe_st ov64b_sensor_mode[] = {
 		.hdr_exp.readout_len_lc = 5208,
 		.hdr_exp.read_margin_lc = 30,
 		.flicker_en = 0,
-		.pclk = 115200000,
-		.linelength = 528,
 		.margin_lc = 24,
 		.lineTimeInNs = 4584,
 	},
@@ -400,8 +362,6 @@ struct fs_perframe_st ov64b_sensor_mode[] = {
 		.hdr_exp.readout_len_lc = 5208,
 		.hdr_exp.read_margin_lc = 20,
 		.flicker_en = 0,
-		.pclk = 115200000,
-		.linelength = 528,
 		.margin_lc = 24,
 		.lineTimeInNs = 4584,
 	},
@@ -433,8 +393,6 @@ struct fs_perframe_st ov64b_sensor_mode[] = {
 		.hdr_exp.readout_len_lc = 2304,
 		.hdr_exp.read_margin_lc = 48*3,
 		.flicker_en = 0,
-		.pclk = 3513600000,
-		.linelength = 15616,
 		.margin_lc = 48*3,
 		.lineTimeInNs = 4444,
 		.readout_time_us = 10239,
@@ -467,8 +425,6 @@ struct fs_perframe_st ov64b_sensor_mode[] = {
 		.hdr_exp.readout_len_lc = 2304,
 		.hdr_exp.read_margin_lc = 48*2,
 		.flicker_en = 0,
-		.pclk = 3513600000,
-		.linelength = 15616,
 		.margin_lc = 48*2,
 		.lineTimeInNs = 4444,
 		.readout_time_us = 10239,
@@ -481,10 +437,75 @@ struct fs_perframe_st ov64b_sensor_mode[] = {
 		.min_fl_lc = 0,
 		.shutter_lc = 0,
 		.flicker_en = 0,
-		.pclk = 0,
-		.linelength = 0,
 		.margin_lc = 0,
 		.lineTimeInNs = 0,
+	},
+};
+
+
+struct fs_perframe_st imx09a_sensor_mode[] = {
+	/* Head */
+	{
+		/* 0 --- DCG+VS */
+		.sensor_idx = 0,
+		.sensor_id = 0x0910,
+		.min_fl_lc = US_TO_LC(33350, 5740),
+		.hdr_exp.mode_exp_cnt = 2,
+		.hdr_exp.multi_exp_type = 2,   /* MULTI_EXP_TYPE_DCG_VSL */
+		.hdr_exp.exp_order = 0,        /* NE first */
+		.hdr_exp.ae_exp_cnt = 2,
+		.hdr_exp.exp_lc = {
+			US_TO_LC(10002, 3550),
+			US_TO_LC(2500, 5740),
+			0,
+			0
+		},
+		.hdr_exp.readout_len_lc = 2476,
+		.hdr_exp.read_margin_lc = 148,
+		.hdr_exp.cas_mode_info.lineTimeInNs = {
+			5740,
+			3550,
+			0,
+			0,
+			0
+		},
+		.hdr_exp.cas_mode_info.margin_lc = {
+			64,
+			64,
+			0,
+			0,
+			0
+		},
+		.hdr_exp.cas_mode_info.read_margin_lc = {
+			148,
+			124,
+			0,
+			0,
+			0
+		},
+		.hdr_exp.cas_mode_info.cit_loss_lc = {
+			3293,
+			0,
+			0,
+			0,
+			0
+		},
+		.flicker_en = 0,
+		.margin_lc = 64,
+		.lineTimeInNs = 5740,
+		.readout_time_us = 16600,
+	},
+
+	/* End */
+	{
+		.sensor_idx = -1,
+		.sensor_id = 0x0,
+		.min_fl_lc = 0,
+		.shutter_lc = 0,
+		.flicker_en = 0,
+		.margin_lc = 0,
+		.lineTimeInNs = 0,
+		.readout_time_us = 0,
 	},
 };
 
@@ -520,6 +541,11 @@ struct ut_fs_perframe_sensor_mode_list ut_fs_pf_s_mode_list[] = {
 	{
 		.sensor_name = "ov64b",
 		.mode_list = ov64b_sensor_mode,
+	},
+
+	{
+		.sensor_name = "imx09a",
+		.mode_list = imx09a_sensor_mode,
 	},
 
 	/* End */

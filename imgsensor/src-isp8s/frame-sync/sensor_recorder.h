@@ -42,6 +42,7 @@ enum predicted_fl_label {
 enum multi_exp_type {
 	MULTI_EXP_TYPE_STG,
 	MULTI_EXP_TYPE_LBMF,
+	MULTI_EXP_TYPE_DCG_VSL,
 };
 
 
@@ -123,8 +124,6 @@ struct FrameRecord {
 	unsigned int exp_order;         /* for NDOL/LBMF/AEB */
 	unsigned int min_vblank_lc;     /* for DOL */
 
-	unsigned long long pclk;
-	unsigned int line_length;
 	unsigned int lineTimeInNs;      /* using it (some sensor has cust line time) */
 
 	/* info for debug */
@@ -186,8 +185,15 @@ void frec_free_mem_data(const unsigned int idx, void *dev);
 
 
 /*----------------------------------------------------------------------------*/
-// utilities functions
+/* user auxiliary functions */
 /*----------------------------------------------------------------------------*/
+static inline int frec_chk_if_lut_is_used(const unsigned int m_exp_type)
+{
+	return (m_exp_type == MULTI_EXP_TYPE_LBMF
+		|| m_exp_type == MULTI_EXP_TYPE_DCG_VSL) ? 1 : 0;
+}
+
+
 void frec_setup_frame_rec_by_fs_streaming_st(struct FrameRecord *p_frame_rec,
 	const struct fs_streaming_st *sensor_info);
 
@@ -222,6 +228,12 @@ unsigned int frec_g_valid_min_fl_lc_for_shutters_by_frame_rec(
 /*----------------------------------------------------------------------------*/
 // recorder framework related functions
 /*----------------------------------------------------------------------------*/
+void frec_update_sen_mode_info(const unsigned int idx,
+	const struct fs_hdr_exp_st *hdr_info);
+
+void frec_clr_sen_mode_info(const unsigned int idx);
+
+
 void frec_chk_fl_pr_match_act(const unsigned int idx);
 
 void frec_update_fl_info(const unsigned int idx, const unsigned int fl_lc,

@@ -184,6 +184,15 @@ static const int hdr_exp_idx_map[][FS_HDR_MAX] = {
 };
 
 
+/* for mode have different mode parameters for each exposure, e.g., DCG+VS */
+struct fs_hdr_sen_cascade_mode_info_st {
+	unsigned int lineTimeInNs[FS_HDR_MAX];
+	unsigned int margin_lc[FS_HDR_MAX];
+	unsigned int read_margin_lc[FS_HDR_MAX];
+	unsigned int cit_loss_lc[FS_HDR_MAX];
+};
+
+
 struct fs_hdr_exp_st {
 	unsigned int mode_exp_cnt;       // exp cnt from HDR mode
 	unsigned int ae_exp_cnt;         // exp cnt from ae set ctrl
@@ -200,6 +209,7 @@ struct fs_hdr_exp_st {
 	unsigned int dol_type;
 	unsigned int exp_order;
 	unsigned int min_vblank_lc;
+	struct fs_hdr_sen_cascade_mode_info_st cas_mode_info;
 };
 /******************************************************************************/
 

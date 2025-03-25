@@ -55,6 +55,36 @@
 /******************************************************************************/
 // frame recorder static structure
 /******************************************************************************/
+/* some sw properties that used to help explain the sensor mode info */
+struct frec_sen_mode_property_info_st {
+	/* common properties */
+	unsigned int multi_exp_type;	/* STG / LBMF / DCG+VS */
+	unsigned int mode_exp_cnt;	/* 2-exp / 3-exp */
+
+	/* special properties */
+	unsigned int exp_order;		/* for LBMF type => LE/SE 1st */
+	unsigned int dol_type;		/* for STG => FDOL/DOL/NDOL */
+};
+
+
+/* for mode have different mode parameters for each exposure, e.g., DCG+VS */
+struct frec_sen_cascade_mode_info_st {
+	unsigned int lineTimeInNs[FS_HDR_MAX];
+	unsigned int margin_lc[FS_HDR_MAX];
+	unsigned int read_margin_lc[FS_HDR_MAX];
+	unsigned int cit_loss_lc[FS_HDR_MAX];
+};
+
+
+/* keeping info that according to sensor mode */
+struct frec_sen_mode_info_st {
+	/* software properties for the sensor mode */
+	struct frec_sen_mode_property_info_st prop;
+
+	struct frec_sen_cascade_mode_info_st cas_mode_info;
+};
+
+
 struct FrameRecorder {
 	/* is_init: */
 	/*     0 => records data need be setup to sensor initial value. */
@@ -63,14 +93,11 @@ struct FrameRecorder {
 
 	unsigned int fl_act_delay; // (N+2) => 3; (N+1) => 2;
 	unsigned int def_fl_lc;
+	struct frec_sen_mode_info_st mode_info;
 
 	/* sensor record */
 	FS_Atomic_T depth_idx;
 	struct FrameRecord frame_recs[RECORDER_DEPTH];
-
-#if !defined(FS_UT)
-	struct mutex frame_recs_update_lock;
-#endif
 
 	/* !!! frame length related info !!! */
 	/* predict frame length */
@@ -97,6 +124,12 @@ struct FrameRecorder {
 	// unsigned int p1_sof_cnt;
 	/* recorder push/update system timestamp for debugging */
 	unsigned long long sys_ts_recs[RECORDER_DEPTH];
+
+	/* locks */
+#if !defined(FS_UT)
+	struct mutex frame_recs_update_lock;
+	spinlock_t sen_mode_info_update_lock;
+#endif
 };
 static struct FrameRecorder *frm_recorders[SENSOR_MAX_NUM];
 /******************************************************************************/
@@ -125,7 +158,91 @@ static struct FrameRecorder *frec_g_recorder_ctx(const unsigned int idx,
 
 
 /*----------------------------------------------------------------------------*/
-// tool function
+// recorder dynamic memory allocate / free functions
+/*----------------------------------------------------------------------------*/
+static void frec_data_init(const unsigned int idx)
+{
+	struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
+
+	if (unlikely(pfrec == NULL))
+		return;
+
+	frec_mutex_lock_init(&pfrec->frame_recs_update_lock);
+	frec_spin_lock_init(&pfrec->sen_mode_info_update_lock);
+}
+
+
+void frec_alloc_mem_data(const unsigned int idx, void *dev)
+{
+	struct FrameRecorder *ptr = NULL;
+
+	if (unlikely(frm_recorders[idx] != NULL)) {
+		LOG_MUST(
+			"NOTICE: [%u] ID:%#x(sidx:%u/inf:%u), mem already allocated(recs[%u]:%p), return\n",
+			idx,
+			fs_get_reg_sensor_id(idx),
+			fs_get_reg_sensor_idx(idx),
+			fs_get_reg_sensor_inf_idx(idx),
+			idx, frm_recorders[idx]);
+		return;
+	}
+
+	ptr = FS_DEV_ZALLOC(dev, sizeof(*ptr));
+	if (unlikely(ptr == NULL)) {
+		LOG_MUST(
+			"ERROR: [%u] ID:%#x(sidx:%u/inf:%u), mem allocate failed(ptr:%p, recs[%u]:%p), return\n",
+			idx,
+			fs_get_reg_sensor_id(idx),
+			fs_get_reg_sensor_idx(idx),
+			fs_get_reg_sensor_inf_idx(idx),
+			ptr, idx, frm_recorders[idx]);
+		return;
+	}
+
+	frm_recorders[idx] = ptr;
+
+	/* init allocated data */
+	frec_data_init(idx);
+
+	LOG_INF(
+		"[%u] ID:%#x(sidx:%u/inf:%u), mem allocated (ptr:%p, recs[%u]:%p)\n",
+		idx,
+		fs_get_reg_sensor_id(idx),
+		fs_get_reg_sensor_idx(idx),
+		fs_get_reg_sensor_inf_idx(idx),
+		ptr, idx, frm_recorders[idx]);
+}
+
+
+void frec_free_mem_data(const unsigned int idx, void *dev)
+{
+	if (unlikely(frm_recorders[idx] == NULL)) {
+		LOG_MUST(
+			"NOTICE: [%u] ID:%#x(sidx:%u/inf:%u), mem already null(recs[%u]:%p), return\n",
+			idx,
+			fs_get_reg_sensor_id(idx),
+			fs_get_reg_sensor_idx(idx),
+			fs_get_reg_sensor_inf_idx(idx),
+			idx, frm_recorders[idx]);
+		return;
+	}
+
+	FS_FREE(frm_recorders[idx]);
+	frm_recorders[idx] = NULL;
+
+	LOG_INF(
+		"[%u] ID:%#x(sidx:%u/inf:%u), mem freed (recs[%u]:%p)\n",
+		idx,
+		fs_get_reg_sensor_id(idx),
+		fs_get_reg_sensor_idx(idx),
+		fs_get_reg_sensor_inf_idx(idx),
+		idx, frm_recorders[idx]);
+}
+/*----------------------------------------------------------------------------*/
+
+
+/*----------------------------------------------------------------------------*/
+/* utilities functions */
 /*----------------------------------------------------------------------------*/
 static unsigned int divide_num(const unsigned int idx,
 	const unsigned int n, const unsigned int base, const char *caller)
@@ -150,9 +267,225 @@ static unsigned int divide_num(const unsigned int idx,
 }
 
 
+/* Return: @0 => non valid / @1 => valid */
+static unsigned int chk_if_sen_fdelay_is_valid(const unsigned int idx,
+	const struct FrameRecorder *pfrec, const char *caller)
+{
+	const unsigned int fdelay = pfrec->fl_act_delay;
+
+	/* error handle, check sensor fl_active_delay value */
+	if (unlikely((fdelay < 2) || (fdelay > 3))) {
+		LOG_MUST(
+			"[%s]: ERROR: [%u] ID:%#x(sidx:%u/inf:%u), sensor driver's frame_time_delay_frame:%u is not valid (MUST be 2 or 3), plz check sensor driver for getting correct value\n",
+			caller, idx,
+			fs_get_reg_sensor_id(idx),
+			fs_get_reg_sensor_idx(idx),
+			fs_get_reg_sensor_inf_idx(idx),
+			fdelay);
+		return 0;
+	}
+	return 1;
+}
+
+
+static inline int chk_exp_order_valid(const unsigned int exp_order)
+{
+	return (likely(exp_order < EXP_ORDER_MAX)) ? 1 : 0;
+}
+
+
+static inline int chk_exp_cnt_valid(const unsigned int exp_cnt)
+{
+	return (likely(exp_cnt < (FS_HDR_MAX + 1))) ? 1 : 0;
+}
+
+
+static inline int chk_exp_no_valid(const unsigned int exp_no)
+{
+	return (likely(exp_no < FS_HDR_MAX)) ? 1 : 0;
+}
+
+
+static inline int g_exp_order_idx_mapping(const unsigned int idx,
+	const unsigned int m_exp_order, const unsigned int m_exp_cnt,
+	const unsigned int exp_no, const char *caller)
+{
+	/* error handling */
+	if (unlikely((!chk_exp_order_valid(m_exp_order))
+			|| (!chk_exp_cnt_valid(m_exp_cnt))
+			|| (!chk_exp_no_valid(exp_no)))) {
+		LOG_MUST(
+			"[%s] ERROR: [%u] ID:%#x(sidx:%u/inf:%u), get invalid para, exp(order:%u/cnt:%u/no:%u) => return exp_idx:%d\n",
+			caller,
+			idx,
+			fs_get_reg_sensor_id(idx),
+			fs_get_reg_sensor_idx(idx),
+			fs_get_reg_sensor_inf_idx(idx),
+			m_exp_order,
+			m_exp_cnt,
+			exp_no,
+			FS_HDR_NONE);
+
+		return FS_HDR_NONE;
+	}
+
+	return (exp_order_idx_map[m_exp_order][m_exp_cnt][exp_no]);
+}
+
+
+static int frec_g_mode_last_exp_idx(const unsigned int idx,
+	const struct FrameRecorder *pfrec, const unsigned int depth_idx)
+{
+	unsigned int m_exp_cnt, m_exp_order, last_exp_no;
+	int last_exp_idx;
+
+	m_exp_order = pfrec->frame_recs[depth_idx].exp_order;
+
+	m_exp_cnt = pfrec->frame_recs[depth_idx].mode_exp_cnt;
+	if (unlikely(m_exp_cnt == 0)) {
+		m_exp_cnt = 1;
+		LOG_MUST(
+			"ERROR: [%u] ID:%#x(sidx:%u/inf:%u), m_exp_cnt:0 => assign m_exp_cnt:%u\n",
+			idx,
+			fs_get_reg_sensor_id(idx),
+			fs_get_reg_sensor_idx(idx),
+			fs_get_reg_sensor_inf_idx(idx),
+			m_exp_cnt);
+	}
+	last_exp_no = (m_exp_cnt - 1);
+
+	last_exp_idx = g_exp_order_idx_mapping(idx, m_exp_order, m_exp_cnt, last_exp_no, __func__);
+	if (unlikely(last_exp_idx < 0)) {
+		last_exp_idx = 0;
+		LOG_MUST(
+			"ERROR: [%u] ID:%#x(sidx:%u/inf:%u), exp_order_idx_map[%u][%u][%u]:(< 0) => assign last_exp_idx:%d\n",
+			idx,
+			fs_get_reg_sensor_id(idx),
+			fs_get_reg_sensor_idx(idx),
+			fs_get_reg_sensor_inf_idx(idx),
+			m_exp_order,
+			m_exp_cnt,
+			last_exp_no,
+			last_exp_idx);
+	}
+
+	return last_exp_idx;
+}
+
+
+/*----------------------------------------------------------------------------*/
+/* sensor mode info struct                                                    */
+/*----------------------------------------------------------------------------*/
+static inline void update_sen_cascade_mode_info(
+	struct frec_sen_cascade_mode_info_st *p_dst_st,
+	const struct fs_hdr_sen_cascade_mode_info_st *p_src_st)
+{
+	/* !!! sync all needed info by yourself !!! */
+	memcpy(&p_dst_st->lineTimeInNs, &p_src_st->lineTimeInNs,
+		sizeof(unsigned int) * FS_HDR_MAX);
+	memcpy(&p_dst_st->margin_lc, &p_src_st->margin_lc,
+		sizeof(unsigned int) * FS_HDR_MAX);
+	memcpy(&p_dst_st->read_margin_lc, &p_src_st->read_margin_lc,
+		sizeof(unsigned int) * FS_HDR_MAX);
+	memcpy(&p_dst_st->cit_loss_lc, &p_src_st->cit_loss_lc,
+		sizeof(unsigned int) * FS_HDR_MAX);
+}
+
+
+static inline void update_sen_mode_info(struct FrameRecorder *pfrec,
+	struct frec_sen_mode_info_st *p_mode_info,
+	const struct fs_hdr_exp_st *p_hdr_info)
+{
+	frec_spin_lock(&pfrec->sen_mode_info_update_lock);
+	/* => some SW properties */
+	pfrec->mode_info.prop.multi_exp_type = p_hdr_info->multi_exp_type;
+	pfrec->mode_info.prop.mode_exp_cnt = p_hdr_info->mode_exp_cnt;
+	pfrec->mode_info.prop.exp_order = p_hdr_info->exp_order;
+	pfrec->mode_info.prop.dol_type = p_hdr_info->dol_type;
+
+	/* => sensor HW mode info */
+	update_sen_cascade_mode_info(
+		&p_mode_info->cas_mode_info,
+		&p_hdr_info->cas_mode_info);
+	frec_spin_unlock(&pfrec->sen_mode_info_update_lock);
+}
+
+
+static inline void clr_sen_mode_info(struct FrameRecorder *pfrec,
+	struct frec_sen_mode_info_st *p_mode_info)
+{
+	frec_spin_lock(&pfrec->sen_mode_info_update_lock);
+	memset(p_mode_info, 0, sizeof(struct frec_sen_mode_info_st));
+	frec_spin_unlock(&pfrec->sen_mode_info_update_lock);
+}
+
+
+static void g_sen_mode_info(const unsigned int idx,
+	struct frec_sen_mode_info_st *p_info)
+{
+	struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
+	struct frec_sen_mode_info_st *p_mode_info = NULL;
+
+	/* unexpected case */
+	if (unlikely(pfrec == NULL || p_info == NULL))
+		return;
+	p_mode_info = &pfrec->mode_info;
+
+	frec_spin_lock(&pfrec->sen_mode_info_update_lock);
+	*p_info = *p_mode_info;
+	frec_spin_unlock(&pfrec->sen_mode_info_update_lock);
+}
+
+
 /*----------------------------------------------------------------------------*/
 // debug/dump function
 /*----------------------------------------------------------------------------*/
+static inline unsigned int frec_snprf_sen_cascade_mode_info(
+	const struct frec_sen_mode_info_st *p_mode_info,
+	unsigned int log_str_len, char *log_buf, unsigned int len)
+{
+	const unsigned int mode_exp_cnt = p_mode_info->prop.mode_exp_cnt;
+	unsigned int i;
+
+	FS_SNPRF(log_str_len, log_buf, len, ",cas(lineT/mar(c,r)/cLOS):(");
+	for (i = 0; (i < mode_exp_cnt && i < FS_HDR_MAX); ++i) {
+		FS_SNPRF(log_str_len, log_buf, len,
+			"[%u](%u/(%u,%u)/%u)|",
+			i,
+			p_mode_info->cas_mode_info.lineTimeInNs[i],
+			p_mode_info->cas_mode_info.margin_lc[i],
+			p_mode_info->cas_mode_info.read_margin_lc[i],
+			p_mode_info->cas_mode_info.cit_loss_lc[i]);
+	}
+	FS_SNPRF(log_str_len, log_buf, len, ")");
+
+	return len;
+}
+
+
+static unsigned int frec_snprf_sen_mode_info(
+	const struct frec_sen_mode_info_st *p_mode_info,
+	unsigned int log_str_len, char *log_buf, unsigned int len)
+{
+	if (unlikely(p_mode_info == NULL))
+		return len;
+
+	FS_SNPRF(log_str_len, log_buf, len,
+		"mProp(m:%u(t:%u(%u),o:%u))",
+		p_mode_info->prop.mode_exp_cnt,
+		p_mode_info->prop.multi_exp_type,
+		p_mode_info->prop.dol_type,
+		p_mode_info->prop.exp_order);
+
+	if (p_mode_info->prop.multi_exp_type == MULTI_EXP_TYPE_DCG_VSL) {
+		len = frec_snprf_sen_cascade_mode_info(
+			p_mode_info, log_str_len, log_buf, len);
+	}
+
+	return len;
+}
+
+
 void frec_dump_cascade_exp_fl_info(const unsigned int idx,
 	const unsigned int *exp_cas_arr, const unsigned int *fl_cas_arr,
 	const unsigned int arr_len, const char *caller)
@@ -241,7 +574,7 @@ void frec_dump_frame_record_info(const struct FrameRecord *p_frame_rec,
 	const char *caller)
 {
 	LOG_MUST(
-		"[%s]: req_id:%d, (exp_lc:%u/fl_lc:%u), (a:%u/m:%u(%u/%u,%u), exp:%u/%u/%u/%u/%u, fl:%u/%u/%u/%u/%u), margin_lc:(%u, read:%u), readout_len_lc:%u, min_vblank_lc:%u, line_time:%u(pclk:%llu,lineL:%u)\n",
+		"[%s]: req_id:%d, (exp_lc:%u/fl_lc:%u), (a:%u/m:%u(%u/%u,%u), exp:%u/%u/%u/%u/%u, fl:%u/%u/%u/%u/%u), margin_lc:(%u, read:%u), readout_len_lc:%u, min_vblank_lc:%u, line_time:%u\n",
 		caller,
 		p_frame_rec->mw_req_id,
 		p_frame_rec->shutter_lc,
@@ -265,9 +598,7 @@ void frec_dump_frame_record_info(const struct FrameRecord *p_frame_rec,
 		p_frame_rec->read_margin_lc,
 		p_frame_rec->readout_len_lc,
 		p_frame_rec->min_vblank_lc,
-		p_frame_rec->lineTimeInNs,
-		p_frame_rec->pclk,
-		p_frame_rec->line_length);
+		p_frame_rec->lineTimeInNs);
 }
 
 
@@ -275,6 +606,7 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 {
 	const struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
 	const unsigned int log_str_len = LOG_BUF_STR_LEN;
+	struct frec_sen_mode_info_st mode_info = {0};
 	unsigned int act_fl_arr[RECORDER_DEPTH-1] = {0};
 	unsigned int depth_idx;
 	unsigned int i;
@@ -294,10 +626,9 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 	}
 
 	FS_SNPRF(log_str_len, log_buf, len,
-		"[%s]: [%u] ID:%#x(sidx:%u), fdelay:%u/def_fl:%u/lineT:%u/mar(%u,r:%u)/routL:%u/min_vb:%u",
+		"[%s]:[%u][sidx:%u] fdelay:%u/defFL:%u/lineT:%u/mar(%u,r:%u)/roL:%u/minVB:%u, ",
 		caller,
 		idx,
-		fs_get_reg_sensor_id(idx),
 		fs_get_reg_sensor_idx(idx),
 		pfrec->fl_act_delay,
 		pfrec->def_fl_lc,
@@ -306,6 +637,9 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 		pfrec->frame_recs[depth_idx].read_margin_lc,
 		pfrec->frame_recs[depth_idx].readout_len_lc,
 		pfrec->frame_recs[depth_idx].min_vblank_lc);
+
+	g_sen_mode_info(idx, &mode_info);
+	len = frec_snprf_sen_mode_info(&mode_info, log_str_len, log_buf, len);
 
 	for (i = 0; i < RECORDER_DEPTH; ++i) {
 		/* dump data from newest to old */
@@ -330,7 +664,7 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 			pfrec->frame_recs[idx].exp_lc_arr[3],
 			pfrec->frame_recs[idx].exp_lc_arr[4]);
 
-		if (pfrec->frame_recs[idx].m_exp_type == MULTI_EXP_TYPE_LBMF) {
+		if (frec_chk_if_lut_is_used(pfrec->frame_recs[idx].m_exp_type)) {
 			FS_SNPRF(log_str_len, log_buf, len,
 				",%u/%u/%u/%u/%u",
 				pfrec->frame_recs[idx].fl_lc_arr[0],
@@ -433,201 +767,8 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 
 
 /*----------------------------------------------------------------------------*/
-// recorder dynamic memory allocate / free functions
+/* user auxiliary functions */
 /*----------------------------------------------------------------------------*/
-static void frec_data_init(const unsigned int idx)
-{
-#if !defined(FS_UT)
-	struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
-
-	if (unlikely(pfrec == NULL))
-		return;
-
-	frec_mutex_lock_init(&pfrec->frame_recs_update_lock);
-#endif
-}
-
-
-void frec_alloc_mem_data(const unsigned int idx, void *dev)
-{
-	struct FrameRecorder *ptr = NULL;
-
-	if (unlikely(frm_recorders[idx] != NULL)) {
-		LOG_MUST(
-			"NOTICE: [%u] ID:%#x(sidx:%u/inf:%u), mem already allocated(recs[%u]:%p), return\n",
-			idx,
-			fs_get_reg_sensor_id(idx),
-			fs_get_reg_sensor_idx(idx),
-			fs_get_reg_sensor_inf_idx(idx),
-			idx, frm_recorders[idx]);
-		return;
-	}
-
-	ptr = FS_DEV_ZALLOC(dev, sizeof(*ptr));
-	if (unlikely(ptr == NULL)) {
-		LOG_MUST(
-			"ERROR: [%u] ID:%#x(sidx:%u/inf:%u), mem allocate failed(ptr:%p, recs[%u]:%p), return\n",
-			idx,
-			fs_get_reg_sensor_id(idx),
-			fs_get_reg_sensor_idx(idx),
-			fs_get_reg_sensor_inf_idx(idx),
-			ptr, idx, frm_recorders[idx]);
-		return;
-	}
-
-	frm_recorders[idx] = ptr;
-
-	/* init allocated data */
-	frec_data_init(idx);
-
-	LOG_INF(
-		"[%u] ID:%#x(sidx:%u/inf:%u), mem allocated (ptr:%p, recs[%u]:%p)\n",
-		idx,
-		fs_get_reg_sensor_id(idx),
-		fs_get_reg_sensor_idx(idx),
-		fs_get_reg_sensor_inf_idx(idx),
-		ptr, idx, frm_recorders[idx]);
-}
-
-
-void frec_free_mem_data(const unsigned int idx, void *dev)
-{
-	if (unlikely(frm_recorders[idx] == NULL)) {
-		LOG_MUST(
-			"NOTICE: [%u] ID:%#x(sidx:%u/inf:%u), mem already null(recs[%u]:%p), return\n",
-			idx,
-			fs_get_reg_sensor_id(idx),
-			fs_get_reg_sensor_idx(idx),
-			fs_get_reg_sensor_inf_idx(idx),
-			idx, frm_recorders[idx]);
-		return;
-	}
-
-	FS_FREE(frm_recorders[idx]);
-	frm_recorders[idx] = NULL;
-
-	LOG_INF(
-		"[%u] ID:%#x(sidx:%u/inf:%u), mem freed (recs[%u]:%p)\n",
-		idx,
-		fs_get_reg_sensor_id(idx),
-		fs_get_reg_sensor_idx(idx),
-		fs_get_reg_sensor_inf_idx(idx),
-		idx, frm_recorders[idx]);
-}
-/*----------------------------------------------------------------------------*/
-
-
-/*----------------------------------------------------------------------------*/
-// utilities functions
-/*----------------------------------------------------------------------------*/
-/*
- * Return:
- *      @0 => non valid
- *      @1 => valid
- */
-static unsigned int frec_chk_fdelay_is_valid(const unsigned int idx,
-	const unsigned int fdelay, const char *caller)
-{
-	/* error handle, check sensor fl_active_delay value */
-	if (unlikely((fdelay < 2) || (fdelay > 3))) {
-		LOG_MUST(
-			"[%s]: ERROR: [%u] ID:%#x(sidx:%u/inf:%u), sensor driver's frame_time_delay_frame:%u is not valid (MUST be 2 or 3), plz check sensor driver for getting correct value\n",
-			caller, idx,
-			fs_get_reg_sensor_id(idx),
-			fs_get_reg_sensor_idx(idx),
-			fs_get_reg_sensor_inf_idx(idx),
-			fdelay);
-		return 0;
-	}
-	return 1;
-}
-
-
-static inline int chk_exp_order_valid(const unsigned int exp_order)
-{
-	return (likely(exp_order < EXP_ORDER_MAX)) ? 1 : 0;
-}
-
-
-static inline int chk_exp_cnt_valid(const unsigned int exp_cnt)
-{
-	return (likely(exp_cnt < (FS_HDR_MAX + 1))) ? 1 : 0;
-}
-
-
-static inline int chk_exp_no_valid(const unsigned int exp_no)
-{
-	return (likely(exp_no < FS_HDR_MAX)) ? 1 : 0;
-}
-
-
-static inline int g_exp_order_idx_mapping(const unsigned int idx,
-	const unsigned int m_exp_order, const unsigned int m_exp_cnt,
-	const unsigned int exp_no, const char *caller)
-{
-	/* error handling */
-	if (unlikely((!chk_exp_order_valid(m_exp_order))
-			|| (!chk_exp_cnt_valid(m_exp_cnt))
-			|| (!chk_exp_no_valid(exp_no)))) {
-		LOG_MUST(
-			"[%s] ERROR: [%u] ID:%#x(sidx:%u/inf:%u), get invalid para, exp(order:%u/cnt:%u/no:%u) => return exp_idx:%d\n",
-			caller,
-			idx,
-			fs_get_reg_sensor_id(idx),
-			fs_get_reg_sensor_idx(idx),
-			fs_get_reg_sensor_inf_idx(idx),
-			m_exp_order,
-			m_exp_cnt,
-			exp_no,
-			FS_HDR_NONE);
-
-		return FS_HDR_NONE;
-	}
-
-	return (exp_order_idx_map[m_exp_order][m_exp_cnt][exp_no]);
-}
-
-
-static int frec_g_mode_last_exp_idx(const unsigned int idx,
-	const struct FrameRecorder *pfrec, const unsigned int depth_idx)
-{
-	unsigned int m_exp_cnt, m_exp_order, last_exp_no;
-	int last_exp_idx;
-
-	m_exp_order = pfrec->frame_recs[depth_idx].exp_order;
-
-	m_exp_cnt = pfrec->frame_recs[depth_idx].mode_exp_cnt;
-	if (unlikely(m_exp_cnt == 0)) {
-		m_exp_cnt = 1;
-		LOG_MUST(
-			"ERROR: [%u] ID:%#x(sidx:%u/inf:%u), m_exp_cnt:0 => assign m_exp_cnt:%u\n",
-			idx,
-			fs_get_reg_sensor_id(idx),
-			fs_get_reg_sensor_idx(idx),
-			fs_get_reg_sensor_inf_idx(idx),
-			m_exp_cnt);
-	}
-	last_exp_no = (m_exp_cnt - 1);
-
-	last_exp_idx = g_exp_order_idx_mapping(idx, m_exp_order, m_exp_cnt, last_exp_no, __func__);
-	if (unlikely(last_exp_idx < 0)) {
-		last_exp_idx = 0;
-		LOG_MUST(
-			"ERROR: [%u] ID:%#x(sidx:%u/inf:%u), exp_order_idx_map[%u][%u][%u]:(< 0) => assign last_exp_idx:%d\n",
-			idx,
-			fs_get_reg_sensor_id(idx),
-			fs_get_reg_sensor_idx(idx),
-			fs_get_reg_sensor_inf_idx(idx),
-			m_exp_order,
-			m_exp_cnt,
-			last_exp_no,
-			last_exp_idx);
-	}
-
-	return last_exp_idx;
-}
-
-
 void frec_setup_frame_rec_by_fs_streaming_st(struct FrameRecord *p_frame_rec,
 	const struct fs_streaming_st *sensor_info)
 {
@@ -652,8 +793,6 @@ void frec_setup_frame_rec_by_fs_streaming_st(struct FrameRecord *p_frame_rec,
 	p_frame_rec->exp_order = sensor_info->hdr_exp.exp_order;
 	p_frame_rec->min_vblank_lc = sensor_info->hdr_exp.min_vblank_lc;
 
-	p_frame_rec->pclk = sensor_info->pclk;
-	p_frame_rec->line_length = sensor_info->linelength;
 	p_frame_rec->lineTimeInNs = sensor_info->lineTimeInNs;
 
 	// p_frame_rec->mw_req_id = // NOT has this info now.
@@ -686,8 +825,6 @@ void frec_setup_frame_rec_by_fs_perframe_st(struct FrameRecord *p_frame_rec,
 	p_frame_rec->exp_order = pf_ctrl->hdr_exp.exp_order;
 	p_frame_rec->min_vblank_lc = pf_ctrl->hdr_exp.min_vblank_lc;
 
-	p_frame_rec->pclk = pf_ctrl->pclk;
-	p_frame_rec->line_length = pf_ctrl->linelength;
 	p_frame_rec->lineTimeInNs = pf_ctrl->lineTimeInNs;
 
 	p_frame_rec->mw_req_id = pf_ctrl->req_id;
@@ -716,6 +853,246 @@ void frec_setup_seamless_rec_by_fs_seamless_st(
 /*----------------------------------------------------------------------------*/
 // NDOL / LB-MF utilities functions
 /*----------------------------------------------------------------------------*/
+static inline unsigned int g_lut_id_by_cascade_ref_idx(
+	const unsigned int ref_idx, const unsigned int mode_exp_cnt)
+{
+	return (mode_exp_cnt != 0)
+		? ((ref_idx % mode_exp_cnt) % FS_HDR_MAX)
+		: (ref_idx % FS_HDR_MAX);
+}
+
+
+static inline unsigned int g_margin_lc_by_lut_id(const unsigned int idx,
+	const unsigned int ref_idx,
+	const struct frec_sen_mode_info_st *mode_info,
+	const struct FrameRecord *curr_rec)
+{
+	const unsigned int multi_exp_type = mode_info->prop.multi_exp_type;
+	unsigned int ret = 0;
+
+	switch (multi_exp_type) {
+	case MULTI_EXP_TYPE_DCG_VSL:
+	{
+		const unsigned int lut_idx = g_lut_id_by_cascade_ref_idx(
+			ref_idx, curr_rec->mode_exp_cnt);
+
+		ret = mode_info->cas_mode_info.margin_lc[lut_idx];
+	}
+		break;
+	case MULTI_EXP_TYPE_LBMF:
+	default:
+		ret = divide_num(idx,
+			curr_rec->margin_lc, curr_rec->mode_exp_cnt, __func__);
+		break;
+	}
+
+	return ret;
+}
+
+
+static inline unsigned int g_based_fll_by_lut_id(const unsigned int idx,
+	const unsigned int ref_idx,
+	const struct frec_sen_mode_info_st *mode_info,
+	const struct FrameRecord *curr_rec)
+{
+	const unsigned int multi_exp_type = mode_info->prop.multi_exp_type;
+	unsigned int ret = 0;
+
+	switch (multi_exp_type) {
+	case MULTI_EXP_TYPE_DCG_VSL:
+	{
+		const unsigned int lut_idx = g_lut_id_by_cascade_ref_idx(
+			ref_idx, curr_rec->mode_exp_cnt);
+
+		ret = curr_rec->readout_len_lc +
+			mode_info->cas_mode_info.read_margin_lc[lut_idx];
+	}
+		break;
+	case MULTI_EXP_TYPE_LBMF:
+	default:
+		ret = curr_rec->readout_len_lc + curr_rec->read_margin_lc;
+		break;
+	}
+
+	return ret;
+}
+
+
+static inline unsigned int g_cit_loss_by_lut_id(const unsigned int idx,
+	const unsigned int ref_idx,
+	const struct frec_sen_mode_info_st *mode_info,
+	const struct FrameRecord *curr_rec)
+{
+	const unsigned int multi_exp_type = mode_info->prop.multi_exp_type;
+	unsigned int ret = 0;
+
+	switch (multi_exp_type) {
+	case MULTI_EXP_TYPE_DCG_VSL:
+	{
+		const unsigned int lut_idx = g_lut_id_by_cascade_ref_idx(
+			ref_idx, curr_rec->mode_exp_cnt);
+
+		ret = mode_info->cas_mode_info.cit_loss_lc[lut_idx];
+	}
+		break;
+	case MULTI_EXP_TYPE_LBMF:
+	default:
+		ret = 0;
+		break;
+	}
+
+	return ret;
+}
+
+
+/**
+ * function for supporting LBMF/AEB and DCG+VS/L.
+ * (MUST be used with g_fll_tgt_req() & g_curr_total_fl_by_lut_id() function)
+ *
+ * => LBMF/AEB: using line count domain value.
+ * => DCG+VS/L: auto switch to time domain value from line count domain.
+ *              (used equiv line time that on the driver ctx)
+ */
+static inline unsigned int g_equiv_min_fl_lc(const unsigned int idx,
+	const unsigned int equiv_min_fl,
+	const struct frec_sen_mode_info_st *mode_info,
+	const struct FrameRecord *curr_rec)
+{
+	const unsigned int multi_exp_type = mode_info->prop.multi_exp_type;
+	unsigned int result = 0;
+
+	switch (multi_exp_type) {
+	case MULTI_EXP_TYPE_DCG_VSL:
+		/* used equiv line time that on the driver ctx */
+		result = convert2LineCount(curr_rec->lineTimeInNs, equiv_min_fl);
+		break;
+	case MULTI_EXP_TYPE_LBMF:
+	default:
+		result = equiv_min_fl;
+		break;
+	}
+
+	return result;
+}
+
+
+/**
+ * function for supporting LBMF/AEB and DCG+VS/L.
+ * (MUST be used with g_equiv_min_fl_lc() & g_fll_tgt_req() function)
+ *
+ * => LBMF/AEB: using line count domain value.
+ * => DCG+VS/L: auto switch to time domain value from line count domain.
+ *
+ * @curr_total_fl: start from 0
+ */
+static inline unsigned int g_curr_total_fl_by_lut_id(const unsigned int idx,
+	const unsigned int fl_lc, const unsigned int curr_total_fl,
+	const unsigned int ref_idx,
+	const struct frec_sen_mode_info_st *mode_info,
+	const struct FrameRecord *curr_rec)
+{
+	const unsigned int multi_exp_type = mode_info->prop.multi_exp_type;
+	unsigned int result = 0;
+
+	switch (multi_exp_type) {
+	case MULTI_EXP_TYPE_DCG_VSL:
+	{
+		const unsigned int lut_idx = g_lut_id_by_cascade_ref_idx(
+			ref_idx, curr_rec->mode_exp_cnt);
+
+		result = curr_total_fl + convert2TotalTime(
+			mode_info->cas_mode_info.lineTimeInNs[lut_idx], fl_lc);
+	}
+		break;
+	case MULTI_EXP_TYPE_LBMF:
+	default:
+		result = curr_total_fl + fl_lc;
+		break;
+	}
+
+	return result;
+}
+
+
+/**
+ * function for supporting LBMF/AEB and DCG+VS/L.
+ * (MUST be used with g_equiv_min_fl_lc() & g_curr_total_fl_by_lut_id() function)
+ *
+ * => LBMF/AEB: using line count domain value.
+ * => DCG+VS/L: auto switch to time domain value from line count domain.
+ */
+static inline unsigned int g_fll_tgt_req(const unsigned int idx,
+	const unsigned int total_min_fl_lc, const unsigned int curr_tatal_fl,
+	const unsigned int ref_idx,
+	const struct frec_sen_mode_info_st *mode_info,
+	const struct FrameRecord *curr_rec)
+{
+	const unsigned int multi_exp_type = mode_info->prop.multi_exp_type;
+	unsigned int result = 0;
+
+	switch (multi_exp_type) {
+	case MULTI_EXP_TYPE_DCG_VSL:
+	{
+		const unsigned int lut_idx = g_lut_id_by_cascade_ref_idx(
+			ref_idx, curr_rec->mode_exp_cnt);
+		const unsigned int total_min_fl_us = convert2TotalTime(
+			curr_rec->lineTimeInNs, total_min_fl_lc);
+
+		/* unit/domain: time us */
+		result = (total_min_fl_us > curr_tatal_fl)
+			? (total_min_fl_us - curr_tatal_fl) : 0;
+		/* unit/domain: line count */
+		result = convert2LineCount(
+			mode_info->cas_mode_info.lineTimeInNs[lut_idx], result);
+	}
+		break;
+	case MULTI_EXP_TYPE_LBMF:
+	default:
+		result = (total_min_fl_lc > curr_tatal_fl)
+			? (total_min_fl_lc - curr_tatal_fl) : 0;
+		break;
+	}
+
+	return result;
+}
+
+
+static unsigned int calc_lut_fll_required_by_exp(const unsigned int idx,
+	const unsigned int ref_idx, const unsigned int exp_lc,
+	const struct frec_sen_mode_info_st *p_mode_info,
+	const struct FrameRecord *curr_rec,
+	const char *caller)
+{
+	const unsigned int margin_lc =
+		g_margin_lc_by_lut_id(idx, ref_idx, p_mode_info, curr_rec);
+	const unsigned int based_min_fl_lc =
+		g_based_fll_by_lut_id(idx, ref_idx, p_mode_info, curr_rec);
+	const unsigned int cit_loss_lc =
+		g_cit_loss_by_lut_id(idx, ref_idx, p_mode_info, curr_rec);
+	unsigned int exp_req_fll, result;
+
+	exp_req_fll = (exp_lc + margin_lc + cit_loss_lc);
+	result = (exp_req_fll > based_min_fl_lc) ? exp_req_fll : based_min_fl_lc;
+
+#ifndef REDUCE_SEN_REC_LOG
+	LOG_MUST(
+		"[%s][%u][sidx:%u] result:%u(exp_req_fll:%u/exp_lc:%u/ref_idx:%u:(margin:%u/based_min_fl_lc:%u/loss:%u))\n",
+		caller,
+		idx,
+		fs_get_reg_sensor_idx(idx),
+		result,
+		exp_req_fll,
+		exp_lc,
+		ref_idx,
+		margin_lc,
+		based_min_fl_lc,
+		cit_loss_lc);
+#endif
+
+	return result;
+}
+
+
 static void frec_get_cascade_exp_fl_settings(const unsigned int idx,
 	const struct FrameRecord *recs_arr[], const unsigned int recs_len,
 	unsigned int *exp_cas_arr, unsigned int *fl_cas_arr,
@@ -792,64 +1169,62 @@ static void frec_calc_target_fl_lc_arr_val_fdelay_2(const unsigned int idx,
 	unsigned int fl_lc_arr[], const unsigned int arr_len)
 {
 	const struct FrameRecord *recs[2] = {prev_rec, curr_rec};
+	const unsigned int mode_exp_cnt = curr_rec->mode_exp_cnt;
+	struct frec_sen_mode_info_st mode_info = {0};
 	unsigned int exp_cas[2*FS_HDR_MAX] = {0}, fl_cas[2*FS_HDR_MAX] = {0};
-	unsigned int mode_exp_cnt, based_min_fl_lc, margin_lc_per_exp;
-	unsigned int prev_total_fl_lc = 0, lut_fll_0;
+	unsigned int prev_total_fl = 0, lut_fll_0;
 	unsigned int i;
 
+	g_sen_mode_info(idx, &mode_info);
 	frec_get_cascade_exp_fl_settings(
 		idx, recs, 2, exp_cas, fl_cas, (2*FS_HDR_MAX));
 
 	/* !!! mode related info in defferent frame should be the same !!! */
 	/* first, setup basic min fl for shutter of current frec */
 	/* => prepare info that will use on below flow */
-	mode_exp_cnt = curr_rec->mode_exp_cnt;
-	based_min_fl_lc = curr_rec->readout_len_lc + curr_rec->read_margin_lc;
-	margin_lc_per_exp = divide_num(idx,
-		curr_rec->margin_lc, curr_rec->mode_exp_cnt, __func__);
 	/* => setup each fl arr value for each LUT block */
-	for (i = 0; i < mode_exp_cnt; ++i) {
-		const unsigned int ref_idx = mode_exp_cnt + i;
-		const unsigned int sm_lc = exp_cas[ref_idx] + margin_lc_per_exp;
+	for (i = 0; (i < mode_exp_cnt && i < FS_HDR_MAX); ++i) {
+		const unsigned int ref_idx = mode_exp_cnt + i; /* calc. ref idx */
+		const unsigned int exp_lc = exp_cas[ref_idx]; /* get cit value by the ref idx */
+		/* basic required fll for each lut/turn */
+		const unsigned int req_fl_lc = calc_lut_fll_required_by_exp(idx,
+			i, exp_lc, &mode_info, curr_rec, __func__);
 
-		/* max(based and valid min fl, s+m) */
-		fl_lc_arr[i] = (sm_lc > based_min_fl_lc) ? sm_lc : based_min_fl_lc;
+		fl_lc_arr[i] = req_fl_lc;
 	}
 
 	/* then, keep or let FL of N+1 frame match to min FL or target FL */
-	/* => prepare info that will use on below flow */
-	/* => !!! mode related info in defferent frame should be the same !!! */
-	/* based_min_fl_lc = prev_rec->readout_len_lc + prev_rec->read_margin_lc; */
-	/* margin_lc_per_exp = divide_num(idx, */
-	/*	prev_rec->margin_lc, prev_rec->mode_exp_cnt, __func__); */
 	/* => setup each fl arr value for each LUT block */
-	for (i = 1; i < mode_exp_cnt; ++i) {
-		const unsigned int sm_lc = exp_cas[i] + margin_lc_per_exp;
+	for (i = 1; (i < mode_exp_cnt && i < FS_HDR_MAX); ++i) {
+		/* get cit & fll value by the ref idx */
+		const unsigned int exp_lc = exp_cas[i];
 		const unsigned int fl_lc = fl_cas[i];
+		/* basic required fll for each lut/turn */
+		const unsigned int req_fl_lc = calc_lut_fll_required_by_exp(idx,
+			i, exp_lc, &mode_info, curr_rec, __func__);
 		/* basic output for each turn */
-		unsigned int min_fl_lc = based_min_fl_lc;
+		unsigned int min_fl_lc = 0;
 
 		/*
 		 * for preventing any issue of wrong fl values in LUT from drv,
 		 * check correct FL value again manually.
 		 */
-		/* max(based and valid min fl, s+m) */
-		min_fl_lc = (sm_lc > min_fl_lc) ? sm_lc : min_fl_lc;
-		min_fl_lc = (fl_lc > min_fl_lc) ? fl_lc : min_fl_lc;
+		min_fl_lc = (fl_lc > req_fl_lc) ? fl_lc : req_fl_lc;
 
-		prev_total_fl_lc += min_fl_lc;
+		prev_total_fl = g_curr_total_fl_by_lut_id(idx,
+			min_fl_lc, prev_total_fl,
+			i, &mode_info, curr_rec);
 	}
 	/* => modify the 1st LUT-FLL / [0] value (match to N+1 type) */
-	lut_fll_0 = (target_fl_lc > prev_total_fl_lc)
-		? (target_fl_lc - prev_total_fl_lc) : fl_lc_arr[0];
+	lut_fll_0 = g_fll_tgt_req(idx,
+		target_fl_lc, prev_total_fl, i, &mode_info, curr_rec);
+	lut_fll_0 = (lut_fll_0 != 0) ? lut_fll_0 : fl_lc_arr[0];
 	fl_lc_arr[0] = (lut_fll_0 > fl_lc_arr[0]) ? lut_fll_0 : fl_lc_arr[0];
 
 	LOG_INF(
-		"[%u] ID:%#x(sidx:%u/inf:%u), target_fl_lc:%u, fl_lc_arr:(%u/%u/%u/%u/%u), p:((a:%u/m:%u(%u,%u), %u/%u/%u/%u/%u, %u/%u/%u/%u/%u), mar(%u/r:%u), routL:%u) / c:((a:%u/m:%u(%u,%u), %u/%u/%u/%u/%u), mar(%u/r:%u), routL:%u)\n",
+		"[%u][sidx:%u] tar_fl_lc:%u, fl_lc_arr:(%u/%u/%u/%u/%u), p:((a:%u/m:%u(%u,%u),%u/%u/%u/%u/%u,%u/%u/%u/%u/%u),mar(%u/r:%u),roL:%u)/c:((a:%u/m:%u(%u,%u),%u/%u/%u/%u/%u),mar(%u/r:%u),roL:%u), cas(lineT(%u/%u/%u/%u/%u),mar(%u/%u/%u/%u/%u,r(%u/%u/%u/%u/%u)))\n",
 		idx,
-		fs_get_reg_sensor_id(idx),
 		fs_get_reg_sensor_idx(idx),
-		fs_get_reg_sensor_inf_idx(idx),
 		target_fl_lc,
 		fl_lc_arr[0],
 		fl_lc_arr[1],
@@ -878,7 +1253,22 @@ static void frec_calc_target_fl_lc_arr_val_fdelay_2(const unsigned int idx,
 		curr_rec->exp_lc_arr[3],
 		curr_rec->exp_lc_arr[4],
 		curr_rec->margin_lc, curr_rec->read_margin_lc,
-		curr_rec->readout_len_lc);
+		curr_rec->readout_len_lc,
+		mode_info.cas_mode_info.lineTimeInNs[0],
+		mode_info.cas_mode_info.lineTimeInNs[1],
+		mode_info.cas_mode_info.lineTimeInNs[2],
+		mode_info.cas_mode_info.lineTimeInNs[3],
+		mode_info.cas_mode_info.lineTimeInNs[4],
+		mode_info.cas_mode_info.margin_lc[0],
+		mode_info.cas_mode_info.margin_lc[1],
+		mode_info.cas_mode_info.margin_lc[2],
+		mode_info.cas_mode_info.margin_lc[3],
+		mode_info.cas_mode_info.margin_lc[4],
+		mode_info.cas_mode_info.read_margin_lc[0],
+		mode_info.cas_mode_info.read_margin_lc[1],
+		mode_info.cas_mode_info.read_margin_lc[2],
+		mode_info.cas_mode_info.read_margin_lc[3],
+		mode_info.cas_mode_info.read_margin_lc[4]);
 }
 
 
@@ -889,44 +1279,43 @@ static void frec_calc_target_fl_lc_arr_val_fdelay_3(const unsigned int idx,
 {
 	const struct FrameRecord *recs[2] = {curr_rec, curr_rec};
 	const unsigned int curr_mode_exp_cnt = curr_rec->mode_exp_cnt;
-	const unsigned int based_min_fl_lc =
-		curr_rec->readout_len_lc + curr_rec->read_margin_lc;
+	struct frec_sen_mode_info_st mode_info = {0};
 	unsigned int exp_cas[2*FS_HDR_MAX] = {0}, fl_cas[2*FS_HDR_MAX] = {0};
-	unsigned int equiv_min_fl_lc = 0;
-	unsigned int margin_lc_per_exp;
+	unsigned int equiv_min_fl = 0;
 	unsigned int i;
 
+	g_sen_mode_info(idx, &mode_info);
 	frec_get_cascade_exp_fl_settings(
 		idx, recs, 2, exp_cas, fl_cas, (2*FS_HDR_MAX));
 
-	margin_lc_per_exp = divide_num(idx,
-		curr_rec->margin_lc, curr_mode_exp_cnt, __func__);
-	for (i = 0; i < curr_mode_exp_cnt; ++i) {
-		const unsigned int ref_idx = i + 1;
-		const unsigned int sm_lc = exp_cas[ref_idx] + margin_lc_per_exp;
+	for (i = 0; (i < curr_mode_exp_cnt && i < FS_HDR_MAX); ++i) {
+		const unsigned int ref_idx = i + 1; /* calc. ref idx */
+		const unsigned int exp_lc = exp_cas[ref_idx]; /* get cit value by the ref idx */
+		/* basic required fll for each lut/turn */
+		const unsigned int req_fl_lc = calc_lut_fll_required_by_exp(idx,
+			i, exp_lc, &mode_info, curr_rec, __func__);
 
-		/* max(based and valid min fl, s+m) */
-		fl_lc_arr[i] = (sm_lc > based_min_fl_lc) ? sm_lc : based_min_fl_lc;
+		fl_lc_arr[i] = req_fl_lc;
 
 		/* keep total fps match to target fps */
 		if (ref_idx == curr_mode_exp_cnt) {
 			const unsigned int temp_min_fl_lc =
-				(target_fl_lc > equiv_min_fl_lc)
-				? (target_fl_lc - equiv_min_fl_lc) : 0;
+				g_fll_tgt_req(idx,
+					target_fl_lc, equiv_min_fl,
+					i, &mode_info, curr_rec);
 
 			fl_lc_arr[i] = (temp_min_fl_lc > fl_lc_arr[i])
 				? temp_min_fl_lc : fl_lc_arr[i];
 		}
-
-		equiv_min_fl_lc += fl_lc_arr[i];
+		equiv_min_fl = g_curr_total_fl_by_lut_id(idx,
+			fl_lc_arr[i], equiv_min_fl,
+			i, &mode_info, curr_rec);
 	}
 
 	LOG_INF(
-		"[%u] ID:%#x(sidx:%u/inf:%u), target_fl_lc:%u, fl_lc_arr:(%u/%u/%u/%u/%u), (a:%u/m:%u(%u,%u), %u/%u/%u/%u/%u), margin(per:%u):%u, based:%u(rout_l:%u/r_m:%u)\n",
+		"[%u][sidx:%u] tar_fl_lc:%u, fl_lc_arr:(%u/%u/%u/%u/%u), c:((a:%u/m:%u(%u,%u),%u/%u/%u/%u/%u),mar(%u/r:%u),roL:%u,lineT:%u), cas(lineT(%u/%u/%u/%u/%u),mar(%u/%u/%u/%u/%u,r(%u/%u/%u/%u/%u)))\n",
 		idx,
-		fs_get_reg_sensor_id(idx),
 		fs_get_reg_sensor_idx(idx),
-		fs_get_reg_sensor_inf_idx(idx),
 		target_fl_lc,
 		fl_lc_arr[0],
 		fl_lc_arr[1],
@@ -940,9 +1329,24 @@ static void frec_calc_target_fl_lc_arr_val_fdelay_3(const unsigned int idx,
 		curr_rec->exp_lc_arr[2],
 		curr_rec->exp_lc_arr[3],
 		curr_rec->exp_lc_arr[4],
-		margin_lc_per_exp, curr_rec->margin_lc,
-		based_min_fl_lc,
-		curr_rec->readout_len_lc, curr_rec->read_margin_lc);
+		curr_rec->margin_lc, curr_rec->read_margin_lc,
+		curr_rec->readout_len_lc,
+		curr_rec->lineTimeInNs,
+		mode_info.cas_mode_info.lineTimeInNs[0],
+		mode_info.cas_mode_info.lineTimeInNs[1],
+		mode_info.cas_mode_info.lineTimeInNs[2],
+		mode_info.cas_mode_info.lineTimeInNs[3],
+		mode_info.cas_mode_info.lineTimeInNs[4],
+		mode_info.cas_mode_info.margin_lc[0],
+		mode_info.cas_mode_info.margin_lc[1],
+		mode_info.cas_mode_info.margin_lc[2],
+		mode_info.cas_mode_info.margin_lc[3],
+		mode_info.cas_mode_info.margin_lc[4],
+		mode_info.cas_mode_info.read_margin_lc[0],
+		mode_info.cas_mode_info.read_margin_lc[1],
+		mode_info.cas_mode_info.read_margin_lc[2],
+		mode_info.cas_mode_info.read_margin_lc[3],
+		mode_info.cas_mode_info.read_margin_lc[4]);
 }
 
 
@@ -951,27 +1355,29 @@ void frec_g_valid_min_fl_arr_val_for_lut(const unsigned int idx,
 	const unsigned int target_fl_lc,
 	unsigned int fl_lc_arr[], const unsigned int arr_len)
 {
-	const struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
+	struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
 
 	/* error handle */
 	if (unlikely(pfrec == NULL))
 		return;
-	if (unlikely(!frec_chk_fdelay_is_valid(idx, pfrec->fl_act_delay, __func__)))
+	if (unlikely(!chk_if_sen_fdelay_is_valid(idx, pfrec, __func__)))
 		return;
 	if (unlikely(fl_lc_arr == NULL))
 		return;
 	/* ONLY for mode that using LUT */
 	if (unlikely((curr_rec->mode_exp_cnt <= 1)
-			|| (curr_rec->m_exp_type != MULTI_EXP_TYPE_LBMF))) {
+			|| (!frec_chk_if_lut_is_used(curr_rec->m_exp_type)))) {
 		LOG_MUST(
-			"WARNING: [%u] ID:%#x(sidx:%u/inf:%u), sensor curr_mode_exp_cnt:%u, multi_exp_type:%u(STG:%u/LBMF:%u) is not for LBMF, return\n",
+			"WARNING: [%u] ID:%#x(sidx:%u/inf:%u), sensor curr_mode_exp_cnt:%u, multi_exp_type:%u(STG:%u/LBMF:%u/DCGVSL:%u) is not for LUT gen, return\n",
 			idx,
 			fs_get_reg_sensor_id(idx),
 			fs_get_reg_sensor_idx(idx),
 			fs_get_reg_sensor_inf_idx(idx),
 			curr_rec->mode_exp_cnt,
 			curr_rec->m_exp_type,
-			MULTI_EXP_TYPE_STG, MULTI_EXP_TYPE_LBMF);
+			MULTI_EXP_TYPE_STG,
+			MULTI_EXP_TYPE_LBMF,
+			MULTI_EXP_TYPE_DCG_VSL);
 		return;
 	}
 
@@ -1000,14 +1406,14 @@ void frec_g_valid_min_fl_arr_val_for_lut(const unsigned int idx,
 	}
 }
 /*----------------------------------------------------------------------------*/
-
+/* NDOL / LB-MF utilities functions                                           */
 /*----------------------------------------------------------------------------*/
 
 
 /*----------------------------------------------------------------------------*/
 // NDOL / LB-MF functions
 /*----------------------------------------------------------------------------*/
-static void frec_calc_lbmf_read_offset_by_fdelay(const unsigned int idx,
+static void frec_calc_lut_read_offset_by_fdelay(const unsigned int idx,
 	const struct FrameRecord *curr_rec, const unsigned int fdelay,
 	unsigned int *p_next_pr_rd_offset_lc,
 	unsigned int *p_next_pr_rd_offset_us)
@@ -1015,10 +1421,7 @@ static void frec_calc_lbmf_read_offset_by_fdelay(const unsigned int idx,
 	const struct FrameRecord *recs[1] = {curr_rec};
 	const unsigned int order = curr_rec->exp_order;
 	const unsigned int curr_mode_exp_cnt = curr_rec->mode_exp_cnt;
-	const unsigned int margin_lc_per_exp = divide_num(idx,
-		curr_rec->margin_lc, curr_mode_exp_cnt, __func__);
-	const unsigned int based_min_fl_lc =
-		curr_rec->readout_len_lc + curr_rec->read_margin_lc;
+	struct frec_sen_mode_info_st mode_info = {0};
 	unsigned int exp_cas[FS_HDR_MAX] = {0}, fl_cas[FS_HDR_MAX] = {0};
 	unsigned int bias = 0;
 	unsigned int i;
@@ -1026,30 +1429,35 @@ static void frec_calc_lbmf_read_offset_by_fdelay(const unsigned int idx,
 	memset(p_next_pr_rd_offset_lc, 0, sizeof(unsigned int) * FS_HDR_MAX);
 	memset(p_next_pr_rd_offset_us, 0, sizeof(unsigned int) * FS_HDR_MAX);
 
+	g_sen_mode_info(idx, &mode_info);
 	frec_get_cascade_exp_fl_settings(
 		idx, recs, 1, exp_cas, fl_cas, (FS_HDR_MAX));
 
-	for (i = 0; i < (curr_mode_exp_cnt - 1); ++i) {
+	for (i = 0; (i < (curr_mode_exp_cnt - 1) && i < (FS_HDR_MAX - 1)); ++i) {
 		/* calc. ref idx */
 		const unsigned int exp_ref_idx = (i + 1);
 		const unsigned int fl_ref_idx = (fdelay == 2) ? (i + 1) : i;
-		/* calc./get value of the ref idx */
-		const unsigned int sm_lc = exp_cas[exp_ref_idx] + margin_lc_per_exp;
+		/* get cit & fll value by the ref idx */
+		const unsigned int exp_lc = exp_cas[exp_ref_idx];
 		const unsigned int fl_lc = fl_cas[fl_ref_idx];
+		/* basic required fll for each lut/turn */
+		const unsigned int req_fl_lc = calc_lut_fll_required_by_exp(idx,
+			fl_ref_idx, exp_lc, &mode_info, curr_rec, __func__);
 		/* info for output result */
 		const int exp_id = g_exp_order_idx_mapping(idx,
 			order, curr_mode_exp_cnt, exp_ref_idx, __func__);
-		unsigned int min_fl_lc = based_min_fl_lc;
+		unsigned int min_fl_lc = 0;
 
 		if (unlikely(exp_id < 0))
 			return;
 
-		/* max(based and valid min fl, s+m) */
-		min_fl_lc = (sm_lc > min_fl_lc) ? sm_lc : min_fl_lc;
-		min_fl_lc = (fl_lc > min_fl_lc) ? fl_lc : min_fl_lc;
+		min_fl_lc = (fl_lc > req_fl_lc) ? fl_lc : req_fl_lc;
 
-		bias += min_fl_lc;
-		p_next_pr_rd_offset_lc[exp_id] = bias;
+		bias = g_curr_total_fl_by_lut_id(idx,
+			min_fl_lc, bias, fl_ref_idx, &mode_info, curr_rec);
+
+		p_next_pr_rd_offset_lc[exp_id] =
+			g_equiv_min_fl_lc(idx, bias, &mode_info, curr_rec);
 		p_next_pr_rd_offset_us[exp_id] =
 			convert2TotalTime(
 				curr_rec->lineTimeInNs,
@@ -1057,16 +1465,13 @@ static void frec_calc_lbmf_read_offset_by_fdelay(const unsigned int idx,
 
 #ifndef REDUCE_SEN_REC_LOG
 		LOG_MUST(
-			"[%u] ID:%#x(sidx:%u/inf:%u), fdelay:%u, i:%u(ref_idx:(exp:%u/fl:%u))/cnt:%u/exp_id:%d, (s:%u/m:%u/b:%u, fl:%u) => r_offset:%u(%u)\n",
+			"[%u][sidx:%u] fdelay:%u, lineT:%u, cnt:%u, i:%u(ref_idx:(exp:%u/fl:%u)), exp_lc:%u, (reqFL:%u,FL:%u) => r_offset[exp_id:%d]:%u(%u)\n",
 			idx,
-			fs_get_reg_sensor_id(idx),
 			fs_get_reg_sensor_idx(idx),
-			fs_get_reg_sensor_inf_idx(idx),
-			fdelay, i, exp_ref_idx, fl_ref_idx, curr_mode_exp_cnt, exp_id,
-			exp_cas[exp_ref_idx],
-			margin_lc_per_exp,
-			based_min_fl_lc,
-			fl_cas[fl_ref_idx],
+			fdelay, curr_rec->lineTimeInNs, curr_mode_exp_cnt,
+			i, exp_ref_idx, fl_ref_idx,
+			exp_lc, fl_lc,
+			exp_id,
 			p_next_pr_rd_offset_us[exp_id],
 			p_next_pr_rd_offset_lc[exp_id]);
 #endif
@@ -1074,24 +1479,23 @@ static void frec_calc_lbmf_read_offset_by_fdelay(const unsigned int idx,
 }
 
 
-static unsigned int frec_calc_lbmf_valid_min_fl_lc_for_shutters_by_fdelay(
+static unsigned int frec_calc_lut_valid_min_fl_lc_for_shutters_by_fdelay(
 	const unsigned int idx,
 	const struct FrameRecord *curr_rec, const struct FrameRecord *prev_rec,
 	const unsigned int fdelay, const unsigned int target_min_fl_lc)
 {
 	const struct FrameRecord *recs[2] = {prev_rec, curr_rec};
 	const unsigned int mode_exp_cnt = curr_rec->mode_exp_cnt;
-	const unsigned int margin_lc_per_exp = divide_num(idx,
-		curr_rec->margin_lc, mode_exp_cnt, __func__);
-	const unsigned int based_min_fl_lc =
-		curr_rec->readout_len_lc + curr_rec->read_margin_lc;
 	const unsigned int total_min_fl_lc = (target_min_fl_lc > 0) ? target_min_fl_lc : 0;
+	struct frec_sen_mode_info_st mode_info = {0};
 	unsigned int exp_cas[2*FS_HDR_MAX] = {0}, fl_cas[2*FS_HDR_MAX] = {0};
-	unsigned int equiv_min_fl_lc = 0;
+	unsigned int equiv_min_fl = 0;
 	unsigned int i;
 	unsigned int log_en = _FS_LOG_ENABLED(LOG_SEN_REC_CALC_LBMF_VALID_MIN_FL_DUMP);
 	char *log_buf = NULL;
 	int len = 0, ret;
+
+	g_sen_mode_info(idx, &mode_info);
 
 	if (unlikely(log_en)) {
 		/* prepare for log print */
@@ -1104,58 +1508,59 @@ static unsigned int frec_calc_lbmf_valid_min_fl_lc_for_shutters_by_fdelay(
 	}
 	if (unlikely(log_en)) {
 		FS_SNPRF(LOG_BUF_STR_LEN, log_buf, len,
-			"[%u] ID:%#x(sidx:%u/inf:%u), fdelay:%u, tar_total_min:%u(p:%u/c:%u/tar:%u)",
+			"[%u][sidx:%u] tar_minFL:%u(%u):(tar:%u/p:%u/c:%u),fdelay:%u,cnt:%u,lineT:%u,ro(L:%u,mar:%u),",
 			idx,
-			fs_get_reg_sensor_id(idx),
 			fs_get_reg_sensor_idx(idx),
-			fs_get_reg_sensor_inf_idx(idx),
-			fdelay,
+			convert2TotalTime(
+				curr_rec->lineTimeInNs, total_min_fl_lc),
 			total_min_fl_lc,
-			prev_rec->framelength_lc,
-			curr_rec->framelength_lc,
-			target_min_fl_lc);
+			target_min_fl_lc,
+			prev_rec->framelength_lc, curr_rec->framelength_lc,
+			fdelay, mode_exp_cnt,
+			curr_rec->lineTimeInNs,
+			curr_rec->readout_len_lc, curr_rec->read_margin_lc);
+
+		len = frec_snprf_sen_mode_info(&mode_info, LOG_BUF_STR_LEN, log_buf, len);
 	}
 
 	frec_get_cascade_exp_fl_settings(
 		idx, recs, 2, exp_cas, fl_cas, (2*FS_HDR_MAX));
 
 	/* check each CIT/FLL settings in LUT */
-	for (i = 0; i < mode_exp_cnt; ++i) {
+	for (i = 0; (i < mode_exp_cnt && i < FS_HDR_MAX); ++i) {
 		/* calc. ref idx */
 		const unsigned int exp_ref_idx = (i + 1);
 		const unsigned int fl_ref_idx = (fdelay == 2) ? (i + 1) : i;
-		/* calc./get value of the ref idx */
-		const unsigned int sm_lc = exp_cas[exp_ref_idx] + margin_lc_per_exp;
+		/* get cit & fll value by the ref idx */
+		const unsigned int exp_lc = exp_cas[exp_ref_idx];
 		const unsigned int fl_lc = fl_cas[fl_ref_idx];
-		/* basic output for each turn */
-		unsigned int min_fl_lc = based_min_fl_lc;
+		/* basic required fll for each lut/turn */
+		const unsigned int req_fl_lc = calc_lut_fll_required_by_exp(idx,
+			fl_ref_idx, exp_lc, &mode_info, curr_rec, __func__);
+		unsigned int min_fl_lc = 0;
 
 		/* max(based and valid min fl, s+m) */
-		min_fl_lc = (sm_lc > min_fl_lc) ? sm_lc : min_fl_lc;
-		min_fl_lc = (fl_lc > min_fl_lc) ? fl_lc : min_fl_lc;
+		min_fl_lc = (fl_lc > req_fl_lc) ? fl_lc : req_fl_lc;
 
 		/* keep total fps match to max fps */
 		if (exp_ref_idx == mode_exp_cnt) {
 			const unsigned int temp_min_fl_lc =
-				(total_min_fl_lc > equiv_min_fl_lc)
-				? (total_min_fl_lc - equiv_min_fl_lc) : 0;
+				g_fll_tgt_req(idx,
+					total_min_fl_lc, equiv_min_fl,
+					fl_ref_idx, &mode_info, curr_rec);
 
 			min_fl_lc = (temp_min_fl_lc > min_fl_lc)
 				? temp_min_fl_lc : min_fl_lc;
 		}
-
-		equiv_min_fl_lc += min_fl_lc;
+		equiv_min_fl = g_curr_total_fl_by_lut_id(idx,
+			min_fl_lc, equiv_min_fl,
+			fl_ref_idx, &mode_info, curr_rec);
 
 		if (unlikely(log_en)) {
 			FS_SNPRF(LOG_BUF_STR_LEN, log_buf, len,
-				", i:%u(ref_idx:(exp:%u/fl:%u)/cnt:%u, equiv_minFL:%u(minFL:%u(s+m:%u(%u/%u),based:%u(routL:%u/rM:%u),fl:%u)))",
-				i, exp_ref_idx, fl_ref_idx, mode_exp_cnt,
-				equiv_min_fl_lc,
-				min_fl_lc,
-				sm_lc, exp_cas[exp_ref_idx], margin_lc_per_exp,
-				based_min_fl_lc,
-				curr_rec->readout_len_lc, curr_rec->read_margin_lc,
-				fl_cas[fl_ref_idx]);
+				", i:%u(ref_idx:(exp:%u/fl:%u),exp_lc:%u,equiv_minFL:%u(minFL:%u(reqFL:%u,FL:%u)))",
+				i, exp_ref_idx, fl_ref_idx, exp_lc,
+				equiv_min_fl, min_fl_lc, req_fl_lc, fl_lc);
 		}
 	}
 
@@ -1165,49 +1570,47 @@ static unsigned int frec_calc_lbmf_valid_min_fl_lc_for_shutters_by_fdelay(
 			FS_FREE(log_buf);
 	}
 
-	return equiv_min_fl_lc;
+	return g_equiv_min_fl_lc(idx, equiv_min_fl, &mode_info, curr_rec);
 }
 
 
-static void frec_calc_lbmf_read_offset(const unsigned int idx,
+static void frec_calc_lut_read_offset(const unsigned int idx,
 	const struct FrameRecord *curr_rec,
 	unsigned int *p_next_pr_rd_offset_lc,
 	unsigned int *p_next_pr_rd_offset_us)
 {
-	const struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
+	struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
 
 	/* error handle */
 	if (unlikely(pfrec == NULL))
 		return;
-	if (unlikely(!frec_chk_fdelay_is_valid(idx, pfrec->fl_act_delay, __func__)))
+	if (unlikely(!chk_if_sen_fdelay_is_valid(idx, pfrec, __func__)))
 		return;
 
-	frec_calc_lbmf_read_offset_by_fdelay(idx, curr_rec, pfrec->fl_act_delay,
+	frec_calc_lut_read_offset_by_fdelay(idx, curr_rec, pfrec->fl_act_delay,
 		p_next_pr_rd_offset_lc, p_next_pr_rd_offset_us);
 }
 
 
-static unsigned int frec_calc_lbmf_valid_min_fl_lc_for_shutters(
+static unsigned int frec_calc_lut_valid_min_fl_lc_for_shutters(
 	const unsigned int idx,
 	const struct FrameRecord *curr_rec, const struct FrameRecord *prev_rec,
 	const unsigned int target_min_fl_lc)
 {
-	const struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
+	struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
 	unsigned int equiv_min_fl_lc = 0;
 
 	/* error handle */
 	if (unlikely(pfrec == NULL))
 		return curr_rec->framelength_lc;
-	if (unlikely(!frec_chk_fdelay_is_valid(idx, pfrec->fl_act_delay, __func__)))
+	if (unlikely(!chk_if_sen_fdelay_is_valid(idx, pfrec, __func__)))
 		return curr_rec->framelength_lc;
 
-	equiv_min_fl_lc = frec_calc_lbmf_valid_min_fl_lc_for_shutters_by_fdelay(
+	equiv_min_fl_lc = frec_calc_lut_valid_min_fl_lc_for_shutters_by_fdelay(
 		idx, curr_rec, prev_rec, pfrec->fl_act_delay, target_min_fl_lc);
 
 	return equiv_min_fl_lc;
 }
-
-
 /*----------------------------------------------------------------------------*/
 // !!! END !!! ---  NDOL / LB-MF functions
 /*----------------------------------------------------------------------------*/
@@ -1506,8 +1909,9 @@ static unsigned int frec_calc_valid_min_fl_lc_for_shutters(
 	/* multi-exp / HDR sensor => mode exp cnt > 1 */
 	if (curr_rec->mode_exp_cnt > 1) {
 		switch (m_exp_type) {
+		case MULTI_EXP_TYPE_DCG_VSL:
 		case MULTI_EXP_TYPE_LBMF:
-			min_fl_lc = frec_calc_lbmf_valid_min_fl_lc_for_shutters(
+			min_fl_lc = frec_calc_lut_valid_min_fl_lc_for_shutters(
 				idx, curr_rec, prev_rec, target_min_fl_lc);
 			break;
 		case MULTI_EXP_TYPE_STG:
@@ -1555,8 +1959,9 @@ static void frec_predict_shutters_read_offset_by_curr_rec(const unsigned int idx
 	}
 
 	switch (m_exp_type) {
+	case MULTI_EXP_TYPE_DCG_VSL:
 	case MULTI_EXP_TYPE_LBMF:
-		frec_calc_lbmf_read_offset(idx, curr_rec,
+		frec_calc_lut_read_offset(idx, curr_rec,
 			p_next_pr_rd_offset_lc,
 			p_next_pr_rd_offset_us);
 		break;
@@ -1580,8 +1985,7 @@ static unsigned int frec_predict_fl_lc_by_curr_rec(const unsigned int idx,
 	/* error handle */
 	if (unlikely(pfrec == NULL))
 		return curr_rec->framelength_lc;
-	if (unlikely(!frec_chk_fdelay_is_valid(
-			idx, pfrec->fl_act_delay, __func__)))
+	if (unlikely(!chk_if_sen_fdelay_is_valid(idx, pfrec, __func__)))
 		return curr_rec->framelength_lc;
 
 	/* check case get corresponding frame record pointer */
@@ -1611,7 +2015,7 @@ static unsigned int frec_predict_fl_lc_by_curr_rec(const unsigned int idx,
 		break;
 	case 2:
 		/* N+1 type, e.g., non-SONY sensor */
-		if (curr_rec->m_exp_type == MULTI_EXP_TYPE_LBMF)
+		if (frec_chk_if_lut_is_used(curr_rec->m_exp_type))
 			next_fl_lc = min_fl_lc;
 		else
 			next_fl_lc = (min_fl_lc > curr_rec->framelength_lc)
@@ -1697,8 +2101,7 @@ unsigned int frec_g_valid_min_fl_lc_for_shutters_by_frame_rec(
 	/* error handle */
 	if (unlikely(pfrec == NULL))
 		return min_fl_lc;
-	if (unlikely(!frec_chk_fdelay_is_valid(
-			idx, pfrec->fl_act_delay, __func__)))
+	if (unlikely(!chk_if_sen_fdelay_is_valid(idx, pfrec, __func__)))
 		return min_fl_lc;
 
 	switch (label) {
@@ -1740,34 +2143,69 @@ unsigned int frec_g_valid_min_fl_lc_for_shutters_by_frame_rec(
 }
 
 
+static unsigned int g_seamless_1st_exp_line_time(
+	const struct frec_sen_mode_info_st *p_mode_info,
+	const struct FrameRecord *frame_rec, const unsigned int fl_act_delay)
+{
+	const unsigned int multi_exp_type = p_mode_info->prop.multi_exp_type;
+	unsigned int ret = 0;
+
+	switch (multi_exp_type) {
+	case MULTI_EXP_TYPE_DCG_VSL:
+		/* lineT is different in LUT_A, LUT_B, ... */
+		if (fl_act_delay == 3) {
+			/* => for CIT N+1 active but FLL N+2 active */
+			const unsigned int mode_exp_cnt = frame_rec->mode_exp_cnt;
+			const unsigned int ref_idx = g_lut_id_by_cascade_ref_idx(
+				mode_exp_cnt-1, mode_exp_cnt);
+
+			ret = p_mode_info->cas_mode_info.lineTimeInNs[ref_idx];
+		} else {
+			/* => for CIT, FLL all N+1 active */
+			ret = p_mode_info->cas_mode_info.lineTimeInNs[0];
+		}
+		break;
+	default:
+		ret = frame_rec->lineTimeInNs;
+		break;
+	}
+
+	return ret;
+}
+
+
 static unsigned int frec_calc_seamless_frame_length(const unsigned int idx,
 	const struct FrameRecorder *pfrec,
-	const struct frec_seamless_st *p_seamless_rec)
+	const struct frec_seamless_st *p_seamless_rec,
+	const unsigned int fl_act_delay)
 {
 	const struct FrameRecord *frame_rec = &p_seamless_rec->frame_rec;
 	const struct fs_seamless_property_st *ss_prop = &p_seamless_rec->prop;
 	const unsigned int orig_fl_us = pfrec->curr_predicted_fl_us;
-	const unsigned int new_mode_line_time_ns = p_seamless_rec->frame_rec.lineTimeInNs;
-	const int first_exp_idx =
-		g_exp_order_idx_mapping(idx,
-			frame_rec->exp_order, frame_rec->mode_exp_cnt, 0, __func__);
+	const int first_exp_idx = g_exp_order_idx_mapping(idx,
+		frame_rec->exp_order, frame_rec->mode_exp_cnt, 0, __func__);
 	const unsigned int log_str_len = 512;
+	struct frec_sen_mode_info_st mode_info = {0};
 	unsigned int fl_us_composition[3] = {0};
-	unsigned int curr_exp_read_offset;
-	unsigned int depth_idx, seamless_shutter_lc = 0;
+	unsigned int curr_exp_read_offset, ctrl_delta_to_sof_us;
+	unsigned int depth_idx, seamless_shutter_lc = 0, new_mode_line_time_ns = 0;
 	unsigned int result = 0;
 	int orig_last_exp_idx;
 	int len = 0, ret;
 	char *log_buf = NULL;
+
+	g_sen_mode_info(idx, &mode_info);
 
 	/* Part-1: calculate end of readout time us */
 	depth_idx = FS_ATOMIC_READ(&pfrec->depth_idx);
 	orig_last_exp_idx = frec_g_mode_last_exp_idx(idx, pfrec, depth_idx);
 	curr_exp_read_offset =
 		pfrec->curr_predicted_rd_offset_us[orig_last_exp_idx];
+	ctrl_delta_to_sof_us = (ss_prop->ctrl_receive_time_us < orig_fl_us)
+		? ss_prop->ctrl_receive_time_us : 0;
 	if ((curr_exp_read_offset + ss_prop->orig_readout_time_us)
-			< ss_prop->ctrl_receive_time_us)
-		fl_us_composition[0] = ss_prop->ctrl_receive_time_us;
+			< ctrl_delta_to_sof_us)
+		fl_us_composition[0] = ctrl_delta_to_sof_us;
 	else {
 		fl_us_composition[0] =
 			curr_exp_read_offset + ss_prop->orig_readout_time_us;
@@ -1792,6 +2230,8 @@ static unsigned int frec_calc_seamless_frame_length(const unsigned int idx,
 			? (p_seamless_rec->frame_rec.exp_lc_arr[first_exp_idx])
 			: (p_seamless_rec->frame_rec.shutter_lc);
 	}
+	new_mode_line_time_ns =
+		g_seamless_1st_exp_line_time(&mode_info, frame_rec, fl_act_delay);
 	fl_us_composition[2] =
 		convert2TotalTime(new_mode_line_time_ns, seamless_shutter_lc);
 
@@ -1856,11 +2296,9 @@ static unsigned int frec_calc_seamless_frame_length(const unsigned int idx,
 	}
 
 	FS_SNPRF(log_str_len, log_buf, len,
-		"NOTICE: [%u] ID:%#x(sidx:%u/inf:%u), seamless_fl_us:%u(%u(%u/%u)/%u/%u(%u)), new_mode_line_t:%u, r_offset[%u]:%u, type_id:%u, orig_readout_t:%u, hw_re_init_t:%u, prsh_length_lc:%u, (exp_lc:%u, (a:%u/m:%u(%u,%u), exp:%u/%u/%u/%u/%u)",
+		"NOTICE: [%u][sidx:%u] seamless_fl_us:%u(%u(%u/%u)/%u/%u(%u)), new_mode_lineT:%u(%u/%u/%u/%u/%u), fdelay:%u, pr(c(%u)), r_offset[%u]:%u, type_id:%u, orig_readout_t:%u, hw_re_init_t:%u, prsh_length_lc:%u, (exp_lc:%u, (a:%u/m:%u(%u,%u), exp:%u/%u/%u/%u/%u)",
 		idx,
-		fs_get_reg_sensor_id(idx),
 		fs_get_reg_sensor_idx(idx),
-		fs_get_reg_sensor_inf_idx(idx),
 		result,
 		fl_us_composition[0],
 		curr_exp_read_offset + ss_prop->orig_readout_time_us,
@@ -1869,6 +2307,13 @@ static unsigned int frec_calc_seamless_frame_length(const unsigned int idx,
 		fl_us_composition[2],
 		seamless_shutter_lc,
 		new_mode_line_time_ns,
+		mode_info.cas_mode_info.lineTimeInNs[0],
+		mode_info.cas_mode_info.lineTimeInNs[1],
+		mode_info.cas_mode_info.lineTimeInNs[2],
+		mode_info.cas_mode_info.lineTimeInNs[3],
+		mode_info.cas_mode_info.lineTimeInNs[4],
+		fl_act_delay,
+		orig_fl_us,
 		orig_last_exp_idx,
 		curr_exp_read_offset,
 		ss_prop->type_id,
@@ -1898,6 +2343,37 @@ static unsigned int frec_calc_seamless_frame_length(const unsigned int idx,
 /*----------------------------------------------------------------------------*/
 // sensor recorder framework functions
 /*----------------------------------------------------------------------------*/
+void frec_update_sen_mode_info(const unsigned int idx,
+	const struct fs_hdr_exp_st *p_hdr_info)
+{
+	struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
+	struct frec_sen_mode_info_st *p_mode_info = NULL;
+
+	/* unexpected case */
+	if (unlikely(pfrec == NULL))
+		return;
+	p_mode_info = &pfrec->mode_info;
+
+	/* call static inline function to help */
+	update_sen_mode_info(pfrec, p_mode_info, p_hdr_info);
+}
+
+
+void frec_clr_sen_mode_info(const unsigned int idx)
+{
+	struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
+	struct frec_sen_mode_info_st *p_mode_info = NULL;
+
+	/* unexpected case */
+	if (unlikely(pfrec == NULL))
+		return;
+	p_mode_info = &pfrec->mode_info;
+
+	/* call static inline function to help */
+	clr_sen_mode_info(pfrec, p_mode_info);
+}
+
+
 void frec_chk_fl_pr_match_act(const unsigned int idx)
 {
 	struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
@@ -2355,8 +2831,8 @@ void frec_seamless_switch(const unsigned int idx,
 
 	frec_mutex_lock(&pfrec->frame_recs_update_lock);
 
-	seamless_fl_us =
-		frec_calc_seamless_frame_length(idx, pfrec, p_seamless_rec);
+	seamless_fl_us = frec_calc_seamless_frame_length(
+		idx, pfrec, p_seamless_rec, fl_act_delay);
 
 	FS_ATOMIC_SET(0, &pfrec->depth_idx);
 	for (i = 0; i < RECORDER_DEPTH; ++i) {

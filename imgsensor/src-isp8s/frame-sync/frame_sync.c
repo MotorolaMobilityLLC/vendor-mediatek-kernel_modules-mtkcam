@@ -1514,6 +1514,7 @@ static void fs_do_seamless_switch_proc(const unsigned int idx,
 	p_seamless_info = &fs_mgr.seamless_ctrl[idx].seamless_info;
 	p_seamless_ctrl = &fs_mgr.seamless_ctrl[idx].seamless_info.seamless_pf_ctrl;
 
+	frec_update_sen_mode_info(idx, &p_seamless_ctrl->hdr_exp);
 	frec_setup_seamless_rec_by_fs_seamless_st(
 		&seamless_rec, p_seamless_info);
 	frec_seamless_switch(idx,
@@ -2597,6 +2598,7 @@ static void fs_reset_idx_ctx(const unsigned int idx)
 
 	/* reset frame recorder data */
 	frec_reset_records(idx);
+	frec_clr_sen_mode_info(idx);
 
 	/* clear/reset perframe stage data */
 	fs_reset_perframe_stage_data(idx, 0);
@@ -2717,6 +2719,7 @@ unsigned int fs_streaming(const unsigned int flag,
 			idx, sensor_info);
 
 		/* init/setup sensor recorder */
+		frec_update_sen_mode_info(idx, &sensor_info->hdr_exp);
 		frec_setup_frame_rec_by_fs_streaming_st(
 			&frame_rec, sensor_info);
 		frec_init_recorder(idx, &frame_rec,
@@ -2740,6 +2743,10 @@ unsigned int fs_streaming(const unsigned int flag,
 
 		/* reset/clear cb info */
 		fs_event_exe_cb_info_clear(idx);
+
+		/* reset debug info */
+		fs_mgr.sof_cnt_arr[idx] = 0;
+		fs_mgr.notify_vsync_sof_cnt_arr[idx] = 0;
 	}
 
 	LOG_INF(

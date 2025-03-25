@@ -15,8 +15,6 @@ struct fs_perframe_st frameCtrl_main2[] = {
 		.min_fl_lc = US_TO_LC(33350, 8828),
 		.shutter_lc = US_TO_LC(19997, 8828),
 		.flicker_en = 1,
-		.pclk = 580000000,
-		.linelength = 5120,
 		.margin_lc = 18,
 		.lineTimeInNs = 8828,
 	},
@@ -27,8 +25,6 @@ struct fs_perframe_st frameCtrl_main2[] = {
 		.min_fl_lc = US_TO_LC(33350, 8828),
 		.shutter_lc = US_TO_LC(19997, 8828),
 		.flicker_en = 1,
-		.pclk = 580000000,
-		.linelength = 5120,
 		.margin_lc = 18,
 		.lineTimeInNs = 8828,
 	}

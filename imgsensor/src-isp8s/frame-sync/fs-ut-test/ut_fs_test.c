@@ -366,7 +366,7 @@ static unsigned int print_and_select_s_mode(const int idx)
 			.mode_list[i].sensor_id != 0; ++i) {
 
 		printf(GREEN
-			"[%d] ID:%#x (sidx:%u), margin_lc:%3u, lineTimeInNs:%7u, pclk:%10llu, linelength:%6u, hdr_exp.mode_exp_cnt:%u\n"
+			"[%d] ID:%#x (sidx:%u), margin_lc:%3u, lineTimeInNs:%7u, hdr_exp.mode_exp_cnt:%u\n"
 			NONE,
 			i,
 			g_streaming_sensors_modes_list[idx]
@@ -377,10 +377,6 @@ static unsigned int print_and_select_s_mode(const int idx)
 					.mode_list[i].margin_lc,
 			g_streaming_sensors_modes_list[idx]
 					.mode_list[i].lineTimeInNs,
-			g_streaming_sensors_modes_list[idx]
-					.mode_list[i].pclk,
-			g_streaming_sensors_modes_list[idx]
-					.mode_list[i].linelength,
 			g_streaming_sensors_modes_list[idx]
 					.mode_list[i].hdr_exp.mode_exp_cnt);
 	}

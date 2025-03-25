@@ -845,6 +845,40 @@ struct ut_fs_test_sensor_cfg sensor_cfg_20[] = {
 		.mode = NULL,
 	}
 };
+
+
+/* FL_act_delay : DCG+VS 2-exp-LE(N+2) with Normal(N+1) */
+struct ut_fs_test_sensor_cfg sensor_cfg_21[] = {
+	{
+		.sensor_name = "imx09a",
+		.sensor_idx = 0,
+		.tg = 2,
+		.sensor = &imx09a,
+		.mode = imx09a_sensor_mode,
+		.mode_idx = 0,   /* DCG+VS */
+		.first_vts_value = 100000,
+		/* .first_vts_value = 110000, */
+	},
+
+	{
+		.sensor_name = "s5k3m5sx",
+		.sensor_idx = 2,
+		.tg = 1,
+		.sensor = &s5k3m5sx,
+		.mode = s5k3m5sx_sensor_mode,
+		.mode_idx = 0,
+		.first_vts_value = 110000,
+		/* .first_vts_value = 100000, */
+	},
+
+	/* End */
+	{
+		.sensor_idx = 255,
+		.tg = 255,
+		.sensor = NULL,
+		.mode = NULL,
+	}
+};
 /******************************************************************************/
 
 
@@ -1614,6 +1648,16 @@ struct ut_fs_test_list test_list[] = {
 		},
 		.async_master_sidx = 1, // from 1
 		.sensor_cfg = sensor_cfg_14,
+		.env_cfg = &env_cfg_05,
+	},
+
+	{
+		/* 39 */
+		.test_name =
+			"DCG+VS N+2 2-exp / Normal N+1, per-frame CTRL (LOCK exp-10002us / NO lock flk)",
+		.auto_test_must_run = 1,
+		.sync_type = {FS_SYNC_TYPE_LE|FS_SYNC_TYPE_VSYNC, 1},
+		.sensor_cfg = sensor_cfg_21,
 		.env_cfg = &env_cfg_05,
 	},
 

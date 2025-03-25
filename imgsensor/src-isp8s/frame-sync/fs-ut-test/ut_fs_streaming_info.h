@@ -9,6 +9,14 @@
 #include "../frame_sync.h"
 
 
+/* utility marco */
+/**
+ *  x : input time in us.
+ *  y : put sensor lineTimeInNs value.
+ */
+#define US_TO_LC(x, y) ((x)*1000/(y)+(((x)*1000%(y))?1:0))
+
+
 struct ut_fs_streaming_sensor_list {
 	char *sensor_name;
 	unsigned int sensor_idx;
@@ -26,8 +34,6 @@ struct fs_streaming_st imx586 = {
 	.def_fl_lc = 3068,
 	.max_fl_lc = 0xffff,
 	.def_shutter_lc = 0x3D0,
-	.pclk = 752000000,
-	.linelength = 7872,
 	.lineTimeInNs = 10469,
 };
 
@@ -40,8 +46,6 @@ struct fs_streaming_st s5k3m5sx = {
 	.def_fl_lc = 3314,
 	.max_fl_lc = 0xffff,
 	.def_shutter_lc = 0x3D0,
-	.pclk = 482000000,
-	.linelength = 4848,
 	.lineTimeInNs = 10059,
 };
 
@@ -54,8 +58,6 @@ struct fs_streaming_st imx481 = {
 	.def_fl_lc = 3776,
 	.max_fl_lc = 0xffff,
 	.def_shutter_lc = 0x3D0,
-	.pclk = 580000000,
-	.linelength = 5120,
 	.lineTimeInNs = 8828,
 };
 
@@ -68,8 +70,6 @@ struct fs_streaming_st imx766 = {
 	.def_fl_lc = 4844,
 	.max_fl_lc = 0xffff,
 	.def_shutter_lc = 0x3D0,
-	.pclk = 1281600000,
-	.linelength = 8816,
 	.lineTimeInNs = 6879,
 };
 
@@ -82,8 +82,6 @@ struct fs_streaming_st imx516 = {
 	.def_fl_lc = 2400,
 	.max_fl_lc = 0xfffe,
 	.def_shutter_lc = 0x029,
-	.pclk = 1041120000,
-	.linelength = 1446,
 	.lineTimeInNs = 1389,
 };
 
@@ -96,9 +94,59 @@ struct fs_streaming_st ov64b = {
 	.def_fl_lc = 3660*2,
 	.max_fl_lc = 0xFFFFFF,
 	.def_shutter_lc = 0x3D0,
-	.pclk = 115200000,
-	.linelength = 528,
 	.lineTimeInNs = 4584,
+};
+
+
+struct fs_streaming_st imx09a = {
+	.sensor_idx = 0,
+	.sensor_id = 0x0910,
+	.tg = 2,
+	.fl_active_delay = 3,
+	.def_fl_lc = 5802,   /* (2744*5.74 + 4944*3.55)/5.74 */
+	.max_fl_lc = 0xffff,
+	.def_shutter_lc = 0x3D0,
+	.hdr_exp.mode_exp_cnt = 2,
+	.hdr_exp.multi_exp_type = 2,   /* MULTI_EXP_TYPE_DCG_VSL */
+	.hdr_exp.exp_order = 0,        /* NE first */
+	.hdr_exp.ae_exp_cnt = 2,
+	.hdr_exp.exp_lc = {
+		US_TO_LC(10002, 3550),
+		US_TO_LC(2500, 5740),
+		0,
+		0
+	},
+	.hdr_exp.readout_len_lc = 2476,
+	.hdr_exp.read_margin_lc = 148,
+	.hdr_exp.cas_mode_info.lineTimeInNs = {
+		5740,
+		3550,
+		0,
+		0,
+		0
+	},
+	.hdr_exp.cas_mode_info.margin_lc = {
+		64,
+		64,
+		0,
+		0,
+		0
+	},
+	.hdr_exp.cas_mode_info.read_margin_lc = {
+		148,
+		124,
+		0,
+		0,
+		0
+	},
+	.hdr_exp.cas_mode_info.cit_loss_lc = {
+		3293,
+		0,
+		0,
+		0,
+		0
+	},
+	.lineTimeInNs = 5740,
 };
 
 
@@ -133,6 +181,11 @@ struct ut_fs_streaming_sensor_list ut_fs_s_list[] = {
 	{
 		.sensor_name = "ov64b",
 		.sensor = &ov64b,
+	},
+
+	{
+		.sensor_name = "imx09a",
+		.sensor = &imx09a,
 	},
 
 	/* End */

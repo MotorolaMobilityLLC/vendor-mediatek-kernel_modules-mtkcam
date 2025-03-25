@@ -220,8 +220,6 @@ struct FrameSyncInst {
 
 	/* on-the-fly sensor mode change */
 	unsigned int margin_lc;
-	unsigned long long pclk;
-	unsigned int linelength;
 	unsigned int lineTimeInNs;      // ~= 10^9 * (linelength/pclk)
 	unsigned int readout_time_us;   // current mode read out time.
 
@@ -614,8 +612,8 @@ static void get_valid_fl_lc_info(const unsigned int idx, unsigned int *p_fl_lc,
 	/* check frame length register boundary (max) */
 	chk_fl_boundary(idx, p_fl_lc, __func__);
 
-	/* ==> for LB-MF sensor */
-	if (fs_inst[idx].p_frecs[0]->m_exp_type == MULTI_EXP_TYPE_LBMF) {
+	/* ==> e.g., LB-MF sensor */
+	if (frec_chk_if_lut_is_used(fs_inst[idx].p_frecs[0]->m_exp_type)) {
 		frec_g_valid_min_fl_arr_val_for_lut(
 			idx, fs_inst[idx].p_frecs[0],
 			*p_fl_lc, fl_lc_arr, arr_len);
@@ -671,70 +669,6 @@ static unsigned int calc_min_fl_lc(const unsigned int idx,
 }
 
 
-#ifdef FS_UT
-/*
- * like sensor driver set_max_framerate() function
- */
-static inline void
-set_max_framerate(unsigned int idx, unsigned int framerate)
-{
-	fs_inst[idx].output_fl_lc =
-		fs_inst[idx].pclk / framerate * 10 / fs_inst[idx].linelength;
-}
-
-
-/* TODO: output value in fs_inst[].output_fl_c or in stack? */
-unsigned int fs_alg_write_shutter(unsigned int idx)
-{
-	unsigned int realtime_fps = 0;
-	unsigned int is_adjust_fps = 0;
-
-
-	/* get appropriate min framelength base on shutter */
-	fs_inst[idx].output_fl_lc =
-		// calc_min_fl_lc(idx, fs_inst[idx].def_min_fl_lc, PREDICT_STABLE_FL);
-		calc_min_fl_lc(idx, fs_inst[idx].min_fl_lc, PREDICT_STABLE_FL);
-
-	/* shutter boundary check, pass for UT */
-
-	/* for anti flicker */
-	realtime_fps = fs_inst[idx].pclk / fs_inst[idx].linelength * 10
-					/ fs_inst[idx].output_fl_lc;
-
-	if (fs_inst[idx].flicker_en) {
-		if (realtime_fps >= 297 && realtime_fps <= 305) {
-			set_max_framerate(idx, 296);
-			realtime_fps = 296;
-			is_adjust_fps = 1;
-		} else if (realtime_fps >= 147 && realtime_fps <= 150) {
-			set_max_framerate(idx, 146);
-			realtime_fps = 146;
-			is_adjust_fps = 1;
-		}
-	}
-
-
-	LOG_INF(
-		"[%u] ID:%#x(sidx:%u), fl:%u(%u), x10fps(%u):%u, flicker(%u), shutter:%u(%u)\n",
-		idx,
-		fs_inst[idx].sensor_id,
-		fs_inst[idx].sensor_idx,
-		convert2TotalTime(fs_inst[idx].lineTimeInNs,
-				fs_inst[idx].output_fl_lc),
-		fs_inst[idx].output_fl_lc,
-		is_adjust_fps,
-		realtime_fps,
-		fs_inst[idx].flicker_en,
-		convert2TotalTime(fs_inst[idx].lineTimeInNs,
-				fs_inst[idx].shutter_lc),
-		fs_inst[idx].shutter_lc);
-
-
-	return fs_inst[idx].output_fl_lc;
-}
-#endif // FS_UT
-
-
 static unsigned int calc_vts_sync_bias_lc(const unsigned int idx)
 {
 	const enum FS_SYNC_TYPE sync_type = fs_inst[idx].sync_type;
@@ -770,84 +704,6 @@ static unsigned int calc_vts_sync_bias_lc(const unsigned int idx)
 #endif
 
 	return total_bias_lc;
-}
-
-
-/* static */unsigned int calc_seamless_frame_time_us(const unsigned int idx,
-	const struct fs_seamless_st *p_seamless_info)
-{
-	const unsigned int mode_exp_cnt =
-		fs_inst[idx].prev_hdr_exp.mode_exp_cnt;
-	unsigned int re_exp_us = 0, re_exp_lc = 0;
-	unsigned int hw_init_time_us = 0;
-	unsigned int readout_start_shift_us = 0;
-	unsigned int i = 0;
-	unsigned int ret = 0;
-
-	/* error handling (unexpected case) */
-	if (unlikely(p_seamless_info == NULL)) {
-		LOG_MUST(
-			"ERROR: [%u] ID:%#x(sidx:%u), get p_seamless_info:%p, return 0\n",
-			idx, fs_inst[idx].sensor_id, fs_inst[idx].sensor_idx,
-			p_seamless_info);
-		return 0;
-	}
-
-	/* get basic info */
-	/* check normal or hdr situation (normal: shutter_lc / hdr: hdr_exp) */
-	// if (p_seamless_info->seamless_pf_ctrl.shutter_lc != 0)
-	if (p_seamless_info->seamless_pf_ctrl.hdr_exp.ae_exp_cnt <= 1)
-		re_exp_lc = p_seamless_info->seamless_pf_ctrl.shutter_lc;
-	else
-		re_exp_lc = p_seamless_info->seamless_pf_ctrl.hdr_exp.exp_lc[0];
-
-	re_exp_us = convert2TotalTime(
-			p_seamless_info->seamless_pf_ctrl.lineTimeInNs,
-			re_exp_lc);
-
-	/* read back some last pf ctrl settings for calculating */
-	if (mode_exp_cnt) {
-		for (i = 1; i < mode_exp_cnt; ++i) {
-			int hdr_idx = hdr_exp_idx_map[mode_exp_cnt][i];
-
-			/* error case (unexpected) */
-			if (unlikely(hdr_idx < 0)) {
-				readout_start_shift_us = 0;
-				LOG_MUST(
-					"ERROR: [%u] ID:%#x(sidx:%u), hdr_exp_idx_map[%u][%u] = %d => return readout_start_shift_us:%u\n",
-					idx, fs_inst[idx].sensor_id, fs_inst[idx].sensor_idx,
-					mode_exp_cnt,
-					i,
-					hdr_idx,
-					readout_start_shift_us);
-
-				return readout_start_shift_us;
-			}
-
-			readout_start_shift_us +=
-				(fs_inst[idx].prev_hdr_exp.exp_lc[hdr_idx]
-				+ (fs_inst[idx].margin_lc / mode_exp_cnt));
-		}
-
-		readout_start_shift_us =
-			convert2TotalTime(fs_inst[idx].lineTimeInNs, readout_start_shift_us);
-	}
-
-	ret = readout_start_shift_us + p_seamless_info->prop.orig_readout_time_us
-		+ hw_init_time_us + re_exp_us;
-
-	LOG_MUST(
-		"[%u] ID:%#x(sidx:%u), seamless_frame_time_us:%u (readout_start_shift_us:%u, orig_readout_time_us:%u, hw_init_time_us:%u, re_exp_us:%u, line_time(ns):(%u => %u)\n",
-		idx, fs_inst[idx].sensor_id, fs_inst[idx].sensor_idx,
-		ret,
-		readout_start_shift_us,
-		p_seamless_info->prop.orig_readout_time_us,
-		hw_init_time_us,
-		re_exp_us,
-		fs_inst[idx].lineTimeInNs,
-		p_seamless_info->seamless_pf_ctrl.lineTimeInNs);
-
-	return ret;
 }
 
 
@@ -1519,7 +1375,7 @@ static inline void fs_alg_sa_adjust_diff_m_s_general_msg_connector(
 static inline void fs_alg_dump_streaming_data(unsigned int idx)
 {
 	LOG_MUST(
-		"[%u] ID:%#x(sidx:%u/inf:%u), tg:%u, fl_delay:%u, fl_lc(def/min/max):%u/%u/%u, def_shut_lc:%u, lineTime:%u(linelength:%u/pclk:%llu), hdr_exp: c(%u/%u/%u/%u/%u, %u/%u), prev(%u/%u/%u/%u/%u, %u/%u), cnt:(mode/ae)\n",
+		"[%u] ID:%#x(sidx:%u/inf:%u), tg:%u, fl_delay:%u, fl_lc(def/min/max):%u/%u/%u, def_shut_lc:%u, lineTime:%u, hdr_exp: c(%u/%u/%u/%u/%u, %u/%u), prev(%u/%u/%u/%u/%u, %u/%u), cnt:(mode/ae)\n",
 		idx,
 		fs_get_reg_sensor_id(idx),
 		fs_get_reg_sensor_idx(idx),
@@ -1531,8 +1387,6 @@ static inline void fs_alg_dump_streaming_data(unsigned int idx)
 		fs_inst[idx].max_fl_lc,
 		fs_inst[idx].def_shutter_lc,
 		fs_inst[idx].lineTimeInNs,
-		fs_inst[idx].linelength,
-		fs_inst[idx].pclk,
 		fs_inst[idx].hdr_exp.exp_lc[0],
 		fs_inst[idx].hdr_exp.exp_lc[1],
 		fs_inst[idx].hdr_exp.exp_lc[2],
@@ -1553,7 +1407,7 @@ static inline void fs_alg_dump_streaming_data(unsigned int idx)
 static inline void fs_alg_dump_perframe_data(unsigned int idx)
 {
 	LOG_INF(
-		"[%u] ID:%#x(sidx:%u/inf:%u), flk_en:%u, min_fl:%u(%u), shutter:%u(%u), margin:%u(%u), lineTime(ns):%u(%u/%llu), hdr_exp: c(%u(%u)/%u(%u)/%u(%u)/%u(%u)/%u(%u), %u/%u), prev(%u(%u)/%u(%u)/%u(%u)/%u(%u)/%u(%u), %u/%u)\n",
+		"[%u] ID:%#x(sidx:%u/inf:%u), flk_en:%u, min_fl:%u(%u), shutter:%u(%u), margin:%u(%u), lineTime(ns):%u, hdr_exp: c(%u(%u)/%u(%u)/%u(%u)/%u(%u)/%u(%u), %u/%u), prev(%u(%u)/%u(%u)/%u(%u)/%u(%u)/%u(%u), %u/%u)\n",
 		idx,
 		fs_get_reg_sensor_id(idx),
 		fs_get_reg_sensor_idx(idx),
@@ -1572,8 +1426,6 @@ static inline void fs_alg_dump_perframe_data(unsigned int idx)
 			fs_inst[idx].margin_lc),
 		fs_inst[idx].margin_lc,
 		fs_inst[idx].lineTimeInNs,
-		fs_inst[idx].linelength,
-		fs_inst[idx].pclk,
 		convert2TotalTime(
 			fs_inst[idx].lineTimeInNs,
 			fs_inst[idx].hdr_exp.exp_lc[0]),
@@ -1625,7 +1477,7 @@ static inline void fs_alg_dump_perframe_data(unsigned int idx)
 void fs_alg_dump_fs_inst_data(const unsigned int idx)
 {
 	LOG_MUST(
-		"[%u] ID:%#x(sidx:%u/inf:%u), (req:%d/f:%u/%u), tg:%u, fdelay:%u, fl_lc(def/min/max/out):%u/%u/%u/%u(%u), pred_fl(c:%u(%u)/n:%u(%u)), shut_lc:%u(def:%u), margin_lc:%u, flk_en:%u, lineTime:%u(%u/%llu), readout(us):%u, f_cell:%u, f_tag:%u, n_1:%u, hdr_exp(c(%u/%u/%u/%u/%u, %u/%u, %u/%u), prev(%u/%u/%u/%u/%u, %u/%u, %u/%u), cnt:(mode/ae), read(len/margin)), ts(%llu/%llu/%llu/%llu, %llu/+(%llu)/%u)\n",
+		"[%u] ID:%#x(sidx:%u/inf:%u), (req:%d/f:%u/%u), tg:%u, fdelay:%u, fl_lc(def/min/max/out):%u/%u/%u/%u(%u), pred_fl(c:%u(%u)/n:%u(%u)), shut_lc:%u(def:%u), margin_lc:%u, flk_en:%u, lineTime:%u, readout(us):%u, f_cell:%u, f_tag:%u, n_1:%u, hdr_exp(c(%u/%u/%u/%u/%u, %u/%u, %u/%u), prev(%u/%u/%u/%u/%u, %u/%u, %u/%u), cnt:(mode/ae), read(len/margin)), ts(%llu/%llu/%llu/%llu, %llu/+(%llu)/%u)\n",
 		idx,
 		fs_get_reg_sensor_id(idx),
 		fs_get_reg_sensor_idx(idx),
@@ -1649,8 +1501,6 @@ void fs_alg_dump_fs_inst_data(const unsigned int idx)
 		fs_inst[idx].margin_lc,
 		fs_inst[idx].flicker_en,
 		fs_inst[idx].lineTimeInNs,
-		fs_inst[idx].linelength,
-		fs_inst[idx].pclk,
 		fs_inst[idx].readout_time_us,
 		fs_inst[idx].frame_tag,
 		fs_inst[idx].frame_cell_size,
@@ -2508,7 +2358,6 @@ static void fs_alg_sa_update_seamless_dynamic_para(const unsigned int idx,
 	struct fs_seamless_st *p_seamless_info,
 	struct FrameSyncDynamicPara *p_para)
 {
-	// unsigned int seamless_frame_time_us = 0;
 	unsigned int i = 0;
 
 	/* error handling (unexpected case) */
@@ -2521,9 +2370,6 @@ static void fs_alg_sa_update_seamless_dynamic_para(const unsigned int idx,
 			p_seamless_info);
 		return;
 	}
-
-	/* calculate seamless frame time */
-	// seamless_frame_time_us = calc_seamless_frame_time_us(idx, p_seamless_info);
 
 	/* using seamless ctrl to update pf ctrl */
 	fs_inst[idx].hdr_exp = p_seamless_info->seamless_pf_ctrl.hdr_exp;
@@ -3559,8 +3405,6 @@ void fs_alg_set_streaming_st_data(const unsigned int idx,
 	fs_inst[idx].margin_lc = set_and_chk_margin_lc(idx,
 		pData->margin_lc, __func__);
 
-	fs_inst[idx].pclk = pData->pclk;
-	fs_inst[idx].linelength = pData->linelength;
 	fs_inst[idx].lineTimeInNs = pData->lineTimeInNs;
 
 
@@ -3587,8 +3431,6 @@ void fs_alg_set_perframe_st_data(const unsigned int idx,
 	fs_inst[idx].margin_lc = set_and_chk_margin_lc(idx,
 		pData->margin_lc, __func__);
 	fs_inst[idx].flicker_en = pData->flicker_en;
-	fs_inst[idx].pclk = pData->pclk;
-	fs_inst[idx].linelength = pData->linelength;
 	fs_inst[idx].lineTimeInNs = pData->lineTimeInNs;
 	fs_inst[idx].readout_time_us = pData->readout_time_us;
 
@@ -3627,8 +3469,6 @@ void fs_alg_set_preset_perframe_streaming_st_data(const unsigned int idx,
 	fs_inst[idx].margin_lc = set_and_chk_margin_lc(idx,
 		p_pf_ctrl_data->margin_lc, __func__);
 	fs_inst[idx].flicker_en = p_pf_ctrl_data->flicker_en;
-	fs_inst[idx].pclk = p_pf_ctrl_data->pclk;
-	fs_inst[idx].linelength = p_pf_ctrl_data->linelength;
 	fs_inst[idx].lineTimeInNs = p_pf_ctrl_data->lineTimeInNs;
 
 	fs_inst[idx].prev_readout_min_fl_lc = fs_inst[idx].readout_min_fl_lc;
