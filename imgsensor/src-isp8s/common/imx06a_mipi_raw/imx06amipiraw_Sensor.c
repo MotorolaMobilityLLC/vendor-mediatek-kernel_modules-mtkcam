@@ -155,6 +155,81 @@ static struct mtk_mbus_frame_desc_entry frame_desc_regC[] = {
 	},
 };
 
+static struct mtk_mbus_frame_desc_entry frame_desc_regD[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2b,
+			.hsize = 0x1000, /* 4096 */
+			.vsize = 0x0900, /* 2304 */
+			.user_data_desc = VC_STAGGER_NE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 1,
+			.data_type = 0x2b,
+			.hsize = 0x1000, /* 4096 */
+			.vsize = 0x0900, /* 2304 */
+			.user_data_desc = VC_STAGGER_ME,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 2,
+			.data_type = 0x2b,
+			.hsize = 0x1000, /* 4096 */
+			.vsize = 0x0900, /* 2304 */
+			.user_data_desc = VC_STAGGER_SE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x1000, /* 4096 */
+			.vsize = 0x240, /* 576 */
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+		},
+	},
+};
+
+static struct mtk_mbus_frame_desc_entry frame_desc_regE[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2b,
+			.hsize = 0x1000, /* 4096 */
+			.vsize = 0x0900, /* 2304 */
+			.user_data_desc = VC_STAGGER_NE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 1,
+			.data_type = 0x2b,
+			.hsize = 0x1000, /* 4096 */
+			.vsize = 0x0900, /* 2304 */
+			.user_data_desc = VC_STAGGER_ME,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
+		},
+	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x1000, /* 4096 */
+			.vsize = 0x240, /* 576 */
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+		},
+	},
+};
+
 #else
 
 static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = { //mode 0
@@ -922,6 +997,132 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 6326,//TBD
 		.delay_frame = 3,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW14_R,
+	},
+	{
+		.frame_desc = frame_desc_regD,
+		.num_entries = ARRAY_SIZE(frame_desc_regD),
+		.mode_setting_table = imx06a_dcg_vs_regD,
+		.mode_setting_len = ARRAY_SIZE(imx06a_dcg_vs_regD),
+		.seamless_switch_group = 1,
+		.seamless_switch_mode_setting_table = imx06a_dcg_vs_regD,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx06a_dcg_vs_regD),
+		.hdr_mode = HDR_RAW_DCG_RAW_VS,
+		.raw_cnt = 3,
+		.exp_cnt = 3,
+		.pclk = 2803200000,// VTPXCK system pixel rate
+		.linelength = 16096,//line_length_pck
+		.framelength = 2912 * 2,//frame_length_lines
+		.max_framerate = 300,
+		.mipi_pixel_rate = 2445940000,// OPSYCK system pixel rate
+		.readout_length = 0,
+		.read_margin = 64,
+		.framelength_step = 8,
+		.coarse_integ_step = 4,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 768,
+			.w0_size = 8192,
+			.h0_size = 4608,
+			.scale_w = 4096,
+			.scale_h = 2304,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2304,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2304,
+		},
+		.pdaf_cap = TRUE,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = -436,
+		.delay_frame = 3,
+		.saturation_info = &imgsensor_saturation_info_14bit,
+		.dcg_info = {
+			.dcg_mode = IMGSENSOR_DCG_RAW,
+			.dcg_gain_mode = IMGSENSOR_DCG_RATIO_MODE,
+			.dcg_gain_ratio_min = 16000,
+			.dcg_gain_ratio_max = 16000,
+			.dcg_gain_ratio_step = 0,
+			.dcg_gain_table = imx06a_dcg_ratio_table_ratio16,
+			.dcg_gain_table_size = sizeof(imx06a_dcg_ratio_table_ratio16),
+		},
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 4,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_SE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_SE].max = BASEGAIN * 64,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 1390,  // 8.023ms
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = 1390,  // 8.023ms
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_SE].max = 278,  // 0.99ms
+		.multiexp_s_info[IMGSENSOR_EXPOSURE_SE].belong_to_lut_id = IMGSENSOR_LUT_B,
+		.mode_lut_s_info[IMGSENSOR_LUT_B].linelength = 9952,//line_length_pck
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW14_R,
+	},
+	{
+		.frame_desc = frame_desc_regE,
+		.num_entries = ARRAY_SIZE(frame_desc_regE),
+		.mode_setting_table = imx06a_dcg_vs_regE,
+		.mode_setting_len = ARRAY_SIZE(imx06a_dcg_vs_regE),
+		.seamless_switch_group = 1,
+		.seamless_switch_mode_setting_table = imx06a_dcg_vs_regE,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx06a_dcg_vs_regE),
+		.hdr_mode = HDR_RAW_DCG_RAW,
+		.raw_cnt = 2,
+		.exp_cnt = 2,
+		.pclk = 2803200000,// VTPXCK system pixel rate
+		.linelength = 32192,//line_length_pck
+		.framelength = 2900,//frame_length_lines
+		.max_framerate = 300,
+		.mipi_pixel_rate = 2445940000,// OPSYCK system pixel rate
+		.readout_length = 0,
+		.read_margin = 64,
+		.framelength_step = 8,
+		.coarse_integ_step = 4,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 768,
+			.w0_size = 8192,
+			.h0_size = 4608,
+			.scale_w = 4096,
+			.scale_h = 2304,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 2304,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 2304,
+		},
+		.pdaf_cap = TRUE,
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = -436,
+		.delay_frame = 3,
+		.saturation_info = &imgsensor_saturation_info_14bit,
+		.dcg_info = {
+			.dcg_mode = IMGSENSOR_DCG_RAW,
+			.dcg_gain_mode = IMGSENSOR_DCG_RATIO_MODE,
+			.dcg_gain_ratio_min = 16000,
+			.dcg_gain_ratio_max = 16000,
+			.dcg_gain_ratio_step = 0,
+			.dcg_gain_table = imx06a_dcg_ratio_table_ratio16,
+			.dcg_gain_table_size = sizeof(imx06a_dcg_ratio_table_ratio16),
+		},
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 4,
+		//.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 1390,  // 8.023ms
+		//.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = 1390,  // 8.023ms
+		//.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_SE].max = 278,  // 0.99ms
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW14_R,
 	},
 #endif
