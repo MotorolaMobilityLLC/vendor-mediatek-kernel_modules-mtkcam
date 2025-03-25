@@ -631,6 +631,7 @@ void sv_reset_by_camsys_top(struct mtk_camsv_device *sv_dev)
 {
 	int cq_dma_sw_ctl;
 	int ret;
+	unsigned int vcore_gal;
 
 	dev_info(sv_dev->dev, "%s camsv_id:%d\n", __func__, sv_dev->id);
 
@@ -654,9 +655,25 @@ void sv_reset_by_camsys_top(struct mtk_camsv_device *sv_dev)
 		goto RESET_FAILURE;
 	}
 	writel(0, sv_dev->base_scq + REG_CAMSVCQTOP_SW_RST_CTL);
+	// mraw
+	writel(0xDEADBEEF, sv_dev->top + 0x10);
+	pr_info("mraw sram_del: 0x%x", readl(sv_dev->top + 0x10));
+	// main
+	writel(0xDEADBEEF, sv_dev->cam->base + 0x10);
+	pr_info("main sram_del: 0x%x", readl(sv_dev->cam->base + 0x10));
+	// vcore
+	vcore_gal = readl(sv_dev->cam->vcore_base + 0x10);
+	pr_info("vcore gal read: 0x%x", readl(sv_dev->cam->vcore_base + 0x10));
+	vcore_gal &= ~(0x2000);
+	vcore_gal |= (1 << 13);
+	writel(vcore_gal, sv_dev->cam->vcore_base + 0x10);
+	pr_info("vcore gal write: 0x%x", readl(sv_dev->cam->vcore_base + 0x10));
 	writel(0, sv_dev->top + REG_CAM_MAIN_SW_RST_1);
+	pr_info("reset_dbg_step 1");
 	writel(3 << ((sv_dev->id) * 2 + 4), sv_dev->top + REG_CAM_MAIN_SW_RST_1);
+	pr_info("reset_dbg_step 2");
 	writel(0, sv_dev->top + REG_CAM_MAIN_SW_RST_1);
+	pr_info("reset_dbg_step 3");
 	wmb(); /* make sure committed */
 
 RESET_FAILURE:
