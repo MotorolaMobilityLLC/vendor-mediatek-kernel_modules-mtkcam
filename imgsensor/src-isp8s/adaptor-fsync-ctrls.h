@@ -7,11 +7,6 @@
 #define __ADAPTOR_FSYNC_CTRLS_H__
 
 
-/* !!! ONLY for testing or bypass fsync mgr !!! */
-/* !!! if you define this, log msg will also be disable !!! */
-// #define FORCE_DISABLE_FSYNC_MGR
-
-
 /*******************************************************************************
  * streaming ctrls
  ******************************************************************************/

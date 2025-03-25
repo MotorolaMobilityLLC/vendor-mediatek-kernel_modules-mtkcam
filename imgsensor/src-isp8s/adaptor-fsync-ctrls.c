@@ -7,92 +7,34 @@
 #include <linux/spinlock.h>
 #include <linux/delay.h>
 
+#include "adaptor-fsync-def.h"
+#include "adaptor-fsync-ctrls.h"
 #include "frame-sync/frame_sync.h"
 #include "frame-sync/sensor_recorder.h"
 
 #include "mtk_camera-v4l2-controls-common.h"
-#include "kd_imgsensor_define_v4l2.h"
-#include "imgsensor-user.h"
 
-#include "adaptor.h"
-#include "adaptor-def.h"
-#include "adaptor-trace.h"
-#include "adaptor-common-ctrl.h"
+#include "adaptor-fsync-utils.h"
 #include "adaptor-subdrv-ctrl.h"
-#include "adaptor-fsync-ctrls.h"
 #include "adaptor-tsrec-cb-ctrl-impl.h"
 #include "adaptor-broadcast-ctrls.h"
 #include "adaptor-util.h"
 
 
 /*******************************************************************************
- * fsync mgr log ctrl
+ * fsync ctrls log def
  ******************************************************************************/
+#define PFX "AdaptFsyncCtrls"
+
 #define REDUCE_FSYNC_CTRLS_LOG
 #define REDUCE_FSYNC_CTRLS_DBG_LOG
 
-#define PFX "AdaptorFsyncCtrls"
-
-#if !defined(FORCE_DISABLE_FSYNC_MGR)
-#define FSYNC_MGR_LOG_INF(ctx, format, ...) { \
-	dev_info(ctx->dev, PFX "[%s] " format, __func__, ##__VA_ARGS__); \
-}
-
-#define FSYNC_MGR_LOGD(ctx, format, ...) { \
-	adaptor_logd(ctx, PFX "[%s] " format, __func__, ##__VA_ARGS__); \
-}
-
-#define FSYNC_MGR_LOGI(ctx, format, ...) { \
-	adaptor_logi(ctx, PFX "[%s] " format, __func__, ##__VA_ARGS__); \
-}
-
-#else
-#define FSYNC_MGR_LOG_INF(ctx, format, ...)
-#define FSYNC_MGR_LOGD(ctx, format, ...)
-#define FSYNC_MGR_LOGI(ctx, format, ...)
-#endif // !FORCE_DISABLE_FSYNC_MGR
-
-
-#define FSYNC_TRACE_BEGIN(fmt, args...) \
-do { \
-	if (adaptor_trace_enabled()) { \
-		__adaptor_systrace( \
-			"B|%d|%s::" fmt, task_tgid_nr(current), PFX, ##args); \
-	} \
-} while (0)
-
-#define FSYNC_TRACE_FUNC_BEGIN() \
-	FSYNC_TRACE_BEGIN("%s", __func__)
-
-#define FSYNC_TRACE_END() \
-do { \
-	if (adaptor_trace_enabled()) { \
-		__adaptor_systrace("E|%d", task_tgid_nr(current)); \
-	} \
-} while (0)
-
-#define FSYNC_TRACE_PR_LOG_INF(fmt, args...) \
-do { \
-	if (adaptor_trace_enabled()) { \
-		__adaptor_systrace( \
-			"B|%d|%s[%s]" fmt, task_tgid_nr(current), PFX, __func__, ##args); \
-		__adaptor_systrace("E|%d", task_tgid_nr(current)); \
-	} \
-} while (0)
-
 
 /*******************************************************************************
- * fsync mgr define/enum/structure
+ * fsync mgr define/enum/structure/variables
  ******************************************************************************/
-#define FSYNC_WAIT_TSREC_UPDATE_DELAY_CNT (5)
-#define FSYNC_WAIT_TSREC_UPDATE_DELAY_US  (400)
-
 static unsigned int is_fsync_ts_src_type_tsrec;
 
-
-/*******************************************************************************
- * fsync mgr variables
- ******************************************************************************/
 /* for checking if any sensor enter long exposure mode */
 static atomic_t long_exp_mode_bits = ATOMIC_INIT(0);
 
@@ -123,8 +65,8 @@ void fsync_mgr_dump_tsrec_ts_info(struct adaptor_ctx *ctx,
 	const struct mtk_cam_seninf_tsrec_timestamp_info *ts_info,
 	const char *caller)
 {
-	adaptor_logi(ctx,
-		"[%s] idx:%d, ts_info(tsrec_no:%u, seninf_idx:%u, tick_factor:%u, pre_latch_exp_no:%u, sys_ts:%llu(ns), tsrec_ts:%llu(us), tick:%llu, ts(0:(%llu/%llu/%llu/%llu), 1:(%llu/%llu/%llu/%llu), 2:(%llu/%llu/%llu/%llu)))\n",
+	FSYNC_MGR_LOGI(ctx,
+		"[%s] sidx:%d, info(no:%u/inf:%u, tick_fac:%u, prelatch_exp_no:%u, irq(%llu(ns)/%llu(us)(%llu)), ts(0:(%llu/%llu/%llu/%llu)/1:(%llu/%llu/%llu/%llu)/2:(%llu/%llu/%llu/%llu)))\n",
 		caller,
 		ctx->idx,
 		ts_info->tsrec_no,
@@ -297,93 +239,6 @@ static void fsync_mgr_chk_wait_tsrec_hw_pre_latch_updated(
 
 
 /*******************************************************************************
- * sensor driver feature ctrls
- ******************************************************************************/
-static void fsync_mgr_g_sensor_hw_sync_mode(
-	struct adaptor_ctx *ctx, struct fs_streaming_st *s_info)
-{
-	union feature_para para;
-	u32 len;
-
-	para.u32[0] = 0;
-	para.u32[1] = 0;
-	para.u32[2] = 0;
-
-	subdrv_call(ctx, feature_control,
-		SENSOR_FEATURE_GET_SENSOR_SYNC_MODE,
-		para.u8, &len);
-
-	s_info->sync_mode = para.u32[0]; // sync operate mode. none/master/slave
-	s_info->hw_sync_group_id = para.u32[1]; //FS_HW_SYNC_GROUP_ID_MCSS;   // hw sync group ID
-	s_info->hw_sync_method = para.u32[2]; //1;     // legacy:0, MCSS:1
-
-	FSYNC_MGR_LOGD(ctx,
-		"sensor_idx:%d, set hw_sync_mode s_info->sync_mode:%u s_info->hw_sync_group_id:%u s_info->hw_sync_method:%u\n",
-		ctx->idx, s_info->sync_mode,s_info->hw_sync_group_id, s_info->hw_sync_method);
-}
-
-static void fsync_mgr_s_frame_length(struct adaptor_ctx *ctx)
-{
-	enum ACDK_SENSOR_FEATURE_ENUM cmd;
-	union feature_para para;
-	u32 len;
-
-	para.u64[0] = ctx->fsync_out_fl;
-	para.u64[1] = (u64)ctx->fsync_out_fl_arr;
-
-	cmd = (ctx->fsync_out_fl_arr[0])
-		? SENSOR_FEATURE_SET_FRAMELENGTH_IN_LUT
-		: SENSOR_FEATURE_SET_FRAMELENGTH;
-
-	FSYNC_TRACE_BEGIN(
-		"%s::imgsensor:subdrv_call, cmd:%u(SET_FL:%u/SET_FL_IN_LUT:%u)",
-		__func__,
-		cmd,
-		SENSOR_FEATURE_SET_FRAMELENGTH,
-		SENSOR_FEATURE_SET_FRAMELENGTH_IN_LUT);
-	subdrv_call(ctx, feature_control, cmd, para.u8, &len);
-	FSYNC_TRACE_END();
-}
-
-static void fsync_mgr_s_multi_shutter_frame_length(
-	struct adaptor_ctx *ctx,
-	u64 *ae_exp_arr, u32 ae_exp_cnt,
-	const unsigned int multi_exp_type)
-{
-	enum ACDK_SENSOR_FEATURE_ENUM cmd;
-	union feature_para para;
-	u64 fsync_exp[IMGSENSOR_STAGGER_EXPOSURE_CNT] = {0};
-	u32 len = 0;
-	int i;
-
-	if (likely(ae_exp_arr != NULL)) {
-		for (i = 0;
-			(i < ae_exp_cnt) && (i < IMGSENSOR_STAGGER_EXPOSURE_CNT);
-			++i)
-			fsync_exp[i] = (*(ae_exp_arr + i));
-	}
-
-	para.u64[0] = (u64)fsync_exp;
-	para.u64[1] = min_t(u32, ae_exp_cnt, (u32)IMGSENSOR_STAGGER_EXPOSURE_CNT);
-	para.u64[2] = ctx->fsync_out_fl;
-	para.u64[3] = (u64)ctx->fsync_out_fl_arr;
-
-	cmd = (multi_exp_type == MULTI_EXP_TYPE_LBMF)
-		? SENSOR_FEATURE_SET_MULTI_SHUTTER_FRAME_TIME_IN_LUT
-		: SENSOR_FEATURE_SET_MULTI_SHUTTER_FRAME_TIME;
-
-	FSYNC_TRACE_BEGIN(
-		"%s::imgsensor:subdrv_call, cmd:%u(SET_EXP_FL:%u/SET_EXP_FL_IN_LUT:%u)",
-		__func__,
-		cmd,
-		SENSOR_FEATURE_SET_MULTI_SHUTTER_FRAME_TIME,
-		SENSOR_FEATURE_SET_MULTI_SHUTTER_FRAME_TIME_IN_LUT);
-	subdrv_call(ctx, feature_control, cmd, para.u8, &len);
-	FSYNC_TRACE_END();
-}
-
-
-/*******************************************************************************
  * fsync mgr static functions
  ******************************************************************************/
 static void fsync_mgr_update_sensor_actual_fl_info(struct adaptor_ctx *ctx,
@@ -394,7 +249,7 @@ static void fsync_mgr_update_sensor_actual_fl_info(struct adaptor_ctx *ctx,
 
 	p_pf_ctrl->out_fl_lc = ctx->subctx.frame_length_rg;
 
-	if (p_pf_ctrl->hdr_exp.multi_exp_type == MULTI_EXP_TYPE_LBMF) {
+	if (frec_chk_if_lut_is_used(p_pf_ctrl->hdr_exp.multi_exp_type)) {
 		for (i = 0; i < mode_exp_cnt; ++i) {
 #ifdef FL_ARR_IN_LUT_ORDER
 			const int fl_idx = i;
@@ -417,7 +272,7 @@ static void fsync_mgr_chk_long_exposure(struct adaptor_ctx *ctx,
 	int fine_integ_line = 0;
 
 	fine_integ_line =
-		g_sensor_fine_integ_line(ctx, ctx->subctx.current_scenario_id);
+		fsync_util_sen_g_fine_integ_line(ctx, ctx->subctx.current_scenario_id);
 
 	for (i = 0; i < ae_exp_cnt; ++i) {
 		u32 exp_lc = (u32)
@@ -454,93 +309,12 @@ static void fsync_mgr_chk_long_exposure(struct adaptor_ctx *ctx,
 }
 
 
-static void fsync_mgr_setup_sensor_hdr_info(struct adaptor_ctx *ctx,
-	struct fs_hdr_exp_st *p_hdr_exp, const u32 mode_id)
-{
-	struct adaptor_sensor_lbmf_property_st lbmf_prop = {0};
-
-	/* set mode exp cnt (e.g., stagger: 1 ~ 3) */
-	p_hdr_exp->mode_exp_cnt = g_scenario_exposure_cnt(ctx, mode_id);
-	p_hdr_exp->readout_len_lc = ctx->subctx.readout_length;
-	p_hdr_exp->read_margin_lc = ctx->subctx.read_margin;
-	p_hdr_exp->min_vblank_lc = ctx->subctx.min_vblanking_line;
-
-	/* setup multi exp type (HDR type, e.g., stagger, LB-MF, etc.) */
-	if (g_sensor_lbmf_property(ctx, mode_id, &lbmf_prop)) {
-		p_hdr_exp->multi_exp_type = MULTI_EXP_TYPE_LBMF;
-
-		switch (lbmf_prop.exp_order) {
-		case IMGSENSOR_LBMF_EXPOSURE_LE_FIRST:
-			p_hdr_exp->exp_order = EXP_ORDER_LE_1ST;
-			break;
-		case IMGSENSOR_LBMF_EXPOSURE_SE_FIRST:
-			p_hdr_exp->exp_order = EXP_ORDER_SE_1ST;
-			break;
-		case IMGSENSOR_LBMF_EXPOSURE_ORDER_SUPPORT_NONE:
-			FSYNC_MGR_LOGI(ctx,
-				"ERROR: sidx:%d, detect sensor mode is LBMF HDR, but exp order is SUPPORT NONE, treat as SE first\n",
-				ctx->idx);
-			p_hdr_exp->exp_order = EXP_ORDER_SE_1ST;
-			break;
-		default:
-			FSYNC_MGR_LOGI(ctx,
-				"ERROR: sidx:%d, detect sensor mode is LBMF HDR, but exp order is unknown (%d), treat as SE first\n",
-				ctx->idx, lbmf_prop.exp_order);
-			p_hdr_exp->exp_order = EXP_ORDER_SE_1ST;
-			break;
-		}
-	} else if (g_sensor_dcg_property(ctx, mode_id)) {
-		/* => DCG */
-		p_hdr_exp->mode_exp_cnt = 1;
-	} else {
-		/* => stagger */
-		enum IMGSENSOR_HDR_SUPPORT_TYPE_ENUM type = HDR_SUPPORT_NA;
-		u32 ret;
-
-		ret = g_sensor_stagger_type(ctx, mode_id, &type);
-		switch (type) {
-		case HDR_SUPPORT_STAGGER_FDOL:
-			p_hdr_exp->dol_type = STAGGER_DOL_TYPE_FDOL;
-			break;
-		case HDR_SUPPORT_STAGGER_DOL:
-			p_hdr_exp->dol_type = STAGGER_DOL_TYPE_DOL;
-			break;
-		case HDR_SUPPORT_STAGGER_NDOL:
-			p_hdr_exp->dol_type = STAGGER_DOL_TYPE_NDOL;
-			break;
-		default:
-			p_hdr_exp->dol_type = STAGGER_DOL_TYPE_FDOL;
-#ifndef REDUCE_FSYNC_CTRLS_LOG
-			FSYNC_MGR_LOGI(ctx,
-				"ERROR: sidx:%d, g_stagger_info return vc info is stagger, but type is unexpected (ret:%u/type:%d), treat as FDOL\n",
-				ctx->idx, ret, type);
-#endif
-			break;
-		}
-
-		p_hdr_exp->multi_exp_type = MULTI_EXP_TYPE_STG;
-	}
-
-#ifndef REDUCE_FSYNC_CTRLS_DBG_LOG
-	FSYNC_MGR_LOGI(ctx,
-		"sidx:%d, set p_hdr_exp(multi_exp_type:%u(STG:%d/LBMF:%d)/mode_exp_cnt:%u/exp_order:%u)\n",
-		ctx->idx,
-		p_hdr_exp->multi_exp_type,
-		MULTI_EXP_TYPE_STG,
-		MULTI_EXP_TYPE_LBMF,
-		p_hdr_exp->mode_exp_cnt,
-		p_hdr_exp->exp_order);
-#endif
-}
-
 static void fsync_mgr_setup_all_exp_data(struct adaptor_ctx *ctx,
 	unsigned int *p_shutter_lc, struct fs_hdr_exp_st *p_hdr_exp,
 	const u64 *ae_exp_arr, const u32 ae_exp_cnt, const u32 mode_id)
 {
-	struct mtk_stagger_info info = {0};
 	unsigned int i = 0;
 	int fine_integ_line;
-	int ret = 0;
 	u64 ae_exp;
 
 	/* error handle */
@@ -552,13 +326,11 @@ static void fsync_mgr_setup_all_exp_data(struct adaptor_ctx *ctx,
 	}
 
 	/* !!! start setup all exp data (shutter_lc & fs_hdr_exp_st) !!! */
-	fine_integ_line = g_sensor_fine_integ_line(ctx, mode_id);
+	fine_integ_line = fsync_util_sen_g_fine_integ_line(ctx, mode_id);
 
 	/* ==> for hdr-exp settings, e.g. STG sensor */
-	info.scenario_id = SENSOR_SCENARIO_ID_NONE;
-	ret = g_stagger_info(ctx, mode_id, &info);
-	if (!ret) {
-		fsync_mgr_setup_sensor_hdr_info(ctx, p_hdr_exp, mode_id);
+	if (!fsync_util_sen_g_stagger_info(ctx, mode_id)) {
+		fsync_util_setup_sen_hdr_info_st(ctx, p_hdr_exp, mode_id);
 
 		// p_hdr_exp->mode_exp_cnt = info.count;
 		p_hdr_exp->ae_exp_cnt = ae_exp_cnt;
@@ -579,8 +351,7 @@ static void fsync_mgr_setup_all_exp_data(struct adaptor_ctx *ctx,
 				} else
 					p_hdr_exp->exp_lc[idx] = ae_exp;
 
-				if (p_hdr_exp->multi_exp_type ==
-						MULTI_EXP_TYPE_LBMF) {
+				if (frec_chk_if_lut_is_used(p_hdr_exp->multi_exp_type)) {
 					p_hdr_exp->fl_lc[fl_idx] = 0;
 						// ctx->subctx.frame_length_in_lut_rg[i];
 				}
@@ -771,7 +542,7 @@ int cb_func_fsync_mgr_set_fl_info(void *p_ctx, const unsigned int cmd_id,
 		// p_pf_ctrl = (struct fs_perframe_st *)pf_info;
 
 		/* set frame length */
-		fsync_mgr_s_frame_length(ctx);
+		fsync_util_sen_s_frame_length(ctx);
 
 		/* update sensor current fl to Frame-Sync */
 		ctx->fsync_mgr->fs_update_frame_length(ctx->idx,
@@ -834,21 +605,22 @@ static void fsync_mgr_setup_fs_streaming_st(struct adaptor_ctx *ctx,
 	s_info->target_tg = ctx->fsync_listen_target->val;
 
 	s_info->fl_active_delay =
-		g_sensor_frame_length_delay(ctx, mode_id, __func__);
+		fsync_util_sen_g_fdelay(ctx, mode_id, __func__);
 
 	/* for any settings before streaming on */
 	s_info->def_fl_lc = ctx->subctx.frame_length_rg;
 	s_info->max_fl_lc = ctx->subctx.max_frame_length;
 
 	/* frame sync sensor operate mode. none/master/slave */
-	fsync_mgr_g_sensor_hw_sync_mode(ctx, s_info);
+	fsync_util_sen_g_hw_sync_info(ctx, s_info);
 
 	/* using ctx->subctx.shutter instead of ctx->subctx.exposure_def */
 	/* for any settings before streaming on */
 	s_info->def_shutter_lc = ctx->subctx.shutter;
-	s_info->margin_lc = g_sensor_margin(ctx, ctx->subctx.current_scenario_id);
+	s_info->margin_lc =
+		fsync_util_sen_g_margin(ctx, ctx->subctx.current_scenario_id);
 
-	fsync_mgr_setup_sensor_hdr_info(ctx, &s_info->hdr_exp, mode_id);
+	fsync_util_setup_sen_hdr_info_st(ctx, &s_info->hdr_exp, mode_id);
 	if (s_info->hdr_exp.mode_exp_cnt > 1) {
 		for (i = 0; i < s_info->hdr_exp.mode_exp_cnt; ++i) {
 			const int idx =
@@ -862,7 +634,7 @@ static void fsync_mgr_setup_fs_streaming_st(struct adaptor_ctx *ctx,
 			}
 
 			s_info->hdr_exp.exp_lc[idx] = ctx->subctx.exposure[i];
-			if (s_info->hdr_exp.multi_exp_type == MULTI_EXP_TYPE_LBMF) {
+			if (frec_chk_if_lut_is_used(s_info->hdr_exp.multi_exp_type)) {
 #ifdef FL_ARR_IN_LUT_ORDER
 				const int fl_idx = i;
 #else
@@ -1045,7 +817,7 @@ static void fsync_mgr_setup_basic_fs_perframe_st(struct adaptor_ctx *ctx,
 	pf_ctrl->sensor_idx = ctx->idx;
 
 	pf_ctrl->min_fl_lc = ctx->subctx.min_frame_length;
-	pf_ctrl->margin_lc = g_sensor_margin(ctx, mode_id);
+	pf_ctrl->margin_lc = fsync_util_sen_g_margin(ctx, mode_id);
 	pf_ctrl->flicker_en = ctx->subctx.autoflicker_en;
 	pf_ctrl->out_fl_lc = ctx->subctx.frame_length_rg; // sensor current fl_lc
 
@@ -1069,11 +841,23 @@ static inline void fsync_mgr_setup_seamless_property(struct adaptor_ctx *ctx,
 	const u32 orig_readout_time_us,
 	struct fs_seamless_st *seamless_info)
 {
+	unsigned long long sof_sys_ts_ns, cur_sys_ts_ns;
+
+	if (is_fsync_ts_src_type_tsrec) {
+		spin_lock(&ctx->fsync_pre_latch_ts_info_update_lock);
+		sof_sys_ts_ns = ctx->fsync_pre_latch_ts_info.irq_sys_time_ns;
+		spin_unlock(&ctx->fsync_pre_latch_ts_info_update_lock);
+	} else {
+		/* => timestamp from CCU */
+		sof_sys_ts_ns = ctx->sys_ts_update_sof_cnt;
+	}
+	cur_sys_ts_ns = ktime_get_boottime_ns();
+
 	/* !!! setup all seamless switch property that needed !!! */
 	/* setup original mode readout time */
 	seamless_info->prop.orig_readout_time_us = orig_readout_time_us;
-	seamless_info->prop.ctrl_receive_time_us = (unsigned int)
-		((ktime_get_boottime_ns() - ctx->sys_ts_update_sof_cnt)/1000);
+	seamless_info->prop.ctrl_receive_time_us = (sof_sys_ts_ns != 0)
+		? ((unsigned int)((cur_sys_ts_ns - sof_sys_ts_ns) / 1000)) : 0;
 
 	switch ( ctx->subctx.s_ctx.seamless_switch_type ) {
 	case SEAMLESS_SWITCH_CUT_VB_INIT_SHUT :
@@ -1327,7 +1111,7 @@ void notify_fsync_mgr_seamless_switch(struct adaptor_ctx *ctx,
 	/* !!! start here !!! */
 	/* setup info that may be changed through seamless switch */
 	seamless_info.fl_active_delay =
-		g_sensor_frame_length_delay(ctx, target_scenario_id, __func__);
+		fsync_util_sen_g_fdelay(ctx, target_scenario_id, __func__);
 
 	/* setup basic structure, exp info */
 	fsync_mgr_setup_basic_fs_perframe_st(ctx,
@@ -1446,7 +1230,7 @@ void notify_fsync_mgr_set_shutter(struct adaptor_ctx *ctx,
 
 		/* Enable frame-sync && using SW sync (SA algo) solution */
 		/* set exp with fl (ctx->fsync_out_fl) */
-		fsync_mgr_s_multi_shutter_frame_length(ctx,
+		fsync_util_sen_s_multi_shutter_frame_length(ctx,
 			ae_exp_arr, ae_exp_cnt,
 			pf_ctrl.hdr_exp.multi_exp_type);
 	}
@@ -1541,7 +1325,7 @@ static void notify_fsync_mgr_bcast_event_re_ctrl_fl(struct adaptor_ctx *ctx,
 	FSYNC_TRACE_END();
 
 	/* set fl (ctx->fsync_out_fl) */
-	fsync_mgr_s_frame_length(ctx);
+	fsync_util_sen_s_frame_length(ctx);
 	/* update sensor current fl_lc */
 	fsync_mgr_update_sensor_actual_fl_info(ctx, &pf_ctrl);
 	/* update sensor current fl_lc to Frame-Sync */
