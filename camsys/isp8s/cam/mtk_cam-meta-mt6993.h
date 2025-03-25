@@ -744,7 +744,8 @@ struct mtk_cam_uapi_awb_stats {
       * MTK_CAM_UAPI_AEDO_MAX_BLK_X \
       * MTK_CAM_UAPI_AEDO_MAX_BLK_Y)
 
-#define MTK_CAM_UAPI_STATCOLO_MAX_BUF_SIZE (320)
+#define MTK_CAM_UAPI_STATCOLO_SIZE (320)
+#define MTK_CAM_UAPI_STATCOLO_MAX_BUF_SIZE (MTK_CAM_UAPI_STATCOLO_SIZE * 3)
 
 /**
  * struct mtk_cam_uapi_ae_stats - statistics of ae
