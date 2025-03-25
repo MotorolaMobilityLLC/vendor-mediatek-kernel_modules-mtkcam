@@ -4897,6 +4897,9 @@ static int update_job_raw_change(struct mtk_cam_job *job)
 				job->raw_change = JOB_RAW_MASTER_UNCHANGED;
 			else
 				job->raw_change = JOB_RAW_MASTER_CHANGED;
+
+			job->disable_qof_cq_ctrl = true;
+
 			dev_info(ctx->cam->dev,
 				"%s:ctx(%d): change raw resource (hwmode:%d/engine:0x%lx->0x%x) raw_change_type:%d\n",
 				__func__, ctx->stream_id,
