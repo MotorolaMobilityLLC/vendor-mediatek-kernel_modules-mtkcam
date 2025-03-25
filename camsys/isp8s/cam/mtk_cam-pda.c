@@ -43,68 +43,173 @@ int mtk_pda_translation_fault_callback(int port, dma_addr_t mva, void *data)
 	dev_info(pda_dev->dev, "%s:check buffer information\n", __func__);
 
 	dev_info(pda_dev->dev, "CFG_0/1/2/3/4/5/6: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_0),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_1),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_2),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_3),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_4),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_5),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_6));
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_0),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_1),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_2),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_3),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_4),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_5),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_6));
 	dev_info(pda_dev->dev, "CFG_14~18: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_14),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_15),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_16),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_17),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_18));
-	dev_info(pda_dev->dev, "CFG_19~22: 0x%x/0x%x/0x%x/0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_19),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_20),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_21),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_CFG_22));
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_14),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_15),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_16),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_17),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_18));
+
+	dev_info(pda_dev->dev, "ROI 0,1, CFG_19~26: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_19),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_20),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_21),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_22),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_23),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_24),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_25),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_26));
+	dev_info(pda_dev->dev, "ROI 2,3, CFG_27~34: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_27),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_28),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_29),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_30),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_31),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_32),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_33),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_34));
+	dev_info(pda_dev->dev, "ROI 4,5, CFG_35~42: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_35),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_36),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_37),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_38),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_39),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_40),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_41),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_42));
+	dev_info(pda_dev->dev, "ROI 6,7, CFG_43~50: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_43),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_44),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_45),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_46),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_47),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_48),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_49),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_50));
+	dev_info(pda_dev->dev, "ROI 8,9, CFG_51~58: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_51),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_52),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_53),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_54),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_55),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_56),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_57),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_58));
+	dev_info(pda_dev->dev, "ROI 10,11, CFG_59~66: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_59),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_60),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_61),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_62),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_63),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_64),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_65),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_66));
+	dev_info(pda_dev->dev, "ROI 12,13, CFG_67~74: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_67),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_68),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_69),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_70),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_71),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_72),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_73),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_74));
+	dev_info(pda_dev->dev, "ROI 14,15, CFG_75~82: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_75),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_76),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_77),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_78),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_79),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_80),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_81),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_82));
+	dev_info(pda_dev->dev, "ROI 16,17, CFG_83~90: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_83),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_84),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_85),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_86),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_87),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_88),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_89),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_90));
+	dev_info(pda_dev->dev, "ROI 18,19, CFG_91~98: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_91),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_92),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_93),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_94),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_95),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_96),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_97),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_98));
+	dev_info(pda_dev->dev, "ROI 20,21, CFG_99~106: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_99),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_100),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_101),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_102),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_103),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_104),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_105),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_106));
+	dev_info(pda_dev->dev, "ROI 22,23, CFG_107~114: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_107),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_108),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_109),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_110),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_111),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_112),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_113),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_CFG_114));
+
 	dev_info(pda_dev->dev, "DCIF DEBUG0~7: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA0),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA1),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA2),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA3),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA4),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA5),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA6),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA7));
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA0),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA1),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA2),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA3),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA4),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA5),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA6),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA7));
 	dev_info(pda_dev->dev, "I_P1/TI_P1/I_P2/TI_P2/Out: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P1_BASE_ADDR),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P1_BASE_ADDR),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P2_BASE_ADDR),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P2_BASE_ADDR),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAO_P1_BASE_ADDR));
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDAI_P1_BASE_ADDR),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDATI_P1_BASE_ADDR),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDAI_P2_BASE_ADDR),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDATI_P2_BASE_ADDR),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDAO_P1_BASE_ADDR));
 	dev_info(pda_dev->dev, "[MSB]I_P1/TI_P1/I_P2/TI_P2/Out: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P1_BASE_ADDR_MSB),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P1_BASE_ADDR_MSB),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P2_BASE_ADDR_MSB),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P2_BASE_ADDR_MSB),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAO_P1_BASE_ADDR_MSB));
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDAI_P1_BASE_ADDR_MSB),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDATI_P1_BASE_ADDR_MSB),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDAI_P2_BASE_ADDR_MSB),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDATI_P2_BASE_ADDR_MSB),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDAO_P1_BASE_ADDR_MSB));
 	dev_info(pda_dev->dev, "ERR_STAT_EN/ERR_STAT/TOP_CTL/DCIF_CTL: 0x%x/0x%x/0x%x/0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_ERR_STAT_EN),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_ERR_STAT),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_TOP_CTL),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DCIF_CTL));
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDA_ERR_STAT_EN),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDA_ERR_STAT),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDA_TOP_CTL),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_DCIF_CTL));
 	dev_info(pda_dev->dev, "[ERR_STAT]I_P1/TI_P1/I_P2/TI_P2/Out: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P1_ERR_STAT),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P1_ERR_STAT),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P2_ERR_STAT),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P2_ERR_STAT),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAO_P1_ERR_STAT));
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDAI_P1_ERR_STAT),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDATI_P1_ERR_STAT),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDAI_P2_ERR_STAT),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDATI_P2_ERR_STAT),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDAO_P1_ERR_STAT));
 	dev_info(pda_dev->dev, "pack_mode/dilation: 0x%x/0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PACK_MODE),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DILATION_CFG));
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PACK_MODE),
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_DILATION_CFG));
 	dev_info(pda_dev->dev, "DMA_EN(0x1f): 0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DMA_EN));
+		readl_relaxed(pda_dev->base_inner + REG_E_PDA_OTF_PDA_DMA_EN));
 
 	// check debug data
 	for (sel_index = 0; sel_index < Length_Arr; ++sel_index) {
-		writel_relaxed(Debug_Sel[sel_index], pda_dev->base + REG_PDA_PDA_DEBUG_SEL);
+		writel_relaxed(Debug_Sel[sel_index], pda_dev->base_inner + REG_PDA_PDA_DEBUG_SEL);
 		dev_info(pda_dev->dev, "DEBUG_SEL/DEBUG_DATA: 0x%x/0x%x\n",
-			readl_relaxed(pda_dev->base + REG_PDA_PDA_DEBUG_SEL),
-			readl_relaxed(pda_dev->base + REG_PDA_PDA_DEBUG_DATA));
+			readl_relaxed(pda_dev->base_inner + REG_PDA_PDA_DEBUG_SEL),
+			readl_relaxed(pda_dev->base_inner + REG_PDA_PDA_DEBUG_DATA));
 	}
 
 	return 0;
@@ -719,6 +824,21 @@ static int mtk_pda_of_probe(struct platform_device *pdev,
 	}
 	dev_dbg(dev, "pda, map_addr=0x%pK\n", pda_dev->base);
 
+	/* base inner register */
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "inner_base");
+	if (!res) {
+		dev_dbg(dev, "failed to get inner_base\n");
+		return -ENODEV;
+	}
+
+	pda_dev->base_inner = devm_ioremap_resource(dev, res);
+	if (IS_ERR(pda_dev->base_inner)) {
+		dev_dbg(dev, "failed to map register inner base\n");
+		return PTR_ERR(pda_dev->base_inner);
+	}
+
+	dev_dbg(dev, "pda, map_addr=0x%pK\n", pda_dev->base_inner);
+
 	for (i = 0; i < PDA_IRQ_NUM; i++) {
 		pda_dev->irq[i] = platform_get_irq(pdev, i);
 		if (!pda_dev->irq[i]) {
@@ -887,7 +1007,6 @@ static int mtk_pda_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-
 	ret = mtk_cam_qos_probe(dev, &pda_dev->qos, SMI_PORT_PDA_NUM);
 	if (ret)
 		goto UNREGISTER_PM_NOTIFIER;
@@ -934,6 +1053,7 @@ int mtk_pda_runtime_suspend(struct device *dev)
 {
 	struct mtk_pda_device *pda_dev = dev_get_drvdata(dev);
 	int i;
+
 	dev_info(dev, "%s +\n", __func__);
 
 	pda_reset(pda_dev);
@@ -977,6 +1097,7 @@ int mtk_pda_runtime_resume(struct device *dev)
 {
 	struct mtk_pda_device *pda_dev = dev_get_drvdata(dev);
 	int i, ret;
+
 	dev_info(dev, "%s +\n", __func__);
 
 	for (i = 0; i < pda_dev->num_larbs; i++)
