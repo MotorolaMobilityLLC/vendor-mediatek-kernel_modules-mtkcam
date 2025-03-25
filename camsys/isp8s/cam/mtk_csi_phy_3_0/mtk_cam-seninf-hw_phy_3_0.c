@@ -434,6 +434,12 @@ static struct mtk_cam_seninf_cdphy_ctle_setting cphy_standard_channel[] = {
 };
 
 
+struct mtk_cam_seninf_lprx_info {
+	u32 port_a_lprx_out_mask;
+	u32 port_b_lprx_out_mask;
+	u32 port_a_lprx_out_status;
+	u32 port_b_lprx_out_status;
+};
 
 static int mtk_cam_seninf_common_reg_setup(struct seninf_ctx *ctx);
 static u64 settle_formula(u64 settle_ns, u64 seninf_ck)
@@ -4875,12 +4881,14 @@ static ssize_t mtk_cam_seninf_show_outmux_status(struct device *dev,
  *
  * @return {@code false} if it has been streamed off and delay partically, otherwise (@code true}
  */
-/*static */bool delay_with_stream_check(struct seninf_ctx *ctx, unsigned long delay)
+/*static */bool delay_with_stream_check(struct seninf_ctx *ctx, unsigned long target_delay_in_ms,
+	struct mtk_cam_seninf_lprx_info *info)
 {
-	unsigned long delay_step, delay_inc;
+	void *ana_baseA = ctx->reg_ana_csi_rx[(unsigned int)ctx->portA];
+	void *ana_baseB = ctx->reg_ana_csi_rx[(unsigned int)ctx->portB];
+	u64 ini_ts_in_ns = ktime_get_boottime_ns();
+	u64 current_duration_in_us = 0;
 
-	delay_inc = 0;
-	delay_step = 1;
 	do {
 		if (!ctx->streaming)
 			break;
@@ -4889,14 +4897,33 @@ static ssize_t mtk_cam_seninf_show_outmux_status(struct device *dev,
 			dev_info(ctx->dev, "%s abort\n", __func__);
 			return false;
 		}
-		delay_step = min((unsigned long)MAX_DELAY_STEP, delay - delay_inc);
-		mdelay(delay_step);
-		delay_inc += delay_step;
-	} while (delay > delay_inc);
 
-	if (delay > delay_inc) {
-		dev_info(ctx->dev, "delay = %lu, inc = %lu, seninf streamed-off\n",
-			 delay, delay_inc);
+		if (ctx->is_cphy) {
+			info->port_a_lprx_out_status |=
+				SENINF_READ_REG(ana_baseA, CDPHY_RX_ANA_AD_0) &&
+					info->port_a_lprx_out_mask;
+
+			info->port_b_lprx_out_status |=
+				SENINF_READ_REG(ana_baseB, CDPHY_RX_ANA_AD_0) &&
+					info->port_b_lprx_out_mask;
+		} else {
+			info->port_a_lprx_out_status |=
+				SENINF_READ_REG(ana_baseA, CDPHY_RX_ANA_AD_0) &&
+					info->port_a_lprx_out_mask;
+
+			info->port_b_lprx_out_status |=
+				SENINF_READ_REG(ana_baseB, CDPHY_RX_ANA_AD_0) &&
+					info->port_b_lprx_out_mask;
+		}
+
+		current_duration_in_us = (ktime_get_boottime_ns() - ini_ts_in_ns) / 1000;
+
+	} while (current_duration_in_us < target_delay_in_ms * 1000);
+
+	if (current_duration_in_us < target_delay_in_ms * 1000) {
+		dev_info(ctx->dev, "target delay %lu ms, already delay %llu ms seninf stream-off\n",
+			 target_delay_in_ms,
+			 current_duration_in_us / 1000);
 		return false;
 	}
 
@@ -5068,7 +5095,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 	unsigned int tmp_mipi_packet_cnt = 0;
 	unsigned long total_delay = 0;
 	unsigned long max_delay = 0;
-	int ret = 0;
+	int ret = SENINF_DEBUG_ERR_NONE;
 	int j, i, k;
 	unsigned long debug_ft = FT_30_FPS * SCAN_TIME;	// FIXME
 	unsigned long debug_vb = 1;	// 1ms for min readout time
@@ -5081,12 +5108,9 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 	void *pSeninf_top = ctx->reg_if_top;
 	void *pSeninf_asytop = ctx->reg_if_async;
 	void *pSeninf_outmux = NULL;
-	u32 port_a_lprx_out_mask = 0;
-	u32 port_b_lprx_out_mask = 0;
-	u32 port_a_lprx_out_status = 0;
-	u32 port_b_lprx_out_status = 0;
-	void *ana_baseA = ctx->reg_ana_csi_rx[(unsigned int)ctx->portA];
-	void *ana_baseB = ctx->reg_ana_csi_rx[(unsigned int)ctx->portB];
+	struct mtk_cam_seninf_lprx_info lprx_info;
+
+	memset(&lprx_info, 0, sizeof(struct mtk_cam_seninf_lprx_info));
 
 	mtk_cam_sensor_get_frame_cnt(ctx, &frame_cnt1);
 
@@ -5382,7 +5406,8 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_RESYNC_MERGE_CTRL));
 
 	/* Set LPRX OUT mask for socket checking */
-	if (mtk_cam_seninf_get_lprx_mask(ctx, &port_a_lprx_out_mask, &port_b_lprx_out_mask)) {
+	if (mtk_cam_seninf_get_lprx_mask(ctx,
+		&lprx_info.port_a_lprx_out_mask, &lprx_info.port_b_lprx_out_mask)) {
 		dev_info(ctx->dev,
 			"[error][%s] mtk_cam_seninf_get_lprx_mask return failed\n", __func__);
 	}
@@ -5437,27 +5462,9 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 
 		while (total_delay < max_delay) {
 			tmp_mipi_packet_cnt = mipi_packet_cnt & 0xFFFF;
-			if (!delay_with_stream_check(ctx, debug_vb))
+			if (!delay_with_stream_check(ctx, debug_vb, &lprx_info))
 				return ret; // has been stream off
 			total_delay += debug_vb;
-
-			if (ctx->is_cphy) {
-				port_a_lprx_out_status |=
-					SENINF_READ_REG(ana_baseA, CDPHY_RX_ANA_AD_1) &&
-						port_a_lprx_out_mask;
-
-				port_b_lprx_out_status |=
-					SENINF_READ_REG(ana_baseB, CDPHY_RX_ANA_AD_1) &&
-						port_b_lprx_out_mask;
-			} else {
-				port_a_lprx_out_status |=
-					SENINF_READ_REG(ana_baseA, CDPHY_RX_ANA_AD_0) &&
-						port_a_lprx_out_mask;
-
-				port_b_lprx_out_status |=
-					SENINF_READ_REG(ana_baseB, CDPHY_RX_ANA_AD_0) &&
-						port_b_lprx_out_mask;
-			}
 
 			mipi_packet_cnt = SENINF_READ_REG(base_csi_mac,
 						CSIRX_MAC_CSI2_PACKET_CNT_STATUS);
@@ -5472,7 +5479,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 	}
 
 	if (!pkg_cnt_changed) {
-		ret = -1;
+		ret = -SENINF_DEBUG_PKCNT_ERR;  // ret = -1
 		seninf_logi(ctx,
 			"total_delay:%lums/%lums,CSI-%d_PkCnt:(0x%x),ret=%d\n",
 			total_delay, max_delay, ctx->portNum, mipi_packet_cnt, ret);
@@ -5480,7 +5487,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 
 	/* Check csi status again */
 	if (debug_ft > total_delay) {
-		if (!delay_with_stream_check(ctx, debug_ft - total_delay))
+		if (!delay_with_stream_check(ctx, debug_ft - total_delay, &lprx_info))
 			return ret; // has been stream off
 	}
 
@@ -5502,30 +5509,27 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		"CSI-%d_CSI2_IRQ_STATUS(0x%x)/_MULTI_ERR_F_STATUS(0x%x),SENINF_ASYNC%d_OVERRUN:(0x%x),C/DPHY_RX_IRQ_STATUS:(0x%x)/(0x%x)\n",
 		ctx->portNum, mac_irq, temp, ctx->seninfAsyncIdx, seninf_irq, cphy_irq, dphy_irq);
 	if ((mac_irq & 0xD0) || seninf_irq)
-		ret = -2; //multi lanes sync error, crc error, ecc error
+		ret = -SENINF_DEBUG_ECC_CRC_LANE_ERR; //multi lanes sync error, crc error, ecc error
 
-	if ((ret == -1) && (mac_irq & 0x324)) {
+	if ((ret == -SENINF_DEBUG_PKCNT_ERR) && (mac_irq & 0x324)) {
 		seninf_logi(ctx,
 			"packet count is not changed but IRQ status raised still, so it would be false alarm due to all checking are in vb");
-		ret = 0;
+		ret = SENINF_DEBUG_ERR_NONE;
 	}
 
 	if ((!ctx->fake_sensor_info.is_fake_sensor) &&
-		(!pkg_cnt_changed) &&
-		!(mac_irq & 0x324) &&
+		(ret == -SENINF_DEBUG_PKCNT_ERR) &&
 		(ctx->csi_streaming) &&
 		(ctx->streaming) &&
-		(port_a_lprx_out_status != port_a_lprx_out_mask ||
-		port_b_lprx_out_status != port_b_lprx_out_mask)) {
-		ret = -2;
+		(lprx_info.port_a_lprx_out_status == 0)&&
+		(lprx_info.port_b_lprx_out_status == 0)) {
+		ret = -SENINF_DEBUG_SOCKET_ERR;
 		seninf_logi(ctx,
 		"[ERROR]LPRX_OUT check failed with portA/B 0x%x/0x%x  portA/B msk 0x%x/0x%x\n",
-			port_a_lprx_out_status,
-			port_b_lprx_out_status,
-			port_a_lprx_out_mask,
-			port_b_lprx_out_mask);
-		seninf_logi(ctx, "[%s][ERR] Sensor socket is disconnect\n", __func__);
-		seninf_aee_print(SENINF_AEE_SENSOR_SOCKER_ERR, "Sensor socket is disconnect\n");
+			lprx_info.port_a_lprx_out_status,
+			lprx_info.port_b_lprx_out_status,
+			lprx_info.port_a_lprx_out_mask,
+			lprx_info.port_b_lprx_out_mask);
 	}
 
 	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 0, false);

@@ -553,6 +553,9 @@ struct seninf_ctx {
 	u32 debug_cur_mac_csi2_size_irq4;
 	u32 debug_cur_mac_csi2_size_irq5;
 
+	/* sensor socket detetion */
+	u32 sensor_socket_err_cnt;
+
 	/* Vsync in*/
 	struct mutex mutex_vsync_in;
 	u32 sensor_sequence;

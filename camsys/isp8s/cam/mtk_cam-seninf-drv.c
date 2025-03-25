@@ -3064,6 +3064,7 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 	seninf_sentest_flag_init(ctx);
 	notify_imgsensor_lastest_mipi_cnt(ctx);
 	ctx->set_abort_flag = false;
+	ctx->sensor_socket_err_cnt = false;
 
 	mutex_unlock(&ctx->stream_mutex);
 
@@ -4859,6 +4860,48 @@ u64 mtk_cam_seninf_get_frame_time(struct v4l2_subdev *sd, u32 seq_id)
 	return tmp * 1000;
 }
 
+static int mtk_cam_seninf_ixc_connector_check(struct seninf_ctx *ctx)
+{
+	struct v4l2_subdev *sensor_sd;
+	bool i2c_is_err = false;
+	const int assert_socket_disconnect_threshold = 5;
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("ctx is NULL\n");
+		return -EINVAL;
+	}
+
+	if (unlikely(ctx->fake_sensor_info.is_fake_sensor))
+		return 0;
+
+	if (unlikely(ctx->streaming == false))
+		return 0;
+
+	sensor_sd = ctx->sensor_sd;
+
+	if (unlikely(sensor_sd == NULL)) {
+		pr_info("sensor_sd is NULL\n");
+		return -EINVAL;
+	}
+
+	i2c_is_err = sensor_sd->ops->core->command(
+			sensor_sd, V4L2_CMD_G_SENSOR_CONNECTOR_STATUS, NULL);
+
+	if (i2c_is_err) {
+		ctx->sensor_socket_err_cnt++;
+		dev_info(ctx->dev,
+			"[%s][ERR] ixc socket check return failed, err_acc %u\n",
+			__func__, ctx->sensor_socket_err_cnt);
+	}
+
+	if (ctx->sensor_socket_err_cnt > assert_socket_disconnect_threshold) {
+		seninf_aee_print(SENINF_AEE_SENSOR_SOCKER_ERR,
+					"please check if sensor sockeet status\n");
+	}
+
+	return 0;
+}
+
 int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 			bool assert_when_error)
 {
@@ -4928,21 +4971,23 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 
 	if (!in_reset) {
 
-		if ((!ctx->fake_sensor_info.is_fake_sensor) && (ctx->streaming)) {
-			i2c_is_err = sensor_sd->ops->core->command(
-				sensor_sd, V4L2_CMD_G_SENSOR_CONNECTOR_STATUS, NULL);
+		ret = g_seninf_ops->_debug(sd_to_ctx(sd));
+		/* assert */
 
-			if ((assert_when_error) && (i2c_is_err)) {
-				dev_info(ctx->dev, "[%s][ERR] Sensor socket i2c is disconnect\n",
-					__func__);
-				seninf_aee_print(SENINF_AEE_SENSOR_SOCKER_ERR,
-					"Sensor socket is disconnect %d\n", i2c_is_err);
+		if (assert_when_error) {
+			switch (ret) {
+			case SENINF_DEBUG_ECC_CRC_LANE_ERR:
+				seninf_aee_print(SENINF_AEE_FRMERR,
+					"Seninf dump with error code: %d\n", ret);
 				asserted = true;
+				break;
+			case SENINF_DEBUG_SOCKET_ERR:
+				mtk_cam_seninf_ixc_connector_check(ctx);
+				asserted = true;
+				break;
 			}
 		}
 
-		ret = g_seninf_ops->_debug(sd_to_ctx(sd));
-		/* assert */
 		if (assert_when_error && (i2c_is_err == 0) && ret != 0) {
 			seninf_aee_print(SENINF_AEE_FRMERR,
 					"Seninf dump with error code: %d\n", ret);
