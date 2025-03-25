@@ -2642,9 +2642,11 @@ void mtk_cam_sv_fifo_dump(struct mtk_camsv_device *sv_dev)
 		for (int dbg_type = 0; dbg_type < 2; dbg_type++) {
 			debug_sel &= ~(0x40);
 			debug_sel |= dbg_type;
+			writel_relaxed(debug_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
 			dbg_port6 = readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT6);
 			dev_info(sv_dev->dev,
-				"[core%d] dbg_sel:0x%x => dbg_dspch:0x%x\n", dma_core, debug_sel, dbg_port6);
+				"[core%d] dbg_sel:0x%x => dbg_dspch:0x%x\n",
+				dma_core, debug_sel, dbg_port6);
 		}
 
 		for (int i = 0; i < RECORD_FRAME_NUM; i++) {
@@ -2653,6 +2655,15 @@ void mtk_cam_sv_fifo_dump(struct mtk_camsv_device *sv_dev)
 		}
 	}
 
+	for (int dma_core = 0; dma_core < MAX_DMA_CORE; dma_core++) {
+		debug_sel = 0;
+		debug_sel |= (1 << 7);  // real time val
+		debug_sel |= (dma_core << 4);
+		writel_relaxed(debug_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
+		dev_info(sv_dev->dev,
+			"[core%d] max_fifo %x\n", dma_core,
+			readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT5));
+	}
 }
 
 void mtk_cam_sv_stg_dump(struct mtk_camsv_device *sv_dev)
@@ -3168,8 +3179,9 @@ static irqreturn_t mtk_irq_camsv_sof(int irq, void *data)
 
 	for (int dma_core = 0; dma_core < MAX_DMA_CORE; dma_core++) {
 		debug_sel = 0;
-		debug_sel |= (1 << 7); // real time val
+		debug_sel |= (1 << 7);  // real time val
 		debug_sel |= (dma_core << 4);
+		writel_relaxed(debug_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
 		sv_dev->fifo_dbg[dma_core][(sv_dev->fifo_dbg_cnt % RECORD_FRAME_NUM)] =
 			readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DBG_PORT5);
 	}
