@@ -16,10 +16,13 @@
 #define SENINF_AEE_OUTMUX "Seninf: outmux error"
 #define SENINF_AEE_FS_SEQ "Seninf: sensor fs sequence"
 #define SENINF_AEE_FRMERR "Seninf: frame error"
+#define SENINF_AEE_SENSOR_SOCKER_ERR "Seninf: sensor socket disconnect"
 
 #if IS_ENABLED(CONFIG_MTK_AEE_FEATURE)
 #define seninf_aee_print(title, string, args...) do { \
-	;\
+	aee_kernel_exception_api(__FILE__, __LINE__, \
+			DB_OPT_DEFAULT | DB_OPT_FTRACE, \
+			title, "["title"]: "string, ##args); \
 	} while (0)
 #else
 #define seninf_aee_print(title, string, args...) \

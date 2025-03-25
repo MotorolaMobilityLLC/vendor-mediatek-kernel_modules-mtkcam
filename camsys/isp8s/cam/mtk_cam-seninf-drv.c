@@ -1740,6 +1740,7 @@ static int mtk_cam_seninf_set_fmt(struct v4l2_subdev *sd,
 	struct seninf_ctx *ctx = sd_to_ctx(sd);
 	struct v4l2_mbus_framefmt *format;
 	char bSinkFormatChanged = 0;
+	int ret = 0;
 
 	if (fmt->pad >= PAD_MAXCNT)
 		return -EINVAL;
@@ -1778,11 +1779,11 @@ static int mtk_cam_seninf_set_fmt(struct v4l2_subdev *sd,
 
 		if (bSinkFormatChanged && !ctx->is_test_model) {
 			mtk_cam_seninf_get_sensor_usage(&ctx->subdev);
-			mtk_cam_sensor_get_vc_info_by_scenario(ctx, fmt->format.code);
+			ret = mtk_cam_sensor_get_vc_info_by_scenario(ctx, fmt->format.code);
 			update_cfg_done_max_wait_time(ctx);
 		}
 
-		dev_info(ctx->dev, "s_fmt pad %d code/res 0x%x/%dx%d which %d=> 0x%x/%dx%d\n",
+		dev_info(ctx->dev, "s_fmt pad %d code/res 0x%x/%dx%d which %d=> 0x%x/%dx%d ret %d\n",
 			fmt->pad,
 			fmt->format.code,
 			fmt->format.width,
@@ -1790,10 +1791,11 @@ static int mtk_cam_seninf_set_fmt(struct v4l2_subdev *sd,
 			fmt->which,
 			format->code,
 			format->width,
-			format->height);
+			format->height,
+			ret);
 	}
 
-	return 0;
+	return ret;
 }
 
 static int mtk_cam_seninf_get_fmt(struct v4l2_subdev *sd,
@@ -4763,6 +4765,7 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 	int reset_by_user = 0;
 	bool in_reset = 0;
 	bool asserted = false;
+	bool i2c_is_err = false;
 
 	if (!sd)
 		return -EINVAL;
@@ -4819,9 +4822,20 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 		sensor_sd->ops->core->command(sensor_sd, V4L2_CMD_SENSOR_IN_RESET, &in_reset);
 
 	if (!in_reset) {
+
+		i2c_is_err = sensor_sd->ops->core->command(
+				sensor_sd, V4L2_CMD_G_SENSOR_CONNECTOR_STATUS, NULL);
+
+		if ((assert_when_error) && (i2c_is_err)) {
+			dev_info(ctx->dev, "[%s][ERR] Sensor socket is disconnect\n", __func__);
+			seninf_aee_print(SENINF_AEE_SENSOR_SOCKER_ERR,
+					"Sensor socket is disconnect %d\n", i2c_is_err);
+			asserted = true;
+		}
+
 		ret = g_seninf_ops->_debug(sd_to_ctx(sd));
 		/* assert */
-		if (assert_when_error && ret != 0) {
+		if (assert_when_error && (i2c_is_err == 0) && ret != 0) {
 			seninf_aee_print(SENINF_AEE_FRMERR,
 					"Seninf dump with error code: %d\n", ret);
 			asserted = true;

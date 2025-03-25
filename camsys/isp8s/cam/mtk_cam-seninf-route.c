@@ -2543,7 +2543,7 @@ int mtk_cam_seninf_set_cfg_rdy(struct v4l2_subdev *sd, int camtg)
 	return 0;
 }
 
-void mtk_cam_sensor_get_vc_info_by_scenario(struct seninf_ctx *ctx, u32 code)
+int mtk_cam_sensor_get_vc_info_by_scenario(struct seninf_ctx *ctx, u32 code)
 {
 	int i = 0;
 	struct mtk_sensor_vc_info_by_scenario vc_sid= {0};
@@ -2556,8 +2556,10 @@ void mtk_cam_sensor_get_vc_info_by_scenario(struct seninf_ctx *ctx, u32 code)
 	bool only_one_vc = true;
 	u64 fsync_ext_vsync_pad_code = 0;
 
-	if (!ctx)
-		return;
+	if (!ctx) {
+		pr_info("[%s][ERROR] ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
 
 	vc_sid.scenario_id = get_scenario_from_fmt_code(code);
 	if (ctx->sensor_sd &&
@@ -2620,6 +2622,7 @@ void mtk_cam_sensor_get_vc_info_by_scenario(struct seninf_ctx *ctx, u32 code)
 			 first_vc, last_vc);
 		seninf_aee_print(SENINF_AEE_FS_SEQ,
 			"Check sensor's frame desc fs_seq setting\n");
+		return -EINVAL;
 	}
 
 	ctx->cur_first_vs = first_vc;
@@ -2627,6 +2630,7 @@ void mtk_cam_sensor_get_vc_info_by_scenario(struct seninf_ctx *ctx, u32 code)
 
 	dev_info(ctx->dev, "current first vc(%d) current last vc(%d)\n",
 		ctx->cur_first_vs, ctx->cur_last_vs);
+	return 0;
 }
 
 #if AOV_GET_PARAM

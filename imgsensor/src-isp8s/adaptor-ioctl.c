@@ -1474,7 +1474,7 @@ static int g_current_frame_time_in_us(struct adaptor_ctx *ctx, void *arg)
 	}
 
 	info->frametime_in_us = linetime_in_ns * ctx->subctx.frame_length_rg / 1000;
-	adaptor_logi(ctx, "[%s] scenario(%d) frametime in_line(%d)/in_us(%d)\n",
+	adaptor_logd(ctx, "[%s] scenario(%d) frametime in_line(%d)/in_us(%d)\n",
 		__func__, scenario_id, ctx->subctx.frame_length_rg, info->frametime_in_us);
 
 	return 0;
@@ -1499,17 +1499,17 @@ static int g_read_margin_in_us_by_scenario(struct adaptor_ctx *ctx, void *arg)
 	if (ctx->subctx.s_ctx.mode[scenario_id].read_margin) {
 		info->margin = linetime_in_ns *
 			ctx->subctx.s_ctx.mode[scenario_id].read_margin / 1000;
-		adaptor_logi(ctx, "[%s] scenario(%d) read_margin in_line(%d)/in_us(%d)\n",
+		adaptor_logd(ctx, "[%s] scenario(%d) read_margin in_line(%d)/in_us(%d)\n",
 			__func__, (u32)info->scenario_id,
 			ctx->subctx.s_ctx.mode[scenario_id].read_margin, info->margin);
 	} else if (ctx->subctx.read_margin) {
 		info->margin = linetime_in_ns *
 			ctx->subctx.read_margin / 1000;
-		adaptor_logi(ctx, "[%s] global read_margin in_line(%d)/in_us(%d)\n",
+		adaptor_logd(ctx, "[%s] global read_margin in_line(%d)/in_us(%d)\n",
 			__func__,
 			ctx->subctx.read_margin, info->margin);
 	} else {
-		adaptor_logi(ctx, "[%s] scenario(%d) no read_margin\n",
+		adaptor_logd(ctx, "[%s] scenario(%d) no read_margin\n",
 			__func__, (u32)info->scenario_id);
 	}
 
@@ -1535,17 +1535,17 @@ static int g_exposure_margin_in_us_by_scenario(struct adaptor_ctx *ctx, void *ar
 	if (ctx->subctx.s_ctx.mode[scenario_id].exposure_margin) {
 		info->margin = linetime_in_ns *
 			ctx->subctx.s_ctx.mode[scenario_id].exposure_margin / 1000;
-		adaptor_logi(ctx, "[%s] scenario(%d) exp_margin in_line(%d)/in_us(%d)\n",
+		adaptor_logd(ctx, "[%s] scenario(%d) exp_margin in_line(%d)/in_us(%d)\n",
 			__func__, (u32)info->scenario_id,
 			ctx->subctx.s_ctx.mode[scenario_id].exposure_margin, info->margin);
 	} else if (ctx->subctx.s_ctx.exposure_margin) {
 		info->margin = linetime_in_ns *
 			ctx->subctx.s_ctx.exposure_margin / 1000;
-		adaptor_logi(ctx, "[%s] global exp_margin in_line(%d)/in_us(%d)\n",
+		adaptor_logd(ctx, "[%s] global exp_margin in_line(%d)/in_us(%d)\n",
 			__func__,
 			ctx->subctx.s_ctx.exposure_margin, info->margin);
 	} else {
-		adaptor_logi(ctx, "[%s] scenario(%d) no exp_margin\n",
+		adaptor_logd(ctx, "[%s] scenario(%d) no exp_margin\n",
 			__func__, (u32)info->scenario_id);
 	}
 

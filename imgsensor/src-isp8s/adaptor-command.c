@@ -341,6 +341,30 @@ static int g_cmd_g_sensor_stream_status(struct adaptor_ctx *ctx, void *arg)
 	return ret;
 }
 
+static int g_cmd_g_sensor_connector_status(struct adaptor_ctx *ctx, void *arg)
+{
+	u32 sensor_id = 0xffffffff;
+	int ret = 0;
+
+	/* unexpected case, arg is nullptr */
+	if (unlikely(ctx == 0)) {
+		pr_info("[%s][ERROR] ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (ctx->power_refcnt == 0) {
+		adaptor_logi(ctx, "sensor do not power on\n");
+		return -EINVAL;
+	}
+
+	if (subdrv_call(ctx, get_id, &sensor_id)) {
+		adaptor_logi(ctx, "sensor i2c test failed, please check connector status\n");
+		ret = -EINVAL;
+	}
+
+	return ret;
+}
+
 static int s_cmd_sensor_broadcast_event(struct adaptor_ctx *ctx, void *arg)
 {
 	int ret = 0;
@@ -826,6 +850,7 @@ static const struct command_entry command_list[] = {
 	{V4L2_CMD_G_SENSOR_STREAM_STATUS, g_cmd_g_sensor_stream_status},
 	{V4L2_CMD_G_SENSOR_FAKE_SENSOR_INFO, g_cmd_fake_sensor_info},
 	{V4L2_CMD_G_SENSOR_CTLE_PARAM, g_cmd_ctle_param},
+	{V4L2_CMD_G_SENSOR_CONNECTOR_STATUS, g_cmd_g_sensor_connector_status},
 
 	/* SET */
 	{V4L2_CMD_SET_CB_FUNC_OF_FAKE_SENSOR, set_cb_func_of_fake_sensor},

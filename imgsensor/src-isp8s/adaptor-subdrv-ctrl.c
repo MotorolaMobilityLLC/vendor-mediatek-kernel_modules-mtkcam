@@ -4785,7 +4785,7 @@ void get_multi_exp_static_info_by_scenario(struct subdrv_ctx *ctx,
 		ae_info->margin = get_multiexp_static_info(ctx, u32, exposure_margin, scenario_id, i);
 		ae_info->binning_ratio = get_multiexp_static_info(ctx, u32, ae_binning_ratio, scenario_id, i);
 
-		DRV_LOG_MUST(ctx,
+		DRV_LOG(ctx,
 			"scenario_id(%d),exp_cnt(%u)=> ae_static_info[%d]:gain_min/max/stp(%u/%u/%u),shut_min/max_stp(%llu/%llu/%u),ltInNs(%llu),fineIntegL(%d),margin(%u),binRatio(%u)\n",
 			scenario_id, info->exp_cnt, i,
 			ae_info->gain.min, ae_info->gain.max, ae_info->gain.step,

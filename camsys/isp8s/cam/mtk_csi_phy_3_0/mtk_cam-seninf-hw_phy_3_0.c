@@ -3447,8 +3447,8 @@ static int csirx_dphy_init_periodic_deskew_setting(struct seninf_ctx *ctx, u64 s
 		SENINF_BITS(dphy_base, DPHY_RX_DESKEW_LANE1_CTRL, DPHY_RX_DESKEW_L1_DELAY_EN, 0);
 		SENINF_BITS(dphy_base, DPHY_RX_DESKEW_LANE2_CTRL, DPHY_RX_DESKEW_L2_DELAY_EN, 0);
 		SENINF_BITS(dphy_base, DPHY_RX_DESKEW_LANE3_CTRL, DPHY_RX_DESKEW_L3_DELAY_EN, 0);
-		seninf_aee_print(SENINF_AEE_GENERAL,
-			"[%s] Data rate (%llu) < 1.5G, no need deskew", __func__, data_rate);
+		seninf_logd(ctx, "[%s] Data rate (%llu) < 1.5G, no need deskew",
+			__func__, data_rate);
 	}
 	return 0;
 }
@@ -4650,6 +4650,161 @@ static ssize_t mtk_cam_seninf_show_outmux_status(struct device *dev,
 	return true;
 }
 
+static void mtk_cam_seninf_get_cphy_lprx_mask(struct seninf_ctx *ctx, u32 *maskA, u32 *maskB)
+{
+	switch (ctx->port) {
+	case CSI_PORT_0:
+	case CSI_PORT_1:
+	case CSI_PORT_2:
+	case CSI_PORT_3:
+	case CSI_PORT_4:
+	case CSI_PORT_5:
+	case CSI_PORT_0A:
+	case CSI_PORT_1A:
+	case CSI_PORT_2A:
+	case CSI_PORT_3A:
+	case CSI_PORT_4A:
+	case CSI_PORT_5A:
+		if (ctx->num_data_lanes == 3) {
+			*maskA |= RO_AD_CSI0_CPHY_T0_ALPRX_OUT_MASK;
+			*maskA |= RO_AD_CSI0_CPHY_T1_ALPRX_OUT_MASK;
+			*maskB |= RO_AD_CSI0_CPHY_T0_ALPRX_OUT_MASK;
+		} else if (ctx->num_data_lanes == 2) {
+			*maskA |= RO_AD_CSI0_CPHY_T0_ALPRX_OUT_MASK;
+			*maskA |= RO_AD_CSI0_CPHY_T1_ALPRX_OUT_MASK;
+		} else {
+			*maskA |= RO_AD_CSI0_CPHY_T0_ALPRX_OUT_MASK;
+		}
+		break;
+	case CSI_PORT_0B:
+	case CSI_PORT_1B:
+	case CSI_PORT_2B:
+	case CSI_PORT_3B:
+	case CSI_PORT_4B:
+	case CSI_PORT_5B:
+
+		*maskB = (ctx->num_data_lanes == 1) ? RO_AD_CSI0_CPHY_T0_ALPRX_OUT_MASK : 0;
+		break;
+	default:
+		dev_info(ctx->dev, "[%s][ERROR] ctx->port %d is invalid\n",
+				__func__, ctx->port);
+		break;
+	}
+}
+
+static void mtk_cam_seninf_get_dphy_lprx_mask(struct seninf_ctx *ctx, u32 *maskA, u32 *maskB)
+{
+	if (ctx->is_4d1c) {
+		switch(ctx->num_data_lanes) {
+		case 1:
+			*maskA |= RO_AD_CSI0_CDPHY_L1P_T0C_LPRX_OUT_MASK;
+			*maskA |= RO_AD_CSI0_CDPHY_L1N_T1A_LPRX_OUT_MASK;
+			break;
+		case 2:
+			*maskA |= RO_AD_CSI0_CDPHY_L1P_T0C_LPRX_OUT_MASK;
+			*maskA |= RO_AD_CSI0_CDPHY_L1N_T1A_LPRX_OUT_MASK;
+
+			*maskB |= RO_AD_CSI0_CDPHY_L0P_T0A_LPRX_OUT_MASK;
+			*maskB |= RO_AD_CSI0_CDPHY_L0N_T0B_LPRX_OUT_MASK;
+			break;
+		case 4:
+			*maskA |= RO_AD_CSI0_CDPHY_L0P_T0A_LPRX_OUT_MASK;
+			*maskA |= RO_AD_CSI0_CDPHY_L0N_T0B_LPRX_OUT_MASK;
+			*maskA |= RO_AD_CSI0_CDPHY_L1P_T0C_LPRX_OUT_MASK;
+			*maskA |= RO_AD_CSI0_CDPHY_L1N_T1A_LPRX_OUT_MASK;
+
+			*maskB |= RO_AD_CSI0_CDPHY_L0P_T0A_LPRX_OUT_MASK;
+			*maskB |= RO_AD_CSI0_CDPHY_L0N_T0B_LPRX_OUT_MASK;
+			*maskB |= RO_AD_CSI0_CDPHY_L1P_T0C_LPRX_OUT_MASK;
+			*maskB |= RO_AD_CSI0_CDPHY_L1N_T1A_LPRX_OUT_MASK;
+			break;
+		default:
+			dev_info(ctx->dev, "[%s][ERROR] num_data_lanes %d is invalid\n",
+						__func__, ctx->num_data_lanes);
+			break;
+		}
+	} else {
+		switch(ctx->num_data_lanes) {
+		case 1:
+			switch(ctx->port) {
+			case CSI_PORT_0A:
+			case CSI_PORT_1A:
+			case CSI_PORT_2A:
+			case CSI_PORT_3A:
+			case CSI_PORT_4A:
+			case CSI_PORT_5A:
+				*maskA |= RO_AD_CSI0_CDPHY_L0P_T0A_LPRX_OUT_MASK;
+				*maskA |= RO_AD_CSI0_CDPHY_L0N_T0B_LPRX_OUT_MASK;
+				break;
+			case CSI_PORT_0B:
+			case CSI_PORT_1B:
+			case CSI_PORT_2B:
+			case CSI_PORT_3B:
+			case CSI_PORT_4B:
+			case CSI_PORT_5B:
+				*maskB |= RO_AD_CSI0_CDPHY_L0P_T0A_LPRX_OUT_MASK;
+				*maskB |= RO_AD_CSI0_CDPHY_L0N_T0B_LPRX_OUT_MASK;
+				break;
+			default:
+				dev_info(ctx->dev, "[%s][ERROR] ctx->port %d is invalid\n",
+					__func__, ctx->port);
+				break;
+			}
+			break;
+		case 2:
+			switch(ctx->port) {
+			case CSI_PORT_0A:
+			case CSI_PORT_1A:
+			case CSI_PORT_2A:
+			case CSI_PORT_3A:
+			case CSI_PORT_4A:
+			case CSI_PORT_5A:
+				*maskA |= RO_AD_CSI0_CDPHY_L0P_T0A_LPRX_OUT_MASK;
+				*maskA |= RO_AD_CSI0_CDPHY_L0N_T0B_LPRX_OUT_MASK;
+				*maskA |= RO_AD_CSI0_CDPHY_L2P_T1B_LPRX_OUT_MASK;
+				*maskA |= RO_AD_CSI0_CDPHY_L2N_T1C_LPRX_OUT_MASK;
+				break;
+			default:
+				dev_info(ctx->dev, "[%s][ERROR] ctx->port %d is invalid\n",
+					__func__, ctx->port);
+				break;
+			}
+			break;
+		default:
+			dev_info(ctx->dev, "[%s][ERROR] num_data_lanes %d is invalid\n",
+						__func__, ctx->num_data_lanes);
+			break;
+		}
+	}
+}
+
+static int mtk_cam_seninf_get_lprx_mask(struct seninf_ctx *ctx, u32 *maskA, u32 *maskB)
+{
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s] base is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (unlikely(maskA == NULL)) {
+		dev_info(ctx->dev, "[%s] maskA is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (unlikely(maskB == NULL)) {
+		dev_info(ctx->dev, "[%s] maskB is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	*maskA = 0;
+	*maskB = 0;
+
+	if (ctx->is_cphy)
+		mtk_cam_seninf_get_cphy_lprx_mask(ctx, maskA, maskB);
+	else
+		mtk_cam_seninf_get_dphy_lprx_mask(ctx, maskA, maskB);
+	return 0;
+}
+
 static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 {
 	void *base_ana, *base_cphy, *base_dphy, *base_csi_mac;
@@ -4673,6 +4828,12 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 	void *pSeninf_top = ctx->reg_if_top;
 	void *pSeninf_asytop = ctx->reg_if_async;
 	void *pSeninf_outmux = NULL;
+	u32 port_a_lprx_out_mask = 0;
+	u32 port_b_lprx_out_mask = 0;
+	u32 port_a_lprx_out_status = 0;
+	u32 port_b_lprx_out_status = 0;
+	void *ana_baseA = ctx->reg_ana_csi_rx[(unsigned int)ctx->portA];
+	void *ana_baseB = ctx->reg_ana_csi_rx[(unsigned int)ctx->portB];
 
 	mtk_cam_sensor_get_frame_cnt(ctx, &frame_cnt1);
 
@@ -4967,6 +5128,12 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		seninf_irq,
 		SENINF_READ_REG(base_csi_mac, CSIRX_MAC_CSI2_RESYNC_MERGE_CTRL));
 
+	/* Set LPRX OUT mask for socket checking */
+	if (mtk_cam_seninf_get_lprx_mask(ctx, &port_a_lprx_out_mask, &port_b_lprx_out_mask)) {
+		dev_info(ctx->dev,
+			"[error][%s] mtk_cam_seninf_get_lprx_mask return failed\n", __func__);
+	}
+
 	/* Dump MAC CHECKER status and IRQ status */
 	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 0, true);
 	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 1, true);
@@ -5020,6 +5187,25 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 			if (!delay_with_stream_check(ctx, debug_vb))
 				return ret; // has been stream off
 			total_delay += debug_vb;
+
+			if (ctx->is_cphy) {
+				port_a_lprx_out_status |=
+					SENINF_READ_REG(ana_baseA, CDPHY_RX_ANA_AD_1) &&
+						port_a_lprx_out_mask;
+
+				port_b_lprx_out_status |=
+					SENINF_READ_REG(ana_baseB, CDPHY_RX_ANA_AD_1) &&
+						port_b_lprx_out_mask;
+			} else {
+				port_a_lprx_out_status |=
+					SENINF_READ_REG(ana_baseA, CDPHY_RX_ANA_AD_0) &&
+						port_a_lprx_out_mask;
+
+				port_b_lprx_out_status |=
+					SENINF_READ_REG(ana_baseB, CDPHY_RX_ANA_AD_0) &&
+						port_b_lprx_out_mask;
+			}
+
 			mipi_packet_cnt = SENINF_READ_REG(base_csi_mac,
 						CSIRX_MAC_CSI2_PACKET_CNT_STATUS);
 			if (tmp_mipi_packet_cnt != (mipi_packet_cnt & 0xFFFF)) {
@@ -5031,6 +5217,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 			}
 		}
 	}
+
 	if (!pkg_cnt_changed) {
 		ret = -1;
 		seninf_logi(ctx,
@@ -5068,6 +5255,21 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		seninf_logi(ctx,
 			"packet count is not changed but IRQ status raised still, so it would be false alarm due to all checking are in vb");
 		ret = 0;
+	}
+
+	if (!pkg_cnt_changed &&
+		!(mac_irq & 0x324) &&
+		(port_a_lprx_out_status != port_a_lprx_out_mask ||
+		port_b_lprx_out_status != port_b_lprx_out_mask)) {
+		ret = -2;
+		seninf_logi(ctx,
+		"[ERROR]LPRX_OUT check failed with portA/B 0x%x/0x%x  portA/B msk 0x%x/0x%x\n",
+			port_a_lprx_out_status,
+			port_b_lprx_out_status,
+			port_a_lprx_out_mask,
+			port_b_lprx_out_mask);
+		seninf_logi(ctx, "[%s][ERR] Sensor socket is disconnect\n", __func__);
+		seninf_aee_print(SENINF_AEE_SENSOR_SOCKER_ERR, "Sensor socket is disconnect\n");
 	}
 
 	DUMP_CUR_MAC_CHECKER_WITH_CLEAR(ctx, base_csi_mac, 0, false);

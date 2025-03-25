@@ -28,7 +28,7 @@ int mtk_cam_seninf_is_di_enabled(struct seninf_ctx *ctx, u8 ch, u8 dt);
 int mtk_cam_seninf_get_csi_param(struct seninf_ctx *ctx);
 int mtk_cam_seninf_s_stream_mux(struct seninf_ctx *ctx);
 int mtk_cam_seninf_forget_camtg_setting(struct seninf_ctx *ctx);
-void mtk_cam_sensor_get_vc_info_by_scenario(struct seninf_ctx *ctx, u32 code);
+int mtk_cam_sensor_get_vc_info_by_scenario(struct seninf_ctx *ctx, u32 code);
 
 #ifdef SENINF_DEBUG
 int mux2mux_vr(struct seninf_ctx *ctx, int mux, int cammux, int vc_idx);
