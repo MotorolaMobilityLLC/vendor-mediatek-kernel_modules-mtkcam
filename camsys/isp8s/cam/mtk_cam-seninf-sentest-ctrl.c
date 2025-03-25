@@ -709,8 +709,15 @@ static int seninf_sentest_dump_last_frame_size(struct seninf_ctx *ctx)
 int notify_sentest_irq_for_seamless_switch(struct seninf_ctx *ctx,
 					const struct mtk_cam_seninf_tsrec_irq_notify_info *p_info)
 {
-	if (is_target_vsync(ctx, p_info , SENTEST_FIRST_VSYNC))
+	struct mtk_seninf_sof_notify_param param;
+
+	if (is_target_vsync(ctx, p_info , SENTEST_FIRST_VSYNC)) {
 		ctx->sentest_irq_counter++;
+		param.sd = &ctx->subdev;
+		param.sof_cnt = ctx->sentest_irq_counter;
+		param.sof_ts = ktime_get_boottime_ns();
+		mtk_cam_seninf_sof_notify(&param);
+	}
 
 	pr_info("[%s] sentest_seamless_irq_ref %llu, sentest_irq_counter %llu\n",
 			__func__,
@@ -761,21 +768,19 @@ static bool set_sensor_max_fps(struct seninf_ctx *ctx)
 int notify_sentest_irq_for_active_frame(struct seninf_ctx *ctx,
 					const struct mtk_cam_seninf_tsrec_irq_notify_info *p_info)
 {
-	if (!is_target_vsync(ctx, p_info , SENTEST_FIRST_VSYNC))
-		return 0;
+	if (is_target_vsync(ctx, p_info , SENTEST_FIRST_VSYNC))
+		ctx->sentest_active_frame_irq_counter++;
 
-	ctx->sentest_active_frame_irq_counter++;
-
-	pr_info(
-		"[%s] active_frame_irq_ref_counter %llu, active_frame_irq_counter %llu\n",
+	pr_info("[%s] active_frame_irq_ref_counter %llu, active_frame_irq_counter %llu\n",
 		__func__,
 		ctx->sentest_active_frame_irq_ref_counter,
 		ctx->sentest_active_frame_irq_counter);
 
-
 	if ((ctx->sentest_active_frame_irq_ref_counter + 1) ==
 		ctx->sentest_active_frame_irq_counter) {
-		set_sensor_max_fps(ctx);
+
+		if (is_target_vsync(ctx, p_info , SENTEST_LAST_VSYNC))
+			set_sensor_max_fps(ctx);
 	}
 
 	return 0;

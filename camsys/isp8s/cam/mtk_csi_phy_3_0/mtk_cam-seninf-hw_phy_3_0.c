@@ -147,6 +147,10 @@ vcinfo_debug->rec_size_h = \
 	SENINF_READ_REG(outmux, SENINF_OUTMUX_TAG_DBG_PORT_##tag_id) >> 16 & 0xFFFF; \
 vcinfo_debug->rec_size_v =  \
 	SENINF_READ_REG(outmux, SENINF_OUTMUX_TAG_DBG_PORT_##tag_id) & 0xFFFF; \
+vcinfo_debug->vc = vc->vc = \
+	SENINF_READ_BITS(outmux, SENINF_OUTMUX_TAG_VCDT_FILT_##tag_id, SENINF_OUTMUX_FILT_VC_##tag_id); \
+vcinfo_debug->dt = vc->dt = \
+	SENINF_READ_BITS(outmux, SENINF_OUTMUX_TAG_VCDT_FILT_##tag_id, SENINF_OUTMUX_FILT_DT_##tag_id); \
 irq_status = SENINF_READ_REG(outmux, SENINF_OUTMUX_IRQ_STATUS); \
 vcinfo_debug->done_irq_status =	0x01 &  (irq_status >> SENINF_OUTMUX_TAG_DONE_IRQ_STATUS_##tag_id##_SHIFT); \
 irq_status = 0x00;\
@@ -4407,8 +4411,6 @@ static int mtk_cam_seninf_debug_core_dump(struct seninf_ctx *ctx,
 			vcinfo_debug->outmux_id = dest->outmux;
 			vcinfo_debug->vc_feature = vc->feature;
 			vcinfo_debug->tag_id = dest->tag;
-			vcinfo_debug->vc = vc->vc;
-			vcinfo_debug->dt = vc->dt;
 			vcinfo_debug->ref_vsync_irq_status = SENINF_READ_BITS(outmux,
 				SENINF_OUTMUX_IRQ_STATUS, SENINF_OUTMUX_REF_VSYNC_IRQ_STATUS);
 			switch(dest->tag) {

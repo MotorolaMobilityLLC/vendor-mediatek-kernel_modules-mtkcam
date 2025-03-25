@@ -1579,50 +1579,56 @@ int mtk_cam_seninf_forget_camtg_setting(struct seninf_ctx *ctx)
 static int _mtk_cam_seninf_reset_outmux_outer(struct seninf_ctx *ctx, int pad_id)
 {
 	struct seninf_vc *vc;
+	struct seninf_vcinfo *vcinfo = &ctx->vcinfo;
 	int old_outmux;
-	u8 j;
+	u8 i, j;
 
 	if (pad_id < PAD_SRC_RAW0 || pad_id >= PAD_MAXCNT) {
 		dev_info(ctx->dev, "no such pad id:%d\n", pad_id);
 		return -EINVAL;
 	}
 
-	vc = mtk_cam_seninf_get_vc_by_pad(ctx, pad_id);
-	if (!vc) {
-		seninf_logi(ctx, "no such vc by pad id:%d\n", pad_id);
-		return -EINVAL;
-	}
+	for (i = 0; i < vcinfo->cnt; i++) {
+		if (vcinfo->vc[i].out_pad != pad_id)
+			continue;
 
-	if (!ctx->streaming) {
-		dev_info(ctx->dev, "%s !ctx->streaming\n", __func__);
-		return -EINVAL;
-	}
-
-	if (!!vc->dest_cnt) {
-		dev_info(ctx->dev, "[%s] disable pad_id %d vc id %d dt 0x%x dest_cnt %d res %dx%d\n",
-			 __func__, pad_id, vc->vc, vc->dt,
-			vc->dest_cnt, vc->exp_hsize, vc->exp_vsize);
-	}
-	for (j = 0; j < vc->dest_cnt; j++) {
-		old_outmux = vc->dest[j].outmux;
-
-		if (old_outmux != 0xff) {
-			//disable vc dt filter when next sof
-			g_seninf_ops->_disable_outmux(ctx, old_outmux, false);
+		vc = &vcinfo->vc[i];
+		if (!vc) {
+			seninf_logi(ctx, "no such vc by pad id:%d\n", pad_id);
+			return -EINVAL;
 		}
 
-		/**
-		 *	disable rdy msk grp_en & sw rdy  for all using out mux to prevent
-		 *  causing out mux masking by old outmux
-		 */
-		g_seninf_ops->_set_outmux_rdy_msk_sw_rdy_status(ctx, old_outmux, false);
-		g_seninf_ops->_set_outmux_rdy_msk_grp_en(ctx, old_outmux, false);
+		if (!ctx->streaming) {
+			dev_info(ctx->dev, "%s !ctx->streaming\n", __func__);
+			return -EINVAL;
+		}
 
-		seninf_logd(ctx, "disable outer of pad_id(%d) old camtg(%d)\n",
-			 pad_id, old_outmux);
+		if (!!vc->dest_cnt) {
+			dev_info(ctx->dev, "[%s] disable pad_id %d vc id %d dt 0x%x dest_cnt %d res %dx%d\n",
+				 __func__, pad_id, vc->vc, vc->dt,
+				vc->dest_cnt, vc->exp_hsize, vc->exp_vsize);
+		}
+		for (j = 0; j < vc->dest_cnt; j++) {
+			old_outmux = vc->dest[j].outmux;
+
+			if (old_outmux != 0xff) {
+				//disable vc dt filter when next sof
+				g_seninf_ops->_disable_outmux(ctx, old_outmux, false);
+			}
+
+			/**
+			 *	disable rdy msk grp_en & sw rdy  for all using out mux to prevent
+			 *  causing out mux masking by old outmux
+			 */
+			g_seninf_ops->_set_outmux_rdy_msk_sw_rdy_status(ctx, old_outmux, false);
+			g_seninf_ops->_set_outmux_rdy_msk_grp_en(ctx, old_outmux, false);
+
+			seninf_logd(ctx, "disable outer of pad_id(%d) old camtg(%d)\n",
+				 pad_id, old_outmux);
+		}
+
+		vc->dest_cnt = 0;
 	}
-
-	vc->dest_cnt = 0;
 
 	return 0;
 }
