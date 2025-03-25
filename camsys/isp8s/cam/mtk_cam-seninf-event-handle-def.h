@@ -37,6 +37,7 @@ enum mtk_cam_seninf_tsrec_irq_event_user_tags {
 	TSREC_IRQ_EVENT_USER_NONE = 0,
 	TSREC_IRQ_EVENT_USER_SENTEST,
 	TSREC_IRQ_EVENT_USER_MIPI_ERR_DETECT,
+	TSREC_IRQ_EVENT_USER_SENINF_RDY_MSK_DEFER,
 };
 
 static inline int mtk_cam_seninf_tsrec_irq_notify_chk_users(struct seninf_ctx *ctx)
@@ -54,6 +55,9 @@ static inline int mtk_cam_seninf_tsrec_irq_notify_chk_users(struct seninf_ctx *c
 
 	if (unlikely(ctx->core->vsync_irq_en_flag || ctx->core->csi_irq_en_flag))
 		set_user_event(&ret, TSREC_IRQ_EVENT_USER_MIPI_ERR_DETECT);
+
+	if (unlikely(ctx->rdy_msk_defer_info.defer_to_tsrec_en))
+		set_user_event(&ret, TSREC_IRQ_EVENT_USER_SENINF_RDY_MSK_DEFER);
 
 	return ret;
 }

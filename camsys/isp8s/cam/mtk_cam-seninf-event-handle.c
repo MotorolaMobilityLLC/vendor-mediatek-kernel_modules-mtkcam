@@ -17,6 +17,7 @@
 #include "mtk_cam-seninf-if.h"
 #include "mtk_cam-seninf-utils.h"
 #include "mtk_cam-seninf-sentest-ctrl.h"
+#include "mtk_cam-seninf-route.h"
 #include "imgsensor-user.h"
 
 
@@ -562,6 +563,31 @@ int notify_mipi_err_detect_handler(struct seninf_ctx *ctx,
 	return 0;
 }
 
+bool is_first_vsync(struct seninf_ctx *ctx,
+	const struct mtk_cam_seninf_tsrec_irq_notify_info *p_info)
+{
+	if (unlikely(p_info == NULL)) {
+		pr_info("[Error][%s] p_info is NULL", __func__);
+		return false;
+	}
+
+	return p_info->vsync_status & 0x01;
+}
+
+int notify_seninf_rdy_msk_defer_handler(struct seninf_ctx *ctx,
+		const struct mtk_cam_seninf_tsrec_irq_notify_info *p_info)
+{
+	if (is_first_vsync(ctx, p_info) == false)
+		return 0;
+
+	mtk_cam_seninf_set_mux_sw_rdy_immediate(
+			&ctx->subdev,
+			ctx->rdy_msk_defer_info.camtg,
+			ctx->rdy_msk_defer_info.sw_rdy_status);
+
+	mtk_cam_seninf_rdy_msk_defer_info_init(ctx);
+	return 0;
+}
 
 /*----------------------------------------------------------------------------*/
 // => tsrec event/handle
@@ -589,6 +615,10 @@ void mtk_cam_seninf_tsrec_irq_notify(const int event_users,
 	if (unlikely(chk_user_event(event_users,
 			TSREC_IRQ_EVENT_USER_MIPI_ERR_DETECT)))
 		notify_mipi_err_detect_handler(ctx, p_info);
+
+	if (unlikely(chk_user_event(event_users,
+			TSREC_IRQ_EVENT_USER_SENINF_RDY_MSK_DEFER)))
+		notify_seninf_rdy_msk_defer_handler(ctx, p_info);
 }
 
 

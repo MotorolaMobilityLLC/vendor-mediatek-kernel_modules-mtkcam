@@ -2925,6 +2925,9 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 
 	mutex_lock(&ctx->stream_mutex);
 
+	/* reset seninf rdy msk defer info */
+	mtk_cam_seninf_rdy_msk_defer_info_init(ctx);
+
 	/* get current sensor idx by get_sensor_idx */
 	if (!ctx->is_test_model) {
 		ctx->current_sensor_id = get_sensor_idx(ctx);
@@ -3336,7 +3339,7 @@ static int seninf_test_streamon(struct seninf_ctx *ctx, u32 en)
 		ctx->is_test_streamon = 1;
 		mtk_cam_seninf_alloc_outmux(ctx);
 		seninf_s_stream(&ctx->subdev, 1);
-		mtk_cam_seninf_set_mux_sw_rdy(&ctx->subdev, 0, true);
+		mtk_cam_seninf_set_mux_sw_rdy(&ctx->subdev, 0, true, false);
 	} else {
 		seninf_s_stream(&ctx->subdev, 0);
 		mtk_cam_seninf_release_outmux(ctx);

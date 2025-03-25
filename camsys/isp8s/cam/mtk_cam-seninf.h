@@ -326,6 +326,12 @@ struct mtk_cam_sentest_watchdog {
 	struct timer_list timer;
 };
 
+struct mtk_cam_seninf_rdy_msk_defer_info {
+	bool defer_to_tsrec_en;
+	bool sw_rdy_status;
+	u8 camtg;
+};
+
 struct seninf_ctx {
 	struct v4l2_subdev subdev;
 	struct v4l2_async_notifier notifier;
@@ -552,6 +558,9 @@ struct seninf_ctx {
 	u32 sensor_sequence;
 	u32 sensor_sync_id;
 	u32 vsync_in_frame_seq_no;
+
+	/* Rdy msk for DCG+VS */
+	struct mtk_cam_seninf_rdy_msk_defer_info rdy_msk_defer_info;
 };
 
 struct mtk_cam_seninf_irq_event_st {

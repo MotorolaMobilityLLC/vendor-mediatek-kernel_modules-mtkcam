@@ -1848,9 +1848,9 @@ static bool mtk_cam_seninf_set_mux_rdy_msk_cfg_by_cmd(struct seninf_ctx *ctx, u8
 	return ret;
 }
 
-bool mtk_cam_seninf_set_mux_sw_rdy(struct v4l2_subdev *sd, u8 camtg, bool sw_rdy_status)
+bool mtk_cam_seninf_set_mux_sw_rdy_immediate(
+	struct v4l2_subdev *sd, u8 camtg, bool sw_rdy_status)
 {
-	bool ret = false;
 	struct seninf_ctx *ctx = container_of(sd, struct seninf_ctx, subdev);
 
 	if (unlikely(ctx == NULL)) {
@@ -1858,10 +1858,46 @@ bool mtk_cam_seninf_set_mux_sw_rdy(struct v4l2_subdev *sd, u8 camtg, bool sw_rdy
 		return -EINVAL;
 	}
 
-	ret |= mtk_cam_seninf_set_mux_rdy_msk_cfg_by_cmd(
-			ctx, camtg, MTK_CAM_SENINF_RDY_SET_SW_STATUS, sw_rdy_status);
+	return mtk_cam_seninf_set_mux_rdy_msk_cfg_by_cmd(
+		ctx, camtg, MTK_CAM_SENINF_RDY_SET_SW_STATUS, sw_rdy_status);
+}
 
-	return ret;
+static inline bool mtk_cam_seninf_set_mux_sw_rdy_deferred_to_tsrec(
+	struct v4l2_subdev *sd, u8 camtg, bool sw_rdy_status)
+{
+	struct seninf_ctx *ctx = container_of(sd, struct seninf_ctx, subdev);
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s][Err]ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	ctx->rdy_msk_defer_info.camtg = camtg;
+	ctx->rdy_msk_defer_info.sw_rdy_status = sw_rdy_status;
+	ctx->rdy_msk_defer_info.defer_to_tsrec_en = true;
+
+	dev_info(ctx->dev, "[%s] sw_rdy_deferred_to_tsrec done with camtg %d sw_rdy %d\n",
+		__func__, camtg, sw_rdy_status);
+	return 0;
+}
+
+int mtk_cam_seninf_rdy_msk_defer_info_init(struct seninf_ctx *ctx)
+{
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s] ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	memset(&ctx->rdy_msk_defer_info, 0, sizeof(struct mtk_cam_seninf_rdy_msk_defer_info));
+	return 0;
+}
+
+bool mtk_cam_seninf_set_mux_sw_rdy(struct v4l2_subdev *sd, u8 camtg, bool sw_rdy_status,
+	bool is_defered_by_tsrec)
+{
+	return (is_defered_by_tsrec) ?
+		mtk_cam_seninf_set_mux_sw_rdy_deferred_to_tsrec(sd, camtg, sw_rdy_status) :
+		mtk_cam_seninf_set_mux_sw_rdy_immediate(sd, camtg, sw_rdy_status);
 }
 
 bool mtk_cam_seninf_set_mux_cq_en(struct v4l2_subdev *sd, u8 camtg, bool cq_rdy_en)

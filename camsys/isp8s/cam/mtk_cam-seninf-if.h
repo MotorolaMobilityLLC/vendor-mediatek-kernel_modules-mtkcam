@@ -189,6 +189,7 @@ bool mtk_cam_seninf_mux_setup(struct v4l2_subdev *sd,
  * @camtg: a camtg id for the ready mask group that user
  *         intend to control its sw ready bit
  * @sw_rdy_status: the sw ready bit status to apply on the specified camtg group
+ * @is_defer_by_tsrec: whether the sw ready bit status is defer by tsrec
  *
  * To be called when camsys driver need to change the connection from sensor
  * interface to image processing engine. It is a asynchronized
@@ -197,7 +198,7 @@ bool mtk_cam_seninf_mux_setup(struct v4l2_subdev *sd,
  * Returns true if the mux changes will be applied.
  */
 bool mtk_cam_seninf_set_mux_sw_rdy(struct v4l2_subdev *sd,
-			u8 camtg, bool sw_rdy_status);
+			u8 camtg, bool sw_rdy_status, bool is_defered_by_tsrec);
 
 /**
  * struct mtk_cam_seninf_set_mux_cq_en - changing cq ready function enable control
