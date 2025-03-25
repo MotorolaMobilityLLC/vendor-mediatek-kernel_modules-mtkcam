@@ -8,8 +8,23 @@
 struct adaptor_sensor_lbmf_property_st {
 	enum IMGSENSOR_LBMF_EXPOSURE_ORDER exp_order;
 	enum IMGSENSOR_LBMF_MODE_TYPE mode_type;
+	enum IMGSENSOR_HDR_MODE_ENUM hdr_type;
 	unsigned int exp_cnt;
 };
+
+
+struct adaptor_sensor_cas_mode_param_st {
+	unsigned int linetime_in_ns;
+	unsigned int margin_lc;
+	unsigned int read_margin_lc;
+	unsigned int cit_loss_lc;
+};
+
+struct adaptor_sensor_dcg_vsl_property_st {
+	struct adaptor_sensor_cas_mode_param_st params[IMGSENSOR_LUT_MAXCNT];
+	unsigned int lut_cnt;	/* e.g., DCG+VS => ONLY LUT_A & LUT_B => 2 */
+};
+
 
 struct adaptor_ctrl_restore {
 	struct v4l2_ctrl *ctrl;
@@ -80,6 +95,10 @@ u32 g_sensor_dcg_property(struct adaptor_ctx *ctx, const u32 scenario_id);
 /* return: 0 => NON LBMF; 1 => LBMF */
 u32 g_sensor_lbmf_property(struct adaptor_ctx *ctx, const u32 scenario_id,
 	struct adaptor_sensor_lbmf_property_st *prop);
+
+/* return: 0 => NON DCG+VS/L; 1 => DCG+VS */
+u32 g_sensor_dcg_vsl_property(struct adaptor_ctx *ctx, const u32 scenario_id,
+	struct adaptor_sensor_dcg_vsl_property_st *prop);
 
 
 int notify_imgsensor_start_streaming_delay(struct adaptor_ctx *ctx,

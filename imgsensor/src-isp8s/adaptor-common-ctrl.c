@@ -292,26 +292,101 @@ u32 g_sensor_lbmf_property(struct adaptor_ctx *ctx, const u32 scenario_id,
 	/* get the mode's const pointer of the scenario_id */
 	mode_st = &ctx->subctx.s_ctx.mode[scenario_id];
 
-	if (mode_st->hdr_mode != HDR_RAW_LBMF)
+	if (!(mode_st->hdr_mode == HDR_RAW_LBMF
+			|| mode_st->hdr_mode == HDR_RAW_DCG_RAW_VS
+			|| mode_st->hdr_mode == HDR_RAW_DCG_COMPOSE_VS))
 		return 0;
 
 	/* fill in the lbmf property st */
 	prop->exp_cnt = g_scenario_exposure_cnt(ctx, scenario_id);
 	prop->exp_order = mode_st->exposure_order_in_lbmf;
 	prop->mode_type = mode_st->mode_type_in_lbmf;
+	prop->hdr_type = mode_st->hdr_mode;
 
 	/* checking property */
 	if (unlikely(prop->exp_order == IMGSENSOR_LBMF_EXPOSURE_ORDER_SUPPORT_NONE)) {
 		adaptor_logi(ctx,
-			"ERROR: s_ctx.mode[%u]:(hdr_mode:%u (HDR_RAW_LBMF:%u), but exposure_order_in_lbmf:%u (SUPPORT_NONE:%u/LE:%u/SE:%u)), return 0\n",
+			"ERROR: s_ctx.mode[%u]:(hdr_type:%u(LBMF:%u/DCG_VS:%u/DCG_COMP_VS:%u), but exposure_order_in_lbmf:%u (SUPPORT_NONE:%u/LE:%u/SE:%u)), return 0\n",
 			scenario_id,
-			mode_st->hdr_mode,
-			HDR_RAW_LBMF,
+			prop->hdr_type,
+			HDR_RAW_LBMF, HDR_RAW_DCG_RAW_VS, HDR_RAW_DCG_COMPOSE_VS,
 			mode_st->exposure_order_in_lbmf,
 			IMGSENSOR_LBMF_EXPOSURE_ORDER_SUPPORT_NONE,
 			IMGSENSOR_LBMF_EXPOSURE_LE_FIRST,
 			IMGSENSOR_LBMF_EXPOSURE_SE_FIRST);
 		return 0;
+	}
+
+	return 1;
+}
+
+u32 g_sensor_dcg_vsl_property(struct adaptor_ctx *ctx, const u32 scenario_id,
+	struct adaptor_sensor_dcg_vsl_property_st *prop)
+{
+	const struct subdrv_mode_struct *mode_st = NULL;
+	union feature_para para;
+	u32 len = 0;
+	struct struct_dcg_vsl_info dcg_vsl_info = {0};
+	int i, j;
+
+	if (unlikely(!chk_is_valid_scenario_id(ctx, scenario_id, __func__)))
+		return 0;
+	if (unlikely(ctx->subctx.s_ctx.mode == NULL))
+		return 0;
+
+	/* get the mode's const pointer of the scenario_id */
+	mode_st = &ctx->subctx.s_ctx.mode[scenario_id];
+
+	if (!(mode_st->hdr_mode == HDR_RAW_DCG_RAW_VS
+			|| mode_st->hdr_mode == HDR_RAW_DCG_COMPOSE_VS))
+		return 0;
+
+	para.u64[0] = scenario_id;
+	para.u64[1] = (u64)&dcg_vsl_info;
+
+	subdrv_call(ctx, feature_control,
+		SENSOR_FEATURE_GET_DCG_VSL_INFO,
+		para.u8, &len);
+
+	/* checking property */
+	if (unlikely(dcg_vsl_info.exp_cnt >= IMGSENSOR_EXPOSURE_CNT || dcg_vsl_info.exp_cnt == 0)) {
+		adaptor_loge(ctx, "Invalid EXPOSURE count: %u\n", dcg_vsl_info.exp_cnt);
+		return 0;
+	}
+
+	if (unlikely(dcg_vsl_info.lut_cnt >= IMGSENSOR_LUT_MAXCNT || dcg_vsl_info.lut_cnt == 0)) {
+		adaptor_loge(ctx, "Invalid LUT count: %u\n", dcg_vsl_info.lut_cnt);
+		return 0;
+	}
+
+	prop->lut_cnt = dcg_vsl_info.lut_cnt;
+
+	for (i = 0; i < prop->lut_cnt; ++i) {
+		/* read line time */
+		prop->params[i].linetime_in_ns = dcg_vsl_info.lut_info[i].linetime_in_ns;
+
+		prop->params[i].read_margin_lc = dcg_vsl_info.lut_info[i].read_margin;
+		prop->params[i].cit_loss_lc = dcg_vsl_info.lut_info[i].cit_loss;
+
+		/* exp margin */
+		for (j = 0; j < dcg_vsl_info.exp_cnt; ++j) {
+			if (dcg_vsl_info.exp_info[j].lut_idx == i) {
+				prop->params[i].margin_lc = dcg_vsl_info.exp_info[j].exposure_margin;
+				break;
+			}
+		}
+	}
+
+	/* result debug log */
+	adaptor_logi(ctx, "LUT count: %u\n", prop->lut_cnt);
+	for (i = 0; i < prop->lut_cnt; ++i) {
+		adaptor_logi(ctx,
+			"lut[%d]: (linetime_in_ns:%u/margin_lc:%u/read_margin_lc:%u/cit_loss_lc:%u)\n",
+			i,
+			prop->params[i].linetime_in_ns,
+			prop->params[i].margin_lc,
+			prop->params[i].read_margin_lc,
+			prop->params[i].cit_loss_lc);
 	}
 
 	return 1;

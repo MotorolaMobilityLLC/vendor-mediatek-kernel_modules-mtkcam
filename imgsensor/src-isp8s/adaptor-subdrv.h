@@ -8,6 +8,7 @@
 
 //#include "kd_imgsensor_define_v4l2.h"
 #include "imgsensor-user.h"
+#include "imgsensor-krn_user.h"
 #include "adaptor-def.h"
 #include "mtk-i3c-i2c-wrap.h"
 #include "adaptor-i2c.h"
@@ -78,16 +79,6 @@ enum {
 	I2C_TABLE_DT_ADDR_16_DATA_8_SEQ,
 	I2C_TABLE_DT_ADDR_8_DATA_8,
 	I2C_TABLE_DT_MAXCNT,
-};
-
-enum {
-	IMGSENSOR_LUT_NA = 0,
-	IMGSENSOR_LUT_A = IMGSENSOR_LUT_NA,
-	IMGSENSOR_LUT_B,
-	IMGSENSOR_LUT_C,
-	IMGSENSOR_LUT_D,
-	IMGSENSOR_LUT_E,
-	IMGSENSOR_LUT_MAXCNT,
 };
 
 enum {
@@ -293,6 +284,9 @@ struct mode_lut_static_info {
 	u32 read_margin;
 	u32 framelength_step;
 	u32 min_vblanking_line;
+
+	/* cit loss is existed between luts which has different linetime */
+	u32 cit_loss;
 };
 
 /* The info may be different by exp */

@@ -23,6 +23,7 @@
 #include "adaptor-eint-cb-ctrl.h"
 #include "adaptor-sentest.h"
 #include "imgsensor-user.h"
+#include "imgsensor-krn_user.h"
 #include "mtk-i3c-i2c-wrap.h"
 
 /* frame-sync */
