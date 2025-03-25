@@ -732,6 +732,17 @@ imgsys_cmdq_pkt_destroy:
 		((cb_param->is_ctrl_cache == 1) && (cb_param->isPktReuse == 1))) {
 		cmdq_pkt_wait_complete(cb_param->pkt);
 		cmdq_pkt_destroy_no_wq(cb_param->pkt);
+		if ((cb_param->is_ctrl_cache == 1) && (cb_param->isPktReuse == 1)) {
+			is_pkt_created[cb_param->thd_idx] = 0;
+			g_pkt_reuse[cb_param->thd_idx] = NULL;
+			cur_cmd_block[cb_param->thd_idx] = 0;
+			g_reuse_cmd_num[cb_param->thd_idx] = 0;
+			g_reuse_cmd_num_max[cb_param->thd_idx] = 0;
+			g_reuse_event_num[cb_param->thd_idx] = 0;
+			g_reuse_event_num_max[cb_param->thd_idx] = 0;
+			g_cb_idx[cb_param->thd_idx] = 0;
+			cur_cb_idx[cb_param->thd_idx] = 0;
+		}
 	}
 #else
 	cmdq_pkt_wait_complete(cb_param->pkt);
@@ -807,7 +818,7 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 		cb_cnt = cb_param->pkt->cookie_diff;
 		if (imgsys_cmdq_dbg_enable_plat8s())
 			pr_info(
-				"%s: [pkt_reuse] cb(%p) thd_idx(%d) cb_idx(%d/%d) cookie(%d) cb_cnt(%d)",
+				"%s: [pkt_reuse] cb(%p) thd_idx(%d) cb_idx(%d/%d) cookie(%u) cb_cnt(%u)",
 				__func__, cb_param, cb_param->thd_idx,
 				cur_cb_idx[cb_param->thd_idx], g_cb_idx[cb_param->thd_idx], cookie, cb_cnt);
 		if (g_reuse_cb_param[cb_param->thd_idx][cur_cb_idx[cb_param->thd_idx]] != NULL) {
@@ -818,13 +829,13 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 				cur_cb_idx[cb_param->thd_idx] = 0;
 		} else {
 			pr_info(
-				"%s: [ERROR] No more cb_param is left, run pkt_reuse uninit flow! pkt_cb(%p) error(%d)  gid(%d) for frm(%d/%d) blk(%d/%d) ofst(0x%lx) task(%d/%d/%d) thd_idx(%d) cb_idx(%d/%d)",
+				"%s: [ERROR] No more cb_param is left, run pkt_reuse uninit flow! pkt_cb(%p) error(%d)  gid(%d) for frm(%d/%d) blk(%d/%d) ofst(0x%lx) task(%d/%d/%d) thd_idx(%d) cb_idx(%d/%d) cookie(%u) cb_cnt(%u)",
 				__func__, cb_param, data.err, cb_param->group_id,
 				cb_param->frm_idx, cb_param->frm_num,
 				cb_param->blk_idx, cb_param->blk_num,
 				cb_param->pkt->err_data.offset,
 				cb_param->task_id, cb_param->task_num, cb_param->task_cnt, cb_param->thd_idx,
-				cur_cb_idx[cb_param->thd_idx], g_cb_idx[cb_param->thd_idx]);
+				cur_cb_idx[cb_param->thd_idx], g_cb_idx[cb_param->thd_idx], cookie, cb_cnt);
 			goto imgsys_cmdq_queue_cb_work;
 		}
 	}
