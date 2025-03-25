@@ -135,6 +135,10 @@ int ccd_master_init(struct mtk_ccd *ccd)
 		if (mtk_subdev->process_id < 0) {  /* available */
 			mtk_subdev->process_id = curr_pid;
 			mtk_subdev->master_status = CCD_MASTER_ACTIVE;
+			memset(&mtk_subdev->listen_obj, 0,
+			       sizeof(mtk_subdev->listen_obj));
+			atomic_set(&mtk_subdev->listen_obj_rdy,
+				   CCD_LISTEN_OBJECT_PREPARING);
 			ret = 0;
 			break;
 		}
