@@ -289,6 +289,7 @@ struct mtk_imgsys_dvfs {
 	unsigned long cur_freq_smi;
 	unsigned long pixel_size[MTK_IMGSYS_DVFS_GROUP];
 	unsigned long freq;
+	unsigned long smvr_freq_floor;
 	unsigned int vss_task_cnt;
 	unsigned int smvr_task_cnt;
 	unsigned int pix_mode;
