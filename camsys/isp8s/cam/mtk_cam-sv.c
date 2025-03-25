@@ -59,7 +59,7 @@ static int debug_ddren_camsv_sw_mode = 1;
 module_param(debug_ddren_camsv_sw_mode, int, 0644);
 MODULE_PARM_DESC(debug_ddren_camsv_sw_mode, "debug: 1 : active camsv sw mode");
 
-static int disable_camsv_df_mode;
+static int disable_camsv_df_mode = 1;
 module_param(disable_camsv_df_mode, int, 0644);
 MODULE_PARM_DESC(disable_camsv_df_mode, "disable camsv df mode");
 
