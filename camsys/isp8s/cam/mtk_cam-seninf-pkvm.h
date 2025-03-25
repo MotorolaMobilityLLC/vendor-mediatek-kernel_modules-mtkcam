@@ -10,7 +10,6 @@
 
 #include "mtk_cam-seninf-common.h"
 
-extern bool is_pkvm_enabled(void);
 extern uint64_t get_chk_pa(void);
 
 enum SENINF_PKVM_RETURN {

@@ -180,13 +180,6 @@ static const char * const seninf_irq_names[] = {
 #endif
 #endif
 
-static bool pkvm_enabled;
-
-bool is_pkvm_enabled(void)
-{
-	return pkvm_enabled;
-}
-
 static ssize_t status_show(struct device *dev,
 			   struct device_attribute *attr, char *buf)
 {
@@ -1184,8 +1177,6 @@ static int seninf_core_probe(struct platform_device *pdev)
 	int index;
 	u32 port_id = 0;
 	u32 seninf_async_idx = 0;
-	const char *pkvm_status = NULL;
-	struct device_node *pkvm_node;
 
 #ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 	u32 tmp_no = 0;
@@ -1500,13 +1491,6 @@ static int seninf_core_probe(struct platform_device *pdev)
 	}
 
 	g_seninf_ops->_init_irq_fifo(core);
-
-	pkvm_node = of_find_node_by_name(NULL, "pkvm");
-	if (pkvm_node) {
-		of_property_read_string(pkvm_node, "status", &pkvm_status);
-		if (strncmp(pkvm_status, "okay", sizeof("okay")) == 0)
-			pkvm_enabled = true;
-	}
 
 	dev_err(dev, "[%s] core probe done\n", __func__);
 
@@ -2748,7 +2732,7 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 	} else {
 #ifdef SENSOR_SECURE_MTEE_SUPPORT
 		if (ctx->is_secure == 1) {
-			if (!is_pkvm_enabled()) {
+			if (!is_protected_kvm_enabled()) {
 				dev_info(ctx->dev, "sensor kernel ca_free");
 				seninf_ca_free();
 
