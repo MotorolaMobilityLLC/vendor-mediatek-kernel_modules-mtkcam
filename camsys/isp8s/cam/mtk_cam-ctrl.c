@@ -1369,7 +1369,7 @@ int mtk_cam_ctrl_isr_event(struct mtk_cam_device *cam,
 
 static void set_engines_mux_ready(struct mtk_cam_ctx *ctx,
 				  struct v4l2_subdev *seninf,
-				  unsigned long engines, bool ready)
+				  unsigned long engines, bool ready, bool defered)
 {
 	struct mtk_cam_device *cam = ctx->cam;
 	struct mtk_camsv_device *sv_dev;
@@ -1384,7 +1384,7 @@ static void set_engines_mux_ready(struct mtk_cam_ctx *ctx,
 
 		raw_id = get_master_raw_id(BIT(i));  /* get raw itself */
 		raw_tg_idx = raw_to_tg_idx(raw_id);
-		mtk_cam_seninf_set_mux_sw_rdy(seninf, raw_tg_idx, ready);
+		mtk_cam_seninf_set_mux_sw_rdy(seninf, raw_tg_idx, ready, defered);
 	}
 
 	/* camsv */
@@ -1394,10 +1394,11 @@ static void set_engines_mux_ready(struct mtk_cam_ctx *ctx,
 			continue;
 
 		sv_dev = dev_get_drvdata(cam->engines.sv_devs[i]);
-		mtk_cam_seninf_set_mux_sw_rdy(seninf, sv_dev->cammux_id, ready);
+		mtk_cam_seninf_set_mux_sw_rdy(seninf, sv_dev->cammux_id, ready, defered);
 	}
 
-	dev_info(ctx->cam->dev, "%s %d engines:%#lx", __func__, ready, engines);
+	dev_info(ctx->cam->dev, "%s %d (defer %d) engines:%#lx", __func__,
+			 ready, defered, engines);
 }
 
 /* raw switch also resue it to stream on */
@@ -1523,7 +1524,7 @@ static void mtk_cam_ctrl_stream_on_flow(struct mtk_cam_job *job)
 
 	trigger_fake_sof_event(ctrl);
 	/* start to wait sof */
-	set_engines_mux_ready(ctx, job->seninf, job->used_engine, true);
+	set_engines_mux_ready(ctx, job->seninf, job->used_engine, true, false);
 
 	dev_info(dev, "[%s] ctx %d finish\n", __func__, ctrl->ctx->stream_id);
 }
@@ -1638,7 +1639,7 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 
 	/* no sof for ALL engine */
 	set_engines_mux_ready(ctx, job->seninf,
-			      job->used_engine | engine_uninit, false);
+			      job->used_engine | engine_uninit, false, false);
 
 	if (dynamic_raw_change_stream_on(job, engine_uninit))
 		goto SWITCH_FAILURE;
@@ -1687,7 +1688,7 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 	mtk_cam_seninf_force_disable_out_mux(ctx->seninf);  /* after prev p1 done */
 
 	/* start to wait sof */
-	set_engines_mux_ready(ctx, job->seninf, job->used_engine, true);
+	set_engines_mux_ready(ctx, job->seninf, job->used_engine, true, false);
 	dev_info(dev, "[%s] wait 3.new engines(0x%lx) processing seq:0x%x\n",
 			__func__, ctx->used_engine, job->frame_seq_no);
 	check_args.expect_inner = job->frame_seq_no;
@@ -1825,7 +1826,7 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 
 	/* no sof for ALL engine */
 	set_engines_mux_ready(ctx, job->seninf,
-			      job->used_engine | engine_uninit, false);
+			      job->used_engine | engine_uninit, false, false);
 
 	if (dynamic_raw_change_stream_on(job, engine_uninit))
 		goto SWITCH_FAILURE;
@@ -1923,7 +1924,8 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 	trigger_fake_sof_event(ctrl);  /* trigger apply sensor done */
 
 	/* start to wait sof */
-	set_engines_mux_ready(ctx, job->seninf, job->used_engine, true);
+	set_engines_mux_ready(ctx, job->seninf, job->used_engine, true,
+		scen_is_dcg_vs(&job->prev_scen));
 
 	check_args.expect_inner = job->frame_seq_no;
 	dev_info(dev, "[%s] begin waiting check for inner no:%d seq 0x%x\n",
@@ -2024,8 +2026,8 @@ static void mtk_cam_ctrl_raw_switch_flow(struct mtk_cam_job *job)
 			 __func__, prev_seq);
 
 	/* no sof for ALL engine */
-	set_engines_mux_ready(ctx, job->seninf_prev, ctx->used_engine, false);
-	set_engines_mux_ready(ctx, job->seninf, ctx->used_engine, false);
+	set_engines_mux_ready(ctx, job->seninf_prev, ctx->used_engine, false, false);
+	set_engines_mux_ready(ctx, job->seninf, ctx->used_engine, false, false);
 
 	dev_info(dev, "[%s] begin waiting raw switch no:%d\n",
 		 __func__, job->frame_seq_no);
@@ -2085,7 +2087,7 @@ static void mtk_cam_ctrl_raw_switch_flow(struct mtk_cam_job *job)
 
 	trigger_fake_sof_event(ctrl);
 	/* start to wait sof */
-	set_engines_mux_ready(ctx, job->seninf, job->used_engine, true);
+	set_engines_mux_ready(ctx, job->seninf, job->used_engine, true, false);
 
 	dev_info(dev, "[%s] finish, used_engine:0x%x\n",
 		 __func__, job->used_engine);
