@@ -263,7 +263,7 @@ static inline void PDA_Prepare_Enable_ccf_clock(void)
 	if (g_PDA_quantity > 0) {
 		/* consumer device starting work*/
 		ret = pm_runtime_get_sync(g_dev1);
-		if (ret) {
+		if (ret < 0) {
 			LOG_INF("pm_runtime_get_sync dev1 failed:(%d)\n", ret);
 			return;
 		}
@@ -278,7 +278,7 @@ static inline void PDA_Prepare_Enable_ccf_clock(void)
 	if (g_PDA_quantity > 1) {
 		/* consumer device starting work*/
 		ret = pm_runtime_get_sync(g_dev2);
-		if (ret) {
+		if (ret < 0) {
 			LOG_INF("pm_runtime_get_sync dev2 failed:(%d)\n", ret);
 			pm_runtime_put_sync(g_dev1);
 			return;
@@ -322,7 +322,7 @@ static inline void PDA_Disable_Unprepare_ccf_clock(void)
 			LOG_INF("mtk_smi_larb_disable pda larb2 done\n");
 
 		ret = pm_runtime_put_sync(g_dev2);
-		if (ret)
+		if (ret < 0)
 			LOG_INF("pm_runtime_put_sync dev2 failed:(%d)\n", ret);
 	}
 	if (g_PDA_quantity > 0) {
@@ -333,7 +333,7 @@ static inline void PDA_Disable_Unprepare_ccf_clock(void)
 			LOG_INF("mtk_smi_larb_disable pda larb1 done\n");
 
 		ret = pm_runtime_put_sync(g_dev1);
-		if (ret)
+		if (ret < 0)
 			LOG_INF("pm_runtime_put_sync dev1 failed:(%d)\n", ret);
 	}
 
