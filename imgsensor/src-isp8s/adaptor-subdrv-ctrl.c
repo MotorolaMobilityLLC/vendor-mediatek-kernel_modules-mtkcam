@@ -3327,12 +3327,20 @@ void set_gain(struct subdrv_ctx *ctx, u32 gain)
 {
 	u16 rg_gain;
 	bool gph = !ctx->is_seamless && (ctx->s_ctx.s_gph != NULL);
+	u32 i = 0, sid = ctx->current_scenario_id;
+	enum IMGSENSOR_HDR_MODE_ENUM hdr_mode = ctx->s_ctx.mode[sid].hdr_mode;
+
+	/* check DCG gain base*/
+	if (hdr_mode == HDR_RAW_DCG_RAW || hdr_mode == HDR_RAW_DCG_COMPOSE) {
+		if (ctx->s_ctx.mode[sid].dcg_info.dcg_gain_base == IMGSENSOR_DCG_GAIN_LCG_BASE)
+			i = IMGSENSOR_EXPOSURE_ME;
+	}
 
 	/* check boundary of gain */
 	gain = max(gain,
-		ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[0].min);
+		ctx->s_ctx.mode[sid].multi_exposure_ana_gain_range[i].min);
 	gain = min(gain,
-		ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[0].max);
+		ctx->s_ctx.mode[sid].multi_exposure_ana_gain_range[i].max);
 	/* mapping of gain to register value */
 	if (ctx->s_ctx.g_gain2reg != NULL)
 		rg_gain = ctx->s_ctx.g_gain2reg(gain);
