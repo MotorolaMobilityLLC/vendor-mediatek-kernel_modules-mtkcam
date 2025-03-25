@@ -225,6 +225,10 @@ struct mtk_mraw_pipeline {
 	u32 seninf_padidx;
 
 	unsigned int cammux_id;
+
+	/* remove vendor hook driver WA*/
+	struct v4l2_ctrl_handler ctrl_handler;
+	struct v4l2_subdev_fh *fh;
 };
 
 struct mtk_mraw_device {
@@ -258,6 +262,11 @@ struct mtk_mraw {
 };
 
 struct mtk_larb;
+static inline struct mtk_mraw_pipeline*
+mtk_cam_ctrl_handler_to_mraw_pipeline(struct v4l2_ctrl_handler *handler)
+{
+	return container_of(handler, struct mtk_mraw_pipeline, ctrl_handler);
+};
 int mtk_mraw_setup_dependencies(struct mtk_mraw *mraw, struct mtk_larb *larb);
 int mtk_mraw_register_entities(
 	struct mtk_mraw *mraw, struct v4l2_device *v4l2_dev);

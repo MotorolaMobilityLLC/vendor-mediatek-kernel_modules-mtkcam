@@ -767,8 +767,8 @@ int mtk_cam_dequeue_req_frame(struct mtk_cam_ctx *ctx,
 			      unsigned int dequeued_frame_seq_no,
 			      int pipe_id)
 {
-	struct mtk_cam_request *req, *req_prev, *req_next;
-	struct mtk_cam_request_stream_data *s_data, *s_data_pipe, *s_data_mstream, *s_data_next;
+	struct mtk_cam_request *req, *req_prev;
+	struct mtk_cam_request_stream_data *s_data, *s_data_pipe, *s_data_mstream;
 	struct mtk_cam_request_stream_data *deq_s_data[18];
 	struct mtk_raw_pipeline *pipe = ctx->pipe;
 	/* consider running_job_list depth and mstream(2 s_data): 3*3*2 */
@@ -776,12 +776,9 @@ int mtk_cam_dequeue_req_frame(struct mtk_cam_ctx *ctx,
 	int feature, buf_state;
 	int dequeue_cnt, s_data_cnt, handled_cnt;
 	bool del_job, del_req;
-	bool chk_sensor_change;
 	bool unreliable = false;
 	void *vaddr = NULL;
 	struct mtk_ae_debug_data ae_data;
-	int frame_seq_next;
-	bool trigger_raw_switch;
 
 	dequeue_cnt = 0;
 	s_data_cnt = 0;
@@ -818,11 +815,9 @@ STOP_SCAN:
 	spin_unlock(&ctx->cam->running_job_lock);
 
 	for (handled_cnt = 0; handled_cnt < s_data_cnt; handled_cnt++) {
-		chk_sensor_change = false;
 		s_data = deq_s_data[handled_cnt];
 		del_req = false;
 		del_job = false;
-		trigger_raw_switch = false;
 		feature = s_data->feature.raw_feature;
 		req = mtk_cam_s_data_get_req(s_data);
 		if (!req) {
@@ -905,6 +900,7 @@ STOP_SCAN:
 		}
 
 		if (del_job) {
+			atomic_dec(&ctx->running_s_data_cnt);
 			mtk_camsys_state_delete(ctx, sensor_ctrl, req);
 
 			/* release internal buffers */
@@ -920,9 +916,6 @@ STOP_SCAN:
 				mtk_cam_sv_finish_buf(s_data_mstream);
 				mtk_cam_mraw_finish_buf(s_data_mstream);
 			}
-
-			if (s_data->frame_seq_no == dequeued_frame_seq_no)
-				chk_sensor_change = true;
 		}
 
 		if (del_req) {
@@ -949,8 +942,6 @@ STOP_SCAN:
 				"%s:%s:ctx(%d):pipe(%d):seq(%d) s_data_pipe not found\n",
 				__func__, req->req.debug_str, ctx->stream_id, pipe_id,
 				s_data->frame_seq_no);
-			if (del_job)
-				atomic_dec(&ctx->running_s_data_cnt);
 			continue;
 		}
 
@@ -990,46 +981,6 @@ STOP_SCAN:
 				dev_dbg(ctx->cam->dev,
 					"%s:%s:pipe(%d) return request",
 					__func__, req->req.debug_str, pipe_id);
-		}
-
-		/* Serialized raw switch check and try queue flow*/
-		mutex_lock(&ctx->cam->queue_lock);
-
-		/**
-		 * running_s_data_cnt updated must be along with
-		 * raw switch trigger since we use it
-		 * to determine if we should start the switch flow in try queue
-		 * or dequeue timing
-		 */
-		if (del_job)
-			atomic_dec(&ctx->running_s_data_cnt);
-
-		if (chk_sensor_change) {
-			frame_seq_next = dequeued_frame_seq_no + 1;
-			req_next = mtk_cam_get_req(ctx, frame_seq_next);
-			if (!req_next) {
-				dev_dbg(ctx->cam->dev, "%s next req (%d) not queued\n",
-					__func__, frame_seq_next);
-			} else {
-				dev_dbg(ctx->cam->dev,
-					"%s:req(%d) check: req->ctx_used:0x%x, req->ctx_link_update0x%x\n",
-					__func__, frame_seq_next, req_next->ctx_used,
-					req_next->ctx_link_update);
-				if ((req_next->ctx_used & (1 << ctx->stream_id))
-				    && mtk_cam_is_nonimmediate_switch_req(req_next, ctx->stream_id))
-					trigger_raw_switch = true;
-				else
-					dev_dbg(ctx->cam->dev, "%s next req (%d) no link stup\n",
-						__func__, frame_seq_next);
-			}
-		}
-
-		/* release the lock once we know if raw switch needs to be triggered or not here */
-		mutex_unlock(&ctx->cam->queue_lock);
-
-		if (trigger_raw_switch) {
-			s_data_next = mtk_cam_req_get_s_data(req_next, ctx->stream_id, 0);
-			mtk_camsys_raw_change_pipeline(ctx, &ctx->sensor_ctrl, s_data_next);
 		}
 	}
 
@@ -3607,7 +3558,6 @@ immediate_link_update_chk(struct mtk_cam_ctx *ctx, int pipe_id,
 				 "%s:req(%s):pipe(%d):link change after last p1 done: seq(%d), running_s_data_num(%d)\n",
 				 __func__, req->req.debug_str, pipe_id,
 				 s_data->frame_seq_no, running_s_data_num);
-			s_data->state.estate = E_STATE_SENINF;
 		}
 	}
 }
@@ -4585,6 +4535,16 @@ struct mtk_mraw_device *get_mraw_dev(struct mtk_cam_device *cam,
 	return dev_get_drvdata(dev);
 }
 
+bool mtk_cam_is_immediate_switch_req(struct mtk_cam_request *req,
+				     int stream_id)
+{
+	if ((req->flags & MTK_CAM_REQ_FLAG_SENINF_IMMEDIATE_UPDATE) &&
+			(req->ctx_link_update & (1 << stream_id)))
+		return true;
+	else
+		return false;
+}
+
 #if CCD_READY
 static void isp_composer_uninit(struct mtk_cam_ctx *ctx)
 {
@@ -4692,10 +4652,6 @@ static int isp_composer_handle_ack(struct mtk_cam_device *cam,
 			is_mux_change_with_apply_cq = true;
 		}
 	}
-
-	if (mtk_cam_is_nonimmediate_switch_req(req, s_data->pipe_id) &&
-			(s_data->flags & MTK_CAM_REQ_S_DATA_FLAG_SENSOR_SWITCH_BACKEND_DELAYED))
-		is_mux_change_with_apply_cq = true;
 
 	buf_entry->cq_desc_offset =
 		ipi_msg->ack_data.frame_result.cq_desc_offset;
@@ -4935,12 +4891,9 @@ static int isp_composer_handler(struct rpmsg_device *rpdev, void *data,
 	if (ipi_msg->ack_data.ack_cmd_id == CAM_CMD_FRAME) {
 		int ret;
 
-		ctx = &cam->ctxs[ipi_msg->cookie.session_id];
 		MTK_CAM_TRACE_BEGIN(BASIC, "ipi_frame_ack:%d",
 				    ipi_msg->cookie.frame_no);
-		mutex_lock(&ctx->sensor_switch_op_lock);
 		ret = isp_composer_handle_ack(cam, ipi_msg);
-		mutex_unlock(&ctx->sensor_switch_op_lock);
 
 		MTK_CAM_TRACE_END(BASIC);
 		return ret;
@@ -4975,7 +4928,6 @@ static void isp_tx_frame_worker(struct work_struct *work)
 	struct mtk_cam_buffer *meta1_buf;
 	struct mtk_mraw_device *mraw_dev;
 	struct mtk_cam_resource *res_user;
-	struct mtkcam_ipi_config_param *config_param;
 	struct mtk_ccd *ccd;
 	int i;
 	int res_feature;
@@ -5024,12 +4976,7 @@ static void isp_tx_frame_worker(struct work_struct *work)
 	    req_stream_data->flags & MTK_CAM_REQ_S_DATA_FLAG_SINK_FMT_UPDATE)
 		mtk_cam_s_data_dev_config(req_stream_data, true, true);
 
-	/* save config_param for debug and exception dump */
-	config_param = mtk_cam_s_data_get_config_param(req_stream_data);
-	if (config_param)
-		*config_param = ctx->config_params;
-
-	if (mtk_cam_is_immediate_switch_req(req,  ctx->stream_id))
+	if (req->ctx_link_update & 1 << ctx->stream_id)
 		mtk_cam_s_data_sv_dev_config(req_stream_data);
 
 	/* handle stagger 1,2,3 exposure */
@@ -5327,7 +5274,6 @@ void mtk_cam_sensor_switch_stop_reinit_hw(struct mtk_cam_ctx *ctx,
 			// stream_on(raw_dev, 0);
 			dev_info(ctx->cam->dev, "%s: Disable cammux: %s\n", __func__,
 				 s_data->seninf_old->name);
-			mtk_ctx_watchdog_stop(ctx, raw_dev->id);
 			mtk_cam_seninf_set_camtg(s_data->seninf_old, PAD_SRC_RAW0, 0xFF);
 			mtk_cam_seninf_set_camtg(s_data->seninf_old, PAD_SRC_RAW1, 0xFF);
 			mtk_cam_seninf_set_camtg(s_data->seninf_old, PAD_SRC_RAW2, 0xFF);
@@ -5432,10 +5378,6 @@ void mtk_cam_sensor_switch_stop_reinit_hw(struct mtk_cam_ctx *ctx,
 			}
 		}
 	}
-
-	if (mtk_cam_is_nonimmediate_switch_req(req,  ctx->stream_id))
-		mtk_cam_s_data_sv_dev_config(s_data);
-
 }
 
 void handle_immediate_switch(struct mtk_cam_ctx *ctx,
@@ -6550,15 +6492,26 @@ struct mtk_cam_ctx *mtk_cam_find_ctx(struct mtk_cam_device *cam,
 	return NULL;
 }
 
+/*
+ *  Max connected entities of a context:
+ *  sensor, seninf, engines and their video devices
+ */
+#define MTK_CAM_CTX_MAX_ENTITIES (2 + (1 + MTK_RAW_TOTAL_NODES) + \
+				  (1 + MTK_CAMSV_TOTAL_NODES) * MAX_SV_PIPES_PER_STREAM + \
+				  (1 + MTK_MRAW_TOTAL_NODES) * MAX_MRAW_PIPES_PER_STREAM)
+
 struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 				      struct mtk_cam_video_device *node)
 {
 	struct mtk_cam_ctx *ctx = node->ctx;
 	struct v4l2_subdev **target_sd;
-	int ret, i, is_first_ctx;
+	int ret, i, j, is_first_ctx;
 	struct media_entity *entity = &node->vdev.entity;
 	struct media_pipeline_pad *ppad;
 	struct mtk_ccd *ccd = NULL;
+	struct media_entity *entity_walked[MTK_CAM_CTX_MAX_ENTITIES] = {0};
+	int last_entity_walked = 0;
+	bool walked;
 
 	dev_info(cam->dev, "%s:ctx(%d): triggered by %s\n",
 		 __func__, ctx->stream_id, entity->name);
@@ -6580,14 +6533,15 @@ struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 	ctx->ext_isp_pureraw_off = 0;
 	ctx->ext_isp_procraw_off = 0;
 	atomic_set(&ctx->running_s_data_cnt, 0);
-	mutex_init(&ctx->sensor_switch_op_lock);
 	init_completion(&ctx->session_complete);
 	init_completion(&ctx->watchdog_complete);
 	init_completion(&ctx->m2m_complete);
 
 	is_first_ctx = !cam->composer_cnt;
 	if (is_first_ctx) {
+		spin_lock(&ctx->cam->running_job_lock);
 		cam->running_job_count = 0;
+		spin_unlock(&ctx->cam->running_job_lock);
 
 		dev_info(cam->dev, "%s: power on camsys\n", __func__);
 		mtk_cam_power_ctrl_ccu(cam->dev, 1);
@@ -6689,10 +6643,38 @@ struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 
 	/* traverse to update used subdevs & number of nodes */
 
+	mutex_lock(&ctx->cam->v4l2_dev.mdev->graph_mutex);
+
 	i = 0;
 	list_for_each_entry(ppad, &ctx->pipeline.pads, list) {
+		walked = false;
 		entity = ppad->pad->entity;
-		dev_dbg(cam->dev, "linked entity %s\n", entity->name);
+
+		dev_info(cam->dev, "linked entity %s, pad idx: %d, func: %d\n",
+				entity->name, ppad->pad->index, entity->function);
+
+		for (j = 0;
+		     j <= last_entity_walked && j < MTK_CAM_CTX_MAX_ENTITIES;
+		     j++) {
+			if (entity_walked[j] == entity) {
+				walked = true;
+				break;
+			}
+		}
+
+		if (!walked) {
+			if (last_entity_walked > (MTK_CAM_CTX_MAX_ENTITIES - 1)) {
+				dev_info(cam->dev,
+					 "ctx-%d abnormal entity counts:%d\n",
+					 ctx->stream_id, last_entity_walked);
+				goto fail_stop_pipeline;
+			}
+			last_entity_walked++;
+			entity_walked[last_entity_walked] = entity;
+		} else {
+			/* The owner entity of this pad was already walked */
+			continue;
+		}
 
 		target_sd = NULL;
 
@@ -6729,9 +6711,12 @@ struct mtk_cam_ctx *mtk_cam_start_ctx(struct mtk_cam_device *cam,
 			*target_sd = media_entity_to_v4l2_subdev(entity);
 	}
 
+	mutex_unlock(&ctx->cam->v4l2_dev.mdev->graph_mutex);
+
 	return ctx;
 
 fail_stop_pipeline:
+	mutex_unlock(&ctx->cam->v4l2_dev.mdev->graph_mutex);
 	media_pipeline_stop(&entity->pads[0]);
 fail_uninit_sv_wq:
 	destroy_workqueue(ctx->sv_wq);
@@ -6778,10 +6763,6 @@ void mtk_cam_stop_ctx(struct mtk_cam_ctx *ctx, struct media_entity *entity)
 
 	dev_info(cam->dev, "%s:ctx(%d): triggered by %s\n",
 		 __func__, ctx->stream_id, entity->name);
-
-	if (watchdog_scenario(ctx))
-		mtk_ctx_watchdog_stop(ctx, get_master_raw_id(
-			cam->num_raw_drivers, ctx->pipe->enabled_raw));
 
 	media_pipeline_stop(&entity->pads[0]);
 
@@ -7038,9 +7019,6 @@ int mtk_cam_ctx_stream_on(struct mtk_cam_ctx *ctx)
 			// use max buf_size for all sensors
 			buf_size *= 2;
 		}
-
-		if (ctx->pipe->user_res.raw_res.img_wbuf_size > buf_size)
-			buf_size = ctx->pipe->user_res.raw_res.img_wbuf_size;
 
 		if (buf_require)
 			ret = mtk_cam_img_working_buf_pool_init(ctx, buf_require, buf_size);
@@ -7521,6 +7499,10 @@ int mtk_cam_ctx_stream_off(struct mtk_cam_ctx *ctx)
 	if (ctx->pipe)
 		feature = ctx->pipe->feature_active;
 
+	if (watchdog_scenario(ctx))
+		mtk_ctx_watchdog_stop(ctx, get_master_raw_id(
+			cam->num_raw_drivers, ctx->pipe->enabled_raw));
+
 	dev_info(cam->dev, "%s: ctx-%d:  composer_cnt:%d, streaming_pipe:0x%x\n",
 		__func__, ctx->stream_id, cam->composer_cnt, ctx->streaming_pipe);
 
@@ -7790,14 +7772,17 @@ static int mtk_cam_master_bind(struct device *dev)
 	struct mtk_cam_device *cam_dev = dev_get_drvdata(dev);
 	struct media_device *media_dev = &cam_dev->media_dev;
 	int ret;
+	int n = 0;
 
 	//dev_info(dev, "%s\n", __func__);
 
 	media_dev->dev = cam_dev->dev;
 	strscpy(media_dev->model, dev_driver_string(dev),
 		sizeof(media_dev->model));
-	(void)snprintf(media_dev->bus_info, sizeof(media_dev->bus_info),
+	n = snprintf(media_dev->bus_info, sizeof(media_dev->bus_info),
 		 "platform:%s", dev_name(dev));
+	if (n < 0 || n >= sizeof(media_dev->bus_info))
+		dev_info(dev, "%s media_dev->bus_info snprintf error!!!\n", __func__);
 	media_dev->hw_revision = 0;
 	media_dev->ops = &mtk_cam_dev_ops;
 	media_device_init(media_dev);

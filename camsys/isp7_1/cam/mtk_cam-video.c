@@ -49,10 +49,22 @@ int mtk_cam_yuv_dma_bus_size(int bpp, int pixel_mode_shift)
 int mtk_cam_dmao_xsize(int w, unsigned int ipi_fmt, int pixel_mode_shift)
 {
 	const int is_fg		= mtk_cam_is_fullg(ipi_fmt);
-	const int bpp		= mtk_cam_get_pixel_bits(ipi_fmt);
-	const int bytes		= is_fg ?
+	int bpp, bytes, bus_size;
+
+	if (pixel_mode_shift < 0) {
+		pr_info("%s invalid pixel_mode_shift\n", __func__);
+		return -EINVAL;
+	}
+
+	bpp	= mtk_cam_get_pixel_bits(ipi_fmt);
+	if (bpp < 0) {
+		pr_info("%s unsupport pixel_bits\n", __func__);
+		return -EINVAL;
+	}
+
+	bytes = is_fg ?
 		DIV_ROUND_UP(w * bpp * 3 / 2, 8) : DIV_ROUND_UP(w * bpp, 8);
-	const int bus_size	= mtk_cam_dma_bus_size(bpp, pixel_mode_shift, is_fg);
+	bus_size	= mtk_cam_dma_bus_size(bpp, pixel_mode_shift, is_fg);
 
 	return ALIGN(bytes, bus_size);
 }
@@ -758,6 +770,79 @@ static int mtk_cam_vb2_buf_out_validate(struct vb2_buffer *vb)
 	return 0;
 }
 
+static int mtk_cam_vidioc_s_try_fmt_cached_reserved(struct file *file,
+				unsigned int cmd,
+				unsigned char *user_addr)
+{
+	struct mtk_cam_video_device *node = file_to_mtk_cam_node(file);
+	struct mtk_cam_cached_reserved *cached_data = &node->cached_data;
+	struct mtk_cam_device *cam = video_drvdata(file);
+	struct v4l2_format vfmt;
+
+	if (copy_from_user(&vfmt, user_addr, sizeof(vfmt)))
+		return -EFAULT;
+
+	cached_data->reqfd =
+		mtk_cam_fmt_get_request(&vfmt.fmt.pix_mp);
+
+	dev_dbg(cam->dev,
+		"%s:pipe(%d):%s:reqfd(%d)\n",
+		__func__, node->uid.pipe_id, node->desc.name, cached_data->reqfd);
+
+	if(cmd == VIDIOC_TRY_FMT) {
+		cached_data->raw_feature =
+			mtk_cam_fmt_get_raw_feature(&vfmt.fmt.pix_mp);
+		dev_dbg(cam->dev,
+			"%s:pipe(%d):%s:raw_feature(%d)\n",
+			__func__, node->uid.pipe_id, node->desc.name, cached_data->raw_feature);
+	}
+
+	return 0;
+}
+
+static int mtk_cam_vidioc_s_sel_cached_reserved(struct file *file,
+				unsigned char *user_addr)
+{
+	struct mtk_cam_video_device *node = file_to_mtk_cam_node(file);
+	struct mtk_cam_cached_reserved *cached_data = &node->cached_data;
+	struct mtk_cam_device *cam = video_drvdata(file);
+	struct v4l2_selection vsel;
+
+	if (copy_from_user(&vsel, user_addr, sizeof(vsel)))
+		return -EFAULT;
+
+	cached_data->reqfd =
+		mtk_cam_selection_get_request(&vsel);
+	dev_dbg(cam->dev,
+		"%s:pipe(%d):%s:reqfd(%d)\n",
+		__func__, node->uid.pipe_id, node->desc.name, cached_data->reqfd);
+
+	return 0;
+}
+
+static long mtk_cam_video_ioctl2(struct file *file,
+				     unsigned int cmd,
+				     unsigned long arg)
+{
+	unsigned char *user_addr = (unsigned char *)arg;
+
+	switch(cmd) {
+	case VIDIOC_S_FMT:
+	case VIDIOC_TRY_FMT:
+		if (mtk_cam_vidioc_s_try_fmt_cached_reserved(file, cmd, user_addr))
+			return -EFAULT;
+		break;
+	case VIDIOC_S_SELECTION:
+		if (mtk_cam_vidioc_s_sel_cached_reserved(file, user_addr))
+			return -EFAULT;
+		break;
+	default:
+		break;
+	}
+
+	return video_ioctl2(file, cmd, arg);
+}
+
 static const struct vb2_ops mtk_cam_vb2_ops = {
 	.queue_setup = mtk_cam_vb2_queue_setup,
 
@@ -778,7 +863,7 @@ static const struct vb2_ops mtk_cam_vb2_ops = {
 };
 
 static const struct v4l2_file_operations mtk_cam_v4l2_fops = {
-	.unlocked_ioctl = video_ioctl2,
+	.unlocked_ioctl = mtk_cam_video_ioctl2,
 	.open = v4l2_fh_open,
 	.release = vb2_fop_release,
 	.poll = vb2_fop_poll,
@@ -841,7 +926,7 @@ unsigned int mtk_cam_get_sensor_fmt(unsigned int fmt)
 	}
 }
 
-unsigned int mtk_cam_get_pixel_bits(unsigned int ipi_fmt)
+int mtk_cam_get_pixel_bits(unsigned int ipi_fmt)
 {
 	switch (ipi_fmt) {
 	case MTKCAM_IPI_IMG_FMT_BAYER8:
@@ -934,7 +1019,7 @@ unsigned int mtk_cam_get_pixel_bits(unsigned int ipi_fmt)
 	}
 	pr_debug("not supported ipi-fmt 0x%08x", ipi_fmt);
 
-	return 8;
+	return -1;
 }
 
 unsigned int mtk_cam_get_img_fmt(unsigned int fourcc)
@@ -1193,12 +1278,17 @@ int mtk_cam_fill_pixfmt_mp(struct v4l2_pix_format_mplane *pixfmt,
 {
 	struct v4l2_plane_pix_format *plane;
 	unsigned int ipi_fmt = mtk_cam_get_img_fmt(pixelformat);
-	u8 pixel_bits = mtk_cam_get_pixel_bits(ipi_fmt);
+	int pixel_bits = mtk_cam_get_pixel_bits(ipi_fmt);
 	u32 stride;
 	u32 aligned_width;
 	u8 pixel_mode_shift = 0; /* todo: should set by resMgr */
 	u8 bus_size;
 	u8 i;
+
+	if (pixel_bits < 0) {
+		pr_info("%s unsupport pixel_bits\n", __func__);
+		return -EINVAL;
+	}
 
 	pixfmt->width = width;
 	pixfmt->height = height;
@@ -1626,8 +1716,11 @@ int mtk_cam_vidioc_querycap(struct file *file, void *fh,
 
 	strscpy(cap->driver, dev_driver_string(cam->dev), sizeof(cap->driver));
 	strscpy(cap->card, dev_driver_string(cam->dev), sizeof(cap->card));
-	(void)snprintf(cap->bus_info, sizeof(cap->bus_info), "platform:%s",
-		 dev_name(cam->dev));
+	if (snprintf(cap->bus_info, sizeof(cap->bus_info), "platform:%s",
+		 dev_name(cam->dev)) < 0) {
+		dev_info(cam->dev, "%s: snprinf failed\n", __func__);
+		return -1;
+	}
 
 	return 0;
 }
@@ -1648,6 +1741,243 @@ int mtk_cam_vidioc_enum_framesizes(struct file *filp, void *priv,
 	return 0;
 }
 
+static void fill_ext_fmtdesc(struct v4l2_fmtdesc *fmt)
+{
+	const char *descr = NULL;
+	const unsigned int sz = sizeof(fmt->description);
+
+	switch (fmt->pixelformat) {
+	case V4L2_PIX_FMT_YUYV10:
+		descr = "YUYV 4:2:2 10 bits";
+		break;
+	case V4L2_PIX_FMT_YVYU10:
+		descr = "YVYU 4:2:2 10 bits";
+		break;
+	case V4L2_PIX_FMT_UYVY10:
+		descr = "UYVY 4:2:2 10 bits";
+		break;
+	case V4L2_PIX_FMT_VYUY10:
+		descr = "VYUY 4:2:2 10 bits";
+		break;
+	case V4L2_PIX_FMT_NV12_10:
+		descr = "Y/CbCr 4:2:0 10 bits";
+		break;
+	case V4L2_PIX_FMT_NV21_10:
+		descr = "Y/CrCb 4:2:0 10 bits";
+		break;
+	case V4L2_PIX_FMT_NV16_10:
+		descr = "Y/CbCr 4:2:2 10 bits";
+		break;
+	case V4L2_PIX_FMT_NV61_10:
+		descr = "Y/CrCb 4:2:2 10 bits";
+		break;
+	case V4L2_PIX_FMT_NV12_12:
+		descr = "Y/CbCr 4:2:0 12 bits";
+		break;
+	case V4L2_PIX_FMT_NV21_12:
+		descr = "Y/CrCb 4:2:0 12 bits";
+		break;
+	case V4L2_PIX_FMT_NV16_12:
+		descr = "Y/CbCr 4:2:2 12 bits";
+		break;
+	case V4L2_PIX_FMT_NV61_12:
+		descr = "Y/CrCb 4:2:2 12 bits";
+		break;
+	case V4L2_PIX_FMT_MTISP_SBGGR10:
+		descr = "10-bit Bayer BGGR MTISP Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGBRG10:
+		descr = "10-bit Bayer GBRG MTISP Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGRBG10:
+		descr = "10-bit Bayer GRBG MTISP Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SRGGB10:
+		descr = "10-bit Bayer RGGB MTISP Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SBGGR12:
+		descr = "12-bit Bayer BGGR MTISP Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGBRG12:
+		descr = "12-bit Bayer GBRG MTISP Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGRBG12:
+		descr = "12-bit Bayer GRBG MTISP Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SRGGB12:
+		descr = "12-bit Bayer RGGB MTISP Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SBGGR14:
+		descr = "14-bit Bayer BGGR MTISP Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGBRG14:
+		descr = "14-bit Bayer GBRG MTISP Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGRBG14:
+		descr = "14-bit Bayer GRBG MTISP Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SRGGB14:
+		descr = "14-bit Bayer RGGB MTISP Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SBGGR8F:
+		descr = "8-bit Enhanced BGGR Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGBRG8F:
+		descr = "8-bit Enhanced GBRG Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGRBG8F:
+		descr = "8-bit Enhanced GRBG Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SRGGB8F:
+		descr = "8-bit Enhanced RGGB Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SBGGR10F:
+		descr = "10-bit Enhanced BGGR Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGBRG10F:
+		descr = "10-bit Enhanced GBRG Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGRBG10F:
+		descr = "10-bit Enhanced GRBG Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SRGGB10F:
+		descr = "10-bit Enhanced RGGB Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SBGGR12F:
+		descr = "12-bit Enhanced BGGR Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGBRG12F:
+		descr = "12-bit Enhanced GBRG Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGRBG12F:
+		descr = "12-bit Enhanced GRBG Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SRGGB12F:
+		descr = "12-bit Enhanced RGGB Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SBGGR14F:
+		descr = "14-bit Enhanced BGGR Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGBRG14F:
+		descr = "14-bit Enhanced GBRG Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGRBG14F:
+		descr = "14-bit Enhanced GRBG Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SRGGB14F:
+		descr = "14-bit Enhanced RGGB Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_NV12_10P:
+		descr = "Y/CbCr 4:2:0 10 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_NV21_10P:
+		descr = "Y/CrCb 4:2:0 10 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_NV16_10P:
+		descr = "Y/CbCr 4:2:2 10 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_NV61_10P:
+		descr = "Y/CrCb 4:2:2 10 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_YUYV10P:
+		descr = "YUYV 4:2:2 10 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_YVYU10P:
+		descr = "YVYU 4:2:2 10 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_UYVY10P:
+		descr = "UYVY 4:2:2 10 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_VYUY10P:
+		descr = "VYUY 4:2:2 10 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_NV12_12P:
+		descr = "Y/CbCr 4:2:0 12 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_NV21_12P:
+		descr = "Y/CrCb 4:2:0 12 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_NV16_12P:
+		descr = "Y/CbCr 4:2:2 12 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_NV61_12P:
+		descr = "Y/CrCb 4:2:2 12 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_YUYV12P:
+		descr = "YUYV 4:2:2 12 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_YVYU12P:
+		descr = "YVYU 4:2:2 12 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_UYVY12P:
+		descr = "UYVY 4:2:2 12 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_VYUY12P:
+		descr = "VYUY 4:2:2 12 bits packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_NV12_UFBC:
+		descr = "YCbCr 420 8 bits compress";
+		break;
+	case V4L2_PIX_FMT_MTISP_NV21_UFBC:
+		descr = "YCrCb 420 8 bits compress";
+		break;
+	case V4L2_PIX_FMT_MTISP_NV12_10_UFBC:
+		descr = "YCbCr 420 10 bits compress";
+		break;
+	case V4L2_PIX_FMT_MTISP_NV21_10_UFBC:
+		descr = "YCrCb 420 10 bits compress";
+		break;
+	case V4L2_PIX_FMT_MTISP_NV12_12_UFBC:
+		descr = "YCbCr 420 12 bits compress";
+		break;
+	case V4L2_PIX_FMT_MTISP_NV21_12_UFBC:
+		descr = "YCrCb 420 12 bits compress";
+		break;
+	case V4L2_PIX_FMT_MTISP_BAYER8_UFBC:
+		descr = "RAW 8 bits compress";
+		break;
+	case V4L2_PIX_FMT_MTISP_BAYER10_UFBC:
+		descr = "RAW 10 bits compress";
+		break;
+	case V4L2_PIX_FMT_MTISP_BAYER12_UFBC:
+		descr = "RAW 12 bits compress";
+		break;
+	case V4L2_PIX_FMT_MTISP_BAYER14_UFBC:
+		descr = "RAW 14 bits compress";
+		break;
+	case V4L2_META_FMT_MTISP_3A:
+		descr = "AE/AWB Histogram";
+		break;
+	case V4L2_META_FMT_MTISP_AF:
+		descr = "AF Histogram";
+		break;
+	case V4L2_META_FMT_MTISP_LCS:
+		descr = "Local Contrast Enhancement Stat";
+		break;
+	case V4L2_META_FMT_MTISP_LMV:
+		descr = "Local Motion Vector Histogram";
+		break;
+	case V4L2_META_FMT_MTISP_PARAMS:
+		descr = "MTK ISP Tuning Metadata";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGRB8F:
+		descr = "8-bit 3 plane GRB Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGRB10F:
+		descr = "10-bit 3 plane GRB Packed";
+		break;
+	case V4L2_PIX_FMT_MTISP_SGRB12F:
+		descr = "12-bit 3 plane GRB Packed";
+		break;
+	default:
+		descr = "unknown mtk ext fmt";
+		break;
+	}
+
+	if (descr)
+		WARN_ON(strscpy(fmt->description, descr, sz) < 0);
+}
+
 int mtk_cam_vidioc_enum_fmt(struct file *file, void *fh,
 			    struct v4l2_fmtdesc *f)
 {
@@ -1659,6 +1989,8 @@ int mtk_cam_vidioc_enum_fmt(struct file *file, void *fh,
 	/* f->description is filled in v4l_fill_fmtdesc function */
 	f->pixelformat = node->desc.fmts[f->index].vfmt.fmt.pix_mp.pixelformat;
 	f->flags = 0;
+	fill_ext_fmtdesc(f);
+
 	return 0;
 }
 
@@ -1677,6 +2009,7 @@ int mtk_cam_vidioc_s_fmt(struct file *file, void *fh,
 {
 	struct mtk_cam_device *cam = video_drvdata(file);
 	struct mtk_cam_video_device *node = file_to_mtk_cam_node(file);
+	struct mtk_cam_cached_reserved *cached_data = &node->cached_data;
 	struct mtk_cam_request *cam_req;
 	struct media_request *req;
 	struct v4l2_format *vfmt;
@@ -1698,7 +2031,12 @@ int mtk_cam_vidioc_s_fmt(struct file *file, void *fh,
 		return 0;
 	}
 
-	fd = mtk_cam_fmt_get_request(&f->fmt.pix_mp);
+	fd = cached_data->reqfd;
+
+	dev_dbg(cam->dev,
+		"%s:pipe(%d):%s:reqfd(%d)\n",
+		__func__, node->uid.pipe_id, node->desc.name, fd);
+
 	if (fd < 0)
 		return -EINVAL;
 
@@ -1729,17 +2067,18 @@ int mtk_cam_vidioc_s_fmt(struct file *file, void *fh,
 int mtk_cam_video_set_fmt(struct mtk_cam_video_device *node, struct v4l2_format *f, int raw_feature)
 {
 	struct mtk_cam_device *cam = video_get_drvdata(&node->vdev);
+	struct mtk_cam_cached_reserved *cached_data = &node->cached_data;
 	const struct v4l2_format *dev_fmt;
 	struct v4l2_format try_fmt;
 	s32 request_fd, i;
 	u32 bytesperline, sizeimage;
 	u32 is_hdr = 0, is_hdr_m2m = 0;
 
-	dev_dbg(cam->dev,
-			"%s:pipe(%d):%s:feature(0x%x)\n",
-			__func__, node->uid.pipe_id, node->desc.name, raw_feature);
+	request_fd = cached_data->reqfd;
 
-	request_fd = mtk_cam_fmt_get_request(&f->fmt.pix_mp);
+	dev_dbg(cam->dev,
+		"%s:pipe(%d):%s:reqfd(%d)\n",
+		__func__, node->uid.pipe_id, node->desc.name, request_fd);
 	memset(&try_fmt, 0, sizeof(try_fmt));
 	try_fmt.type = f->type;
 
@@ -1877,10 +2216,11 @@ int mtk_cam_vidioc_try_fmt(struct file *file, void *fh,
 			   struct v4l2_format *f)
 {
 	struct mtk_cam_video_device *node = file_to_mtk_cam_node(file);
+	struct mtk_cam_cached_reserved *cached_data = &node->cached_data;
 	int raw_feature = 0;
 
 	if (is_raw_subdev(node->uid.pipe_id))
-		raw_feature = mtk_cam_fmt_get_raw_feature(&f->fmt.pix_mp);
+		raw_feature = cached_data->raw_feature;
 
 	mtk_cam_video_set_fmt(node, f, raw_feature);
 
@@ -1898,6 +2238,7 @@ int mtk_cam_vidioc_meta_enum_fmt(struct file *file, void *fh,
 	/* f->description is filled in v4l_fill_fmtdesc function */
 	f->pixelformat = node->active_fmt.fmt.meta.dataformat;
 	f->flags = 0;
+	fill_ext_fmtdesc(f);
 
 	return 0;
 }
@@ -1948,13 +2289,18 @@ int mtk_cam_vidioc_s_selection(struct file *file, void *fh,
 {
 	struct mtk_cam_device *cam = video_drvdata(file);
 	struct mtk_cam_video_device *node = file_to_mtk_cam_node(file);
+	struct mtk_cam_cached_reserved *cached_data = &node->cached_data;
 	struct mtk_cam_request_stream_data *stream_data;
 	struct mtk_cam_request *cam_req;
 	struct media_request *req;
 	struct v4l2_selection *vsel;
 	s32 fd;
 
-	fd = mtk_cam_selection_get_request(s);
+	fd = cached_data->reqfd;
+	dev_dbg(cam->dev,
+		"%s:pipe(%d):%s:reqfd(%d)\n",
+		__func__, node->uid.pipe_id, node->desc.name, fd);
+
 	if (fd < 0)
 		return -EINVAL;
 

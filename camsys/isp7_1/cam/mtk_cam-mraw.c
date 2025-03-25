@@ -195,6 +195,8 @@ static int mtk_mraw_sd_subscribe_event(struct v4l2_subdev *subdev,
 	}
 }
 
+static int mtk_mraw_ext_set_fmt(struct v4l2_ctrl *ctrl);
+
 int mtk_cam_mraw_select(struct mtk_mraw_pipeline *pipe)
 {
 	pipe->enabled_mraw = 1 << (pipe->id - MTKCAM_SUBDEV_MRAW_START);
@@ -266,6 +268,36 @@ static int mtk_mraw_init_cfg(struct v4l2_subdev *sd,
 
 	return 0;
 }
+
+static int mtk_mraw_try_ctrl(struct v4l2_ctrl *ctrl)
+{
+	return 0;
+}
+
+static int mtk_mraw_set_ctrl(struct v4l2_ctrl *ctrl)
+{
+	int ret = 0;
+
+	if (ctrl->id == V4L2_CID_MTK_SUBDEV_S_FMT)
+		ret = mtk_mraw_ext_set_fmt(ctrl);
+
+	return 0;
+}
+static const struct v4l2_ctrl_ops cam_ctrl_ops = {
+	.s_ctrl = mtk_mraw_set_ctrl,
+	.try_ctrl = mtk_mraw_try_ctrl,
+};
+
+static struct v4l2_ctrl_config cfg_s_fmt = {
+	.ops = &cam_ctrl_ops,
+	.id = V4L2_CID_MTK_SUBDEV_S_FMT,
+	.name = "subdev set fmt",
+	.type = V4L2_CTRL_COMPOUND_TYPES, /* V4L2_CTRL_TYPE_U32,*/
+	.flags = V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
+	.max = 0xffffffff,
+	.step = 1,
+	.dims = {sizeof(struct v4l2_subdev_format)},
+};
 
 static int mtk_mraw_try_fmt(struct v4l2_subdev *sd,
 			  struct v4l2_subdev_format *fmt)
@@ -399,6 +431,25 @@ int mtk_mraw_call_pending_set_fmt(struct v4l2_subdev *sd,
 	return mtk_mraw_call_set_fmt(sd, NULL, fmt);
 }
 
+/* This function is cloned from subdev_ioctl_get_state in original v4l2 framework */
+static struct v4l2_subdev_state *
+mtk_subdev_ioctl_get_state(struct v4l2_subdev *sd, struct v4l2_subdev_fh *subdev_fh,
+	struct v4l2_ctrl *ctrl)
+{
+	u32 which;
+
+	switch(ctrl->id) {
+	case V4L2_CID_MTK_SUBDEV_S_FMT:
+		which = ((struct v4l2_subdev_format *)ctrl->p_new.p)->which;
+		break;
+	default:
+		return NULL;
+	}
+
+	return which == V4L2_SUBDEV_FORMAT_TRY ? subdev_fh->state :
+			v4l2_subdev_get_unlocked_active_state(sd);
+}
+
 static int mtk_mraw_set_fmt(struct v4l2_subdev *sd,
 			  struct v4l2_subdev_state *state,
 			  struct v4l2_subdev_format *fmt)
@@ -440,6 +491,34 @@ static int mtk_mraw_set_fmt(struct v4l2_subdev *sd,
 	stream_data->pad_fmt[fmt->pad] = *fmt;
 
 	media_request_put(req);
+
+	return 0;
+}
+
+static int mtk_mraw_ext_set_fmt(struct v4l2_ctrl *ctrl)
+{
+	struct mtk_mraw_pipeline *pipe;
+	struct v4l2_subdev *sd;
+	struct v4l2_subdev_fh *subdev_fh;
+	struct v4l2_subdev_state *state;
+	struct v4l2_subdev_format *fmt;
+
+	pipe = mtk_cam_ctrl_handler_to_mraw_pipeline(ctrl->handler);
+	sd = &pipe->subdev;
+	subdev_fh = pipe->fh;
+	state = mtk_subdev_ioctl_get_state(sd, subdev_fh, ctrl);
+	fmt = (struct v4l2_subdev_format *)ctrl->p_new.p;
+
+	if (fmt->pad >= MTK_MRAW_PIPELINE_PADS_NUM)
+		return -EINVAL;
+
+	if (state)
+		v4l2_subdev_lock_state(state);
+
+	mtk_mraw_set_fmt(sd, state, fmt);
+
+	if (state)
+		v4l2_subdev_unlock_state(state);
 
 	return 0;
 }
@@ -495,6 +574,44 @@ static int mtk_mraw_media_link_setup(struct media_entity *entity,
 	if (!(flags & MEDIA_LNK_FL_ENABLED))
 		memset(pipe->cfg, 0, sizeof(pipe->cfg));
 
+	return 0;
+}
+
+static void mtk_mraw_pipeline_ctrl_setup(struct mtk_mraw_pipeline *pipe)
+{
+	struct v4l2_ctrl_handler *ctrl_hdlr;
+	struct v4l2_ctrl *ctrl;
+	struct device *dev = pipe->mraw->devs[pipe->id - MTKCAM_SUBDEV_MRAW_START];
+	int ret = 0;
+
+	ctrl_hdlr = &pipe->ctrl_handler;
+	ret = v4l2_ctrl_handler_init(ctrl_hdlr, 5);
+	if (ret) {
+		dev_info(dev, "v4l2_ctrl_handler init failed\n");
+		return;
+	}
+	ctrl = v4l2_ctrl_new_custom(ctrl_hdlr, &cfg_s_fmt, NULL);
+	if (ctrl)
+		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE |
+			V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
+
+	pipe->subdev.ctrl_handler = ctrl_hdlr;
+}
+static int mtk_mraw_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	struct mtk_mraw_pipeline *pipe =
+		container_of(sd, struct mtk_mraw_pipeline, subdev);
+
+	pipe->fh = fh;
+	return 0;
+}
+
+static int mtk_mraw_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	struct mtk_mraw_pipeline *pipe =
+		container_of(sd, struct mtk_mraw_pipeline, subdev);
+
+	pipe->fh = NULL;
 	return 0;
 }
 
@@ -561,11 +678,13 @@ static const struct v4l2_ioctl_ops mtk_mraw_v4l2_meta_out_ioctl_ops = {
 	.vidioc_expbuf = vb2_ioctl_expbuf,
 };
 
-#if (KERNEL_VERSION(6, 7, 0) < LINUX_VERSION_CODE)
 static const struct v4l2_subdev_internal_ops mtk_mraw_internal_ops = {
+#if (KERNEL_VERSION(6, 7, 0) < LINUX_VERSION_CODE)
 	.init_state = mtk_mraw_init_cfg,
-};
 #endif
+	.open = mtk_mraw_open,
+	.close = mtk_mraw_close,
+};
 
 static const struct mtk_cam_format_desc meta_fmts[] = { /* FIXME for ISP6 meta format */
 	{
@@ -2037,7 +2156,7 @@ static int  mtk_mraw_pipeline_register(
 		return ret;
 	}
 	v4l2_set_subdevdata(sd, pipe);
-
+	mtk_mraw_pipeline_ctrl_setup(pipe);
 	dev_info(dev, "%s: %s\n", __func__, sd->name);
 
 	ret = v4l2_device_register_subdev(v4l2_dev, sd);
@@ -2054,8 +2173,11 @@ static int  mtk_mraw_pipeline_register(
 			MEDIA_PAD_FL_SINK : MEDIA_PAD_FL_SOURCE;
 	}
 
-	media_entity_pads_init(&sd->entity, ARRAY_SIZE(pipe->pads), pipe->pads);
-
+	ret = media_entity_pads_init(&sd->entity, ARRAY_SIZE(pipe->pads), pipe->pads);
+	if (ret < 0) {
+		dev_info(dev, "failed to init pads\n");
+		return ret;
+	}
 	/* setup video node */
 	for (i = 0; i < ARRAY_SIZE(pipe->vdev_nodes); i++) {
 		video = pipe->vdev_nodes + i;

@@ -34,6 +34,7 @@ struct mtk_cam_vb2_buf {
 	struct vb2_vmarea_handler	handler;
 	refcount_t			refcount;
 	struct sg_table			*sgt_base;
+	unsigned int			sync;
 
 	/* DMABUF related */
 	struct dma_buf_attachment	*db_attach;
@@ -75,7 +76,7 @@ static void *mtk_cam_vb2_vaddr(struct vb2_buffer *vb, void *buf_priv)
 	int ret;
 	MTK_CAM_TRACE_FUNC_BEGIN(BUFFER);
 	if (!buf->vaddr && buf->db_attach) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		ret = dma_buf_vmap_unlocked(buf->db_attach->dmabuf, &buf->map);
 #else
 		ret = dma_buf_vmap(buf->db_attach->dmabuf, &buf->map);
@@ -101,8 +102,8 @@ static void mtk_cam_vb2_prepare(void *buf_priv)
 
 	if (!sgt)
 		return;
-
-	dma_sync_sgtable_for_device(buf->dev, sgt, buf->dma_dir);
+	if (buf->sync)
+		dma_sync_sgtable_for_device(buf->dev, sgt, buf->dma_dir);
 }
 
 static void mtk_cam_vb2_finish(void *buf_priv)
@@ -112,8 +113,8 @@ static void mtk_cam_vb2_finish(void *buf_priv)
 
 	if (!sgt)
 		return;
-
-	dma_sync_sgtable_for_cpu(buf->dev, sgt, buf->dma_dir);
+	if (buf->sync)
+		dma_sync_sgtable_for_cpu(buf->dev, sgt, buf->dma_dir);
 }
 
 /*********************************************/
@@ -139,7 +140,11 @@ static int mtk_cam_vb2_map_dmabuf(void *mem_priv)
 	MTK_CAM_TRACE_FUNC_BEGIN(BUFFER);
 
 	/* get the associated scatterlist for this buffer */
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
+	sgt = dma_buf_map_attachment_unlocked(buf->db_attach, buf->dma_dir);
+#else
 	sgt = dma_buf_map_attachment(buf->db_attach, buf->dma_dir);
+#endif
 	if (IS_ERR(sgt)) {
 		pr_info("Error getting dmabuf scatterlist\n");
 		return -EINVAL;
@@ -150,10 +155,10 @@ static int mtk_cam_vb2_map_dmabuf(void *mem_priv)
 	if (contig_size < buf->size) {
 		pr_info("contiguous chunk is too small %lu/%lu\n",
 		       contig_size, buf->size);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
-				dma_buf_unmap_attachment_unlocked(buf->db_attach, sgt, buf->dma_dir);
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
+		dma_buf_unmap_attachment_unlocked(buf->db_attach, sgt, buf->dma_dir);
 #else
-				dma_buf_unmap_attachment(buf->db_attach, sgt, buf->dma_dir);
+		dma_buf_unmap_attachment(buf->db_attach, sgt, buf->dma_dir);
 #endif
 		return -EFAULT;
 	}
@@ -184,15 +189,18 @@ static void mtk_cam_vb2_unmap_dmabuf(void *mem_priv)
 	MTK_CAM_TRACE_FUNC_BEGIN(BUFFER);
 
 	if (buf->vaddr) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		dma_buf_vunmap_unlocked(buf->db_attach->dmabuf, &buf->map);
 #else
 		dma_buf_vunmap(buf->db_attach->dmabuf, &buf->map);
 #endif
 		buf->vaddr = NULL;
 	}
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
+	dma_buf_unmap_attachment_unlocked(buf->db_attach, sgt, buf->dma_dir);
+#else
 	dma_buf_unmap_attachment(buf->db_attach, sgt, buf->dma_dir);
-
+#endif
 	buf->dma_addr = 0;
 	buf->dma_sgt = NULL;
 
@@ -210,6 +218,14 @@ static void mtk_cam_vb2_detach_dmabuf(void *mem_priv)
 	/* detach this attachment */
 	dma_buf_detach(buf->db_attach->dmabuf, buf->db_attach);
 	kfree(buf);
+}
+
+static bool region_heap_is_prot(struct dma_buf *dbuf)
+{
+	if (strstr(dbuf->exp_name, "prot"))
+		return true;
+
+	return false;
 }
 
 static void *mtk_cam_vb2_attach_dmabuf(struct vb2_buffer *vb, struct device *dev, struct dma_buf *dbuf,
@@ -237,6 +253,12 @@ static void *mtk_cam_vb2_attach_dmabuf(struct vb2_buffer *vb, struct device *dev
 	buf->dma_dir = vb->vb2_queue->dma_dir;
 	buf->size = size;
 	buf->db_attach = dba;
+
+	if (region_heap_is_prot(dbuf))
+		buf->sync = 0;
+	else
+		buf->sync = 1;
+
 	return buf;
 }
 
@@ -270,8 +292,8 @@ void mtk_cam_vb2_sync_for_device(void *buf_priv)
 
 	if (!sgt)
 		return;
-
-	dma_sync_sgtable_for_device(buf->dev, sgt, buf->dma_dir);
+	if (buf->sync)
+		dma_sync_sgtable_for_device(buf->dev, sgt, buf->dma_dir);
 }
 
 void mtk_cam_vb2_sync_for_cpu(void *buf_priv)
@@ -281,8 +303,8 @@ void mtk_cam_vb2_sync_for_cpu(void *buf_priv)
 
 	if (!sgt)
 		return;
-
-	dma_sync_sgtable_for_cpu(buf->dev, sgt, buf->dma_dir);
+	if (buf->sync)
+		dma_sync_sgtable_for_cpu(buf->dev, sgt, buf->dma_dir);
 }
 
 MODULE_DESCRIPTION("DMA-contig memory handling routines for mtk-cam videobuf2");

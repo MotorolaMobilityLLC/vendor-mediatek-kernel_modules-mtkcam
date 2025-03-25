@@ -63,9 +63,8 @@ int seninf_ca_close_session(void)
 
 int seninf_ca_checkpipe(unsigned int SecInfo_addr)
 {
-
-	int types = 0;
 	int ret = SENINF_CA_RETURN_SUCCESS;
+	int types = 0;
 	TZ_RESULT ret_tz = TZ_RESULT_SUCCESS;
 	union MTEEC_PARAM param[PARAM_SIZE];
 

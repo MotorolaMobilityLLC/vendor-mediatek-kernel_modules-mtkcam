@@ -1237,14 +1237,14 @@ static int mtk_senif_get_ccu_phandle(struct seninf_core *core)
 	struct device_node *node;
 	int ret = 0;
 
-	node = of_find_compatible_node(NULL, NULL, "mediatek,camera-fsync-ccu");
+	node = of_find_compatible_node(NULL, NULL, "mediatek,camera_fsync_ccu");
 	if (node == NULL) {
-		dev_info(dev, "of_find mediatek,camera-fsync-ccu fail\n");
+		dev_info(dev, "of_find mediatek,camera_fsync_ccu fail\n");
 		ret = PTR_ERR(node);
 		goto out;
 	}
 
-	ret = of_property_read_u32(node, "mediatek,ccu-rproc",
+	ret = of_property_read_u32(node, "mediatek,ccu_rproc",
 				   &core->rproc_ccu_phandle);
 	if (ret) {
 		dev_info(dev, "fail to get rproc_ccu_phandle:%d\n", ret);
@@ -1717,7 +1717,7 @@ err_free_handler:
 #if (KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE)
 static int seninf_parse_fwnode(struct device *dev, struct v4l2_async_notifier *notifier)
 {
-	struct fwnode_handle *fwnode = NULL;
+	struct fwnode_handle *fwnode;
 	int ret = 0;
 
 	fwnode_graph_for_each_endpoint(dev_fwnode(dev), fwnode) {

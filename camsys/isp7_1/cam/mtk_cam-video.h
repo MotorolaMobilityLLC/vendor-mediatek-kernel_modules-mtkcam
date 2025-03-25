@@ -108,6 +108,19 @@ struct mtk_cam_dev_node_desc {
 };
 
 /*
+ * struct mtk_cam_cached_reserved - MTK camera reserved value cached
+ *
+ * @reqfd: reqfd cache
+ * @raw_feature: raw feature cache
+ *
+ */
+
+struct mtk_cam_cached_reserved {
+	int reqfd;
+	int raw_feature;
+};
+
+/*
  * struct mtk_cam_video_device - Mediatek video device structure.
  *
  * FIXME
@@ -133,6 +146,7 @@ struct mtk_cam_video_device {
 
 	/* cached ctx info */
 	struct mtk_cam_ctx *ctx;
+	struct mtk_cam_cached_reserved cached_data;
 };
 
 struct mtk_format_info {
@@ -215,7 +229,7 @@ unsigned int mtk_cam_get_sensor_fmt(unsigned int fmt);
 
 int mtk_cam_get_fmt_size_factor(unsigned int ipi_fmt);
 
-unsigned int mtk_cam_get_pixel_bits(unsigned int pix_fmt);
+int mtk_cam_get_pixel_bits(unsigned int pix_fmt);
 
 unsigned int mtk_cam_get_img_fmt(unsigned int fourcc);
 

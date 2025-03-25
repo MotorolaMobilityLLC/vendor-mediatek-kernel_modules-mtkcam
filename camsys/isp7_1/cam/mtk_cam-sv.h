@@ -195,6 +195,10 @@ struct mtk_camsv_pipeline {
 	unsigned int exp_order;
 	unsigned int is_occupied;
 	unsigned int raw_vdevidx;
+
+	/* remove vendor hook driver WA*/
+	struct v4l2_ctrl_handler ctrl_handler;
+	struct v4l2_subdev_fh *fh;
 };
 
 struct mtk_camsv_device {
@@ -267,7 +271,11 @@ static inline bool mtk_camsv_is_yuv_format(unsigned int fmt)
 
 	return ret;
 }
-
+static inline struct mtk_camsv_pipeline*
+mtk_cam_ctrl_handler_to_camsv_pipeline(struct v4l2_ctrl_handler *handler)
+{
+	return container_of(handler, struct mtk_camsv_pipeline, ctrl_handler);
+};
 struct mtk_larb;
 int mtk_camsv_setup_dependencies(struct mtk_camsv *sv, struct mtk_larb *larb);
 int mtk_camsv_register_entities(

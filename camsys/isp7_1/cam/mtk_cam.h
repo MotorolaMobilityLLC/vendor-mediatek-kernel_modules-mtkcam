@@ -88,9 +88,6 @@ struct mtk_raw_pipeline;
 #define MTK_CAM_REQ_S_DATA_FLAG_SENSOR_HDL_DELAYED	BIT(8)
 #define MTK_CAM_REQ_S_DATA_FLAG_INCOMPLETE BIT(9)
 
-/* The raw switching is pending and waiting for the composed cq */
-#define MTK_CAM_REQ_S_DATA_FLAG_SENSOR_SWITCH_BACKEND_DELAYED	BIT(10)
-
 #define v4l2_subdev_format_request_fd(x) x->reserved[0]
 #define v4l2_frame_interval_which(x) x->reserved[0]
 
@@ -307,7 +304,6 @@ struct mtk_cam_req_raw_pipe_data {
 	struct mtk_cam_resource_config res_config;
 	struct mtk_raw_stagger_select stagger_select;
 	int enabled_raw;
-	struct mtkcam_ipi_config_param config_param;/* debug only */
 };
 
 /*
@@ -373,6 +369,7 @@ struct mtk_cam_img_working_buf_pool {
 	struct dma_buf *working_img_buf_dmabuf;
 	void *working_img_buf_va;
 	dma_addr_t working_img_buf_iova;
+	int working_img_buf_fd;
 	int working_img_buf_size;
 	struct mtk_cam_img_working_buf_entry img_working_buf[CAM_IMG_BUF_NUM];
 	struct mtk_cam_working_buf_list cam_freeimglist;
@@ -488,7 +485,6 @@ struct mtk_cam_ctx {
 
 	/* To support debug dump */
 	struct mtkcam_ipi_config_param config_params;
-	struct mutex sensor_switch_op_lock;
 	bool ext_isp_meta_off;
 	bool ext_isp_pureraw_off;
 	bool ext_isp_procraw_off;
@@ -667,18 +663,6 @@ mtk_cam_s_data_get_res(struct mtk_cam_request_stream_data *s_data)
 		return NULL;
 
 	return &s_data->req->raw_pipe_data[s_data->pipe_id].res;
-}
-
-static inline struct mtkcam_ipi_config_param*
-mtk_cam_s_data_get_config_param(struct mtk_cam_request_stream_data *s_data)
-{
-	if (!s_data)
-		return NULL;
-
-	if (!is_raw_subdev(s_data->pipe_id))
-		return NULL;
-
-	return &s_data->req->raw_pipe_data[s_data->pipe_id].config_param;
 }
 
 static inline int
@@ -867,26 +851,6 @@ static inline struct device *mtk_cam_find_raw_dev(struct mtk_cam_device *cam,
 	}
 
 	return NULL;
-}
-
-static inline bool mtk_cam_is_immediate_switch_req(struct mtk_cam_request *req,
-				     int stream_id)
-{
-	if ((req->flags & MTK_CAM_REQ_FLAG_SENINF_IMMEDIATE_UPDATE) &&
-			(req->ctx_link_update & (1 << stream_id)))
-		return true;
-	else
-		return false;
-}
-
-static inline bool mtk_cam_is_nonimmediate_switch_req(struct mtk_cam_request *req,
-				     int stream_id)
-{
-	if ((req->ctx_link_update & (1 << stream_id)) &&
-		!(req->flags & MTK_CAM_REQ_FLAG_SENINF_IMMEDIATE_UPDATE))
-		return true;
-	else
-		return false;
 }
 
 //TODO: with spinlock or not? depends on how request works [TBD]

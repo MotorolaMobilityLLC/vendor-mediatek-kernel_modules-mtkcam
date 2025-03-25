@@ -42,6 +42,12 @@
  */
 #define V4L2_CMD_USER_MTK_SENSOR_BASE		(V4L2_CID_USER_MTK_CAM_BASE + 0x400)
 
+/**
+ * The base for the mediatek common driver controls
+ * We reserve 48 controls for this driver.
+ */
+#define V4L2_CID_USER_MTK_COMMON_BASE		(V4L2_CID_USER_MTK_CAM_BASE + 0x500)
+
 
 /* I M A G E  S E N S O R */
 

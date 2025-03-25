@@ -37,8 +37,6 @@ int mtk_cam_working_buf_pool_init(struct mtk_cam_ctx *ctx)
 
 	INIT_LIST_HEAD(&ctx->buf_pool.cam_freelist.list);
 	spin_lock_init(&ctx->buf_pool.cam_freelist.lock);
-
-	spin_lock(&ctx->buf_pool.cam_freelist.lock);
 	ctx->buf_pool.cam_freelist.cnt = 0;
 	ctx->buf_pool.working_buf_size = CAM_CQ_BUF_NUM * working_buf_size;
 	ctx->buf_pool.msg_buf_size = CAM_CQ_BUF_NUM * msg_buf_size;
@@ -48,7 +46,6 @@ int mtk_cam_working_buf_pool_init(struct mtk_cam_ctx *ctx)
 	smem.len = ctx->buf_pool.working_buf_size;
 	mem_priv = mtk_ccd_get_buffer(ccd, &smem);
 	if (IS_ERR(mem_priv)) {
-		spin_unlock(&ctx->buf_pool.cam_freelist.lock);
 		return PTR_ERR(mem_priv);
 	}
 
@@ -65,7 +62,6 @@ int mtk_cam_working_buf_pool_init(struct mtk_cam_ctx *ctx)
 	smem.len = ctx->buf_pool.msg_buf_size;
 	mem_priv = mtk_ccd_get_buffer(ccd, &smem);
 	if (IS_ERR(mem_priv)) {
-		spin_unlock(&ctx->buf_pool.cam_freelist.lock);
 		return PTR_ERR(mem_priv);
 	}
 
@@ -77,7 +73,7 @@ int mtk_cam_working_buf_pool_init(struct mtk_cam_ctx *ctx)
 	ctx->buf_pool.msg_buf_va = smem.va;
 	ctx->buf_pool.msg_buf_fd = dmabuf_fd;
 
-
+	spin_lock(&ctx->buf_pool.cam_freelist.lock);
 	for (i = 0; i < CAM_CQ_BUF_NUM; i++) {
 		struct mtk_cam_working_buf_entry *buf = &ctx->buf_pool.working_buf[i];
 		int offset, offset_msg;
@@ -99,8 +95,8 @@ int mtk_cam_working_buf_pool_init(struct mtk_cam_ctx *ctx)
 		list_add_tail(&buf->list_entry, &ctx->buf_pool.cam_freelist.list);
 		ctx->buf_pool.cam_freelist.cnt++;
 	}
-
 	spin_unlock(&ctx->buf_pool.cam_freelist.lock);
+
 	dev_info(ctx->cam->dev,
 		"%s: ctx(%d): cq buffers init, freebuf cnt(%d),working(%d),msgfd(%d)\n",
 		__func__, ctx->stream_id, ctx->buf_pool.cam_freelist.cnt,
@@ -111,14 +107,16 @@ int mtk_cam_working_buf_pool_init(struct mtk_cam_ctx *ctx)
 
 void mtk_cam_working_buf_pool_release(struct mtk_cam_ctx *ctx)
 {
-
 	struct mtk_ccd *ccd = ctx->cam->rproc_handle->priv;
 	struct mem_obj smem;
+	int fd;
 
 	/* msg buffer */
 	smem.va = ctx->buf_pool.working_buf_va;
 	smem.iova = ctx->buf_pool.working_buf_iova;
 	smem.len = ctx->buf_pool.working_buf_size;
+	fd = ctx->buf_pool.working_buf_fd;
+	mtk_ccd_put_buffer_fd(ccd, &smem, fd);
 	mtk_ccd_put_buffer(ccd, &smem);
 
 	dev_dbg(ctx->cam->dev,
@@ -129,6 +127,8 @@ void mtk_cam_working_buf_pool_release(struct mtk_cam_ctx *ctx)
 	smem.va = ctx->buf_pool.msg_buf_va;
 	smem.iova = 0;
 	smem.len = ctx->buf_pool.msg_buf_size;
+	fd = ctx->buf_pool.msg_buf_fd;
+	mtk_ccd_put_buffer_fd(ccd, &smem, fd);
 	mtk_ccd_put_buffer(ccd, &smem);
 
 	dev_dbg(ctx->cam->dev,
@@ -193,6 +193,7 @@ int mtk_cam_img_working_buf_pool_init(struct mtk_cam_ctx *ctx, int buf_num,
 	struct mem_obj smem;
 	struct mtk_ccd *ccd;
 	void *mem_priv;
+	int dmabuf_fd;
 	struct dma_buf *dbuf;
 
 	if (buf_num > CAM_IMG_BUF_NUM) {
@@ -205,8 +206,6 @@ int mtk_cam_img_working_buf_pool_init(struct mtk_cam_ctx *ctx, int buf_num,
 
 	INIT_LIST_HEAD(&ctx->img_buf_pool.cam_freeimglist.list);
 	spin_lock_init(&ctx->img_buf_pool.cam_freeimglist.lock);
-
-	spin_lock(&ctx->img_buf_pool.cam_freeimglist.lock);
 	ctx->img_buf_pool.cam_freeimglist.cnt = 0;
 	ctx->img_buf_pool.working_img_buf_size = buf_num * working_buf_size;
 	smem.len = ctx->img_buf_pool.working_img_buf_size;
@@ -215,16 +214,19 @@ int mtk_cam_img_working_buf_pool_init(struct mtk_cam_ctx *ctx, int buf_num,
 	ccd = (struct mtk_ccd *)ctx->cam->rproc_handle->priv;
 	mem_priv = mtk_ccd_get_buffer(ccd, &smem);
 	if (IS_ERR(mem_priv)) {
-		spin_unlock(&ctx->img_buf_pool.cam_freeimglist.lock);
 		return PTR_ERR(mem_priv);
 	}
 
+	/* Todo: remove img fd buffer may casue img buffer leakage */
+	dmabuf_fd = mtk_ccd_get_buffer_fd(ccd, mem_priv);
 	dbuf = mtk_ccd_get_buffer_dmabuf(ccd, mem_priv);
 	if (dbuf)
 		mtk_dma_buf_set_name(dbuf, "CAM_MEM_IMG_ID");
 	ctx->img_buf_pool.working_img_buf_va = smem.va;
 	ctx->img_buf_pool.working_img_buf_iova = smem.iova;
+	ctx->img_buf_pool.working_img_buf_fd = dmabuf_fd;
 
+	spin_lock(&ctx->img_buf_pool.cam_freeimglist.lock);
 	for (i = 0; i < buf_num; i++) {
 		struct mtk_cam_img_working_buf_entry *buf = &ctx->img_buf_pool.img_working_buf[i];
 		int offset;
@@ -241,8 +243,8 @@ int mtk_cam_img_working_buf_pool_init(struct mtk_cam_ctx *ctx, int buf_num,
 		list_add_tail(&buf->list_entry, &ctx->img_buf_pool.cam_freeimglist.list);
 		ctx->img_buf_pool.cam_freeimglist.cnt++;
 	}
-
 	spin_unlock(&ctx->img_buf_pool.cam_freeimglist.lock);
+
 	dev_info(ctx->cam->dev,
 		 "%s: ctx(%d): image buffers init, freebuf cnt(%d)\n",
 		 __func__, ctx->stream_id, ctx->img_buf_pool.cam_freeimglist.cnt);
@@ -252,12 +254,16 @@ int mtk_cam_img_working_buf_pool_init(struct mtk_cam_ctx *ctx, int buf_num,
 
 void mtk_cam_img_working_buf_pool_release(struct mtk_cam_ctx *ctx)
 {
+	int fd;
 	struct mtk_ccd *ccd = ctx->cam->rproc_handle->priv;
 	struct mem_obj smem;
 
 	smem.va = ctx->img_buf_pool.working_img_buf_va;
 	smem.iova = ctx->img_buf_pool.working_img_buf_iova;
 	smem.len = ctx->img_buf_pool.working_img_buf_size;
+	/* Todo: remove img fd buffer may casue img buffer leakage */
+	fd = ctx->img_buf_pool.working_img_buf_fd;
+	mtk_ccd_put_buffer_fd(ccd, &smem, fd);
 	mtk_ccd_put_buffer(ccd, &smem);
 	ctx->img_buf_pool.working_img_buf_size = 0;
 

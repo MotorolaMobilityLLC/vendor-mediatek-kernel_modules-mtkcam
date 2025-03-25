@@ -68,7 +68,6 @@ static struct mtk_ccd_buf *mtk_ccd_buf_alloc(
 		pr_info("dma_heap attach fail\n");
 		goto fail_alloc;
 	}
-
 #if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	buf->dma_sgt = dma_buf_map_attachment_unlocked(buf->db_attach,
 				DMA_BIDIRECTIONAL);
@@ -76,15 +75,14 @@ static struct mtk_ccd_buf *mtk_ccd_buf_alloc(
 	buf->dma_sgt = dma_buf_map_attachment(buf->db_attach,
 				DMA_BIDIRECTIONAL);
 #endif
-
 	if (IS_ERR(buf->dma_sgt)) {
 		pr_info("dma_heap map failed\n");
 		goto fail_map_attach;
 	}
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
-		ret = dma_buf_vmap_unlocked(buf->dbuf, &map);
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
+	ret = dma_buf_vmap_unlocked(buf->dbuf, &map);
 #else
-		ret = dma_buf_vmap(buf->dbuf, &map);
+	ret = dma_buf_vmap(buf->dbuf, &map);
 #endif
 	if (ret < 0) {
 		pr_info("dma_heap vmap failed\n");
@@ -99,7 +97,7 @@ static struct mtk_ccd_buf *mtk_ccd_buf_alloc(
 	return buf;
 
 fail_vmap:
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 	dma_buf_unmap_attachment_unlocked(
 		buf->db_attach, buf->dma_sgt, DMA_BIDIRECTIONAL);
 #else
@@ -117,7 +115,7 @@ static void mtk_ccd_buf_put(struct mtk_ccd_buf *buf)
 {
 	/* free va */
 	if (buf->vaddr) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		dma_buf_vunmap_unlocked(buf->dbuf, &buf->map);
 #else
 		dma_buf_vunmap(buf->dbuf, &buf->map);
@@ -126,12 +124,12 @@ static void mtk_ccd_buf_put(struct mtk_ccd_buf *buf)
 
 	/* free iova */
 	if (buf->db_attach && buf->dma_sgt) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
-	dma_buf_unmap_attachment_unlocked(
-		buf->db_attach, buf->dma_sgt, DMA_BIDIRECTIONAL);
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
+		dma_buf_unmap_attachment_unlocked(
+			buf->db_attach, buf->dma_sgt, DMA_BIDIRECTIONAL);
 #else
-	dma_buf_unmap_attachment(
-		buf->db_attach, buf->dma_sgt, DMA_BIDIRECTIONAL);
+		dma_buf_unmap_attachment(
+			buf->db_attach, buf->dma_sgt, DMA_BIDIRECTIONAL);
 #endif
 	}
 	if (buf->dbuf && buf->db_attach)
@@ -154,7 +152,7 @@ static void *mtk_ccd_buf_get_vaddr(struct mtk_ccd_buf *buf)
 	int ret = 0;
 
 	if (!buf->vaddr && buf->db_attach) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
 		ret = dma_buf_vmap_unlocked(buf->dbuf, &buf->map);
 #else
 		ret = dma_buf_vmap(buf->dbuf, &buf->map);
@@ -330,6 +328,64 @@ int mtk_ccd_get_buffer_fd(struct mtk_ccd *ccd, void *mem_priv)
 }
 EXPORT_SYMBOL_GPL(mtk_ccd_get_buffer_fd);
 
+int mtk_ccd_put_fd(struct mtk_ccd *ccd,
+			struct mem_obj *mem_buff_data,
+			unsigned int target_fd)
+{
+	unsigned int i, num_buffers;
+	dma_addr_t da;
+	void *va = NULL;
+	struct mtk_ccd_buf *buf = NULL;
+	struct mtk_ccd_mem *ccd_buffer = NULL;
+	struct mtk_ccd_memory *ccd_memory = ccd->ccd_memory;
+
+	num_buffers = ccd_memory->num_buffers;
+	if (unlikely(!num_buffers)) {
+		dev_info(ccd_memory->dev, "buffer queue is empty");
+		return -EINVAL;
+	}
+	for (i = 0; i < num_buffers; i++) {
+		ccd_buffer = &ccd_memory->bufs[i];
+		buf = (struct mtk_ccd_buf *)ccd_buffer->mem_priv;
+		va = mtk_ccd_buf_get_vaddr(buf);
+		da = mtk_ccd_buf_get_daddr(buf);
+		if (mem_buff_data->va == va &&
+			mem_buff_data->len == ccd_buffer->size) {
+			if (atomic_long_read(&buf->dbuf->file->f_count) > 1 &&
+			    current->files)
+				close_fd(target_fd);
+			else
+				dev_info(ccd_memory->dev,
+						 "%s user space signal exit to close fd already",
+						 __func__);
+			/* decrease file count */
+			dma_heap_buffer_free(buf->dbuf);
+			dev_dbg(ccd_memory->dev,
+					"put dma buf : %d, iova = %p, va = %p, fd = %d",
+					i, &mem_buff_data->iova, mem_buff_data->va, target_fd);
+			break;
+		}
+	}
+	if (unlikely(i == num_buffers)) {
+		dev_info(ccd_memory->dev,
+				"mismatch dma buf iova = %p, va = %p",
+				&mem_buff_data->iova, mem_buff_data->va);
+		return -EINVAL;
+	}
+	return 0;
+}
+int mtk_ccd_put_buffer_fd(struct mtk_ccd *ccd,
+				struct mem_obj *mem_buff_data,
+				unsigned int target_fd)
+{
+	if (ccd == NULL || mem_buff_data == NULL) {
+		pr_info("mtk_ccd or mem_obj is NULL\n");
+		return -EINVAL;
+	}
+	return mtk_ccd_put_fd(ccd, mem_buff_data, target_fd);
+}
+EXPORT_SYMBOL_GPL(mtk_ccd_put_buffer_fd);
 MODULE_LICENSE("GPL v2");
 MODULE_IMPORT_NS(DMA_BUF);
+MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
 MODULE_DESCRIPTION("MediaTek ccd memory interface");

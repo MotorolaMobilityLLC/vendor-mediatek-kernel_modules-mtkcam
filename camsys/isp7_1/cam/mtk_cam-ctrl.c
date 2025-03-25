@@ -786,7 +786,7 @@ void mtk_cam_req_seninf_change(struct mtk_cam_request *req)
 			writel(val | TG_SEN_MODE_CMOS_EN, raw_dev->base + REG_TG_SEN_MODE);
 
 			mtk_cam_stream_on(raw_dev, ctx);
-			mtk_ctx_watchdog_start(ctx, 4, raw_dev->id);
+
 			dev_info(raw_dev->dev, "%s: stream off seninf:%s\n",
 				 __func__, req_stream_data->seninf_old->name);
 			v4l2_subdev_call(req_stream_data->seninf_old, video, s_stream, 0);
@@ -2104,7 +2104,7 @@ static int mtk_camsys_raw_state_handle(struct mtk_raw_device *raw_dev,
 				"[SOF] HW_IMCOMPLETE state cnt(%d,%d),req(%d),ts(%llu)\n",
 				write_cnt, irq_info->write_cnt, req_stream_data->frame_seq_no,
 				irq_info->ts_ns / 1000);
-			*current_state = state_inner;
+			mutex_unlock(&ctx->cleanup_lock);
 			return STATE_RESULT_PASS_CQ_HW_DELAY;
 		}
 	}
@@ -2835,7 +2835,6 @@ static void mtk_camsys_raw_frame_start(struct mtk_raw_device *raw_dev,
 	/* Detect no frame done and trigger camsys dump for debugging */
 	mtk_cam_debug_detect_dequeue_failed(req_stream_data, 30, irq_info, raw_dev);
 	if (ctx->sensor) {
-		current_state = NULL;
 		if (mtk_cam_is_subsample(ctx))
 			state_handle_ret =
 			mtk_camsys_raw_subspl_state_handle(raw_dev, sensor_ctrl,
@@ -2844,46 +2843,6 @@ static void mtk_camsys_raw_frame_start(struct mtk_raw_device *raw_dev,
 			state_handle_ret =
 			mtk_camsys_raw_state_handle(raw_dev, sensor_ctrl,
 						&current_state, irq_info);
-
-		if (state_handle_ret == STATE_RESULT_PASS_CQ_HW_DELAY && current_state) {
-			int frame_seq_next;
-			struct mtk_cam_request *req_next;
-			bool trigger_raw_switch = false;
-			struct mtk_cam_request_stream_data *s_data_next;
-
-			req_stream_data = mtk_cam_ctrl_state_to_req_s_data(current_state);
-			/* check if we need to start raw switch */
-			frame_seq_next = req_stream_data->frame_seq_no + 1;
-			req_next = mtk_cam_get_req(ctx, frame_seq_next);
-			if (!req_next) {
-				dev_dbg(ctx->cam->dev, "%s next req (%d) not queued\n",
-					__func__, frame_seq_next);
-			} else {
-				dev_dbg(ctx->cam->dev,
-					"%s:req(%d) check: req->ctx_used:0x%x, req->ctx_link_update0x%x\n",
-					__func__, frame_seq_next, req_next->ctx_used,
-					req_next->ctx_link_update);
-				mutex_lock(&ctx->cam->queue_lock);
-				if ((req_next->ctx_used & (1 << ctx->stream_id))
-				    && mtk_cam_is_nonimmediate_switch_req(req_next, ctx->stream_id))
-					trigger_raw_switch = true;
-				else
-					dev_dbg(ctx->cam->dev, "%s next req (%d) no link stup\n",
-						__func__, frame_seq_next);
-				/**
-				 * release the lock once we know
-				 * if raw switch needs to be triggered or not here
-				 */
-				mutex_unlock(&ctx->cam->queue_lock);
-			}
-
-			if (trigger_raw_switch) {
-				mtk_cam_req_dump(req_stream_data, MTK_CAM_REQ_DUMP_DEQUEUE_FAILED,
-						 "No P1 done before raw switch", false);
-				s_data_next = mtk_cam_req_get_s_data(req_next, ctx->stream_id, 0);
-				mtk_camsys_raw_change_pipeline(ctx, &ctx->sensor_ctrl, s_data_next);
-			}
-		}
 
 		if (state_handle_ret != STATE_RESULT_TRIGGER_CQ) {
 			dev_dbg(raw_dev->dev, "[SOF] CQ drop s:%d deq:%d\n",
@@ -3528,33 +3487,35 @@ static void mtk_cam_handle_mux_switch(struct mtk_raw_device *raw_src,
 	dev_info(cam->dev, "%s, req->ctx_used:0x%x, req->ctx_link_update:0x%x\n",
 		 __func__, req->ctx_used, req->ctx_link_update);
 
-	for (i = 0; i < cam->max_stream_num; i++) {
-		if ((req->ctx_used & 1 << i) && (req->ctx_link_update & 1 << i)) {
-			stream_id = i;
-			ctx = &cam->ctxs[stream_id];
-			raw_dev = get_master_raw_dev(ctx->cam, ctx->pipe);
-			req_stream_data = mtk_cam_req_get_s_data(req, stream_id, 0);
-			dev_info(cam->dev, "%s: toggle for rawi\n", __func__);
+	if (req->flags & MTK_CAM_REQ_FLAG_SENINF_IMMEDIATE_UPDATE) {
+		for (i = 0; i < cam->max_stream_num; i++) {
+			if ((req->ctx_used & 1 << i) && (req->ctx_link_update & 1 << i)) {
+				stream_id = i;
+				ctx = &cam->ctxs[stream_id];
+				raw_dev = get_master_raw_dev(ctx->cam, ctx->pipe);
+				req_stream_data = mtk_cam_req_get_s_data(req, stream_id, 0);
+				dev_info(cam->dev, "%s: toggle for rawi\n", __func__);
 
-			enable_tg_db(raw_dev, 0);
-			enable_tg_db(raw_dev, 1);
-			toggle_db(raw_dev);
+				enable_tg_db(raw_dev, 0);
+				enable_tg_db(raw_dev, 1);
+				toggle_db(raw_dev);
 
-			for (j = 0; j < ctx->used_sv_num; j++) {
-				sv_dev = get_camsv_dev(cam, ctx->sv_pipe[j]);
-				mtk_cam_sv_toggle_tg_db(sv_dev);
-				mtk_cam_sv_toggle_db(sv_dev);
+				for (j = 0; j < ctx->used_sv_num; j++) {
+					sv_dev = get_camsv_dev(cam, ctx->sv_pipe[j]);
+					mtk_cam_sv_toggle_tg_db(sv_dev);
+					mtk_cam_sv_toggle_db(sv_dev);
+				}
+
+				for (j = 0; j < ctx->used_mraw_num; j++) {
+					mraw_dev = get_mraw_dev(cam, ctx->mraw_pipe[j]);
+					mtk_cam_mraw_toggle_tg_db(mraw_dev);
+					mtk_cam_mraw_toggle_db(mraw_dev);
+				}
 			}
-
-			for (j = 0; j < ctx->used_mraw_num; j++) {
-				mraw_dev = get_mraw_dev(cam, ctx->mraw_pipe[j]);
-				mtk_cam_mraw_toggle_tg_db(mraw_dev);
-				mtk_cam_mraw_toggle_db(mraw_dev);
-			}
-
-			INIT_WORK(&req->link_work, mtk_cam_link_change_worker);
-			queue_work(cam->link_change_wq, &req->link_work);
 		}
+
+		INIT_WORK(&req->link_work, mtk_cam_link_change_worker);
+		queue_work(cam->link_change_wq, &req->link_work);
 	}
 }
 
@@ -3776,12 +3737,6 @@ static void mtk_camsys_raw_cq_done(struct mtk_raw_device *raw_dev,
 			}
 		}
 
-		if (req->ctx_link_update & (1 << ctx->stream_id)) {
-			dev_info(raw_dev->dev, "%s: Skip frist CQ done's mtk_cam_stream_on\n",
-					 __func__);
-			return;
-		}
-
 		if (type == EXPOSURE_CHANGE_2_to_1 || type == EXPOSURE_CHANGE_3_to_1
 			|| type == EXPOSURE_CHANGE_1_to_2 || type == EXPOSURE_CHANGE_1_to_3) {
 			mtk_camsys_exp_switch_cam_mux(raw_dev, ctx, req_stream_data);
@@ -3975,74 +3930,57 @@ mtk_camsys_raw_prepare_frame_done(struct mtk_raw_device *raw_dev,
 	return true;
 }
 
-void
-mtk_camsys_raw_change_pipeline(struct mtk_cam_ctx *ctx,
+static void
+mtk_camsys_raw_change_pipeline(struct mtk_raw_device *raw_dev,
+			       struct mtk_cam_ctx *ctx,
 			       struct mtk_camsys_sensor_ctrl *sensor_ctrl,
-			       struct mtk_cam_request_stream_data *req_stream_data)
+			       unsigned int dequeued_frame_seq_no)
 {
-	struct mtk_cam_request *req = mtk_cam_s_data_get_req(req_stream_data);
-	int frame_seq = req_stream_data->frame_seq_no;
-	struct mtk_cam_working_buf_entry *buf_entry;
-	dma_addr_t base_addr;
-	u64 ts_ns;
-	struct mtk_raw_device *raw_dev;
+	int i;
+	struct mtk_cam_device *cam = raw_dev->cam;
+	struct mtk_cam_request *req;
+	struct mtk_cam_request_stream_data *req_stream_data;
+	int frame_seq = dequeued_frame_seq_no + 1;
 
-	mutex_lock(&ctx->sensor_switch_op_lock);
+	req = mtk_cam_get_req(ctx, frame_seq);
 
-	dev_info(ctx->cam->dev, "Exchange streams at seq(%d), update link ctx (0x%x)\n",
-		req_stream_data->frame_seq_no, req->ctx_link_update);
-
-	v4l2_subdev_call(req_stream_data->seninf_new, video, s_stream, 1);
-	mtk_cam_sensor_switch_stop_reinit_hw(ctx, req_stream_data, ctx->stream_id);
-
-	spin_lock(&ctx->composed_buffer_list.lock);
-	if (list_empty(&ctx->composed_buffer_list.list)) {
-		req_stream_data->flags |= MTK_CAM_REQ_S_DATA_FLAG_SENSOR_SWITCH_BACKEND_DELAYED;
-		dev_info(ctx->cam->dev,
-			"RAW SWITCH delay, no buffer update, cq_num:%d, frame_seq:%d\n",
-			ctx->composed_frame_seq_no, frame_seq);
-		spin_unlock(&ctx->composed_buffer_list.lock);
-		mutex_unlock(&ctx->sensor_switch_op_lock);
+	if (!req) {
+		dev_dbg(raw_dev->dev, "%s next req (%d) not queued\n", __func__, frame_seq);
 		return;
 	}
 
-	buf_entry = list_first_entry(&ctx->composed_buffer_list.list,
-					 struct mtk_cam_working_buf_entry,
-					 list_entry);
-	list_del(&buf_entry->list_entry);
-	ctx->composed_buffer_list.cnt--;
-	spin_unlock(&ctx->composed_buffer_list.lock);
-	spin_lock(&ctx->processing_buffer_list.lock);
-	list_add_tail(&buf_entry->list_entry,
-			  &ctx->processing_buffer_list.list);
-	ctx->processing_buffer_list.cnt++;
-	spin_unlock(&ctx->processing_buffer_list.lock);
-	base_addr = buf_entry->buffer.iova;
-
-
-	raw_dev = get_master_raw_dev(ctx->cam, ctx->pipe);
-	apply_cq(raw_dev, 1, base_addr,
-		buf_entry->cq_desc_size,
-		buf_entry->cq_desc_offset,
-		buf_entry->sub_cq_desc_size,
-		buf_entry->sub_cq_desc_offset);
-	ts_ns = ktime_get_boottime_ns();
-
-	if (mtk_cam_feature_is_with_w_channel(buf_entry->s_data->feature.raw_feature)) {
-		if (mtk_cam_sv_rgbw_apply_next_buffer(buf_entry->s_data) == 0)
-			dev_info(raw_dev->dev, "rgbw: sv apply next buffer failed");
+	if (!req->ctx_link_update) {
+		dev_dbg(raw_dev->dev, "%s next req (%d) no link setup\n", __func__, frame_seq);
+		return;
 	}
 
-	if (ctx->used_sv_num) {
-		if (mtk_cam_sv_apply_switch_buffers(ctx) == 0)
-			dev_info(raw_dev->dev, "sv apply switch buffers failed");
-	}
+	dev_dbg(raw_dev->dev, "%s:req(%d) check: req->ctx_used:0x%x, req->ctx_link_update0x%x\n",
+		__func__, frame_seq, req->ctx_used, req->ctx_link_update);
 
-	if (ctx->used_mraw_num) {
-		if (mtk_cam_mraw_apply_switch_buffers(ctx) == 0)
-			dev_info(raw_dev->dev, "mraw apply switch buffers failed");
+	/* Check if all ctx is ready to change link */
+	for (i = 0; i < cam->max_stream_num; i++) {
+		if ((req->ctx_used & 1 << i) && (req->ctx_link_update & (1 << i))) {
+			/**
+			 * Switch cammux double buffer write delay, we have to disable the
+			 * mux (mask the data and sof to raw) and than switch it.
+			 */
+			req_stream_data = mtk_cam_req_get_s_data(req, i, 0);
+			if (req_stream_data->state.estate == E_STATE_CAMMUX_OUTER_CFG_DELAY) {
+				/**
+				 * To be move to the start of frame done hanlding
+				 * INIT_WORK(&req->link_work, mtk_cam_link_change_worker);
+				 * queue_work(cam->link_change_wq, &req->link_work);
+				 */
+				dev_info(raw_dev->dev, "%s:req(%d) Exchange streams at req(%d), update link ctx (0x%x)\n",
+					__func__, frame_seq, ctx->stream_id, req->ctx_link_update);
+				mtk_cam_req_seninf_change(req);
+				return;
+			}
+		}
 	}
-	mutex_unlock(&ctx->sensor_switch_op_lock);
+	dev_info(raw_dev->dev, "%s:req(%d) no link update data found!\n",
+		__func__, frame_seq);
+
 }
 
 static void mtk_cam_handle_frame_done(struct mtk_cam_ctx *ctx,
@@ -4085,6 +4023,10 @@ static void mtk_cam_handle_frame_done(struct mtk_cam_ctx *ctx,
 		mutex_lock(&ctx->cam->queue_lock);
 		mtk_cam_dev_req_try_queue(ctx->cam);
 		mutex_unlock(&ctx->cam->queue_lock);
+		if (is_raw_subdev(pipe_id))
+			mtk_camsys_raw_change_pipeline(raw_dev, ctx,
+						       &ctx->sensor_ctrl,
+						       frame_seq_no);
 	}
 }
 
@@ -4708,8 +4650,7 @@ static bool mtk_camsys_is_all_cq_done(struct mtk_cam_ctx *ctx,
 	}
 	spin_unlock(&ctx->first_cq_lock);
 	dev_info(ctx->cam->dev, "[1st-CQD] all done:%d, pipe_id:%d (using raw/mraw:%d/%d)\n",
-		ret, pipe_id, ctx->used_raw_num, ctx->used_mraw_num);
-
+		ctx->is_first_cq_done, pipe_id, ctx->used_raw_num, ctx->used_mraw_num);
 EXIT:
 	return ret;
 }

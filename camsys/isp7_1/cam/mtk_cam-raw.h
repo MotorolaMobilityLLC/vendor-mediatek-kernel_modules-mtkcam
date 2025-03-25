@@ -268,6 +268,7 @@ struct mtk_raw_pipeline {
 	s64 hw_mode_pending;
 	/* Frame sync */
 	int fs_config;
+	struct v4l2_subdev_fh *fh;
 };
 
 struct mtk_raw_device {
