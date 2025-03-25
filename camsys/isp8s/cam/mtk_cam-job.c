@@ -3539,6 +3539,44 @@ _job_pack_only_sv(struct mtk_cam_job *job,
 	return ret;
 }
 
+int fill_sv_bin_imgo_to_ipi_frame(
+	struct req_buffer_helper *helper, struct mtk_cam_buffer *buf,
+	struct mtk_cam_video_device *node)
+{
+	struct mtk_cam_job *job = helper->job;
+	struct mtk_cam_ctx *ctx = job->src_ctx;
+	unsigned int pipe_id, tag_idx, job_exp_no;
+	struct mtkcam_ipi_frame_param *fp = helper->fp;
+	struct mtkcam_ipi_img_output *out;
+	struct mtk_camsv_device *sv_dev;
+	int ret = 0;
+	bool is_fusion;
+
+	if (ctx->hw_sv == NULL)
+		return -1;
+
+	sv_dev = dev_get_drvdata(ctx->hw_sv);
+	pipe_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
+	job_exp_no = job_sensor_exp_num(job);
+	is_fusion = job_sensor_exp_num(job) == job_exp_num(job) ? true : false;
+	tag_idx =
+		get_sv_tag_idx(job_exp_no, MTKCAM_IPI_ORDER_LAST_TAG, false,
+			is_dcg_with_vs(job), is_fusion);
+	if (tag_idx == -1) {
+		ret = -1;
+		pr_info("%s: tag_idx not found(exp_no:%d)", __func__, job_exp_no);
+	}
+	out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[4];
+	ret = fill_img_out(helper, out, buf, node);
+	out->uid.pipe_id = pipe_id;
+	fp->camsv_param[0][tag_idx].bin_enable = true;
+	if (CAM_DEBUG_ENABLED(IPI_BUF))
+		pr_info("%s: tag_idx %d, iova %llx, size %u, fmt fmt/w/h/stride:%d/%d/%d/%d",
+			__func__, tag_idx, out->buf[0][0].iova, out->buf[0][0].size,
+			out->fmt.format, out->fmt.s.w, out->fmt.s.h, out->fmt.stride[0]);
+
+	return ret;
+}
 static int fill_raw_img_buffer_to_ipi_frame(
 	struct req_buffer_helper *helper, struct mtk_cam_buffer *buf,
 	struct mtk_cam_video_device *node)
@@ -4593,6 +4631,7 @@ static struct pack_job_ops_helper subsample_pack_helper = {
 	.update_raw_imgo_to_ipi = fill_imgo_img_buffer_to_ipi_frame_subsample,
 	.update_raw_yuvo_to_ipi = fill_yuvo_img_buffer_to_ipi_frame_subsample,
 	.append_work_buf_to_ipi = NULL,
+	.update_sv_bin_imgo_to_ipi = NULL,
 };
 
 static struct pack_job_ops_helper otf_pack_helper = {
@@ -4602,6 +4641,7 @@ static struct pack_job_ops_helper otf_pack_helper = {
 	.update_raw_imgo_to_ipi = fill_imgo_buf_to_ipi_normal,
 	.update_raw_yuvo_to_ipi = NULL,
 	.append_work_buf_to_ipi = update_work_buffer_to_ipi_frame,
+	.update_sv_bin_imgo_to_ipi = NULL,
 };
 
 static struct pack_job_ops_helper stagger_pack_helper = {
@@ -4611,6 +4651,7 @@ static struct pack_job_ops_helper stagger_pack_helper = {
 	.update_raw_imgo_to_ipi = fill_imgo_buf_to_ipi_stagger,
 	.update_raw_yuvo_to_ipi = NULL,
 	.append_work_buf_to_ipi = update_work_buffer_to_ipi_frame,
+	.update_sv_bin_imgo_to_ipi = fill_sv_bin_imgo_to_ipi_frame,
 };
 static struct pack_job_ops_helper extisp_pack_helper = {
 	.pack_job = _job_pack_extisp,
@@ -4619,6 +4660,7 @@ static struct pack_job_ops_helper extisp_pack_helper = {
 	.update_raw_imgo_to_ipi = fill_imgo_buf_to_ipi_normal,
 	.update_raw_yuvo_to_ipi = NULL,
 	.append_work_buf_to_ipi = update_work_buffer_to_ipi_frame,
+	.update_sv_bin_imgo_to_ipi = NULL,
 };
 
 static struct pack_job_ops_helper m2m_pack_helper = {
@@ -4628,6 +4670,7 @@ static struct pack_job_ops_helper m2m_pack_helper = {
 	.update_raw_imgo_to_ipi = NULL,
 	.update_raw_yuvo_to_ipi = NULL,
 	.append_work_buf_to_ipi = NULL,
+	.update_sv_bin_imgo_to_ipi = NULL,
 };
 
 static struct pack_job_ops_helper timeshare_pack_helper = {
@@ -4637,6 +4680,7 @@ static struct pack_job_ops_helper timeshare_pack_helper = {
 	.update_raw_imgo_to_ipi = NULL,
 	.update_raw_yuvo_to_ipi = NULL,
 	.append_work_buf_to_ipi = update_ts_work_buffer_to_ipi_frame,
+	.update_sv_bin_imgo_to_ipi = NULL,
 };
 
 static struct pack_job_ops_helper mstream_pack_helper = {
@@ -4647,6 +4691,7 @@ static struct pack_job_ops_helper mstream_pack_helper = {
 	.update_raw_imgo_to_ipi = fill_imgo_buf_to_ipi_mstream,
 	.update_raw_yuvo_to_ipi = NULL,
 	.append_work_buf_to_ipi = update_work_buffer_to_ipi_frame,
+	.update_sv_bin_imgo_to_ipi = NULL,
 };
 
 static struct pack_job_ops_helper only_sv_pack_helper = {
@@ -5546,6 +5591,14 @@ static int update_scen_order_to_config(struct mtk_cam_scen *scen,
 	return 0;
 }
 
+static bool scen_support_sv_bin(const struct mtk_cam_scen *scen)
+{
+	if (scen_is_normal(scen))
+		return !!(scen->scen.normal.exp_for_camsv_bin);
+
+	return false;
+}
+
 static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 				       struct mtkcam_ipi_config_param *config)
 {
@@ -5602,6 +5655,9 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 		for (i = SVTAG_START; i < SVTAG_END; i++) {
 			if (job->enabled_tags & (1 << i)) {
 				sv_input = &config->sv_input[0][i];
+
+				if (scen_support_sv_bin(&job->job_scen))
+					sv_input->is_sv_bin = true;
 
 				sv_input->dev_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
 				sv_input->tag_id = i;

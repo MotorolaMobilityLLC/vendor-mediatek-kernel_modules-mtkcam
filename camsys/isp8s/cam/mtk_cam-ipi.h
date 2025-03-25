@@ -122,6 +122,7 @@ struct mtkcam_ipi_sv_input_param {
 	__u8	is_unpack_msb;
 	__u8	is_early_return;
 	__u8	fps;
+	__u8	is_sv_bin;
 	struct mtkcam_ipi_input_param input;
 } __packed;
 
@@ -200,7 +201,7 @@ struct mtkcam_ipi_camsv_frame_param {
 	__u32	previous_sensor_exposure_num;
 	__u32	peak_bw;
 	__u8	cq_hw_rdy_enable;
-
+	__u8	bin_enable;
 	struct mtkcam_ipi_meta_input pdp_meta_inputs;
 	struct mtkcam_ipi_img_output camsv_img_outputs[CAMSV_MAX_IMAGE_OUTPUT];
 } __packed;
