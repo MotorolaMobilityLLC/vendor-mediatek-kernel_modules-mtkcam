@@ -3011,30 +3011,51 @@ void set_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 	}
 
 	if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+		u64 aeb_ae_ctrl_cnt;
+
 		spin_lock(&ctx->aeb_ae_ctrl_cnt_lock);
 		ctx->aeb_ae_ctrl_cnt++;
+		aeb_ae_ctrl_cnt = ctx->aeb_ae_ctrl_cnt;
 		spin_unlock(&ctx->aeb_ae_ctrl_cnt_lock);
+		DRV_LOG(ctx,
+			"sid:%u,shutter(input/lut):0x%llx/%llx/%llx,%x/%x/%x,flInLUT(input/ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u/%u,flick_en:%d,delay_frame:%u,fl(pre_store):%u/%u/%u/%u/%u,aeb_ctrl_cnt:%llu\n",
+			ctx->current_scenario_id,
+			shutters[0], shutters[1], shutters[2],
+			cit_in_lut[0], cit_in_lut[1], cit_in_lut[2],
+			frame_length, ctx->frame_length,
+			ctx->frame_length_in_lut[0],
+			ctx->frame_length_in_lut[1],
+			ctx->frame_length_in_lut[2],
+			ctx->frame_length_in_lut[3],
+			ctx->frame_length_in_lut[4],
+			ctx->autoflicker_en,
+			ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame,
+			ctx->frame_length_pre_store_in_lut[0],
+			ctx->frame_length_pre_store_in_lut[1],
+			ctx->frame_length_pre_store_in_lut[2],
+			ctx->frame_length_pre_store_in_lut[3],
+			ctx->frame_length_pre_store_in_lut[4],
+			aeb_ae_ctrl_cnt);
+	} else {
+		DRV_LOG(ctx,
+			"sid:%u,shutter(input/lut):0x%llx/%llx/%llx,%x/%x/%x,flInLUT(input/ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u/%u,flick_en:%d,delay_frame:%u,fl(pre_store):%u/%u/%u/%u/%u\n",
+			ctx->current_scenario_id,
+			shutters[0], shutters[1], shutters[2],
+			cit_in_lut[0], cit_in_lut[1], cit_in_lut[2],
+			frame_length, ctx->frame_length,
+			ctx->frame_length_in_lut[0],
+			ctx->frame_length_in_lut[1],
+			ctx->frame_length_in_lut[2],
+			ctx->frame_length_in_lut[3],
+			ctx->frame_length_in_lut[4],
+			ctx->autoflicker_en,
+			ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame,
+			ctx->frame_length_pre_store_in_lut[0],
+			ctx->frame_length_pre_store_in_lut[1],
+			ctx->frame_length_pre_store_in_lut[2],
+			ctx->frame_length_pre_store_in_lut[3],
+			ctx->frame_length_pre_store_in_lut[4]);
 	}
-
-	DRV_LOG(ctx,
-		"sid:%u,shutter(input/lut):0x%llx/%llx/%llx,%x/%x/%x,flInLUT(input/ctx/output_a/b/c/d/e):%u/%u/%u/%u/%u/%u/%u,flick_en:%d,delay_frame:%u,fl(pre_store):%u/%u/%u/%u/%u,aeb_ctrl_cnt:%llu\n",
-		ctx->current_scenario_id,
-		shutters[0], shutters[1], shutters[2],
-		cit_in_lut[0], cit_in_lut[1], cit_in_lut[2],
-		frame_length, ctx->frame_length,
-		ctx->frame_length_in_lut[0],
-		ctx->frame_length_in_lut[1],
-		ctx->frame_length_in_lut[2],
-		ctx->frame_length_in_lut[3],
-		ctx->frame_length_in_lut[4],
-		ctx->autoflicker_en,
-		ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame,
-		ctx->frame_length_pre_store_in_lut[0],
-		ctx->frame_length_pre_store_in_lut[1],
-		ctx->frame_length_pre_store_in_lut[2],
-		ctx->frame_length_pre_store_in_lut[3],
-		ctx->frame_length_pre_store_in_lut[4],
-		ctx->aeb_ae_ctrl_cnt);
 	if (!ctx->ae_ctrl_gph_en) {
 		if (gph)
 			ctx->s_ctx.s_gph((void *)ctx, 0);
@@ -5372,8 +5393,7 @@ int common_open(struct subdrv_ctx *ctx)
 	ctx->sof_cnt = 0;
 	ctx->ref_sof_cnt = 0;
 	ctx->is_streaming = 0;
-	ctx->aeb_ae_ctrl_cnt = 0;
-	ctx->aeb_ae_ctrl_cnt_last = 0;
+
 	if (ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_LBMF) {
 		memset(ctx->frame_length_in_lut, 0,
 			sizeof(ctx->frame_length_in_lut));
@@ -5383,6 +5403,10 @@ int common_open(struct subdrv_ctx *ctx)
 		switch (ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt) {
 		case 2:
 			if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+				spin_lock(&ctx->aeb_ae_ctrl_cnt_lock);
+				ctx->aeb_ae_ctrl_cnt = 0;
+				ctx->aeb_ae_ctrl_cnt_last = 0;
+				spin_unlock(&ctx->aeb_ae_ctrl_cnt_lock);
 				ctx->frame_length_in_lut[1] = ctx->readout_length + ctx->read_margin;
 				ctx->frame_length_pre_store_in_lut[1] =
 					ctx->frame_length_in_lut[1];
@@ -5399,6 +5423,10 @@ int common_open(struct subdrv_ctx *ctx)
 			break;
 		case 3:
 			if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+				spin_lock(&ctx->aeb_ae_ctrl_cnt_lock);
+				ctx->aeb_ae_ctrl_cnt = 0;
+				ctx->aeb_ae_ctrl_cnt_last = 0;
+				spin_unlock(&ctx->aeb_ae_ctrl_cnt_lock);
 				ctx->frame_length_in_lut[2] = ctx->readout_length + ctx->read_margin;
 				ctx->frame_length_pre_store_in_lut[2] =
 					ctx->frame_length_in_lut[2];
@@ -5954,8 +5982,7 @@ void update_mode_info(struct subdrv_ctx *ctx, enum SENSOR_SCENARIO_ID_ENUM scena
 	ctx->autoflicker_en = FALSE;
 	ctx->l_shift = 0;
 	ctx->min_vblanking_line = ctx->s_ctx.mode[scenario_id].min_vblanking_line;
-	ctx->aeb_ae_ctrl_cnt = 0;
-	ctx->aeb_ae_ctrl_cnt_last = 0;
+
 	if (ctx->s_ctx.mode[scenario_id].hdr_mode == HDR_RAW_LBMF) {
 		memset(ctx->frame_length_in_lut, 0,
 			sizeof(ctx->frame_length_in_lut));
@@ -5965,6 +5992,10 @@ void update_mode_info(struct subdrv_ctx *ctx, enum SENSOR_SCENARIO_ID_ENUM scena
 		switch (ctx->s_ctx.mode[scenario_id].exp_cnt) {
 		case 2:
 			if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+				spin_lock(&ctx->aeb_ae_ctrl_cnt_lock);
+				ctx->aeb_ae_ctrl_cnt = 0;
+				ctx->aeb_ae_ctrl_cnt_last = 0;
+				spin_unlock(&ctx->aeb_ae_ctrl_cnt_lock);
 				ctx->frame_length_in_lut[1] = ctx->readout_length + ctx->read_margin;
 				ctx->frame_length_pre_store_in_lut[1] =
 					ctx->frame_length_in_lut[1];
@@ -5981,6 +6012,10 @@ void update_mode_info(struct subdrv_ctx *ctx, enum SENSOR_SCENARIO_ID_ENUM scena
 			break;
 		case 3:
 			if (ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame == 2) {
+				spin_lock(&ctx->aeb_ae_ctrl_cnt_lock);
+				ctx->aeb_ae_ctrl_cnt = 0;
+				ctx->aeb_ae_ctrl_cnt_last = 0;
+				spin_unlock(&ctx->aeb_ae_ctrl_cnt_lock);
 				ctx->frame_length_in_lut[2] = ctx->readout_length + ctx->read_margin;
 				ctx->frame_length_pre_store_in_lut[2] =
 					ctx->frame_length_in_lut[2];
