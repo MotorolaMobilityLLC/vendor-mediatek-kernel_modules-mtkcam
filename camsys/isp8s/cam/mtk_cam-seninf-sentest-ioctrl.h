@@ -12,4 +12,6 @@
 
 int seninf_sentest_ioctl_entry(struct seninf_ctx *ctx, void *arg);
 
+int s_sentest_max_isp_clk_clk_en_for_set_ctrl(struct seninf_ctx *ctx, u32 en);
+
 #endif

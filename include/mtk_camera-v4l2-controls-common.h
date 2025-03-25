@@ -581,6 +581,9 @@ typedef int (*fake_sensor_cb_handler_func_ptr)(
 #define V4L2_CID_MTK_SENINF_EINT_IRQ_EN \
 	(V4L2_CID_USER_MTK_SENINF_BASE + 9)
 
+#define V4L2_CID_MTK_SENINF_SET_ISP_CLK_EN \
+	(V4L2_CID_USER_MTK_SENINF_BASE + 10)
+
 /* C A M S Y S */
 
 #define V4L2_MBUS_FRAMEFMT_PAD_ENABLE  BIT(1)

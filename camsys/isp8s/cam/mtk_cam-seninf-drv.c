@@ -1126,28 +1126,25 @@ static int mtk_cam_seninf_rdy_mask_probe(struct seninf_core *core)
 	struct device *dev = core->dev;
 	int ret = 0;
 
-	if (of_property_read_u32(dev->of_node, "normal_cam_rdy_msk_grp_id_start",
+	if (of_property_read_u32(dev->of_node, "normal-cam-rdy-msk-grp-id-start",
 		&core->rdy_msk_grp_id_start)) {
-		dev_err(dev, "[%s] get normal_cam_rdy_msk_grp_id_start failed\n", __func__);
+		dev_err(dev, "[%s] get normal-cam-rdy-msk-grp-id-start failed\n", __func__);
 	}
 
-	if (of_property_read_u32(dev->of_node, "normal_cam_rdy_msk_grp_id_end",
+	if (of_property_read_u32(dev->of_node, "normal-cam-rdy-msk-grp-id-end",
 		&core->rdy_msk_grp_id_end)) {
-		dev_err(dev, "[%s] get normal_cam_rdy_msk_grp_id_end failed\n", __func__);
+		dev_err(dev, "[%s] get normal-cam-rdy-msk-grp-id-end failed\n", __func__);
 	}
 
-	if (of_property_read_u32(dev->of_node, "security_cam_rdy_msk_grp_id_start",
+	if (of_property_read_u32(dev->of_node, "security-cam-rdy-msk-grp-id-start",
 		&core->rdy_msk_sec_cam_grp_id_start)) {
-		dev_err(dev, "[%s] get security_cam_rdy_msk_grp_id_start failed\n", __func__);
+		dev_err(dev, "[%s] get security-cam-rdy-msk-grp-id-start failed\n", __func__);
 	}
 
-	if (of_property_read_u32(dev->of_node, "security_cam_rdy_msk_grp_id_end",
+	if (of_property_read_u32(dev->of_node, "security-cam-rdy-msk-grp-id-end",
 		&core->rdy_msk_sec_cam_grp_id_end)) {
-		dev_err(dev, "[%s] get security_cam_rdy_msk_grp_id_end failed\n", __func__);
+		dev_err(dev, "[%s] get security-cam-rdy-msk-grp-id-end failed\n", __func__);
 	}
-
-	core->rdy_msk_grp_id_start = 0;
-	core->rdy_msk_grp_id_end = 9;
 
 	dev_info(dev, "[%s] rdy_msk_grp_id_start %u\n", __func__, core->rdy_msk_grp_id_start);
 	dev_info(dev, "[%s] rdy_msk_grp_id_end %u\n", __func__, core->rdy_msk_grp_id_end);
@@ -3419,6 +3416,10 @@ static int mtk_cam_seninf_set_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_REAL_SENSOR_FOR_AOV_PARAM:
 		ret = seninf_real_sensor_for_aov_param(ctx, ctrl->val);
 		break;
+
+	case V4L2_CID_MTK_SENINF_SET_ISP_CLK_EN:
+		ret = s_sentest_max_isp_clk_clk_en_for_set_ctrl(ctx, ctrl->val);
+		break;
 	default:
 		ret = 0;
 		dev_info(ctx->dev, "%s Unhandled id:0x%x, val:0x%x\n",
@@ -3621,6 +3622,16 @@ static const struct v4l2_ctrl_config cfg_seninf_eint_irq_en = {
 	.step = 1,
 };
 
+static const struct v4l2_ctrl_config cfg_seninf_isp_clk_en = {
+	.ops = &seninf_ctrl_ops,
+	.id = V4L2_CID_MTK_SENINF_SET_ISP_CLK_EN,
+	.name = "seninf_isp_clk_en",
+	.type = V4L2_CTRL_TYPE_INTEGER,
+	.flags = V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
+	.max = 0x7fffffff,
+	.step = 1,
+};
+
 static int seninf_initialize_controls(struct seninf_ctx *ctx)
 {
 	struct v4l2_ctrl_handler *handler;
@@ -3646,6 +3657,7 @@ static int seninf_initialize_controls(struct seninf_ctx *ctx)
 	v4l2_ctrl_new_custom(handler, &cfg_s_real_sensor_for_aov_param, NULL);
 	v4l2_ctrl_new_custom(handler, &cfg_g_csi2_irq_status, NULL);
 	v4l2_ctrl_new_custom(handler, &cfg_seninf_eint_irq_en, NULL);
+	v4l2_ctrl_new_custom(handler, &cfg_seninf_isp_clk_en, NULL);
 
 	if (handler->error) {
 		ret = handler->error;

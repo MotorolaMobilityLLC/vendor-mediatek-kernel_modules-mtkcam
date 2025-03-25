@@ -399,9 +399,10 @@ enum SENTEST_SEAMLESS_STATUS {
 	"clk_top_ap_step3", \
 	"clk_top_ap_step4", \
 	"clk_top_ap_step5", \
+	"mmdvfs_mux", \
 	"clk_hw_ccf_cam_main", \
 	"clk_hw_ccf_csi_bs", \
-	"mmdvfs_mux", \
+
 
 enum {
 	CLK_FMETER_ISP = 0,

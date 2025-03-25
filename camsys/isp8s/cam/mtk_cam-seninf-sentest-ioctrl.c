@@ -16,6 +16,21 @@ struct seninf_sentest_ioctl {
 	int (*func)(struct seninf_ctx *ctx, void *arg);
 };
 
+int s_sentest_max_isp_clk_clk_en_for_set_ctrl(struct seninf_ctx *ctx, u32 en)
+{
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s][ERROR] ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	ctx->sentest_adjust_isp_en = en;
+
+	dev_info(ctx->dev, "[%s] en: %d, sentest_adjust_isp_en is %d\n",
+				__func__, en, ctx->sentest_adjust_isp_en);
+
+	return 0;
+}
+
 static int s_sentest_max_isp_clk_en(struct seninf_ctx *ctx, void *arg)
 {
 	int *en = kmalloc(sizeof(int), GFP_KERNEL);
