@@ -31,5 +31,7 @@ static u16 fake_custom1_setting[] = {};
 static u16 fake_custom2_setting[] = {};
 static u16 fake_custom3_setting[] = {};
 static u16 fake_custom4_setting[] = {};
+static u16 fake_custom5_setting[] = {};
+static u16 fake_custom6_setting[] = {};
 
 #endif
