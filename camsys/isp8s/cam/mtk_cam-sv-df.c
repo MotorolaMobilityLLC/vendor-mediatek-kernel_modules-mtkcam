@@ -44,6 +44,49 @@ static void sv_df_policy_make(struct mtk_cam_sv_df_mgr *sv_df_mgr)
 	unsigned long long total_bw = 0;
 	unsigned int total_fifo_num = 0;
 
+	/* reset pending action */
+	for (i = 0; i < MAX_SV_DF_HW_NUM; i++) {
+		dev_info = &sv_df_mgr->dev_info[i];
+		if (dev_info->state == SV_DF_ST_IDLE ||
+			dev_info->state == SV_DF_ST_PENDING) {
+			pending_action = &dev_info->pending_action;
+			if (pending_action->actions[DF_CORE_IDX].action ==
+					SV_DF_REQ_ENQ) {
+				dev_info->cfg_fifo_num -=
+					pending_action->actions[DF_CORE_IDX].req_num;
+				dev_info->port_info[DF_CORE_IDX].cfg_fifo_num -=
+					pending_action->actions[DF_CORE_IDX].req_num;
+				sv_df_mgr->avai_fifo_num +=
+					pending_action->actions[DF_CORE_IDX].req_num;
+
+				pending_action->actions[DF_CORE_IDX].action =
+					SV_DF_REQ_NONE;
+				pending_action->actions[DF_CORE_IDX].req_num = 0;
+			}
+		}
+	}
+
+	for (i = 0; i < MAX_SV_DF_HW_NUM; i++) {
+		dev_info = &sv_df_mgr->dev_info[i];
+		if (dev_info->state == SV_DF_ST_IDLE ||
+			dev_info->state == SV_DF_ST_PENDING) {
+			pending_action = &dev_info->pending_action;
+			if (pending_action->actions[DF_CORE_IDX].action ==
+					SV_DF_REQ_DEQ) {
+				dev_info->cfg_fifo_num +=
+					pending_action->actions[DF_CORE_IDX].req_num;
+				dev_info->port_info[DF_CORE_IDX].cfg_fifo_num +=
+					pending_action->actions[DF_CORE_IDX].req_num;
+				sv_df_mgr->avai_fifo_num -=
+					pending_action->actions[DF_CORE_IDX].req_num;
+
+				pending_action->actions[DF_CORE_IDX].action =
+					SV_DF_REQ_NONE;
+				pending_action->actions[DF_CORE_IDX].req_num = 0;
+			}
+		}
+	}
+
 	avai_fifo_num = sv_df_mgr->avai_fifo_num;
 	sv_df_mgr->avai_fifo_num = 0;
 	total_fifo_num += avai_fifo_num;
@@ -58,11 +101,20 @@ static void sv_df_policy_make(struct mtk_cam_sv_df_mgr *sv_df_mgr)
 		}
 	}
 
+	if (enable_sv_df_log) {
+		pr_info("%s total_bw:%llu total_fifo_num:%d\n",
+			__func__, total_bw, total_fifo_num);
+		mtk_cam_sv_df_debug_dump(sv_df_mgr, "original");
+	}
+
 	/* deq */
 	for (i = 0; i < MAX_SV_DF_HW_NUM; i++) {
 		dev_info = &sv_df_mgr->dev_info[i];
-		if (dev_info->state == SV_DF_ST_IDLE ||
-			dev_info->state == SV_DF_ST_PENDING) {
+		pending_action = &dev_info->pending_action;
+		if ((dev_info->state == SV_DF_ST_IDLE ||
+				dev_info->state == SV_DF_ST_PENDING) &&
+			(pending_action->actions[DF_CORE_IDX].action ==
+				SV_DF_REQ_NONE)) {
 			optimal_fifo_num =
 				total_fifo_num * dev_info->applied_bw / total_bw;
 			dev_fifo_num = dev_info->non_cfg_fifo_num +
@@ -73,9 +125,8 @@ static void sv_df_policy_make(struct mtk_cam_sv_df_mgr *sv_df_mgr)
 				cfg_fifo_num = port_info->cfg_fifo_num;
 				free_fifo_num = 0;
 				while (cfg_fifo_num &&
-					(dev_fifo_num - free_fifo_num >= optimal_fifo_num)) {
-					pending_action = &dev_info->pending_action;
-
+					((dev_fifo_num - free_fifo_num - DF_UNIT) >=
+						optimal_fifo_num)) {
 					pending_action->actions[DF_CORE_IDX].action =
 						SV_DF_REQ_DEQ;
 					pending_action->actions[DF_CORE_IDX].req_num +=
@@ -91,11 +142,17 @@ static void sv_df_policy_make(struct mtk_cam_sv_df_mgr *sv_df_mgr)
 		}
 	}
 
+	if (enable_sv_df_log)
+		mtk_cam_sv_df_debug_dump(sv_df_mgr, "after_deq");
+
 	/* enq */
 	for (i = 0; i < MAX_SV_DF_HW_NUM; i++) {
 		dev_info = &sv_df_mgr->dev_info[i];
-		if (dev_info->state == SV_DF_ST_IDLE ||
-			dev_info->state == SV_DF_ST_PENDING) {
+		pending_action = &dev_info->pending_action;
+		if ((dev_info->state == SV_DF_ST_IDLE ||
+				dev_info->state == SV_DF_ST_PENDING) &&
+			(pending_action->actions[DF_CORE_IDX].action ==
+				SV_DF_REQ_NONE)) {
 			optimal_fifo_num =
 				total_fifo_num * dev_info->applied_bw / total_bw;
 			dev_fifo_num = dev_info->non_cfg_fifo_num +
@@ -105,8 +162,6 @@ static void sv_df_policy_make(struct mtk_cam_sv_df_mgr *sv_df_mgr)
 				port_info = &dev_info->port_info[DF_CORE_IDX];
 				cfg_fifo_num = 0;
 				while (avai_fifo_num) {
-					pending_action = &dev_info->pending_action;
-
 					pending_action->actions[DF_CORE_IDX].action =
 						SV_DF_REQ_ENQ;
 					pending_action->actions[DF_CORE_IDX].req_num +=
@@ -125,6 +180,26 @@ static void sv_df_policy_make(struct mtk_cam_sv_df_mgr *sv_df_mgr)
 	}
 
 	sv_df_mgr->avai_fifo_num = avai_fifo_num;
+
+	/* update state */
+	for (i = 0; i < MAX_SV_DF_HW_NUM; i++) {
+		dev_info = &sv_df_mgr->dev_info[i];
+		pending_action = &dev_info->pending_action;
+
+		if ((dev_info->state == SV_DF_ST_IDLE) &&
+			!mtk_cam_sv_check_df_action_done(pending_action))
+			dev_info->state = SV_DF_ST_PENDING;
+
+		if ((dev_info->state == SV_DF_ST_PENDING) &&
+			mtk_cam_sv_check_df_action_done(pending_action))
+			dev_info->state = SV_DF_ST_IDLE;
+	}
+
+	if (enable_sv_df_log) {
+		mtk_cam_sv_df_debug_dump(sv_df_mgr, "after_enq");
+		pr_info("%s avai_fifo_num:%d\n",
+			__func__, sv_df_mgr->avai_fifo_num);
+	}
 }
 
 unsigned int mtk_cam_sv_df_get_non_cfg_fifo_num(unsigned int sv_idx,
@@ -141,6 +216,51 @@ unsigned int mtk_cam_sv_df_get_cfg_fifo_num(unsigned int sv_idx,
 			cfg_fifo_num[sv_idx][core_idx] : 0;
 }
 
+int mtk_cam_sv_df_mgr_init(struct mtk_cam_sv_df_mgr *sv_df_mgr)
+{
+	int ret = 0, i, j;
+
+	sv_df_mgr->avai_fifo_num = 0;
+
+	for (i = 0; i < MAX_SV_HW_NUM; i++) {
+		sv_df_mgr->dev_info[i].applied_bw = 0;
+		sv_df_mgr->dev_info[i].state = SV_DF_ST_NONE;
+		sv_df_mgr->dev_info[i].non_cfg_fifo_num = 0;
+		sv_df_mgr->dev_info[i].cfg_fifo_num = 0;
+		for (j = 0; j < MAX_DMA_CORE; j++) {
+			sv_df_mgr->dev_info[i].port_info[j].non_cfg_fifo_num =
+				mtk_cam_sv_df_get_non_cfg_fifo_num(i, j);
+			sv_df_mgr->dev_info[i].non_cfg_fifo_num +=
+				mtk_cam_sv_df_get_non_cfg_fifo_num(i, j);
+
+			sv_df_mgr->dev_info[i].port_info[j].cfg_fifo_num =
+				mtk_cam_sv_df_get_cfg_fifo_num(i, j);
+			sv_df_mgr->dev_info[i].cfg_fifo_num +=
+				mtk_cam_sv_df_get_cfg_fifo_num(i, j);
+
+			sv_df_mgr->dev_info[i].pending_action.actions[j].action =
+				SV_DF_REQ_NONE;
+			sv_df_mgr->dev_info[i].pending_action.actions[j].req_num = 0;
+		}
+	}
+
+	return ret;
+}
+
+unsigned int mtk_cam_sv_df_get_runtime_fifo_size(
+		struct mtk_cam_sv_df_mgr *sv_df_mgr,
+		unsigned int sv_idx, unsigned int core_idx)
+{
+	unsigned int fifo_num = 0;
+
+	mutex_lock(&sv_df_mgr->op_lock);
+	fifo_num += sv_df_mgr->dev_info[sv_idx].port_info[core_idx].cfg_fifo_num;
+	fifo_num += sv_df_mgr->dev_info[sv_idx].port_info[core_idx].non_cfg_fifo_num;
+	mutex_unlock(&sv_df_mgr->op_lock);
+
+	return fifo_num * 512;
+}
+
 int mtk_cam_sv_df_update_bw(struct mtk_cam_sv_df_mgr *sv_df_mgr,
 		unsigned int sv_idx, unsigned long long applied_bw)
 {
@@ -152,7 +272,8 @@ int mtk_cam_sv_df_update_bw(struct mtk_cam_sv_df_mgr *sv_df_mgr,
 
 	mutex_lock(&sv_df_mgr->op_lock);
 
-	if (sv_df_mgr->dev_info[sv_idx].state == SV_DF_ST_NONE)
+	if ((sv_df_mgr->dev_info[sv_idx].state == SV_DF_ST_NONE) &&
+		(applied_bw > 0))
 		sv_df_mgr->dev_info[sv_idx].state = SV_DF_ST_IDLE;
 
 	is_bw_changed =
@@ -162,16 +283,6 @@ int mtk_cam_sv_df_update_bw(struct mtk_cam_sv_df_mgr *sv_df_mgr,
 	/* bw changed or stream off */
 	if (is_bw_changed || applied_bw == 0)
 		sv_df_policy_make(sv_df_mgr);
-
-	if ((sv_df_mgr->dev_info[sv_idx].state == SV_DF_ST_IDLE) &&
-		!mtk_cam_sv_check_df_action_done(
-			&sv_df_mgr->dev_info[sv_idx].pending_action))
-		sv_df_mgr->dev_info[sv_idx].state = SV_DF_ST_PENDING;
-
-	if ((sv_df_mgr->dev_info[sv_idx].state == SV_DF_ST_PENDING) &&
-		mtk_cam_sv_check_df_action_done(
-			&sv_df_mgr->dev_info[sv_idx].pending_action))
-		sv_df_mgr->dev_info[sv_idx].state = SV_DF_ST_IDLE;
 
 	if (enable_sv_df_log)
 		pr_info("%s sv_idx:%d applied_bw:%llu_%llu state:%d\n",
@@ -294,5 +405,29 @@ bool mtk_cam_sv_check_df_action_done(struct sv_df_action *sv_df_action)
 	}
 
 	return is_done;
+}
+
+void mtk_cam_sv_df_debug_dump(struct mtk_cam_sv_df_mgr *sv_df_mgr,
+		char *dbg_msg)
+{
+	struct sv_df_dev_info *dev_info;
+	struct sv_df_action *pending_action;
+	unsigned int i, j;
+
+	for (i = 0; i < MAX_SV_DF_HW_NUM; i++) {
+		dev_info = &sv_df_mgr->dev_info[i];
+		pending_action = &dev_info->pending_action;
+		pr_info("%s:%s sv_idx:%d applied_bw:%llu state:%d non_cfg_fifo_num:%d cfg_fifo_num:%d\n",
+			__func__, dbg_msg, i, dev_info->applied_bw, dev_info->state,
+			dev_info->non_cfg_fifo_num, dev_info->cfg_fifo_num);
+		for (j = 0; j < MAX_DMA_CORE; j++) {
+			pr_info("%s:%s sv_idx:%d core_idx:%d pending_action:%d_%d port_info:%d_%d\n",
+				__func__, dbg_msg, i, j,
+				pending_action->actions[j].action,
+				pending_action->actions[j].req_num,
+				dev_info->port_info[j].non_cfg_fifo_num,
+				dev_info->port_info[j].cfg_fifo_num);
+		}
+	}
 }
 

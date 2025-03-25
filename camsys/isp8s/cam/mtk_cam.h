@@ -348,6 +348,7 @@ struct mtk_cam_device {
 	struct mtk_fmon_device fmon;
 
 	struct mtk_cam_sv_df_mgr sv_df_mgr;
+	atomic_t sv_ref_cnt;
 
 	/* shutdown flow */
 	wait_queue_head_t shutdown_wq;

@@ -57,10 +57,14 @@ struct mtk_cam_sv_df_mgr {
 	struct mutex op_lock;
 };
 
+int mtk_cam_sv_df_mgr_init(struct mtk_cam_sv_df_mgr *sv_df_mgr);
 unsigned int mtk_cam_sv_df_get_non_cfg_fifo_num(unsigned int sv_idx,
 		unsigned int core_idx);
 unsigned int mtk_cam_sv_df_get_cfg_fifo_num(unsigned int sv_idx,
 		unsigned int core_idx);
+unsigned int mtk_cam_sv_df_get_runtime_fifo_size(
+		struct mtk_cam_sv_df_mgr *sv_df_mgr,
+		unsigned int sv_idx, unsigned int core_idx);
 int mtk_cam_sv_df_update_bw(struct mtk_cam_sv_df_mgr *sv_df_mgr,
 		unsigned int sv_idx, unsigned long long bw);
 int mtk_cam_sv_df_action_ack(struct mtk_cam_sv_df_mgr *sv_df_mgr,
@@ -71,5 +75,7 @@ int mtk_cam_sv_df_reset(struct mtk_cam_sv_df_mgr *sv_df_mgr,
 		unsigned int sv_idx);
 bool mtk_cam_sv_check_df_action_done(
 		struct sv_df_action *sv_df_action);
+void mtk_cam_sv_df_debug_dump(struct mtk_cam_sv_df_mgr *sv_df_mgr,
+		char *dbg_msg);
 
 #endif

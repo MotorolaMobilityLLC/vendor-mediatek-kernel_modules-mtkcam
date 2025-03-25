@@ -369,8 +369,11 @@ void mtk_cam_sv_backup(struct mtk_camsv_device *sv_dev);
 void mtk_cam_sv_restore(struct mtk_camsv_device *sv_dev);
 void mtk_cam_sv_exp_setup(struct mtk_camsv_device *sv_dev, int exp0_h, int exp1_h);
 int mtk_cam_sv_golden_set(struct mtk_camsv_device *sv_dev, bool is_golden_set);
+int mtk_cam_sv_fifo_monitor_config(struct mtk_camsv_device *sv_dev,
+	bool is_on, unsigned int fifo_core1, unsigned int fifo_core2,
+	unsigned int fifo_core3);
 int mtk_cam_sv_df_config(struct mtk_camsv_device *sv_dev);
-int mtk_cam_sv_run_df_reset(struct mtk_camsv_device *sv_dev);
+int mtk_cam_sv_run_df_reset(struct mtk_camsv_device *sv_dev, bool is_on);
 int mtk_cam_sv_run_df_actions(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_run_df_action_ack(struct mtk_camsv_device *sv_dev,
 		unsigned int top_status);

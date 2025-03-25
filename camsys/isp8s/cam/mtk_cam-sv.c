@@ -680,6 +680,17 @@ RESET_FAILURE:
 	return;
 }
 
+void sv_top_reset_by_camsys_top(struct mtk_camsv_device *sv_dev)
+{
+
+	dev_info(sv_dev->dev, "%s camsv_id:%d\n", __func__, sv_dev->id);
+
+	writel(0, sv_dev->top + REG_CAM_MAIN_SW_RST_1);
+	writel(3 << 2, sv_dev->top + REG_CAM_MAIN_SW_RST_1);
+	writel(0, sv_dev->top + REG_CAM_MAIN_SW_RST_1);
+	wmb(); /* make sure committed */
+}
+
 void sv_reset(struct mtk_camsv_device *sv_dev)
 {
 	int dma_sw_ctl, cq_dma_sw_ctl, stg_sw_ctl;
@@ -856,31 +867,39 @@ void sv_reset(struct mtk_camsv_device *sv_dev)
 RESET_FAILURE:
 	return;
 }
-int mtk_cam_sv_fifo_config(struct mtk_camsv_device *sv_dev, unsigned int fifo_core1_thd2,
-	unsigned int fifo_core2_thd2, unsigned int fifo_core3_thd2)
+
+int mtk_cam_sv_fifo_monitor_config(struct mtk_camsv_device *sv_dev,
+	bool is_on, unsigned int fifo_core1, unsigned int fifo_core2,
+	unsigned int fifo_core3)
 {
 	if (!is_fmon_support())
 		return 0;
 
 	CAMSV_WRITE_BITS(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_INT_FIFO_EN,
-		CAMSVDMATOP_DMA_INT_FIFO_EN, FIFO_CORE1_2_EN, 1);
+		CAMSVDMATOP_DMA_INT_FIFO_EN, FIFO_CORE1_2_EN,
+		(is_on && fifo_core1) ? 1 : 0);
 	CAMSV_WRITE_BITS(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_INT_FIFO_EN,
-		CAMSVDMATOP_DMA_INT_FIFO_EN, FIFO_CORE2_2_EN, 1);
+		CAMSVDMATOP_DMA_INT_FIFO_EN, FIFO_CORE2_2_EN,
+		(is_on && fifo_core2) ? 1 : 0);
 	CAMSV_WRITE_BITS(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_INT_FIFO_EN,
-		CAMSVDMATOP_DMA_INT_FIFO_EN ,FIFO_CORE3_2_EN, 1);
+		CAMSVDMATOP_DMA_INT_FIFO_EN ,FIFO_CORE3_2_EN,
+		(is_on && fifo_core3) ? 1 : 0);
 
 	CAMSV_WRITE_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE1_THD,
-		fifo_core1_thd2 << 16);
+		(fifo_core1 * 9 / 10) << 16);
 	CAMSV_WRITE_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE2_THD,
-		fifo_core2_thd2 << 16);
+		(fifo_core2 * 9 / 10) << 16);
 	CAMSV_WRITE_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE3_THD,
-		fifo_core3_thd2 << 16);
-	pr_info("%s int_en 0x%x fifo_core 0x%x_%x_%x",
+		(fifo_core3 * 9 / 10) << 16);
+
+	pr_info("%s int_en:0x%x fifo_core:0x%x_%x_%x fifo_core_thd:0x%x_%x_%x\n",
 		__func__,
 		CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_INT_FIFO_EN),
+		fifo_core1, fifo_core2, fifo_core3,
 		CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE1_THD),
 		CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE2_THD),
 		CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE3_THD));
+
 	return 0;
 }
 
@@ -892,7 +911,6 @@ int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 	int ret = 0;
 	struct sv_dma_th_setting th_setting;
 	struct sv_dma_bw_setting bw_setting;
-	unsigned int fifo_core1_thd = 0, fifo_core2_thd = 0, fifo_core3_thd = 0;
 	memset(&th_setting, 0, sizeof(struct sv_dma_th_setting));
 	memset(&bw_setting, 0, sizeof(struct sv_dma_bw_setting));
 
@@ -907,12 +925,6 @@ int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 		get_sv_dma_th_setting, sv_dev->id, fifo_img_p1, fifo_img_p2,
 		fifo_img_p3, fifo_len_p1, fifo_len_p2, fifo_len_p3,
 		&th_setting, &bw_setting);
-
-	CALL_PLAT_V4L2(
-		get_sv_fifo_core_setting, sv_dev->id, &fifo_core1_thd, &fifo_core2_thd,
-		&fifo_core3_thd);
-
-	mtk_cam_sv_fifo_config(sv_dev, fifo_core1_thd, fifo_core2_thd, fifo_core3_thd);
 
 	switch (sv_dev->id) {
 	case CAMSV_0:
@@ -1478,14 +1490,22 @@ EXIT:
 	return ret;
 }
 
-int mtk_cam_sv_run_df_reset(struct mtk_camsv_device *sv_dev)
+int mtk_cam_sv_run_df_reset(struct mtk_camsv_device *sv_dev, bool is_on)
 {
 	struct mtk_cam_device *cam_dev = sv_dev->cam;
+	unsigned int fifo_core1 = 0, fifo_core2 = 0, fifo_core3 = 0;
 	int share_sram_ctl;
 	int ret = 0;
 
-	if (disable_camsv_df_mode || sv_dev->id >= MAX_SV_DF_HW_NUM)
+	if (disable_camsv_df_mode || sv_dev->id >= MAX_SV_DF_HW_NUM) {
+		/* fifo monitor */
+		CALL_PLAT_V4L2(
+			get_sv_fifo_core_setting, sv_dev->id,
+			&fifo_core1, &fifo_core2, &fifo_core3);
+		mtk_cam_sv_fifo_monitor_config(sv_dev, is_on,
+			fifo_core1, fifo_core2, fifo_core3);
 		goto EXIT;
+	}
 
 	writel(1, sv_dev->base + REG_CAMSVCENTRAL_SHARE_SRAM_CTL);
 	ret = readx_poll_timeout(readl, sv_dev->base + REG_CAMSVCENTRAL_SHARE_SRAM_CTL,
@@ -1502,6 +1522,19 @@ int mtk_cam_sv_run_df_reset(struct mtk_camsv_device *sv_dev)
 	writel(0, sv_dev->base_dma + REG_CAMSVDMATOP_CTL);
 
 	mtk_cam_sv_df_reset(&cam_dev->sv_df_mgr, sv_dev->id);
+
+	/* fifo monitor */
+	fifo_core1 =
+		mtk_cam_sv_df_get_runtime_fifo_size(&cam_dev->sv_df_mgr,
+			sv_dev->id, 0);
+	fifo_core2 =
+		mtk_cam_sv_df_get_runtime_fifo_size(&cam_dev->sv_df_mgr,
+			sv_dev->id, 1);
+	fifo_core3 =
+		mtk_cam_sv_df_get_runtime_fifo_size(&cam_dev->sv_df_mgr,
+			sv_dev->id, 2);
+	mtk_cam_sv_fifo_monitor_config(sv_dev, is_on,
+		fifo_core1, fifo_core2, fifo_core3);
 
 EXIT:
 	return ret;
@@ -1536,6 +1569,7 @@ int mtk_cam_sv_run_df_action_ack(struct mtk_camsv_device *sv_dev,
 		unsigned int top_status)
 {
 	struct mtk_cam_device *cam_dev = sv_dev->cam;
+	unsigned int fifo_core1, fifo_core2, fifo_core3;
 	int ret = 0, i;
 
 	if (disable_camsv_df_mode || sv_dev->id >= MAX_SV_DF_HW_NUM)
@@ -1562,8 +1596,22 @@ int mtk_cam_sv_run_df_action_ack(struct mtk_camsv_device *sv_dev,
 		}
 	}
 
-	if (mtk_cam_sv_check_df_action_done(&sv_dev->sv_df_action))
+	if (mtk_cam_sv_check_df_action_done(&sv_dev->sv_df_action)) {
 		mtk_cam_sv_df_action_ack(&cam_dev->sv_df_mgr, sv_dev->id);
+
+		/* fifo monitor */
+		fifo_core1 =
+			mtk_cam_sv_df_get_runtime_fifo_size(&cam_dev->sv_df_mgr,
+				sv_dev->id, 0);
+		fifo_core2 =
+			mtk_cam_sv_df_get_runtime_fifo_size(&cam_dev->sv_df_mgr,
+				sv_dev->id, 1);
+		fifo_core3 =
+			mtk_cam_sv_df_get_runtime_fifo_size(&cam_dev->sv_df_mgr,
+				sv_dev->id, 2);
+		mtk_cam_sv_fifo_monitor_config(sv_dev, true,
+			fifo_core1, fifo_core2, fifo_core3);
+	}
 
 EXIT:
 	return ret;
@@ -2909,6 +2957,8 @@ int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tag
 	dev_info_ratelimited(sv_dev->dev, "first_tag:0x%x last_tag:0x%x\n",
 		first_tag, last_tag);
 
+	mtk_cam_sv_df_debug_dump(&sv_dev->cam->sv_df_mgr, "error");
+
 	if (atomic_read(&sv_dev->is_fifo_full)) {
 		need_smi_dump = true;
 		atomic_set(&sv_dev->is_fifo_full, 0);
@@ -3971,8 +4021,13 @@ int mtk_camsv_runtime_suspend(struct device *dev)
 
 	mtk_cam_sv_golden_set(sv_dev, false);
 
-	mtk_cam_sv_run_df_reset(sv_dev);
+	mtk_cam_sv_run_df_reset(sv_dev, false);
 	mtk_cam_sv_run_df_bw_update(sv_dev, 0);
+
+	if (atomic_dec_and_test(&sv_dev->cam->sv_ref_cnt)) {
+		sv_top_reset_by_camsys_top(sv_dev);
+		mtk_cam_sv_df_mgr_init(&sv_dev->cam->sv_df_mgr);
+	}
 
 	for (i = sv_dev->num_clks - 1; i >= 0; i--)
 		clk_disable_unprepare(sv_dev->clks[i]);
@@ -4011,7 +4066,8 @@ int mtk_camsv_runtime_resume(struct device *dev)
 	}
 	sv_reset_by_camsys_top(sv_dev);
 
-	mtk_cam_sv_run_df_reset(sv_dev);
+	atomic_inc(&sv_dev->cam->sv_ref_cnt);
+	mtk_cam_sv_run_df_reset(sv_dev, true);
 
 	for (i = 0; i < CAMSV_IRQ_NUM; i++) {
 		enable_irq(sv_dev->irq[i]);

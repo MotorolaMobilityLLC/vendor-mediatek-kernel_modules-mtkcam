@@ -453,29 +453,25 @@ static int get_single_sv_opp_idx(unsigned int *opp_idx)
 	return 0;
 }
 
-static int get_sv_fifo_core_setting(unsigned int dev_id, unsigned int *fifo_core1_thd,
-unsigned int *fifo_core2_thd, unsigned int *fifo_core3_thd)
+static int get_sv_fifo_core_setting(unsigned int dev_id, unsigned int *fifo_core1,
+unsigned int *fifo_core2, unsigned int *fifo_core3)
 {
-	switch (dev_id) {
-	case CAMSV_0:
-	case CAMSV_1:
-	case CAMSV_2:
-		*fifo_core1_thd = 1380;
-		*fifo_core2_thd = 1380;
-		*fifo_core3_thd = 1380;
-		break;
-	case CAMSV_3:
-		*fifo_core1_thd = 920;
-		*fifo_core2_thd = 920;
-		*fifo_core3_thd = 920;
-		break;
-	case CAMSV_4:
-	case CAMSV_5:
-		*fifo_core1_thd = 460;
-		*fifo_core2_thd = 460;
-		*fifo_core3_thd = 460;
-		break;
+	const unsigned int max_fifo_img_p1[CAMSV_END] = {1536, 1536, 1536, 1024, 512, 512};
+	const unsigned int max_fifo_img_p2[CAMSV_END] = {1536, 1536, 1536, 1024, 0, 0};
+	const unsigned int max_fifo_img_p3[CAMSV_END] = {1536, 1536, 1536, 0, 0, 0};
+
+	if (dev_id >= CAMSV_END) {
+		pr_info("%s unexpected dev_id(%d)\n", __func__, dev_id);
+		*fifo_core1 = 0;
+		*fifo_core2 = 0;
+		*fifo_core3 = 0;
+		return 0;
 	}
+
+	*fifo_core1 = max_fifo_img_p1[dev_id];
+	*fifo_core2 = max_fifo_img_p2[dev_id];
+	*fifo_core3 = max_fifo_img_p3[dev_id];
+
 	return 0;
 }
 

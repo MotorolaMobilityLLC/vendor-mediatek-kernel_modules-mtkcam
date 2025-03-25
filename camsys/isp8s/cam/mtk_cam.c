@@ -5359,40 +5359,6 @@ static int mtk_cam_vcore_runtime_resume(struct device *dev)
 	return 0;
 }
 
-static int mtk_cam_sv_df_mgr_init(struct mtk_cam_sv_df_mgr *sv_df_mgr,
-		struct mtk_cam_device *cam_dev)
-{
-	int ret = 0, i, j;
-
-	mutex_init(&sv_df_mgr->op_lock);
-
-	sv_df_mgr->avai_fifo_num = 0;
-
-	for (i = 0; i < MAX_SV_HW_NUM; i++) {
-		sv_df_mgr->dev_info[i].applied_bw = 0;
-		sv_df_mgr->dev_info[i].state = SV_DF_ST_NONE;
-		sv_df_mgr->dev_info[i].non_cfg_fifo_num = 0;
-		sv_df_mgr->dev_info[i].cfg_fifo_num = 0;
-		for (j = 0; j < MAX_DMA_CORE; j++) {
-			sv_df_mgr->dev_info[i].port_info[j].non_cfg_fifo_num =
-				mtk_cam_sv_df_get_non_cfg_fifo_num(i, j);
-			sv_df_mgr->dev_info[i].non_cfg_fifo_num +=
-				mtk_cam_sv_df_get_non_cfg_fifo_num(i, j);
-
-			sv_df_mgr->dev_info[i].port_info[j].cfg_fifo_num =
-				mtk_cam_sv_df_get_cfg_fifo_num(i, j);
-			sv_df_mgr->dev_info[i].cfg_fifo_num +=
-				mtk_cam_sv_df_get_cfg_fifo_num(i, j);
-
-			sv_df_mgr->dev_info[i].pending_action.actions[j].action =
-				SV_DF_REQ_NONE;
-			sv_df_mgr->dev_info[i].pending_action.actions[j].req_num = 0;
-		}
-	}
-
-	return ret;
-}
-
 static int mtk_cam_probe(struct platform_device *pdev)
 {
 	struct platform_device *vcore_pdev;
@@ -5665,7 +5631,9 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	mtk_cam_dvc_probe(pdev, &cam_dev->dvfs.dvc);
 	mtk_cam_fmon_probe(pdev, cam_dev);
 
-	mtk_cam_sv_df_mgr_init(&cam_dev->sv_df_mgr, cam_dev);
+	mutex_init(&cam_dev->sv_df_mgr.op_lock);
+	mtk_cam_sv_df_mgr_init(&cam_dev->sv_df_mgr);
+	atomic_set(&cam_dev->sv_ref_cnt, 0);
 
 	return 0;
 
