@@ -109,7 +109,7 @@ struct mtk_cam_request {
 	bool is_buf_empty;
 
 	int used_ctx;
-	unsigned int used_pipe;
+	unsigned long used_pipe;
 
 	spinlock_t buf_lock;
 	struct list_head buf_list;

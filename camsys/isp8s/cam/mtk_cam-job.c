@@ -1002,7 +1002,7 @@ handle_raw_frame_done(struct mtk_cam_job *job)
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_cam_device *cam = ctx->cam;
 	struct mtk_cam_engines	*eng = &cam->engines;
-	unsigned int used_pipe = job->req->used_pipe & job->src_ctx->used_pipe;
+	unsigned long used_pipe = job->req->used_pipe & job->src_ctx->used_pipe;
 	int i;
 	unsigned long long *meta, *work_buf;
 
@@ -1088,7 +1088,7 @@ handle_sv_frame_done(struct mtk_cam_job *job)
 	struct mtk_raw_sink_data *raw_sink;
 	struct mtk_camsv_sink_data *sv_sink;
 	struct mtk_mraw_pipeline *mraw_pipe;
-	unsigned int used_pipe = job->req->used_pipe & job->src_ctx->used_pipe;
+	unsigned long used_pipe = job->req->used_pipe & job->src_ctx->used_pipe;
 	int tag_idx;
 	int i, pipe_id;
 	bool pda_support;
@@ -1148,8 +1148,8 @@ handle_sv_frame_done(struct mtk_cam_job *job)
 		}
 	}
 
-	for (i = MTKCAM_SUBDEV_MRAW_START; i < MTKCAM_SUBDEV_MRAW_END; i ++) {
-		if (used_pipe & (1 << i)) {
+	for (i = MTKCAM_SUBDEV_MRAW_START; i < MTKCAM_SUBDEV_MRAW_END; i++) {
+		if (used_pipe & (1UL << i)) {
 			pipe_id = i;
 			tag_idx = mtk_cam_get_sv_tag_index(job->tag_info, pipe_id);
 			if (tag_idx != SVTAG_UNKNOWN) {
@@ -2556,7 +2556,7 @@ static void dump_job_info(struct mtk_cam_job *job, const char *desc)
 	int i;
 
 	fp = (struct mtkcam_ipi_frame_param *)job->ipi.vaddr;
-	dev_info(dev, "%s: ctx-%d pipe %x job type %d req-%d-0x%x eng %x\n",
+	dev_info(dev, "%s: ctx-%d pipe %lx job type %d req-%d-0x%x eng %x\n",
 		 __func__,
 		 ctx->stream_id, ctx->used_pipe,
 		 job->job_type,
@@ -6420,7 +6420,7 @@ int mtk_cam_job_fill_dump_param(struct mtk_cam_job *job,
 
 	pipe_id = get_raw_subdev_idx(job->src_ctx->used_pipe);
 	if (pipe_id < 0) {
-		pr_info("%s: failed to get pipe_id from %x\n",
+		pr_info("%s: failed to get pipe_id from %lx\n",
 			__func__, job->src_ctx->used_pipe);
 		return -1;
 	}
@@ -6577,7 +6577,7 @@ static int job_debug_dump(struct mtk_cam_job *job, const char *desc,
 	return 0;
 
 DUMP_FAILED:
-	pr_info("%s: failed. ctx %d pipe %x job req_seq %i desc %s\n",
+	pr_info("%s: failed. ctx %d pipe %lx job req_seq %i desc %s\n",
 		__func__, ctx->stream_id, ctx->used_pipe,
 		job->req_seq, desc);
 	return -1;
@@ -6861,7 +6861,7 @@ int job_handle_done(struct mtk_cam_job *job)
 	ret = mtk_cam_job_is_done(job) ? 1 : 0;
 	if (ret) {
 		struct mtk_cam_ctx *ctx = job->src_ctx;
-		unsigned int used_pipe = job->req->used_pipe & ctx->used_pipe;
+		unsigned long used_pipe = job->req->used_pipe & ctx->used_pipe;
 		char debug_ts[160];
 
 		debug_ts[0] = '\0';
@@ -6877,7 +6877,7 @@ int job_handle_done(struct mtk_cam_job *job)
 			 job->dump_luma ? ctx->str_ae_data : "");
 
 		if (job->done_pipe != used_pipe)
-			dev_info(ctx->cam->dev, "%s: warn. done mismatched. used_pipe:0x%x\n",
+			dev_info(ctx->cam->dev, "%s: warn. done mismatched. used_pipe:0x%lx\n",
 				 __func__, used_pipe);
 	}
 

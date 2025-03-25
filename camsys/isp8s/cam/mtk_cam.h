@@ -176,7 +176,7 @@ struct mtk_cam_ctx {
 	 */
 
 	atomic_t streaming;
-	unsigned int used_pipe;
+	unsigned long used_pipe;
 	unsigned long used_engine;
 
 	bool not_first_job;

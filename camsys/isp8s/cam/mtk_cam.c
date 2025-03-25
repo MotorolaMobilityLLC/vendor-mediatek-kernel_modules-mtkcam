@@ -560,7 +560,8 @@ static unsigned int mtk_cam_get_used_pipe(struct mtk_cam_device *cam,
 	struct mtk_cam_request *req)
 {
 	unsigned int used_ctx = req->used_ctx;
-	unsigned int i, stream_bit, used_pipe = 0;
+	unsigned int i, stream_bit;
+	unsigned long used_pipe = 0;
 	struct mtk_cam_ctx *ctx;
 
 	for (i = 0, stream_bit = bit_map_bit(MAP_STREAM, 0);
@@ -583,7 +584,7 @@ static void mtk_cam_clone_pipe_data_to_req(struct media_request *req)
 	struct mtk_cam_device *cam =
 		container_of(req->mdev, struct mtk_cam_device, media_dev);
 	struct mtk_cam_v4l2_pipelines *ppls = &cam->pipelines;
-	unsigned int used_pipe, i;
+	unsigned long used_pipe, i;
 	unsigned long submask;
 
 	submask = bit_map_subset_of(MAP_SUBDEV_RAW, cam_req->used_pipe);
@@ -2846,7 +2847,7 @@ static void mtk_cam_update_pipe_used(struct mtk_cam_ctx *ctx,
 				     struct mtk_cam_v4l2_pipelines *ppls)
 {
 	int i;
-	unsigned int used_pipe = 0;
+	unsigned long used_pipe = 0;
 
 	for (i = 0; i < ppls->num_raw; i++)
 		if (_ctx_find_subdev(ctx, &ppls->raw[i].subdev))
@@ -2865,7 +2866,7 @@ static void mtk_cam_update_pipe_used(struct mtk_cam_ctx *ctx,
 
 	ctx->used_pipe = used_pipe;
 	if (CAM_DEBUG_ENABLED(V4L2))
-		dev_info(ctx->cam->dev, "%s: ctx %d pipe_used %x\n",
+		dev_info(ctx->cam->dev, "%s: ctx %d pipe_used %lx\n",
 		 __func__, ctx->stream_id, ctx->used_pipe);
 }
 
@@ -3904,7 +3905,7 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 	struct mtk_camsv_device *sv_dev;
 	int i;
 
-	dev_info(ctx->cam->dev, "%s: ctx-%d pipe 0x%x engine 0x%lx\n",
+	dev_info(ctx->cam->dev, "%s: ctx-%d pipe 0x%lx engine 0x%lx\n",
 		 __func__, ctx->stream_id,
 		 ctx->used_pipe, ctx->used_engine);
 

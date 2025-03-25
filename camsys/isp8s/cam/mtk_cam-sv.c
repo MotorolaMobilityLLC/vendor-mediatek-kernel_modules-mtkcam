@@ -1406,7 +1406,7 @@ struct mtk_cam_seninf_sentest_param *
 		return &sv_pipe->sentest_param;
 	}
 
-	pr_info("%s: sv pipe not found(used_pipe:0x%x)\n",
+	pr_info("%s: sv pipe not found(used_pipe:0x%lx)\n",
 		__func__, ctx->used_pipe);
 
 	return NULL;
