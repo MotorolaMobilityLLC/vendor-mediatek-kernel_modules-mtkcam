@@ -3545,11 +3545,11 @@ int fill_sv_bin_imgo_to_ipi_frame(
 {
 	struct mtk_cam_job *job = helper->job;
 	struct mtk_cam_ctx *ctx = job->src_ctx;
-	unsigned int pipe_id, tag_idx, job_exp_no;
+	unsigned int pipe_id, job_exp_no;
 	struct mtkcam_ipi_frame_param *fp = helper->fp;
 	struct mtkcam_ipi_img_output *out;
 	struct mtk_camsv_device *sv_dev;
-	int ret = 0;
+	int ret = 0, tag_idx;
 	bool is_fusion;
 
 	if (ctx->hw_sv == NULL)
@@ -3565,6 +3565,7 @@ int fill_sv_bin_imgo_to_ipi_frame(
 	if (tag_idx == -1) {
 		ret = -1;
 		pr_info("%s: tag_idx not found(exp_no:%d)", __func__, job_exp_no);
+		return ret;
 	}
 	out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[4];
 	ret = fill_img_out(helper, out, buf, node);
