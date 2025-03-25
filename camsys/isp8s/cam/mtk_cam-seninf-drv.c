@@ -1834,7 +1834,7 @@ static int set_aov_test_model_param(struct seninf_ctx *ctx, char enable)
 	int ret = 0;
 	struct seninf_vcinfo *vcinfo = &ctx->vcinfo;
 	struct seninf_vc *vc;
-	int aov_csi_port = ctx->port;
+	int aov_csi_port = ctx->portNum;
 
 	pr_info("[%s] aov_csi_port(%d)+\n", __func__, aov_csi_port);
 
@@ -2022,7 +2022,7 @@ static int config_hw_csi(struct seninf_ctx *ctx)
 	struct seninf_core *core = ctx->core;
 #endif
 	int ret = 0;
-	int aov_csi_port = ctx->port;
+	int aov_csi_port = ctx->portNum;
 
 	memset(&glpinfo, 0, sizeof(struct seninf_glp_dt));
 
@@ -2128,7 +2128,7 @@ static int get_buffered_pixel_rate(struct seninf_ctx *ctx,
 #if AOV_GET_PARAM
 	struct seninf_core *core = ctx->core;
 #endif
-	int aov_csi_port = ctx->port;
+	int aov_csi_port = ctx->portNum;
 
 	fmt.pad = sd_pad_idx;
 	fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
@@ -2203,7 +2203,7 @@ static int get_customized_pixel_rate(struct seninf_ctx *ctx, struct v4l2_subdev 
 #if AOV_GET_PARAM
 	struct seninf_core *core = ctx->core;
 #endif
-	int aov_csi_port = ctx->port;
+	int aov_csi_port = ctx->portNum;
 
 	ctrl = v4l2_ctrl_find(sd->ctrl_handler, V4L2_CID_MTK_CUST_SENSOR_PIXEL_RATE);
 	if (!ctrl) {
@@ -2234,7 +2234,7 @@ static int get_pixel_rate(struct seninf_ctx *ctx, struct v4l2_subdev *sd,
 #if AOV_GET_PARAM
 	struct seninf_core *core = ctx->core;
 #endif
-	int aov_csi_port = ctx->port;
+	int aov_csi_port = ctx->portNum;
 
 	ctrl = v4l2_ctrl_find(sd->ctrl_handler, V4L2_CID_PIXEL_RATE);
 	if (!ctrl) {
@@ -2265,7 +2265,7 @@ static int get_mbus_config(struct seninf_ctx *ctx, struct v4l2_subdev *sd)
 #if AOV_GET_PARAM
 	struct seninf_core *core = ctx->core;
 #endif
-	int aov_csi_port = ctx->port;
+	int aov_csi_port = ctx->portNum;
 
 	ret = v4l2_subdev_call(sd, pad, get_mbus_config, ctx->sensor_pad_idx, &cfg);
 	if (ret) {
@@ -2637,7 +2637,7 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 #if AOV_GET_PARAM
 	struct seninf_core *core = ctx->core;
 #endif
-	int aov_csi_port = ctx->port;
+	int aov_csi_port = ctx->portNum;
 
 	if (ctx->csi_streaming == enable) {
 		dev_info(ctx->dev,
@@ -2833,7 +2833,7 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 #ifdef INIT_PERIODIC_DESKEW_DEBUG
 	int deskew_dump_idx;
 #endif /*INIT_PERIODIC_DESKEW_DEBUG*/
-	int aov_csi_port = ctx->port;
+	int aov_csi_port = ctx->portNum;
 
 	mutex_lock(&ctx->stream_mutex);
 
@@ -3124,7 +3124,7 @@ static int seninf_real_sensor_for_aov_param(struct seninf_ctx *ctx, u32 enable)
 	struct seninf_core *core = ctx->core;
 	unsigned long flags;
 	int tmp;
-	int aov_csi_port = ctx->port;
+	int aov_csi_port = ctx->portNum;
 
 	if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
 		pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
@@ -3266,7 +3266,7 @@ static int mtk_cam_seninf_set_ctrl(struct v4l2_ctrl *ctrl)
 	struct seninf_core *core = ctx->core;
 	unsigned long flags;
 	int tmp;
-	int aov_csi_port = ctx->port;
+	int aov_csi_port = ctx->portNum;
 
 	if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {
 		pr_info("[%s]Error: aov_csi_port(%d) out of bound\n", __func__, aov_csi_port);
@@ -3475,7 +3475,7 @@ static int seninf_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct seninf_ctx *ctx = sd_to_ctx(sd);
 	unsigned int i;
-	int aov_csi_port = ctx->port;
+	int aov_csi_port = ctx->portNum;
 	int sensor_id = -1;
 
 	if (aov_csi_port < 0 || aov_csi_port >= AOV_SENINF_NUM) {

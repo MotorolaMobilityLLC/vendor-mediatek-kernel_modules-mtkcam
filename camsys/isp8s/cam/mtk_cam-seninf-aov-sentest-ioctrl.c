@@ -99,7 +99,7 @@ static int g_sentest_aov_apmcu_status(struct seninf_ctx *ctx, void *arg)
 	}
 
 	core = ctx->core;
-	aov_csi_port = ctx->port;
+	aov_csi_port = ctx->portNum;
 
 	if (unlikely(core == NULL)) {
 		pr_info("[%s][ERROR] core is NULL\n", __func__);

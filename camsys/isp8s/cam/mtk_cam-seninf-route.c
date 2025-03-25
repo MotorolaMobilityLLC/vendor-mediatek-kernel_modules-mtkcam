@@ -591,7 +591,7 @@ int mtk_cam_seninf_get_csi_param(struct seninf_ctx *ctx)
 #if AOV_GET_PARAM
 	struct seninf_core *core = ctx->core;
 #endif
-	int aov_csi_port = ctx->port;
+	int aov_csi_port = ctx->portNum;
 
 	if (!ctx->sensor_sd)
 		return -EINVAL;
