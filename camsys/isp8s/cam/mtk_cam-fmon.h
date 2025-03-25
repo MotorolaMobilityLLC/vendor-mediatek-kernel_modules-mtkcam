@@ -77,11 +77,14 @@ struct mtk_fmon_device {
 
 	/* cti/ela */
 	void __iomem *ela_ctrl;
-	void __iomem *cti_ctrl;
+	void __iomem *cti_set;
 	void __iomem *cti_clear;
 
 	struct mutex op_lock;
 	enum FMON_PIPE_INFO pipes[3];
+
+	atomic_t stop_triggered;
+	atomic_t start_triggered;
 };
 
 extern struct platform_driver mtk_cam_fmon_driver;
