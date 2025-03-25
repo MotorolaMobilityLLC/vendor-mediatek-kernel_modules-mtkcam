@@ -88,7 +88,7 @@ static int g_cmd_fake_sensor_info(struct adaptor_ctx *ctx, void *arg)
 	p_info = arg;
 	memset(p_info, 0, sizeof(struct mtk_fake_sensor_info));
 
-	p_info->is_fake_sensor = (ctx->subctx.s_ctx.sensor_id == 0x00) ? 1 : 0;
+	p_info->is_fake_sensor = (ctx->subctx.s_ctx.sensor_id == 0xFAFA) ? 1 : 0;
 	p_info->fps = ctx->subctx.s_ctx.mode[ctx->cur_mode->id].max_framerate;
 	p_info->hdr_mode = ctx->subctx.s_ctx.mode[ctx->cur_mode->id].hdr_mode;
 	p_info->sensor_output_dataformat =

@@ -684,7 +684,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 };
 
 static struct subdrv_static_ctx static_ctx = {
-	.sensor_id = 0x00, /* fake sensor */
+	.sensor_id = 0xFAFA, /* fake sensor */
 	.reg_addr_sensor_id = {0x0016, 0x0017},
 	.i2c_addr_table = {0x34, 0xFF},
 	.i2c_burst_write_support = TRUE,
@@ -778,7 +778,7 @@ static struct subdrv_pw_seq_entry pw_seq[] = {};
 
 const struct subdrv_entry fake_mipi_raw_entry = {
 	.name = "fake_mipi_raw",
-	.id = 0x00,
+	.id = 0xFAFA,
 	.pw_seq = pw_seq,
 	.pw_seq_cnt = ARRAY_SIZE(pw_seq),
 	.ops = &ops,
@@ -789,7 +789,7 @@ const struct subdrv_entry fake_mipi_raw_entry = {
 static int get_id(struct subdrv_ctx *ctx, u32 *sensor_id)
 {
 	DRV_LOG_MUST(ctx, "[%s] fake sensor found\n", __func__);
-	*sensor_id = 0x00;
+	*sensor_id = 0xFAFA;
 	return 0;
 }
 
