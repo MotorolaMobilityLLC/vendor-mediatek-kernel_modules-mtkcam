@@ -16,7 +16,7 @@ struct seninf_ctx *fake_sensor_seninf_ctx;
 struct mtk_cam_seninf_ops *fake_g_seninf_ops;
 struct seninf_fakesensor_tm_param fakesensor_tm_param;
 
-static inline int get_test_hmargin(u16 w, u16 h, u8 clk_cnt, u16 clk_mhz, u8 fps)
+static inline int get_test_hmargin(u16 w, u16 h, u8 clk_cnt, u16 clk_mhz, u16 fps)
 {
 	int target_h = clk_mhz * (1000000/fps) / w * max(16/(clk_cnt+1), 1);
 
@@ -35,14 +35,14 @@ static void fakesensor_tm_param_prepare(struct seninf_ctx *ctx)
 	int width_tm = (tm_width >> 1);
 	int bit_depth = 16;
 	int width_tm_bit = width_tm * bit_depth;
-	const u8 c_fps = 30;
-	const u16 c_isp_clk = 412;
-	const u8 c_clk_div_cnt = 0xF;
-	const u16 c_dummy_pxl = 0x400;
-	const u16 c_h_margin = 0x1000;
-	const u16 c_dum_vsync = get_test_hmargin(
-								tm_width + c_dummy_pxl,
-								tm_height + c_h_margin,
+	const u16 c_fps = 30;
+	const u16 c_isp_clk = 346;
+	u8 c_clk_div_cnt = 0x7;
+	u16 c_dummy_pxl = 0x400;
+	int width_cal = (width_tm+tm_height+c_dummy_pxl*8)*2;
+	u16 c_dum_vsync = get_test_hmargin(
+								width_cal,
+								tm_height,
 								c_clk_div_cnt,
 								c_isp_clk,
 								c_fps);
@@ -55,6 +55,35 @@ static void fakesensor_tm_param_prepare(struct seninf_ctx *ctx)
 	fakesensor_tm_param.width_tm_bit = width_tm_bit;
 	fakesensor_tm_param.c_clk_div_cnt = c_clk_div_cnt;
 	fakesensor_tm_param.c_dum_vsync = c_dum_vsync;
+
+	/* SMVR-ISP CLK 564M  */
+	if (ctx->fake_sensor_info.fps==9600){
+		FakeSensor_INF("is SMVR mode\n");
+		c_dummy_pxl = 365;
+		c_clk_div_cnt = 3;
+		width_cal = (width_tm+tm_height+c_dummy_pxl*8)*2;
+		c_dum_vsync = get_test_hmargin(
+								width_cal,
+								tm_height,
+								c_clk_div_cnt,
+								564,
+								960);
+		fakesensor_tm_param.c_dummy_pxl = c_dummy_pxl;
+		fakesensor_tm_param.c_clk_div_cnt = c_clk_div_cnt;
+		fakesensor_tm_param.c_dum_vsync = c_dum_vsync;
+	}
+
+	/* 8K60-ISP CLK 564M  */
+	if (ctx->fake_sensor_info.fps==600 && tm_width ==8192){
+		FakeSensor_INF("is 8K60 mode\n");
+		c_dummy_pxl = 400;
+		c_clk_div_cnt = 1;
+		width_cal = (width_tm+tm_height+c_dummy_pxl*8)*2;
+		c_dum_vsync = 350;
+		fakesensor_tm_param.c_dummy_pxl = c_dummy_pxl;
+		fakesensor_tm_param.c_clk_div_cnt = c_clk_div_cnt;
+		fakesensor_tm_param.c_dum_vsync = c_dum_vsync;
+	}
 
 	switch (ctx->fake_sensor_info.hdr_mode) {
 	case HDR_NONE:
@@ -114,6 +143,13 @@ static void fakesensor_tm_param_prepare(struct seninf_ctx *ctx)
 
 void seninf_fakesensor_set_testmdl(struct seninf_ctx *ctx)
 {
+	struct mtk_fake_sensor_info fake_sensor_info;
+
+	if (ctx->sensor_sd == NULL) {
+		FakeSensor_INF("ERROR: ctx->sensor_sd is NULL\n");
+		return;
+	}
+
 	if (unlikely(fake_sensor_seninf_ctx == NULL)) {
 		FakeSensor_INF("ERROR: fake_sensor_seninf_ctx == NULL\n");
 		return;
@@ -123,6 +159,12 @@ void seninf_fakesensor_set_testmdl(struct seninf_ctx *ctx)
 		FakeSensor_INF("ERROR: fake_g_seninf_ops == NULL\n");
 		return;
 	}
+
+	ctx->sensor_sd->ops->core->command(ctx->sensor_sd,
+						V4L2_CMD_G_SENSOR_FAKE_SENSOR_INFO,
+						&fake_sensor_info);
+
+	memcpy(&(ctx->fake_sensor_info), &fake_sensor_info, sizeof(struct mtk_fake_sensor_info));
 
 	fakesensor_tm_param_prepare(ctx);
 
@@ -152,11 +194,11 @@ static int fake_sensor_set_gain(
 	}
 
 	fakesensor_tm_param.clr_value = (*feature_data);
-
-	fake_g_seninf_ops->_set_test_model_fake_sensor(fake_sensor_seninf_ctx,
-		fake_sensor_seninf_ctx->seninfAsyncIdx,
-		&fakesensor_tm_param, 1);
-
+	/*
+	 *fake_g_seninf_ops->_set_test_model_fake_sensor(fake_sensor_seninf_ctx,
+	 *	fake_sensor_seninf_ctx->seninfAsyncIdx,
+	 *	&fakesensor_tm_param, 1);
+	 */
 	FakeSensor_INF("gain:%llu\n", (*feature_data));
 
 	return 0;
@@ -183,11 +225,11 @@ static int fake_sensor_set_eshutter(
 	}
 
 	fakesensor_tm_param.clr_value = (*feature_data);
-
-	fake_g_seninf_ops->_set_test_model_fake_sensor(fake_sensor_seninf_ctx,
-		fake_sensor_seninf_ctx->seninfAsyncIdx,
-		&fakesensor_tm_param, 1);
-
+	/*
+	 *fake_g_seninf_ops->_set_test_model_fake_sensor(fake_sensor_seninf_ctx,
+	 *	fake_sensor_seninf_ctx->seninfAsyncIdx,
+	 *	&fakesensor_tm_param, 1);
+	 */
 	FakeSensor_INF("exp:%llu\n", (*feature_data));
 
 	return 0;

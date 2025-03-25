@@ -1525,7 +1525,7 @@ static int mtk_cam_seninf_set_test_model_fake_sensor(struct seninf_ctx *ctx,
 		SENINF_TG_SENINF_TG_TM_CORE0_FMT, tm_param->tm_core_fmt);
 
 	/* tm pattern */
-	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL, SENINF_TG_SENINF_TG_TM_CORE0_PAT, 0xb);
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL, SENINF_TG_SENINF_TG_TM_CORE0_PAT, 0x8);
 
 	/* Set as non single mode */
 	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL, SENINF_TG_SENINF_TG_TM_CORE0_SINGLE, 0);
