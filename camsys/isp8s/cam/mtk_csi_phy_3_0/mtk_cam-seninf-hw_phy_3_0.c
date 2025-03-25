@@ -226,6 +226,210 @@ module_param(adb_seninf_clk, uint, 0644);
 MODULE_PARM_DESC(adb_seninf_clk, "adb_seninf_clk");
 #endif /* INIT_PERIODIC_DESKEW_UT */
 
+#define  DPHY_CTLE_TABLE_MAX 3
+#define  CPHY_CTLE_TABLE_MAX 2
+
+struct mtk_cam_seninf_cdphy_ctle_param {
+	u8 eq_des_vref_sel;
+	u8 cphy_en;
+	u8 eq_bw;
+	u8 eq_dg0_en;
+	u8 eq_dg1_en;
+	u8 eq_sr0;
+	u8 eq_sr1;
+	u8 t0_1_hsmode_en;
+	u8 ab_bc_ca_width;
+	u8 ck_delay;
+	u8 sel_code;
+	u8 eq_is;
+	u8 eq_os_is;
+	u8 eq_is_cdr;
+};
+
+struct mtk_cam_seninf_cdphy_ctle_setting {
+	u64 max_data_rate;
+	u64 min_data_rate;
+	struct mtk_cam_seninf_cdphy_ctle_param param;
+};
+
+static struct mtk_cam_seninf_cdphy_ctle_setting dphy_intermediate_channel[] = {
+	{
+		.max_data_rate = 9000000000,
+		.min_data_rate = 4500000000,
+		.param = {
+			.eq_bw = 0b11,
+			.eq_dg0_en = true,
+			.eq_dg1_en = false,
+			.eq_sr0 = 0b11,
+			.eq_sr1 = 0b00,
+			.eq_is = 0b10,
+			.eq_os_is = 0b1,
+			.eq_is_cdr = 0b0,
+		},
+	},
+	{
+		.max_data_rate = 4500000000,
+		.min_data_rate = 2500000000,
+		.param = {
+			.eq_bw = 0b11,
+			.eq_dg0_en = true,
+			.eq_dg1_en = false,
+			.eq_sr0 = 0b11,
+			.eq_sr1 = 0b00,
+			.eq_is = 0b10,
+			.eq_os_is = 0b1,
+			.eq_is_cdr = 0b1,
+		},
+	},
+	{
+		.max_data_rate = 2500000000,
+		.min_data_rate = 0,
+		.param = {
+			.eq_bw = 0b01,
+			.eq_dg0_en = true,
+			.eq_dg1_en = true,
+			.eq_sr0 = 0b11,
+			.eq_sr1 = 0b00,
+			.eq_is = 0b10,
+			.eq_os_is = 0b1,
+			.eq_is_cdr = 0b0,
+		},
+	},
+};
+
+static struct mtk_cam_seninf_cdphy_ctle_setting dphy_standard_channel[] = {
+	{
+		.max_data_rate = 9000000000,
+		.min_data_rate = 4500000000,
+		.param = {
+			.eq_bw = 0b11,
+			.eq_dg0_en = true,
+			.eq_dg1_en = true,
+			.eq_sr0 = 0b01,
+			.eq_sr1 = 0b00,
+			.eq_is = 0b10,
+			.eq_os_is = 0b1,
+			.eq_is_cdr = 0b0,
+		},
+	},
+	{
+		.max_data_rate = 4500000000,
+		.min_data_rate = 2500000000,
+		.param = {
+			.eq_bw = 0b11,
+			.eq_dg0_en = true,
+			.eq_dg1_en = true,
+			.eq_sr0 = 0b01,
+			.eq_sr1 = 0b00,
+			.eq_is = 0b10,
+			.eq_os_is = 0b1,
+			.eq_is_cdr = 0b1,
+		},
+	},
+	{
+		.max_data_rate = 2500000000,
+		.min_data_rate = 0,
+		.param = {
+			.eq_bw = 0b01,
+			.eq_dg0_en = true,
+			.eq_dg1_en = true,
+			.eq_sr0 = 0b11,
+			.eq_sr1 = 0b01,
+			.eq_is = 0b10,
+			.eq_os_is = 0b1,
+			.eq_is_cdr = 0b0,
+		},
+	},
+};
+
+
+static struct mtk_cam_seninf_cdphy_ctle_setting cphy_intermediate_channel[] = {
+	{
+		.max_data_rate = 6000000000,
+		.min_data_rate = 2500000000,
+		.param = {
+			.eq_des_vref_sel = 0b10100,
+			.cphy_en = 0b1,
+			.eq_bw = 0b11,
+			.eq_dg0_en = true,
+			.eq_dg1_en = false,
+			.eq_sr0 = 0b11,
+			.eq_sr1 = 0b00,
+			.t0_1_hsmode_en = 0b0,
+			.ab_bc_ca_width = 0b1000,
+			.ck_delay = 0b10,
+			.sel_code = 0b10,
+			.eq_is = 0b10,
+			.eq_os_is = 0b1,
+			.eq_is_cdr = 0b0,
+		},
+	},
+	{
+		.max_data_rate = 2500000000,
+		.min_data_rate = 0,
+		.param = {
+			.eq_des_vref_sel = 0b10100,
+			.cphy_en = 0b1,
+			.eq_bw = 0b11,
+			.eq_dg0_en = true,
+			.eq_dg1_en = false,
+			.eq_sr0 = 0b11,
+			.eq_sr1 = 0b00,
+			.t0_1_hsmode_en = 0b0,
+			.ab_bc_ca_width = 0b1001,
+			.ck_delay = 0b1010,
+			.sel_code = 0b1010,
+			.eq_is = 0b10,
+			.eq_os_is = 0b1,
+			.eq_is_cdr = 0b1,
+		},
+	},
+};
+
+static struct mtk_cam_seninf_cdphy_ctle_setting cphy_standard_channel[] = {
+	{
+		.max_data_rate = 6000000000,
+		.min_data_rate = 2500000000,
+		.param = {
+			.eq_des_vref_sel = 0b10100,
+			.cphy_en = 0b1,
+			.eq_bw = 0b11,
+			.eq_dg0_en = true,
+			.eq_dg1_en = true,
+			.eq_sr0 = 0b1,
+			.eq_sr1 = 0b00,
+			.t0_1_hsmode_en = 0b0,
+			.ab_bc_ca_width = 0b1000,
+			.ck_delay = 0b10,
+			.sel_code = 0b10,
+			.eq_is = 0b10,
+			.eq_os_is = 0b1,
+			.eq_is_cdr = 0b0,
+		},
+	},
+	{
+		.max_data_rate = 2500000000,
+		.min_data_rate = 0,
+		.param = {
+			.eq_des_vref_sel = 0b10100,
+			.cphy_en = 0b1,
+			.eq_bw = 0b11,
+			.eq_dg0_en = true,
+			.eq_dg1_en = true,
+			.eq_sr0 = 0b1,
+			.eq_sr1 = 0b00,
+			.t0_1_hsmode_en = 0b0,
+			.ab_bc_ca_width = 0b1001,
+			.ck_delay = 0b1010,
+			.sel_code = 0b1010,
+			.eq_is = 0b10,
+			.eq_os_is = 0b1,
+			.eq_is_cdr = 0b1,
+		},
+	},
+};
+
+
 
 static int mtk_cam_seninf_common_reg_setup(struct seninf_ctx *ctx);
 static u64 settle_formula(u64 settle_ns, u64 seninf_ck)
@@ -2778,6 +2982,14 @@ static int csirx_phyA_cdphy_ulps_setting(struct seninf_ctx *ctx)
 	baseA = ctx->reg_ana_csi_rx[(unsigned int)ctx->portA];
 	baseB = ctx->reg_ana_csi_rx[(unsigned int)ctx->portB];
 
+	seninf_logd(ctx, "is_4d1c %d dphy_ulps_support flag = %d dphy_ulps_support flag = %d\n",
+			ctx->is_4d1c,
+			ctx->csi_param.dphy_ulps_support,
+			ctx->csi_param.dphy_ulps_support);
+
+	if (ctx->csi_param.dphy_ulps_support == 0 && ctx->csi_param.cphy_ulps_support == 0)
+		return 0;
+
 	if (ctx->is_4d1c) {
 		/* ANA - CSIA */
 		SENINF_BITS(baseA, CDPHY_RX_ULPS_CTRL_0, CSI_CDPHY_ULPS_L0_T0_CG_FORCE_ON, 0x0);
@@ -2832,7 +3044,7 @@ static int csirx_phyA_cdphy_ulps_setting(struct seninf_ctx *ctx)
 		}
 	}
 
-	if (!ctx->is_cphy) {//dphy ulps setting
+	if (!ctx->is_cphy && ctx->csi_param.dphy_ulps_support) {//dphy ulps setting
 		if (ctx->is_4d1c) {//dphy ulps setting no split port
 			switch(ctx->num_data_lanes) {
 			case 1:
@@ -2927,7 +3139,7 @@ static int csirx_phyA_cdphy_ulps_setting(struct seninf_ctx *ctx)
 				break;
 			}
 		}
-	} else {//cphy ulps setting
+	} else if (ctx->csi_param.cphy_ulps_support){//cphy ulps setting
 		if (ctx->is_4d1c) {//cphy ulps setting no split port
 			switch(ctx->num_data_lanes) {
 			case 1:
@@ -8138,60 +8350,6 @@ static int mtk_cam_csi_mac_get_hv_hb(struct seninf_ctx *ctx,
 	return 0;
 }
 
-static int mtk_cam_csi_set_eq_offset(struct seninf_ctx *ctx, int val_signed)
-{
-	u32 i, port;
-	void *base;
-	u32 eq_offset_val;
-	u32 val = (val_signed < 0) ? -val_signed : val_signed;
-
-	if ((val_signed > 31) || (val_signed < -31)) {
-		dev_info(ctx->dev, "[EYE_SCAN FAIL] EQ_OFFSET value(%d) illegal\n", val_signed);
-		return -EINVAL;
-	}
-	eq_offset_val = (val_signed < 0) ? ((0b11111 & val) + 0b100000) : (0b11111 & val);
-
-	for (i = 0; i <= ctx->is_4d1c; i++) {
-		port = i ? ctx->portB : ctx->port;
-		base = ctx->reg_ana_csi_rx[(unsigned int)port];
-		SENINF_BITS(base, CDPHY_RX_ANA_10,
-			RG_CSI0_CDPHY_L0_T0AB_EQ_OS_CAL_FORCE_EN, 0x1);
-		SENINF_BITS(base, CDPHY_RX_ANA_10,
-				RG_CSI0_CDPHY_L0_T0AB_EQ_OS_CAL_FORCE_CODE, eq_offset_val);
-
-		SENINF_BITS(base, CDPHY_RX_ANA_10,
-			RG_CSI0_CDPHY_XX_T0CA_EQ_OS_CAL_FORCE_EN, 0x1);
-		SENINF_BITS(base, CDPHY_RX_ANA_10,
-			RG_CSI0_CDPHY_XX_T0CA_EQ_OS_CAL_FORCE_CODE, eq_offset_val);
-
-		SENINF_BITS(base, CDPHY_RX_ANA_10,
-			RG_CSI0_CDPHY_XX_T0BC_EQ_OS_CAL_FORCE_EN, 0x1);
-		SENINF_BITS(base, CDPHY_RX_ANA_10,
-			RG_CSI0_CDPHY_XX_T0BC_EQ_OS_CAL_FORCE_CODE, eq_offset_val);
-
-		SENINF_BITS(base, CDPHY_RX_ANA_10,
-			RG_CSI0_CDPHY_L1_T1AB_EQ_OS_CAL_FORCE_EN, 0x1);
-		SENINF_BITS(base, CDPHY_RX_ANA_10,
-			RG_CSI0_CDPHY_L1_T1AB_EQ_OS_CAL_FORCE_CODE, eq_offset_val);
-
-		SENINF_BITS(base, CDPHY_RX_ANA_11,
-			RG_CSI0_CDPHY_XX_T1CA_EQ_OS_CAL_FORCE_EN, 0x1);
-		SENINF_BITS(base, CDPHY_RX_ANA_11,
-			RG_CSI0_CDPHY_XX_T1CA_EQ_OS_CAL_FORCE_CODE, eq_offset_val);
-
-		SENINF_BITS(base, CDPHY_RX_ANA_11,
-			RG_CSI0_CDPHY_L2_T1BC_EQ_OS_CAL_FORCE_EN, 0x1);
-		SENINF_BITS(base, CDPHY_RX_ANA_11,
-			RG_CSI0_CDPHY_L2_T1BC_EQ_OS_CAL_FORCE_CODE, eq_offset_val);
-
-		dev_info(ctx->dev,
-			"EYE_SCAN_KEYS_EQ_OFFSET input val_signed=%d, write to reg val=0x%x\n",
-				val_signed, eq_offset_val);
-	}
-
-	return 0;
-}
-
 static int mtk_cam_csi_set_cdr_delay(struct seninf_ctx *ctx, u8 val)
 {
 	u32 i, port;
@@ -8203,28 +8361,22 @@ static int mtk_cam_csi_set_cdr_delay(struct seninf_ctx *ctx, u8 val)
 		// L0
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_6,
 				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L0_DELAY_CODE, (val & 0b11111111));
-		mdelay(1);
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_6,
 				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L0_DELAY_APPLY, 0x0);
-		mdelay(1);
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_6,
 				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L0_DELAY_APPLY, 0x1);
 		// L1
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_7,
 				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L1_DELAY_CODE, (val & 0b11111111));
-		mdelay(1);
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_7,
 				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L1_DELAY_APPLY, 0x0);
-		mdelay(1);
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_7,
 				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L1_DELAY_APPLY, 0x1);
 		// L2
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_8,
 				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L2_DELAY_CODE, (val & 0b11111111));
-		mdelay(1);
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_8,
 				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L2_DELAY_APPLY, 0x0);
-		mdelay(1);
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_8,
 				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L2_DELAY_APPLY, 0x1);
 
@@ -8246,37 +8398,28 @@ static int mtk_cam_seninf_set_cdr_delay_en(struct seninf_ctx *ctx, bool en)
 		// L0
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_6,
 					RG_SW_FORCE_EN_DA_CSI0_DPHY_L0_DELAY_EN, en);
-		mdelay(1);
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_6,
 					RG_SW_FORCE_EN_DA_CSI0_DPHY_L0_DELAY_CODE, en);
-		mdelay(1);
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_6,
 					RG_SW_FORCE_EN_DA_CSI0_DPHY_L0_DELAY_APPLY, en);
-		mdelay(1);
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_6,
 					RG_SW_FORCE_VAL_DA_CSI0_DPHY_L0_DELAY_EN, en);
 		// L1
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_7,
 					RG_SW_FORCE_EN_DA_CSI0_DPHY_L1_DELAY_EN, en);
-		mdelay(1);
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_7,
 					RG_SW_FORCE_EN_DA_CSI0_DPHY_L1_DELAY_CODE, en);
-		mdelay(1);
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_7,
 					RG_SW_FORCE_EN_DA_CSI0_DPHY_L1_DELAY_APPLY, en);
-		mdelay(1);
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_7,
 					RG_SW_FORCE_VAL_DA_CSI0_DPHY_L1_DELAY_EN, en);
 		// L2
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_8,
 					RG_SW_FORCE_EN_DA_CSI0_DPHY_L2_DELAY_EN, en);
-		mdelay(1);
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_8,
 					RG_SW_FORCE_EN_DA_CSI0_DPHY_L2_DELAY_CODE, en);
-		mdelay(1);
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_EN_8,
 					RG_SW_FORCE_EN_DA_CSI0_DPHY_L2_DELAY_APPLY, en);
-		mdelay(1);
 		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_8,
 					RG_SW_FORCE_VAL_DA_CSI0_DPHY_L2_DELAY_EN, en);
 
@@ -8284,6 +8427,199 @@ static int mtk_cam_seninf_set_cdr_delay_en(struct seninf_ctx *ctx, bool en)
 	}
 
 	return 0;
+}
+
+static int mtk_cam_seninf_config_cphy_insertion_loss_table(struct seninf_ctx *ctx,
+		struct mtk_sensor_insertion_loss *insertion_param, u64 data_rate)
+{
+	int i, port;
+	void *base;
+	struct mtk_cam_seninf_cdphy_ctle_setting *table = NULL;
+	struct mtk_cam_seninf_cdphy_ctle_param *param = NULL;
+
+	if (insertion_param->loss >= 2500) {
+		table = cphy_standard_channel;
+	} else if (insertion_param->loss >= 1800 && insertion_param->loss < 2500) {
+		table = cphy_intermediate_channel;
+	} else {
+		pr_info("[%s] using default table\n", __func__);
+		return 0;
+	}
+
+	if (unlikely(table == NULL)) {
+		pr_info("[%s]table is NULL\n", __func__);
+		return -EFAULT;
+	}
+
+	for (i = 0 ; i < CPHY_CTLE_TABLE_MAX; i++) {
+		if (data_rate > table[i].max_data_rate)
+			continue;
+
+		if (data_rate < table[i].min_data_rate)
+			continue;
+
+		param = &table[i].param;
+		pr_info("[%s] apply ctle table %d\n", __func__, i);
+		break;
+	}
+
+	if (unlikely(param == NULL)) {
+		pr_info("[%s]param is NULL\n", __func__);
+		return -EFAULT;
+	}
+
+	for (i = 0; i <= ctx->is_4d1c; i++) {
+		port = i ? ctx->portB : ctx->port;
+		base = ctx->reg_ana_csi_rx[(unsigned int)port];
+
+
+		SENINF_BITS(base, CDPHY_RX_ANA_3, RG_CSI0_EQ_DES_VREF_SEL, param->eq_des_vref_sel);
+		SENINF_BITS(base, CDPHY_RX_ANA_0, RG_CSI0_CPHY_EN, param->cphy_en);
+		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_BW, param->eq_bw);
+		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, param->eq_dg0_en);
+		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, param->eq_dg1_en);
+		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, param->eq_sr0);
+		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, param->eq_sr1);
+		SENINF_BITS(base, CDPHY_RX_ANA_0, RG_CSI0_CPHY_T0_HSMODE_EN, param->t0_1_hsmode_en);
+		SENINF_BITS(base, CDPHY_RX_ANA_0, RG_CSI0_CPHY_T1_HSMODE_EN, param->t0_1_hsmode_en);
+
+		SENINF_BITS(base,
+				CDPHY_RX_ANA_6,
+				RG_CSI0_CPHY_T0_CDR_AB_WIDTH,
+				param->ab_bc_ca_width);
+		SENINF_BITS(base,
+				CDPHY_RX_ANA_6,
+				RG_CSI0_CPHY_T0_CDR_BC_WIDTH,
+				param->ab_bc_ca_width);
+		SENINF_BITS(base,
+				CDPHY_RX_ANA_6,
+				RG_CSI0_CPHY_T0_CDR_CA_WIDTH,
+				param->ab_bc_ca_width);
+
+		SENINF_BITS(base, CDPHY_RX_ANA_6, RG_CSI0_CPHY_T0_CDR_CK_DELAY, param->ck_delay);
+		SENINF_BITS(base, CDPHY_RX_ANA_7, RG_CSI0_CPHY_T1_CDR_CK_DELAY, param->ck_delay);
+
+		SENINF_BITS(base, CDPHY_RX_ANA_13, RG_CSI0_CPHY_T0_CDR_SEL_CODE, param->sel_code);
+		SENINF_BITS(base, CDPHY_RX_ANA_13, RG_CSI0_CPHY_T1_CDR_SEL_CODE, param->sel_code);
+		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_IS, param->eq_is);
+		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_IS_RDC, param->eq_is_cdr);
+		SENINF_BITS(base, CDPHY_RX_ANA_14, RG_CSI0_CDPHY_EQ_OS_IS, param->eq_os_is);
+
+		dev_info(ctx->dev, "[%s] csi %d port %s CDPHY_RX_ANA_5 0x%x CDPHY_RX_ANA_14 0x%x\n",
+						__func__,
+						ctx->port,
+						(i) ? "B" : "A",
+						SENINF_READ_REG(base, CDPHY_RX_ANA_5),
+						SENINF_READ_REG(base, CDPHY_RX_ANA_14));
+	}
+	return 0;
+}
+
+static int mtk_cam_seninf_config_dphy_insertion_loss_table(struct seninf_ctx *ctx,
+		struct mtk_sensor_insertion_loss *insertion_param, u64 data_rate)
+{
+	int i, port;
+	void *base;
+	struct mtk_cam_seninf_cdphy_ctle_setting *table = NULL;
+	struct mtk_cam_seninf_cdphy_ctle_param *param = NULL;
+
+	if (insertion_param->loss >= 2500) {
+		table = dphy_standard_channel;
+	} else if (insertion_param->loss >= 1800 && insertion_param->loss < 2500) {
+		table = dphy_intermediate_channel;
+	} else {
+		pr_info("[%s] using default table\n", __func__);
+		return 0;
+	}
+
+	if (unlikely(table == NULL)) {
+		pr_info("[%s]table is NULL\n", __func__);
+		return -EFAULT;
+	}
+
+
+	for (i = 0 ; i < DPHY_CTLE_TABLE_MAX; i++) {
+		if (data_rate > table[i].max_data_rate)
+			continue;
+
+		if (data_rate < table[i].min_data_rate)
+			continue;
+
+		param = &table[i].param;
+		pr_info("[%s] apply ctle table %d\n", __func__, i);
+		break;
+	}
+
+	if (unlikely(param == NULL)) {
+		pr_info("[%s]param is NULL\n", __func__);
+		return -EFAULT;
+	}
+
+	for (i = 0; i <= ctx->is_4d1c; i++) {
+		port = i ? ctx->portB : ctx->port;
+		base = ctx->reg_ana_csi_rx[(unsigned int)port];
+
+		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_BW, param->eq_bw);
+		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, param->eq_dg0_en);
+		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, param->eq_dg1_en);
+		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, param->eq_sr0);
+		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, param->eq_sr1);
+		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_IS, param->eq_is);
+		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_IS_RDC, param->eq_is_cdr);
+		SENINF_BITS(base, CDPHY_RX_ANA_14, RG_CSI0_CDPHY_EQ_OS_IS, param->eq_os_is);
+
+		dev_info(ctx->dev, "[%s] csi %d port %s CDPHY_RX_ANA_5 0x%x CDPHY_RX_ANA_14 0x%x\n",
+						__func__,
+						ctx->port,
+						(i) ? "B" : "A",
+						SENINF_READ_REG(base, CDPHY_RX_ANA_5),
+						SENINF_READ_REG(base, CDPHY_RX_ANA_14));
+	}
+	return 0;
+}
+
+static int mtk_cam_seninf_set_csi_insertion_loss_config(struct seninf_ctx *ctx,
+		struct mtk_sensor_insertion_loss *param)
+{
+	u64 data_rate = 0;
+	struct seninf_vc *vc = NULL;
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s]ctx is NULL\n", __func__);
+		return -EFAULT;
+	}
+
+	if (unlikely(param == NULL)) {
+		pr_info("[%s]ctx is NULL\n", __func__);
+		return -EFAULT;
+	}
+
+	vc = mtk_cam_seninf_get_vc_by_pad(ctx, PAD_SRC_RAW0);
+
+	if (vc == NULL)
+		vc = mtk_cam_seninf_get_vc_by_pad(ctx, PAD_SRC_RAW_EXT0);
+
+	if (vc == NULL) {
+		pr_info("[%s]vc is NULL\n", __func__);
+		return -EFAULT;
+	}
+
+	if (ctx->is_cphy) { // Cphy
+		data_rate = ctx->mipi_pixel_rate * vc->bit_depth * 7;
+		do_div(data_rate, ctx->num_data_lanes * 16);
+	} else { // Dphy
+		data_rate = ctx->mipi_pixel_rate * vc->bit_depth;
+		do_div(data_rate, ctx->num_data_lanes);
+	}
+
+	if (unlikely(data_rate == 0)) {
+		pr_info("[%s]data_rate should not be 0, skip csi insertion config\n", __func__);
+		return -EFAULT;
+	}
+
+	return (ctx->is_cphy) ?
+		mtk_cam_seninf_config_cphy_insertion_loss_table(ctx, param, data_rate) :
+		mtk_cam_seninf_config_dphy_insertion_loss_table(ctx, param, data_rate);
 }
 
 static int mtk_cam_seninf_set_csi_ctle_config(struct seninf_ctx *ctx,
@@ -8302,11 +8638,6 @@ static int mtk_cam_seninf_set_csi_ctle_config(struct seninf_ctx *ctx,
 		pr_info("[%s]ctx is NULL\n", __func__);
 		return -EFAULT;
 	}
-
-
-	if (param->eq_offset)
-		ret |= mtk_cam_csi_set_eq_offset(ctx, param->eq_offset);
-
 
 	if (param->cdr_delay) {
 		ret |= mtk_cam_seninf_set_cdr_delay_en(ctx, true);
@@ -8511,4 +8842,5 @@ struct mtk_cam_seninf_ops mtk_csi_phy_3_0 = {
 	._set_csi_ctle_config = mtk_cam_seninf_set_csi_ctle_config,
 	._set_mac_chk_ctrl = mtk_cam_mac_set_chk_ctrl,
 	._get_mac_chk_result = mtk_cam_mac_get_chk_result,
+	._set_csi_insertion_loss_config = mtk_cam_seninf_set_csi_insertion_loss_config,
 };

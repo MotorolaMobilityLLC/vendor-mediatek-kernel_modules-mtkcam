@@ -827,6 +827,60 @@ static int s_cmd_sensor_frame_length(struct adaptor_ctx *ctx, void *arg)
 	return 0;
 }
 
+static int g_cmd_insertion_loss_param(struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_sensor_insertion_loss *input_param = NULL;
+	int ret = 0;
+
+	/* unexpected case, arg is nullptr */
+	if (unlikely((chk_input_arg(ctx, arg, &ret, __func__)) != 0))
+		return ret;
+
+	input_param = (struct mtk_sensor_insertion_loss *)arg;
+
+	if (ctx->subctx.s_ctx.insertion_loss)
+		memcpy(input_param,
+			ctx->subctx.s_ctx.insertion_loss,
+			sizeof(struct mtk_sensor_insertion_loss));
+	else
+		memset(input_param, 0, sizeof(struct mtk_sensor_insertion_loss));
+
+	return 0;
+}
+
+static int g_cmd_cust_ctle_config(struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_sensor_ctle_param *input_param = NULL;
+	int ret = 0;
+
+	/* unexpected case, arg is nullptr */
+	if (unlikely((chk_input_arg(ctx, arg, &ret, __func__)) != 0))
+		return 0;
+
+	input_param = (struct mtk_sensor_ctle_param *)arg;
+
+	ret = subdrv_call(ctx, get_customer_ctle_config, input_param);
+
+	if (ret) {
+		memset(input_param, 0, sizeof(struct mtk_sensor_ctle_param));
+		adaptor_logi(ctx, "[%s] no customer ctle table", __func__);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+static int s_cmd_notify_mipi_err_cnt(struct adaptor_ctx *ctx, void *arg)
+{	int ret = 0;
+
+	/* unexpected case, arg is nullptr */
+	if (unlikely((chk_input_arg(ctx, arg, &ret, __func__)) != 0))
+		return 0;
+
+	subdrv_call(ctx, notify_lastest_mipi_err_cnt, (struct mtk_sensor_mipi_error_info *)arg);
+
+	return 0;
+}
 /*---------------------------------------------------------------------------*/
 // adaptor command framework/entry
 /*---------------------------------------------------------------------------*/
@@ -851,6 +905,8 @@ static const struct command_entry command_list[] = {
 	{V4L2_CMD_G_SENSOR_FAKE_SENSOR_INFO, g_cmd_fake_sensor_info},
 	{V4L2_CMD_G_SENSOR_CTLE_PARAM, g_cmd_ctle_param},
 	{V4L2_CMD_G_SENSOR_CONNECTOR_STATUS, g_cmd_g_sensor_connector_status},
+	{V4L2_CMD_G_INSERTION_LOSS_PARAM, g_cmd_insertion_loss_param},
+	{V4L2_CMD_G_CUST_CTLE_CONFIG, g_cmd_cust_ctle_config},
 
 	/* SET */
 	{V4L2_CMD_SET_CB_FUNC_OF_FAKE_SENSOR, set_cb_func_of_fake_sensor},
@@ -870,6 +926,7 @@ static const struct command_entry command_list[] = {
 	{V4L2_CMD_SET_SENSOR_AOV_DUALSYNC, s_cmd_sensor_aov_dualsync},
 	{V4L2_CMD_SET_SENSOR_BROADCAST_EVENT, s_cmd_sensor_broadcast_event},
 	{V4L2_CMD_SET_SENSOR_FRAME_LENGTH, s_cmd_sensor_frame_length},
+	{V4L2_CMD_SET_MIPI_ERR_CNT, s_cmd_notify_mipi_err_cnt},
 };
 
 long adaptor_command(struct v4l2_subdev *sd, unsigned int cmd, void *arg)

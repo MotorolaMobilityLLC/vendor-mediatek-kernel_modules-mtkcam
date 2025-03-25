@@ -884,6 +884,15 @@ static int init_sensor_global_info_section(struct adaptor_ctx *ctx,
 		memcpy(pdata->dynamic.ctle_param, data + offset, sz);
 		offset += sz;
 	}
+	if (pdata->has_insertion_loss) {
+		sz = sizeof(struct fw_mtk_sensor_insertion_loss);
+		pdata->dynamic.insertion_loss = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
+		if (!pdata->dynamic.insertion_loss)
+			return -ENOMEM;
+
+		memcpy(pdata->dynamic.insertion_loss, data + offset, sz);
+		offset += sz;
+	}
 	if (pdata->init_setting_table_cnt) {
 		int i;
 		u32 sz2, sz3;
@@ -1071,6 +1080,7 @@ static int update_s_ctx(struct adaptor_ctx *ctx,
 	COPY_COMMON_MEMBER(s_ctx, fw_struct, reg_addr_mcss_mc_frm_lp_en);
 	COPY_COMMON_MEMBER(s_ctx, fw_struct, reg_addr_mcss_frm_length_reflect_timing);
 	COPY_COMMON_MEMBER(s_ctx, fw_struct, reg_addr_mcss_mc_frm_mask_num);
+	COPY_COMMON_MEMBER(s_ctx, fw_struct, ocl_info);
 
 	/* ana_gain_table */
 	if (fw_struct->ana_gain_table_cnt) {
@@ -1127,9 +1137,6 @@ static int update_s_ctx(struct adaptor_ctx *ctx,
 				   eq_dg0_en);
 		COPY_COMMON_MEMBER(s_ctx->ctle_param,
 				   fw_struct->dynamic.ctle_param,
-				   eq_offset);
-		COPY_COMMON_MEMBER(s_ctx->ctle_param,
-				   fw_struct->dynamic.ctle_param,
 				   cdr_delay);
 		COPY_COMMON_MEMBER(s_ctx->ctle_param,
 				   fw_struct->dynamic.ctle_param,
@@ -1143,6 +1150,18 @@ static int update_s_ctx(struct adaptor_ctx *ctx,
 		COPY_COMMON_MEMBER(s_ctx->ctle_param,
 				   fw_struct->dynamic.ctle_param,
 				   eq_sr1);
+	}
+
+	/* insertion loss */
+	if (fw_struct->has_insertion_loss) {
+		sz = sizeof(struct mtk_sensor_insertion_loss);
+		s_ctx->insertion_loss = ctx_fw_kzalloc(ctx, sensor_fw, sz, GFP_KERNEL);
+		if (!s_ctx->insertion_loss)
+			return -ENOMEM;
+
+		COPY_COMMON_MEMBER(s_ctx->insertion_loss,
+				   fw_struct->dynamic.insertion_loss,
+				   loss);
 	}
 
 	/* init_setting_table */
@@ -1547,9 +1566,16 @@ static int update_s_ctx_mode(struct adaptor_ctx *ctx,
 	COPY_COMMON_MEMBER(pmode, fw_struct, csi_param.dphy_csi2_resync_dmy_cycle);
 	COPY_COMMON_MEMBER(pmode, fw_struct, csi_param.not_fixed_dphy_settle);
 	COPY_COMMON_MEMBER(pmode, fw_struct, csi_param.dphy_init_deskew_support);
+	COPY_COMMON_MEMBER(pmode, fw_struct, csi_param.dphy_periodic_deskew_support);
+	COPY_COMMON_MEMBER(pmode, fw_struct, csi_param.dphy_lrte_support);
 	COPY_COMMON_MEMBER(pmode, fw_struct, csi_param.cphy_lrte_support);
+	COPY_COMMON_MEMBER(pmode, fw_struct, csi_param.dphy_alp_support);
+	COPY_COMMON_MEMBER(pmode, fw_struct, csi_param.cphy_alp_support);
+	COPY_COMMON_MEMBER(pmode, fw_struct, csi_param.dphy_ulps_support);
+	COPY_COMMON_MEMBER(pmode, fw_struct, csi_param.cphy_ulps_support);
 	COPY_COMMON_MEMBER(pmode, fw_struct, csi_param.clk_lane_no_initial_flow);
 	COPY_COMMON_MEMBER(pmode, fw_struct, csi_param.initial_skew);
+
 
 	COPY_COMMON_MEMBER(pmode, fw_struct, sensor_output_dataformat);
 	COPY_COMMON_MEMBER(pmode, fw_struct, sensor_output_dataformat_cell_type);
@@ -1813,9 +1839,6 @@ static int update_s_ctx_mode(struct adaptor_ctx *ctx,
 		COPY_COMMON_MEMBER(pmode->ctle_param,
 				   fw_struct->dynamic.ctle_param,
 				   eq_dg0_en);
-		COPY_COMMON_MEMBER(pmode->ctle_param,
-				   fw_struct->dynamic.ctle_param,
-				   eq_offset);
 		COPY_COMMON_MEMBER(pmode->ctle_param,
 				   fw_struct->dynamic.ctle_param,
 				   cdr_delay);
@@ -2563,6 +2586,10 @@ static int init_with_firmware(struct adaptor_ctx *ctx, struct sensor_firmware *s
 					global_info.reg_addr_mcss_frm_length_reflect_timing,
 					global_info.reg_addr_mcss_mc_frm_mask_num,
 					global_info.cust_global_data_len);
+				adaptor_logi(ctx,
+					"global info ocl_info %u",
+					global_info.ocl_info);
+
 				for (j = 0; j < global_info.ana_gain_table_cnt; j++) {
 					adaptor_logi(ctx, "global info ana_gain_table[%d] = 0x%x\n",
 						     j, global_info.dynamic.ana_gain_table[j]);
@@ -2598,6 +2625,11 @@ static int init_with_firmware(struct adaptor_ctx *ctx, struct sensor_firmware *s
 					adaptor_logi(ctx, "global info custom global data len(%u): %s\n",
 						     global_info.cust_global_data_len,
 						     global_info.dynamic.cust_global_data);
+				}
+
+				if (global_info.ocl_info) {
+					adaptor_logi(ctx, "global info ocl_info(%u)\n",
+						     global_info.ocl_info);
 				}
 				break;
 			case SECTION_MODE_INFO:
@@ -2665,12 +2697,21 @@ static int init_with_firmware(struct adaptor_ctx *ctx, struct sensor_firmware *s
 						modes.mode_list[j].csi_param.legacy_phy,
 						modes.mode_list[j].csi_param.not_fixed_trail_settle);
 					adaptor_logi(ctx,
-						"mode info [%d] csi_para dphy_rsync=%u, n_fix_dphy_s=%u, dphy_init_deskew=%u, cphy_lrte=%u, clk_lane_no=%u, init_skew=%u",
+						"mode info [%d] csi_para dphy_rsync=%u, n_fix_dphy_s=%u, dphy_init_deskew=%u, dphy_periodic_deskew=%u, dphy_lrte=%u, cphy_lrte=%u",
 						j,
 						modes.mode_list[j].csi_param.dphy_csi2_resync_dmy_cycle,
 						modes.mode_list[j].csi_param.not_fixed_dphy_settle,
 						modes.mode_list[j].csi_param.dphy_init_deskew_support,
-						modes.mode_list[j].csi_param.cphy_lrte_support,
+						modes.mode_list[j].csi_param.dphy_periodic_deskew_support,
+						modes.mode_list[j].csi_param.dphy_lrte_support,
+						modes.mode_list[j].csi_param.cphy_lrte_support);
+					adaptor_logi(ctx,
+						"mode info [%d] csi_para dphy_alp=%u, cphy_alp=%u, dphy_ulps=%u, cphy_ulps=%u,clk_lane_no=%u, init_skew=%u",
+						j,
+						modes.mode_list[j].csi_param.dphy_alp_support,
+						modes.mode_list[j].csi_param.cphy_alp_support,
+						modes.mode_list[j].csi_param.dphy_ulps_support,
+						modes.mode_list[j].csi_param.cphy_ulps_support,
 						modes.mode_list[j].csi_param.clk_lane_no_initial_flow,
 						modes.mode_list[j].csi_param.initial_skew);
 					adaptor_logi(ctx,
@@ -2952,6 +2993,9 @@ static bool compare_static_ctx(struct adaptor_ctx *ctx,
 			sizeof(struct mtk_sensor_saturation_info), "global info");
 	ret |= RET_IF_CHK_PTR_FAIL(ctx, target, legacy, ctle_param,
 			sizeof(struct mtk_sensor_ctle_param), "global info");
+
+	ret |= RET_IF_CHK_PTR_FAIL(ctx, target, legacy, insertion_loss,
+			sizeof(struct mtk_sensor_insertion_loss), "global info");
 
 	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, frame_length_max, "global info");
 	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, frame_length_max_without_lshift, "global info");

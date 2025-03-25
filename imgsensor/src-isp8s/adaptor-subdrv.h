@@ -499,7 +499,9 @@ struct subdrv_static_ctx {
 	u32 init_setting_table_v2_cnt;
 	struct subdrv_mode_struct *mode;
 	struct mtk_sensor_ctle_param *ctle_param;
+	struct mtk_sensor_insertion_loss *insertion_loss;
 	u32 sensor_mode_num;
+	u32 ocl_info;
 	struct subdrv_feature_control *list;
 	u32 list_len;
 	u8 chk_s_off_sta;
@@ -774,6 +776,9 @@ struct subdrv_ops {
 	int (*aov_dualsync)(struct subdrv_ctx *ctx, u32 role);
 	/*this ops is for sensor switch to i3c mode*/
 	int (*i3c_pre_config)(struct subdrv_ctx *ctx);
+	int (*get_customer_ctle_config)(struct subdrv_ctx *ctx, struct mtk_sensor_ctle_param *param);
+	int (*notify_lastest_mipi_err_cnt)(struct subdrv_ctx *ctx,
+		struct mtk_sensor_mipi_error_info *info);
 };
 
 struct sensor_firmware_res {

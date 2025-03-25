@@ -127,12 +127,15 @@ struct fw_mtk_sensor_ctle_param {
 	u8 eq_latch_en;
 	u8 eq_dg1_en;
 	u8 eq_dg0_en;
-	int eq_offset;
 	u8 cdr_delay;
 	u8 eq_is;
 	u8 eq_bw;
 	u8 eq_sr0;
 	u8 eq_sr1;
+} __packed;
+
+struct fw_mtk_sensor_insertion_loss {
+	u32 loss;
 } __packed;
 
 struct fw_reg_setting_values {
@@ -151,6 +154,7 @@ struct fw_sensor_global_info_dynamic_size {
 	u32 *ana_gain_table;
 	struct fw_mtk_sensor_saturation_info *saturation_info;
 	struct fw_mtk_sensor_ctle_param *ctle_param;
+	struct fw_mtk_sensor_insertion_loss *insertion_loss;
 	struct fw_reg_setting_entry *init_setting_table;
 	u16 *i3c_precfg_setting_table;
 	char *cust_global_data;
@@ -188,6 +192,7 @@ struct fw_sensor_global_info {
 	u8 exposure_margin;
 	u8 has_saturation_info;
 	u8 has_ctle_param;
+	u8 has_insertion_loss;
 
 	u32 frame_length_max;
 	u32 frame_length_max_without_lshift;
@@ -270,7 +275,7 @@ struct fw_sensor_global_info {
 	u32 i3c_precfg_setting_len;
 
 	u32 cust_global_data_len;
-
+	u32 ocl_info;
 	/* the struct contains dynamic size parts */
 	struct fw_sensor_global_info_dynamic_size dynamic;
 } __packed;
@@ -358,7 +363,13 @@ struct fw_mtk_csi_param {
 	u32 dphy_csi2_resync_dmy_cycle;
 	u8 not_fixed_dphy_settle;
 	u8 dphy_init_deskew_support;
+	u8 dphy_periodic_deskew_support;
+	u8 dphy_lrte_support;
 	u8 cphy_lrte_support;
+	u8 dphy_alp_support;
+	u8 cphy_alp_support;
+	u8 dphy_ulps_support;
+	u8 cphy_ulps_support;
 	u8 clk_lane_no_initial_flow;
 	u8 initial_skew;
 } __packed;

@@ -801,6 +801,7 @@ struct ACDK_SENSOR_INFO_STRUCT {
 	MUINT32 OB_pedestal;
 	MUINT8 RGBW_Support;
 	MUINT8 Cam_Type;
+	MUINT32 OCL_info;
 	/* Sensing_mode: ae support
 	 * 0: not support; 1: support
 	 */

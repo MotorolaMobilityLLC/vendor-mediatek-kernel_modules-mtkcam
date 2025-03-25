@@ -452,12 +452,24 @@ struct mtk_sensor_ctle_param {
 	bool eq_latch_en;
 	bool eq_dg1_en;
 	bool eq_dg0_en;
-	int eq_offset;
 	__u8 cdr_delay;
 	__u8 eq_is;
 	__u8 eq_bw;
 	__u8 eq_sr0;
 	__u8 eq_sr1;
+};
+
+struct mtk_sensor_mipi_error_info {
+	u32 ecc_err_corrected_cnt;
+	u32 ecc_err_double_cnt;
+	u32 crc_err_cnt;
+	u32 err_lane_resync_cnt;
+	u32 data_not_enough_cnt;
+};
+
+/*sensor insertion loss */
+struct mtk_sensor_insertion_loss {
+	u32 loss;
 };
 
 struct mtk_csi_param {
@@ -475,6 +487,8 @@ struct mtk_csi_param {
 	__u8 cphy_lrte_support;
 	__u8 dphy_alp_support;
 	__u8 cphy_alp_support;
+	__u8 dphy_ulps_support;
+	__u8 cphy_ulps_support;
 	__u8 clk_lane_no_initial_flow;
 	__u8 initial_skew;
 };

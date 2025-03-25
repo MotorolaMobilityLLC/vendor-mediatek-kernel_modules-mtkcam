@@ -1980,6 +1980,29 @@ static int set_test_model(struct seninf_ctx *ctx, char enable)
 	return 0;
 }
 
+static int set_insertion_loss_param(struct seninf_ctx *ctx)
+{
+	struct mtk_sensor_insertion_loss param;
+	int ret = 0;
+
+	ctx->sensor_sd->ops->core->command(ctx->sensor_sd,
+						V4L2_CMD_G_INSERTION_LOSS_PARAM,
+						&param);
+
+	if (param.loss == 0)
+		return 0;
+
+	dev_info(ctx->dev, "[%s]apply insertion loss config\n", __func__);
+	ret = g_seninf_ops->_set_csi_insertion_loss_config(ctx, &param);
+
+	if (ret) {
+		dev_info(ctx->dev, "[%s] _set_csi_insertion_loss_config return failed\n", __func__);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
 static int set_ctle_param(struct seninf_ctx *ctx)
 {
 	struct mtk_sensor_ctle_param param;
@@ -1990,12 +2013,48 @@ static int set_ctle_param(struct seninf_ctx *ctx)
 						&param);
 
 	dev_info(ctx->dev,
-		"[%s] eq_latch_en: 0x%x eq_dg1_en: 0x%x eq_dg0_en: 0x%x eq_offset:%d cdr_delay: 0x%x eq_is: 0x%x eq_bw: 0x%x eq_sr0: 0x%x eq_sr1: 0x%x\n",
+		"[%s] eq_latch_en: 0x%x eq_dg1_en: 0x%x eq_dg0_en: 0x%x cdr_delay: 0x%x eq_is: 0x%x eq_bw: 0x%x eq_sr0: 0x%x eq_sr1: 0x%x\n",
 			__func__,
 			param.eq_latch_en,
 			param.eq_dg1_en,
 			param.eq_dg0_en,
-			param.eq_offset,
+			param.cdr_delay,
+			param.eq_is,
+			param.eq_bw,
+			param.eq_sr0,
+			param.eq_sr1);
+
+	ret = g_seninf_ops->_set_csi_ctle_config(ctx, &param);
+
+	if (ret) {
+		dev_info(ctx->dev, "[%s] _set_csi_ctle_config return failed\n", __func__);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+static int set_cust_ctle_config(struct seninf_ctx *ctx)
+{
+	struct mtk_sensor_ctle_param param;
+	int ret = 0;
+
+	memset(&param, 0, sizeof(struct mtk_sensor_ctle_param));
+	ret = ctx->sensor_sd->ops->core->command(ctx->sensor_sd,
+						V4L2_CMD_G_CUST_CTLE_CONFIG,
+						&param);
+
+	if (ret) {
+		dev_info(ctx->dev, "[%s] get cust ctle config failed, skip\n", __func__);
+		return 0;
+	}
+
+	dev_info(ctx->dev,
+		"[%s] eq_latch_en: 0x%x eq_dg1_en: 0x%x eq_dg0_en: 0x%x cdr_delay: 0x%x eq_is: 0x%x eq_bw: 0x%x eq_sr0: 0x%x eq_sr1: 0x%x\n",
+			__func__,
+			param.eq_latch_en,
+			param.eq_dg1_en,
+			param.eq_dg0_en,
 			param.cdr_delay,
 			param.eq_is,
 			param.eq_bw,
@@ -2072,9 +2131,14 @@ static int config_hw_csi(struct seninf_ctx *ctx)
 	if (ctx->fake_sensor_info.is_fake_sensor)
 		seninf_fakesensor_set_testmdl(ctx);
 
+	if (set_insertion_loss_param(ctx))
+		dev_info(ctx->dev, "[%s][Error] set_insertion_loss_param ret(%d)\n", __func__, ret);
+
 	if (set_ctle_param(ctx))
 		dev_info(ctx->dev, "[%s][Error] set_ctle_param ret(%d)\n", __func__, ret);
 
+	if (set_cust_ctle_config(ctx))
+		dev_info(ctx->dev, "[%s][Error] set_cust_ctle_config ret(%d)\n", __func__, ret);
 
 	return 0;
 }
@@ -2626,6 +2690,31 @@ static void reset_csi_ps_info(struct seninf_ctx *ctx)
 	dev_info(ctx->dev, "[%s] reset done\n", __func__);
 }
 
+static int notify_imgsensor_lastest_mipi_cnt(struct seninf_ctx *ctx)
+{
+	struct mtk_sensor_mipi_error_info info;
+
+	if (ctx->streaming)
+		return 0;
+
+	if (ctx->sensor_sd == NULL) {
+		dev_err(ctx->dev, "[%s] ctx->sensor_sd is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	memset(&info, 0, sizeof(struct mtk_sensor_mipi_error_info));
+	info.ecc_err_corrected_cnt = ctx->ecc_err_corrected_cnt;
+	info.ecc_err_double_cnt = ctx->ecc_err_double_cnt;
+	info.crc_err_cnt = ctx->crc_err_cnt;
+	info.err_lane_resync_cnt = ctx->err_lane_resync_cnt;
+	info.data_not_enough_cnt = ctx->data_not_enough_cnt;
+
+	ctx->sensor_sd->ops->core->command(ctx->sensor_sd,
+					V4L2_CMD_SET_MIPI_ERR_CNT,
+					&info);
+	return 0;
+}
+
 static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 {
 #ifdef SENSOR_SECURE_MTEE_SUPPORT
@@ -2970,6 +3059,7 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable)
 
 	/* reset all sentest flag */
 	seninf_sentest_flag_init(ctx);
+	notify_imgsensor_lastest_mipi_cnt(ctx);
 	ctx->set_abort_flag = false;
 
 	mutex_unlock(&ctx->stream_mutex);

@@ -37,7 +37,7 @@
 
 /*ULPS-mode support*/
 #undef CDPHY_ULPS_MODE_SUPPORT
-//#define CDPHY_ULPS_MODE_SUPPORT
+#define CDPHY_ULPS_MODE_SUPPORT
 
 /*Dphy LRTE support*/
 #undef DPHY_LRTE_SUPPORT
@@ -250,6 +250,7 @@ struct mtk_cam_seninf_ops {
 	int (*_get_tsrec_timestamp)(struct seninf_ctx *ctx, void *arg);
 	int (*_eye_scan)(struct seninf_ctx *ctx, u32 key, int val, char *plog, int logbuf_size);
 	int (*_set_csi_ctle_config)(struct seninf_ctx *ctx, struct mtk_sensor_ctle_param *param);
+	int (*_set_csi_insertion_loss_config)(struct seninf_ctx *ctx, struct mtk_sensor_insertion_loss *param);
 	int (*_set_reg)(struct seninf_ctx *ctx, u32 key, u64 val);
 	int (*_set_phya_clock_src)(struct seninf_ctx *ctx);
 	ssize_t (*_show_err_status)(struct device *dev, struct device_attribute *attr, char *buf);
