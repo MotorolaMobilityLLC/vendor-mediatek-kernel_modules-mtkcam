@@ -285,7 +285,7 @@ static int basic_send_event(struct mtk_cam_job_state *s,
 	p->reference_sof_ns = s->reference_sof_ns;
 
 	loop_each_transition(s->sensor_tbl, &s_acc, SENSOR_STATE, p);
-	loop_each_transition(&basic_isp_tbl, &s_acc, ISP_STATE, p);
+	loop_each_transition(s->isp_tbl, &s_acc, ISP_STATE, p);
 
 	return 0;
 }

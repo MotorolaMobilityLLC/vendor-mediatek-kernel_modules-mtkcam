@@ -566,11 +566,14 @@ static inline bool current_sensor_applied(struct state_accessor *s_acc)
 static inline int guard_apply_isp_xvs(struct state_accessor *s_acc,
 				  struct transition_param *p)
 {
+	pr_info("%s: %d %d %d", __func__,
+			allow_applying_hw(s_acc),
+			ops_call(s_acc, prev_allow_apply_isp),
+			current_sensor_applied(s_acc));
+
 	return allow_applying_hw(s_acc) &&
 		ops_call(s_acc, prev_allow_apply_isp) &&
-		current_sensor_applied(s_acc) &&
-		// TODO: remove valid_cq_execution_xvs after ready mask support
-		valid_cq_execution_xvs(p);
+		current_sensor_applied(s_acc);
 }
 
 static inline int guard_apply_isp_valid_cq(struct state_accessor *s_acc,
