@@ -5210,7 +5210,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 	/* dump debug cur status function in case of log dropping */
 	if (ctx->debug_cur_sys_time_in_ns) {
 		seninf_logi(ctx,
-		"sys_time_ns:%llu,D/CPHY_RX_IRQ_STATUS:(0x%08x)/(0x%08x),CSIRX_MAC_CSI2_IRQ_STATUS/_MULTI_ERR_F_STATUS:(0x%x)/(0x%x),SENINF_CSI2_IRQ_STATUS:(0x%x)\n",
+		"record in current dump -> sys_time_ns:%llu,D/CPHY_RX_IRQ_STATUS:(0x%08x)/(0x%08x),CSIRX_MAC_CSI2_IRQ_STATUS/_MULTI_ERR_F_STATUS:(0x%x)/(0x%x),SENINF_CSI2_IRQ_STATUS:(0x%x)\n",
 		ctx->debug_cur_sys_time_in_ns,
 		ctx->debug_cur_dphy_irq,
 		ctx->debug_cur_cphy_irq,
@@ -5347,10 +5347,9 @@ static int mtk_cam_seninf_debug_current_status(struct seninf_ctx *ctx)
 	ctx->debug_cur_temp = SENINF_READ_REG(base_csi_mac,
 		CSIRX_CSI2_IRQ_MULTI_ERR_FRAME_SYNC_STATUS);
 
-	if (ctx->debug_cur_mac_irq & ~(0x324)) {
-		SENINF_WRITE_REG(base_csi_mac, CSIRX_MAC_CSI2_IRQ_STATUS, 0xFFFFFFFF);
-		SENINF_WRITE_REG(base_csi_mac, CSIRX_CSI2_IRQ_MULTI_ERR_FRAME_SYNC_STATUS, ctx->debug_cur_temp);
-	}
+	/* alway clear irq status */
+	SENINF_WRITE_REG(base_csi_mac, CSIRX_MAC_CSI2_IRQ_STATUS, ctx->debug_cur_mac_irq);
+	SENINF_WRITE_REG(base_csi_mac, CSIRX_CSI2_IRQ_MULTI_ERR_FRAME_SYNC_STATUS, ctx->debug_cur_temp);
 
 	seninf_logi(ctx,
 		"CSI-%d,CSIRX_MAC_CSI2_EN/_OPT/_IRQ_STATUS/_MULTI_ERR_F_STATUS:(0x%x)/(0x%x)/(0x%x)/(0x%x),SENINF_ASYNC%d_OVERRUN:(0x%x),CSIRX_MAC_CSI2_RESYNC_MERGE_CTRL:(0x%x)\n",
