@@ -3720,8 +3720,8 @@ int ctx_stream_on_seninf_sensor(struct mtk_cam_job *job, int seninf_pad_bitmask)
 				dev_info(cam->dev, "Error:mtk_cam_hsf_config fail\n");
 				return -EPERM;
 			}
-			if (is_dc_mode(job))
-				ccu_hsf_camsv_config(ctx, 1);
+			//if (is_dc_mode(job))
+			ccu_hsf_camsv_config(ctx, 1);
 
 			mtk_cam_seninf_set_secure(seninf, 1,
 				ctx->hsf->share_buf->chunk_hsfhandle);
