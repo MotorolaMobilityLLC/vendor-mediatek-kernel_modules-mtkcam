@@ -600,18 +600,16 @@ void imgsys_main_set_init(struct mtk_imgsys_dev *imgsys_dev)
 
 	DdrRegBA = imgsysVcoreRegBA;
 
-	/* disable WLA & coh_req */
-	value = ioread32((void *)(DdrRegBA + 0xf8));
-	value = 0x4;
-	iowrite32(value, (DdrRegBA + 0xf8));
-
+	/* enable WLA & coh protect */
+	iowrite32(0xc, (DdrRegBA + 0xf8));
 	value = ioread32((void *)(DdrRegBA + 0xf8));
 	pr_debug("DdrRegBA + 0xf8 = 0x%08x\n", value);
 
-	/* WLA setting */
-	iowrite32(0x007d0002, (DdrRegBA + 0x98));
-	value = ioread32((void *)(DdrRegBA + 0x98));
-	pr_debug("DdrRegBA + 0x98 = 0x%08x\n", value);
+	/* WLA 2.0 setting */
+	iowrite32(0x80006000, (DdrRegBA + 0x9c));
+	value = ioread32((void *)(DdrRegBA + 0x9c));
+	pr_debug("DdrRegBA + 0x9c = 0x%08x\n", value);
+
 	/* Force SW ddren for debug */
 	value = 0x3fd;
 	iowrite32(value, (DdrRegBA + 0x10));
