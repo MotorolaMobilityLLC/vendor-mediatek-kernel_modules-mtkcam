@@ -1961,6 +1961,10 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 		qof_enable_cq_trigger_by_qof(raw, true);
 
 		qof_setup_hw_timer(raw, get_sensor_interval_us(job));
+
+		qof_set_force_dump(raw, true);
+		qof_dump_power_state(raw);
+		qof_set_force_dump(raw, false);
 	}
 
 	for (i = 0; i < cam->engines.num_raw_devices; i++) {

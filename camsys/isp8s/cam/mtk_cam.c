@@ -65,7 +65,7 @@ static unsigned int debug_sensor_meta_dump;
 module_param(debug_sensor_meta_dump, uint, 0644);
 MODULE_PARM_DESC(debug_sensor_meta_dump, "activates sensor meta dump");
 
-static unsigned int rms_freerun;
+static unsigned int rms_freerun = 1;
 module_param(rms_freerun, int, 0644);
 MODULE_PARM_DESC(rms_freerun, "rms_freerun");
 
@@ -5020,20 +5020,54 @@ static int loop_each_engine_rms(struct mtk_cam_engines *eng,
 	return 0;
 }
 
+static int rms_power_on(struct device *dev)
+{
+	struct mtk_rms_device *rms = dev_get_drvdata(dev);
+	struct mtk_cam_device *cam = rms->cam;
+	struct mtk_raw_device *raw;
+	int ret;
+
+	raw = dev_get_drvdata(cam->engines.raw_devs[rms->id]);
+
+	if (qof_is_enabled(raw))
+		ret = qof_rms_mtcmos_ctrl_get(raw);
+	else
+		ret = pm_runtime_get(dev);
+
+	return ret;
+}
+
+static int rms_power_off(struct device *dev)
+{
+	struct mtk_rms_device *rms = dev_get_drvdata(dev);
+	struct mtk_cam_device *cam = rms->cam;
+	struct mtk_raw_device *raw;
+	int ret;
+
+	raw = dev_get_drvdata(cam->engines.raw_devs[rms->id]);
+
+	if (qof_is_enabled(raw))
+		ret = qof_rms_mtcmos_ctrl_put(raw);
+	else
+		ret = pm_runtime_put(dev);
+
+	return ret;
+}
+
 int mtk_cam_pm_runtime_rms_engines(
 	struct mtk_cam_ctx *ctx, struct mtk_cam_engines *eng,
 	unsigned long engine_mask, int enable)
 {
 	if (enable) {
 		if (rms_freerun) {
-			loop_each_engine_rms(eng, engine_mask, pm_runtime_get, enable);
+			loop_each_engine_rms(eng, engine_mask, rms_power_on, enable);
 			pr_info("%s:get: engine_mask:0x%lx", __func__, engine_mask);
 		}
 
 		ctx->rms_disable = 0;
 	} else {
 		if (rms_freerun) {
-			loop_each_engine_rms(eng, engine_mask, pm_runtime_put, enable);
+			loop_each_engine_rms(eng, engine_mask, rms_power_off, enable);
 			pr_info("%s:put: engine_mask:0x%lx", __func__, engine_mask);
 		}
 		ctx->rms_disable = 1;
@@ -5458,6 +5492,24 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	if (IS_ERR(cam_dev->qoftop_base)) {
 		dev_err(dev, "%s: failed to map qoftop_base\n", __func__);
 		cam_dev->qoftop_base = NULL;
+	}
+
+	cam_dev->hwccf_link_set = ioremap(REG_HWCCF_BASE + REG_HWCCF_LINK_SET_ADDR, 0x4);
+	if (IS_ERR(cam_dev->hwccf_link_set)) {
+		dev_err(dev, "%s: failed to map hwccf_link_set\n", __func__);
+		cam_dev->hwccf_link_set = NULL;
+	}
+
+	cam_dev->hwccf_link_clr = ioremap(REG_HWCCF_BASE + REG_HWCCF_LINK_CLR_ADDR, 0x4);
+	if (IS_ERR(cam_dev->hwccf_link_clr)) {
+		dev_err(dev, "%s: failed to map hwccf_link_clr\n", __func__);
+		cam_dev->hwccf_link_clr = NULL;
+	}
+
+	cam_dev->hwccf_link_status = ioremap(REG_HWCCF_BASE + REG_HWCCF_LINK_STA_ADDR, 0x4);
+	if (IS_ERR(cam_dev->hwccf_link_status)) {
+		dev_err(dev, "%s: failed to map hwccf_link_status\n", __func__);
+		cam_dev->hwccf_link_status = NULL;
 	}
 
 	cam_dev->vcore_base = ioremap(cam_vcore_base, 0x36C);

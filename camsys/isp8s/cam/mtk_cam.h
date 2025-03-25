@@ -358,6 +358,9 @@ struct mtk_cam_device {
 	/* qoftop */
 	int qoftop_irq;
 	spinlock_t qoftop_lock;
+	void __iomem *hwccf_link_set;
+	void __iomem *hwccf_link_clr;
+	void __iomem *hwccf_link_status;
 };
 
 static inline struct device *subdev_to_cam_dev(struct v4l2_subdev *sd)

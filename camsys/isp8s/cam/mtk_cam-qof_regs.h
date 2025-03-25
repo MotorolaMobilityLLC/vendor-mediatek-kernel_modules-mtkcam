@@ -953,5 +953,9 @@
 #define REG_CAM_VCORE_PM_RMSB                   0x54
 #define REG_CAM_VCORE_PM_RMSC                   0x58
 
+#define REG_HWCCF_BASE                          0x31C00000
+#define REG_HWCCF_LINK_SET_ADDR                 0x3FB0
+#define REG_HWCCF_LINK_CLR_ADDR                 0x3FB4
+#define REG_HWCCF_LINK_STA_ADDR                 0x3FB8
 
 #endif	/* _MTK_CAM_QOF_REGS_H */

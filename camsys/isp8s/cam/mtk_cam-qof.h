@@ -8,6 +8,7 @@
 
 struct mtk_raw_device;
 struct mtk_yuv_device;
+struct mtk_rms_device;
 struct mtk_cam_ctx;
 struct mtk_cam_device;
 
@@ -46,7 +47,10 @@ void qof_set_cq_start_max(struct mtk_raw_device *dev, int scq_ms);
 
 bool qof_is_enabled(struct mtk_raw_device *dev);
 int qof_enable(struct mtk_raw_device *dev, bool enable);
+
 int qof_enable_cq_trigger_by_qof(struct mtk_raw_device *dev, bool enable);
+int qof_rms_mtcmos_ctrl_get(struct mtk_raw_device *dev);
+int qof_rms_mtcmos_ctrl_put(struct mtk_raw_device *dev);
 
 int __qof_mtcmos_voter(struct mtk_cam_engines *eng,
 	unsigned int used_engine, bool enable,
