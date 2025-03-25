@@ -142,13 +142,26 @@ void mtk_cam_ctx_job_finish(struct mtk_cam_job *job)
 	mtk_cam_job_return(job);
 }
 
+/* need media request protection */
 static void mtk_cam_sensor_work(struct kthread_work *work)
 {
 	struct mtk_cam_job *job =
 		container_of(work, struct mtk_cam_job, sensor_work);
+	struct media_request *req = &job->req->req;
+	struct media_request *req_sensor = &job->req_sensor->req;
 
+	/**
+	 * Both sensor req and isp req will update "job->req" and the isp req
+	 * might be enqued during the "apply_sensor", that is, the "job->req"
+	 * would be different after the "apply_sensor" is called. Recording the
+	 * media_request in the beginning to avoid of unbalanced get/put.
+	 */
+
+	two_media_request_get(req, req_sensor);
 	call_jobop(job, apply_sensor);
-	mtk_cam_job_put(job);
+	two_media_request_put(req, req_sensor);
+
+	mtk_cam_job_put(job);  /* pair with mtk_cam_job_apply_pending_action */
 }
 
 static int apply_sensor_async(struct mtk_cam_job *job)
@@ -171,11 +184,16 @@ static int check_processing(struct mtk_cam_job *job)
 	return 0;
 }
 
+/* need media request protection */
 static void mtk_cam_tuning_work(struct kthread_work *work)
 {
 	struct mtk_cam_job *job =
 		container_of(work, struct mtk_cam_job, tuning_work);
+	struct media_request *req = &job->req->req;
+	struct media_request *req_sensor = &job->req_sensor->req;
 	struct mtk_cam_tuning *p = &job->tuning_param;
+
+	two_media_request_get(req, req_sensor);
 
 	/* shading update */
 	MTK_CAM_TRACE_BEGIN(BASIC, "%s:update-%d", __func__, job->frame_seq_no);
@@ -205,7 +223,8 @@ static void mtk_cam_tuning_work(struct kthread_work *work)
 				p->end_ts_ns - p->begin_ts_ns,
 				p->begin_ts_ns, p->end_ts_ns);
 
-	mtk_cam_job_put(job);
+	two_media_request_put(req, req_sensor);
+	mtk_cam_job_put(job);  /* pair with handle_tuning_update */
 }
 
 /* TODO: refactor duplicate looping camtg function */
@@ -1653,10 +1672,11 @@ _apply_sensor_subsample(struct mtk_cam_job *job)
 
 	if (CAM_DEBUG_ENABLED(JOB_ACTION) || 1)
 		dev_info(cam->dev,
-			 "[%s] ctx:%d seq %#x sensor_ctrl_obj:%d is_raw_trigger:%d, %p/%p\n",
+			 "[%s] ctx:%d seq %#x sensor_ctrl_obj:%d is_raw_trigger:%d, sen/isp_req:%s/%s\n",
 			 __func__, ctx->stream_id, job->frame_seq_no,
 			 has_ctrls_from_sensor, job->is_raw_trigger_sensor,
-			 job->req, job->req_sensor);
+			 job->req_sensor ? job->req_sensor->debug_str : "-",
+			 job->req->debug_str);
 
 	if (job->req_sensor)
 		req = job->req_sensor;
@@ -6868,13 +6888,14 @@ int job_handle_done(struct mtk_cam_job *job)
 		debug_ts[0] = '\0';
 		debug_str_local_ts(job, debug_ts, sizeof(debug_ts));
 
-		dev_info(ctx->cam->dev, "%s: ctx-%d f_seq:0x%x req:%s(%d) ltms:%d pipe:0x%x ts:%lld%s%s,%s\n",
-			 __func__, ctx->stream_id,
-			 job->frame_seq_no,
-			 job->req->debug_str, job->req_seq, job->need_copy_ltmsgo,
+		dev_info(ctx->cam->dev,
+			 "%s: ctx-%d f_seq:%#x sen/isp_req:%s/%s(%d) ltms:%d pipe:%#x ts:%lld%s%s,%s\n",
+			 __func__, ctx->stream_id, job->frame_seq_no,
+			 job->req_sensor ? job->req_sensor->debug_str : "-",
+			 job->req->debug_str, job->req_seq,
+			 job->need_copy_ltmsgo,
 			 job->done_pipe, job->timestamp,
-			 debug_ts,
-			 job->req->is_buf_empty ? " (empty)" : "",
+			 debug_ts, job->req->is_buf_empty ? " (empty)" : "",
 			 job->dump_luma ? ctx->str_ae_data : "");
 
 		if (job->done_pipe != used_pipe)
