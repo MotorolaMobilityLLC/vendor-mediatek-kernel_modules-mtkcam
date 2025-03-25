@@ -1937,14 +1937,18 @@ int aov_core_reset(struct mtk_aov *aov_dev)
 				spin_unlock_irqrestore(&core_info->buf_lock, flag);
 				AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag), "aov free buffer-\n");
 
-				AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
-					"mtk_cam_seninf_aov_runtime_resume(%d/%d)+\n",
-					close_info.sensor_id, DEINIT_ABNORMAL_USR_FD_KILL);
-				mtk_cam_seninf_aov_runtime_resume(close_info.sensor_id,
-					DEINIT_ABNORMAL_USR_FD_KILL);
-				AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
-					"mtk_cam_seninf_aov_runtime_resume(%d/%d)-\n",
-					close_info.sensor_id, DEINIT_ABNORMAL_USR_FD_KILL);
+				if (atomic_read(&(core_info->aov_start_in_used[user_idx])) == 2) {
+					AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
+						"mtk_cam_seninf_aov_runtime_resume(%d/%d)+\n",
+						close_info.sensor_id, DEINIT_ABNORMAL_USR_FD_KILL);
+					mtk_cam_seninf_aov_runtime_resume(close_info.sensor_id,
+						DEINIT_ABNORMAL_USR_FD_KILL);
+					AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
+						"mtk_cam_seninf_aov_runtime_resume(%d/%d)-\n",
+						close_info.sensor_id, DEINIT_ABNORMAL_USR_FD_KILL);
+				} else if (atomic_read(&(core_info->aov_start_in_used[user_idx])) == 1) {
+					dev_info(aov_dev->dev, "%s: second close!", __func__);
+				}
 
 				// Free aov_start buffer
 				if (core_info->aov_start[user_idx]) {
