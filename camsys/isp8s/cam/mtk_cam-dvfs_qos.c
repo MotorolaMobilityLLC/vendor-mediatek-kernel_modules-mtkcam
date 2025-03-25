@@ -762,7 +762,7 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 	/* wdma */
 	for (i = 0; i < CAMSV_MAX_TAGS; i++) {
 		stash_peak_bw = stash_avg_bw = 0;
-		sv_param = &fp->camsv_param[0][i];
+		sv_param = &fp->camsv_param[i];
 		in = &sv_param->camsv_img_outputs[0];
 
 		x_size = in->fmt.stride[0];
@@ -903,7 +903,7 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 				job->sv_mmqos[SMI_PORT_SV_WDMA_2].peak_bw,
 				job->sv_mmqos[SMI_PORT_SV_STG_2].peak_bw);
 
-		fp->camsv_param[0][i].peak_bw = peak_bw + pd_peak_bw;
+		fp->camsv_param[i].peak_bw = peak_bw + pd_peak_bw;
 	}
 
 	mtk_cam_sv_run_df_bw_update(sv_dev, total_peak_bw);

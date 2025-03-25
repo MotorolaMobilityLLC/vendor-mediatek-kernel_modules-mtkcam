@@ -251,7 +251,6 @@ struct mtkcam_ipi_timeshared_msg {
 #define CAM_MAX_IMAGE_OUTPUT (CAM_MAX_OUTPUT_PAD + CAM_MAX_W_PATH_OUT_SIZE)
 #define CAM_MAX_META_OUTPUT	 (4)
 #define CAM_MAX_PIPE_USED	 (4)
-#define CAMSV_MAX_PIPE_USED  (2)
 #define CAMSV_MAX_TAGS       (8)
 
 struct mtkcam_ipi_config_param {
@@ -259,7 +258,7 @@ struct mtkcam_ipi_config_param {
 	__u8 need_sw_workaround;
 	__u8 use_buf_idx_for_mmap;
 	struct mtkcam_ipi_input_param	input;
-	struct mtkcam_ipi_sv_input_param sv_input[CAMSV_MAX_PIPE_USED][CAMSV_MAX_TAGS];
+	struct mtkcam_ipi_sv_input_param sv_input[CAMSV_MAX_TAGS];
 	__u8 n_maps; /* maximum # of subdevs per stream */
 	struct mtkcam_ipi_hw_mapping maps[6];
 	__u8	sw_feature;
@@ -279,7 +278,7 @@ struct mtkcam_ipi_frame_param {
 
 	struct mtkcam_ipi_dcif_ring_param dcif_param;
 	struct mtkcam_ipi_raw_frame_param raw_param;
-	struct mtkcam_ipi_camsv_frame_param camsv_param[CAMSV_MAX_PIPE_USED][CAMSV_MAX_TAGS];
+	struct mtkcam_ipi_camsv_frame_param camsv_param[CAMSV_MAX_TAGS];
 	struct mtkcam_ipi_adl_frame_param adl_param;
 
 	struct mtkcam_ipi_timeshared_msg	timeshared_param;
@@ -311,7 +310,7 @@ struct mtkcam_ipi_cq_desc_entry {
 struct mtkcam_ipi_frame_ack_result {
 	struct mtkcam_ipi_cq_desc_entry		main;
 	struct mtkcam_ipi_cq_desc_entry		sub;
-	struct mtkcam_ipi_cq_desc_entry		camsv[CAMSV_MAX_PIPE_USED];
+	struct mtkcam_ipi_cq_desc_entry		camsv;
 	__u8 rms_disable;
 } __packed;
 

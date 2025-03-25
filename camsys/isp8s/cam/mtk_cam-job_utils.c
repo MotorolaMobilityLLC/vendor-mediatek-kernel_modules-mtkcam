@@ -743,10 +743,10 @@ static int fill_sv_img_fp_working_buffer(struct req_buffer_helper *helper,
 	uid.pipe_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
 	uid.id = MTKCAM_IPI_CAMSV_MAIN_OUT;
 
-	fp->camsv_param[0][tag_idx].dev_id = uid.pipe_id;
-	fp->camsv_param[0][tag_idx].tag_id = tag_idx;
+	fp->camsv_param[tag_idx].dev_id = uid.pipe_id;
+	fp->camsv_param[tag_idx].tag_id = tag_idx;
 
-	out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[0];
+	out = &fp->camsv_param[tag_idx].camsv_img_outputs[0];
 	ret = fill_img_out_driver_buf(out, uid, fmt_desc, buf);
 
 EXIT:
@@ -1060,10 +1060,10 @@ int update_sensor_meta_buffer_to_ipi_frame(struct mtk_cam_job *job,
 	uid.pipe_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
 	uid.id = MTKCAM_IPI_CAMSV_MAIN_OUT;
 
-	fp->camsv_param[0][tag_idx].dev_id = uid.pipe_id;
-	fp->camsv_param[0][tag_idx].tag_id = tag_idx;
+	fp->camsv_param[tag_idx].dev_id = uid.pipe_id;
+	fp->camsv_param[tag_idx].tag_id = tag_idx;
 
-	out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[0];
+	out = &fp->camsv_param[tag_idx].camsv_img_outputs[0];
 	ret = fill_img_out_driver_buf(out, uid,
 			&fmt_desc, &job->sensor_meta_buf);
 
@@ -1763,7 +1763,7 @@ static int fill_sv_mp_fp(
 {
 	struct mtkcam_ipi_frame_param *fp = helper->fp;
 	struct mtkcam_ipi_img_output *out =
-		&fp->camsv_param[0][tag_idx].camsv_img_outputs[0];
+		&fp->camsv_param[tag_idx].camsv_img_outputs[0];
 	dma_addr_t buf_offset = 0;
 	unsigned int size = buf->image_info.size[0];
 	int valid_plane = 0, ret = -1;
@@ -1780,8 +1780,8 @@ static int fill_sv_mp_fp(
 			MTKCAM_IPI_CAMSV_MAIN_OUT, valid_plane, buf_offset);
 	out->uid.pipe_id = pipe_id;
 
-	fp->camsv_param[0][tag_idx].dev_id = pipe_id;
-	fp->camsv_param[0][tag_idx].tag_id = tag_idx;
+	fp->camsv_param[tag_idx].dev_id = pipe_id;
+	fp->camsv_param[tag_idx].tag_id = tag_idx;
 
 
 	buf_printk("%s: tag_idx %d, iova %llx, size %u, fmt fmt/w/h/stride:%d/%d/%d/%d",

@@ -469,18 +469,18 @@ static int cam_composer_handler(struct rpmsg_device *rpdev, void *data,
 
 		if (single_sv_case(ut->isp_hardware)) {
 			buf_entry->cq_buf.size =
-				ipi_msg->ack_data.frame_result.camsv[0].size;
+				ipi_msg->ack_data.frame_result.camsv.size;
 			buf_entry->cq_offset =
-				ipi_msg->ack_data.frame_result.camsv[0].offset;
+				ipi_msg->ack_data.frame_result.camsv.offset;
 			dev_info(dev, "%s, camsv size/offset(%d/%d)\n", __func__,
 				buf_entry->cq_buf.size, buf_entry->cq_offset);
 		}
 
 		if (single_sv_pdp_case(ut->isp_hardware)) {
 			buf_entry->cq_buf.size =
-				ipi_msg->ack_data.frame_result.camsv[0].size;
+				ipi_msg->ack_data.frame_result.camsv.size;
 			buf_entry->cq_offset =
-				ipi_msg->ack_data.frame_result.camsv[0].offset;
+				ipi_msg->ack_data.frame_result.camsv.offset;
 			dev_info(dev, "%s, camsv size/offset(%d/%d)\n", __func__,
 				buf_entry->cq_buf.size, buf_entry->cq_offset);
 		}
@@ -1161,7 +1161,7 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (ut->isp_hardware & WITH_RAW)
 			ut->subsample = config.config_param.input.subsample;
 		else if (ut->isp_hardware & SINGLE_SV_PDP)
-			ut->subsample = config.config_param.sv_input[0][PDP_TAG].input.subsample;
+			ut->subsample = config.config_param.sv_input[PDP_TAG].input.subsample;
 
 		if ((config.config_param.n_maps > 0) &&
 			(config.config_param.n_maps < MAX_N_MAPS)) {

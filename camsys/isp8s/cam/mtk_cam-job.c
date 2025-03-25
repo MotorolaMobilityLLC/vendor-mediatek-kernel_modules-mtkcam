@@ -1982,7 +1982,6 @@ unsigned long engines_to_trigger_cq(struct mtk_cam_job *job,
 	unsigned long used_engine, subset;
 	unsigned long cq_engine;
 	int dev_idx;
-	int i;
 
 	used_engine = ctx->used_engine;
 	cq_engine = 0;
@@ -2000,14 +1999,9 @@ unsigned long engines_to_trigger_cq(struct mtk_cam_job *job,
 	/* camsv */
 	subset = bit_map_subset_of(MAP_HW_CAMSV, used_engine);
 	if (subset) {
-		for (i = 0; i < ARRAY_SIZE(cq_ret->camsv); ++i) {
-			if (is_valid_cq(&cq_ret->camsv[i])) {
-				dev_idx = find_first_bit_set(subset);
-				cq_engine |= bit_map_bit(MAP_HW_CAMSV, dev_idx);
-
-				/* only single sv device */
-				break;
-			}
+		if (is_valid_cq(&cq_ret->camsv)) {
+			dev_idx = find_first_bit_set(subset);
+			cq_engine |= bit_map_bit(MAP_HW_CAMSV, dev_idx);
 		}
 	}
 
@@ -2021,7 +2015,6 @@ unsigned long raw_change_cq_engine(struct mtk_cam_job *job,
 	unsigned long used_engine, subset;
 	unsigned long cq_engine;
 	int dev_idx;
-	int i;
 
 	used_engine = job->used_engine;
 	cq_engine = 0;
@@ -2039,14 +2032,9 @@ unsigned long raw_change_cq_engine(struct mtk_cam_job *job,
 	/* camsv */
 	subset = bit_map_subset_of(MAP_HW_CAMSV, used_engine);
 	if (subset) {
-		for (i = 0; i < ARRAY_SIZE(cq_ret->camsv); ++i) {
-			if (is_valid_cq(&cq_ret->camsv[i])) {
-				dev_idx = find_first_bit_set(subset);
-				cq_engine |= bit_map_bit(MAP_HW_CAMSV, dev_idx);
-
-				/* only single sv device */
-				break;
-			}
+		if (is_valid_cq(&cq_ret->camsv)) {
+			dev_idx = find_first_bit_set(subset);
+			cq_engine |= bit_map_bit(MAP_HW_CAMSV, dev_idx);
 		}
 	}
 
@@ -2154,8 +2142,8 @@ static int _apply_sv_cq(struct mtk_cam_job *job,
 
 	apply_camsv_cq(sv_dev,
 		       cq->daddr,
-		       cq_rst->camsv[0].size,
-		       cq_rst->camsv[0].offset, 0);
+		       cq_rst->camsv.size,
+		       cq_rst->camsv.offset, 0);
 	return 0;
 }
 
@@ -3217,8 +3205,7 @@ static int update_buffer_to_ipi_mstream_1st(struct mtk_cam_job *job,
 
 	/* copy 2nd camsv frame's param to 1st */
 	memcpy(fp_1st->camsv_param, fp_2nd->camsv_param,
-		sizeof(struct mtkcam_ipi_camsv_frame_param) *
-		CAMSV_MAX_PIPE_USED * CAMSV_MAX_TAGS);
+		sizeof(struct mtkcam_ipi_camsv_frame_param) * CAMSV_MAX_TAGS);
 
 	reset_unused_io_of_ipi_frame(&helper);
 	return 0;
@@ -3587,10 +3574,10 @@ int fill_sv_bin_imgo_to_ipi_frame(
 		pr_info("%s: tag_idx not found(exp_no:%d)", __func__, job_exp_no);
 		return ret;
 	}
-	out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[4];
+	out = &fp->camsv_param[tag_idx].camsv_img_outputs[4];
 	ret = fill_img_out(helper, out, buf, node);
 	out->uid.pipe_id = pipe_id;
-	fp->camsv_param[0][tag_idx].bin_enable = true;
+	fp->camsv_param[tag_idx].bin_enable = true;
 	if (CAM_DEBUG_ENABLED(IPI_BUF))
 		pr_info("%s: tag_idx %d, iova %llx, size %u, fmt fmt/w/h/stride:%d/%d/%d/%d",
 			__func__, tag_idx, out->buf[0][0].iova, out->buf[0][0].size,
@@ -3721,12 +3708,12 @@ static int fill_sv_img_buffer_to_ipi_frame(
 	}
 	pad_idx = mtk_cam_get_seninf_pad_index(job->tag_info, node->uid.pipe_id);
 
-	out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[0];
+	out = &fp->camsv_param[tag_idx].camsv_img_outputs[0];
 	ret = fill_img_out(helper, out, buf, node);
 
-	fp->camsv_param[0][tag_idx].dev_id =
+	fp->camsv_param[tag_idx].dev_id =
 		sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
-	fp->camsv_param[0][tag_idx].tag_id = tag_idx;
+	fp->camsv_param[tag_idx].tag_id = tag_idx;
 	out->uid.id = MTKCAM_IPI_CAMSV_MAIN_OUT;
 	out->uid.pipe_id =
 		sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
@@ -3794,12 +3781,12 @@ static int fill_sv_img_buffer_to_ipi_frame_display_ic(
 	for (i = 0; i < num_plane; i++) {
 		tag_idx = proc_tag[i];
 
-		out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[0];
+		out = &fp->camsv_param[tag_idx].camsv_img_outputs[0];
 		ret = fill_img_out(helper, out, buf, node);
 
-		fp->camsv_param[0][tag_idx].dev_id =
+		fp->camsv_param[tag_idx].dev_id =
 			sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
-		fp->camsv_param[0][tag_idx].tag_id = tag_idx;
+		fp->camsv_param[tag_idx].tag_id = tag_idx;
 		out->uid.id = MTKCAM_IPI_CAMSV_MAIN_OUT;
 		out->uid.pipe_id =
 			sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
@@ -3840,12 +3827,12 @@ static int fill_sv_ext_img_buffer_to_ipi_frame_display_ic(
 	sv_dev = dev_get_drvdata(ctx->hw_sv);
 	tag_idx = SVTAG_2;
 
-	out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[0];
+	out = &fp->camsv_param[tag_idx].camsv_img_outputs[0];
 	ret = fill_img_out(helper, out, buf, node);
 
-	fp->camsv_param[0][tag_idx].dev_id =
+	fp->camsv_param[tag_idx].dev_id =
 		sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
-	fp->camsv_param[0][tag_idx].tag_id = tag_idx;
+	fp->camsv_param[tag_idx].tag_id = tag_idx;
 	out->uid.id = MTKCAM_IPI_CAMSV_MAIN_OUT;
 	out->uid.pipe_id =
 		sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
@@ -3874,12 +3861,12 @@ static int fill_sv_img_buffer_to_ipi_frame_non_comb_ic(
 	for (i = 0; i < ARRAY_SIZE(proc_tag); i++) {
 		tag_idx = proc_tag[i];
 
-		out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[0];
+		out = &fp->camsv_param[tag_idx].camsv_img_outputs[0];
 		ret = fill_img_out(helper, out, buf, node);
 
-		fp->camsv_param[0][tag_idx].dev_id =
+		fp->camsv_param[tag_idx].dev_id =
 			sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
-		fp->camsv_param[0][tag_idx].tag_id = tag_idx;
+		fp->camsv_param[tag_idx].tag_id = tag_idx;
 		out->uid.id = MTKCAM_IPI_CAMSV_MAIN_OUT;
 		out->uid.pipe_id =
 			sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
@@ -3893,7 +3880,7 @@ static int fill_sv_img_buffer_to_ipi_frame_non_comb_ic(
 		out->fmt.s.w = out->fmt.s.w / 4;
 
 		pr_info("%s: tag_idx:%d dev_id:%d buf_offset:%d stride:%d\n",
-			__func__, tag_idx, fp->camsv_param[0][tag_idx].dev_id,
+			__func__, tag_idx, fp->camsv_param[tag_idx].dev_id,
 			buf_offset, out->fmt.stride[0]);
 	}
 
@@ -5681,7 +5668,7 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 
 		for (i = SVTAG_START; i < SVTAG_END; i++) {
 			if (job->enabled_tags & (1 << i)) {
-				sv_input = &config->sv_input[0][i];
+				sv_input = &config->sv_input[i];
 
 				if (scen_support_sv_bin(&job->job_scen))
 					sv_input->is_sv_bin = true;
@@ -5693,12 +5680,12 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 					(job->first_job || job->raw_switch ||
 					job->raw_change == JOB_RAW_MASTER_CHANGED) ? 1 : 0;
 				sv_input->is_last_order_meta_off = (is_dcg_ap_merge(job)) ? 1 : 0;
-				sv_input->input = job->ipi_config.sv_input[0][i].input;
+				sv_input->input = job->ipi_config.sv_input[i].input;
 				CALL_PLAT_V4L2(
 					get_sv_smi_setting, sv_dev->id, &is_two_smi_out);
 				sv_input->is_two_smi_out = (is_two_smi_out) ? 1 : 0;
 				sv_input->is_queue_mode = atomic_read(&sv_dev->is_queue_mode);
-				sv_input->is_unpack_msb = job->ipi_config.sv_input[0][i].is_unpack_msb;
+				sv_input->is_unpack_msb = job->ipi_config.sv_input[i].is_unpack_msb;
 				sv_input->is_early_return = 0;
 				if (job->tag_info[i].is_meta_tag) {
 					struct mtk_mraw_pipeline *pipe = job->tag_info[i].mraw_pipe;
@@ -5733,17 +5720,17 @@ static int mtk_cam_job_fill_ipi_config_only_sv(struct mtk_cam_job *job,
 
 	for (i = SVTAG_START; i < SVTAG_END; i++) {
 		if (job->enabled_tags & (1 << i)) {
-			sv_input = &config->sv_input[0][i];
+			sv_input = &config->sv_input[i];
 			sv_pipe = job->tag_info[i].sv_pipe;
 
 			sv_input->dev_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
 			sv_input->tag_id = i;
 			sv_input->tag_order = job->tag_info[i].tag_order;
 			sv_input->is_first_frame = (job->first_job) ? 1 : 0;
-			sv_input->is_unpack_msb = job->ipi_config.sv_input[0][i].is_unpack_msb;
+			sv_input->is_unpack_msb = job->ipi_config.sv_input[i].is_unpack_msb;
 			sv_input->is_early_return =
 				(sv_pipe && sv_pipe->ctrl_data.is_buf_early_return) ? 1 : 0;
-			sv_input->input = job->ipi_config.sv_input[0][i].input;
+			sv_input->input = job->ipi_config.sv_input[i].input;
 			sv_input->fps = get_sensor_fps(job);
 		}
 	}
@@ -5827,7 +5814,7 @@ static int update_job_sv_param_to_ipi_frame(struct mtk_cam_job *job,
 	struct mtkcam_ipi_camsv_frame_param *sv_param;
 
 	for (i = 0; i < CAMSV_MAX_TAGS; i++) {
-		sv_param = &fp->camsv_param[0][i];
+		sv_param = &fp->camsv_param[i];
 		sv_param->previous_sensor_exposure_num = job_prev_sensor_exp_num(job);
 		sv_param->sensor_exposure_num = job_sensor_exp_num(job);
 	}
@@ -5957,11 +5944,11 @@ static int update_pdp_meta_buf_to_ipi_frame(
 		goto EXIT;
 	}
 
-	out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[0];
+	out = &fp->camsv_param[tag_idx].camsv_img_outputs[0];
 
-	fp->camsv_param[0][tag_idx].dev_id =
+	fp->camsv_param[tag_idx].dev_id =
 		sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
-	fp->camsv_param[0][tag_idx].tag_id = tag_idx;
+	fp->camsv_param[tag_idx].tag_id = tag_idx;
 	out->uid.id = MTKCAM_IPI_CAMSV_MAIN_OUT;
 	out->uid.pipe_id =
 		sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
@@ -5972,7 +5959,7 @@ static int update_pdp_meta_buf_to_ipi_frame(
 			struct mtkcam_ipi_meta_input *in;
 			void *vaddr;
 
-			in = &fp->camsv_param[0][tag_idx].pdp_meta_inputs;
+			in = &fp->camsv_param[tag_idx].pdp_meta_inputs;
 			in->remap = buf->meta_info.remap;
 			in->buf_idx = buf->v4l2_buffer_idx;
 			FILL_META_IN_OUT(in, buf, node->uid);
@@ -6395,7 +6382,7 @@ static void update_cq_hw_rdy_param(struct mtk_cam_job *job,
 	if (!ctx->hw_sv)
 		return;
 	for (tag_idx = SVTAG_START; tag_idx < SVTAG_META_END; tag_idx++)
-		fp->camsv_param[0][tag_idx].cq_hw_rdy_enable = 1;
+		fp->camsv_param[tag_idx].cq_hw_rdy_enable = 1;
 }
 
 static int mtk_cam_job_fill_ipi_frame(struct mtk_cam_job *job,

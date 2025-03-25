@@ -1713,7 +1713,7 @@ void mtk_cam_sv_fill_pdp_tag_info(struct mtk_camsv_tag_info *arr_tag,
 {
 	struct mtk_camsv_tag_info *tag_info = &arr_tag[tag_param->tag_idx];
 	struct mtkcam_ipi_input_param *cfg_in_param =
-		&ipi_config->sv_input[0][tag_param->tag_idx].input;
+		&ipi_config->sv_input[tag_param->tag_idx].input;
 
 	tag_info->mraw_pipe = pipeline;
 	tag_info->seninf_padidx = tag_param->seninf_padidx;
@@ -1722,7 +1722,7 @@ void mtk_cam_sv_fill_pdp_tag_info(struct mtk_camsv_tag_info *arr_tag,
 	tag_info->pixel_mode = pixelmode;
 	tag_info->is_meta_tag  = true;
 
-	ipi_config->sv_input[0][tag_param->tag_idx].is_unpack_msb =
+	ipi_config->sv_input[tag_param->tag_idx].is_unpack_msb =
 		is_unpack_msb;
 
 	cfg_in_param->pixel_mode = pixelmode;
@@ -1746,7 +1746,7 @@ void mtk_cam_sv_fill_tag_info(struct mtk_camsv_tag_info *arr_tag,
 {
 	struct mtk_camsv_tag_info *tag_info = &arr_tag[tag_param->tag_idx];
 	struct mtkcam_ipi_input_param *cfg_in_param =
-		&ipi_config->sv_input[0][tag_param->tag_idx].input;
+		&ipi_config->sv_input[tag_param->tag_idx].input;
 
 	tag_info->sv_pipe = pipeline;
 	tag_info->seninf_padidx = tag_param->seninf_padidx;
@@ -1756,7 +1756,7 @@ void mtk_cam_sv_fill_tag_info(struct mtk_camsv_tag_info *arr_tag,
 	tag_info->is_meta_tag = false;
 
 	/* msb swap(nv21_10) */
-	ipi_config->sv_input[0][tag_param->tag_idx].is_unpack_msb =
+	ipi_config->sv_input[tag_param->tag_idx].is_unpack_msb =
 		is_unpack_msb;
 
 	cfg_in_param->pixel_mode = pixelmode;
@@ -2406,8 +2406,8 @@ static void mtk_cam_sv_set_pda_frame_param_dmao(
 		dev_info(ctx->cam->dev, "%s: unknown tag idx", __func__);
 		return;
 	}
-	fp->camsv_param[0][tag_idx].pda_enable = pda_en;
-	fp->camsv_param[0][tag_idx].pda_idx = pipe->res_config.stats_cfg_param.pda_idx;
+	fp->camsv_param[tag_idx].pda_enable = pda_en;
+	fp->camsv_param[tag_idx].pda_idx = pipe->res_config.stats_cfg_param.pda_idx;
 
 	info[pdao_m1].width = pipe->res_config.stats_cfg_param.pda_width;
 	info[pdao_m1].height = pipe->res_config.stats_cfg_param.pda_height;
@@ -2418,7 +2418,7 @@ static void mtk_cam_sv_set_pda_frame_param_dmao(
 		dev_info(ctx->cam->dev, "%s: unknown tag idx", __func__);
 		return;
 	}
-	out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[pdao_m1];
+	out = &fp->camsv_param[tag_idx].camsv_img_outputs[pdao_m1];
 	out->uid.id = MTKCAM_IPI_MRAW_PDA_OUT;
 	out->uid.pipe_id = pipe_id;
 	out->buf[0][0].iova = buf_daddr + offset;
@@ -2455,9 +2455,9 @@ static void mtk_cam_sv_set_pdp_frame_param_dmao(
 		dev_info(ctx->cam->dev, "%s: unknown tag idx", __func__);
 		return;
 	}
-	fp->camsv_param[0][tag_idx].dev_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
-	fp->camsv_param[0][tag_idx].tag_id = tag_idx;
-	fp->camsv_param[0][tag_idx].pdp_enable = pdp_en;
+	fp->camsv_param[tag_idx].dev_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
+	fp->camsv_param[tag_idx].tag_id = tag_idx;
+	fp->camsv_param[tag_idx].pdp_enable = pdp_en;
 
 
 	offset =
@@ -2467,7 +2467,7 @@ static void mtk_cam_sv_set_pdp_frame_param_dmao(
 	dmao_num = pdp_en ? pdp_support_dmao_num : pdp_not_support_dmao_num;
 
 	for (i = 0; i < dmao_num; i++) {
-		out = &fp->camsv_param[0][tag_idx].camsv_img_outputs[i];
+		out = &fp->camsv_param[tag_idx].camsv_img_outputs[i];
 
 		out->uid.id = MTKCAM_IPI_MRAW_META_STATS_0;
 		out->uid.pipe_id = pipe_id;
