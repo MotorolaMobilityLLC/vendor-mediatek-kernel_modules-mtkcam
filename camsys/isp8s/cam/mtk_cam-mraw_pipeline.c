@@ -364,7 +364,14 @@ static const char *mraw_output_queue_names[MRAW_PIPELINE_NUM]
 	{"mtk-cam mraw-4 meta-input"},
 	{"mtk-cam mraw-5 meta-input"},
 	{"mtk-cam mraw-6 meta-input"},
-	{"mtk-cam mraw-7 meta-input"}
+	{"mtk-cam mraw-7 meta-input"},
+	{"mtk-cam mraw-8 meta-input"},
+	{"mtk-cam mraw-9 meta-input"},
+	{"mtk-cam mraw-10 meta-input"},
+	{"mtk-cam mraw-11 meta-input"},
+	{"mtk-cam mraw-12 meta-input"},
+	{"mtk-cam mraw-13 meta-input"},
+	{"mtk-cam mraw-14 meta-input"}
 };
 
 static const struct
@@ -409,7 +416,14 @@ static const char *mraw_capture_queue_names[MRAW_PIPELINE_NUM]
 	{"mtk-cam mraw-4 partial-meta-0", "mtk-cam mraw-4 pda-output"},
 	{"mtk-cam mraw-5 partial-meta-0", "mtk-cam mraw-5 pda-output"},
 	{"mtk-cam mraw-6 partial-meta-0", "mtk-cam mraw-6 pda-output"},
-	{"mtk-cam mraw-7 partial-meta-0", "mtk-cam mraw-7 pda-output"}
+	{"mtk-cam mraw-7 partial-meta-0", "mtk-cam mraw-7 pda-output"},
+	{"mtk-cam mraw-8 partial-meta-0", "mtk-cam mraw-8 pda-output"},
+	{"mtk-cam mraw-9 partial-meta-0", "mtk-cam mraw-9 pda-output"},
+	{"mtk-cam mraw-10 partial-meta-0", "mtk-cam mraw-10 pda-output"},
+	{"mtk-cam mraw-11 partial-meta-0", "mtk-cam mraw-11 pda-output"},
+	{"mtk-cam mraw-12 partial-meta-0", "mtk-cam mraw-12 pda-output"},
+	{"mtk-cam mraw-13 partial-meta-0", "mtk-cam mraw-13 pda-output"},
+	{"mtk-cam mraw-14 partial-meta-0", "mtk-cam mraw-14 pda-output"}
 };
 
 static void mtk_mraw_pipeline_queue_setup(

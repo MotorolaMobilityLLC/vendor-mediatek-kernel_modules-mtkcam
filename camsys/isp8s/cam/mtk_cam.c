@@ -3904,7 +3904,7 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 	struct mtk_camsv_device *sv_dev;
 	int i;
 
-	dev_info(ctx->cam->dev, "%s: ctx-%d pipe 0x%x engine 0x%x\n",
+	dev_info(ctx->cam->dev, "%s: ctx-%d pipe 0x%x engine 0x%lx\n",
 		 __func__, ctx->stream_id,
 		 ctx->used_pipe, ctx->used_engine);
 

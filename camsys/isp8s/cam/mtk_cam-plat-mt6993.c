@@ -961,8 +961,8 @@ static u8 vb2_queues_support_list[] = {
 
 static const struct plat_v4l2_data mt6993_v4l2_data = {
 	.raw_pipeline_num = 3,
-	.camsv_pipeline_num = 4,
-	.mraw_pipeline_num = 6,
+	.camsv_pipeline_num = 12,
+	.mraw_pipeline_num = 12,
 
 	.meta_major = MTK_CAM_META_VERSION_MAJOR,
 	.meta_minor = MTK_CAM_META_VERSION_MINOR,

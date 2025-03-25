@@ -177,7 +177,7 @@ struct mtk_cam_ctx {
 
 	atomic_t streaming;
 	unsigned int used_pipe;
-	int used_engine;
+	unsigned long used_engine;
 
 	bool not_first_job;
 	bool configured;
@@ -200,7 +200,7 @@ struct mtk_cam_ctx {
 	struct mtk_camsv_tag_info tag_info[CAMSV_MAX_TAGS];
 
 	/* pda control */
-	unsigned int pda_modules;
+	unsigned long pda_modules;
 
 	/* for mmqos usage */
 	struct mtk_seninf_active_line_info act_line_info;

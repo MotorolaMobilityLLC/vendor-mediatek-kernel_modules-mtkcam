@@ -1626,7 +1626,7 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 		goto SWITCH_FAILURE;
 #endif
 
-	dev_info(dev, "[%s] master raw changed case : wait engines:0x%x setting done\n",
+	dev_info(dev, "[%s] master raw changed case : wait engines:0x%lx setting done\n",
 			 __func__, ctx->used_engine);
 	if (mtk_cam_ctrl_wait_event(ctrl, check_setting_done, &no, 30000)) {
 		dev_info(dev, "[%s] check for dynamic_raws_change timeout: outer = 0x%x\n",
@@ -1688,7 +1688,7 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 
 	/* start to wait sof */
 	set_engines_mux_ready(ctx, job->seninf, job->used_engine, true);
-	dev_info(dev, "[%s] wait 3.new engines(0x%x) processing seq:0x%x\n",
+	dev_info(dev, "[%s] wait 3.new engines(0x%lx) processing seq:0x%x\n",
 			__func__, ctx->used_engine, job->frame_seq_no);
 	check_args.expect_inner = job->frame_seq_no;
 	check_args.expect_ack = job->frame_seq_no;
@@ -2931,7 +2931,7 @@ static int mtk_cam_watchdog_monitor_vsync(struct mtk_cam_watchdog *wd)
 	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
 		if (ctx->hw_raw[i]) {
 			dev_info_ratelimited(ctx->cam->dev,
-			"%s: vsync may timeout, ctx:%d(%d/0x%x), last ts = %lld\n",
+			"%s: vsync may timeout, ctx:%d(%d/0x%lx), last ts = %lld\n",
 			__func__, ctx->stream_id, i, ctx->used_engine, wd->last_sof_ts);
 		}
 	}

@@ -10,7 +10,7 @@
 #include "mtk_cam-video.h"
 #include "mtk_cam-plat.h"
 
-#define MRAW_PIPELINE_NUM 8
+#define MRAW_PIPELINE_NUM 15
 
 /* enum for pads of mraw pipeline */
 enum {

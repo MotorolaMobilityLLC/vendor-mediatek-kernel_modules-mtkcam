@@ -250,7 +250,7 @@ void ccu_stream_on(struct mtk_cam_ctx *ctx, unsigned int without_tg)
 
 	raw_engine = bit_map_subset_of(MAP_HW_RAW, ctx->used_engine);
 	raw_id = find_first_bit_set(raw_engine);
-	pr_info("%s used_engine:%d raw_engine:%d raw_id:%d\n", __func__, ctx->used_engine,
+	pr_info("%s used_engine:%lx raw_engine:%d raw_id:%d\n", __func__, ctx->used_engine,
 		raw_engine, raw_id);
 	if (raw_id < 0) {
 		pr_info("%s error: raw_id is not found\n", __func__);

@@ -2751,11 +2751,11 @@ static int job_pda_hw_init(struct mtk_cam_job *job, int pda_idx)
 		pda_need_uninit = ctx->pda_modules;
 
 	if (pda_need_init) {
-		pr_info("%s pda_need_init %lx pda_need_unint %lx use engine %x ",
+		pr_info("%s pda_need_init %lx pda_need_unint %lx use engine %lx ",
 			__func__, pda_need_init, pda_need_uninit, ctx->used_engine);
 		mtk_cam_ctx_fetch_pda_devices(ctx, pda_selected);
 		if (mtk_cam_occupy_engine(ctx->cam, pda_selected))
-			dev_info(ctx->cam->dev, "%s warning: occupy resource prev:0x%x/cur:0x%lx",
+			dev_info(ctx->cam->dev, "%s warning: occupy resource prev:0x%lx/cur:0x%lx",
 			__func__, ctx->used_engine, pda_selected);
 		pda_need_init = pda_selected & ~ctx->used_engine;
 		ctx->used_engine |= pda_need_init;
@@ -2772,10 +2772,10 @@ static int job_pda_hw_init(struct mtk_cam_job *job, int pda_idx)
 		}
 	}
 	if (pda_need_uninit) {
-		pr_info("%s pda_need_init %lx pda_need_unint %lx use engine %x ",
+		pr_info("%s pda_need_init %lx pda_need_unint %lx use engine %lx ",
 			__func__, pda_need_init, pda_need_uninit, ctx->used_engine);
 		if (mtk_cam_release_engine(ctx->cam, pda_need_uninit))
-			dev_info(ctx->cam->dev, "%s warning: release resource prev:0x%x",
+			dev_info(ctx->cam->dev, "%s warning: release resource prev:0x%lx",
 				__func__, ctx->used_engine);
 		ctx->used_engine &= ~pda_need_uninit;
 		ctx->pda_modules = 0;
@@ -2793,19 +2793,19 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job)
 	bool qof_enabled = false;
 
 	if (mtk_cam_release_engine(ctx->cam, ctx->used_engine))
-		dev_info(ctx->cam->dev, "%s warning: release resource prev:0x%x",
+		dev_info(ctx->cam->dev, "%s warning: release resource prev:0x%lx",
 			__func__, ctx->used_engine);
 	selected = mtk_cam_select_hw(job);
 	if (!selected)
 		return -1;
 	if (mtk_cam_occupy_engine(ctx->cam, selected))
-		dev_info(ctx->cam->dev, "%s warning: occupy resource prev:0x%x/cur:0x%lx",
+		dev_info(ctx->cam->dev, "%s warning: occupy resource prev:0x%lx/cur:0x%lx",
 		__func__, ctx->used_engine, selected);
 	/* eg. a->ab , b'0011 & b'1110 = b'0010 */
 	selected_need_init = selected & ~ctx->used_engine;
 	/* eg. ab->a , b'0011 & b'1110 = b'0010 */
 	unselected_need_uninit = ctx->used_engine & ~selected;
-	dev_info(ctx->cam->dev, "%s raw resource 0x%x->0x%lx , need init:0x%lx, need uninit:0x%lx",
+	dev_info(ctx->cam->dev, "%s raw resource 0x%lx->0x%lx , need init:0x%lx, need uninit:0x%lx",
 		__func__, ctx->used_engine, selected, selected_need_init, unselected_need_uninit);
 	/* ToDo - YM */
 	ctx->used_engine = selected;
@@ -4878,7 +4878,7 @@ static int update_job_raw_change(struct mtk_cam_job *job)
 		res = &ctrl_data->resource.user_data.raw_res;
 		if (CAM_DEBUG_ENABLED(JOB))
 			dev_info(ctx->cam->dev,
-			"%s:ctx(%d): (%s/%s) check raw resource(hwmode:%d/ctx used:0x%x) : raw_must/raws (pipe, ctx):(0x%x/0x%x, 0x%x/0x%x) enquecnt:%d freq:%d\n",
+			"%s:ctx(%d): (%s/%s) check raw resource(hwmode:%d/ctx used:0x%lx) : raw_must/raws (pipe, ctx):(0x%x/0x%x, 0x%x/0x%x) enquecnt:%d freq:%d\n",
 			__func__,
 			ctx->stream_id, job->sensor->entity.name, job->seninf->entity.name,
 			res->hw_mode, ctx->used_engine,
@@ -4895,7 +4895,7 @@ static int update_job_raw_change(struct mtk_cam_job *job)
 			else
 				job->raw_change = JOB_RAW_MASTER_CHANGED;
 			dev_info(ctx->cam->dev,
-				"%s:ctx(%d): change raw resource (hwmode:%d/engine:0x%x->0x%x) raw_change_type:%d\n",
+				"%s:ctx(%d): change raw resource (hwmode:%d/engine:0x%lx->0x%x) raw_change_type:%d\n",
 				__func__, ctx->stream_id,
 				res->hw_mode, ctx->used_engine, res->raws, job->raw_change);
 		}
