@@ -779,8 +779,19 @@ static void HWDMASettings(struct PDA_Data_t *pda_PdaConfig)
 
 		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_AUTO_TRIG_REG, 0x0);
 
+		// clear AXSLC
+		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_P1_AXSLC_REG, 0x0);
+		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_P2_AXSLC_REG, 0x0);
+		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_P3_AXSLC_REG, 0x0);
+		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_P4_AXSLC_REG, 0x0);
+		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_P5_AXSLC_REG, 0x0);
+		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDAO_P1_AXSLC_REG, 0x0);
+
 		// ddren set hw mode
 		PDA_WR32(PDA_devs[i].m_pda_base + PDA_DDREN_CFG_REG, 0x8);
+
+		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PACK_MODE_REG, 0x0);
+		PDA_WR32(PDA_devs[i].m_pda_base + PDA_DILATION_CFG_REG, 0x0);
 
 		PDA_WR32(PDA_devs[i].m_pda_base + PDA_OFL_SKIP_MODE_REG, 0x1);
 		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_DL_CTRL_REG, 0x1);
@@ -1159,25 +1170,121 @@ static void LOGHWRegister(unsigned int i)
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_12_REG),
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_13_REG));
 
-	LOG_INF("CFG_14/15/16/17/18/19/20: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+	LOG_INF("CFG_14/15/16/17/18: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_14_REG),
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_15_REG),
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_16_REG),
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_17_REG),
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_18_REG),
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_19_REG),
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_20_REG));
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_18_REG));
 
-	LOG_INF("CFG_21/22/23/24/25/26/27/28: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+	LOG_INF("ROI 0,1, CFG_19~26: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_19_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_20_REG),
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_21_REG),
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_22_REG),
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_23_REG),
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_24_REG),
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_25_REG),
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_26_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_26_REG));
+	LOG_INF("ROI 2,3, CFG_27~34: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_27_REG),
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_28_REG));
-
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_28_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_29_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_30_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_31_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_32_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_33_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_34_REG));
+	LOG_INF("ROI 4,5, CFG_35~42: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_35_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_36_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_37_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_38_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_39_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_40_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_41_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_42_REG));
+	LOG_INF("ROI 6,7, CFG_43~50: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_43_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_44_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_45_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_46_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_47_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_48_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_49_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_50_REG));
+	LOG_INF("ROI 8,9, CFG_51~58: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_51_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_52_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_53_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_54_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_55_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_56_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_57_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_58_REG));
+	LOG_INF("ROI 10,11, CFG_59~66: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_59_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_60_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_61_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_62_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_63_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_64_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_65_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_66_REG));
+	LOG_INF("ROI 12,13, CFG_67~74: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_67_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_68_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_69_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_70_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_71_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_72_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_73_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_74_REG));
+	LOG_INF("ROI 14,15, CFG_75~82: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_75_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_76_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_77_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_78_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_79_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_80_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_81_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_82_REG));
+	LOG_INF("ROI 16,17, CFG_83~90: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_83_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_84_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_85_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_86_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_87_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_88_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_89_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_90_REG));
+	LOG_INF("ROI 18,19, CFG_91~98: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_91_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_92_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_93_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_94_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_95_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_96_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_97_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_98_REG));
+	LOG_INF("ROI 20,21, CFG_99~106: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_99_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_100_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_101_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_102_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_103_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_104_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_105_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_106_REG));
+	LOG_INF("ROI 22,23, CFG_107~114: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_107_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_108_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_109_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_110_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_111_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_112_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_113_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_114_REG));
 	LOG_INF("I_P1/TI_P1/I_P2/TI_P2/Out: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDAI_P1_BASE_ADDR_REG),
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDATI_P1_BASE_ADDR_REG),
@@ -1316,6 +1423,10 @@ static void LOGHWRegister(unsigned int i)
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDARI_P4_BASE_ADDR_MSB_REG),
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDALI_P5_BASE_ADDR_MSB_REG),
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDARI_P5_BASE_ADDR_MSB_REG));
+
+	LOG_INF("PACK/DILATION: 0x%x/0x%x\n",
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PACK_MODE_REG),
+		PDA_RD32(PDA_devs[i].m_pda_base + PDA_DILATION_CFG_REG));
 }
 
 static void TF_dump_log(unsigned int hw_trigger_num)
@@ -2881,6 +2992,18 @@ struct device *pda_init_larb(struct platform_device *pdev, int idx)
 
 	return &larb_pdev->dev;
 }
+
+int camera_pda_translation_fault_callback(int port, dma_addr_t mva, void *data)
+{
+	TF_dump_log(g_PDA_quantity);
+	LOG_INF("PDA size image/table/output: %d/%d/%d\n",
+		g_pda_Pdadata.image_size,
+		g_pda_Pdadata.table_size,
+		g_pda_Pdadata.output_size);
+
+	return 0;
+}
+
 /*****************************************************************************
  *
  ****************************************************************************/
@@ -2893,6 +3016,7 @@ static int PDA_probe(struct platform_device *pdev)
 	struct device_node *vcore_node;
 	struct platform_device *vcore_pdev;
 	struct device_link *vcore_link;
+	int smmus;
 
 	LOG_INF("probe Start\n");
 
@@ -3025,6 +3149,21 @@ static int PDA_probe(struct platform_device *pdev)
 		if (!g_smmu_dev1) {
 			LOG_INF("failed to get pda smmu device\n");
 			return -EINVAL;
+		}
+	}
+
+	smmus = of_property_count_u32_elems(
+		pdev->dev.of_node, "mediatek,smmu-dma-axid");
+	smmus = (smmus > 0) ? smmus : 0;
+	LOG_INF("smmu_num:%d\n", smmus);
+	for (i = 0; i < smmus; i++) {
+		u32 axid;
+
+		if (!of_property_read_u32_index(
+			pdev->dev.of_node, "mediatek,smmu-dma-axid", i, &axid)) {
+			mtk_iommu_register_fault_callback(
+				axid, camera_pda_translation_fault_callback,
+				NULL, false);
 		}
 	}
 
