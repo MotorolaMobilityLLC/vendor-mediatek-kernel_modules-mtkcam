@@ -5,6 +5,7 @@
 #define __MTK_CAM_SENINF_IF_H__
 
 #include <media/v4l2-ctrls.h>
+#include "imgsensor-krn_user.h"
 
 /* ISP8 new API */
 
@@ -288,6 +289,32 @@ struct mtk_seninf_active_line_info {
 int mtk_cam_seninf_get_active_line_info(struct v4l2_subdev *sd,
 				unsigned int mbus_code,
 				struct mtk_seninf_active_line_info *result);
+
+
+/**
+ * struct mtk_seninf_sensor_linetime_list - DCG+VS lut linetime list
+ * @hdr_mode: HDR_RAW_DCG_RAW_VS: ap merge moded,
+ *            HDR_RAW_DCG_COMPOSE_VS: sensor merged mode,
+ *            others (non-DCG_VS)
+ * @linetime_cnt: array count of lut_read_linetimes_in_ns
+ * @lut_read_linetimes_in_ns: linetime list in ns
+ */
+struct mtk_seninf_sensor_linetime_list {
+	unsigned int hdr_mode;
+	unsigned int linetime_cnt;
+	unsigned int lut_read_linetimes_in_ns[IMGSENSOR_LUT_MAXCNT];
+};
+
+/**
+ * Get linetime_list by lut order (DCG VS used)
+ *
+ * @param sd v4l2_subdev
+ * @param mbus_code Info of queried sensor mode id
+ * @param result The result
+ * @return 0 if success, and negative number if error occur
+ */
+int mtk_seninf_g_read_linetime_list(struct v4l2_subdev *sd,
+				unsigned int mbus_code, struct mtk_seninf_sensor_linetime_list *result);
 
 void
 mtk_cam_seninf_set_secure(struct v4l2_subdev *sd, int enable, u64 SecInfo_addr);

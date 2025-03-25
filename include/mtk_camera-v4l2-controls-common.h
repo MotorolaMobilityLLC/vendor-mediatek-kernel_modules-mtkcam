@@ -417,6 +417,9 @@ struct mtk_cam_broadcast_info {
 #define V4L2_CMD_SET_MIPI_ERR_CNT \
 	(V4L2_CMD_USER_MTK_SENSOR_BASE + 32)
 
+#define V4L2_CMD_G_DCG_VSL_LINETIME_INFO \
+	(V4L2_CMD_USER_MTK_SENSOR_BASE + 33)
+
 
 /**
  * EINT

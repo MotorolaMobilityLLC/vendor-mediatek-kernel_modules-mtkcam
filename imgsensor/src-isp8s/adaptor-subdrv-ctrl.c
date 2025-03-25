@@ -729,25 +729,23 @@ void write_dcg_vs_frame_length_in_lut(struct subdrv_ctx *ctx, u32 fll, u32 *fll_
 {
 	int i = 0;
 	u32 frame_length_buf;
-	u8 dcg_lut_id, vs_lut_id;
-	u32 dcg_fl_step, vs_fl_step;
+	u32 fl_a_step = 0, fl_b_step = 0;
+	struct struct_dcg_vsl_info dcg_vsl_info = {0};
 
 	check_current_scenario_id_bound(ctx);
 
-	dcg_lut_id = get_multiexp_belong_lut(ctx, ctx->current_scenario_id, IMGSENSOR_EXPOSURE_LE);
-	vs_lut_id = get_multiexp_belong_lut(ctx, ctx->current_scenario_id, IMGSENSOR_EXPOSURE_SE);
-	dcg_fl_step = get_lut_static_info(ctx, u32, framelength_step,
-					ctx->current_scenario_id, dcg_lut_id);
-	vs_fl_step = get_lut_static_info(ctx, u32, framelength_step,
-					ctx->current_scenario_id, vs_lut_id);
+	get_dcg_vsl_info_by_scenario(ctx, ctx->current_scenario_id, &dcg_vsl_info);
 
 	// manual mode
-	switch (ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt) {
-	case 3:
-		if (dcg_fl_step)
-			fll_in_lut[0] = roundup(fll_in_lut[0], dcg_fl_step);
-		if (vs_fl_step)
-			fll_in_lut[1] = roundup(fll_in_lut[1], vs_fl_step);
+	switch (dcg_vsl_info.lut_cnt) {
+	case 2:
+		/* lut-A & lut-B */
+		fl_a_step = dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].framelength_step;
+		fl_b_step = dcg_vsl_info.lut_info[IMGSENSOR_LUT_B].framelength_step;
+		if (fl_a_step)
+			fll_in_lut[0] = roundup(fll_in_lut[0], fl_a_step);
+		if (fl_b_step)
+			fll_in_lut[1] = roundup(fll_in_lut[1], fl_b_step);
 		fll_in_lut[2] = 0;
 		fll_in_lut[3] = 0;
 		fll_in_lut[4] = 0;
@@ -806,8 +804,8 @@ void write_dcg_vs_frame_length_in_lut(struct subdrv_ctx *ctx, u32 fll, u32 *fll_
 			fll_in_lut[2],
 			fll_in_lut[3],
 			fll_in_lut[4],
-			dcg_fl_step,
-			vs_fl_step);
+			fl_a_step,
+			fl_b_step);
 	} else {
 		DRV_LOG(ctx,
 			"sid:%u,extend_frame_length_en:%u,default won't write fll!\n",
@@ -1088,42 +1086,30 @@ void set_max_framerate(struct subdrv_ctx *ctx, u16 framerate, bool min_frameleng
 	} else if (ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_DCG_RAW_VS ||
 		ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_DCG_COMPOSE_VS) {
 		// DONE: DCG-VS, margin would diff between lut
-		u8 dcg_lut_id = get_multiexp_belong_lut(ctx, ctx->current_scenario_id, IMGSENSOR_EXPOSURE_LE);
-		u8 vs_lut_id = get_multiexp_belong_lut(ctx, ctx->current_scenario_id, IMGSENSOR_EXPOSURE_SE);
-		u32 dcg_readout_length = get_lut_static_info(ctx, u32, readout_length,
-							ctx->current_scenario_id, dcg_lut_id);
-		u32 vs_readout_length = get_lut_static_info(ctx, u32, readout_length,
-							ctx->current_scenario_id, vs_lut_id);
-		u8 dcg_read_margin = get_lut_static_info(ctx, u8, read_margin,
-							ctx->current_scenario_id, dcg_lut_id);
-		u8 vs_read_margin = get_lut_static_info(ctx, u8, read_margin,
-							ctx->current_scenario_id, vs_lut_id);
-		u64 dcg_pclk = get_lut_static_info(ctx, u64, pclk,
-					ctx->current_scenario_id, dcg_lut_id);
-		u64 vs_pclk = get_lut_static_info(ctx, u64, pclk,
-					ctx->current_scenario_id, vs_lut_id);
-		u32 dcg_linelength = get_lut_static_info(ctx, u32, linelength,
-						ctx->current_scenario_id, dcg_lut_id);
-		u32 vs_linelength = get_lut_static_info(ctx, u32, linelength,
-						ctx->current_scenario_id, vs_lut_id);
-		u64 dcg_linetime_ns = (u64)dcg_linelength * 1000000000 / (dcg_pclk ? dcg_pclk : 1);
-		u64 vs_linetime_ns = (u64)vs_linelength * 1000000000 / (vs_pclk ? vs_pclk : 1);
+		struct struct_dcg_vsl_info dcg_vsl_info = {0};
 
-		switch (ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt) {
-		case 3:  /* DCG + VS */
+		get_dcg_vsl_info_by_scenario(ctx, ctx->current_scenario_id, &dcg_vsl_info);
+
+		switch (dcg_vsl_info.lut_cnt) {
+		case 2: /* DCG + VS. lut-A + lut-B */
 
 			ctx->frame_length_in_lut[0] =
-				max(ctx->frame_length_in_lut[0], dcg_readout_length + dcg_read_margin);
+				max(ctx->frame_length_in_lut[0],
+				    dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].readout_length +
+				    dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].read_margin);
 			ctx->frame_length_in_lut[0] =
 				min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
 			ctx->frame_length_in_lut[1] =
-				max(ctx->frame_length_in_lut[1], vs_readout_length + vs_read_margin);
+				max(ctx->frame_length_in_lut[1],
+				    dcg_vsl_info.lut_info[IMGSENSOR_LUT_B].readout_length +
+				    dcg_vsl_info.lut_info[IMGSENSOR_LUT_B].read_margin);
 			if (framerate && ctx->frame_length >= ctx->frame_length_in_lut[0]) {
 				u64 vs_ft_ns = (1000000000 / framerate * 10)
-					- line2ntime(ctx->frame_length_in_lut[0], dcg_linetime_ns);
+					- dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].linetime_in_ns;
 				ctx->frame_length_in_lut[1] =
 					max(ctx->frame_length_in_lut[1],
-					    ntime2line(vs_ft_ns, vs_linetime_ns));
+					    ntime2line(vs_ft_ns,
+						       dcg_vsl_info.lut_info[IMGSENSOR_LUT_B].linetime_in_ns));
 			}
 			ctx->frame_length_in_lut[1] =
 				min(ctx->frame_length_in_lut[1], ctx->s_ctx.frame_length_max);
@@ -1366,42 +1352,31 @@ void set_max_framerate_base100(struct subdrv_ctx *ctx, u16 framerate, bool min_f
 	} else if (ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_DCG_RAW_VS ||
 		ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_DCG_COMPOSE_VS) {
 		// DONE: DCG-VS, margin would diff between lut
-		u8 dcg_lut_id = get_multiexp_belong_lut(ctx, ctx->current_scenario_id, IMGSENSOR_EXPOSURE_LE);
-		u8 vs_lut_id = get_multiexp_belong_lut(ctx, ctx->current_scenario_id, IMGSENSOR_EXPOSURE_SE);
-		u32 dcg_readout_length = get_lut_static_info(ctx, u32, readout_length,
-							ctx->current_scenario_id, dcg_lut_id);
-		u32 vs_readout_length = get_lut_static_info(ctx, u32, readout_length,
-							ctx->current_scenario_id, vs_lut_id);
-		u8 dcg_read_margin = get_lut_static_info(ctx, u8, read_margin,
-							ctx->current_scenario_id, dcg_lut_id);
-		u8 vs_read_margin = get_lut_static_info(ctx, u8, read_margin,
-							ctx->current_scenario_id, vs_lut_id);
-		u64 dcg_pclk = get_lut_static_info(ctx, u64, pclk,
-					ctx->current_scenario_id, dcg_lut_id);
-		u64 vs_pclk = get_lut_static_info(ctx, u64, pclk,
-					ctx->current_scenario_id, vs_lut_id);
-		u32 dcg_linelength = get_lut_static_info(ctx, u32, linelength,
-						ctx->current_scenario_id, dcg_lut_id);
-		u32 vs_linelength = get_lut_static_info(ctx, u32, linelength,
-						ctx->current_scenario_id, vs_lut_id);
-		u64 dcg_linetime_ns = (u64)dcg_linelength * 1000000000 / (dcg_pclk ? dcg_pclk : 1);
-		u64 vs_linetime_ns = (u64)vs_linelength * 1000000000 / (vs_pclk ? vs_pclk : 1);
+		struct struct_dcg_vsl_info dcg_vsl_info = {0};
 
-		switch (ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt) {
-		case 3: /* DCG + VS */
+		get_dcg_vsl_info_by_scenario(ctx, ctx->current_scenario_id, &dcg_vsl_info);
+
+		switch (dcg_vsl_info.lut_cnt) {
+		case 2: /* DCG + VS. lut-A + lut-B */
 
 			ctx->frame_length_in_lut[0] =
-				max(ctx->frame_length_in_lut[0], dcg_readout_length + dcg_read_margin);
+				max(ctx->frame_length_in_lut[0],
+				    dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].readout_length +
+				    dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].read_margin);
 			ctx->frame_length_in_lut[0] =
 				min(ctx->frame_length_in_lut[0], ctx->s_ctx.frame_length_max);
 			ctx->frame_length_in_lut[1] =
-				max(ctx->frame_length_in_lut[1], vs_readout_length + vs_read_margin);
+				max(ctx->frame_length_in_lut[1],
+				    dcg_vsl_info.lut_info[IMGSENSOR_LUT_B].readout_length +
+				    dcg_vsl_info.lut_info[IMGSENSOR_LUT_B].read_margin);
+			// ctx->frame_length is calculated with lut-a's line time
 			if (framerate && ctx->frame_length >= ctx->frame_length_in_lut[0]) {
 				u64 vs_ft_ns = (1000000000 / framerate * 100)
-					- line2ntime(ctx->frame_length_in_lut[0], dcg_linetime_ns);
+					- dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].linetime_in_ns;
 				ctx->frame_length_in_lut[1] =
 					max(ctx->frame_length_in_lut[1],
-					    ntime2line(vs_ft_ns, vs_linetime_ns));
+					    ntime2line(vs_ft_ns,
+						       dcg_vsl_info.lut_info[IMGSENSOR_LUT_B].linetime_in_ns));
 			}
 			ctx->frame_length_in_lut[1] =
 				min(ctx->frame_length_in_lut[1], ctx->s_ctx.frame_length_max);
@@ -2008,93 +1983,83 @@ void set_dcg_vs_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 	u32 calc_fl_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT] = {0};
 	int i;
 	u32 linetime_in_ns = 0;
-	u8 dcg_lut_id = get_multiexp_belong_lut(ctx, scenario_id, IMGSENSOR_EXPOSURE_LE);
-	u8 vs_lut_id = get_multiexp_belong_lut(ctx, scenario_id, IMGSENSOR_EXPOSURE_SE);
-	u32 dcg_readout_length = get_lut_static_info(ctx, u32, readout_length,
-						scenario_id, dcg_lut_id);
-	u32 vs_readout_length = get_lut_static_info(ctx, u32, readout_length,
-						scenario_id, vs_lut_id);
-	u8 dcg_read_margin = get_lut_static_info(ctx, u8, read_margin,
-						scenario_id, dcg_lut_id);
-	u8 vs_read_margin = get_lut_static_info(ctx, u8, read_margin,
-						scenario_id, vs_lut_id);
-	u32 dcg_exposure_margin = get_multiexp_static_info(ctx, u32, exposure_margin,
-						scenario_id, IMGSENSOR_EXPOSURE_LE);
-	u32 vs_exposure_margin = get_multiexp_static_info(ctx, u32, exposure_margin,
-						scenario_id, IMGSENSOR_EXPOSURE_SE);
-	u64 dcg_pclk = get_lut_static_info(ctx, u64, pclk,
-				scenario_id, dcg_lut_id);
-	u64 vs_pclk = get_lut_static_info(ctx, u64, pclk,
-				scenario_id, vs_lut_id);
-	u32 dcg_linelength = get_lut_static_info(ctx, u32, linelength,
-					scenario_id, dcg_lut_id);
-	u32 vs_linelength = get_lut_static_info(ctx, u32, linelength,
-					scenario_id, vs_lut_id);
-	u32 dcg_fl_step = get_lut_static_info(ctx, u32, framelength_step,
-					scenario_id, dcg_lut_id);
-	u32 vs_fl_step = get_lut_static_info(ctx, u32, framelength_step,
-					scenario_id, vs_lut_id);
-	u64 dcg_linetime_ns = (u64)dcg_linelength * 1000000000 / (dcg_pclk ? dcg_pclk : 1);
-	u64 vs_linetime_ns = (u64)vs_linelength * 1000000000 / (vs_pclk ? vs_pclk : 1);
+	struct struct_dcg_vsl_info dcg_vsl_info = {0};
+	u8 lut_a_exp_id, lut_b_exp_id;
+	u32 lut_a_fl_step, lut_b_fl_step, lut_a_linet, lut_b_linet;
 	u64 frame_time_ns, lut_0_ft_ns;
 
 	/* set default frame length if given default framerate */
 	if (framerate ==  ctx->s_ctx.mode[scenario_id].max_framerate)
 		ctx->frame_length = ctx->s_ctx.mode[scenario_id].framelength;
 
+	get_dcg_vsl_info_by_scenario(ctx, ctx->current_scenario_id, &dcg_vsl_info);
+
 	// manual mode
 	exp_cnt = ctx->s_ctx.mode[scenario_id].exp_cnt;
-	switch (exp_cnt) {
-	case 3:  /* DCG + VS */
+	if (exp_cnt == 3 && dcg_vsl_info.lut_cnt == 2) {
+		/* DCG + VS.  lut-a + lut-b */
 		for (i = 0; i < exp_cnt; i++) {
 			/*  update cit_in_lut */
 			cit_in_lut[i] = ctx->exposure[i];
 		}
+		if (ctx->s_ctx.mode[scenario_id].exposure_order_in_lbmf == IMGSENSOR_LBMF_EXPOSURE_SE_FIRST) {
+			// SE first
+			lut_a_exp_id = IMGSENSOR_EXPOSURE_SE;
+			lut_b_exp_id = IMGSENSOR_EXPOSURE_LE;
+		} else {
+			// LE first
+			lut_a_exp_id = IMGSENSOR_EXPOSURE_LE;
+			lut_b_exp_id = IMGSENSOR_EXPOSURE_SE;
+		}
+		lut_a_fl_step = dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].framelength_step;
+		lut_b_fl_step = dcg_vsl_info.lut_info[IMGSENSOR_LUT_B].framelength_step;
+		lut_a_linet = dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].linetime_in_ns;
+		lut_b_linet = dcg_vsl_info.lut_info[IMGSENSOR_LUT_B].linetime_in_ns;
 		/* fll_a_min = readout + xx lines(margin) */
 		calc_fl_in_lut[0] =
-			dcg_readout_length + dcg_read_margin;
+			dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].readout_length +
+			dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].read_margin;
 		/* fll_a = max(readout, previous shutter_b) */
 		calc_fl_in_lut[0] = max(calc_fl_in_lut[0],
-				ntime2line(line2ntime(cit_in_lut[1], vs_linetime_ns), dcg_linetime_ns)
-				+ dcg_exposure_margin);
+				cit_in_lut[2] + dcg_vsl_info.exp_info[lut_b_exp_id].exposure_margin);
 		/* fll_a = min(fll_a, fll_max) */
 		ctx->frame_length_in_lut[0] =
 			min(calc_fl_in_lut[0], ctx->s_ctx.frame_length_max);
-		ctx->frame_length_in_lut[0] = dcg_fl_step ?
-			roundup(ctx->frame_length_in_lut[0], dcg_fl_step) :
+		ctx->frame_length_in_lut[0] = lut_a_fl_step ?
+			roundup(ctx->frame_length_in_lut[0], lut_a_fl_step) :
 			ctx->frame_length_in_lut[0];
 		/* fll_b_min = readout + xx lines(margin) */
 		calc_fl_in_lut[1] =
-			vs_readout_length + vs_read_margin;
+			dcg_vsl_info.lut_info[IMGSENSOR_LUT_B].readout_length +
+			dcg_vsl_info.lut_info[IMGSENSOR_LUT_B].read_margin;
 		/* fll_b = max(readout, previous shutter_a) */
 		calc_fl_in_lut[1] = max(calc_fl_in_lut[1],
-				ntime2line(line2ntime(cit_in_lut[0], dcg_linetime_ns), vs_linetime_ns)
-				+ vs_exposure_margin);
+				cit_in_lut[0] + dcg_vsl_info.exp_info[lut_a_exp_id].exposure_margin);
 
 		if (framerate)
 			frame_time_ns = 1000000000ULL / framerate * 10;
 		else
 			frame_time_ns = 1000000000ULL / 1 * 10;
-		lut_0_ft_ns = line2ntime(ctx->frame_length_in_lut[0], dcg_linetime_ns);
+		lut_0_ft_ns = line2ntime(ctx->frame_length_in_lut[0], lut_a_linet);
 		DRV_LOG_MUST(ctx, "total ft = %llu  nslut-A ft = %llu ns\n", frame_time_ns, lut_0_ft_ns);
 		if (frame_time_ns >= lut_0_ft_ns) {
 			/* fll_b = max(fll_b, fll-fll_a) */
 			ctx->frame_length_in_lut[1] = max(ctx->frame_length_in_lut[1],
-				    ntime2line(frame_time_ns - lut_0_ft_ns, vs_linetime_ns));
+				    ntime2line(frame_time_ns - lut_0_ft_ns, lut_b_linet));
 		}
 		/* fll_b = min(fll_b, fll_max) */
 		ctx->frame_length_in_lut[1] =
 			min(calc_fl_in_lut[1], ctx->s_ctx.frame_length_max);
-		ctx->frame_length_in_lut[1] = vs_fl_step ?
-			roundup(ctx->frame_length_in_lut[1], vs_fl_step) :
+		ctx->frame_length_in_lut[1] = lut_b_fl_step ?
+			roundup(ctx->frame_length_in_lut[1], lut_b_fl_step) :
 			ctx->frame_length_in_lut[1];
 		ctx->frame_length_in_lut[2] = 0;
 		ctx->frame_length_in_lut[3] = 0;
 		ctx->frame_length_in_lut[4] = 0;
 		/* convert ctx->frame_length base on lut-A line time */
 		ctx->frame_length = ctx->frame_length_in_lut[0] +
-			ntime2line(line2ntime(ctx->frame_length_in_lut[1], vs_linetime_ns),
-				   dcg_linetime_ns);
+			ntime2line(line2ntime(ctx->frame_length_in_lut[1], lut_b_linet),
+				   lut_a_linet);
 
 		if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
 			ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
@@ -2117,13 +2082,10 @@ void set_dcg_vs_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 			ctx->frame_length_in_lut[4]);
 		if (ctx->s_ctx.reg_addr_auto_extend ||
 			(ctx->frame_length_in_lut[0] >
-			(ctx->exposure[1] + dcg_read_margin)) ||
+			(ctx->exposure[2] + dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].read_margin)) ||
 			(ctx->frame_length_in_lut[1] >
-			(ctx->exposure[0] + vs_read_margin)))
+			(ctx->exposure[0] + dcg_vsl_info.lut_info[IMGSENSOR_LUT_B].read_margin)))
 			set_dummy(ctx);
-		break;
-	default:
-		break;
 	}
 }
 
@@ -3096,22 +3058,15 @@ void set_dcg_vs_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 	u32 cit_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT] = {0};
 	u32 calc_fl_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT] = {0};
 	bool gph = !ctx->is_seamless && (ctx->s_ctx.s_gph != NULL);
+	struct struct_dcg_vsl_info dcg_vsl_info = {0};
 	int dcg_vs_exp_id[] = {
 		IMGSENSOR_EXPOSURE_LE,
 		IMGSENSOR_EXPOSURE_SE
 	};
-	int fine_integ_line_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
-	u32 cit_step_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
 	u32 frame_length_step_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
-	u64 exposure_range_min[IMGSENSOR_STAGGER_EXPOSURE_CNT];
-	u64 exposure_range_max[IMGSENSOR_STAGGER_EXPOSURE_CNT];
 	u32 readout_length_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
 	u8 read_margin_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
-	u32 exposure_margin_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
-	u64 linetime_ns_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
-	u8 lut_id;
-	u64 lut_pclk;
-	u32 lut_linelength;
+	u32 linetime_ns_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
 	u64 lut_0_ft_ns;
 
 
@@ -3124,68 +3079,33 @@ void set_dcg_vs_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 	}
 	check_current_scenario_id_bound(ctx);
 
+	get_dcg_vsl_info_by_scenario(ctx, ctx->current_scenario_id, &dcg_vsl_info);
+
+	if (ctx->s_ctx.mode[ctx->current_scenario_id].exposure_order_in_lbmf == IMGSENSOR_LBMF_EXPOSURE_SE_FIRST) {
+		// SE first
+		dcg_vs_exp_id[0] = IMGSENSOR_EXPOSURE_SE;
+		dcg_vs_exp_id[1] = IMGSENSOR_EXPOSURE_LE;
+	}
+
 	/* get static data of lut */
-	memset(fine_integ_line_in_lut, 0, sizeof(fine_integ_line_in_lut));
-	memset(cit_step_in_lut, 0, sizeof(cit_step_in_lut));
 	memset(frame_length_step_in_lut, 0, sizeof(frame_length_step_in_lut));
-	memset(exposure_range_min, 0, sizeof(exposure_range_min));
-	memset(exposure_range_max, 0, sizeof(exposure_range_max));
 	memset(readout_length_in_lut, 0, sizeof(readout_length_in_lut));
 	memset(read_margin_in_lut, 0, sizeof(read_margin_in_lut));
-	memset(exposure_margin_in_lut, 0, sizeof(exposure_margin_in_lut));
 	memset(linetime_ns_in_lut, 0, sizeof(linetime_ns_in_lut));
 	for (i = 0; i < ARRAY_SIZE(dcg_vs_exp_id); i++) {
-		fine_integ_line_in_lut[i] = get_multiexp_static_info(ctx, int, fine_integ_line,
-						ctx->current_scenario_id, dcg_vs_exp_id[i]);
-		cit_step_in_lut[i] = get_multiexp_static_info(ctx, u32, coarse_integ_step,
-						ctx->current_scenario_id, dcg_vs_exp_id[i]);
-		lut_id = get_multiexp_belong_lut(ctx, ctx->current_scenario_id, dcg_vs_exp_id[i]);
-		frame_length_step_in_lut[i] = get_lut_static_info(ctx, u32, framelength_step,
-						ctx->current_scenario_id, lut_id);
-
-		exposure_range_min[i] = (u64)ctx->s_ctx.mode[ctx->current_scenario_id]
-				.multi_exposure_shutter_range[dcg_vs_exp_id[i]].min;
-		exposure_range_max[i] = (u64)ctx->s_ctx.mode[ctx->current_scenario_id]
-				.multi_exposure_shutter_range[dcg_vs_exp_id[i]].max;
-
-		readout_length_in_lut[i] = get_lut_static_info(ctx, u32, readout_length,
-						ctx->current_scenario_id, lut_id);
-		read_margin_in_lut[i] = get_lut_static_info(ctx, u8, read_margin,
-						ctx->current_scenario_id, lut_id);
-		exposure_margin_in_lut[i] = get_multiexp_static_info(ctx, u32, exposure_margin,
-						ctx->current_scenario_id, dcg_vs_exp_id[i]);
-
-		lut_pclk = get_lut_static_info(ctx, u64, pclk,
-						ctx->current_scenario_id, lut_id);
-		lut_linelength = get_lut_static_info(ctx, u32, linelength,
-						ctx->current_scenario_id, lut_id);
-		linetime_ns_in_lut[i] = (u64)lut_linelength * 1000000000 / (lut_pclk ? lut_pclk : 1);
-
-		DRV_LOG_MUST(ctx,
-			"sid:%u,exp[%d]:dcg_expid:%d,fil/cit_step/lut/fll_step/exp_min/exp_max/readout_len/read_mar/exp_mar/pclk/llen/lt_ns:%d/%u/%u/%u/%llu/%llu/%u/%u/%u/%llu/%u/%llu\n",
-			ctx->current_scenario_id, i,
-			dcg_vs_exp_id[i],
-			fine_integ_line_in_lut[i],
-			cit_step_in_lut[i],
-			lut_id,
-			frame_length_step_in_lut[i],
-			exposure_range_min[i],
-			exposure_range_max[i],
-			readout_length_in_lut[i],
-			read_margin_in_lut[i],
-			exposure_margin_in_lut[i],
-			lut_pclk,
-			lut_linelength,
-			linetime_ns_in_lut[i]);
+		frame_length_step_in_lut[i] = dcg_vsl_info.lut_info[i].framelength_step;
+		readout_length_in_lut[i] = dcg_vsl_info.lut_info[i].readout_length;
+		read_margin_in_lut[i] = dcg_vsl_info.lut_info[i].read_margin;
+		linetime_ns_in_lut[i] = dcg_vsl_info.lut_info[i].linetime_in_ns;
 	}
 
 	/* manual mode */
-	for (i = 0; i < exp_cnt; i++) {
-		shutters[i] = FINE_INTEG_CONVERT(shutters[i], fine_integ_line_in_lut[i]);
-		shutters[i] = max_t(u64, shutters[i], exposure_range_min[i]);
-		shutters[i] = min_t(u64, shutters[i], exposure_range_max[i]);
-		if (cit_step_in_lut[i])
-			shutters[i] = roundup(shutters[i], cit_step_in_lut[i]);
+	for (i = 0; i < exp_cnt && i < ARRAY_SIZE(dcg_vs_exp_id); i++) {
+		shutters[i] = FINE_INTEG_CONVERT(shutters[i], dcg_vsl_info.exp_info[dcg_vs_exp_id[i]].fine_integ_line);
+		shutters[i] = max_t(u64, shutters[i], dcg_vsl_info.exp_info[dcg_vs_exp_id[i]].shutter_min);
+		shutters[i] = min_t(u64, shutters[i], dcg_vsl_info.exp_info[dcg_vs_exp_id[i]].shutter_max);
+		if (dcg_vsl_info.exp_info[dcg_vs_exp_id[i]].coarse_integ_step)
+			shutters[i] = roundup(shutters[i], dcg_vsl_info.exp_info[dcg_vs_exp_id[i]].coarse_integ_step);
 
 		/* update frame_length_in_lut */
 		ctx->frame_length_in_lut[i] = frame_length_in_lut[i] ?
@@ -3213,20 +3133,18 @@ void set_dcg_vs_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 		ctx->frame_length_in_lut[3],
 		ctx->frame_length_in_lut[4]);
 
-	switch (ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt) {
-	case 3:
+	if (ctx->s_ctx.mode[ctx->current_scenario_id].exp_cnt == 3 && dcg_vsl_info.lut_cnt == 2) {
+		// DCG+VS. lut-a + lut-b
 		/* fll_a_min = readout + xx lines(margin) */
 		calc_fl_in_lut[0] = readout_length_in_lut[0] + read_margin_in_lut[0];
 		/* fll_a = max(readout, current shutter_b) */
 		calc_fl_in_lut[0] = max(calc_fl_in_lut[0],
-				ntime2line(line2ntime(cit_in_lut[1], linetime_ns_in_lut[1]), linetime_ns_in_lut[0])
-				+ exposure_margin_in_lut[0]);
+				cit_in_lut[1] + dcg_vsl_info.exp_info[dcg_vs_exp_id[1]].exposure_margin);
 		/* fll_b_min = readout + xx lines(margin) */
 		calc_fl_in_lut[1] = readout_length_in_lut[1] + read_margin_in_lut[1];
 		/* fll_b = max(readout, current shutter_a) */
 		calc_fl_in_lut[1] = max(calc_fl_in_lut[1],
-				ntime2line(line2ntime(cit_in_lut[0], linetime_ns_in_lut[0]), linetime_ns_in_lut[1])
-				+ exposure_margin_in_lut[1]);
+				cit_in_lut[0] + dcg_vsl_info.exp_info[dcg_vs_exp_id[0]].exposure_margin);
 
 		/* fll_a = max(fll_a, userInput_fll_a) */
 		ctx->frame_length_in_lut[0] =
@@ -3275,66 +3193,74 @@ void set_dcg_vs_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 		ctx->frame_length_in_lut[3] = 0;
 		/* lut[4] no use, and assign zero */
 		ctx->frame_length_in_lut[4] = 0;
-		break;
-	default:
-		break;
-	}
 
-	/* restore shutter & update framelength */
-	memset(ctx->exposure, 0, sizeof(ctx->exposure));
-	//ctx->frame_length = 0;
-	for (i = 0; i < exp_cnt; i++) {
-		ctx->exposure[i] = shutters[i];
-		//ctx->frame_length += ctx->frame_length_in_lut[i];
-	}
-	/* check boundary of framelength */
-	//ctx->frame_length = max(ctx->frame_length, ctx->min_frame_length);
-	/* group hold start */
-	if (gph)
-		ctx->s_ctx.s_gph((void *)ctx, 1);
-	/* enable auto extend */
-	if (ctx->s_ctx.reg_addr_auto_extend)
-		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_auto_extend, 0x01);
-	/* write framelength */
-	set_auto_flicker(ctx, 0);
-	write_dcg_vs_frame_length_in_lut(ctx, ctx->frame_length, ctx->frame_length_in_lut);
-
-	/* convert ctx->frame_length base on lut-A line time */
-	ctx->frame_length = ctx->frame_length_in_lut[0] +
-			ntime2line(line2ntime(ctx->frame_length_in_lut[1], linetime_ns_in_lut[1]),
-				   linetime_ns_in_lut[0]);
-
-	/* write shutter: LUT register differs from DOL */
-	if (ctx->s_ctx.reg_addr_exposure_lshift != PARAM_UNDEFINED) {
-		set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure_lshift, 0);
-		ctx->l_shift = 0;
-	}
-	for (i = 0; i < 2; i++) {
-		if (cit_in_lut[i]) {
-			set_i2c_buffer(ctx,
-				ctx->s_ctx.reg_addr_exposure_in_lut[i].addr[0],
-				(cit_in_lut[i] >> 8) & 0xFF);
-			set_i2c_buffer(ctx,
-				ctx->s_ctx.reg_addr_exposure_in_lut[i].addr[1],
-				cit_in_lut[i] & 0xFF);
+		/* restore shutter & update framelength */
+		memset(ctx->exposure, 0, sizeof(ctx->exposure));
+		//ctx->frame_length = 0;
+		for (i = 0; i < exp_cnt; i++) {
+			ctx->exposure[i] = shutters[i];
+			//ctx->frame_length += ctx->frame_length_in_lut[i];
 		}
-	}
-	DRV_LOG(ctx,
-		"sid:%u,shutter(input/lut):0x%llx/%llx/%llx,%x/%x/%x,flInLUT(input/ctx/output_a/b/c/d/e):%llu/%u/%u/%u/%u/%u/%u,flick_en:%d\n",
-		ctx->current_scenario_id,
-		shutters[0], shutters[1], shutters[2],
-		cit_in_lut[0], cit_in_lut[1], cit_in_lut[2],
-		frame_time_ns, ctx->frame_length,
-		ctx->frame_length_in_lut[0],
-		ctx->frame_length_in_lut[1],
-		ctx->frame_length_in_lut[2],
-		ctx->frame_length_in_lut[3],
-		ctx->frame_length_in_lut[4],
-		ctx->autoflicker_en);
-	if (!ctx->ae_ctrl_gph_en) {
+		/* check boundary of framelength */
+		//ctx->frame_length = max(ctx->frame_length, ctx->min_frame_length);
+		/* group hold start */
 		if (gph)
-			ctx->s_ctx.s_gph((void *)ctx, 0);
-		commit_i2c_buffer(ctx);
+			ctx->s_ctx.s_gph((void *)ctx, 1);
+		/* enable auto extend */
+		if (ctx->s_ctx.reg_addr_auto_extend)
+			set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_auto_extend, 0x01);
+		/* write framelength */
+		set_auto_flicker(ctx, 0);
+		write_dcg_vs_frame_length_in_lut(ctx, ctx->frame_length, ctx->frame_length_in_lut);
+
+		/* convert ctx->frame_length base on lut-A line time */
+		ctx->frame_length = ctx->frame_length_in_lut[0] +
+				ntime2line(line2ntime(ctx->frame_length_in_lut[1], linetime_ns_in_lut[1]),
+					   linetime_ns_in_lut[0]);
+
+		/* write shutter: LUT register differs from DOL */
+		if (ctx->s_ctx.reg_addr_exposure_lshift != PARAM_UNDEFINED) {
+			set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_exposure_lshift, 0);
+			ctx->l_shift = 0;
+		}
+
+		/* set cit index 0 LE(DCG) & 2 SE(VS) */
+		if (cit_in_lut[0]) {
+			set_i2c_buffer(ctx,
+				ctx->s_ctx.reg_addr_exposure_in_lut[0].addr[0],
+				(cit_in_lut[0] >> 8) & 0xFF);
+			set_i2c_buffer(ctx,
+				ctx->s_ctx.reg_addr_exposure_in_lut[0].addr[1],
+				cit_in_lut[0] & 0xFF);
+		}
+		for (i = 0; i < 2; i++) {
+			if (cit_in_lut[i]) {
+				set_i2c_buffer(ctx,
+					       ctx->s_ctx.reg_addr_exposure_in_lut[i].addr[0],
+					       (cit_in_lut[i] >> 8) & 0xFF);
+				set_i2c_buffer(ctx,
+					       ctx->s_ctx.reg_addr_exposure_in_lut[i].addr[1],
+					       cit_in_lut[i] & 0xFF);
+			}
+		}
+
+		DRV_LOG(ctx,
+			"sid:%u,shutter(input/lut):0x%llx/%llx/%llx,%x/%x/%x,flInLUT(input/ctx/output_a/b/c/d/e):%llu/%u/%u/%u/%u/%u/%u,flick_en:%d\n",
+			ctx->current_scenario_id,
+			shutters[0], shutters[1], shutters[2],
+			cit_in_lut[0], cit_in_lut[1], cit_in_lut[2],
+			frame_time_ns, ctx->frame_length,
+			ctx->frame_length_in_lut[0],
+			ctx->frame_length_in_lut[1],
+			ctx->frame_length_in_lut[2],
+			ctx->frame_length_in_lut[3],
+			ctx->frame_length_in_lut[4],
+			ctx->autoflicker_en);
+		if (!ctx->ae_ctrl_gph_en) {
+			if (gph)
+				ctx->s_ctx.s_gph((void *)ctx, 0);
+			commit_i2c_buffer(ctx);
+		}
 	}
 	/* group hold end */
 }
@@ -4744,10 +4670,9 @@ void get_multi_exp_static_info_by_scenario(struct subdrv_ctx *ctx,
 {
 	struct mtk_multi_exp_static_info *info;
 	struct mtk_ae_info *ae_info;
-	int i;
+	struct struct_dcg_vsl_info dcg_vsl_info = {0};
 	u8 lut_id;
-	u64 lut_pclk;
-	u32 lut_linelength;
+	int i;
 
 	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
 		DRV_LOG(ctx, "invalid sid:%u, mode_num:%u\n",
@@ -4760,32 +4685,43 @@ void get_multi_exp_static_info_by_scenario(struct subdrv_ctx *ctx,
 	info->exp_cnt = ctx->s_ctx.mode[scenario_id].exp_cnt
 				? ctx->s_ctx.mode[scenario_id].exp_cnt : 1;
 
+	DRV_LOG_MUST(ctx, "scenario_id:%u,exp_cnt:%u\n", scenario_id, info->exp_cnt);
+
+	get_dcg_vsl_info_by_scenario(ctx, scenario_id, &dcg_vsl_info);
+
 	for (i = 0; (i < ARRAY_SIZE(info->ae_info)) && (i < info->exp_cnt); i++) {
 		ae_info = info->ae_info + i;
 
-		ae_info->gain.min = (u32)ctx->s_ctx.mode[scenario_id].multi_exposure_ana_gain_range[i].min;
-		ae_info->gain.max = (u32)ctx->s_ctx.mode[scenario_id].multi_exposure_ana_gain_range[i].max;
-		ae_info->gain.step = get_multiexp_static_info(ctx, u32, coarse_integ_step, scenario_id, i);
-		ae_info->shutter.min = (u64)ctx->s_ctx.mode[scenario_id].multi_exposure_shutter_range[i].min;
-		ae_info->shutter.max = (u64)ctx->s_ctx.mode[scenario_id].multi_exposure_shutter_range[i].max;
-		ae_info->shutter.step = get_multiexp_static_info(ctx, u32, coarse_integ_step, scenario_id, i);
+		ae_info->gain.min = dcg_vsl_info.exp_info[i].ana_gain_min;
+		ae_info->gain.max = dcg_vsl_info.exp_info[i].ana_gain_max;
+		ae_info->gain.step = dcg_vsl_info.exp_info[i].ana_gain_step;
+		ae_info->shutter.min = dcg_vsl_info.exp_info[i].shutter_min;
+		ae_info->shutter.max = dcg_vsl_info.exp_info[i].shutter_max;
+		ae_info->shutter.step = dcg_vsl_info.exp_info[i].coarse_integ_step;
 
 		if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
 			ctx->s_ctx.cust_get_linetime_in_us(ctx, scenario_id,
 							   (u32 *)&ae_info->line_time_in_ns,
 							   GET_SHUTTER_LINETIME);
 		} else {
-			lut_id = get_multiexp_belong_lut(ctx, scenario_id, i);
-			lut_pclk = get_lut_static_info(ctx, u64, pclk, scenario_id, lut_id);
-			lut_linelength = get_lut_static_info(ctx, u32, linelength, scenario_id, lut_id);
-			ae_info->line_time_in_ns = CALC_LINE_TIME_IN_NS(lut_pclk, lut_linelength);
+			lut_id = dcg_vsl_info.exp_info[i].lut_idx;//get_multiexp_belong_lut(ctx, scenario_id, i);
+			if (lut_id == IMGSENSOR_LUT_A) {
+				if (dcg_vsl_info.lut_cnt > 1)
+					lut_id = dcg_vsl_info.lut_cnt - 1;
+				else
+					lut_id = 0;
+			} else {
+				lut_id = lut_id - 1;
+			}
+
+			ae_info->line_time_in_ns = dcg_vsl_info.lut_info[lut_id].linetime_in_ns;
 		}
 
-		ae_info->fine_integ_line = get_multiexp_static_info(ctx, int, fine_integ_line, scenario_id, i);
-		ae_info->margin = get_multiexp_static_info(ctx, u32, exposure_margin, scenario_id, i);
-		ae_info->binning_ratio = get_multiexp_static_info(ctx, u32, ae_binning_ratio, scenario_id, i);
+		ae_info->fine_integ_line = dcg_vsl_info.exp_info[i].fine_integ_line;
+		ae_info->margin = dcg_vsl_info.exp_info[i].exposure_margin;
+		ae_info->binning_ratio = dcg_vsl_info.exp_info[i].ae_binning_ratio;
 
-		DRV_LOG(ctx,
+		DRV_LOG_MUST(ctx,
 			"scenario_id(%d),exp_cnt(%u)=> ae_static_info[%d]:gain_min/max/stp(%u/%u/%u),shut_min/max_stp(%llu/%llu/%u),ltInNs(%llu),fineIntegL(%d),margin(%u),binRatio(%u)\n",
 			scenario_id, info->exp_cnt, i,
 			ae_info->gain.min, ae_info->gain.max, ae_info->gain.step,
@@ -4796,6 +4732,92 @@ void get_multi_exp_static_info_by_scenario(struct subdrv_ctx *ctx,
 			ae_info->binning_ratio);
 	}
 
+}
+
+void get_dcg_vsl_info_by_scenario(struct subdrv_ctx *ctx,
+		enum SENSOR_SCENARIO_ID_ENUM scenario_id,
+		void *data)
+{
+	struct struct_dcg_vsl_info *info;
+	struct struct_exp_info *exp_info;
+	struct struct_lut_info *lut_info;
+	int i;
+	u8 max_lut_id = IMGSENSOR_LUT_A;
+	u64 lut_pclk;
+	u32 lut_linelength;
+
+	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
+		DRV_LOG(ctx, "invalid sid:%u, mode_num:%u\n",
+			scenario_id, ctx->s_ctx.sensor_mode_num);
+		scenario_id = SENSOR_SCENARIO_ID_NORMAL_PREVIEW;
+	}
+
+	info = (struct struct_dcg_vsl_info *) data;
+
+	/* exp info */
+	info->exp_cnt = ctx->s_ctx.mode[scenario_id].exp_cnt
+				? ctx->s_ctx.mode[scenario_id].exp_cnt : 1;
+
+	for (i = 0; (i < ARRAY_SIZE(info->exp_info)) && (i < info->exp_cnt); i++) {
+		exp_info = info->exp_info + i;
+
+		exp_info->lut_idx = get_multiexp_belong_lut(ctx, scenario_id, i);
+		exp_info->coarse_integ_step = get_multiexp_static_info(ctx, u32, coarse_integ_step, scenario_id, i);
+		exp_info->exposure_margin = get_multiexp_static_info(ctx, u32, exposure_margin, scenario_id, i);
+		exp_info->ae_binning_ratio = get_multiexp_static_info(ctx, u32, ae_binning_ratio, scenario_id, i);
+		exp_info->fine_integ_line = get_multiexp_static_info(ctx, int, fine_integ_line, scenario_id, i);
+		exp_info->dig_gain_min = get_multiexp_static_info(ctx, u32, dig_gain_min, scenario_id, i);
+		exp_info->dig_gain_max = get_multiexp_static_info(ctx, u32, dig_gain_max, scenario_id, i);
+		exp_info->dig_gain_step = get_multiexp_static_info(ctx, u32, dig_gain_step, scenario_id, i);
+		exp_info->ana_gain_min = (u32)ctx->s_ctx.mode[scenario_id].multi_exposure_ana_gain_range[i].min;
+		exp_info->ana_gain_max = (u32)ctx->s_ctx.mode[scenario_id].multi_exposure_ana_gain_range[i].max;
+		exp_info->ana_gain_step = ctx->s_ctx.ana_gain_step;
+		exp_info->shutter_min = (u64)ctx->s_ctx.mode[scenario_id].multi_exposure_shutter_range[i].min;
+		exp_info->shutter_max = (u64)ctx->s_ctx.mode[scenario_id].multi_exposure_shutter_range[i].max;
+
+		if (exp_info->lut_idx > max_lut_id)
+			max_lut_id = exp_info->lut_idx;
+
+		DRV_LOG_MUST(ctx,
+			"scenario_id(%d),exp_cnt(%u)=> exp_info[%d]:lut(%u),gain_min/max/stp(%u/%u/%u),dgain_min/max/stp(%u/%u/%u),shut_min/max_stp(%llu/%llu/%u),exp_margin(%u),fil(%i),binRatio(%u)\n",
+			scenario_id, info->exp_cnt, i,
+			exp_info->lut_idx,
+			exp_info->ana_gain_min, exp_info->ana_gain_max, exp_info->ana_gain_step,
+			exp_info->dig_gain_min, exp_info->dig_gain_max, exp_info->dig_gain_step,
+			exp_info->shutter_min, exp_info->shutter_max, exp_info->coarse_integ_step,
+			exp_info->exposure_margin, exp_info->fine_integ_line, exp_info->ae_binning_ratio);
+	}
+
+	/* lut info */
+	if (max_lut_id >= IMGSENSOR_LUT_MAXCNT) {
+		DRV_LOG_MUST(ctx, "Invalid lut count: %u\n", max_lut_id + 1);
+		info->lut_cnt = 0;
+		return;
+	}
+	info->lut_cnt = max_lut_id + 1;
+
+	for (i = 0; (i < ARRAY_SIZE(info->lut_info)) && (i < info->lut_cnt); i++) {
+		lut_info = info->lut_info + i;
+
+		lut_info->readout_length = get_lut_static_info(ctx, u32, readout_length, scenario_id, i);
+		lut_info->read_margin = get_lut_static_info(ctx, u32, read_margin, scenario_id, i);
+		lut_info->framelength_step = get_lut_static_info(ctx, u32, framelength_step, scenario_id, i);
+		lut_info->min_vblanking_line = get_lut_static_info(ctx, u32, min_vblanking_line, scenario_id, i);
+		lut_info->cit_loss = ctx->s_ctx.mode[scenario_id].mode_lut_s_info[i].cit_loss;
+
+		lut_pclk = get_lut_static_info(ctx, u64, pclk, scenario_id, i);
+		lut_linelength = get_lut_static_info(ctx, u32, linelength, scenario_id, i);
+		lut_info->linetime_in_ns = (u32)CALC_LINE_TIME_IN_NS(lut_pclk, lut_linelength);
+
+		DRV_LOG_MUST(ctx,
+			"scenario_id(%d),lut_cnt(%u)=> lut_info[%d]:rout_len/r_margin/frm_stp/min_vb_lc/cit_loss(%u/%u/%u/%u/%u),pclk/llc(%llu/%u),line_time_ns(%u)\n",
+			scenario_id, info->lut_cnt, i,
+			lut_info->readout_length, lut_info->read_margin,
+			lut_info->framelength_step, lut_info->min_vblanking_line,
+			lut_info->cit_loss,
+			lut_pclk, lut_linelength,
+			lut_info->linetime_in_ns);
+	}
 }
 
 void update_hw_init_time(struct subdrv_ctx *ctx, u64 fisrt_vsync_time)
@@ -6705,6 +6727,11 @@ int common_feature_control(struct subdrv_ctx *ctx, MSDK_SENSOR_FEATURE_ENUM feat
 		break;
 	case SENSOR_FEATURE_GET_MULTI_EXP_STATIC_INFO_BY_SCENARIO:
 		get_multi_exp_static_info_by_scenario(ctx,
+			(enum SENSOR_SCENARIO_ID_ENUM)*(feature_data),
+			(void *)(uintptr_t)(*(feature_data + 1)));
+		break;
+	case SENSOR_FEATURE_GET_DCG_VSL_INFO:
+		get_dcg_vsl_info_by_scenario(ctx,
 			(enum SENSOR_SCENARIO_ID_ENUM)*(feature_data),
 			(void *)(uintptr_t)(*(feature_data + 1)));
 		break;

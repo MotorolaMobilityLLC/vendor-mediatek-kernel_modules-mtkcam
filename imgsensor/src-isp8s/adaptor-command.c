@@ -365,6 +365,47 @@ static int g_cmd_g_sensor_connector_status(struct adaptor_ctx *ctx, void *arg)
 	return ret;
 }
 
+static int g_cmd_dgc_vsl_linetime_info(struct adaptor_ctx *ctx, void *arg)
+{
+	int ret = 0;
+	struct struct_cmd_sensor_dcg_vsl_info *info = NULL;
+	const struct subdrv_mode_struct *mode_st = NULL;
+	u32 scenario_id = 0;
+	union feature_para para;
+	u32 len = 0;
+
+	/* unexpected case, arg is nullptr */
+	if (unlikely((chk_input_arg(ctx, arg, &ret, __func__)) != 0))
+		return ret;
+
+	info = arg;
+	scenario_id = info->scenario_id;
+	memset(&info->info, 0, sizeof(struct struct_dcg_vsl_info));
+
+	if (unlikely(ctx->subctx.s_ctx.mode == NULL))
+		return -EINVAL;
+	if (unlikely(scenario_id > ctx->subctx.s_ctx.sensor_mode_num))
+		return -EINVAL;
+
+	/* get the mode's const pointer of the scenario_id */
+	mode_st = &ctx->subctx.s_ctx.mode[scenario_id];
+
+	if (!(mode_st->hdr_mode == HDR_RAW_DCG_RAW_VS
+			|| mode_st->hdr_mode == HDR_RAW_DCG_COMPOSE_VS)) {
+		info->hdr_mode = 0;
+		return 0;
+	}
+
+	para.u64[0] = scenario_id;
+	para.u64[1] = (u64)&info->info;
+
+	subdrv_call(ctx, feature_control,
+		SENSOR_FEATURE_GET_DCG_VSL_INFO,
+		para.u8, &len);
+
+	return ret;
+}
+
 static int s_cmd_sensor_broadcast_event(struct adaptor_ctx *ctx, void *arg)
 {
 	int ret = 0;
@@ -907,6 +948,7 @@ static const struct command_entry command_list[] = {
 	{V4L2_CMD_G_SENSOR_CONNECTOR_STATUS, g_cmd_g_sensor_connector_status},
 	{V4L2_CMD_G_INSERTION_LOSS_PARAM, g_cmd_insertion_loss_param},
 	{V4L2_CMD_G_CUST_CTLE_CONFIG, g_cmd_cust_ctle_config},
+	{V4L2_CMD_G_DCG_VSL_LINETIME_INFO, g_cmd_dgc_vsl_linetime_info},
 
 	/* SET */
 	{V4L2_CMD_SET_CB_FUNC_OF_FAKE_SENSOR, set_cb_func_of_fake_sensor},

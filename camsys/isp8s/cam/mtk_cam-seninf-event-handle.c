@@ -182,6 +182,50 @@ int mtk_cam_seninf_get_active_line_info(struct v4l2_subdev *sd,
 	return -1;
 }
 
+int mtk_seninf_g_read_linetime_list(struct v4l2_subdev *sd,
+	unsigned int mbus_code, struct mtk_seninf_sensor_linetime_list *result)
+{
+	struct seninf_ctx *ctx = container_of(sd, struct seninf_ctx, subdev);
+	struct v4l2_subdev *sensor_sd = NULL;
+	struct struct_cmd_sensor_dcg_vsl_info mode_info;
+	unsigned int scenario_id;
+	int i;
+
+	if (!result)
+		return -1;
+
+	scenario_id = (mbus_code >> 16) & 0xff;
+	memset(result, 0, sizeof(*result));
+
+	if (ctx)
+		sensor_sd = ctx->sensor_sd;
+
+	mode_info.scenario_id = scenario_id;
+
+	if (likely(chk_subdev_ops_command_exist(sensor_sd))) {
+		sensor_sd->ops->core->command(sensor_sd,
+			V4L2_CMD_G_DCG_VSL_LINETIME_INFO, &mode_info);
+
+		result->hdr_mode = mode_info.hdr_mode;
+		result->linetime_cnt = mode_info.info.lut_cnt;
+		for (i = 0;
+		     i < result->linetime_cnt && i < ARRAY_SIZE(mode_info.info.lut_info);
+		     ++i) {
+			// get line time
+			result->lut_read_linetimes_in_ns[i] = mode_info.info.lut_info[i].linetime_in_ns;
+
+			seninf_logi(ctx, "modeid=%u, hdr_mode=%u/%u, line_cnt_in_ns[%d]=%u\n",
+					mode_info.scenario_id,
+					result->hdr_mode,
+					result->linetime_cnt,
+					i,
+					result->lut_read_linetimes_in_ns[i]);
+		}
+	}
+
+	return -1;
+}
+
 bool has_embedded_parser(struct v4l2_subdev *sd)
 {
 	struct seninf_ctx *ctx = container_of(sd, struct seninf_ctx, subdev);

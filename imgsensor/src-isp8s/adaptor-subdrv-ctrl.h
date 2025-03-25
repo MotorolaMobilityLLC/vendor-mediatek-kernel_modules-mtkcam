@@ -225,6 +225,10 @@ void get_dcg_ratio_group_by_scenario(struct subdrv_ctx *ctx,
 		enum SENSOR_SCENARIO_ID_ENUM scenario_id, void *data);
 char *get_string_with_key(const char *str, const size_t str_len, const char *key);
 
+void get_dcg_vsl_info_by_scenario(struct subdrv_ctx *ctx,
+		enum SENSOR_SCENARIO_ID_ENUM scenario_id,
+		void *data);
+
 
 int common_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
 void subdrv_ctx_init(struct subdrv_ctx *ctx);
