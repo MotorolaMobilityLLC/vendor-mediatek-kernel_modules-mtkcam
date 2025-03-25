@@ -6600,7 +6600,7 @@ static void job_dump_engines_debug_status(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_cam_device *cam = ctx->cam;
-	int dma_debug_dump = (is_dc_mode(job) || is_m2m(job)) ?
+	int dma_debug_dump = (is_dc_mode(job) || is_m2m(job) || is_vhdr(job)) ?
 		DD_DUMP_SRT : DD_DUMP_NONE;
 	int isp_state = mtk_cam_job_state_get(&job->job_state, ISP_STATE);
 
