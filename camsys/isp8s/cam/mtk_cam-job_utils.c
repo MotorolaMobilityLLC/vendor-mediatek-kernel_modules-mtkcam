@@ -305,7 +305,7 @@ int get_hw_scenario(struct mtk_cam_job *job)
 		if (scen->scen.normal.exp_num > 1) {
 			if (is_dc) {
 				hard_scenario = MTKCAM_IPI_HW_PATH_DC_STAGGER;
-			} else if (is_dcg_ap_merge(job) && !is_dcg_with_vs(job)) {
+			} else if (is_dcg_ap_merge(job)) {
 				hard_scenario = MTKCAM_IPI_HW_PATH_OTF_STAGGER_LN_INTL;
 			} else {
 				hard_scenario = MTKCAM_IPI_HW_PATH_STAGGER;

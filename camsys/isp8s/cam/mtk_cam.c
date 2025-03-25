@@ -3576,18 +3576,6 @@ static int _config_2exp_cam_mux(struct mtk_cam_job *job, bool disable_prev_mux)
 		settings[cnt].tag_id = first_tag_idx;
 		settings[cnt].pixelmode = sv_max_pixel_mode;
 		settings[cnt++].enable = 1;
-		/* for intererlived exposure, all exposure pass the raw tg */
-		hw_scen = get_hw_scenario(job);
-		if (hw_scen == MTKCAM_IPI_HW_PATH_OTF_STAGGER_LN_INTL) {
-			if (cnt >= MUX_SETTING_NUM)
-				goto WARN_EXIT;
-			settings[cnt].seninf = seninf;
-			settings[cnt].source = PAD_SRC_RAW0;
-			settings[cnt].camtg  = raw_tg_idx;
-			settings[cnt].raw_set = raw_set++;
-			settings[cnt].pixelmode = GET_PLAT_V4L2(raw_tg_pixelmode);
-			settings[cnt++].enable = 1;
-		}
 
 		/* 2nd exp, PAD_SRC_RAW1 */
 		if (cnt >= MUX_SETTING_NUM)
@@ -3597,6 +3585,19 @@ static int _config_2exp_cam_mux(struct mtk_cam_job *job, bool disable_prev_mux)
 		settings[cnt].camtg  = sv_dev_cammux_id;
 		settings[cnt].tag_id = last_tag_idx;
 		settings[cnt].pixelmode = sv_max_pixel_mode;
+		settings[cnt++].enable = 1;
+	}
+
+	/* for intererlived exposure, all exposure pass the raw tg */
+	hw_scen = get_hw_scenario(job);
+	if (hw_scen == MTKCAM_IPI_HW_PATH_OTF_STAGGER_LN_INTL) {
+		if (cnt >= MUX_SETTING_NUM)
+			goto WARN_EXIT;
+		settings[cnt].seninf = seninf;
+		settings[cnt].source = PAD_SRC_RAW0;
+		settings[cnt].camtg  = raw_tg_idx;
+		settings[cnt].raw_set = raw_set++;
+		settings[cnt].pixelmode = GET_PLAT_V4L2(raw_tg_pixelmode);
 		settings[cnt++].enable = 1;
 	}
 
