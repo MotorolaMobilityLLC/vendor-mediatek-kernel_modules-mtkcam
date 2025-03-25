@@ -3862,7 +3862,7 @@ int mtk_cam_ctx_stream_off(struct mtk_cam_ctx *ctx)
 	return 0;
 }
 
-static void mtk_cam_ctx_raw_qof_disable(struct mtk_cam_ctx *ctx)
+void mtk_cam_ctx_raw_qof_disable(struct mtk_cam_ctx *ctx)
 {
 	int i;
 	struct mtk_raw_device *raw;
@@ -3908,8 +3908,6 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 		 __func__, ctx->stream_id,
 		 ctx->used_pipe, ctx->used_engine);
 
-	qof_mtcmos_voter(&ctx->cam->engines, ctx->used_engine, true);
-
 	if (ctx->hw_sv) {
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
 		mtk_cam_sv_dev_stream_on(sv_dev, false, 0, 0);
@@ -3935,8 +3933,6 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 			stream_on(raw_dev, false, true);
 		}
 	}
-
-	mtk_cam_ctx_raw_qof_disable(ctx);
 
 	mtk_cam_fmon_unbind(&ctx->cam->fmon,
 			bit_map_subset_of(MAP_HW_RAW, ctx->used_engine));

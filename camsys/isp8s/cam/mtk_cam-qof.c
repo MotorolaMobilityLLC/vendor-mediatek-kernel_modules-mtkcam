@@ -316,6 +316,8 @@ void mtk_cam_enable_itc(struct mtk_raw_device *raw, bool enable)
 		val &= ~qof_raw_to_bit[raw->id].itc_src;
 
 	writel(val, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
+	raw->io_ops = (enable) ? &qof_enabled_io_ops : qof_disabled_io_ops;
+
 	spin_unlock_irqrestore(&cam->qoftop_lock, flags);
 
 	dev_info(raw->dev, "qof: %s: misc1/2/3 0x%x 0x%x 0x%x (0x%x 0x%x 0x%x)", __func__,
@@ -450,8 +452,6 @@ int qof_enable(struct mtk_raw_device *raw, bool enable)
 
 	if (en)
 		writel(0xfff, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_INT_EN);
-
-	raw->io_ops = (enable) ? &qof_enabled_io_ops : qof_disabled_io_ops;
 
 	dev_info(raw->dev, "qof: %s: %s TOP_CTL 0x%08x",
 			 __func__, (enable) ? "enable" : "disable",

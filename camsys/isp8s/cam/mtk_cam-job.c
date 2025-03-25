@@ -4443,16 +4443,19 @@ int mtk_cam_job_uninit_engine(struct mtk_cam_job *job, int unit_engs)
 
 			raw_dev = dev_get_drvdata(cam->engines.raw_devs[i]);
 
+			qof_mtcmos_raw_voter(raw_dev, true);
+
+			disable_irq(raw_dev->irq);
+			reset(raw_dev);
+			clear_reg(raw_dev);
+
 			if (qof_is_enabled(raw_dev)) {
+				qof_setup_twin(raw_dev, true, false);
 				qof_enable(raw_dev, false);
 				qof_setup_ctrl(raw_dev, false);
 				qof_reset_mtcmos_raw_voter(raw_dev);
 				qof_hwccf_link(raw_dev, true);
 			}
-
-			disable_irq(raw_dev->irq);
-			reset(raw_dev);
-			clear_reg(raw_dev);
 		}
 	}
 	for (i = 0; i < cam->engines.num_camsv_devices; i++) {

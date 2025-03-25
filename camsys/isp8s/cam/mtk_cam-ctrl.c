@@ -2028,11 +2028,13 @@ static void mtk_cam_ctrl_raw_switch_flow(struct mtk_cam_job *job)
 
 	/* stop the isp but doesn't power off raws */
 
+	qof_mtcmos_voter(&ctx->cam->engines, ctx->used_engine, true);
 	mtk_cam_ctx_engine_off(ctx);
 	mtk_cam_watchdog_stop(&ctrl->watchdog);
 	/* disable irq first */
 	mtk_cam_ctx_engine_disable_irq(ctx);
 	mtk_cam_ctx_engine_reset(ctx);
+	mtk_cam_ctx_raw_qof_disable(ctx);
 
 	mtk_cam_ctx_engine_reset_msgfifo(ctx);
 
@@ -2552,6 +2554,8 @@ void mtk_cam_ctrl_stop(struct mtk_cam_ctrl *cam_ctrl)
 	atomic_set(&cam_ctrl->stopped, 1);
 	wake_up_interruptible(&cam_ctrl->done_wq);
 	mtk_cam_ctx_slc_stream(ctx, false, 0xFF);
+
+	qof_mtcmos_voter(&ctx->cam->engines, ctx->used_engine, true);
 	mtk_cam_ctx_engine_off(ctx);
 
 	/* disable irq first */
@@ -2584,6 +2588,8 @@ void mtk_cam_ctrl_stop(struct mtk_cam_ctrl *cam_ctrl)
 	mtk_cam_ctx_engine_reset(ctx);
 	/* clear hw some regs */
 	mtk_cam_ctx_engine_clear(ctx);
+
+	mtk_cam_ctx_raw_qof_disable(ctx);
 
 	mtk_cam_event_eos(cam_ctrl);
 

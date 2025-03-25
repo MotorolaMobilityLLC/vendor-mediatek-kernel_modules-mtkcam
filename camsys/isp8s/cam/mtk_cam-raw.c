@@ -633,6 +633,9 @@ static void reset_int_en(struct mtk_raw_device *dev)
 	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT7_EN);
 	raw_writel(0, dev, dev->base, REG_CAMCTL_INT7_EN);
 
+	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT13_EN);
+	raw_writel(0, dev, dev->base, REG_CAMCTL_INT13_EN);
+
 	raw_writel(0, dev, dev->base_inner, REG_CAMCTL_INT17_EN);
 	raw_writel(0, dev, dev->base, REG_CAMCTL_INT17_EN);
 
@@ -659,22 +662,24 @@ static void reset_int_en(struct mtk_raw_device *dev)
 	raw_writel(0, dev, dev->yuv_base, REG_CAMCTL2_INT17_EN);
 
 	dev_info_ratelimited(dev->dev,
-		"[%s] INT2/3/5/17/18/20/21_EN [in] 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x",
+		"[%s] INT2/3/5/13/17/18/20/21_EN [in] 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x",
 		__func__,
 		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT2_EN),
 		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT3_EN),
 		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT5_EN),
+		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT13_EN),
 		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT17_EN),
 		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT18_EN),
 		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT20_EN),
 		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT21_EN));
 
 	dev_info_ratelimited(dev->dev,
-		"[%s] INT2/3/5/17/18/20/21_EN [out] 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x",
+		"[%s] INT2/3/5/13/17/18/20/21_EN [out] 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x",
 		__func__,
 		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT2_EN),
 		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT3_EN),
 		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT5_EN),
+		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT13_EN),
 		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT17_EN),
 		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT18_EN),
 		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT20_EN),
