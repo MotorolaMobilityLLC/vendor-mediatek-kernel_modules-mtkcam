@@ -55,7 +55,7 @@
 #define BWR_IMG_MAIN             5
 #define BWR_LTRAW                6
 #define BWR_MAE                  7
-#define BWR_ADL_RD__ADL_WR       8
+#define BWR_ADL_RD__ADL_WR       8 /* not in use */
 #define BWR_DWPE__DFP__DVS       9
 
 /* Enable engine for each core & sub-common for BWR */
@@ -63,9 +63,9 @@
 #define BWR_IMG_CORE0_SC1_ENG_EN	(BIT(BWR_DIP))
 #define BWR_IMG_CORE1_SC0_ENG_EN	(BIT(BWR_OMC_TNR__PQDIP_B__ME) | BIT(BWR_WPE_LITE__OMC_LITE) | \
 					BIT(BWR_DIP) | BIT(BWR_LTRAW))
-#define BWR_IMG_CORE2_SC0_ENG_EN	(BIT(BWR_MAE) | BIT(BWR_ADL_RD__ADL_WR))
+#define BWR_IMG_CORE2_SC0_ENG_EN	(BIT(BWR_MAE))
 #define BWR_IMG_CORE3_SC0_ENG_EN	(BIT(BWR_TRAW) | BIT(BWR_MAE) | \
-					BIT(BWR_ADL_RD__ADL_WR) | BIT(BWR_DWPE__DFP__DVS))
+					BIT(BWR_DWPE__DFP__DVS))
 #define BWR_IMG_EMI_ENG_EN		(BWR_IMG_CORE0_SC0_ENG_EN | BWR_IMG_CORE0_SC1_ENG_EN | \
 					BWR_IMG_CORE1_SC0_ENG_EN | BWR_IMG_CORE2_SC0_ENG_EN | \
 					BWR_IMG_CORE3_SC0_ENG_EN)
@@ -210,7 +210,9 @@ struct qos_map qos_map_data[] = {
 	{BLS_REG(13), BWR_BW_REG(3, 0, BWR_TRAW,                40)},	/* 9: TRAW */
 	{BLS_REG(14), BWR_BW_REG(3, 0, BWR_TRAW,                28)},	/* 10: TRAW */
 	{BLS_REG(15), BWR_BW_REG(3, 0, BWR_DWPE__DFP__DVS,      50)},	/* 11: DWPE + DFP + DEPTH */
-	{BLS_REG(16), BWR_BW_REG(3, 0, BWR_ADL_RD__ADL_WR,      18)},	/* 12: ROOTCQ + ADL */
+	/* ROOTCQ + ADL is not in use
+	 * {BLS_REG(16), BWR_BW_REG(3, 0, BWR_ADL_RD__ADL_WR,      18)},
+	 */
 };
 
 struct qos_limiter_rw {

@@ -801,7 +801,7 @@ static void imgsys_qos_set_ttl_eng_bw(struct cmdq_pkt *pkt,
 	} else {
 		cmdq_pkt_write(pkt, NULL,
 			BWR_IMG_E1A_BASE + bwr_ttl_offset,
-			(bwr_bw * count) >> QOS_TTL_RIGHT_SHIFT, CMDQ_REG_MASK);
+			((bwr_bw >> 2) * 3 * count) >> QOS_TTL_RIGHT_SHIFT, CMDQ_REG_MASK);
 	}
 	va_end(args);
 }
@@ -971,7 +971,6 @@ static void imgsys_qos_set_chn_avg_bw(struct cmdq_pkt *pkt)
 	imgsys_qos_set_chn_avg_eng_bw(pkt, 8, 1 /* count */, 8);
 	imgsys_qos_set_chn_avg_eng_bw(pkt, 9, 2 /* count */, 9, 10);
 	imgsys_qos_set_chn_avg_eng_bw(pkt, 11, 1 /* count */, 11);
-	imgsys_qos_set_chn_avg_eng_bw(pkt, 12, 1 /* count */, 12);
 }
 
 static void imgsys_qos_set_ttl_bw(struct cmdq_pkt *pkt,
@@ -991,10 +990,11 @@ static void imgsys_qos_set_ttl_bw(struct cmdq_pkt *pkt,
 		BWR_IMG_SRT_EMI_ENG_BW6_OFT, 1 /* count */, 7);
 	imgsys_qos_set_ttl_eng_bw(pkt, is_avg, bwr_bw,
 		BWR_IMG_SRT_EMI_ENG_BW7_OFT, 1 /* count */, 8);
-	imgsys_qos_set_ttl_eng_bw(pkt, is_avg, bwr_bw,
-		BWR_IMG_SRT_EMI_ENG_BW8_OFT, 1 /* count */, 12);
-	imgsys_qos_set_ttl_eng_bw(pkt, is_avg, bwr_bw,
-		BWR_IMG_SRT_EMI_ENG_BW9_OFT, 1 /* count */, 11);
+	if (is_avg) {
+		/* set DFP when avg BW */
+		imgsys_qos_set_ttl_eng_bw(pkt, is_avg, bwr_bw,
+			BWR_IMG_SRT_EMI_ENG_BW9_OFT, 1 /* count */, 11);
+	}
 }
 
 static void imgsys_get_mminfra_freq(struct cmdq_pkt *pkt)
@@ -1055,7 +1055,7 @@ static void imgsys_qos_set_limiter(struct cmdq_pkt *pkt,
 	imgsys_qos_calculate_limiter(pkt,
 		is_avg, bw,
 		2, /* limiter idx */
-		5  /* count */, 8, 9, 10, 11, 12);
+		4  /* count */, 8, 9, 10, 11);
 	imgsys_qos_calculate_limiter(pkt,
 		is_avg, bw,
 		1, /* limiter idx */
@@ -1075,6 +1075,11 @@ static void imgsys_qos_set_fix_bw(struct cmdq_pkt *pkt,
 			continue;
 		}
 		reg = qos_map_data[i].bwr_r_offset;
+		/* skip DFP for high BW */
+		if (bwr_bw != 0 &&
+			qos_map_data[i].engine == BWR_DWPE__DFP__DVS) {
+			continue;
+		}
 		cmdq_pkt_write(pkt, NULL,
 				BWR_IMG_E1A_BASE + qos_map_data[i].bwr_r_offset,
 				bwr_bw, CMDQ_REG_MASK);
