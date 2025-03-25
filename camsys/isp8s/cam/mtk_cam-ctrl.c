@@ -2126,13 +2126,12 @@ static void mtk_cam_flow_runner(struct kthread_work *work)
 	struct mtk_cam_flow_work *flow_work =
 		container_of(work, struct mtk_cam_flow_work, work);
 	struct mtk_cam_job *job = mtk_cam_job_get(flow_work->job);
-	struct media_request *req, *req_sensor;
+	struct media_request *req = (job && job->req) ? &job->req->req : NULL;
+	struct media_request *req_sensor =
+		(job && job->req_sensor) ? &job->req_sensor->req : NULL;
 
 	if (job) {
-		req = &job->req->req;
-		req_sensor = &job->req_sensor->req;
-
-		if (flow_work->exec || req) {
+		if (flow_work->exec) {
 			two_media_request_get(req, req_sensor);
 			flow_work->exec(job);
 			two_media_request_put(req, req_sensor);

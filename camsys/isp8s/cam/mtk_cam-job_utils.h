@@ -10,17 +10,17 @@
 
 #define two_media_request_get(r1, r2)	\
 do {					\
-	if (!IS_ERR_OR_NULL(r1))	\
+	if (r1 && !IS_ERR_OR_NULL(r1))	\
 		media_request_get(r1);	\
-	if (!IS_ERR_OR_NULL(r2))	\
+	if (r2 && !IS_ERR_OR_NULL(r2))	\
 		media_request_get(r2);	\
 } while (0)
 
 #define two_media_request_put(r1, r2)	\
 do {					\
-	if (!IS_ERR_OR_NULL(r2))	\
+	if (r2 && !IS_ERR_OR_NULL(r2))	\
 		media_request_put(r2);	\
-	if (!IS_ERR_OR_NULL(r1))	\
+	if (r1 && !IS_ERR_OR_NULL(r1))	\
 		media_request_put(r1);	\
 } while (0)
 
