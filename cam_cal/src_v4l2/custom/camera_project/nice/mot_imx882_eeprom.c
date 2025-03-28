@@ -14,8 +14,6 @@
 #include "mot_cam_cal.h"
 
 unsigned int imx882_mot_do_factory_verify(struct EEPROM_DRV_FD_DATA *pdata, unsigned int *pGetSensorCalData);
-static unsigned int mot_imx882_do_manufacture_info(struct EEPROM_DRV_FD_DATA *pdata,
-		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData);
 static unsigned int mot_imx882_do_2a_gain(struct EEPROM_DRV_FD_DATA *pdata,
 		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData);
 static unsigned int mot_imx882_do_pdaf(struct EEPROM_DRV_FD_DATA *pdata,
@@ -80,7 +78,7 @@ static struct STRUCT_CALIBRATION_LAYOUT_STRUCT cal_layout_table = {
 		{0x00000000, 0x00000000, 0x00000E25, do_dump_all},//CAMERA_CAM_CAL_DATA_DUMP
 		{0x00000000, 0x00000F80, 0x0000000A, do_lens_id},//CAMERA_CAM_CAL_DATA_LENS_ID
 		{0x00000000, 0x00000000, 0x00000000, NULL},//CAMERA_CAM_CAL_DATA_SHADING_TABLE_16_9
-		{0x00000001, IMX882_MOT_MNF_ADDR, IMX882_MOT_MNF_DATA_SIZE, mot_imx882_do_manufacture_info}//CAMERA_CAM_CAL_DATA_MANUFACTURE
+		{0x00000001, IMX882_MOT_MNF_ADDR, IMX882_MOT_MNF_DATA_SIZE, mot_do_manufacture_info}//CAMERA_CAM_CAL_DATA_MANUFACTURE
 	}
 };
 
@@ -586,145 +584,4 @@ unsigned int imx882_mot_do_factory_verify(struct EEPROM_DRV_FD_DATA *pdata, unsi
 	}
 
 	return CAM_CAL_ERR_NO_ERR;
-}
-
-unsigned int mot_lens_id_to_name(uint8_t id,unsigned int block_size,unsigned char * lens_id,unsigned int err);
-static unsigned int mot_imx882_do_manufacture_info(struct EEPROM_DRV_FD_DATA *pdata,
-		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData)
-{
-	struct STRUCT_CAM_CAL_DATA_STRUCT *pCamCalData =
-				(struct STRUCT_CAM_CAL_DATA_STRUCT *)pGetSensorCalData;
-	unsigned int err = CamCalReturnErr[pCamCalData->Command];
-	int read_data_size, checkSum, ret;
-	uint8_t  tempBuf[40] = {0};
-
-	read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID,
-			start_addr, block_size + 2, (unsigned char *)tempBuf);
-	if (read_data_size <= 0) {
-		debug_log("read data failed");
-		err = CAM_CAL_ERR_NO_PARTNO;
-		return err;
-	}
-
-	checkSum = (tempBuf[38]<<8) | (tempBuf[39]);
-
-	if(check_crc16(tempBuf, 38, checkSum)) {
-		debug_log("check_crc16 ok");
-		err = CAM_CAL_ERR_NO_ERR;
-	} else {
-		debug_log("check_crc16 err");
-		err = CAM_CAL_ERR_NO_PARTNO;
-		return err;
-	}
-	 //eeprom_table_version
-	ret = snprintf(pCamCalData->ManufactureData.eeprom_table_version, MAX_CALIBRATION_STRING, "0x%x", tempBuf[0]);
-
-	if (ret < 0 || ret >= block_size) {
-		debug_log("snprintf of mnf->eeprom_table_version failed");
-		memset(pCamCalData->ManufactureData.eeprom_table_version, 0,
-			sizeof(pCamCalData->ManufactureData.eeprom_table_version));
-		err = CAM_CAL_ERR_NO_PARTNO;
-	}
-
-	//part_number
-	ret = snprintf(pCamCalData->ManufactureData.part_number, MAX_CALIBRATION_STRING, "%c%c%c%c%c%c%c%c",
-		tempBuf[3], tempBuf[4], tempBuf[5], tempBuf[6],
-		tempBuf[7], tempBuf[8], tempBuf[9], tempBuf[10]);
-
-	if (ret < 0 || ret >= block_size) {
-		debug_log("snprintf of mnf->mot_part_number failed");
-		memset(pCamCalData->ManufactureData.part_number, 0,
-			sizeof(pCamCalData->ManufactureData.part_number));
-		err = CAM_CAL_ERR_NO_PARTNO;
-	}
-
-	//actuator_id
-	ret = snprintf(pCamCalData->ManufactureData.actuator_id, MAX_CALIBRATION_STRING, "0x%x", tempBuf[12]);
-
-	if (ret < 0 || ret >= block_size) {
-		debug_log("snprintf of mnf->actuator_id failed");
-		memset(pCamCalData->ManufactureData.actuator_id, 0,
-			sizeof(pCamCalData->ManufactureData.actuator_id));
-		err = CAM_CAL_ERR_NO_PARTNO;
-	}
-	//lens_id
-        err = mot_lens_id_to_name(tempBuf[13],block_size,pCamCalData->ManufactureData.lens_id,err);
-	//manufacture id
-	if(tempBuf[14] == 'T' && tempBuf[15] == 'S') {
-		ret = snprintf(pCamCalData->ManufactureData.manufacturer_id, MAX_CALIBRATION_STRING, "Tianshi");
-	} else if(tempBuf[14] == 'S' && tempBuf[15] == 'U') {
-		ret = snprintf(pCamCalData->ManufactureData.manufacturer_id, MAX_CALIBRATION_STRING, "Sunny");
-	} else if(tempBuf[14] == 'Q' && tempBuf[15] == 'T') {
-		ret = snprintf(pCamCalData->ManufactureData.manufacturer_id, MAX_CALIBRATION_STRING, "Qtech");
-	} else if(tempBuf[14] == 'S' && tempBuf[15] == 'W') {
-		ret = snprintf(pCamCalData->ManufactureData.manufacturer_id, MAX_CALIBRATION_STRING, "Sunwin");
-	} else if(tempBuf[14] == 'O' && tempBuf[15] == 'F') {
-		ret = snprintf(pCamCalData->ManufactureData.manufacturer_id, MAX_CALIBRATION_STRING, "Ofilm");
-	} else {
-		ret = snprintf(pCamCalData->ManufactureData.manufacturer_id, MAX_CALIBRATION_STRING, "Unknow");
-	}
-
-	if (ret < 0 || ret >= block_size) {
-		debug_log("snprintf of mnf->manufacturer_id failed");
-		memset(pCamCalData->ManufactureData.manufacturer_id, 0,
-			sizeof(pCamCalData->ManufactureData.manufacturer_id));
-		err = CAM_CAL_ERR_NO_PARTNO;
-	}
-
-	//factory_id
-	ret = snprintf(pCamCalData->ManufactureData.factory_id, MAX_CALIBRATION_STRING, "%c%c", tempBuf[16], tempBuf[17]);
-
-	if (ret < 0 || ret >= block_size) {
-		debug_log("snprintf of mnf->factory_id failed");
-		memset(pCamCalData->ManufactureData.factory_id, 0,
-			sizeof(pCamCalData->ManufactureData.factory_id));
-		err = CAM_CAL_ERR_NO_PARTNO;
-	}
-
-	//manufacture_line
-	ret = snprintf(pCamCalData->ManufactureData.manufacture_line, MAX_CALIBRATION_STRING, "0x%x", tempBuf[18]);
-
-	if (ret < 0 || ret >= block_size) {
-		debug_log("snprintf of mnf->manufacture_line failed");
-		memset(pCamCalData->ManufactureData.manufacture_line, 0,
-			sizeof(pCamCalData->ManufactureData.manufacture_line));
-		err = CAM_CAL_ERR_NO_PARTNO;
-	}
-
-	//manufacture_date
-	ret = snprintf(pCamCalData->ManufactureData.manufacture_date, MAX_CALIBRATION_STRING, "20%02u%02u%02u",
-		tempBuf[19], tempBuf[20], tempBuf[21]);
-
-	if (ret < 0 || ret >= block_size) {
-		debug_log("snprintf of mnf->manufacture_date failed");
-		memset(pCamCalData->ManufactureData.manufacture_date, 0,
-			sizeof(pCamCalData->ManufactureData.manufacture_date));
-		err = CAM_CAL_ERR_NO_PARTNO;
-	}
-
-	//serial_number
-	ret = snprintf(pCamCalData->ManufactureData.serial_number, MAX_CALIBRATION_STRING,
-		"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-		tempBuf[22], tempBuf[23], tempBuf[24], tempBuf[25], tempBuf[26], tempBuf[27], tempBuf[28], tempBuf[29],
-		tempBuf[30], tempBuf[31], tempBuf[32], tempBuf[33], tempBuf[34], tempBuf[35], tempBuf[36], tempBuf[37]);
-
-	if (ret < 0 || ret >= block_size) {
-		debug_log("snprintf of mnf->serial_number failed");
-		memset(pCamCalData->ManufactureData.serial_number, 0,
-			sizeof(pCamCalData->ManufactureData.serial_number));
-		err = CAM_CAL_ERR_NO_PARTNO;
-	}
-#ifdef EEPROM_DEBUG
-	debug_log("eeprom_table_version: %s\n", pCamCalData->ManufactureData.eeprom_table_version);
-	debug_log("part_number: %s\n", pCamCalData->ManufactureData.part_number);
-	debug_log("actuator_id: %s\n", pCamCalData->ManufactureData.actuator_id);
-	debug_log("lens_id: %s\n", pCamCalData->ManufactureData.lens_id);
-	debug_log("manufacturer_id: %s\n", pCamCalData->ManufactureData.manufacturer_id);
-	debug_log("factory_id: %s\n", pCamCalData->ManufactureData.factory_id);
-	debug_log("manufacture_line: %s\n", pCamCalData->ManufactureData.manufacture_line);
-	debug_log("manufacture_date: %s\n", pCamCalData->ManufactureData.manufacture_date);
-	debug_log("serial_number: %s\n", pCamCalData->ManufactureData.serial_number);
-#endif
-
-	return err;
 }
