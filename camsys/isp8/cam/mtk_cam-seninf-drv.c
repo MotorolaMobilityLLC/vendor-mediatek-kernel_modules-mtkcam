@@ -2527,8 +2527,12 @@ static int seninf_csi_s_stream(struct v4l2_subdev *sd, int enable)
 static int stream_sensor(struct seninf_ctx *ctx, bool enable)
 {
 	int ret;
+	struct v4l2_subdev *sensor_sd = ctx->sensor_sd;
 
-	ret = v4l2_subdev_call(ctx->sensor_sd, video, s_stream, enable);
+	/* ensure definitely execute s_stream */
+	sensor_sd->enabled_streams = !enable;
+
+	ret = v4l2_subdev_call(sensor_sd, video, s_stream, enable);
 	if (ret) {
 		dev_info(ctx->dev, "%s sensor stream-%s fail,ret(%d)\n",
 			 __func__,
