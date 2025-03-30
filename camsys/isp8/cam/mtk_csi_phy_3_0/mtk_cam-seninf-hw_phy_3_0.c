@@ -5395,10 +5395,8 @@ static void mtk_cam_seninf_irq_event_st_uninit(struct seninf_core *core)
 
 static int mtk_cam_enable_stream_err_detect(struct seninf_ctx *ctx)
 {
-#if PORTING_FIXME
 	struct seninf_core *core;
 	struct seninf_ctx *ctx_;
-	void *pSeninf_cam_mux_gcsr;
 
 	core = dev_get_drvdata(ctx->dev->parent);
 
@@ -5423,20 +5421,8 @@ static int mtk_cam_enable_stream_err_detect(struct seninf_ctx *ctx)
 #ifdef ERR_DETECT_TEST
 		ctx_->test_cnt = 0;
 #endif
-		pSeninf_cam_mux_gcsr = ctx_->reg_if_cam_mux_gcsr;
-		dev_info(
-			ctx_->dev,
-			"mwj VSYNC_IRQ_EN by stream_err_detect!");
-			SENINF_WRITE_REG(
-				pSeninf_cam_mux_gcsr,
-				SENINF_CAM_MUX_GCSR_VSYNC_IRQ_EN,
-				0xFFFFFFFF);
-			SENINF_WRITE_REG(
-				pSeninf_cam_mux_gcsr,
-				SENINF_CAM_MUX_GCSR_VSYNC_IRQ_EN_H,
-				0xFFFFFFFF);
 	}
-#endif
+
 	return 0;
 }
 
