@@ -34,6 +34,7 @@
 #define IMGSYS_DIP_BASE_P	(0x15100000)//YWTBD
 
 #define DIPNR2_CINE_SEL		0x0070//bit24
+#define DIPNR2_DMA_ERR		0x1018//bit16 17
 
 #define DIP_DBG_SEL		0x210
 #define DIP_DBG_OUT		0x214

@@ -1319,6 +1319,7 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 	unsigned int CtlDbgOut = DIP_DBG_OUT;
 	char DMANrPort = 0;
 	unsigned int CineSel = 0;
+	unsigned int Nr2DmaErr = 0;
 
 	pr_info("%s: +\n", __func__);
 
@@ -1427,6 +1428,10 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 		}
 	}
 
+	/* img4o 4bo dma err check */
+	Nr2DmaErr = (((unsigned int)ioread32((void *)(dipRegBA + DIPNR2_DMA_ERR))
+			& 0x30000) ? 1 : 0);
+
 	/* DMA_TOP debug data */
 	DMANrPort = 0;
 	dipRegBA = gdipRegBA[0];
@@ -1510,6 +1515,12 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
 	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
 		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
+
+	// force KE
+	if (Nr2DmaErr == 1) {
+		pr_info("%s: Nr2DmaErr force KE\n", __func__);
+		BUG_ON(1);
+	}
 
 	pr_info("%s: -\n", __func__);
 
