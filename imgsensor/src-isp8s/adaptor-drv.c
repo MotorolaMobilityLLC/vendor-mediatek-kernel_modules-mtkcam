@@ -1672,6 +1672,7 @@ static int imgsensor_probe(struct i3c_i2c_device *client)
 	int i, ret;
 	unsigned int reindex, conceptual_mipi;
 	unsigned int pmic_delayus;
+	unsigned int aov_scp_pwr;
 	unsigned int pre_cfg_addr;
 	const char *reindex_match[OF_SENSOR_NAMES_MAXCNT];
 	int reindex_match_cnt;
@@ -1749,6 +1750,12 @@ static int imgsensor_probe(struct i3c_i2c_device *client)
 		dev_info(dev, "pmic_delayus:%llu\n", ctx->pmic_delayus);
 	}	else
 		ctx->pmic_delayus = 0;
+
+	if (!of_property_read_u32(dev->of_node, "aov-scp-power-support", &aov_scp_pwr)) {
+		ctx->aov_scp_pwr = aov_scp_pwr ? true : false;
+		dev_info(dev, "aov_scp_pwr:%d\n", ctx->aov_scp_pwr);
+	}	else
+		ctx->aov_scp_pwr = 0;
 
 	ctx->pre_cfg_addr = 0;
 	if (!of_property_read_u32(dev->of_node, "pre-cfg-addr",	&pre_cfg_addr)) {

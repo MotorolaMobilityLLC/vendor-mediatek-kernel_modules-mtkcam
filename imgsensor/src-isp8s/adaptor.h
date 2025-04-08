@@ -192,6 +192,7 @@ struct adaptor_ctx {
 	unsigned long long pmic_on_tick;
 	unsigned long long first_sensor_power_on_tick;
 	unsigned long long pmic_delayus;
+	bool aov_scp_pwr;
 	bool pmic_on;
 
 	/* seninf info */

@@ -330,6 +330,16 @@ static int set_state_boolean(struct adaptor_ctx *ctx, void *data, const struct s
 	return __set_state(ctx, data, !!(val->para1));
 }
 
+static int set_state_scp(struct adaptor_ctx *ctx, void *data, const struct subdrv_pw_val *val)
+{
+	return __set_state(ctx, data, 0);
+}
+
+static int unset_state_ap(struct adaptor_ctx *ctx, void *data, const struct subdrv_pw_val *val)
+{
+	return __set_state(ctx, data, -2);
+}
+
 static int set_state_mipi_switch(struct adaptor_ctx *ctx, void *data, const struct subdrv_pw_val *val)
 {
 	return __set_state(ctx, (void *)STATE_MIPI_SWITCH_ON, 0);
@@ -923,6 +933,7 @@ int adaptor_hw_init(struct adaptor_ctx *ctx)
 
 	INST_OPS(ctx, state, STATE_BASE_OFF, HW_ID_BASE,
 			set_state_boolean, unset_state);
+
 	INST_OPS(ctx, state, STATE_DVDD1_OFF, HW_ID_DVDD1,
 			set_state_boolean, unset_state);
 
@@ -946,6 +957,18 @@ int adaptor_hw_init(struct adaptor_ctx *ctx)
 
 	INST_OPS(ctx, state, STATE_SDA_AP, HW_ID_SDA,
 			set_state, unset_state);
+
+	if (ctx->state[STATE_RST_LOW])
+		INST_OPS(ctx, state, STATE_RST_SCP, HW_ID_RST_SCP,
+				set_state_scp, unset_state_ap);
+
+	if (ctx->state[STATE_AVDD1_OFF])
+		INST_OPS(ctx, state, STATE_AVDD1_SCP, HW_ID_AVDD1_SCP,
+				set_state_scp, unset_state_ap);
+
+	if (ctx->state[STATE_DVDD1_OFF])
+		INST_OPS(ctx, state, STATE_DVDD1_SCP, HW_ID_DVDD1_SCP,
+				set_state_scp, unset_state_ap);
 
 	INST_OPS(ctx, state, STATE_EINT, HW_ID_EINT,
 		 set_state, unset_state);

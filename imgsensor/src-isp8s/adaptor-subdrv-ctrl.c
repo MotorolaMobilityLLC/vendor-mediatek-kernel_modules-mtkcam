@@ -5375,10 +5375,33 @@ int common_open(struct subdrv_ctx *ctx)
 	u32 sensor_id = 0;
 	u32 scenario_id = 0;
 	u32 linetime_in_ns = 0;
+	struct adaptor_ctx *_adaptor_ctx = NULL;
+	struct v4l2_subdev *sd = NULL;
+
+	if (ctx->i2c_client)
+		sd = i2c_get_clientdata(ctx->i2c_client);
+	if (ctx->ixc_client.protocol)
+		sd = adaptor_ixc_get_clientdata(&ctx->ixc_client);
+	if (sd)
+		_adaptor_ctx = to_ctx(sd);
+	if (!_adaptor_ctx) {
+		DRV_LOGE(ctx, "null _adaptor_ctx\n");
+		return -ENODEV;
+	}
 
 	/* get sensor id */
 	if (common_get_imgsensor_id(ctx, &sensor_id) != ERROR_NONE)
 		return ERROR_SENSOR_CONNECT_FAIL;
+
+#ifdef SCP_SENSOR_RESET_READY
+	/* no init setting due to scp sensor power on */
+	if (ctx->s_ctx.aov_sensor_support &&
+		ctx->s_ctx.mode[scenario_id].aov_mode &&
+		_adaptor_ctx->aov_scp_pwr) {
+		DRV_LOG_MUST(ctx, "no init setting due to scp sensor power on\n");
+		return ERROR_NONE;
+	}
+#endif
 
 	/* initail setting */
 	if (ctx->s_ctx.aov_sensor_support && !ctx->s_ctx.init_in_open)
@@ -6205,6 +6228,16 @@ int common_control(struct subdrv_ctx *ctx,
 	if (ctx->s_ctx.chk_s_off_sta)
 		check_stream_off(ctx);
 	update_mode_info(ctx, scenario_id);
+
+#ifdef SCP_SENSOR_RESET_READY
+	/* no mode setting due to scp sensor power on */
+	if (ctx->s_ctx.aov_sensor_support &&
+		ctx->s_ctx.mode[scenario_id].aov_mode &&
+		_adaptor_ctx->aov_scp_pwr) {
+		DRV_LOG_MUST(ctx, "no mode setting due to scp sensor power on\n");
+		return ret;
+	}
+#endif
 
 	if (ctx->s_ctx.mode[scenario_id].mode_setting_table != NULL) {
 		DRV_LOG(ctx, "E: sid:%u size:%u\n", scenario_id,

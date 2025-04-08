@@ -61,6 +61,7 @@ enum {
 	STATE_MCLK_8MA,
 	STATE_RST_LOW,
 	STATE_RST_HIGH,
+	STATE_RST_SCP,
 	STATE_PDN_LOW,
 	STATE_PDN_HIGH,
 	STATE_MIPI_SWITCH_OFF,
@@ -77,6 +78,7 @@ enum {
 	STATE_AFVDD1_ON,
 	STATE_AVDD1_OFF,
 	STATE_AVDD1_ON,
+	STATE_AVDD1_SCP,
 	STATE_AVDD2_OFF,
 	STATE_AVDD2_ON,
 	STATE_AVDD3_OFF,
@@ -92,6 +94,7 @@ enum {
 	STATE_MCLK1_8MA,
 	STATE_DVDD1_OFF,
 	STATE_DVDD1_ON,
+	STATE_DVDD1_SCP,
 	STATE_DVDD2_OFF,
 	STATE_DVDD2_ON,
 	STATE_OISVDD_OFF,
@@ -118,6 +121,7 @@ enum {
 	"mclk_8mA", \
 	"rst_low", \
 	"rst_high", \
+	"rst_scp", \
 	"pdn_low", \
 	"pdn_high", \
 	"mipi_switch_off", \
@@ -134,6 +138,7 @@ enum {
 	"afvdd1_on", \
 	"avdd1_off", \
 	"avdd1_on", \
+	"avdd1_scp", \
 	"avdd2_off", \
 	"avdd2_on", \
 	"avdd3_off", \
@@ -149,6 +154,7 @@ enum {
 	"mclk1_8mA", \
 	"dvdd1_off", \
 	"dvdd1_on", \
+	"dvdd1_scp", \
 	"dvdd2_off", \
 	"dvdd2_on", \
 	"oisvdd_off", \

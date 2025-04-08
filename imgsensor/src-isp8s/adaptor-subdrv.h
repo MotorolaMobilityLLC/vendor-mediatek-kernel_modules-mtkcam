@@ -107,6 +107,9 @@ enum {
 	HW_ID_PONV,
 	HW_ID_SCL,
 	HW_ID_SDA,
+	HW_ID_RST_SCP,
+	HW_ID_AVDD1_SCP,
+	HW_ID_DVDD1_SCP,
 	HW_ID_EINT,
 	HW_ID_MAXCNT,
 };
@@ -137,6 +140,9 @@ enum {
 	"HW_ID_PONV", \
 	"HW_ID_SCL", \
 	"HW_ID_SDA", \
+	"HW_ID_RST_SCP", \
+	"HW_ID_AVDD1_SCP", \
+	"HW_ID_DVDD1_SCP", \
 	"HW_ID_EINT", \
 
 enum AOV_MODE_CTRL_OPS {
