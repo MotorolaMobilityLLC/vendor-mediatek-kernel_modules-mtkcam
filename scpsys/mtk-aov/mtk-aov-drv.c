@@ -271,8 +271,9 @@ static long mtk_aov_ioctl(struct file *file, unsigned int cmd,
 		AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
 			"turn on ulposc\n");
 		if (aov_ulposc_check_cali_result(aov_dev) != 1) {
-			dev_info(aov_dev->dev, "%s: ulposc3 check fail!\n", __func__);
 			up(&core_info->start_stop_sema);
+			dev_info(aov_dev->dev, "%s: ulposc3 check fail!\n", __func__);
+			WARN_ON(true);
 			return -EFAULT;
 		}
 		AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),

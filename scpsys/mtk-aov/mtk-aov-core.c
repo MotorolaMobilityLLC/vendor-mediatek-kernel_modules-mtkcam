@@ -980,11 +980,24 @@ int aov_core_send_cmd(struct mtk_aov *aov_dev, uint32_t cmd,
 		ret = slbc_status(&slb);
 		if (ret > 0) {
 			dev_info(aov_dev->dev,
-				"%s: still have slb user at resume. ref count: %d, release in kernel\n",
+				"%s: still have aov slb user at resume. ref count: %d, release in kernel\n",
 				__func__, ret);
 			ret = slbc_release(&slb);
 			if (ret < 0)
-				dev_info(aov_dev->dev, "%s: failed to release slb buffer\n",
+				dev_info(aov_dev->dev, "%s: failed to release aov slb buffer\n",
+					__func__);
+		}
+		// release AOV_APU SLB for resume fail case
+		slb.uid = UID_AOV_APU;
+		slb.type = TP_BUFFER;
+		ret = slbc_status(&slb);
+		if (ret > 0) {
+			dev_info(aov_dev->dev,
+				"%s: still have aov apu slb user at resume. ref count: %d, release in kernel\n",
+				__func__, ret);
+			ret = slbc_release(&slb);
+			if (ret < 0)
+				dev_info(aov_dev->dev, "%s: failed to release aov apu slb buffer\n",
 					__func__);
 		}
 #endif  // AOV_SLB_ALLOC_FREE
@@ -1730,7 +1743,7 @@ int aov_core_copy(struct mtk_aov *aov_dev, struct aov_dqevent *dequeue)
 				return -ENOMEM;
 			}
 
-			// Copy apu buffer output
+			// Copy meta output
 			get_user(buffer, (void **)((uintptr_t)dequeue +
 				offsetof(struct aov_dqevent, meta_output)));
 
@@ -1749,6 +1762,37 @@ int aov_core_copy(struct mtk_aov *aov_dev, struct aov_dqevent *dequeue)
 			}
 		}
 
+		// Setup reg output size
+		put_user(ndd_data->reg_size,
+			(uint32_t *)((uintptr_t)dequeue + offsetof(struct aov_dqevent, reg_size)));
+
+		if (ndd_data->reg_size) {
+			if (ndd_data->reg_size > AOV_MAX_REG_OUTPUT) {
+				buffer_release(core_info, ndd_data);
+				dev_info(aov_dev->dev, "%s: invalid reg output overflow(%d/%d)\n",
+					__func__, ndd_data->reg_size, AOV_MAX_REG_OUTPUT);
+				return -ENOMEM;
+			}
+
+			// Copy reg output
+			get_user(buffer, (void **)((uintptr_t)dequeue +
+				offsetof(struct aov_dqevent, reg_output)));
+
+			AOV_DEBUG_LOG(*(aov_dev->enable_aov_log_flag),
+				"%s: copy reg output from(%p) to(%p) size(%d)\n",
+				__func__, ALIGN16(&(ndd_data->reg_output[0])),
+				buffer, ndd_data->reg_size);
+
+			ret = copy_to_user((void *)buffer,
+				ALIGN16(&(ndd_data->reg_output[0])), ndd_data->reg_size);
+			if (ret) {
+				buffer_release(core_info, ndd_data);
+				dev_info(aov_dev->dev,
+					"%s: failed to copy reg output(%d)\n", __func__, ret);
+				return -EFAULT;
+			}
+		}
+
 		// Setup awb output size
 		put_user(ndd_data->awb_size,
 			(uint32_t *)((uintptr_t)dequeue + offsetof(struct aov_dqevent, awb_size)));
@@ -1761,7 +1805,7 @@ int aov_core_copy(struct mtk_aov *aov_dev, struct aov_dqevent *dequeue)
 				return -ENOMEM;
 			}
 
-			// Copy apu buffer output
+			// Copy awb output
 			get_user(buffer, (void **)((uintptr_t)dequeue +
 				offsetof(struct aov_dqevent, awb_output)));
 

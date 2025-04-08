@@ -103,6 +103,7 @@
 #define AOV_MAX_AAO_OUTPUT        (158 * 1024)
 #define AOV_MAX_AAHO_OUTPUT       (1 * 1024)
 #define AOV_MAX_META_OUTPUT       (6 * 1024)
+#define AOV_MAX_REG_OUTPUT        (256)
 #define AOV_MAX_AWB_OUTPUT        (1 * 1024)
 
 #define AOV_MAX_SENSOR_COUNT      (64)
@@ -198,6 +199,9 @@ struct aov_dqevent {
 	uint32_t meta_size;
 	void *meta_output;
 
+	uint32_t reg_size;
+	void *reg_output;
+
 	uint32_t awb_size;
 	void *awb_output;
 };
@@ -257,6 +261,9 @@ struct ndd_event {
 
 	uint32_t meta_size;
 	uint8_t meta_output[AOV_MAX_META_OUTPUT];
+
+	uint32_t reg_size;
+	uint8_t reg_output[AOV_MAX_REG_OUTPUT];
 
 	uint32_t awb_size;
 	uint8_t awb_output[AOV_MAX_AWB_OUTPUT];
