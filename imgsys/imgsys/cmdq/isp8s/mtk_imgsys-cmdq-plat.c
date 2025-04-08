@@ -362,7 +362,7 @@ void imgsys_cmdq_streamoff_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 	#endif
 }
 
-static void imgsys_cmdq_cmd_dump_plat8s(struct swfrm_info_t *frm_info, u32 frm_idx)
+static void imgsys_cmdq_cmd_dump_plat8s(struct swfrm_info_t *frm_info, u32 frm_idx, bool isFullDump)
 {
 	struct GCERecoder *cmd_buf = NULL;
 	struct Command *cmd = NULL;
@@ -398,14 +398,14 @@ static void imgsys_cmdq_cmd_dump_plat8s(struct swfrm_info_t *frm_info, u32 frm_i
 				cmd[cmd_idx].u.source, cmd[cmd_idx].u.target, cmd[cmd_idx].u.mask);
 			break;
 		case IMGSYS_CMD_WRITE:
-			if (imgsys_cmdq_dbg_enable_plat8s())
+			if (imgsys_cmdq_dbg_enable_plat8s() || isFullDump)
 				pr_debug(
 					"%s: WRITE with addr(0x%08x) value(0x%08x) mask(0x%08x)\n", __func__,
 					cmd[cmd_idx].u.address, cmd[cmd_idx].u.value, cmd[cmd_idx].u.mask);
 			break;
 #ifdef MTK_IOVA_SINK2KERNEL
 		case IMGSYS_CMD_WRITE_FD:
-			if (imgsys_cmdq_dbg_enable_plat8s())
+			if (imgsys_cmdq_dbg_enable_plat8s() || isFullDump)
 				pr_debug(
 					"%s: WRITE_FD with addr(0x%08x) msb_ofst(0x%08x) fd(0x%08x) ofst(0x%08x) rshift(%d)\n",
 					__func__, cmd[cmd_idx].u.dma_addr,
@@ -414,7 +414,7 @@ static void imgsys_cmdq_cmd_dump_plat8s(struct swfrm_info_t *frm_info, u32 frm_i
 					cmd[cmd_idx].u.right_shift);
 			break;
 		case IMGSYS_CMD_WRITE_FD_HW:
-			if (imgsys_cmdq_dbg_enable_plat8s()) {
+			if (imgsys_cmdq_dbg_enable_plat8s() || isFullDump) {
 				pr_debug(
 				"%s: WRITE_FD_HW with addr(0x%08x) hw_id(%d) fd(0x%08x) ofst(0x%08x) rsv(%d)\n",
 				__func__, cmd[cmd_idx].u.dma_addr,
@@ -1424,7 +1424,12 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 				cb_param->pkt->err_data.event, event_val, isHWhang);
 		}
 
-		imgsys_cmdq_cmd_dump_plat8s(cb_param->frm_info, real_frm_idx);
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+		if (cb_param->pkt->loop && isHWhang)
+			imgsys_cmdq_cmd_dump_plat8s(cb_param->frm_info, real_frm_idx, true);
+		else
+#endif
+			imgsys_cmdq_cmd_dump_plat8s(cb_param->frm_info, real_frm_idx, false);
 
 		if (cb_param->user_cmdq_err_cb) {
 #if CMDQ_TIMEOUT_KTHREAD
@@ -2438,7 +2443,13 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 		}
 #endif
 
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+		if (imgsys_cmdq_dbg_enable_plat8s() ||
+			((frm_info->is_ctrl_cache == 1) &&
+			(is_pkt_created[thd_idx] == 0)))
+#else
 		if (imgsys_cmdq_dbg_enable_plat8s())
+#endif
 			dev_dbg(imgsys_dev->dev,
 				"%s: req fd/no(%d/%d) frame no(%d) frm(%d/%d) cmd_oft(0x%x/0x%x), cmd_len(%d), num(%d), sz_per_cmd(%lu), frm_blk(%d), hw_comb(0x%x), sync_id(%d), gce_thd(%d), gce_clt(0x%lx), ctrl_cache(%d)\n",
 				__func__, frm_info->request_fd, frm_info->request_no, frm_info->frame_no,
