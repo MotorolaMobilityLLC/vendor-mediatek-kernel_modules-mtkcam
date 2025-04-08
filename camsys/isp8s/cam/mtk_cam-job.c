@@ -2547,7 +2547,10 @@ static void trigger_error_dump(struct mtk_cam_job *job,
 		 */
 		if (!ctx->is_sv_mraw_error) {
 			mtk_cam_event_error(&ctx->cam_ctrl, desc);
-			WRAP_AEE_EXCEPTION(desc, warn_desc);
+			if (strcmp(desc, MSG_M4U_TF)) {
+				// let SMMU trigger M4F TF KE
+				WRAP_AEE_EXCEPTION(desc, warn_desc);
+			}
 		} else {
 			ctx->is_sv_mraw_error = false;
 		}
