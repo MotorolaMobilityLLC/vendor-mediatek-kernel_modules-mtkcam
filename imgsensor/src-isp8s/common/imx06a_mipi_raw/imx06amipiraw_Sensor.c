@@ -1062,7 +1062,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_SE].max = 278,  // 0.99ms
 		.multiexp_s_info[IMGSENSOR_EXPOSURE_SE].belong_to_lut_id = IMGSENSOR_LUT_B,
 		.mode_lut_s_info[IMGSENSOR_LUT_B].linelength = 9952,//line_length_pck
-		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW14_R,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_R,
 	},
 	{
 		.frame_desc = frame_desc_regE,
@@ -1123,7 +1123,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		//.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 1390,  // 8.023ms
 		//.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = 1390,  // 8.023ms
 		//.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_SE].max = 278,  // 0.99ms
-		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW14_R,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_R,
 	},
 #endif
 };
