@@ -83,6 +83,8 @@ static struct mutex cpr_lock;
 static int isc_irq_enabled;
 
 #ifdef IMGSYS_CMDQ_PKT_REUSE
+int imgsys_cmdq_pkt_reuse_dis;
+module_param(imgsys_cmdq_pkt_reuse_dis, int, 0644);
 static dma_addr_t g_pkt_reuse_pa[IMGSYS_NOR_THD];
 static u32 *g_pkt_reuse_va[IMGSYS_NOR_THD];
 static struct cmdq_pkt *g_pkt_reuse[IMGSYS_NOR_THD];
@@ -2434,7 +2436,8 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 
 #ifdef IMGSYS_CMDQ_PKT_REUSE
 		/* Bypass pkt reuse flow for smvr and secure camera */
-		if ((frm_info->batchnum != 0) || (frm_info->is_secReq != 0))
+		if ((frm_info->batchnum != 0) || (frm_info->is_secReq != 0) ||
+			(imgsys_cmdq_pkt_reuse_disable_plat8s()))
 			frm_info->is_ctrl_cache = 0;
 
 		/* This segment deal with scenario change from isCtrlCache=1 to isCtrlCache=0. */
@@ -4152,6 +4155,13 @@ u32 imgsys_iova_dbg_port_plat8s(void)
 {
 	return imgsys_iova_dbg_port_en;
 }
+
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+bool imgsys_cmdq_pkt_reuse_disable_plat8s(void)
+{
+	return imgsys_cmdq_pkt_reuse_dis;
+}
+#endif
 
 struct imgsys_cmdq_cust_data imgsys_cmdq_data_8s = {
 	.cmdq_init = imgsys_cmdq_init_plat8s,

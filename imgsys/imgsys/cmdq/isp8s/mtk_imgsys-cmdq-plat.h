@@ -1638,6 +1638,9 @@ bool imgsy_isc_xfd_dbg_enable_plat8s(void);
 bool imgsys_iova_dbg_enable_plat8s(void);
 u32 imgsys_iova_dbg_port_plat8s(void);
 u32 imgsys_cmdq_is_stream_off(void);
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+bool imgsys_cmdq_pkt_reuse_disable_plat8s(void);
+#endif
 
 #if IMGSYS_KTHREAD_USE_VIP
 extern void set_task_priority_based_vip(int pid, int prio);
