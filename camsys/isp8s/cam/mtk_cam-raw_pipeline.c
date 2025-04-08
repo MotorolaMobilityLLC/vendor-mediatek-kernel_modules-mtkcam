@@ -1050,8 +1050,9 @@ static int mtk_raw_set_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_MTK_CAM_HSF_EN:
 		ctrl_data->enable_hsf_raw = ctrl->val;
-		dev_info(dev, "%s:pipe(%d):HSF_EN(%d)\n",
-			 __func__, pipeline->id, ctrl_data->enable_hsf_raw);
+		if (CAM_DEBUG_ENABLED(V4L2) || ctrl_data->enable_hsf_raw)
+			dev_info(dev, "%s:pipe(%d):HSF_EN(%d)\n",
+				__func__, pipeline->id, ctrl_data->enable_hsf_raw);
 		break;
 	case V4L2_CID_MTK_CAM_EXP_SHUTTER:
 		{

@@ -86,7 +86,7 @@ int mtk_ccd_client_get_channel(struct mtk_ccd *ccd,
 	}
 
 	id_mask = to_ccd_id_mask(center_id, channel_id);
-	dev_info(dev, "%s, id mask:%#010x", __func__, id_mask);
+	dev_dbg(dev, "%s, id mask:%#010x", __func__, id_mask);
 
 	return id_mask;
 }
@@ -110,7 +110,7 @@ int mtk_ccd_client_put_channel(struct mtk_ccd *ccd, int id_mask)
 	/* put channel - free ept + return rpmsg dev */
 	mtk_ccd_put_channel(ccd, center_id, channel_id);
 
-	dev_info(dev, "%s, id mask:%#010x", __func__, id_mask);
+	dev_dbg(dev, "%s, id mask:%#010x", __func__, id_mask);
 
 	return 0;
 }

@@ -788,7 +788,7 @@ static long mtk_cam_vidioc_streamoff_handler(struct file *file,
 			atomic_read(&node->queued_cnt));
 
 	if (ctx)
-		_stream_off_handler_locked(ctx, node, true, "stream_off");
+		_stream_off_handler_locked(ctx, node, false, "stream_off");
 
 	/* mtk_cam_vb2_stop_streaming */
 	return video_ioctl2(file, cmd, arg);

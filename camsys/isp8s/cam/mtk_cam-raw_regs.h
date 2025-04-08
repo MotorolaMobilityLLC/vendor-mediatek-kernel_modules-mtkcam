@@ -5684,6 +5684,8 @@
 #define REG_TG_DBG_DEBUG_DATA                      0x12D8
 #define REG_TG_HW_COH_GEN_PULSE_CNT                0x12DC
 
+#define REG_SEP_VSIZE                              0x1308
+
 /* module: FHG_R1A */
 #define REG_FHG_FHG_SPARE_1                        0x41C0
 #define REG_FHG_FHG_SPARE_2                        0x41C4

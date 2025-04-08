@@ -1426,13 +1426,7 @@ static int mtk_cam_ctrl_stream_on_job(struct mtk_cam_job *job)
 
 	ctrl->frame_interval_ns =
 			mtk_cam_query_interval_from_sensor(ctx->sensor);
-
-	/* should set ts for second job's apply_sensor */
-	ctrl->r_info.sof_ts_ns = ktime_get_boottime_ns();
-	ctrl->r_info.sof_l_ts_ns = ktime_get_boottime_ns();
 	ctrl->fs_event_subframe_cnt = job->frame_cnt;
-
-	ctrl->r_info.xvs_ts_ns = ktime_get_boottime_ns();
 
 	call_jobop(job, stream_on, true);
 	if (ctrl->r_info.extisp_enable || !ctx->has_raw_subdev)
@@ -1469,6 +1463,11 @@ static void trigger_fake_sof_event(struct mtk_cam_ctrl *ctrl)
 	 *   - smvr: different applying order for sensor/isp
 	 *   - lbmf: trigger sensor via last sof
 	 */
+
+	/* should set ts for second job's apply_sensor */
+	ctrl->r_info.sof_ts_ns = ktime_get_boottime_ns();
+	ctrl->r_info.sof_l_ts_ns = ctrl->r_info.sof_ts_ns;
+	ctrl->r_info.xvs_ts_ns = ctrl->r_info.sof_ts_ns;
 
 	/* note: on purpose not to update ctrl's runtime info */
 	pr_info("%s:ctx=%d, sof:%lld, sof_l:%lld, ts:%lld\n", __func__,
@@ -1878,13 +1877,6 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 		mtk_cam_job_uninit_engine(job, engine_uninit);
 		goto SWITCH_FAILURE;
 	}
-	/* should set ts for next job's apply_sensor */
-	//ctrl->frame_interval_ns =
-	//		mtk_cam_query_interval_from_sensor(ctx->sensor);
-	ctrl->r_info.sof_ts_ns = ktime_get_boottime_ns();
-	ctrl->r_info.sof_l_ts_ns = ctrl->r_info.sof_ts_ns;
-
-	ctrl->r_info.xvs_ts_ns = ktime_get_boottime_ns();
 
 	for (i = 0; i < cam->engines.num_raw_devices; i++) {
 		bool is_master = false;

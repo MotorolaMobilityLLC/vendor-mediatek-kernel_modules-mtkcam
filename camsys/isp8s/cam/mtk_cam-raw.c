@@ -16,8 +16,6 @@
 #include <linux/sched/clock.h>
 #include <linux/rtc.h>
 
-#include <mtk_printk_ctrl.h>
-
 #include <soc/mediatek/smi.h>
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
 
@@ -50,8 +48,6 @@ module_param(debug_ddren_sw_mode, int, 0644);
 MODULE_PARM_DESC(debug_ddren_sw_mode, "debug: 1 : active sw mode");
 
 #define MTK_RAW_STOP_HW_TIMEOUT			(33)
-
-#define KERNEL_LOG_MAX	                400
 
 #define RAW_DEBUG 0
 #define AEO_SW_WORKAROUND 1
@@ -675,7 +671,7 @@ static void reset_int_en(struct mtk_raw_device *dev)
 	raw_writel(0, dev, dev->yuv_base, REG_CAMCTL2_INT17_EN);
 
 	dev_info_ratelimited(dev->dev,
-		"[%s] INT2/3/5/13/17/18/20/21_EN [in] 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x",
+		"[%s] INT2/3/5/13/17/18/20/21_EN [in] %#x/%#x/%#x/%#x/%#x/%#x/%#x/%#x [out] %#x/%#x/%#x/%#x/%#x/%#x/%#x/%#x",
 		__func__,
 		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT2_EN),
 		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT3_EN),
@@ -684,11 +680,7 @@ static void reset_int_en(struct mtk_raw_device *dev)
 		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT17_EN),
 		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT18_EN),
 		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT20_EN),
-		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT21_EN));
-
-	dev_info_ratelimited(dev->dev,
-		"[%s] INT2/3/5/13/17/18/20/21_EN [out] 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x",
-		__func__,
+		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT21_EN),
 		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT2_EN),
 		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT3_EN),
 		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT5_EN),
@@ -894,15 +886,12 @@ void dbload_force(struct mtk_raw_device *dev)
 		dev_info(dev->dev, "%s: 0x%x\n", __func__, val);
 }
 
-
 void toggle_db(struct mtk_raw_device *dev)
 {
-	u32 val;
+	u32 val, sep_vsz, sep_vsz_inner;
 
-	dev_info(dev->dev, "%s: check reg: before: SEP_VSIZE outer 0x%x/ inner: 0x%x\n",
-		__func__,
-		raw_readl_relaxed(dev, dev->base, 0x1308),
-		raw_readl_relaxed(dev, dev->base_inner, 0x1308));
+	sep_vsz = raw_readl_relaxed(dev, dev->base, REG_SEP_VSIZE);
+	sep_vsz_inner = raw_readl_relaxed(dev, dev->base_inner, REG_SEP_VSIZE);
 
 	val = raw_readl(dev, dev->base, REG_CAMCTL_DB_LOAD_CTL1);
 	raw_writel(val & ~FBIT(CAMCTL_DB_EN), dev, dev->base, REG_CAMCTL_DB_LOAD_CTL1);
@@ -911,18 +900,14 @@ void toggle_db(struct mtk_raw_device *dev)
 	val = raw_readl(dev, dev->base, REG_CAMCTL_DB_LOAD_CTL1);
 	raw_writel(val | FBIT(CAMCTL_DB_EN), dev, dev->base, REG_CAMCTL_DB_LOAD_CTL1);
 
-	dev_info(dev->dev, "%s: 0x%x seq:0x%x/0x%x\n", __func__,
-		raw_readl(dev, dev->base, REG_CAMCTL_DB_LOAD_CTL1),
+	dev_info(dev->dev,
+		"%s: 0x%x seq:0x%x/0x%x, sep_vsize [in] %#x->%#x [out] %#x->%#x\n",
+		__func__, raw_readl(dev, dev->base, REG_CAMCTL_DB_LOAD_CTL1),
 		raw_readl_relaxed(dev, dev->base, REG_FHG_FHG_SPARE_1),
-		raw_readl_relaxed(dev, dev->base_inner, REG_FHG_FHG_SPARE_1));
-
-	dev_info(dev->dev, "%s: check reg: after: SEP_VSIZE outer 0x%x/ inner: 0x%x\n",
-		__func__,
-		raw_readl_relaxed(dev, dev->base, 0x1308),
-		raw_readl_relaxed(dev, dev->base_inner, 0x1308));
+		raw_readl_relaxed(dev, dev->base_inner, REG_FHG_FHG_SPARE_1),
+		sep_vsz_inner, raw_readl_relaxed(dev, dev->base_inner, REG_SEP_VSIZE),
+		sep_vsz, raw_readl_relaxed(dev, dev->base, REG_SEP_VSIZE));
 }
-
-
 
 void enable_tg_db(struct mtk_raw_device *dev, int en)
 {
@@ -2559,8 +2544,6 @@ static int mtk_raw_probe(struct platform_device *pdev)
 		goto UNREGISTER_PM_NOTIFIER;
 	}
 
-	raw_dev->default_printk_cnt = get_detect_count();
-
 	raw_dev->apmcu_voter_cnt = 0;
 	spin_lock_init(&raw_dev->apmcu_voter_lock);
 	spin_lock_init(&raw_dev->qof_ctrl_lock);
@@ -2634,13 +2617,8 @@ int mtk_raw_runtime_suspend(struct device *dev)
 {
 	struct mtk_raw_device *drvdata = dev_get_drvdata(dev);
 	int i;
-	unsigned int pr_detect_count;
 
 	dev_info(dev, "%s:disable clock\n", __func__);
-
-	pr_detect_count = get_detect_count();
-	if (pr_detect_count > drvdata->default_printk_cnt)
-		set_detect_count(drvdata->default_printk_cnt);
 
 	mtk_cam_reset_qos(dev, &drvdata->qos);
 	mtk_cam_isp8s_bwr_clr_bw(drvdata->cam->bwr,
@@ -2664,7 +2642,6 @@ int mtk_raw_runtime_resume(struct device *dev)
 {
 	struct mtk_raw_device *drvdata = dev_get_drvdata(dev);
 	int i, ret;
-	unsigned int pr_detect_count;
 
 	if (is_hwccf_apply())
 		mtk_smi_larb_enable(&drvdata->larbs[0]->dev);
@@ -2674,11 +2651,7 @@ int mtk_raw_runtime_resume(struct device *dev)
 	if (ret)
 		return ret;
 
-	pr_detect_count = get_detect_count();
-	if (pr_detect_count < KERNEL_LOG_MAX)
-		set_detect_count(KERNEL_LOG_MAX);
 	dev_info(dev, "%s:enable clock\n", __func__);
-
 	if (CAM_DEBUG_ENABLED(RAW_CG))
 		cg_dump_and_test(dev, CG_RAW, 1);
 	for (i = 0; i < drvdata->num_clks; i++) {

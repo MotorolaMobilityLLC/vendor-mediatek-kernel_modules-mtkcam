@@ -164,9 +164,10 @@ static int mtk_mraw_set_fmt(struct v4l2_subdev *sd,
 		}
 
 		fmt->format = *mf;
-		dev_info(sd->v4l2_dev->dev,
-			"sd:%s pad:%d set format w/h/code/which %d/%d/0x%x/%d\n",
-			sd->name, fmt->pad, mf->width, mf->height, mf->code, fmt->which);
+		if (CAM_DEBUG_ENABLED(V4L2_TRY))
+			dev_info(sd->v4l2_dev->dev,
+				"sd:%s pad:%d set format w/h/code/which %d/%d/0x%x/%d\n",
+				sd->name, fmt->pad, mf->width, mf->height, mf->code, fmt->which);
 	} else {
 		mf = get_mraw_fmt(pipe, state, fmt->pad, fmt->which);
 		if (!mf) {
@@ -175,9 +176,10 @@ static int mtk_mraw_set_fmt(struct v4l2_subdev *sd,
 		}
 
 		*mf = fmt->format;
-		dev_info(sd->v4l2_dev->dev,
-			"sd:%s pad:%d set format w/h/code/which %d/%d/0x%x/%d\n",
-			sd->name, fmt->pad, mf->width, mf->height, mf->code, fmt->which);
+		if (CAM_DEBUG_ENABLED(V4L2_TRY))
+			dev_info(sd->v4l2_dev->dev,
+				"sd:%s pad:%d set format w/h/code/which %d/%d/0x%x/%d\n",
+				sd->name, fmt->pad, mf->width, mf->height, mf->code, fmt->which);
 
 		if (fmt->pad == MTK_MRAW_SINK &&
 			fmt->which == V4L2_SUBDEV_FORMAT_ACTIVE) {

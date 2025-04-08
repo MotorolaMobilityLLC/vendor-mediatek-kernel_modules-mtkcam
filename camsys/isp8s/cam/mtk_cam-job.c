@@ -664,6 +664,7 @@ static unsigned long mtk_cam_select_hw(struct mtk_cam_job *job)
 		for (i = 0; i < cam->engines.num_raw_devices; i++)
 			if (raws & BIT(i))
 				selected |= bit_map_bit(MAP_HW_RAW, i);
+
 		/* raw seletection rule TBC */
 		if (is_offline_timeshare(job)) {
 			dev_info(cam->dev, "%s: timeshare case : raw:%d\n", __func__,
@@ -683,10 +684,6 @@ static unsigned long mtk_cam_select_hw(struct mtk_cam_job *job)
 
 		/* if has raw */
 		int raw_idx = get_master_raw_id(selected);
-
-		dev_info(cam->dev,
-			 "select sv hw start (raw_idx:%d/sv_available:0x%lx)\n",
-			 raw_idx, sv_available);
 
 		/* if failed to find corresponding camsv */
 		if (!(sv_available & BIT(raw_idx))) {
@@ -724,8 +721,8 @@ static unsigned long mtk_cam_select_hw(struct mtk_cam_job *job)
 		dev_info(cam->dev, "%s: timeshare case : raw:0x%lx\n",
 			__func__, selected);
 	}
-SELECT_HW_FAILED:
 
+SELECT_HW_FAILED:
 	/* update ctx's hw devs */
 	if (mtk_cam_ctx_fetch_devices(ctx, selected))
 		return 0;
@@ -1671,7 +1668,7 @@ _apply_sensor_subsample(struct mtk_cam_job *job)
 	bool has_ctrls_from_sensor = job->sensor_hdl_obj;
 	struct v4l2_ctrl *ctrl;
 
-	if (CAM_DEBUG_ENABLED(JOB_ACTION) || 1)
+	if (CAM_DEBUG_ENABLED(JOB_ACTION))
 		dev_info(cam->dev,
 			 "[%s] ctx:%d seq %#x sensor_ctrl_obj:%d is_raw_trigger:%d, sen/isp_req:%s/%s\n",
 			 __func__, ctx->stream_id, job->frame_seq_no,

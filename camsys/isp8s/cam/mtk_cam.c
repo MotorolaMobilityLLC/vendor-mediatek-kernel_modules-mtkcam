@@ -35,6 +35,7 @@
 #include <soc/mediatek/smi.h>
 #include <soc/mediatek/mmdvfs_v3.h>
 #include <mtk_heap.h>
+#include <mtk_printk_ctrl.h>
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
 #include <slbc_ops.h>
 #include <mtk-vmm-notifier.h>
@@ -1225,11 +1226,12 @@ int isp_composer_create_session(struct mtk_cam_ctx *ctx)
 		dev_info(cam->dev, "%s send ipi msg failed", __func__);
 		ret = -1;
 	}
+
 	dev_info(cam->dev,
-		"%s: rpmsg_send id: %d cq_buf(fd:%d,sz:%d) msg_buf(fd:%d,sz%d) ret(%d)\n",
-		__func__, event.cmd_id, session_data->workbuf.ccd_fd,
-		session_data->workbuf.size, session_data->msg_buf.ccd_fd,
-		session_data->msg_buf.size,
+		"%s: ctx:%d rpmsg_send id:%d cq_buf(fd:%d,sz:%d) msg_buf(fd:%d,sz%d) ret(%d)\n",
+		__func__, ctx->stream_id, event.cmd_id,
+		session_data->workbuf.ccd_fd, session_data->workbuf.size,
+		session_data->msg_buf.ccd_fd, session_data->msg_buf.size,
 		ret);
 
 	return ret;
@@ -1304,8 +1306,9 @@ static int isp_composer_init(struct mtk_cam_ctx *ctx)
 		return -EINVAL;
 	}
 
-	dev_info(dev, "%s initialized composer of ctx:%d\n",
-		 __func__, ctx->stream_id);
+	if (CAM_DEBUG_ENABLED(JOB))
+		dev_info(dev, "%s initialized composer of ctx:%d\n",
+			__func__, ctx->stream_id);
 
 	return 0;
 }
@@ -1500,7 +1503,7 @@ static int mtk_cam_initialize(struct mtk_cam_device *cam)
 
 	mtk_cam_dvfs_reset_runtime_info(&cam->dvfs);
 
-	WARN_ON(pm_runtime_get_sync(cam->dev));
+	WARN_ON(pm_runtime_get_sync(cam->dev));  /* mtk_cam_runtime_resume */
 
 	ret = mtk_cam_power_rproc(cam, 1);
 	if (ret)
@@ -2501,14 +2504,16 @@ int mtk_cam_alloc_img_pool(struct device *dev_to_attach,
 			  false);
 	}
 
-	for (i = 0; i < ARRAY_SIZE(desc->fmt_desc); ++i) {
-		struct mtk_cam_buf_fmt_desc *fmt_desc = &desc->fmt_desc[i];
+	if (CAM_DEBUG_ENABLED(IPI_BUF)) {
+		for (i = 0; i < ARRAY_SIZE(desc->fmt_desc); ++i) {
+			struct mtk_cam_buf_fmt_desc *fmt_desc = &desc->fmt_desc[i];
 
-		dev_info(dev_to_attach, "[%s]: fmt_desc[%d](%d/%d/%d/sz:%zu/ipi:%d)",
-				 __func__, i,
-				 fmt_desc->width, fmt_desc->height,
-				 fmt_desc->stride[0], fmt_desc->size,
-				 fmt_desc->ipi_fmt);
+			dev_info(dev_to_attach, "[%s]: fmt_desc[%d](%d/%d/%d/sz:%zu/ipi:%d)",
+				__func__, i,
+				fmt_desc->width, fmt_desc->height,
+				fmt_desc->stride[0], fmt_desc->size,
+				fmt_desc->ipi_fmt);
+		}
 	}
 
 	dev_info(dev_to_attach, "[%s]: desc(%zu/0x%x) alloc_mem(%d/%d/%d) img_wbuf_num(%d/%d)\n",
@@ -3089,10 +3094,9 @@ int mtk_cam_ctx_init_scenario(struct mtk_cam_ctx *ctx)
 	scen = &res->scen;
 
 	if (ctrl_data->valid_apu_info &&
-		   scen_is_m2m_apu(scen, &ctrl_data->apu_info)) {
-
+	    scen_is_m2m_apu(scen, &ctrl_data->apu_info)) {
+		/* TODO: phase out */
 		ret = mtk_cam_ctx_request_slb(ctx, UID_SH_P1, false, NULL);
-
 	} else if (res_raw_is_dc_mode(res) && res->slc_mode) {
 		/* dcif + slc buffer case */
 		ret = mtk_cam_ctx_request_slc(ctx, res->slc_mode);
@@ -3170,14 +3174,18 @@ static inline bool _apply_mux_setting(char *prefix, struct mtk_cam_job *job,
 {
 	struct device *dev = job->src_ctx->cam->dev;
 	struct mtk_cam_seninf_mux_param param;
-	unsigned int i;
+	char cfg_str[128];
+	unsigned int i, n;
 
-	dev_info(dev, "[%s] mux change Req:%d %s eninges:%#x num_settings:%u/%u",
+	cfg_str[0] = '\0';
+	for (i = 0, n = 0; i < num && i < MUX_SETTING_NUM; i++) {
+		n += scnprintf(cfg_str + n, sizeof(cfg_str) - n,
+				"[%d/%d/%d]", settings[i].source,
+				settings[i].camtg, settings[i].enable);
+	}
+	dev_info(dev, "[%s] mux change Req:%d %s eninges:%#x num_settings:%u/%u %s",
 		prefix, job->frame_seq_no, job->scen_str, job->used_engine,
-		num, MUX_SETTING_NUM);
-	for (i = 0; i < num && i < MUX_SETTING_NUM; i++)
-		dev_info(dev, "[%s] [%d/%d/%d]", prefix,
-			settings[i].source, settings[i].camtg, settings[i].enable);
+		num, MUX_SETTING_NUM, cfg_str);
 
 	param.settings = settings;
 	param.num = num;
@@ -3444,7 +3452,6 @@ static int _config_1exp_cam_mux(struct mtk_cam_job *job, bool disable_prev_mux)
 		settings[cnt].pixelmode = sv_max_pixel_mode;
 		settings[cnt++].enable = 1;
 	}
-
 
 	/* raw for otf */
 	if (!is_dc && !is_offline_ts) {
@@ -5659,6 +5666,8 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&cam_dev->pending_job_list);
 	INIT_LIST_HEAD(&cam_dev->running_job_list);
 
+	cam_dev->default_printk_cnt = get_detect_count();
+
 	ret = mtk_cam_of_rproc(cam_dev);
 	if (ret)
 		goto fail_return;
@@ -5745,6 +5754,12 @@ static int mtk_cam_runtime_suspend(struct device *dev)
 	struct mtk_cam_device *cam_dev  = dev_get_drvdata(dev);
 	int clk_num = cam_dev->num_clks;
 	int i;
+	unsigned int pr_detect_count;
+
+	/* reset log too much size */
+	pr_detect_count = get_detect_count();
+	if (pr_detect_count > cam_dev->default_printk_cnt)
+		set_detect_count(cam_dev->default_printk_cnt);
 
 	dev_info(dev, "%s:suspend\n", __func__);
 
@@ -5788,6 +5803,12 @@ static int mtk_cam_runtime_resume(struct device *dev)
 	struct mtk_cam_device *cam_dev  = dev_get_drvdata(dev);
 	int clk_num = cam_dev->num_clks;
 	int i, ret;
+	unsigned int pr_detect_count;
+
+	/* increase log too much size */
+	pr_detect_count = get_detect_count();
+	if (pr_detect_count < KERNEL_LOG_MAX)
+		set_detect_count(KERNEL_LOG_MAX);
 
 	dev_info(dev, "%s: resume\n", __func__);
 	if (CAM_DEBUG_ENABLED(RAW_CG))

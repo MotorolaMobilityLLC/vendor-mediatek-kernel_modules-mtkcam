@@ -654,6 +654,7 @@ void sv_reset_by_camsys_top(struct mtk_camsv_device *sv_dev)
 		mtk_smi_dbg_hang_detect("camsys-camsv");
 		goto RESET_FAILURE;
 	}
+	/* debug only, rm soon */
 	writel(0, sv_dev->base_scq + REG_CAMSVCQTOP_SW_RST_CTL);
 	// mraw
 	writel(0xDEADBEEF, sv_dev->top + 0x10);
@@ -2031,8 +2032,6 @@ int mtk_cam_sv_dev_pertag_stream_on(
 	}
 
 EXIT:
-	dev_info(sv_dev->dev, "camsv %d %s en(%d) streaming_tag_cnt:%d\n",
-		sv_dev->id, __func__, (on) ? 1 : 0, sv_dev->streaming_tag_cnt);
 	return ret;
 }
 
@@ -2051,6 +2050,10 @@ int mtk_cam_sv_dev_stream_on(struct mtk_camsv_device *sv_dev, bool on,
 		if (sv_dev->enabled_tags & (1 << i))
 			mtk_cam_sv_dev_pertag_stream_on(sv_dev, i, on);
 	}
+
+	dev_info(sv_dev->dev,
+		"camsv %d %s en(%d) streaming_tag_cnt:%d\n",
+		sv_dev->id, __func__, (on) ? 1 : 0, sv_dev->streaming_tag_cnt);
 
 	return ret;
 }
@@ -4077,7 +4080,7 @@ int mtk_camsv_runtime_resume(struct device *dev)
 	if (ret)
 		return ret;
 
-	dev_dbg(dev, "%s:enable clock\n", __func__);
+	dev_info(dev, "%s:enable clock\n", __func__);
 	for (i = 0; i < sv_dev->num_clks; i++) {
 		ret = clk_prepare_enable(sv_dev->clks[i]);
 		if (ret) {
@@ -4099,8 +4102,6 @@ int mtk_camsv_runtime_resume(struct device *dev)
 		enable_irq(sv_dev->irq[i]);
 		dev_dbg(dev, "%s:enable irq %d\n", __func__, sv_dev->irq[i]);
 	}
-
-	dev_info(dev, "%s:enable irq\n", __func__);
 
 	if (camsv_fifo_detect) {
 		if (atomic_read(&sv_dev->enable_fifo_detect))

@@ -48,6 +48,7 @@
 
 #define CCD_READY 1
 #define NO_CHECK_RETURN(ret) {(void) ret;}
+#define KERNEL_LOG_MAX 400
 
 struct mtk_cam_debug_fs;
 struct mtk_cam_request;
@@ -304,6 +305,7 @@ struct mtk_cam_device {
 	u64 base_reg_addr;
 
 	atomic_t initialize_cnt;
+	int default_printk_cnt;
 
 	//TODO: for real SCP
 	//struct device *smem_dev;
