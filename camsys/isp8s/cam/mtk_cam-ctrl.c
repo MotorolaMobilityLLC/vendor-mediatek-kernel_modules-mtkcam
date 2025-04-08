@@ -333,6 +333,9 @@ void mtk_cam_event_pda_resource_ready(struct mtk_cam_ctrl *cam_ctrl, unsigned lo
 	unsigned int pda_id;
 	unsigned long subset;
 
+	if (pda_ready == 0)
+		return;
+
 	subset = bit_map_subset_of(MAP_HW_PDA, pda_ready);
 	pda_id = find_first_bit_set(subset);
 
@@ -346,6 +349,8 @@ void mtk_cam_event_pda_resource_ready(struct mtk_cam_ctrl *cam_ctrl, unsigned lo
 	memcpy(event.u.data, &data, 4);
 
 	mtk_cam_ctx_send_mraw_event(ctx, &event);
+
+	pr_info("%s:send pda resource ready event:%lx\n", __func__, pda_ready);
 
 	log_event(__func__, ctx->stream_id, &event);
 }
@@ -1559,35 +1564,21 @@ static void mtk_cam_ctrl_pda_unint_flow(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_cam_ctrl *ctrl = &ctx->cam_ctrl;
-	unsigned long pda_engine_uninit = job->uninit_pda_engine;
 	struct device *dev = ctx->cam->dev;
 	int prev_seq;
 
 	prev_seq = prev_frame_seq(job->frame_seq_no);
 	dev_info(dev, "[%s] wait engines done req:0x%x\n",
 			__func__, prev_seq);
-	if (mtk_cam_ctrl_wait_event(ctrl, check_done, &prev_seq, 30000)) {
+
+	if (mtk_cam_ctrl_wait_event(ctrl, check_done, &prev_seq, 30000))
 		dev_info(dev, "[%s] check for pda unint timeout: prev_seq=0x%x\n",
-			 __func__, prev_seq);
-		goto PDA_UNINT_FAILURE;
-	}
-	if (mtk_cam_job_uninit_pda_engine(job, pda_engine_uninit)) {
-		dev_info(dev, "[%s] uninit engine failed, uninit pda:0x%lx\n",
-			__func__, job->uninit_pda_engine);
-		goto PDA_UNINT_FAILURE;
-	}
+			__func__, prev_seq);
 
-	if (pda_engine_uninit)
-		mtk_cam_event_pda_resource_ready(&ctx->cam_ctrl, pda_engine_uninit);
-	dev_info(dev, "[%s] finish, uninit engines:0x%lx\n",
-		__func__, pda_engine_uninit);
-
-	return;
-
-PDA_UNINT_FAILURE:
-	dev_info(dev, "[%s] failed: ctx-%d job %d frame_seq 0x%x\n",
-		__func__, ctx->stream_id, job->req_seq, job->frame_seq_no);
-
+	/* uninit pda engine if necessary */
+	mtk_cam_job_uninit_pda_engine(job, job->uninit_pda_engine);
+	/* send pda resource ready event if necessary */
+	mtk_cam_event_pda_resource_ready(&ctx->cam_ctrl, job->uninit_pda_engine);
 }
 
 static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
@@ -1649,6 +1640,11 @@ static void mtk_cam_ctrl_dynamic_raws_change_flow(struct mtk_cam_job *job)
 			 __func__, prev_seq);
 		goto SWITCH_FAILURE;
 	}
+
+	/* uninit pda engine if necessary */
+	mtk_cam_job_uninit_pda_engine(job, job->uninit_pda_engine);
+	/* send pda resource ready event if necessary */
+	mtk_cam_event_pda_resource_ready(&ctx->cam_ctrl, job->uninit_pda_engine);
 
 	if (!ois_comp) {
 		if (mtk_cam_job_uninit_engine(job, engine_uninit)) {
@@ -1744,6 +1740,11 @@ SWITCH_FAILURE:
 #endif
 	dev_info(dev, "[%s] failed: ctx-%d job %d frame_seq 0x%x\n",
 		 __func__, ctx->stream_id, job->req_seq, job->frame_seq_no);
+
+	/* uninit pda engine if necessary */
+	mtk_cam_job_uninit_pda_engine(job, job->uninit_pda_engine);
+	/* send pda resource ready event if necessary */
+	mtk_cam_event_pda_resource_ready(&ctx->cam_ctrl, job->uninit_pda_engine);
 
 	vsync_collector_dump(&ctrl->vsync_col);
 	if (mtk_cam_seninf_dump(ctx->seninf, job->frame_seq_no, true, true)
@@ -1904,6 +1905,9 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 	if (engine_uninit)
 		mtk_cam_event_camsys_resource_ready(&ctx->cam_ctrl, engine_uninit);
 
+	/* send pda resource ready event if necessary */
+	mtk_cam_event_pda_resource_ready(&ctx->cam_ctrl, job->uninit_pda_engine);
+
 	if (mtk_cam_job_not_support_qof(job))
 		qof_mtcmos_voter_handle(&ctx->cam->engines,
 			raw_after_change, &ctx->unsupport_scen);
@@ -1920,19 +1924,6 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 	check_args.expect_inner = job->frame_seq_no;
 	dev_info(dev, "[%s] begin waiting check for inner no:%d seq 0x%x\n",
 		__func__, job->req_seq, job->frame_seq_no);
-
-	if (job->uninit_pda_engine) {
-		dev_info(dev, "[%s] pda uninit start, uninit pda engines:0x%lx\n",
-			__func__, job->uninit_pda_engine);
-		if (mtk_cam_job_uninit_pda_engine(job, job->uninit_pda_engine)) {
-			dev_info(dev, "[%s] uninit engine failed, uninit pda:0x%lx\n",
-				__func__, job->uninit_pda_engine);
-			goto SWITCH_FAILURE;
-		}
-		mtk_cam_event_pda_resource_ready(&ctx->cam_ctrl, job->uninit_pda_engine);
-		dev_info(dev, "[%s] pda uninit finish, uninit pda engines:0x%lx\n",
-			__func__, job->uninit_pda_engine);
-	}
 
 	if (mtk_cam_ctrl_wait_event(ctrl, check_for_inner, &check_args,
 				    30000)) {
@@ -1986,6 +1977,12 @@ SWITCH_FAILURE:
 	dev_info(dev, "[%s] failed: ctx-%d job %d frame_seq 0x%x (streaming:%d)\n",
 		 __func__, ctx->stream_id, job->req_seq, job->frame_seq_no,
 		 atomic_read(&ctx->streaming));
+
+	/* uninit pda engine if necessary */
+	mtk_cam_job_uninit_pda_engine(job, job->uninit_pda_engine);
+	/* send pda resource ready event if necessary */
+	mtk_cam_event_pda_resource_ready(&ctx->cam_ctrl, job->uninit_pda_engine);
+
 	vsync_collector_dump(&ctrl->vsync_col);
 	if (atomic_read(&ctx->streaming))
 		WRAP_AEE_EXCEPTION(MSG_SWITCH_FAILURE, __func__);

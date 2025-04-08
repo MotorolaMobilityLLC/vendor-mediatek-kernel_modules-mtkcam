@@ -2763,7 +2763,6 @@ static int job_pda_hw_init(struct mtk_cam_job *job, int pda_idx)
 		if (mtk_cam_occupy_engine(ctx->cam, pda_selected))
 			dev_info(ctx->cam->dev, "%s warning: occupy resource prev:0x%lx/cur:0x%lx",
 			__func__, ctx->used_engine, pda_selected);
-		pda_need_init = pda_selected & ~ctx->used_engine;
 		ctx->used_engine |= pda_need_init;
 		ctx->pda_modules |= pda_need_init;
 		mtk_cam_pm_runtime_engines(&ctx->cam->engines, pda_need_init, 1);
@@ -4397,6 +4396,9 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 
 	mtk_cam_job_uninit_engine(job, uninit_engine);
 
+	/* uninit pda engine if necessary */
+	mtk_cam_job_uninit_pda_engine(job, job->uninit_pda_engine);
+
 	if (is_ois_comp)
 		mtk_cam_tuning_init(&job->tuning_param);
 	lock_done_ctrl_enable(raw_dev, is_ois_comp);
@@ -4434,13 +4436,12 @@ static struct mtk_cam_seamless_ops common_seamless = {
 int mtk_cam_job_uninit_pda_engine(struct mtk_cam_job *job, unsigned long unit_engs)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
-	struct device *dev = ctx->cam->dev;
 
-	dev_info(dev, "[%s] begin uninit pda:0x%lx\n",
-			 __func__, unit_engs);
-
-	if (unit_engs)
+	if (unit_engs) {
+		dev_info(ctx->cam->dev, "[%s] uninit pda engine:0x%lx\n",
+			__func__, unit_engs);
 		mtk_cam_pm_runtime_engines(&ctx->cam->engines, unit_engs, 0);
+	}
 
 	return 0;
 }
