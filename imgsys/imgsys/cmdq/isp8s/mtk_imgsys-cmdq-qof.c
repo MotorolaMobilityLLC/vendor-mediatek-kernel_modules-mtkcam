@@ -1907,7 +1907,9 @@ void mtk_imgsys_cmdq_qof_add(struct cmdq_pkt *pkt, bool *qof_need_sub, u32 hw_co
 		struct img_swfrm_info *user_info, unsigned int mode, bool *need_cine, bool sec)
 {
 	u32 pwr = 0;
+#ifdef QOF_DYNAMIC_DIP_CINE
 	u32 priv_data_idx = 0;
+#endif
 
 	if(g_qof_debug_level == QOF_DEBUG_MODE_PERFRAME_DUMP)
 		mtk_imgsys_cmdq_qof_dump(0, false);
