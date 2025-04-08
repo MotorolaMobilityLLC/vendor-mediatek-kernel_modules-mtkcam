@@ -284,7 +284,7 @@ void imgsys_cmdq_streamon_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 #endif
 
 #ifdef IMGSYS_CMDQ_PKT_REUSE
-	for (idx = 0; idx < IMGSYS_NOR_THD; idx++) {
+	for (idx = IMGSYS_MCNR_THD_START; idx <= IMGSYS_MCNR_THD_END; idx++) {
 		g_pkt_reuse[idx] = NULL;
 		is_pkt_created[idx] = 0;
 		g_pkt_reuse_va[idx] = cmdq_mbox_muti_buf_alloc(
@@ -328,7 +328,7 @@ void imgsys_cmdq_streamoff_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 	#endif
 
 #ifdef IMGSYS_CMDQ_PKT_REUSE
-	for (idx = 0; idx < IMGSYS_NOR_THD; idx++) {
+	for (idx = IMGSYS_MCNR_THD_START; idx <= IMGSYS_MCNR_THD_END; idx++) {
 		cmdq_mbox_muti_buf_free(imgsys_clt[idx], g_pkt_reuse_va[idx],
 			g_pkt_reuse_pa[idx], IMGSYS_PKT_REUSE_PAGE_NUM);
 	}
@@ -2437,6 +2437,7 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 #ifdef IMGSYS_CMDQ_PKT_REUSE
 		/* Bypass pkt reuse flow for smvr and secure camera */
 		if ((frm_info->batchnum != 0) || (frm_info->is_secReq != 0) ||
+			(thd_idx < IMGSYS_MCNR_THD_START) || (thd_idx > IMGSYS_MCNR_THD_END) ||
 			(imgsys_cmdq_pkt_reuse_disable_plat8s()))
 			frm_info->is_ctrl_cache = 0;
 
