@@ -52,6 +52,8 @@
 #define RESET_VAL 999999
 #define LMCORE_UM_RATIO_MAX 20
 
+#define SET_APP_BINDER_VIP_PERIOD_SEC 1
+
 extern int proc_time_window_size;
 extern int debug_log_on;
 extern unsigned int c2ps_nr_clusters;
@@ -64,6 +66,7 @@ extern bool enable_dyna_isolation;
 extern int c2ps_pwr_eff_threshold;
 extern int long_period_idle;
 extern int cpu_on_off_energy;
+extern bool enable_app_vip;
 
 enum c2ps_env_status : int {
 	C2PS_STAT_NODEF = 0,
@@ -217,6 +220,8 @@ struct global_info {
 	enum c2ps_runnable_signal runnable_count_signal;
 	int available_cpus;
 	bool um_updated_by_idle;
+	int camera_app_pid;
+	unsigned long last_app_vip_jiffies;
 
 	/**
 	 * need_update_bg definition:
@@ -442,6 +447,8 @@ void cancel_dyna_core_isolation(void);
 // um ratio
 int c2ps_get_kf_freq(int curr_freq, int cluster_index);
 int c2ps_cal_pwr_eff(int cluster, struct cpu_info *g_cpu_info);
+
+void set_camera_app_vip(void);
 
 // EAS
 extern void set_curr_uclamp_ctrl(int val);

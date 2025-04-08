@@ -59,6 +59,8 @@ int cpu_idlerate_thres_to_isolation = 15;
 int cpu_on_off_energy;
 int cpu_on_off_th = 3;
 int cpu_on_um_th = 90;
+int app_vip_prior = 3;
+int app_vip_prior_throttle = 33;
 
 module_param(proc_time_window_size, int, 0644);
 module_param(debug_log_on, int, 0644);
@@ -77,6 +79,8 @@ module_param(disable_b_core_dyna_isolation, bool, 0644);
 module_param(cpu_idlerate_thres_to_isolation, int, 0644);
 module_param(cpu_on_off_th, int, 0644);
 module_param(cpu_on_um_th, int, 0644);
+module_param(app_vip_prior, int, 0644);
+module_param(app_vip_prior_throttle, int, 0644);
 
 #if !(IS_ENABLED(CONFIG_MTK_SCHED_GROUP_AWARE) && IS_ENABLED(CONFIG_MTK_SCHED_FAST_LOAD_TRACKING))
 bool flt_ctrl_force_get(void)
@@ -1467,43 +1471,54 @@ static inline bool need_update_long_period_idle_rate(
 	return likely(idle_rate)? (((++idle_rate->counter) % long_period_idle) == 0) : false;
 }
 
-static void set_camera_app_vip(void)
+void set_camera_app_vip(void)
 {
 	struct task_struct *p;
 	const char *app_name = ".camera";
-	char buf[256];
-	int cam_app_pid = 0;
-	int len;
 
 	c2ps_main_systrace("Get camera app pid +");
-	rcu_read_lock();
-	for_each_process(p) {
-		if (strstr(p->comm, app_name)) {
-			struct task_struct *t;
+	if (unlikely(!glb_info))
+		return;
+	if (unlikely(glb_info->camera_app_pid == 0)) {
+		rcu_read_lock();
+		for_each_process(p) {
+			if (strstr(p->comm, app_name)) {
+				C2PS_LOGD("Found app %s with PID %d\n", p->comm, p->pid);
+				glb_info->camera_app_pid = p->pid;
+				break;
+			}
+		}
+		rcu_read_unlock();
+	}
+	if (likely(glb_info->camera_app_pid > 0)) {
+		struct task_struct *t;
+		int len;
+		char buf[256];
 
-			C2PS_LOGD("Found app %s with PID %d\n", p->comm, p->pid);
-			len = snprintf(buf, sizeof(buf), "binder:%d", p->pid);
-
-			if (unlikely(len < 0))
-				return;
-			else if (unlikely(len == 256))
-				buf[255] = '\0';
-
-			cam_app_pid = p->pid;
-
+		rcu_read_lock();
+		p = find_task_by_vpid(glb_info->camera_app_pid);
+		if (likely(p))
+			get_task_struct(p);
+		rcu_read_unlock();
+		if (likely(p)) {
 			for_each_thread(p, t) {
+				len = snprintf(buf, sizeof(buf), "binder:%d", p->pid);
+
+				if (unlikely(len < 0))
+					return;
+				else if (unlikely(len == 256))
+					buf[255] = '\0';
 				if (strstr(t->comm, buf)) {
 					C2PS_LOGD("set binder %s with PID %d VIP\n", t->comm, t->pid);
-					set_task_basic_vip_and_throttle(t->pid, 33);
+					set_task_priority_based_vip_and_throttle(
+						t->pid, app_vip_prior, app_vip_prior_throttle);
 				}
 			}
-			break;
+			put_task_struct(p);
 		}
 	}
-	rcu_read_unlock();
-	c2ps_main_systrace("Get camera app pid:%d -", cam_app_pid);
+	c2ps_main_systrace("Get camera app pid:%d -", glb_info->camera_app_pid);
 }
-
 
 void update_cpu_idle_rate(void)
 {

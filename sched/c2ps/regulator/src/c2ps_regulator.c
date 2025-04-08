@@ -106,6 +106,12 @@ static void regulator_process(struct regulator_req *req)
 	default:
 		break;
 	}
+	if (req->glb_info && enable_app_vip &&
+		time_after(jiffies,
+			req->glb_info->last_app_vip_jiffies + SET_APP_BINDER_VIP_PERIOD_SEC * HZ)) {
+		set_camera_app_vip();
+		req->glb_info->last_app_vip_jiffies = jiffies;
+	}
 	c2ps_main_systrace("%s -", __func__);
 	kmem_cache_free(regulator_reqs, req);
 }
