@@ -636,7 +636,7 @@ static const struct mtk_imgsys_video_device_desc traw_setting[] = {
 	},
 	{
 		.id = MTK_IMGSYS_VIDEO_NODE_ID_IMGSTATO_CAPTURE,
-		.name = "IMGSTATO Output",
+		.name = "IMGSTATO Outpu",
 		.cap = V4L2_CAP_VIDEO_CAPTURE_MPLANE | V4L2_CAP_STREAMING,
 		.buf_type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE,
 		.smem_alloc = 0,
@@ -648,7 +648,7 @@ static const struct mtk_imgsys_video_device_desc traw_setting[] = {
 		.default_height = MTK_TRAW_CAPTURE_MAX_WIDTH,
 		.dma_port = 7,
 		.frmsizeenum = &traw_out_frmsizeenum,
-		.description = "IMGSTATO output",
+		.description = "IMGSTATO outpu",
 	},
 	{
 		.id = MTK_IMGSYS_VIDEO_NODE_ID_XTMEO_CAPTURE,
