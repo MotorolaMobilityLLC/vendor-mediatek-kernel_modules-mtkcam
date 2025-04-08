@@ -1784,7 +1784,10 @@ int mtk_cam_get_sv_meta_tag(int meta_tag_num, int pad_id)
 {
 	switch (meta_tag_num) {
 	case 1:
-		return SVTAG_4;
+		if (pad_id == PAD_SRC_PDAF0)
+			return SVTAG_5;
+		else
+			return SVTAG_4;
 	case 2:
 		if (pad_id == PAD_SRC_PDAF1)
 			return SVTAG_4;
