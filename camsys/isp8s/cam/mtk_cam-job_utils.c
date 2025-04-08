@@ -2113,6 +2113,7 @@ bool find_video_node(struct mtk_cam_job *job, int node_id)
 	struct mtk_cam_request *req = job->req;
 	struct mtk_cam_buffer *buf;
 
+	/* no need buf_lock before compose */
 	list_for_each_entry(buf, &req->buf_list, list) {
 		node = mtk_cam_buf_to_vdev(buf);
 

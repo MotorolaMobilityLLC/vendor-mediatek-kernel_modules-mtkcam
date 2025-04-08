@@ -614,6 +614,7 @@ static int mtk_cam_get_pda_idx(struct mtk_cam_job *job)
 	int pda_idx = -1;
 	void *vaddr;
 
+	/* no need buf_lock before compose */
 	list_for_each_entry(buf, &req->buf_list, list) {
 		struct mtk_cam_video_device *node;
 
@@ -2587,6 +2588,7 @@ static void dump_job_info(struct mtk_cam_job *job, const char *desc)
 		}
 	}
 	/* user buffer iova*/
+	spin_lock(&req->buf_lock);
 	list_for_each_entry(buf, &req->buf_list, list) {
 		if (buf->vbb.vb2_buf.vb2_queue &&
 			mtk_cam_job_is_done(job) == false) {
@@ -2598,6 +2600,7 @@ static void dump_job_info(struct mtk_cam_job *job, const char *desc)
 					node->desc.name, buf->daddr);
 		}
 	}
+	spin_unlock(&req->buf_lock);
 }
 
 static void job_dump(struct mtk_cam_job *job, int seq_no, const char *desc)
@@ -6339,6 +6342,7 @@ static int update_job_buffer_to_ipi_frame(struct mtk_cam_job *job,
 	helper.fp = fp;
 	helper.ufbc_header = &job->ufbc_header;
 
+	/* no need buf_lock before compose */
 	list_for_each_entry(buf, &req->buf_list, list) {
 		ret = ret || update_cam_buf_to_ipi_frame(&helper, buf, job_helper);
 	}
