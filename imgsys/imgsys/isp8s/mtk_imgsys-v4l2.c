@@ -199,9 +199,10 @@ static int mtk_imgsys_subdev_get_selection(struct v4l2_subdev *sd,
 		return -EINVAL;
 	}
 
-	if (sel->which == V4L2_SUBDEV_FORMAT_TRY)
-		sel->r = *try_sel;
-	else
+	if (sel->which == V4L2_SUBDEV_FORMAT_TRY) {
+		if (try_sel)
+			sel->r = *try_sel;
+	} else
 		sel->r = *r;
 
 	return 0;
@@ -247,9 +248,10 @@ static int mtk_imgsys_subdev_set_selection(struct v4l2_subdev *sd,
 		return -EINVAL;
 	}
 
-	if (sel->which == V4L2_SUBDEV_FORMAT_TRY)
-		*try_sel = sel->r;
-	else
+	if (sel->which == V4L2_SUBDEV_FORMAT_TRY) {
+		if (try_sel)
+			*try_sel = sel->r;
+	} else
 		*rect = sel->r;
 
 	return 0;
