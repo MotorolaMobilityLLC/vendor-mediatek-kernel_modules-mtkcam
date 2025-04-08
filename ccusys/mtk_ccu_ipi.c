@@ -136,6 +136,7 @@ static int mtk_ccu_rproc_ipc_trigger(struct mtk_ccu *ccu,
 		cmsg.feature_type = msg->feature_type;
 		cmsg.msg_id = msg->msg_id;
 		cmsg.in_data_ptr = msg->in_data_ptr;
+		cmsg.inDataSize = msg->inDataSize;
 		cmsg.tg_info = msg->tg_info;
 		cmsg.sensor_idx = msg->sensor_idx;
 		mtk_ccu_memcpy(&ccu->ccu_ipc.ccuIpcPtr->msg, &cmsg,
@@ -144,6 +145,7 @@ static int mtk_ccu_rproc_ipc_trigger(struct mtk_ccu *ccu,
 		writel(msg->feature_type, &ccu->ccu_ipc.ccuIpcPtr->msg.feature_type);
 		writel(msg->msg_id, &ccu->ccu_ipc.ccuIpcPtr->msg.msg_id);
 		writel(msg->in_data_ptr, &ccu->ccu_ipc.ccuIpcPtr->msg.in_data_ptr);
+		writel(msg->inDataSize, &ccu->ccu_ipc.ccuIpcPtr->msg.inDataSize);
 		writel(msg->tg_info, &ccu->ccu_ipc.ccuIpcPtr->msg.tg_info);
 		writel(msg->sensor_idx, &ccu->ccu_ipc.ccuIpcPtr->msg.sensor_idx);
 	}
