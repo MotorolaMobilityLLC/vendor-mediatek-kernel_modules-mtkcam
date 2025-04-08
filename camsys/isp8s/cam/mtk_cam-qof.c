@@ -380,7 +380,10 @@ void qof_setup_hw_timer(struct mtk_raw_device *raw, u32 interval_us)
 	u32 mtcmos_cycle;
 	u32 pwr_off_max;
 
-	if (!interval_us) {
+	if (interval_us == QOF_HW_TIMER_MIN) {
+		mtcmos_cycle = 1;
+		pwr_off_max = 1;
+	} else if (!interval_us) {
 		mtcmos_cycle = 0;
 		pwr_off_max = 0;
 	} else {

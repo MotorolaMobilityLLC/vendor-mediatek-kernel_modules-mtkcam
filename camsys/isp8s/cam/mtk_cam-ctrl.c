@@ -1898,6 +1898,17 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 		}
 	}
 
+	for (i = 0; i < cam->engines.num_raw_devices; ++i) {
+		struct mtk_raw_device *raw = NULL;
+
+		if (!(BIT(i) & raw_after_change))
+			continue;
+
+		raw = dev_get_drvdata(cam->engines.raw_devs[i]);
+
+		qof_setup_hw_timer(raw, QOF_HW_TIMER_MIN);
+	}
+
 	call_job_seamless_ops(job, after_prev_frame_done);  /* apply_cam_mux_switch */
 	mtk_cam_seninf_force_disable_out_mux(ctx->seninf);  /* after prev p1 done */
 

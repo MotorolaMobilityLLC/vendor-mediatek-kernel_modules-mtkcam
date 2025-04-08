@@ -34,6 +34,8 @@ void qof_setup_ctrl(struct mtk_raw_device *dev, int on);
 void qof_sof_src_sel(struct mtk_raw_device *dev,
 	int exp_num, bool with_tg, int sv_last_tag);
 void qof_init_timer_freq(struct mtk_raw_device *dev);
+
+#define QOF_HW_TIMER_MIN                        0xFFFFFFFF
 void qof_setup_hw_timer(struct mtk_raw_device *dev, u32 interval_us);
 void qof_setup_rtc(struct mtk_raw_device *dev);
 int qof_setup_twin(struct mtk_raw_device *dev, bool is_master, bool next_raw);
