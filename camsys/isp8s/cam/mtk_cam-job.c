@@ -2355,11 +2355,13 @@ static int apply_engines_cq(struct mtk_cam_job *job,
 		mtk_cam_sv_run_df_actions(sv_dev);
 
 	ctx->cam_ctrl.frame_sync_id = job->req_info_id;
-	dev_info(ctx->cam->dev, "[%s] ctx-%d CQ-0x%x(%d) cq_eng 0x%lx used_eng 0x%lx (%s)[rms_dis:%d] cq_thr(%llu) ts(%llu) ref_sof(%llu);%s\n",
+	dev_info(ctx->cam->dev, "[%s] ctx-%d CQ-0x%x(%d) cq_eng 0x%lx used_eng 0x%lx (%s)[rms_dis:%d] cq_thr(%llu) ts(%llu) ref_sof(%llu);%s, cq_addr(%llu)size(%d)_rawm(%x)(%x)_raws(%x)(%x)_sv(%x)(%x)\n",
 		__func__, ctx->stream_id, frame_seq_no, job->req_info_id, cq_engine,
 		used_engine, job->scen_str, job->rms_disable, job->job_state.cq_trigger_thres_ns,
 		ts, job->job_state.reference_sof_ns,
-		raw_dev ? raw_dev->str_debug_irq_data : "");
+		raw_dev ? raw_dev->str_debug_irq_data : "",
+		cq->daddr, cq->size, cq_rst->main.offset, cq_rst->main.size,
+		cq_rst->sub.offset, cq_rst->sub.size, cq_rst->camsv.offset, cq_rst->camsv.size);
 
 	qof_dump_ctx(ctx, qof_dump_cq_addr);
 	qof_dump_ctx(ctx, qof_dump_ctrl);
