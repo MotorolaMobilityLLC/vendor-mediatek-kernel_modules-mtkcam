@@ -1384,11 +1384,18 @@ static void raw_handle_dma_err(struct mtk_raw_device *raw_dev,
 static void raw_handle_tg_overrun_err(struct mtk_raw_device *raw_dev,
 				      unsigned int fh_cookie);
 
+static void raw_handle_yuv_dma_err(struct mtk_raw_device *raw_dev,
+			       unsigned int fh_cookie);
+
 static void raw_handle_error(struct mtk_raw_device *raw_dev,
 			     struct mtk_camsys_irq_info *data)
 {
 	int err_status = data->e.err_status;
+	int err_status2 = data->e.err_status2;
 	unsigned int fh_cookie = data->frame_idx_inner;
+
+	if (err_status2 & FBIT(CAMCTL2_DMA_ERR_ST))
+		raw_handle_yuv_dma_err(raw_dev, fh_cookie);
 
 	if (err_status & FBIT(CAMCTL_DMA_ERR_ST))
 		raw_handle_dma_err(raw_dev, fh_cookie);
@@ -1784,6 +1791,19 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 			wake_thread = 1;
 	}
 
+	if (unlikely(err_status_y)) {
+		struct mtk_camsys_irq_info err_info;
+
+		err_info.irq_type = 1 << CAMSYS_IRQ_ERROR;
+		err_info.ts_ns = irq_info.ts_ns;
+		err_info.frame_idx = irq_info.frame_idx;
+		err_info.frame_idx_inner = irq_info.frame_idx_inner;
+		err_info.e.err_status2 = err_status_y;
+
+		if (push_msgfifo(raw, &err_info) == 0)
+			wake_thread = 1;
+	}
+
 	/* enable to debug fbc related */
 	//if (debug_raw && debug_dump_fbc && (irq_status & SOF_INT_ST))
 	//	mtk_cam_raw_dump_fbc(raw_dev->dev, raw_dev->base, raw_dev->yuv_base);
@@ -1992,6 +2012,26 @@ static void raw_handle_tg_grab_err(struct mtk_raw_device *raw_dev,
 		do_engine_callback(raw_dev->engine_cb, dump_request,
 				   raw_dev->cam, CAMSYS_ENGINE_RAW, raw_dev->id,
 				   fh_cookie, MSG_TG_GRAB_ERROR);
+}
+
+static void dump_tcyso_dma_debug(struct mtk_yuv_device *yuv)
+{
+	mtk_cam_dump_yuv_dma_debug(yuv,
+			       yuv->dmatop_base, /* DMATOP_BASE */
+			       "TCYSO_R1",
+			       dbg_TCYSO_R1, ARRAY_SIZE(dbg_TCYSO_R1));
+}
+
+static void raw_handle_yuv_dma_err(struct mtk_raw_device *raw_dev,
+			       unsigned int fh_cookie)
+{
+	struct mtk_yuv_device *yuv_dev = get_yuv_dev(raw_dev);
+
+	qof_mtcmos_raw_voter(raw_dev, true);
+	dump_topdebug_rdyreq_status(raw_dev);
+	dump_yuv_dma_err_st(yuv_dev);
+	dump_tcyso_dma_debug(yuv_dev);
+	qof_mtcmos_raw_voter(raw_dev, false);
 }
 
 static void raw_handle_dma_err(struct mtk_raw_device *raw_dev,

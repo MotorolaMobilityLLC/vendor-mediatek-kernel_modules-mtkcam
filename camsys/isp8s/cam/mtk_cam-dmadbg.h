@@ -134,6 +134,22 @@ static __maybe_unused struct dma_debug_item dbg_UFDI_R5[] = {
 	{0x00000C0D, "ufdi_r5 ufo_line_pix_cnt"},
 };
 
+static __maybe_unused struct dma_debug_item dbg_TCYSO_R1[] = {
+	{0x0000000E, "tcyso_r1 32(hex) 0000"},
+	{0x0000010E, "tcyso_r1 state_checksum"},
+	{0x0000020E, "tcyso_r1 line_pix_cnt_tmp"},
+	{0x0000030E, "tcyso_r1 line_pix_cnt"},
+	{0x0000040E, "tcyso_r1 important_status"},
+	{0x0000050E, "tcyso_r1 cmd_data_cnt"},
+	{0x0000060E, "tcyso_r1 cmd_cnt_for_v=bvalid_phase"},
+	{0x0000070E, "tcyso_r1 input_h_cnt"},
+	{0x0000080E, "tcyso_r1 input_v_cnt"},
+	{0x0000090E, "tcyso_r1 xfer_y_cnt"},
+	{0x00000A0E, "tcyso_r1 pcrp_debug_data"},
+	{0x00000B0E, "tcyso_r1 ag_rdy,sram_fifo_full"},
+	{0x00000C0E, "tcyso_r1 data_pre_cnt"},
+};
+
 static __maybe_unused struct dma_debug_item dbg_IMGO_R1[] = {
 	{0x00000017, "imgo_r1 32(hex) 0000"},
 	{0x00000117, "imgo_r1 state_checksum"},
@@ -432,6 +448,8 @@ static __maybe_unused struct dma_debug_item dbg_YUVO_R5[] = {
 	 "yuvo_r2_smi_port / plane-5 - yuvo_r2_smi_port / plane-2 (i.e. bpci_r3) / maddr_min record"},
 
 };
+
+
 
 
 // M4U_PORT CAM3_RZH1N2TO_R1 : rzh1n2to_r1 + rzh1n2tbo_r1 + rzh1n2to_r2 +

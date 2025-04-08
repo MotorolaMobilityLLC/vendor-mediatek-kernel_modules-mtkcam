@@ -126,6 +126,7 @@ void dump_yuv_dma_err_st(struct mtk_yuv_device *yuv)
 
 	qof_int_en_yuv_dma_err(yuv, true);
 }
+
 void dump_dmatop_dc_st(struct mtk_raw_device *raw)
 {
 	char str[256];
@@ -258,6 +259,48 @@ void mtk_cam_dump_dma_debug(struct mtk_raw_device *raw_dev,
 	struct device *dev = raw_dev->dev;
 	void __iomem *dbg_sel = dmatop_base + 0x88;
 	void __iomem *dbg_port = dmatop_base + 0x8c;
+	int i = 0;
+	unsigned int vals[MAX_DEBUG_SIZE];
+	int crc_en;
+
+	if (n >= MAX_DEBUG_SIZE) {
+		dev_info(dev, "%s: should enlarge array size for n(%d)\n",
+			__func__, n);
+		return;
+	}
+
+	crc_en = readl(dbg_sel) & BIT(28);
+
+	for (i = 0; i < n; i++) {
+		int cur_sel, actual_sel;
+
+		cur_sel = items[i].debug_sel;
+		writel(BIT(29) | crc_en | cur_sel, dbg_sel);
+
+		actual_sel = readl(dbg_sel);
+		if ((actual_sel ^ cur_sel) & 0xffffff)
+			dev_info(dev, "failed to write dbg_sel %08x actual %08x\n",
+				 cur_sel, actual_sel);
+		if (actual_sel & 0xc0000000)
+			dev_info(dev, "dbg_sel: %08x\n", actual_sel);
+
+		vals[i] = readl(dbg_port);
+	};
+
+	dev_info(dev, "%s: %s\n", __func__, dma_name);
+	for (i = 0; i < n; i++)
+		dev_info(dev, "%08x: %08x [%s]\n",
+			 crc_en | items[i].debug_sel, vals[i], items[i].msg);
+}
+
+void mtk_cam_dump_yuv_dma_debug(struct mtk_yuv_device *yuv_dev,
+			    void __iomem *dmatop_base,
+			    const char *dma_name,
+			    struct dma_debug_item *items, int n)
+{
+	struct device *dev = yuv_dev->dev;
+	void __iomem *dbg_sel = dmatop_base + 0x70;
+	void __iomem *dbg_port = dmatop_base + 0x74;
 	int i = 0;
 	unsigned int vals[MAX_DEBUG_SIZE];
 	int crc_en;
