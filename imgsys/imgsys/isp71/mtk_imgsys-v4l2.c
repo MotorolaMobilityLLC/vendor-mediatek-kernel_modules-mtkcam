@@ -29,7 +29,6 @@
 #include "mtk_imgsys-hw.h"
 #include "mtk_imgsys-requesttrack.h"
 #include "mtk-hcp.h"
-#include "mtk-hcp_kernelfence.h"
 
 #include "mtk_imgsys-v4l2-debug.h"
 #include "mtk_imgsys_v4l2_vnode.h"
@@ -37,6 +36,11 @@
 
 #include "mtk_imgsys-probe.h"
 #include "iommu_debug.h"
+
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
+#define IMGSYS_NEW_DMA_BUF_API
+#endif
+
 #define CLK_READY
 
 int imgsys_dbg_en;
@@ -1586,7 +1590,7 @@ static int mtkdip_ioc_add_kva(struct v4l2_subdev *subdev, void *arg)
 		buf_va_info->buf_fd = fd_info->fds[i];
 		dmabuf = dma_buf_get(fd_info->fds[i]);
 
-		if (IS_ERR(dmabuf)) {
+		if (IS_ERR_OR_NULL(dmabuf)) {
 			dev_info(imgsys_pipe->imgsys_dev->dev, "%s:err fd %d",
 						__func__, fd_info->fds[i]);
 			vfree(buf_va_info);
@@ -1596,16 +1600,27 @@ static int mtkdip_ioc_add_kva(struct v4l2_subdev *subdev, void *arg)
 		fd_info->fds_size[i] = dmabuf->size;
 
 		dma_buf_begin_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
+		#ifdef IMGSYS_NEW_DMA_BUF_API
+		ret = dma_buf_vmap_unlocked(dmabuf, &map);
+		#else
 		ret = dma_buf_vmap(dmabuf, &map);
-		if (ret)
-			pr_info("%s, map kernel va failed\n", __func__);
+		#endif
+		if (ret) {
+			pr_info("%s, map kernel va failed(%d)\n", __func__, ret);
+			dma_buf_put(dmabuf);
+			return -ENOMEM;
+		}
 		buf_va_info->kva = (u64)map.vaddr;
 		buf_va_info->map = map;
 		buf_va_info->dma_buf_putkva = dmabuf;
 
-		attach = dma_buf_attach(dmabuf, imgsys_pipe->imgsys_dev->smmu_dev);
+		attach = dma_buf_attach(dmabuf, imgsys_pipe->imgsys_dev->dev);
 		if (IS_ERR(attach)) {
+			#ifdef IMGSYS_NEW_DMA_BUF_API
+			dma_buf_vunmap_unlocked(dmabuf, &buf_va_info->map);
+			#else
 			dma_buf_vunmap(dmabuf, &buf_va_info->map);
+			#endif
 			dma_buf_end_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
 			dma_buf_put(dmabuf);
 			vfree(buf_va_info);
@@ -1613,9 +1628,17 @@ static int mtkdip_ioc_add_kva(struct v4l2_subdev *subdev, void *arg)
 			continue;
 		}
 
+		#ifdef IMGSYS_NEW_DMA_BUF_API
+		sgt = dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
+		#else
 		sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
+		#endif
 		if (IS_ERR(sgt)) {
+			#ifdef IMGSYS_NEW_DMA_BUF_API
+			dma_buf_vunmap_unlocked(dmabuf, &buf_va_info->map);
+			#else
 			dma_buf_vunmap(dmabuf, &buf_va_info->map);
+			#endif
 			dma_buf_end_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
 			dma_buf_detach(dmabuf, attach);
 			dma_buf_put(dmabuf);
@@ -1641,7 +1664,7 @@ static int mtkdip_ioc_add_kva(struct v4l2_subdev *subdev, void *arg)
 	}
 	}
 
-	mtk_hcp_send_async(imgsys_pipe->imgsys_dev->scp_pdev,
+	mtk_hcp_send_async_isp71(imgsys_pipe->imgsys_dev->scp_pdev,
 				HCP_IMGSYS_UVA_FDS_ADD_ID, fd_info,
 				sizeof(struct fd_info), 0);
 
@@ -1684,11 +1707,23 @@ static int mtkdip_ioc_del_kva(struct v4l2_subdev *subdev, void *arg)
 		mutex_unlock(&(kva_list->mymutex));
 
 		dmabuf = buf_va_info->dma_buf_putkva;
+		if (!IS_ERR_OR_NULL(&buf_va_info->map.vaddr)) {
+			#ifdef IMGSYS_NEW_DMA_BUF_API
+			dma_buf_vunmap_unlocked(dmabuf, &buf_va_info->map);
+
+			dma_buf_end_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
+
+			dma_buf_unmap_attachment_unlocked(buf_va_info->attach, buf_va_info->sgt,
+				DMA_BIDIRECTIONAL);
+			#else
 		dma_buf_vunmap(dmabuf, &buf_va_info->map);
+
 		dma_buf_end_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
 
 		dma_buf_unmap_attachment(buf_va_info->attach, buf_va_info->sgt,
 			DMA_BIDIRECTIONAL);
+			#endif
+		}
 		dma_buf_detach(dmabuf, buf_va_info->attach);
 		fd_info->fds_size[i] = dmabuf->size;
 		dma_buf_put(dmabuf);
@@ -1700,7 +1735,7 @@ static int mtkdip_ioc_del_kva(struct v4l2_subdev *subdev, void *arg)
 	}
 	}
 
-	mtk_hcp_send_async(imgsys_pipe->imgsys_dev->scp_pdev,
+	mtk_hcp_send_async_isp71(imgsys_pipe->imgsys_dev->scp_pdev,
 				HCP_IMGSYS_UVA_FDS_DEL_ID, fd_info,
 				sizeof(struct fd_info), 0);
 
@@ -1718,7 +1753,7 @@ static int mtkdip_ioc_add_iova(struct v4l2_subdev *subdev, void *arg)
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
 	dma_addr_t dma_addr;
-	int *kfd;
+	unsigned int *kfd;
 	size_t size;
 	int i, ret;
 
@@ -1765,14 +1800,18 @@ static int mtkdip_ioc_add_iova(struct v4l2_subdev *subdev, void *arg)
 			"[%s]%s: fd(%d) GCE buffer used\n", __func__, dmabuf->name, kfd[i]);
 		spin_unlock(&dmabuf->name_lock);
 #endif
-		attach = dma_buf_attach(dmabuf, pipe->imgsys_dev->smmu_dev);
+		attach = dma_buf_attach(dmabuf, pipe->imgsys_dev->dev);
 		if (IS_ERR(attach)) {
 			dma_buf_put(dmabuf);
 			pr_info("dma_buf_attach fail fd:%d\n", kfd[i]);
 			continue;
 		}
 
+		#ifdef NEW_DMA_BUF_API
+		sgt = dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
+		#else
 		sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
+		#endif
 		if (IS_ERR(sgt)) {
 			dma_buf_detach(dmabuf, attach);
 			dma_buf_put(dmabuf);
@@ -1808,6 +1847,9 @@ static int mtkdip_ioc_add_iova(struct v4l2_subdev *subdev, void *arg)
 
 	}
 
+	mtk_hcp_send_async_isp71(pipe->imgsys_dev->scp_pdev,
+				HCP_IMGSYS_IOVA_FDS_ADD_ID, (void *)&fd_info,
+				sizeof(struct fd_info), 0);
 
 	vfree(kfd);
 
@@ -1821,7 +1863,7 @@ static int mtkdip_ioc_del_iova(struct v4l2_subdev *subdev, void *arg)
 	struct fd_tbl *fd_tbl = (struct fd_tbl *)arg;
 	struct fd_info fd_info;
 	struct dma_buf *dmabuf;
-	int *kfd;
+	unsigned int *kfd;
 	size_t size;
 	int i, ret;
 	bool found = false;
@@ -1889,99 +1931,14 @@ static int mtkdip_ioc_del_iova(struct v4l2_subdev *subdev, void *arg)
 
 	}
 
-
+	mtk_hcp_send_async_isp71(pipe->imgsys_dev->scp_pdev,
+				HCP_IMGSYS_IOVA_FDS_DEL_ID, (void *)&fd_info,
+				sizeof(struct fd_info), 0);
 	vfree(kfd);
 
 	return 0;
 }
 
-static int mtkdip_ioc_add_fence(struct v4l2_subdev *subdev, void *arg)
-{
-	struct mtk_imgsys_pipe *pipe = mtk_imgsys_subdev_to_pipe(subdev);
-	struct fd_tbl *fd_tbl = (struct fd_tbl *)arg;
-	unsigned int *kfd;
-	size_t size;
-	int ret, get, i;
-
-	if ((!fd_tbl->fds) || (!fd_tbl->fd_num)) {
-		dev_info(pipe->imgsys_dev->dev, "%s:NULL usrptr\n", __func__);
-		return -EINVAL;
-	}
-
-	size = sizeof(*kfd) * fd_tbl->fd_num;
-	kfd = vzalloc(size);
-	if (kfd == NULL)
-		return -ENOMEM;
-	ret = copy_from_user(kfd, (void *)fd_tbl->fds, size);
-	get = 1;
-	if (ret != 0) {
-		dev_info(pipe->imgsys_dev->dev,
-			"[%s]%s:copy_from_user fail !!!\n",
-			__func__,
-			pipe->desc->name);
-		vfree(kfd);
-		return -EINVAL;
-	}
-
-	ret = mtk_hcp_set_KernelFence(kfd, fd_tbl->fd_num, get);
-
-	if (ret < 0)
-		return ret;
-
-	for (i = 0; i < fd_tbl->fd_num; i++)
-		pr_info("add imgsys_kernel kernel_fence(%d)\n", kfd[i]);
-
-	ret = copy_to_user((void *)fd_tbl->fds, kfd, size);
-
-	if (ret != 0) {
-		dev_info(pipe->imgsys_dev->dev,
-			"[%s]%s:copy_to_user fail !!!\n",
-			__func__,
-			pipe->desc->name);
-
-		return -EINVAL;
-	}
-	vfree(kfd);
-	return 0;
-}
-
-static int mtkdip_ioc_del_fence(struct v4l2_subdev *subdev, void *arg)
-{
-	struct mtk_imgsys_pipe *pipe = mtk_imgsys_subdev_to_pipe(subdev);
-	struct fd_tbl *fd_tbl = (struct fd_tbl *)arg;
-	unsigned int *kfd;
-	size_t size;
-	int ret, release, i;
-
-	if ((!fd_tbl->fds) || (!fd_tbl->fd_num)) {
-		dev_info(pipe->imgsys_dev->dev, "%s:NULL usrptr\n", __func__);
-		return -EINVAL;
-	}
-
-	size = sizeof(*kfd) * fd_tbl->fd_num;
-	kfd = vzalloc(size);
-	if (kfd == NULL)
-		return -ENOMEM;
-	ret = copy_from_user(kfd, (void *)fd_tbl->fds, size);
-	release = 0;
-	if (ret != 0) {
-		dev_info(pipe->imgsys_dev->dev,
-			"[%s]%s:copy_from_user fail !!!\n",
-			__func__,
-			pipe->desc->name);
-		vfree(kfd);
-		return -EINVAL;
-	}
-	for (i = 0; i < fd_tbl->fd_num; i++)
-		pr_info("del imgsys_kernel kernel_fence(%d)\n", kfd[i]);
-
-	ret = mtk_hcp_set_KernelFence(kfd, fd_tbl->fd_num, release);
-	if (ret < 0)
-		return ret;
-
-	vfree(kfd);
-	return 0;
-}
 #if SMVR_DECOUPLE
 static int imgsys_send(struct platform_device *pdev, enum hcp_id id,
 		    void *buf, unsigned int  len, int req_fd, unsigned int wait)
@@ -1992,9 +1949,9 @@ static int imgsys_send(struct platform_device *pdev, enum hcp_id id,
 			   sizeof(ipi_param), 0);
 #else
 	if (wait)
-		ret = mtk_hcp_send(pdev, id, buf, len, req_fd);
+		ret = mtk_hcp_send_isp71(pdev, id, buf, len, req_fd);
 	else
-		ret = mtk_hcp_send_async(pdev, id, buf, len, req_fd);
+		ret = mtk_hcp_send_async_isp71(pdev, id, buf, len, req_fd);
 #endif
 	return 0;
 }
@@ -2062,10 +2019,11 @@ static int mtkdip_ioc_alloc_buffer(struct v4l2_subdev *subdev, void *arg)
                     gce_buf_en = 0;
                     pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count++;
                 }
-                mtk_hcp_allocate_working_buffer(pipe->imgsys_dev->scp_pdev, imgsys_capture, gce_buf_en);
+				mtk_hcp_allocate_working_buffer_isp71(pipe->imgsys_dev->scp_pdev,
+					imgsys_capture, gce_buf_en);
                 working_buf_info.smvr_mode = 0;
                 working_buf_info.is_capture = info->is_capture;
-            mtk_hcp_get_init_info(pipe->imgsys_dev->scp_pdev, &working_buf_info);
+				mtk_hcp_get_init_info_isp71(pipe->imgsys_dev->scp_pdev, &working_buf_info);
             ret = imgsys_send(pipe->imgsys_dev->scp_pdev, HCP_IMGSYS_ALOC_WORKING_BUF_ID,
 			(void *)&working_buf_info, sizeof(working_buf_info), 0, 1);
                 pipe->imgsys_dev->imgsys_pipe[0].capture_alloc = 1;
@@ -2075,10 +2033,11 @@ static int mtkdip_ioc_alloc_buffer(struct v4l2_subdev *subdev, void *arg)
                         gce_buf_en = 0;
                         pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count++;
                     }
-                    mtk_hcp_allocate_working_buffer(pipe->imgsys_dev->scp_pdev, imgsys_smvr, gce_buf_en);
+					mtk_hcp_allocate_working_buffer_isp71(pipe->imgsys_dev->scp_pdev,
+						imgsys_smvr, gce_buf_en);
                     working_buf_info.smvr_mode = info->is_smvr;
                     working_buf_info.is_capture = 0;
-                mtk_hcp_get_init_info(pipe->imgsys_dev->scp_pdev, &working_buf_info);
+					mtk_hcp_get_init_info_isp71(pipe->imgsys_dev->scp_pdev, &working_buf_info);
                 ret = imgsys_send(pipe->imgsys_dev->scp_pdev, HCP_IMGSYS_ALOC_WORKING_BUF_ID,
 			       (void *)&working_buf_info, sizeof(working_buf_info), 0, 1);
                     pipe->imgsys_dev->imgsys_pipe[0].smvr_alloc = 1;
@@ -2088,10 +2047,11 @@ static int mtkdip_ioc_alloc_buffer(struct v4l2_subdev *subdev, void *arg)
                         gce_buf_en = 0;
                         pipe->imgsys_dev->imgsys_pipe[0].imgsys_user_count++;
                     }
-                mtk_hcp_allocate_working_buffer(pipe->imgsys_dev->scp_pdev, imgsys_streaming, gce_buf_en);
+					mtk_hcp_allocate_working_buffer_isp71(pipe->imgsys_dev->scp_pdev,
+						imgsys_streaming, gce_buf_en);
                     working_buf_info.smvr_mode = 0;
                     working_buf_info.is_capture = 0;
-                mtk_hcp_get_init_info(pipe->imgsys_dev->scp_pdev, &working_buf_info);
+					mtk_hcp_get_init_info_isp71(pipe->imgsys_dev->scp_pdev, &working_buf_info);
                 ret = imgsys_send(pipe->imgsys_dev->scp_pdev, HCP_IMGSYS_ALOC_WORKING_BUF_ID,
 			         (void *)&working_buf_info, sizeof(working_buf_info), 0, 1);
                     pipe->imgsys_dev->imgsys_pipe[0].streaming_alloc = 1;
@@ -2207,7 +2167,7 @@ static int mtkdip_ioc_set_control(struct v4l2_subdev *subdev, void *arg)
 
 	switch (ctrl->id) {
 	case V4L2_CID_IMGSYS_APU_DC:
-		ret = mtk_hcp_set_apu_dc(pipe->imgsys_dev->scp_pdev,
+		ret = mtk_hcp_set_apu_dc_isp71(pipe->imgsys_dev->scp_pdev,
 			ctrl->value, sizeof(ctrl->value));
 		break;
 	default:
@@ -2234,10 +2194,6 @@ long mtk_imgsys_subdev_ioctl(struct v4l2_subdev *subdev, unsigned int cmd,
 		return mtkdip_ioc_add_iova(subdev, arg);
 	case MTKDIP_IOC_DEL_IOVA:
 		return mtkdip_ioc_del_iova(subdev, arg);
-	case MTKDIP_IOC_ADD_FENCE:
-		return mtkdip_ioc_add_fence(subdev, arg);
-	case MTKDIP_IOC_DEL_FENCE:
-		return mtkdip_ioc_del_fence(subdev, arg);
 	case MTKDIP_IOC_S_INIT_INFO:
 		return mtkdip_ioc_s_init_info(subdev, arg);
 	case MTKDIP_IOC_SET_CONTROL:
@@ -2391,12 +2347,6 @@ static void mtk_imgsys_vb2_request_queue(struct media_request *req)
 #endif
 	vb2_request_queue(req);
 
-	if (imgsys_req->req_stat) {
-		union request_track *req_track = (union request_track *)imgsys_req->req_stat;
-
-		req_track->subflow_kernel++;
-		req_track->mainflow_from = REQUEST_FROM_KERNEL_TO_IMGSTREAM;
-	}
 }
 
 int mtk_imgsys_v4l2_fh_open(struct file *filp)
@@ -2516,15 +2466,24 @@ static int mtk_imgsys_video_device_v4l2_register(struct mtk_imgsys_pipe *pipe,
 	node->vdev_fmt.type = node->desc->buf_type;
 	mtk_imgsys_pipe_load_default_fmt(pipe, node, &node->vdev_fmt);
 
+	node->vdev_pad.flags = V4L2_TYPE_IS_OUTPUT(node->desc->buf_type) ?
+		MEDIA_PAD_FL_SOURCE : MEDIA_PAD_FL_SINK;
+
+	snprintf(vdev->name, sizeof(vdev->name), "%s %s", pipe->desc->name,
+		 node->desc->name);
+	vdev->entity.name = vdev->name;
+	vdev->entity.function = MEDIA_ENT_F_IO_V4L;
+	vdev->entity.ops = NULL;
+	vdev->release = video_device_release_empty;
+	vdev->fops = &mtk_imgsys_v4l2_fops;
+	vdev->lock = &node->dev_q.lock;
+
 	ret = media_entity_pads_init(&vdev->entity, 1, &node->vdev_pad);
 	if (ret) {
 		dev_info(pipe->imgsys_dev->dev,
 			"failed initialize media entity (%d)\n", ret);
 		goto err_mutex_destroy;
 	}
-
-	node->vdev_pad.flags = V4L2_TYPE_IS_OUTPUT(node->desc->buf_type) ?
-		MEDIA_PAD_FL_SOURCE : MEDIA_PAD_FL_SINK;
 
 	vbq->type = node->vdev_fmt.type;
 	vbq->io_modes = VB2_MMAP | VB2_DMABUF;
@@ -2557,14 +2516,6 @@ static int mtk_imgsys_video_device_v4l2_register(struct mtk_imgsys_pipe *pipe,
 		goto err_media_entity_cleanup;
 	}
 
-	snprintf(vdev->name, sizeof(vdev->name), "%s %s", pipe->desc->name,
-		 node->desc->name);
-	vdev->entity.name = vdev->name;
-	vdev->entity.function = MEDIA_ENT_F_IO_V4L;
-	vdev->entity.ops = NULL;
-	vdev->release = video_device_release_empty;
-	vdev->fops = &mtk_imgsys_v4l2_fops;
-	vdev->lock = &node->dev_q.lock;
 	if (node->desc->supports_ctrls)
 		vdev->ctrl_handler = &node->ctrl_handler;
 	else
@@ -2582,7 +2533,7 @@ static int mtk_imgsys_video_device_v4l2_register(struct mtk_imgsys_pipe *pipe,
 			pipe->desc->name, node->desc->name,
 			vdev->queue->dev);
 	} else {
-		vdev->queue->dev = pipe->imgsys_dev->smmu_dev;
+		vdev->queue->dev = pipe->imgsys_dev->dev;
         if (imgsys_dbg_enable())
 		dev_dbg(pipe->imgsys_dev->dev,
 			"%s:%s: select default_vb2_alloc_ctx(%p)\n",
@@ -2725,14 +2676,6 @@ int mtk_imgsys_pipe_v4l2_register(struct mtk_imgsys_pipe *pipe,
 		ret = -ENOMEM;
 		goto err_release_ctrl;
 	}
-	ret = media_entity_pads_init(&pipe->subdev.entity,
-				     pipe->desc->total_queues,
-				     pipe->subdev_pads);
-	if (ret) {
-		dev_info(pipe->imgsys_dev->dev,
-			"failed initialize subdev media entity (%d)\n", ret);
-		goto err_free_subdev_pads;
-	}
 
 	/* Initialize subdev */
 	v4l2_subdev_init(&pipe->subdev, &mtk_imgsys_subdev_ops);
@@ -2744,11 +2687,24 @@ int mtk_imgsys_pipe_v4l2_register(struct mtk_imgsys_pipe *pipe,
 		V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
 	pipe->subdev.ctrl_handler = NULL;
 	pipe->subdev.internal_ops = &mtk_imgsys_subdev_int_ops;
+	pipe->subdev.entity.flags =
+		V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
+
+	dev_info(pipe->imgsys_dev->dev, "%s: total_queues:%d\n", __func__, pipe->desc->total_queues);
 
 	for (i = 0; i < pipe->desc->total_queues; i++)
 		pipe->subdev_pads[i].flags =
 			V4L2_TYPE_IS_OUTPUT(pipe->nodes[i].desc->buf_type) ?
 			MEDIA_PAD_FL_SINK : MEDIA_PAD_FL_SOURCE;
+
+	ret = media_entity_pads_init(&pipe->subdev.entity,
+					pipe->desc->total_queues,
+					pipe->subdev_pads);
+	if (ret) {
+		dev_info(pipe->imgsys_dev->dev,
+			"failed initialize subdev media entity (%d)\n", ret);
+		goto err_free_subdev_pads;
+	}
 
 	j = snprintf(pipe->subdev.name, sizeof(pipe->subdev.name),
 		 "%s", pipe->desc->name);
@@ -3143,6 +3099,7 @@ int mtk_imgsys_probe(struct platform_device *pdev)
 	int larbs_num, i;
 	int ret;
 
+	dev_info(&pdev->dev, "- E. imgsys driver probe ======.\n");
 	imgsys_dev = devm_kzalloc(&pdev->dev, sizeof(*imgsys_dev), GFP_KERNEL);
 	if (!imgsys_dev)
 		return -ENOMEM;
@@ -3229,7 +3186,7 @@ int mtk_imgsys_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 #else
-	imgsys_dev->scp_pdev = mtk_hcp_get_plat_device(pdev);
+	imgsys_dev->scp_pdev = mtk_hcp_get_plat_device_isp71(pdev);
 	if (!imgsys_dev->scp_pdev) {
 		dev_info(imgsys_dev->dev,
 			"%s: failed to get hcp device\n",
@@ -3240,13 +3197,6 @@ int mtk_imgsys_probe(struct platform_device *pdev)
 	if (!imgsys_dev->imgcmdq_pdev) {
 		dev_info(imgsys_dev->dev,
 			"%s: failed to get imgsys cmdq device\n",
-			__func__);
-		return -EINVAL;
-	}
-	imgsys_dev->smmu_dev = mtk_smmu_get_shared_device(&pdev->dev);
-	if (!imgsys_dev->smmu_dev) {
-		dev_info(imgsys_dev->dev,
-			"%s: failed to get imgsys smmu device\n",
 			__func__);
 		return -EINVAL;
 	}
@@ -3325,12 +3275,12 @@ bypass_larbs:
 		goto err_release_deinit_v4l2;
 	}
 
-	imgsys_cmdq_init(imgsys_dev, 1);
+	imgsys_cmdq_init_isp71(imgsys_dev, 1);
 
 	#if DVFS_QOS_READY
-	mtk_imgsys_mmdvfs_init(imgsys_dev);
+	mtk_imgsys_mmdvfs_init_isp71(imgsys_dev);
 
-	mtk_imgsys_mmqos_init(imgsys_dev);
+	mtk_imgsys_mmqos_init_isp71(imgsys_dev);
 	#endif
 
 	//pm_runtime_set_autosuspend_delay(&pdev->dev, 3000);
@@ -3347,12 +3297,14 @@ bypass_larbs:
 		return ret;
 	}
 #endif
+	dev_info(&pdev->dev, "- E. imgsys driver probe done ======.\n");
 	return 0;
 
 err_release_deinit_v4l2:
 	mtk_imgsys_dev_v4l2_release(imgsys_dev);
 err_release_working_buf_pool:
 	mtk_imgsys_hw_working_buf_pool_release(imgsys_dev);
+	dev_info(&pdev->dev, "- E. imgsys driver probe fail ======.\n");
 	return ret;
 }
 EXPORT_SYMBOL(mtk_imgsys_probe);
@@ -3367,10 +3319,10 @@ void mtk_imgsys_remove(struct platform_device *pdev)
 	mtk_imgsys_hw_working_buf_pool_release(imgsys_dev);
 	mutex_destroy(&imgsys_dev->hw_op_lock);
 	#if DVFS_QOS_READY
-	mtk_imgsys_mmqos_uninit(imgsys_dev);
-	mtk_imgsys_mmdvfs_uninit(imgsys_dev);
+	mtk_imgsys_mmqos_uninit_isp71(imgsys_dev);
+	mtk_imgsys_mmdvfs_uninit_isp71(imgsys_dev);
 	#endif
-	imgsys_cmdq_release(imgsys_dev);
+	imgsys_cmdq_release_isp71(imgsys_dev);
 }
 EXPORT_SYMBOL(mtk_imgsys_remove);
 

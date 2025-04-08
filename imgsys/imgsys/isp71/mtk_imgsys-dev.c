@@ -20,6 +20,11 @@
 #include "mtk_imgsys-requesttrack.h"
 #include "mtk_imgsys-trace.h"
 #include "mtk_imgsys-v4l2-debug.h"
+#include <linux/version.h>
+
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
+#define IMGSYS_NEW_DMA_BUF_API
+#endif
 
 
 struct fd_kva_list_t fd_kva_info_list = {
@@ -31,9 +36,8 @@ unsigned int nodes_num;
 
 #define	MTK_IMGSYS_VIDEO_NODE_SIGDEV_NORM_OUT	     (nodes_num - 1)
 #define	MTK_IMGSYS_VIDEO_NODE_SIGDEV_OUT	     (nodes_num - 2)
-#define	MTK_IMGSYS_VIDEO_NODE_CTRLMETA_FROM_USER_OUT (nodes_num - 3)
-#define	MTK_IMGSYS_VIDEO_NODE_CTRLMETA_OUT	     (nodes_num - 4)
-#define	MTK_IMGSYS_VIDEO_NODE_TUNING_OUT	     (nodes_num - 5)
+#define	MTK_IMGSYS_VIDEO_NODE_CTRLMETA_OUT	     (nodes_num - 3)
+#define	MTK_IMGSYS_VIDEO_NODE_TUNING_OUT	     (nodes_num - 4)
 
 int mtk_imgsys_pipe_init(struct mtk_imgsys_dev *imgsys_dev,
 				struct mtk_imgsys_pipe *pipe,
@@ -272,8 +276,7 @@ void mtk_imgsys_pipe_job_finish(struct mtk_imgsys_request *req,
 	int i;
 	int req_id = req->id;
 	unsigned int vb2_buffer_index;
-    union request_track *req_track = NULL;
-    req_track = (union request_track *)req->req_stat;
+
 
 #ifdef BATCH_MODE_V3
 	// batch mode
@@ -326,8 +329,7 @@ done:
 #ifdef REQ_TIMESTAMP
 	req->tstate.time_notify2vb2done = ktime_get_boottime_ns()/1000;
 #endif
-    req_track->mainflow_from = REQUEST_DONE_FROM_KERNEL_TO_IMGSTREAM;
-    req_track->subflow_kernel++;
+
 	complete(&req->done);
         if (imgsys_dbg_enable()) {
 		dev_dbg(pipe->imgsys_dev->dev,
@@ -646,14 +648,18 @@ u64 mtk_imgsys_get_iova(struct dma_buf *dma_buf, s32 ionFd,
 		return 0;
 	}
 
-	dev = imgsys_dev->smmu_dev;
+	dev = imgsys_dev->dev;
 
 	attach = dma_buf_attach(dma_buf, dev);
 
 	if (IS_ERR(attach))
 		goto err_attach;
 
+	#ifdef IMGSYS_NEW_DMA_BUF_API
+	sgt = dma_buf_map_attachment_unlocked(attach, DMA_BIDIRECTIONAL);
+	#else
 	sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
+	#endif
 
 	if (IS_ERR(sgt))
 		goto err_map;
@@ -707,8 +713,13 @@ void mtk_imgsys_put_dma_buf(struct dma_buf *dma_buf,
 				struct sg_table *sgt)
 {
 	if (!IS_ERR(dma_buf)) {
+		#ifdef IMGSYS_NEW_DMA_BUF_API
+		dma_buf_unmap_attachment_unlocked(attach, sgt,
+			DMA_BIDIRECTIONAL);
+		#else
 		dma_buf_unmap_attachment(attach, sgt,
 			DMA_BIDIRECTIONAL);
+		#endif
 		dma_buf_detach(dma_buf, attach);
 		dma_buf_put(dma_buf);
 	}
@@ -734,7 +745,11 @@ void *get_kva(struct mtk_imgsys_dev_buffer *buf, struct iosys_map *imap)
 	}
 
 	dma_buf_begin_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
+	#ifdef IMGSYS_NEW_DMA_BUF_API
+	ret = dma_buf_vmap_unlocked(dmabuf, &map);
+	#else
 	ret = dma_buf_vmap(dmabuf, &map);
+	#endif
 	if (ret) {
 		pr_info("%s, map kernel va failed\n", __func__);
 		ret = -ENOMEM;
@@ -763,11 +778,18 @@ static void put_kva(struct buf_va_info_t *buf_va_info)
 	struct dma_buf *dmabuf;
 
 	dmabuf = buf_va_info->dma_buf_putkva;
-	if (!IS_ERR(dmabuf)) {
+	if (!IS_ERR_OR_NULL(&buf_va_info->map.vaddr)) {
+		#ifdef IMGSYS_NEW_DMA_BUF_API
+		dma_buf_vunmap_unlocked(dmabuf, &buf_va_info->map);
+		dma_buf_end_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
+		dma_buf_unmap_attachment_unlocked(buf_va_info->attach, buf_va_info->sgt,
+			DMA_BIDIRECTIONAL);
+		#else
 		dma_buf_vunmap(dmabuf, &buf_va_info->map);
 		dma_buf_end_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
 		dma_buf_unmap_attachment(buf_va_info->attach, buf_va_info->sgt,
 			DMA_BIDIRECTIONAL);
+		#endif
 		dma_buf_detach(dmabuf, buf_va_info->attach);
 		dma_buf_put(dmabuf);
 	}
@@ -1310,12 +1332,10 @@ void mtk_imgsys_sd_desc_map_iova(struct mtk_imgsys_request *req)
 	default:
 	case V4L2_META_FMT_MTISP_SD:
 		desc_sd = (struct singlenode_desc *)buf_sd->va_daddr[0];
-		req->req_stat = &desc_sd->req_state;
 		break;
 	case V4L2_META_FMT_MTISP_SDNORM:
 		desc_sd_norm =
 			(struct singlenode_desc_norm *)buf_sd->va_daddr[0];
-		req->req_stat = &desc_sd_norm->req_state;
 		break;
 	}
 
@@ -1677,8 +1697,7 @@ void mtk_imgsys_singledevice_ipi_params_config(struct mtk_imgsys_request *req)
 	struct mtk_imgsys_dev_buffer *buf_in;
 	struct singlenode_desc *singledevice_desc_dma = NULL;
 	struct singlenode_desc_norm *singledevice_desc_norm = NULL;
-	union request_track *req_track;
-	void *tuning_meta, *ctrl_meta, *ctrl_meta_from_user;
+	void *tuning_meta, *ctrl_meta;
 	int i = 0;
 	bool isMENode = false;
 
@@ -1723,8 +1742,6 @@ void mtk_imgsys_singledevice_ipi_params_config(struct mtk_imgsys_request *req)
 			(struct singlenode_desc *)buf_in->va_daddr[0];
 		tuning_meta = (void *) &singledevice_desc_dma->tuning_meta;
 		ctrl_meta = (void *) &singledevice_desc_dma->ctrl_meta;
-		ctrl_meta_from_user = (void *) &singledevice_desc_dma->ctrl_meta_from_user;
-		req->req_stat = &singledevice_desc_dma->req_state;
 		break;
 	/* NORM */
 	default:
@@ -1733,14 +1750,9 @@ void mtk_imgsys_singledevice_ipi_params_config(struct mtk_imgsys_request *req)
 			(struct singlenode_desc_norm *)buf_in->va_daddr[0];
 		tuning_meta = (void *) &singledevice_desc_norm->tuning_meta;
 		ctrl_meta = (void *) &singledevice_desc_norm->ctrl_meta;
-		ctrl_meta_from_user = (void *) &singledevice_desc_norm->ctrl_meta_from_user;
-		req->req_stat = &singledevice_desc_norm->req_state;
 		break;
 	}
-	{
-		req_track = (union request_track *)req->req_stat;
-		req_track->mainflow_to = REQUEST_FROM_IMGSTREAM_TO_KERNEL;
-	}
+
 	mtk_imgsys_sd_fill_dmas(pipe,
 			MTK_IMGSYS_VIDEO_NODE_TUNING_OUT,
 			tuning_meta,
@@ -1750,9 +1762,7 @@ void mtk_imgsys_singledevice_ipi_params_config(struct mtk_imgsys_request *req)
 			ctrl_meta,
 			buf_in, 1);
 
-	mtk_imgsys_singledevice_fill_ipi_param(pipe,
-			ctrl_meta_from_user,
-			buf_in, 1);
+
 
 #ifndef MTK_IOVA_SINK2KERNEL
 	for (i = 0; i < IMG_MAX_HW_DMAS; i++) {

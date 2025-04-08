@@ -5,7 +5,6 @@ load("@mgk_info//:kernel_version.bzl","kernel_version")
 load("@mgk_info//:dict.bzl",
      "DEFCONFIG_OVERLAYS",
 )
-
 package(
     default_visibility = [
         "//visibility:public",
@@ -39,22 +38,22 @@ ddk_headers(
     hdrs = glob(["**/*.h"]), # export all headers for other modules to use
 )
 
-# TODO: enable this part later
 define_mgk_ddk_ko(
     name = "imgsys_71",
 
     srcs = glob([
         "**/*.c",
-        "**/*.h",
     ]),
 
     includes = ["."],
 
+    hdrs = glob(["**/*.h"]),
+
     ko_deps = [
-        "//vendor/mediatek/kernel_modules/mtkcam/mtk-hcp/legacy:mtk-hcp",
+        "//vendor/mediatek/kernel_modules/mtkcam/mtk-hcp/isp71:mtk-hcp-isp71",
         "//kernel_device_modules-{}/drivers/misc/mediatek/cmdq/mailbox:mtk-cmdq-drv-ext".format(kernel_version),
         "//vendor/mediatek/kernel_modules/mtkcam/imgsys/common:imgsys_common",
-        "//vendor/mediatek/kernel_modules/mtkcam/imgsys/imgsys/cmdq/legacy:imgsys_cmdq",
+        "//vendor/mediatek/kernel_modules/mtkcam/imgsys/imgsys/cmdq/isp71:imgsys_cmdq_isp71",
         "//kernel_device_modules-{}/drivers/misc/mediatek/mtk-interconnect:mtk-icc-core".format(kernel_version),
         "//kernel_device_modules-{}/drivers/misc/mediatek/smi:mtk-smi-dbg".format(kernel_version), # TBD
         "//kernel_device_modules-{}/drivers/misc/mediatek/iommu:mtk_iommu_util".format(kernel_version),
@@ -71,8 +70,8 @@ define_mgk_ddk_ko(
         "//kernel_device_modules-{}/drivers/misc/mediatek/smi:smi_dbg_headers".format(kernel_version), # TBD
         "//kernel_device_modules-{}/drivers/misc/mediatek/iommu:iommu_misc_headers".format(kernel_version),
         "//kernel_device_modules-{}/drivers/iommu/arm/arm-smmu-v3:smmu_public_headers".format(kernel_version),
-        "//vendor/mediatek/kernel_modules/mtkcam/imgsys/imgsys/cmdq/legacy:ddk_public_headers",
-        "//vendor/mediatek/kernel_modules/mtkcam/mtk-hcp/legacy:ddk_public_headers",
+        # "//vendor/mediatek/kernel_modules/mtkcam/imgsys/imgsys/cmdq/isp71:ddk_public_headers",
+        # "//vendor/mediatek/kernel_modules/mtkcam/mtk-hcp/isp71:ddk_public_headers",
     ],
 
     copts = [
@@ -80,7 +79,7 @@ define_mgk_ddk_ko(
         "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/",
     ],
 
-    local_defines = ["MTK_IOVA_SINK2KERNEL"],
+    # local_defines = ["MTK_IOVA_SINK2KERNEL"],
 
     out = "mtk_imgsys_isp71.ko",
 )

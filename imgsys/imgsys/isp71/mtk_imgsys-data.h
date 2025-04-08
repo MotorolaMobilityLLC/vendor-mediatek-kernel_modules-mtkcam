@@ -29,6 +29,7 @@ const struct cust_data imgsys_data[] = {
 		.pipe_settings = pipe_settings_isp7,
 		.pipe_num = ARRAY_SIZE(pipe_settings_isp7),
 	.imgsys_modules = imgsys_isp7_modules,
+		.imgsys_modules_num = MTK_IMGSYS_MODULE_NUM,
 		.dump = imgsys_debug_dump_routine,
 		.imgsys_ports_num = 0,
 	},

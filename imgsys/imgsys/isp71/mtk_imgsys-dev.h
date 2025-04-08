@@ -825,12 +825,9 @@ struct swfrm_info_t {
 	void *pipe;
 	uint32_t fail_uinfo_idx;
 	int8_t fail_isHWhang;
-	int timeout_event;
+	struct timeval eqtime;
 	int chan_id;
-	uint64_t *req_stat;
 	char *hw_ts_log;
-	uint8_t is_capture;
-	uint8_t is_ndd;
 };
 #define HWTOKEN_MAX 100
 struct cleartoken_info_t {

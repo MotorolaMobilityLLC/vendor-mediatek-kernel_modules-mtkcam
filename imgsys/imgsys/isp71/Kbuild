@@ -11,12 +11,18 @@ KO_CODE_PATH := $(if $(filter /%,$(src)),,$(srctree)/)$(src)
 IMGSYS_ISP71_MODULE := mtk_imgsys_isp71
 
 #platform dependent
-ccflags-y += -I$(KO_CODE_PATH)/../../../mtk-hcp/legacy
+ccflags-y += -I$(KO_CODE_PATH)/../../../mtk-hcp/isp71
 ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/cmdq/mailbox/
 ccflags-y += -I$(KO_CODE_PATH)/../../common/
-ccflags-y += -I$(KO_CODE_PATH)/../cmdq/legacy
+ccflags-y += -I$(KO_CODE_PATH)/../cmdq/isp71
 ccflags-y += -I$(KO_CODE_PATH)/
 ccflags-y += -I$(KO_CODE_PATH)/../../../mtk-ipesys-me/
+#ccflags-y += -I$(srctree)/$(src)/../../../mtk-hcp/isp71
+#ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/cmdq/mailbox/
+#ccflags-y += -I$(srctree)/$(src)/../../common/
+#ccflags-y += -I$(srctree)/$(src)/../cmdq/isp71
+#ccflags-y += -I$(srctree)/$(src)/
+#ccflags-y += -I$(srctree)/$(src)/../../../mtk-ipesys-me/
 ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/mtk-interconnect/
 ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/smi/
 ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/iommu
@@ -41,7 +47,13 @@ endif
 
 $(info "imgsys, subdir-ccflags-y = $(subdir-ccflags-y)")
 
-subdir-ccflags-y += -DMTK_IOVA_SINK2KERNEL
+ifeq (6.6,$(word 1,$(sort 6.6 $(KERNEL_VERSION))))
+ccflags-y += -DIMGSYS_NEW_DMA_BUF_API
+endif
+
+$(info "====Mark to build imgsys s0 vendor")
+
+#subdir-ccflags-y += -DMTK_IOVA_SINK2KERNEL
 
 #mtk_imgsys_v4l2-y += mtk_imgsys-trace.o
 #CFLAGS_mtk_imgsys-trace.o	:=-I$(src)

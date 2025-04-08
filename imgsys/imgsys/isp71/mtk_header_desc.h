@@ -28,8 +28,6 @@ enum img_resize_ratio {
 	img_resize_down4,
 	img_resize_down2,
 	img_resize_down42,
-	img_resize_down8,
-	img_resize_down16,
 	img_resiz_max
 };
 #define COMPACT_USE
@@ -138,14 +136,12 @@ struct header_desc_norm {
 
 #define IMG_MAX_HW_OUTPUTS	4
 /* TODO */
-#define IMG_MAX_HW_DMAS		93
+#define IMG_MAX_HW_DMAS		72
 struct singlenode_desc {
 	__u8 dmas_enable[IMG_MAX_HW_DMAS][TIME_MAX];
 	struct header_desc	dmas[IMG_MAX_HW_DMAS];
 	struct header_desc	tuning_meta;
 	struct header_desc	ctrl_meta;
-	struct header_desc	ctrl_meta_from_user;
-	__u64 req_state;
 };
 
 struct singlenode_desc_norm {
@@ -153,8 +149,6 @@ struct singlenode_desc_norm {
 	struct header_desc_norm	dmas[IMG_MAX_HW_DMAS];
 	struct header_desc_norm	tuning_meta;
 	struct header_desc_norm	ctrl_meta;
-	struct header_desc_norm	ctrl_meta_from_user;
-	__u64 req_state;
 };
 
 #define V4L2_META_FMT_MTISP_DESC   v4l2_fourcc('M', 'T', 'f', 'd')

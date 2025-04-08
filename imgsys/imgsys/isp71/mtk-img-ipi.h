@@ -35,7 +35,7 @@ typedef int64_t s64;
 
 #define IMG_MAX_HW_OUTPUTS	4
 
-#define IMG_MAX_HW_DMAS		93
+#define IMG_MAX_HW_DMAS		72
 
 #define IMG_MAX_PLANES		3
 
@@ -45,7 +45,7 @@ typedef int64_t s64;
 #define IMG_IPI_DEBUG   4
 
 #define IMG_MODULE_SET 5
-#define SMVR_DECOUPLE 1
+#define SMVR_DECOUPLE 0
 // Definition about supported hw engines, aligned with hw_definition.h
 enum IMGSYS_ENG {
 	IMGSYS_WPE_EIS = 0,
@@ -127,26 +127,17 @@ uint32_t	is_capture;
         #endif
 } __packed;
 
-#define KFENCE_MAX 4
-struct fence_event {
-	int fence_fd;
-	uint64_t *dma_fence;
-	int gce_event;
-} __packed;
 
-struct private_data {
-	int8_t need_update_desc;
-	int8_t need_flush_tdr;
-	uint32_t buf_fd;
-	uint32_t buf_offset;
-	uint32_t desc_offset;
-	uint32_t tdr_offset;
-} __packed;
+enum imgsys_tasktype {
+	IMG_TASK_NORMAL		= 0,
+	IMG_TASK_SLOW		= 1,
+	IMG_TASK_TIMESHARED	= 2
+};
 
 struct img_swfrm_info {
 	uint32_t hw_comb;
 	int sw_ridx;
-	uint8_t is_time_shared;
+	uint8_t task_type;
 	uint8_t is_secFrm;
 	uint8_t is_earlycb;
 	uint8_t is_lastingroup;
@@ -156,12 +147,6 @@ struct img_swfrm_info {
 	void *g_swbuf;
 	void *bw_swbuf;
 	uint64_t pixel_bw;
-	int tunmeta_size;
-	int wait_fence_num;
-	struct fence_event wait_fence_list[KFENCE_MAX];
-	int notify_fence_num;
-	struct fence_event notify_fence_list[KFENCE_MAX];
-	struct private_data priv[IMGSYS_MAX];
 } __packed;
 
 struct img_addr {
