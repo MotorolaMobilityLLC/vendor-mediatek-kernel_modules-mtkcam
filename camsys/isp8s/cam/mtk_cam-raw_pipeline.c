@@ -112,7 +112,7 @@ static int res_calc_fill_sensor(struct mtk_cam_res_calc *c,
 
 	if (res_raw_is_dc_mode(r))
 		c->raw_line_time = interval / max(s->height + DC_MODE_VB_MARGIN, 1U);
-	else if (scen_is_m2m(&r->scen) || scen_is_timeshare(&r->scen))
+	else if ((r->scen.id == MTK_CAM_SCEN_M2M_NORMAL) || scen_is_timeshare(&r->scen))
 		c->raw_line_time = interval /
 			max(s->height + s->height * M2M_MODE_VB_RATIO / 100, 1U);
 	else
@@ -461,8 +461,7 @@ static void res_sensor_info_validate(
 	struct mtk_cam_scen *scen = &r->scen;
 	u64 prate = 0;
 
-	if (scen->id == MTK_CAM_SCEN_M2M_NORMAL ||
-		scen->id == MTK_CAM_SCEN_ODT_NORMAL) {
+	if (scen->id == MTK_CAM_SCEN_M2M_NORMAL) {
 
 		if (s->interval.numerator == 0 ||
 		    s->interval.denominator == 0) {
