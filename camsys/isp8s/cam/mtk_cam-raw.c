@@ -161,7 +161,7 @@ void init_raw_settings(struct mtk_raw_device *dev, bool is_srt, int frm_time_us)
 #endif
 }
 
-#define BPC_R2_PCRP				0x41EC
+#define BPC_R2_PCRP				0x44f0
 #define CBM_R1_PCRP				0x1018
 
 void diable_rms_pcrp(struct mtk_raw_device *raw)
@@ -183,90 +183,36 @@ void diable_rms_module(struct mtk_raw_device *raw)
 	basic_writel(raw, 0x0, rms->base, REG_CAMCTL3_MOD5_EN);
 	basic_writel(raw, 0x0, rms->base, REG_CAMCTL3_MOD6_EN);
 }
-static void dump_dmai_reg(struct mtk_raw_device *dev)
+
+static inline void dump_dmai_reg(struct mtk_raw_device *dev, char *name, u32 addr)
 {
-	u32 caci_base, caci_base_m, caci_oft, caci_oft_m, caci_xsize, caci_ysize, caci_stride;
-	u32 rawi5_base, rawi5_base_m, rawi5_oft, rawi5_oft_m, rawi5_xsize, rawi5_ysize, rawi5_stride;
+	u32 base, base_m, oft, oft_m, xsize, ysize, stride;
 
-	/* caci r1 */
-	caci_base = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0bc0);
-	caci_base_m = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0bc4);
-	caci_oft = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0bc8);
-	caci_oft_m = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0bcc);
-	caci_xsize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0bd0);
-	caci_ysize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0bd4);
-	caci_stride = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0bd8);
+	base = raw_readl_relaxed(dev, dev->dmatop_base_inner, addr + 0x0);
+	base_m = raw_readl_relaxed(dev, dev->dmatop_base_inner, addr + 0x4);
+	oft = raw_readl_relaxed(dev, dev->dmatop_base_inner, addr + 0x8);
+	oft_m = raw_readl_relaxed(dev, dev->dmatop_base_inner, addr + 0xc);
+	xsize = raw_readl_relaxed(dev, dev->dmatop_base_inner, addr + 0x10);
+	ysize = raw_readl_relaxed(dev, dev->dmatop_base_inner, addr + 0x14);
+	stride = raw_readl_relaxed(dev, dev->dmatop_base_inner, addr + 0x18);
 
 	dev_info(dev->dev,
-		"[%s] raw%d - caci [in] 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		__func__, dev->id, caci_base, caci_base_m, caci_oft,
-		caci_oft_m, caci_xsize, caci_ysize, caci_stride);
-	/* bpci r3 */
-	caci_base = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0980);
-	caci_base_m = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0984);
-	caci_oft = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0988);
-	caci_oft_m = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x098c);
-	caci_xsize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0990);
-	caci_ysize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0994);
-	caci_stride = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0998);
+		"[%s] raw%d - %s [in] 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		__func__, dev->id, name, base, base_m, oft, oft_m,
+			 xsize, ysize, stride);
+}
 
-	dev_info(dev->dev,
-		"[%s] raw%d - bpci3 [in] 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		__func__, dev->id, caci_base, caci_base_m, caci_oft,
-		caci_oft_m, caci_xsize, caci_ysize, caci_stride);
-	/* bpci r4 */
-	caci_base = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x09c0);
-	caci_base_m = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x09c4);
-	caci_oft = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x09c8);
-	caci_oft_m = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x09cc);
-	caci_xsize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x09d0);
-	caci_ysize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x09d4);
-	caci_stride = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x09d8);
-
-	dev_info(dev->dev,
-		"[%s] raw%d - bpci4 [in] 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		__func__, dev->id, caci_base, caci_base_m, caci_oft,
-		caci_oft_m, caci_xsize, caci_ysize, caci_stride);
-	/* pdi r1 */
-	caci_base = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0ac0);
-	caci_base_m = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0ac4);
-	caci_oft = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0ac8);
-	caci_oft_m = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0acc);
-	caci_xsize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0ad0);
-	caci_ysize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0ad4);
-	caci_stride = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0ad8);
-
-	dev_info(dev->dev,
-		"[%s] raw%d - pdi [in] 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		__func__, dev->id, caci_base, caci_base_m, caci_oft,
-		caci_oft_m, caci_xsize, caci_ysize, caci_stride);
-	/* rawi r5 */
-	rawi5_base = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0820);
-	rawi5_base_m = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0824);
-	rawi5_oft = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0828);
-	rawi5_oft_m = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x082c);
-	rawi5_xsize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0830);
-	rawi5_ysize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0834);
-	rawi5_stride = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0838);
-
-	dev_info(dev->dev,
-		"[%s] raw%d - rawi5 [in] 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		__func__, dev->id, rawi5_base, rawi5_base_m, rawi5_oft,
-		rawi5_oft_m, rawi5_xsize, rawi5_ysize, rawi5_stride);
-	/* ufdi r5 */
-	rawi5_base = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0890);
-	rawi5_base_m = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0894);
-	rawi5_oft = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x0898);
-	rawi5_oft_m = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x089c);
-	rawi5_xsize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x08a0);
-	rawi5_ysize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x08a4);
-	rawi5_stride = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x08a8);
-
-	dev_info(dev->dev,
-		"[%s] raw%d - ufdi5 [in] 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		__func__, dev->id, rawi5_base, rawi5_base_m, rawi5_oft,
-		rawi5_oft_m, rawi5_xsize, rawi5_ysize, rawi5_stride);
-
+static void dump_dmai(struct mtk_raw_device *dev)
+{
+	dump_dmai_reg(dev, "caci_r1", 0x09e0);
+	dump_dmai_reg(dev, "bpci_r1", 0x0660);
+	dump_dmai_reg(dev, "bpci_r2", 0x06a0);
+	dump_dmai_reg(dev, "bpci_r3", 0x06e0);
+	dump_dmai_reg(dev, "pdi_r1", 0x07e0);
+	dump_dmai_reg(dev, "rawi_r2", 0x03c0);
+	dump_dmai_reg(dev, "ufdi_r5", 0x0430);
+	dump_dmai_reg(dev, "rawi_r5", 0x0580);
+	dump_dmai_reg(dev, "ufdi_r5", 0x05f0);
 }
 
 static void dump_rms_reg(struct mtk_raw_device *dev)
@@ -294,19 +240,17 @@ static void dump_rms_reg(struct mtk_raw_device *dev)
 static void dump_ae_reg(struct mtk_raw_device *dev, bool force)
 {
 	u32 ae_stat_en, ae_win_org, ae_win_size, ae_win_pit, ae_win_num;
-	u32 qbn_r1_ctl, qbn_r1_pcrp_ctl, pcrp0_xpos, pcrp0_ypos, pcrp1_xpos, pcrp1_ypos;
+	u32 qbn_r1_ctl, qbn_r1_pcrp_ctl, pcrp0_xpos, pcrp0_ypos;
 
-	ae_stat_en = raw_readl_relaxed(dev, dev->base_inner, 0x5840);
-	ae_win_org = raw_readl_relaxed(dev, dev->base_inner, 0x5848);
-	ae_win_size = raw_readl_relaxed(dev, dev->base_inner, 0x584c);
-	ae_win_pit = raw_readl_relaxed(dev, dev->base_inner, 0x5850);
-	ae_win_num = raw_readl_relaxed(dev, dev->base_inner, 0x5854);
-	qbn_r1_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x5800);
-	qbn_r1_pcrp_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x5804);
-	pcrp0_xpos = raw_readl_relaxed(dev, dev->base_inner, 0x5808);
-	pcrp0_ypos = raw_readl_relaxed(dev, dev->base_inner, 0x580c);
-	pcrp1_xpos = raw_readl_relaxed(dev, dev->base_inner, 0x5810);
-	pcrp1_ypos = raw_readl_relaxed(dev, dev->base_inner, 0x5814);
+	ae_stat_en = raw_readl_relaxed(dev, dev->base_inner, 0x5608);
+	ae_win_org = raw_readl_relaxed(dev, dev->base_inner, 0x5448);
+	ae_win_size = raw_readl_relaxed(dev, dev->base_inner, 0x544c);
+	ae_win_pit = raw_readl_relaxed(dev, dev->base_inner, 0x5450);
+	ae_win_num = raw_readl_relaxed(dev, dev->base_inner, 0x5454);
+	qbn_r1_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x5400);
+	qbn_r1_pcrp_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x5404);
+	pcrp0_xpos = raw_readl_relaxed(dev, dev->base_inner, 0x5408);
+	pcrp0_ypos = raw_readl_relaxed(dev, dev->base_inner, 0x540c);
 	if (CAM_DEBUG_ENABLED(RAW_INT) || force)
 		dev_info(dev->dev,
 		"[%s] raw%d - [in] ae_stat_en/ae_win_org/ae_win_size/ae_win_pit/ae_win_num:0x%x/0x%x/0x%x/0x%x/0x%x\n",
@@ -314,48 +258,44 @@ static void dump_ae_reg(struct mtk_raw_device *dev, bool force)
 		ae_win_size, ae_win_pit, ae_win_num);
 	if (CAM_DEBUG_ENABLED(RAW_INT) || force)
 		dev_info(dev->dev,
-		"[%s] raw%d - [in] qbn_r1_ctl/qbn_r1_pcrp_ctl/pcrp0_xpos/pcrp0_ypos/pcrp1_xpos/pcrp1_ypos:0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		__func__, dev->id, qbn_r1_ctl, qbn_r1_pcrp_ctl,
-		pcrp0_xpos, pcrp0_ypos, pcrp1_xpos, pcrp1_ypos);
-	qbn_r1_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x5c80);
-	qbn_r1_pcrp_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x5c84);
-	pcrp0_xpos = raw_readl_relaxed(dev, dev->base_inner, 0x5c88);
-	pcrp0_ypos = raw_readl_relaxed(dev, dev->base_inner, 0x5c8c);
-	pcrp1_xpos = raw_readl_relaxed(dev, dev->base_inner, 0x5c90);
-	pcrp1_ypos = raw_readl_relaxed(dev, dev->base_inner, 0x5c94);
+		"[%s] raw%d - [in] qbn_r1_ctl/qbn_r1_pcrp_ctl/pcrp0_xpos/pcrp0_ypos:0x%x/0x%x/0x%x/0x%x\n",
+		__func__, dev->id, qbn_r1_ctl, qbn_r1_pcrp_ctl, pcrp0_xpos, pcrp0_ypos);
+	qbn_r1_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x5980);
+	qbn_r1_pcrp_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x5984);
+	pcrp0_xpos = raw_readl_relaxed(dev, dev->base_inner, 0x5988);
+	pcrp0_ypos = raw_readl_relaxed(dev, dev->base_inner, 0x598c);
 	if (CAM_DEBUG_ENABLED(RAW_INT) || force)
 		dev_info(dev->dev,
-		"[%s] raw%d - [in] qbn_r9_ctl/qbn_r9_pcrp_ctl/pcrp0_xpos/pcrp0_ypos/pcrp1_xpos/pcrp1_ypos:0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		__func__, dev->id, qbn_r1_ctl, qbn_r1_pcrp_ctl,
-		pcrp0_xpos, pcrp0_ypos, pcrp1_xpos, pcrp1_ypos);
+		"[%s] raw%d - [in] qbn_r9_ctl/qbn_r9_pcrp_ctl/pcrp0_xpos/pcrp0_ypos:0x%x/0x%x/0x%x/0x%x\n",
+		__func__, dev->id, qbn_r1_ctl, qbn_r1_pcrp_ctl, pcrp0_xpos, pcrp0_ypos);
 }
 
 static void dump_awb_reg(struct mtk_raw_device *dev, bool force)
 {
 	u32 awb_stat_en, awb_win_org, awb_win_size, awb_win_pit, awb_win_num;
-	u32 qbn_r8_ctl, qbn_r8_pcrp_ctl, pcrp0_xpos, pcrp0_ypos, pcrp1_xpos, pcrp1_ypos;
+	u32 qbn_r8_ctl, qbn_r8_pcrp_ctl, pcrp0_xpos, pcrp0_ypos;
 	u32 awbo_x, awbo_y, awbo_s, awbo_basic, con0, con1, con2, con3, con4;
 
-	awb_stat_en = raw_readl_relaxed(dev, dev->base_inner, 0x5a80);
-	awb_win_org = raw_readl_relaxed(dev, dev->base_inner, 0x5a88);
-	awb_win_size = raw_readl_relaxed(dev, dev->base_inner, 0x5a8c);
-	awb_win_pit = raw_readl_relaxed(dev, dev->base_inner, 0x5a90);
-	awb_win_num = raw_readl_relaxed(dev, dev->base_inner, 0x5a94);
-	qbn_r8_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x5a40);
-	qbn_r8_pcrp_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x5a44);
-	pcrp0_xpos = raw_readl_relaxed(dev, dev->base_inner, 0x5a48);
-	pcrp0_ypos = raw_readl_relaxed(dev, dev->base_inner, 0x5a4c);
-	pcrp1_xpos = raw_readl_relaxed(dev, dev->base_inner, 0x5a50);
-	pcrp1_ypos = raw_readl_relaxed(dev, dev->base_inner, 0x5a54);
-	awbo_x = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1560);
-	awbo_y = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1564);
-	awbo_s = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1568);
-	awbo_basic = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x156c);
-	con0 = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1570);
-	con1 = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1574);
-	con2 = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1578);
-	con3 = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x157c);
-	con4 = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1580);
+	awb_stat_en = raw_readl_relaxed(dev, dev->base_inner, 0x5780);
+	awb_win_org = raw_readl_relaxed(dev, dev->base_inner, 0x5788);
+	awb_win_size = raw_readl_relaxed(dev, dev->base_inner, 0x578c);
+	awb_win_pit = raw_readl_relaxed(dev, dev->base_inner, 0x5790);
+	awb_win_num = raw_readl_relaxed(dev, dev->base_inner, 0x5794);
+	qbn_r8_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x5740);
+	qbn_r8_pcrp_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x5744);
+	pcrp0_xpos = raw_readl_relaxed(dev, dev->base_inner, 0x5748);
+	pcrp0_ypos = raw_readl_relaxed(dev, dev->base_inner, 0x574c);
+
+	awbo_x = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1500);
+	awbo_y = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1504);
+	awbo_s = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1508);
+	awbo_basic = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x150c);
+
+	con0 = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1510);
+	con1 = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1514);
+	con2 = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1518);
+	con3 = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x151c);
+	con4 = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1520);
 
 	if (CAM_DEBUG_ENABLED(RAW_INT) || force)
 		dev_info(dev->dev,
@@ -364,9 +304,9 @@ static void dump_awb_reg(struct mtk_raw_device *dev, bool force)
 		awb_win_size, awb_win_pit, awb_win_num);
 	if (CAM_DEBUG_ENABLED(RAW_INT) || force)
 		dev_info(dev->dev,
-		"[%s] raw%d - [in] qbn_r8_ctl/qbn_r8_pcrp_ctl/pcrp0_xpos/pcrp0_ypos/pcrp1_xpos/pcrp1_ypos:0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
+		"[%s] raw%d - [in] qbn_r8_ctl/qbn_r8_pcrp_ctl/pcrp0_xpos/pcrp0_ypos:0x%x/0x%x/0x%x/0x%x\n",
 		__func__, dev->id, qbn_r8_ctl, qbn_r8_pcrp_ctl,
-		pcrp0_xpos, pcrp0_ypos, pcrp1_xpos, pcrp1_ypos);
+		pcrp0_xpos, pcrp0_ypos);
 	if (CAM_DEBUG_ENABLED(RAW_INT) || force)
 		dev_info(dev->dev,
 		"[%s] raw%d - [in] awbo_x/y/stride/basic/con0/1/2/3/4:0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
@@ -377,22 +317,20 @@ static void dump_af_reg(struct mtk_raw_device *dev, bool force)
 {
 	u32 af_size, af_vld, af_blk_prot, af_blk_0, af_blk_1;
 	u32 afo_xsize, afo_ysize, afo_stride;
-	u32 qbn_ctl, qbn_pcrp_ctl, pcrp0_xpos, pcrp0_ypos, pcrp1_xpos, pcrp1_ypos;
+	u32 qbn_ctl, qbn_pcrp_ctl, pcrp0_xpos, pcrp0_ypos;
 
-	af_size = raw_readl_relaxed(dev, dev->base_inner, 0x5710);
-	af_vld = raw_readl_relaxed(dev, dev->base_inner, 0x5714);
-	af_blk_prot = raw_readl_relaxed(dev, dev->base_inner, 0x5718);
-	af_blk_0 = raw_readl_relaxed(dev, dev->base_inner, 0x571c);
-	af_blk_1 = raw_readl_relaxed(dev, dev->base_inner, 0x5720);
-	afo_xsize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1600);
-	afo_ysize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1604);
-	afo_stride = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x1608);
-	qbn_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x56c0);
-	qbn_pcrp_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x56c4);
-	pcrp0_xpos = raw_readl_relaxed(dev, dev->base_inner, 0x56c8);
-	pcrp0_ypos = raw_readl_relaxed(dev, dev->base_inner, 0x56d0);
-	pcrp1_xpos = raw_readl_relaxed(dev, dev->base_inner, 0x56d4);
-	pcrp1_ypos = raw_readl_relaxed(dev, dev->base_inner, 0x56d8);
+	af_size = raw_readl_relaxed(dev, dev->base_inner, 0x5310);
+	af_vld = raw_readl_relaxed(dev, dev->base_inner, 0x5314);
+	af_blk_prot = raw_readl_relaxed(dev, dev->base_inner, 0x5318);
+	af_blk_0 = raw_readl_relaxed(dev, dev->base_inner, 0x531c);
+	af_blk_1 = raw_readl_relaxed(dev, dev->base_inner, 0x5320);
+	afo_xsize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x15a0);
+	afo_ysize = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x15a4);
+	afo_stride = raw_readl_relaxed(dev, dev->dmatop_base_inner, 0x15a8);
+	qbn_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x52c0);
+	qbn_pcrp_ctl = raw_readl_relaxed(dev, dev->base_inner, 0x52c4);
+	pcrp0_xpos = raw_readl_relaxed(dev, dev->base_inner, 0x52c8);
+	pcrp0_ypos = raw_readl_relaxed(dev, dev->base_inner, 0x52cc);
 
 	if (CAM_DEBUG_ENABLED(RAW_INT) || force)
 		dev_info(dev->dev,
@@ -404,9 +342,8 @@ static void dump_af_reg(struct mtk_raw_device *dev, bool force)
 			 __func__, dev->id, afo_xsize, afo_ysize, afo_stride);
 	if (CAM_DEBUG_ENABLED(RAW_INT) || force)
 		dev_info(dev->dev,
-		"[%s] raw%d - [in] qbn_r6_ctl/qbn_r6_pcrp_ctl/pcrp0_xpos/pcrp0_ypos/pcrp1_xpos/pcrp1_ypos:0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		__func__, dev->id, qbn_ctl, qbn_pcrp_ctl,
-		pcrp0_xpos, pcrp0_ypos, pcrp1_xpos, pcrp1_ypos);
+		"[%s] raw%d - [in] qbn_r6_ctl/qbn_r6_pcrp_ctl/pcrp0_xpos/pcrp0_ypos:0x%x/0x%x/0x%x/0x%x\n",
+		__func__, dev->id, qbn_ctl, qbn_pcrp_ctl, pcrp0_xpos, pcrp0_ypos);
 }
 
 static void dump_dc_setting(struct mtk_raw_device *dev)
@@ -3633,7 +3570,7 @@ int raw_dump_debug_status(struct mtk_raw_device *dev, int dma_debug_dump)
 	dump_dmatop_dc_st(dev);
 	dump_interrupt(dev);
 	dump_rms_reg(dev);
-	dump_dmai_reg(dev);
+	dump_dmai(dev);
 	dump_ae_reg(dev, 1);
 	dump_awb_reg(dev, 1);
 	dump_af_reg(dev, 1);
