@@ -443,16 +443,29 @@ static void dump_cq_setting(struct mtk_raw_device *dev)
 		 raw_readl(dev, dev->base, REG_CAMCQ_SCQ_START_PERIOD));
 }
 
-static void dump_interrupt(struct mtk_raw_device *dev)
+static void dump_interrupt(struct mtk_raw_device *raw)
 {
-	dev_info_ratelimited(dev->dev, "CAMCTL INT17_EN 0x%08x\n",
-		 raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT17_EN));
-	dev_info_ratelimited(dev->dev, "CAMCTL INT18_EN 0x%08x\n",
-		 raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT18_EN));
-	dev_info_ratelimited(dev->dev, "CAMCTL INT20_EN 0x%08x\n",
-		 raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT20_EN));
-	dev_info_ratelimited(dev->dev, "CAMCTL INT21_EN 0x%08x\n",
-		 raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT21_EN));
+	int i = 0;
+	u32 base;
+	struct mtk_yuv_device *yuv = get_yuv_dev(raw);
+
+	for (i = 1; i <= 26; ++i) {
+		base = REG_CAMCTL_INT_EN + ((i - 1) * 0x10);
+		dev_info(raw->dev, "%s: raw int%d_en/sta/stax 0x%08x 0x%08x 0x%08x",
+			 __func__, i,
+			 readl(raw->base + base),
+			 readl(raw->base + base + 0x4),
+			 readl(raw->base + base + 0x8));
+	}
+
+	for (i = 1; i <= 25; ++i) {
+		base = REG_CAMCTL2_INT_EN + ((i - 1) * 0x10);
+		dev_info(yuv->dev, "%s: yuv int%d_en/sta/stax 0x%08x 0x%08x 0x%08x",
+			 __func__, i,
+			 readl(yuv->base + base),
+			 readl(yuv->base + base + 0x4),
+			 readl(yuv->base + base + 0x8));
+	}
 }
 
 static void dump_tg_setting(struct mtk_raw_device *dev, const char *msg)

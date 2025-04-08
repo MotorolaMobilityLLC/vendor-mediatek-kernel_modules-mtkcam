@@ -8,6 +8,7 @@
 #include <linux/sched/clock.h>
 
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
+#include <soc/mediatek/smi.h>
 
 #include "mtk_cam-fmt_utils.h"
 #include "mtk_cam.h"
@@ -6945,6 +6946,7 @@ int mtk_cam_job_manually_apply_isp(struct mtk_cam_job *job, bool wait_completion
 	if (!wait_for_completion_timeout(&job->compose_completion, timeout)) {
 		pr_info("[%s] error: wait for job composed timeout\n",
 			__func__);
+		call_jobop(job, dump, 1, MSG_COMPOSE_TIMEOUT);
 		return -1;
 	}
 	if (is_extisp(job))
@@ -6953,35 +6955,37 @@ int mtk_cam_job_manually_apply_isp(struct mtk_cam_job *job, bool wait_completion
 		mtk_cam_job_state_set(&job->job_state, ISP_STATE, S_ISP_APPLYING);
 
 	raw_change_handle_before_cq(job, true);
+
+	if (wait_completion)
+		pr_info("[%s] before apply cq_not_ready:%lx", __func__,
+				atomic_long_read(&job->cq_ref.cq_not_ready));
+
 	call_jobop(job, apply_isp);
 
 	if (!wait_completion)
 		return 0;
 
 	if (!wait_for_completion_timeout(&job->cq_exe_completion, timeout)) {
+		int i;
+		struct mtk_cam_ctx *ctx = job->src_ctx;
+
 		pr_info("[%s] error: wait for job cq exe\n", __func__);
 		pr_info("[%s] cq_not_ready:%lx", __func__,
 			atomic_long_read(&job->cq_ref.cq_not_ready));
-		if (CAM_DEBUG_ENABLED(QOF)) {
-			int i;
-			struct mtk_cam_ctx *ctx = job->src_ctx;
 
-			for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
-				if (ctx->hw_raw[i]) {
-					struct mtk_raw_device *raw_dev =
-						dev_get_drvdata(ctx->hw_raw[i]);
+		for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
+			if (ctx->hw_raw[i]) {
+				struct mtk_raw_device *raw_dev =
+					dev_get_drvdata(ctx->hw_raw[i]);
 
-					qof_dump_cq_addr(raw_dev);
-					qof_dump_trigger_cnt(raw_dev);
-					qof_dump_voter(raw_dev);
-					qof_dump_power_state(raw_dev);
-					break;
-				}
+				qof_force_dump_all(raw_dev);
 			}
 		}
-		call_jobop(job, dump, 1,
-			is_dc_mode(job) ? MSG_DC_SKIP_FRAME : MSG_DEQUE_ERROR);
-		return -1;
+
+		mtk_smi_dbg_hang_detect("camsys-raw");
+		call_jobop(job, dump, 1, MSG_STREAM_ON_ERROR);
+
+		return -2;
 	}
 
 	return 0;

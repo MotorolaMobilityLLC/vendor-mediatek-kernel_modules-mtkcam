@@ -1443,9 +1443,7 @@ static int mtk_cam_ctrl_stream_on_job(struct mtk_cam_job *job)
 
 STREAM_ON_FAIL:
 	dev_info(dev, "%s: failed. ctx=%d\n", __func__, ctx->stream_id);
-	mtk_smi_dbg_hang_detect("camsys-raw");
 	mtk_cam_event_error(ctrl, MSG_STREAM_ON_ERROR);
-	WRAP_AEE_EXCEPTION(MSG_STREAM_ON_ERROR, "stream on failed");
 	return -1;
 }
 

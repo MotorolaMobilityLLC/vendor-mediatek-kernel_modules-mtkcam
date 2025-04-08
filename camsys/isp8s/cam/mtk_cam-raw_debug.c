@@ -306,3 +306,27 @@ void mtk_cam_dump_ufd_debug(struct mtk_raw_device *raw_dev,
 				 mod_name, sel, readl(dbg_port));
 	}
 }
+
+void mtk_cam_dump_cq_debug(struct mtk_raw_device *raw_dev)
+{
+	void __iomem *dbg_sel =  raw_dev->base + REG_CAMCQ_DBG_DEBUG_SEL;
+	void __iomem *dbg_port = raw_dev->base + REG_CAMCQ_DBG_DEBUG_DATA;
+	u32 cq_en = readl(raw_dev->base_inner + REG_CAMCQ_CQ_EN);
+	int sel = 0, main_sub_sel = 0;
+
+	for (main_sub_sel = 0; main_sub_sel <= 1; ++main_sub_sel) {
+		SET_FIELD(&cq_en, CAMCQ_CQ_DBG_MAIN_SUB_SEL, main_sub_sel);
+		writel(cq_en, raw_dev->base + REG_CAMCQ_CQ_EN);
+
+		for (sel = 0x0; sel <= 0x8; sel++) {
+			writel(sel, dbg_sel);
+			dev_info(raw_dev->dev, "%s: %s sel=0x%08x data=0x%08x\n",
+					 __func__, (cq_en) ? "sub" : "main",
+					 sel, readl(dbg_port));
+		}
+	}
+
+	dev_info(raw_dev->dev, "%s: start_status 0x%08x",
+		 __func__, readl(raw_dev->base + REG_CAMCTL_START_ST));
+}
+

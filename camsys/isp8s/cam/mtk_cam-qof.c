@@ -10,6 +10,7 @@
 #include "mtk_cam-qof.h"
 #include "mtk_cam-qof_regs.h"
 #include "mtk_cam-raw_regs.h"
+#include "mtk_cam-raw_debug.h"
 #include "mtk_cam-reg_utils.h"
 #include "mtk_cam-bit_mapping.h"
 #include "mtk_cam-hsf.h"
@@ -1540,6 +1541,8 @@ void qof_dump_cq_addr(struct mtk_raw_device *raw)
 				 readl_relaxed(raw->base_inner + REG_CAMCQ_CQ_SUB_THR0_BASEADDR_2),
 				 readl_relaxed(raw->base_inner + REG_CAMCQ_CQ_SUB_THR0_BASEADDR_2_MSB),
 				 readl_relaxed(raw->base_inner + REG_CAMCQ_CQ_SUB_THR0_DESC_SIZE_2));
+
+		mtk_cam_dump_cq_debug(raw);
 	}
 }
 

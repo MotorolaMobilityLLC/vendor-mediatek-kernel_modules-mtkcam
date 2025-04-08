@@ -5827,6 +5827,9 @@ static int mtk_cam_runtime_resume(struct device *dev)
 	mtk_cam_fmon_enable(&cam_dev->fmon);
 	vmm_enable_cvfs(VMM_CVFS_USR_CAMSYS , VMM_CVFS_CAM_SEL);
 
+	if (GET_PLAT_HW(qof_support))
+		mtk_cam_reset_itc(cam_dev);
+
 	enable_irq(cam_dev->qoftop_irq);
 
 	return 0;
