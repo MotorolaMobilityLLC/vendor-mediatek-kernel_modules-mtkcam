@@ -5051,6 +5051,12 @@ static enum VC_FEATURE fd_desc_to_vc_feature(
 	case VC_RAW_FLICKER_DATA:
 		ret = VC_RAW_FLICKER_DATA;
 		break;
+	case VC_META_DATA_0:
+		ret = VC_META_DATA_0;
+		break;
+	case VC_META_DATA_1:
+		ret = VC_META_DATA_1;
+		break;
 	default:
 		ret = VC_RAW_DATA;
 		break;

@@ -58,6 +58,13 @@ static inline unsigned int get_code2dt(unsigned int code)
 	case MEDIA_BUS_FMT_SGRBG14_1X14:
 	case MEDIA_BUS_FMT_SRGGB14_1X14:
 		return 0x2d;
+
+	case MEDIA_BUS_FMT_SBGGR16_1X16:
+	case MEDIA_BUS_FMT_SGBRG16_1X16:
+	case MEDIA_BUS_FMT_SGRBG16_1X16:
+	case MEDIA_BUS_FMT_SRGGB16_1X16:
+		return 0x2e;
+
 	case MEDIA_BUS_FMT_YUYV8_2X8:  //0x2008
 	case MEDIA_BUS_FMT_UYVY8_2X8:  //0x2006
 	case MEDIA_BUS_FMT_VYUY8_2X8:  //0x2007
@@ -99,6 +106,8 @@ static inline int get_mbus_format_by_dt(int dt, int remap_type)
 		return MEDIA_BUS_FMT_SBGGR12_1X12;
 	case 0x2d:
 		return MEDIA_BUS_FMT_SBGGR14_1X14;
+	case 0x2e:
+		return MEDIA_BUS_FMT_SBGGR16_1X16;
 	case 0x24:
 		return MEDIA_BUS_FMT_RGB888_1X24;
 	case 0x1e:

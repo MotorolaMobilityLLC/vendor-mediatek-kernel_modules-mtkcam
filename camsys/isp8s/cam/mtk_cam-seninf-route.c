@@ -385,6 +385,44 @@ void mtk_cam_seninf_get_vcinfo_test(struct seninf_ctx *ctx)
 
 		ctx->cur_first_vs = 0;
 		ctx->cur_last_vs = 1;
+	} else if (ctx->is_test_model == 6) {
+		vc = &vcinfo->vc[vcinfo->cnt++];
+		vc->vc = 1;
+		vc->dt = 0x2a;
+		vc->feature = VC_META_DATA_1;
+		vc->out_pad = PAD_SRC_META1;
+		vc->group = 0;
+		vc->exp_hsize = TEST_MODEL_HSIZE;
+		vc->exp_vsize = TEST_MODEL_VSIZE;
+
+		vc = &vcinfo->vc[vcinfo->cnt++];
+		vc->vc = 0;
+		vc->dt = 0x2b;
+		vc->feature = VC_STAGGER_NE;
+		vc->out_pad = PAD_SRC_RAW0;
+		vc->group = 0;
+		vc->exp_hsize = TEST_MODEL_HSIZE;
+		vc->exp_vsize = TEST_MODEL_VSIZE;
+
+		vc = &vcinfo->vc[vcinfo->cnt++];
+		vc->vc = 2;
+		vc->dt = 0x2a;
+		vc->feature = VC_META_DATA_0;
+		vc->out_pad = PAD_SRC_META0;
+		vc->group = 0;
+		vc->exp_hsize = TEST_MODEL_HSIZE;
+		vc->exp_vsize = TEST_MODEL_VSIZE;
+
+		vc = &vcinfo->vc[vcinfo->cnt++];
+		vc->vc = 3;
+		vc->dt = 0x2e;
+		vc->feature = VC_STAGGER_ME;
+		vc->out_pad = PAD_SRC_RAW1;
+		vc->group = 0;
+		vc->exp_hsize = TEST_MODEL_HSIZE;
+		vc->exp_vsize = TEST_MODEL_VSIZE;
+		ctx->cur_first_vs = 0;
+		ctx->cur_last_vs = 4;
 	}
 }
 
@@ -838,7 +876,7 @@ int mtk_cam_seninf_fill_outpad_to_vc(struct seninf_ctx *ctx,
 		vc->out_pad = PAD_SRC_META1;
 		break;
 	default:
-		if (vc->dt > 0x29 && vc->dt < 0x2e) {
+		if (vc->dt > 0x29 && vc->dt < 0x2f) {
 			switch (desc) {
 			case VC_STAGGER_ME:
 				vc->out_pad = PAD_SRC_RAW1;
@@ -2037,6 +2075,11 @@ int mtk_cam_seninf_get_tag_order(struct v4l2_subdev *sd,
 
 		if (vc_sid->fd.entry[i].bus.csi2.fs_seq == MTK_FRAME_DESC_FS_SEQ_ONLY_ONE) {
 			ret = EXPOSURE_FIRST;
+			break;
+		}
+
+		if (vc_sid->fd.entry[i].bus.csi2.fs_seq == MTK_FRAME_DESC_FS_SEQ_LAST) {
+			ret = EXPOSURE_LAST;
 			break;
 		}
 

@@ -3316,6 +3316,7 @@ static int seninf_test_pattern(struct seninf_ctx *ctx, u32 pattern)
 	case 3:// 1 RAW + 1 PD
 	case 4:// 3 RAW + 2 PD
 	case 5:// 1 RAW + 1 W channel
+	case 6:// For PreISP real pattern test
 		if (ctx->streaming)
 			return -EBUSY;
 		ctx->is_test_model = pattern;
@@ -3651,6 +3652,7 @@ static const char * const seninf_test_pattern_menu[] = {
 	"generate_test_pattern_pd",
 	"generate_test_pattern_5_src_pad",
 	"generate_test_pattern_raw_and_w",
+	"generate_test_pattern_preISP",
 };
 
 #ifdef SENINF_DEBUG
