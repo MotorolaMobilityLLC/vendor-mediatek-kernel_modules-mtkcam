@@ -74,6 +74,13 @@ const struct mtk_imgsys_init_array
 	{0x0120, 0x00010010}, /* WPE_TOP_STG_CTL_RANGE_LR jayer*/
 	// {0x0124, 0x00010010}, /* WPE_TOP_STG_CTL_RANGE_LR  liber*/
 
+	// Disable WPE DCE
+	{0x004C, 0xFFFFFFFF}, /* WPE_TOP_CTL_WPE_DCM_DIS */
+	{0x0050, 0xFFFFFFFF}, /* WPE_TOP_CTL_DMA_DCM_DIS */
+	{0x00B8, 0xFFFFFFFF}, /* WPE_TOP_CTL_WPE_DCM_DIS2 */
+	{0x00BC, 0xFFFFFFFF}, /* WPE_TOP_CTL_DMA_DCM_DIS2 */
+	{0x0FC4, 0x0000003F}, /* WPE_DEC_DEC_CTL2 */
+
 	// {0x04A0, 0x10000040}, /* SVECI_CON, fifo size 0x40 */
 	// {0x04A4, 0x10400040}, /* SVECI_CON2, set pre-ultra */
 	// {0x04A8, 0x00400040}, /* SVECI_CON3, disable ultra */
