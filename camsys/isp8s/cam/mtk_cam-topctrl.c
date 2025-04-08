@@ -13,7 +13,7 @@ static int cam_remap_qos_en = 1;
 module_param(cam_remap_qos_en, int, 0644);
 MODULE_PARM_DESC(cam_remap_qos_en, "1 : active 16 level qos");
 
-static int cam_remap_hrt_tbl = 0x66E066E;
+static int cam_remap_hrt_tbl = 0xCCE0CCE;
 module_param(cam_remap_hrt_tbl, int, 0644);
 MODULE_PARM_DESC(cam_remap_hrt_tbl, "hrt remap lut");
 
@@ -80,7 +80,7 @@ void mtk_cam_main_sv_halt(struct mtk_cam_device *cam)
 	writel_relaxed(0x3, cam->base + REG_CAM_MAIN_HALT3_EN);
 	writel_relaxed(0x3, cam->base + REG_CAM_MAIN_HALT4_EN);
 	writel_relaxed(0x3, cam->base + REG_CAM_MAIN_HALT5_EN);
-	writel_relaxed(0x3, cam->base + REG_CAM_MAIN_HALT6_EN);
+	writel_relaxed(0x7, cam->base + REG_CAM_MAIN_HALT6_EN);
 
 	pr_info("%s: 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x\n",
 		__func__,
