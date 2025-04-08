@@ -2778,6 +2778,13 @@ static int job_pda_hw_init(struct mtk_cam_job *job, int pda_idx)
 				mtk_cam_pda_dev_config(pda);
 			}
 		}
+		if (ctx->hw_sv) {
+			struct mtk_camsv_device *sv;
+
+			sv = dev_get_drvdata(ctx->hw_sv);
+			pr_info("%s: camsv pda dcif setting0x%x\n", __func__,
+				readl(sv->base + 0x0228));
+		}
 	}
 	if (pda_need_uninit) {
 		pr_info("%s pda_need_init %lx pda_need_unint %lx use engine %lx ",
@@ -2792,7 +2799,7 @@ static int job_pda_hw_init(struct mtk_cam_job *job, int pda_idx)
 	return 0;
 }
 
-static int job_raw_change_hw_init(struct mtk_cam_job *job)
+static int job_raw_change_hw_init(struct mtk_cam_job *job, int pda_idx)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	unsigned long selected;
@@ -2804,6 +2811,11 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job)
 		dev_info(ctx->cam->dev, "%s warning: release resource prev:0x%lx",
 			__func__, ctx->used_engine);
 	selected = mtk_cam_select_hw(job);
+
+	/* select pda hw */
+	if (pda_idx != -1)
+		selected |= bit_map_bit(MAP_HW_PDA, pda_idx);
+
 	if (!selected)
 		return -1;
 	if (mtk_cam_occupy_engine(ctx->cam, selected))
@@ -3032,7 +3044,7 @@ _job_pack_otf_stagger(struct mtk_cam_job *job,
 	}
 	if (job->raw_change) {
 		/* check if slave raw need to init or uninit */
-		job_raw_change_hw_init(job);
+		job_raw_change_hw_init(job, pda_idx);
 	}
 
 	job_pda_hw_init(job, pda_idx);
@@ -3311,7 +3323,7 @@ _job_pack_normal(struct mtk_cam_job *job,
 	}
 	if (job->raw_change) {
 		/* check if slave/new raw need to uninit or init */
-		job_raw_change_hw_init(job);
+		job_raw_change_hw_init(job, pda_idx);
 	}
 
 	job_pda_hw_init(job, pda_idx);
