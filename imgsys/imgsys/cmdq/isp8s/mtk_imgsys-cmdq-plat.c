@@ -1642,6 +1642,7 @@ int imgsys_cmdq_task_aee_cb_plat8s(struct cmdq_cb_data data)
 				err_idx, real_frm_idx,
 				cb_param->task_id, cb_param->task_num, cb_param->task_cnt, cb_param->thd_idx,
 				cur_cb_idx[cb_param->thd_idx], g_cb_idx[cb_param->thd_idx]);
+			return ret;
 		}
 	}
 #endif
@@ -2213,6 +2214,29 @@ int imgsys_cmdq_task_aee_cb_plat8s(struct cmdq_cb_data data)
 	return ret;
 }
 
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+bool imgsys_cmdq_task_skip_timeout_cb_plat8s(void *data)
+{
+	struct cmdq_skip_timeout_cb_data *skip_data;
+	s32 event;
+	bool ret = false;
+
+	skip_data = (struct cmdq_skip_timeout_cb_data *)data;
+	event = cmdq_get_inst_event(skip_data->pkt, skip_data->pa_curr);
+	if ((skip_data->pkt->loop == true) && (event > 0)){
+		if ((event >= IMGSYS_CMDQ_PKT_REUSE_BEGIN) &&
+		(event <= IMGSYS_CMDQ_PKT_REUSE_END)) {
+			/* Do skip timeout due to pkt reuse event happened */
+			pr_info(
+			"%s: Do skip timeout due to pkt(%p) reuse event(%d) happened!",
+			__func__, skip_data->pkt, event);
+			ret = true;
+		}
+	}
+	return ret;
+}
+#endif
+
 int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				struct swfrm_info_t *frm_info,
 				void (*cmdq_cb)(struct cmdq_cb_data data,
@@ -2425,21 +2449,29 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					__func__, thd_idx, cur_cb_idx[thd_idx], g_cb_idx[thd_idx]);
 				usleep_range(1000, 1050);
 			}
-				cmdq_mbox_stop(imgsys_clt[thd_idx]);
-				is_pkt_created[thd_idx] = 0;
-				g_pkt_reuse[thd_idx] = NULL;
-				cur_cmd_block[thd_idx] = 0;
-				g_reuse_cmd_num[thd_idx] = 0;
-				g_reuse_cmd_num_max[thd_idx] = 0;
-				g_reuse_event_num[thd_idx] = 0;
-				g_reuse_event_num_max[thd_idx] = 0;
-				g_cb_idx[thd_idx] = 0;
-				cur_cb_idx[thd_idx] = 0;
-				for (int pkt_idx = 0; pkt_idx < IMGSYS_PKT_REUSE_POOL_NUM; pkt_idx++) {
-					cmdq_clear_event(imgsys_clt[0]->chan,
-						imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_PKT_REUSE_POOL_0].event +
-						(thd_idx * IMGSYS_PKT_REUSE_POOL_NUM) + pkt_idx);
-				}
+			cmdq_mbox_stop(imgsys_clt[thd_idx]);
+			is_pkt_created[thd_idx] = 0;
+			g_pkt_reuse[thd_idx] = NULL;
+			cur_cmd_block[thd_idx] = 0;
+			g_reuse_cmd_num[thd_idx] = 0;
+			g_reuse_cmd_num_max[thd_idx] = 0;
+			g_reuse_event_num[thd_idx] = 0;
+			g_reuse_event_num_max[thd_idx] = 0;
+			g_cb_idx[thd_idx] = 0;
+			cur_cb_idx[thd_idx] = 0;
+			for (int pkt_idx = 0; pkt_idx < IMGSYS_PKT_REUSE_POOL_NUM; pkt_idx++) {
+				cmdq_clear_event(imgsys_clt[0]->chan,
+					imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_PKT_REUSE_POOL_0].event +
+					(thd_idx * IMGSYS_PKT_REUSE_POOL_NUM) + pkt_idx);
+			}
+		} else if ((frm_idx == 0) && (g_reuse_cb_param[thd_idx][cur_cb_idx[thd_idx]] == NULL) &&
+			((frm_info->is_ctrl_cache == 1) && (is_pkt_created[thd_idx] == IMGSYS_PKT_REUSE_POOL_NUM))) {
+			/* Reset pkt_reuse timer due to new task coming w/o remaining task in task list */
+			if (imgsys_cmdq_dbg_enable_plat8s())
+				dev_dbg(imgsys_dev->dev,
+					"%s: reset pkt_reuse timer, thd_idx(%d), cb_idx(%d/%d)\n",
+					__func__, thd_idx, cur_cb_idx[thd_idx], g_cb_idx[thd_idx]);
+			cmdq_thread_reset_timer(imgsys_clt[thd_idx]->chan);
 		}
 #endif
 
@@ -2622,7 +2654,8 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 						g_cb_param_idx = 0;
 					}
 					cb_param = &g_cb_param[g_cb_param_idx];
-					if (cb_param->isOccupy) {
+				if (cb_param->isOccupy) {
+					if (imgsys_cmdq_dbg_enable_plat8s())
 						dev_info(imgsys_dev->dev,
 							"%s: g_cb_param[%d] is occypied!!! in block(%d) for frm(%d/%d)\n",
 							__func__, g_cb_param_idx, blk_idx,
@@ -2632,10 +2665,10 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 						//if (isTimeShared)
 							//mutex_unlock(&(imgsys_dev->vss_blk_lock));
 						//return -1;
-					} else {
-						cb_param->isOccupy = true;
-						break;
-					}
+				} else {
+					cb_param->isOccupy = true;
+					break;
+				}
 				}
 				/* Fail to get available cb_param from pool */
 				if (cb_param_cnt == IMGSYS_CMDQ_CBPARAM_NUM) {
@@ -2833,6 +2866,7 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 						pkt->loop = true;
 						pkt->loop_cb_times_by_cookie = true;
 						pkt->skip_add_cookie = false;
+						pkt->skip_timeout_cb = imgsys_cmdq_task_skip_timeout_cb_plat8s;
 						pr_info(
 						"%s: cmdq_pkt_finalize_loop frame_last pkt(0x%lx) is_pkt(%d) thd_idx(%d) reuse_cmd(%d) reuse_cmd_max(%d) reuse_event(%d) reuse_event_max(%d)\n",
 							__func__, (unsigned long)pkt, is_pkt_created[thd_idx], thd_idx,
