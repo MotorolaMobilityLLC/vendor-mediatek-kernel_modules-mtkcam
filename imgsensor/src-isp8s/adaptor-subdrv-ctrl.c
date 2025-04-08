@@ -3073,6 +3073,11 @@ void set_dcg_vs_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 	// NOTE: ctx->frame_length is not precise
 	//ctx->frame_length = frame_length ? frame_length : ctx->min_frame_length;
 
+	// fall back to max fps
+	if (!frame_time_ns && ctx->s_ctx.mode[ctx->current_scenario_id].max_framerate) {
+		frame_time_ns = 10000000000 / ctx->s_ctx.mode[ctx->current_scenario_id].max_framerate;
+	}
+
 	if (exp_cnt > ARRAY_SIZE(ctx->exposure)) {
 		DRV_LOGE(ctx, "invalid exp_cnt:%u>%lu\n", exp_cnt, ARRAY_SIZE(ctx->exposure));
 		exp_cnt = ARRAY_SIZE(ctx->exposure);
@@ -3174,7 +3179,7 @@ void set_dcg_vs_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 			ctx->frame_length_in_lut[4]);
 
 		lut_0_ft_ns = line2ntime(ctx->frame_length_in_lut[0], linetime_ns_in_lut[0]);
-		DRV_LOG_MUST(ctx, "lut-A ft = %llu ns\n", lut_0_ft_ns);
+		DRV_LOG_MUST(ctx, "lut-A ft = %llu ns, frame time = %llu ns\n", lut_0_ft_ns, frame_time_ns);
 		if (frame_time_ns >= lut_0_ft_ns) {
 			/* fll_b = max(fll_b, fll-fll_a) */
 			ctx->frame_length_in_lut[1] = max(ctx->frame_length_in_lut[1],
