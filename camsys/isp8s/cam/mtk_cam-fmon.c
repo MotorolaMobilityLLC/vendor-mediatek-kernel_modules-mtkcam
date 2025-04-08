@@ -11,12 +11,16 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/vmalloc.h>
+#include <soc/mediatek/emi.h>
 
 #include "mtk_cam.h"
 #include "mtk_cam-job_utils.h"
 #include "mtk_cam-reg_utils.h"
 #include "mtk_cam-fmon.h"
 #include "mtk_cam-fmon_regs.h"
+#if IS_ENABLED(CONFIG_MTK_MBRAINK_BRIDGE)
+#include "mbraink_bridge_hrt.h"
+#endif
 
 /* ep default fix yuv a/b/c */
 static int fmon_enable = 1;
@@ -59,12 +63,14 @@ static int dbg_fmon_tx_csr = -1;
 module_param(dbg_fmon_tx_csr, int, 0644);
 MODULE_PARM_DESC(dbg_fmon_tx_csr, "fifo monitor tx csr");
 
+static int fmon_mbrain_enable;
+module_param(fmon_mbrain_enable, int, 0644);
+
 #define FMON_THRS_RATIO_N 60
 #define FMON_THRS_RATIO_D 100
 #define FMON_STOP_THRS_RATIO_N 90
 #define FMON_STOP_THRS_RATIO_D 100
-
-#define FMON_STOP_THRS_MAX 0x1FFF
+#define FMON_STOP_THRS_MAX     0x1FFF
 
 bool is_fmon_support(void)
 {
@@ -75,8 +81,6 @@ static u32 stop_thres_ratio(u32 size)
 {
 	if (dbg_stop_threshold != -1)
 		return (size * dbg_stop_threshold) / FMON_STOP_THRS_RATIO_D;
-	else if (size == FMON_STOP_THRS_MAX)
-		return FMON_STOP_THRS_MAX;
 	else
 		return (size * FMON_STOP_THRS_RATIO_N) / FMON_STOP_THRS_RATIO_D;
 }
@@ -101,52 +105,52 @@ static struct fmon_settings fmon_map
 #endif
 	/* pipe-a dc only */
 	[FPIPE_SV][FPIPE_NONE][FPIPE_NONE] = {
-		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 4, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = FMON_STOP_THRS_MAX, },
+		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
+		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
+		{ .tx_mux = 4, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
+		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
 	},
 	/* pipe-b dc only */
 	[FPIPE_NONE][FPIPE_SV][FPIPE_NONE] = {
-		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = FMON_STOP_THRS_MAX, },
+		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
+		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
+		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
+		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
 	},
 	/* pipe-c dc only */
 	[FPIPE_NONE][FPIPE_NONE][FPIPE_SV] = {
-		{ .tx_mux = 2, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = FMON_STOP_THRS_MAX, },
+		{ .tx_mux = 2, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
+		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
+		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
+		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
 	},
 	/* pipe-a,b dc */
 	[FPIPE_SV][FPIPE_SV][FPIPE_NONE] = {
-		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 4, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = FMON_STOP_THRS_MAX, },
+		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
+		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
+		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
+		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
 	},
 	/* pipe-b,c dc */
 	[FPIPE_NONE][FPIPE_SV][FPIPE_SV] = {
-		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = FMON_STOP_THRS_MAX, },
+		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
+		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
+		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
+		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
 	},
 	/* pipe-a,c dc */
 	[FPIPE_SV][FPIPE_NONE][FPIPE_SV] = {
-		{ .tx_mux = 2, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 4, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = FMON_STOP_THRS_MAX, },
+		{ .tx_mux = 2, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
+		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
+		{ .tx_mux = 4, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
+		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
 	},
 	/* pipe-a,b,c dc */
 	[FPIPE_SV][FPIPE_SV][FPIPE_SV] = {
-		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 4, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = FMON_STOP_THRS_MAX, },
-		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = FMON_STOP_THRS_MAX, },
+		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_0, .fifo_size = 1536, },
+		{ .tx_mux = 0, .rx_mux = 0, .engine = FMON_CAMSV_1, .fifo_size = 1536, },
+		{ .tx_mux = 3, .rx_mux = 0, .engine = FMON_CAMSV_2, .fifo_size = 1536, },
+		{ .tx_mux = 1, .rx_mux = 0, .engine = FMON_CAMSV_3, .fifo_size = 1536, },
 	},
 	/* more combination ... */
 };
@@ -227,7 +231,7 @@ static void fmon_tx_mux(struct mtk_fmon_device *fmon,
 }
 
 static void fmon_threshold(struct mtk_fmon_device *fmon,
-			enum FMON_INDEX fmon_idx, int fifo_size)
+			enum FMON_INDEX fmon_idx, int fifo_size, int is_sv)
 {
 	u32 stop_thr_0, stop_thr_1;
 	u32 fifo_thr = 0;
@@ -243,7 +247,8 @@ static void fmon_threshold(struct mtk_fmon_device *fmon,
 	/* start threshold percentage is 60% */
 	switch(fmon_idx) {
 	case FMON_0:
-		SET_FIELD(&stop_thr_0, CAM_FMON_TRIG_STOP_FIFO_THR_0, stop_thres_ratio(fifo_size));
+		SET_FIELD(&stop_thr_0, CAM_FMON_TRIG_STOP_FIFO_THR_0,
+			is_sv ? FMON_STOP_THRS_MAX : stop_thres_ratio(fifo_size));
 		writel(stop_thr_0, fmon->base + REG_CAM_FMON_WIN_DELAY_THR_0);
 
 		SET_FIELD(&fifo_thr, CAM_FMON_PER_THR_0, dbg_threshold_pr);
@@ -251,7 +256,8 @@ static void fmon_threshold(struct mtk_fmon_device *fmon,
 		writel(fifo_thr, fmon->base + REG_CAM_FMON_THRESHOLD_0);
 	break;
 	case FMON_1:
-		SET_FIELD(&stop_thr_0, CAM_FMON_TRIG_STOP_FIFO_THR_1, stop_thres_ratio(fifo_size));
+		SET_FIELD(&stop_thr_0, CAM_FMON_TRIG_STOP_FIFO_THR_1,
+			is_sv ? FMON_STOP_THRS_MAX : stop_thres_ratio(fifo_size));
 		writel(stop_thr_0, fmon->base + REG_CAM_FMON_WIN_DELAY_THR_0);
 
 		SET_FIELD(&fifo_thr, CAM_FMON_PER_THR_1, dbg_threshold_pr);
@@ -259,7 +265,8 @@ static void fmon_threshold(struct mtk_fmon_device *fmon,
 		writel(fifo_thr, fmon->base + REG_CAM_FMON_THRESHOLD_1);
 	break;
 	case FMON_2:
-		SET_FIELD(&stop_thr_1, CAM_FMON_TRIG_STOP_FIFO_THR_2, stop_thres_ratio(fifo_size));
+		SET_FIELD(&stop_thr_1, CAM_FMON_TRIG_STOP_FIFO_THR_2,
+			is_sv ? FMON_STOP_THRS_MAX : stop_thres_ratio(fifo_size));
 		writel(stop_thr_1, fmon->base + REG_CAM_FMON_WIN_DELAY_THR_1);
 
 		SET_FIELD(&fifo_thr, CAM_FMON_PER_THR_2, dbg_threshold_pr);
@@ -267,7 +274,8 @@ static void fmon_threshold(struct mtk_fmon_device *fmon,
 		writel(fifo_thr, fmon->base + REG_CAM_FMON_THRESHOLD_2);
 	break;
 	case FMON_3:
-		SET_FIELD(&stop_thr_1, CAM_FMON_TRIG_STOP_FIFO_THR_3, stop_thres_ratio(fifo_size));
+		SET_FIELD(&stop_thr_1, CAM_FMON_TRIG_STOP_FIFO_THR_3,
+			is_sv ? FMON_STOP_THRS_MAX : stop_thres_ratio(fifo_size));
 		writel(stop_thr_1, fmon->base + REG_CAM_FMON_WIN_DELAY_THR_1);
 
 		SET_FIELD(&fifo_thr, CAM_FMON_PER_THR_3, dbg_threshold_pr);
@@ -339,7 +347,7 @@ static void fmon_bind_engine(struct mtk_fmon_device *fmon)
 		fmon_debug_setings(i, &setting);
 		fmon_rx_mux(fmon, i, setting.rx_mux);
 		fmon_tx_mux(fmon, setting.engine, setting.tx_mux);
-		fmon_threshold(fmon, i, setting.fifo_size);
+		fmon_threshold(fmon, i, setting.fifo_size, is_camsv_engine(setting.engine));
 	}
 
 	pr_info("%s: fmon_setting:0x%x\n",
@@ -396,6 +404,19 @@ OUT:
 		__func__, fmon->pipes[0], fmon->pipes[1], fmon->pipes[2], used_raw);
 }
 
+void fmon_reset_timer_fn(struct timer_list *timer)
+{
+	struct mtk_fmon_device *fmon =
+		container_of(timer, struct mtk_fmon_device, reset_timer);
+	u32 fmon_setting2 = readl(fmon->base + REG_CAM_FMON_SETTING_2);
+
+	atomic_and(~(FMON_SIG_START), &fmon->fmon_triggered);
+	writel(fmon_setting2 | 0xF, fmon->base + REG_CAM_FMON_SETTING_2);
+
+	pr_info("%s: fmon_setting_2:0x%x\n", __func__,
+					readl(fmon->base + REG_CAM_FMON_SETTING_2));
+}
+
 /* once by cam-main pwr on */
 #define FMON_TRIG_START_MASK 0x00000F0F
 #define FMON_TRIG_STOP_MASK  0x000000F0
@@ -408,8 +429,7 @@ void mtk_cam_fmon_enable(struct mtk_fmon_device *fmon)
 
 	mutex_lock(&fmon->op_lock);
 
-	atomic_set(&fmon->stop_triggered, 0);
-	atomic_set(&fmon->start_triggered, 0);
+	atomic_set(&fmon->fmon_triggered, 0);
 
 	if (dbg_fmon_bypass) {
 		writel(0x1e000, fmon->base + REG_CAM_FMON_SETTING_3);
@@ -464,7 +484,7 @@ void mtk_cam_fmon_enable(struct mtk_fmon_device *fmon)
 
 	//initialize start threshold
 	writel(0xFFFFFFFF, fmon->base + REG_CAM_FMON_THRESHOLD_0);
-	writel(0xffffffff, fmon->base + REG_CAM_FMON_THRESHOLD_1);
+	writel(0xFFFFFFFF, fmon->base + REG_CAM_FMON_THRESHOLD_1);
 	writel(0xFFFFFFFF, fmon->base + REG_CAM_FMON_THRESHOLD_2);
 	writel(0xFFFFFFFF, fmon->base + REG_CAM_FMON_THRESHOLD_3);
 	//initialize stop threshold
@@ -480,6 +500,8 @@ void mtk_cam_fmon_enable(struct mtk_fmon_device *fmon)
 	writel(val, fmon->base + REG_CAM_FMON_SETTING);
 
 	mutex_unlock(&fmon->op_lock);
+
+	timer_setup(&fmon->reset_timer, fmon_reset_timer_fn, 0);
 
 	pr_info("%s: irq_trig:0x%x fmon_wind_set_0/1:0x%x/0x%x fmon_setting0/2/3:0x%x/0x%x/0x%x ela_ctrl:0x%x\n",
 		__func__,
@@ -498,6 +520,7 @@ void mtk_cam_fmon_enable(struct mtk_fmon_device *fmon)
 void mtk_cam_fmon_disable(struct mtk_fmon_device *fmon)
 {
 	u32 val;
+	int signal;
 
 	if (!is_fmon_support())
 		return;
@@ -514,16 +537,18 @@ void mtk_cam_fmon_disable(struct mtk_fmon_device *fmon)
 	writel(0x80f000, fmon->base + REG_CAM_FMON_SETTING);
 
 	memset(&fmon->pipes, 0, sizeof(fmon->pipes));
+
 	mutex_unlock(&fmon->op_lock);
 
+	del_timer_sync(&fmon->reset_timer);
 	disable_irq(fmon->irq);
 
 	/* toggle cti stop if start is trigged but stop didn't */
-	if (atomic_read(&fmon->stop_triggered))
-		writel(1, fmon->cti_clear);
-	else if (atomic_read(&fmon->start_triggered) &&
-			!atomic_read(&fmon->stop_triggered)) {
+	signal = atomic_read(&fmon->fmon_triggered);
+	if (signal & (FMON_SIG_URGENT | FMON_SIG_START)) {
 		writel(1, fmon->cti_set);
+		writel(1, fmon->cti_clear);
+	} else if (signal & FMON_SIG_STOP) {
 		writel(1, fmon->cti_clear);
 	}
 
@@ -556,58 +581,75 @@ static irqreturn_t mtk_irq_fmon(int irq, void *data)
 	u64 systimer_cnt = arch_timer_read_counter();
 	u64 sched_clock_value = sched_clock();
 	u32 fmon_setting2 = 0, fmon_setting3 = 0;
-	u32 dbg_status = 0;
-	u32 val;
+	u32 val = 0;
 
-	dbg_status = readl_relaxed(fmon->base + REG_CAM_FMON_DBG_STATUS);
 	fmon_setting2 = readl_relaxed(fmon->base + REG_CAM_FMON_SETTING_2);
 	fmon_setting3 = readl_relaxed(fmon->base + REG_CAM_FMON_SETTING_3);
 
-	dev_info(dev, "FMON INT dbg:0x%x, setting2:0x%x, setting3:0x%x, systimer:%llu ns, ktime: %llu ns\n",
-		dbg_status, fmon_setting2, fmon_setting3, systimer_cnt, sched_clock_value);
+	dev_info(dev, "FMON INT: setting2:0x%x, setting3:0x%x, systimer:%llu ns, ktime: %llu ns\n",
+		fmon_setting2, fmon_setting3, systimer_cnt, sched_clock_value);
 
+	/* fifo > 40% urgent start */
+	if (READ_FIELD(fmon_setting2, CAM_FMON_STATUS_0) & BIT(1) ||
+		READ_FIELD(fmon_setting2, CAM_FMON_STATUS_1) & BIT(1) ||
+		READ_FIELD(fmon_setting2, CAM_FMON_STATUS_2) & BIT(1) ||
+		READ_FIELD(fmon_setting2, CAM_FMON_STATUS_3) & BIT(1)) {
+		writel(fmon_setting2 & ~(0xF00), fmon->base + REG_CAM_FMON_SETTING_2);
+		atomic_or(FMON_SIG_URGENT, &fmon->fmon_triggered);
+	}
+
+	/* fifo > 60% */
+	if (READ_FIELD(fmon_setting2, CAM_FMON_STATUS_0) & BIT(0) ||
+		READ_FIELD(fmon_setting2, CAM_FMON_STATUS_1) & BIT(0) ||
+		READ_FIELD(fmon_setting2, CAM_FMON_STATUS_2) & BIT(0) ||
+		READ_FIELD(fmon_setting2, CAM_FMON_STATUS_3) & BIT(0)) {
+		writel(fmon_setting2 & ~(0xF), fmon->base + REG_CAM_FMON_SETTING_2);
+		atomic_or(FMON_SIG_START, &fmon->fmon_triggered);
+	}
+
+	/* fifo > 90% */
 	if (READ_FIELD(fmon_setting2, CAM_FMON_STATUS_0) & BIT(2) ||
 		READ_FIELD(fmon_setting2, CAM_FMON_STATUS_1) & BIT(2) ||
 		READ_FIELD(fmon_setting2, CAM_FMON_STATUS_2) & BIT(2) ||
 		READ_FIELD(fmon_setting2, CAM_FMON_STATUS_3) & BIT(2)) {
 		writel(fmon_setting2 & ~(0xFFF), fmon->base + REG_CAM_FMON_SETTING_2);
-		atomic_set(&fmon->stop_triggered, 1);
-	} else {
-		if (READ_FIELD(fmon_setting2, CAM_FMON_STATUS_0) & BIT(1) ||
-			READ_FIELD(fmon_setting2, CAM_FMON_STATUS_1) & BIT(1) ||
-			READ_FIELD(fmon_setting2, CAM_FMON_STATUS_2) & BIT(1) ||
-			READ_FIELD(fmon_setting2, CAM_FMON_STATUS_3) & BIT(1))
-			writel(fmon_setting2 & ~(0xF00), fmon->base + REG_CAM_FMON_SETTING_2);
+		/* force trigger stop instuction */
+		writel(1, fmon->cti_set);
 
-		if (READ_FIELD(fmon_setting2, CAM_FMON_STATUS_0) & BIT(0) ||
-			READ_FIELD(fmon_setting2, CAM_FMON_STATUS_1) & BIT(0) ||
-			READ_FIELD(fmon_setting2, CAM_FMON_STATUS_2) & BIT(0) ||
-			READ_FIELD(fmon_setting2, CAM_FMON_STATUS_3) & BIT(0))
-			writel(fmon_setting2 & ~(0xF), fmon->base + REG_CAM_FMON_SETTING_2);
-		atomic_set(&fmon->start_triggered, 1);
+		/* stop monitor */
+		val = readl(fmon->base + REG_CAM_FMON_SETTING);
+		SET_FIELD(&val, CAM_FMON_FIFO_MON_EN, 0);
+		SET_FIELD(&val, CAM_FMON_ELA_BUS_SEL, 0);
+		writel(val, fmon->base + REG_CAM_FMON_SETTING);
+		atomic_or(FMON_SIG_STOP, &fmon->fmon_triggered);
 	}
-
 
 	val = readl(fmon->base + REG_CAM_FMON_SETTING);
 	SET_FIELD(&val, CAM_FMON_IRQ_CLEAR, 1);
 	SET_FIELD(&val, CAM_FMON_URGENT_CLEAR, 1);
 	writel(val, fmon->base + REG_CAM_FMON_SETTING);
 
-	if (atomic_read(&fmon->stop_triggered)) {
-		/* stop monitor */
-		val = readl(fmon->base + REG_CAM_FMON_SETTING);
-		SET_FIELD(&val, CAM_FMON_FIFO_MON_EN, 0);
-		SET_FIELD(&val, CAM_FMON_ELA_BUS_SEL, 0);
-		writel(val, fmon->base + REG_CAM_FMON_SETTING);
+	return IRQ_WAKE_THREAD;
+}
 
-		/* force trigger stop instuction */
-		writel(1, fmon->cti_set);
-		//writel(1, fmon->cti_clear);
+#define FMON_RECOVER_TIMER 10000
+static irqreturn_t mtk_thread_irq_fmon(int irq, void *data)
+{
+	struct mtk_cam_device *cam = (struct mtk_cam_device *)data;
+	struct mtk_fmon_device *fmon = &cam->fmon;
+	int signal = atomic_read(&fmon->fmon_triggered);
 
-		dev_info(dev, "FMON int stop :setting:0x%x setting2:0x%x setting3:0x%x\n",
-			readl(fmon->base + REG_CAM_FMON_SETTING),
-			readl(fmon->base + REG_CAM_FMON_SETTING_2),
-			readl(fmon->base + REG_CAM_FMON_SETTING_3));
+	if (signal & FMON_SIG_STOP) {
+		mtk_hrt_issue_flag_set(true);
+		//WRAP_AEE_EXCEPTION(MSG_FMON_FIFO_FULL, __func__);
+	} else if (signal & FMON_SIG_START) {
+		if (fmon_mbrain_enable) {
+#if IS_ENABLED(CONFIG_MTK_MBRAINK_BRIDGE)
+			mtk_mbrain2isp_hrt_cb(dbg_threshold_pr);
+			/* trigger timer to recovery settings */
+			mod_timer(&fmon->reset_timer, jiffies + msecs_to_jiffies(FMON_RECOVER_TIMER));
+#endif
+		}
 	}
 
 	return IRQ_HANDLED;
@@ -693,8 +735,10 @@ int mtk_cam_fmon_probe(struct platform_device *pdev, struct mtk_cam_device *cam)
 	if (fmon->irq < 0)
 		dev_err(dev, "%s: failed to get fmon irq\n", __func__);
 
-	ret = devm_request_irq(dev, fmon->irq,
-			mtk_irq_fmon, IRQF_NO_AUTOEN, dev_name(dev), cam);
+	ret = devm_request_threaded_irq(dev, fmon->irq,
+					mtk_irq_fmon,
+					mtk_thread_irq_fmon,
+					IRQF_NO_AUTOEN, dev_name(dev), cam);
 	if (ret)
 		dev_info(dev, "failed to request irq=%d\n", fmon->irq);
 

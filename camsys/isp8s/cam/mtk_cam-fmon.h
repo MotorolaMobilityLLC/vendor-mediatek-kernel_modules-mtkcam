@@ -6,6 +6,9 @@
 #ifndef __MTK_CAM_FMON_H
 #define __MTK_CAM_FMON_H
 
+#include <linux/timer.h>
+#include <linux/jiffies.h>
+
 enum FMON_INDEX {
 	FMON_0 = 0,
 	FMON_1,
@@ -52,6 +55,12 @@ enum FMON_ENGINE {
 	FMON_ENG_NUM,
 };
 
+enum FMON_SIGNAL {
+	FMON_SIG_URGENT = 1 << 0,
+	FMON_SIG_START  = 1 << 1,
+	FMON_SIG_STOP   = 1 << 2,
+};
+
 struct fmon_settings {
 	u32 tx_mux;
 	u32 rx_mux;
@@ -83,11 +92,18 @@ struct mtk_fmon_device {
 	struct mutex op_lock;
 	enum FMON_PIPE_INFO pipes[3];
 
-	atomic_t stop_triggered;
-	atomic_t start_triggered;
+	atomic_t fmon_triggered;
+
+	struct timer_list reset_timer;
 };
 
+static inline int is_camsv_engine(enum FMON_ENGINE engine)
+{
+	return (engine >= FMON_CAMSV_0 && engine < FMON_ENG_NUM);
+}
+
 extern struct platform_driver mtk_cam_fmon_driver;
+extern int mtk_hrt_issue_flag_set(bool is_hrt_issue);
 
 bool is_fmon_support(void);
 void mtk_cam_fmon_enable(struct mtk_fmon_device *fmon);

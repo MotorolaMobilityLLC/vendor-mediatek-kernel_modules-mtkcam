@@ -886,11 +886,11 @@ int mtk_cam_sv_fifo_monitor_config(struct mtk_camsv_device *sv_dev,
 		(is_on && fifo_core3) ? 1 : 0);
 
 	CAMSV_WRITE_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE1_THD,
-		(fifo_core1 * 9 / 10) << 16);
+		1530 << 16);
 	CAMSV_WRITE_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE2_THD,
-		(fifo_core2 * 9 / 10) << 16);
+		1530 << 16);
 	CAMSV_WRITE_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE3_THD,
-		(fifo_core3 * 9 / 10) << 16);
+		1530 << 16);
 
 	pr_info("%s int_en:0x%x fifo_core:0x%x_%x_%x fifo_core_thd:0x%x_%x_%x\n",
 		__func__,
