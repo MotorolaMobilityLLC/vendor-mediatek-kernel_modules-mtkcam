@@ -1661,6 +1661,7 @@ static int update_s_ctx_mode(struct adaptor_ctx *ctx,
 	COPY_COMMON_MEMBER(pmode, fw_struct, mode_type_in_lbmf);
 	COPY_COMMON_MEMBER(pmode, fw_struct, sw_fl_delay);
 	COPY_COMMON_MEMBER(pmode, fw_struct, support_mcss);
+	COPY_COMMON_MEMBER(pmode, fw_struct, force_wr_mode_setting);
 
 	/* imgsensor_pd_info */
 	if (fw_struct->has_imgsensor_pd_info) {
@@ -2742,7 +2743,7 @@ static int init_with_firmware(struct adaptor_ctx *ctx, struct sensor_firmware *s
 							     modes.mode_list[j].multi_exposure_shutter_range[k].max);
 					}
 					adaptor_logi(ctx,
-						"mode info [%d] aov_m=%u, rosc_m=%u, s_dum_sup=%u, ae_ctrl_sup=%u, expo_order_lbmf=%u, expo_order_dcg=%u, mode_type_lbmf=%u, sw_fl_delay=%u, supp_mcss=%u, cust_m_str_len=%u",
+						"mode info [%d] aov_m=%u, rosc_m=%u, s_dum_sup=%u, ae_ctrl_sup=%u, expo_order_lbmf=%u, expo_order_dcg=%u, mode_type_lbmf=%u, sw_fl_delay=%u, supp_mcss=%u, force_wr_mode_setting=%u, cust_m_str_len=%u",
 						j,
 						modes.mode_list[j].aov_mode,
 						modes.mode_list[j].rosc_mode,
@@ -2753,6 +2754,7 @@ static int init_with_firmware(struct adaptor_ctx *ctx, struct sensor_firmware *s
 						modes.mode_list[j].mode_type_in_lbmf,
 						modes.mode_list[j].sw_fl_delay,
 						modes.mode_list[j].support_mcss,
+						modes.mode_list[j].force_wr_mode_setting,
 						modes.mode_list[j].cust_sensor_mode_data_len);
 
 					if (modes.mode_list[j].dynamic.saturation_info) {
@@ -3153,6 +3155,7 @@ static bool compare_static_ctx(struct adaptor_ctx *ctx,
 		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, mode_type_in_lbmf, "mode %d", i);
 		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, sw_fl_delay, "mode %d", i);
 		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, support_mcss, "mode %d", i);
+		ret |= RET_IF_CHK_FAIL(ctx, mode_target, mode_legacy, force_wr_mode_setting, "mode %d", i);
 	}
 
 	ret |= RET_IF_CHK_FAIL(ctx, target, legacy, list_len, "global info");

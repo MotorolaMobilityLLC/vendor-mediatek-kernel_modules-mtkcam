@@ -504,6 +504,7 @@ struct fw_mode_info {
 	u32 mode_type_in_lbmf;
 	u32 sw_fl_delay;
 	u8 support_mcss;
+	u8 force_wr_mode_setting;
 
 	u32 cust_sensor_mode_data_len;
 
