@@ -58,6 +58,8 @@ static void qof_writel(struct mtk_raw_device *raw, u32 val,
 static void qof_writel_relaxed(struct mtk_raw_device *raw, u32 val,
 							   void __iomem *base, u32 offset);
 
+static int qof_force_xpc_vote(struct mtk_raw_device *raw);
+
 struct raw_io_ops qof_enabled_io_ops = {
 	.__readl = qof_readl,
 	.__readl_relaxed = qof_readl_relaxed,
@@ -207,7 +209,7 @@ int qof_reset(struct mtk_raw_device *raw)
 	writel(rst_val, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_SW_RST);
 	writel(rst_val_off, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_SW_RST);
 
-	qof_init_timer_freq(raw);
+//	qof_init_timer_freq(raw);
 
 	return 0;
 }
@@ -457,8 +459,12 @@ int qof_enable(struct mtk_raw_device *raw, bool enable)
 	raw->qof_enabled = enable;
 	spin_unlock_irqrestore(&cam->qoftop_lock, flags);
 
-	if (en)
+	if (en) {
 		writel(0xfff, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_INT_EN);
+		qof_force_xpc_vote(raw);
+	}
+
+	qof_init_timer_freq(raw);
 
 	dev_info(raw->dev, "qof: %s: %s TOP_CTL 0x%08x",
 			 __func__, (enable) ? "enable" : "disable",
@@ -539,12 +545,12 @@ int qof_setup_twin(struct mtk_raw_device *raw, bool is_master, bool next_raw)
 	return ret;
 }
 
-static int qof_xpc_vote_raw(struct mtk_raw_device *dev, bool enable)
+static int qof_xpc_vote_raw(struct mtk_raw_device *dev, bool enable, bool force)
 {
 	struct mtk_cam_device *cam = dev->cam;
 
 	// TODO: HW_SEQ_MODE
-	if (dev->xpc_raw_enabled != enable) {
+	if ((dev->xpc_raw_enabled != enable) || force) {
 		if (enable) {
 			writel_relaxed(qof_raw_to_bit[dev->id].hwccf_sw_vote_on,
 				   cam->qoftop_base + REG_QOF_CAM_TOP_QOF_HWCCF_SW_CTL);
@@ -559,10 +565,10 @@ static int qof_xpc_vote_raw(struct mtk_raw_device *dev, bool enable)
 	return 0;
 }
 
-static int qof_xpc_vote_rms(struct mtk_raw_device *dev, bool enable)
+static int qof_xpc_vote_rms(struct mtk_raw_device *dev, bool enable, bool force)
 {
 	// TODO: HW_SEQ_MODE
-	if (dev->xpc_rms_enabled != enable) {
+	if ((dev->xpc_rms_enabled != enable) || force) {
 		if (enable) {
 			// NOTE: pulse
 			writel_relaxed(BIT(3), dev->qof_base + REG_QOF_CAM_A_QOF_SPARE1);
@@ -738,12 +744,12 @@ int qof_hwccf_link(struct mtk_raw_device *raw, bool enable)
 {
 	if (enable) {
 		hwccf_link(raw, false);
-		qof_xpc_vote_raw(raw, false);
-		qof_xpc_vote_rms(raw, false);
+		qof_xpc_vote_raw(raw, false, false);
+		qof_xpc_vote_rms(raw, false, false);
 		qof_polling_xpc_vote(raw);
 	} else {
-		qof_xpc_vote_raw(raw, true);
-		qof_xpc_vote_rms(raw, true);
+		qof_xpc_vote_raw(raw, true, false);
+		qof_xpc_vote_rms(raw, true, false);
 		qof_polling_xpc_vote(raw);
 		hwccf_link(raw, true);
 	}
@@ -753,6 +759,19 @@ int qof_hwccf_link(struct mtk_raw_device *raw, bool enable)
 	qof_set_force_dump(raw, false);
 
 	// TODO: dump status
+
+	return 0;
+}
+
+static int qof_force_xpc_vote(struct mtk_raw_device *raw)
+{
+	qof_xpc_vote_raw(raw, true, true);
+	qof_xpc_vote_rms(raw, true, true);
+	qof_polling_xpc_vote(raw);
+
+	qof_set_force_dump(raw, true);
+	qof_dump_power_state(raw);
+	qof_set_force_dump(raw, false);
 
 	return 0;
 }
@@ -1565,7 +1584,7 @@ void qof_dump_qoftop_status(struct mtk_raw_device *raw)
 		dev_info(raw->dev, "qof: %s: QOF_CAM_TOP_ITC_STATUS 0x%08x", __func__,
 			 readl(raw->cam->qoftop_base + REG_QOF_CAM_TOP_ITC_STATUS));
 		dev_info(raw->dev, "qof: %s: QOF_CAM_A_QOF_DONE_STATUS 0x%08x", __func__,
-			 readl(raw->cam->qoftop_base + REG_QOF_CAM_A_QOF_DONE_STATUS));
+			 readl(raw->qof_base + REG_QOF_CAM_A_QOF_DONE_STATUS));
 		dev_info(raw->dev, "qof: %s: QOF_CAM_TOP_QOF_INT_STATUS 0x%08x", __func__,
 			 readl(raw->cam->qoftop_base + REG_QOF_CAM_TOP_QOF_INT_STATUS));
 	}
