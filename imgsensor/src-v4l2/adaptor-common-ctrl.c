@@ -163,6 +163,9 @@ u32 g_sensor_margin(struct adaptor_ctx *ctx, unsigned int scenario)
 		    para.u8, &len);
 	info.scenario_id = SENSOR_SCENARIO_ID_NONE;
 
+	if (unlikely(ctx->subctx.s_ctx.mode == NULL))
+		return para.u64[2];
+
 	/* get the mode's const pointer of the scenario_id */
 	mode_st = &ctx->subctx.s_ctx.mode[scenario];
 
