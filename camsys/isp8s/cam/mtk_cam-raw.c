@@ -1089,6 +1089,78 @@ static void dump_dmatop_slc(struct mtk_raw_device *dev, bool force)
 	}
 }
 
+static void dump_wla_2_0(struct mtk_raw_device *raw)
+{
+	struct mtk_cam_device *cam = raw->cam;
+
+	dev_info(cam->dev, "%s: vcore base + 0x%x: 0x%08x", __func__,
+			 0x104, readl(cam->vcore_base + 0x104));
+	dev_info(cam->dev, "%s: vcore base + 0x%x: 0x%08x", __func__,
+			 0x108, readl(cam->vcore_base + 0x108));
+	dev_info(cam->dev, "%s: vcore base + 0x%x: 0x%08x", __func__,
+			 0x10c, readl(cam->vcore_base + 0x10c));
+
+	dev_info(cam->dev, "%s: vcore base + 0x%x: 0x%08x", __func__,
+			 0x110, readl(cam->vcore_base + 0x110));
+	dev_info(cam->dev, "%s: vcore base + 0x%x: 0x%08x", __func__,
+			 0x114, readl(cam->vcore_base + 0x114));
+	dev_info(cam->dev, "%s: vcore base + 0x%x: 0x%08x", __func__,
+			 0x118, readl(cam->vcore_base + 0x118));
+	dev_info(cam->dev, "%s: vcore base + 0x%x: 0x%08x", __func__,
+			 0x11c, readl(cam->vcore_base + 0x11c));
+
+	dev_info(cam->dev, "%s: vcore base + 0x%x: 0x%08x", __func__,
+			 0x120, readl(cam->vcore_base + 0x120));
+	dev_info(cam->dev, "%s: vcore base + 0x%x: 0x%08x", __func__,
+			 0x124, readl(cam->vcore_base + 0x124));
+
+	dev_info(cam->dev, "%s: vcore base + 0x%x: 0x%08x", __func__,
+			 0x130, readl(cam->vcore_base + 0x130));
+	dev_info(cam->dev, "%s: vcore base + 0x%x: 0x%08x", __func__,
+			 0x134, readl(cam->vcore_base + 0x134));
+	dev_info(cam->dev, "%s: vcore base + 0x%x: 0x%08x", __func__,
+			 0x138, readl(cam->vcore_base + 0x138));
+	dev_info(cam->dev, "%s: vcore base + 0x%x: 0x%08x", __func__,
+			 0x13c, readl(cam->vcore_base + 0x13c));
+}
+
+static void dump_raw_slice_gals(struct mtk_raw_device *raw)
+{
+	static const u32 debug_sel[] = {
+		0x0, 0x1, 0x2, 0x3, 0x4, 0x1f,
+	};
+
+	void __iomem *dbg_sel =  raw->base + 0x234;
+	void __iomem *dbg_port = raw->base + 0x238;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(debug_sel); i++) {
+		writel(debug_sel[i], dbg_sel);
+		dev_info(raw->dev, "%s sel 0x%08x port 0x%08x\n",
+			 __func__, readl(dbg_sel), readl(dbg_port));
+	}
+}
+
+static void dump_vcore_gals(struct mtk_raw_device *raw)
+{
+	struct mtk_cam_device *cam = raw->cam;
+	void __iomem *dbg_sel =  cam->vcore_base + 0x300;
+	void __iomem *dbg_port = cam->vcore_base + 0x304;
+	int i;
+
+	for (i = 0x0; i <= 0x1a; i++) {
+		writel(i | BIT(16) | BIT(10), dbg_sel);
+		dev_info(cam->dev, "%s sel 0x%08x port 0x%08x\n",
+			 __func__, readl(dbg_sel), readl(dbg_port));
+	}
+
+	for (i = 0x0; i <= 0x1b; i++) {
+		writel((i << 5 | 0x1b) | BIT(16) | BIT(10), dbg_sel);
+		dev_info(cam->dev, "%s sel 0x%08x port 0x%08x\n",
+			 __func__, readl(dbg_sel), readl(dbg_port));
+	}
+}
+
 int rawi_r2_slc_config(struct mtk_raw_device *raw_dev, int gid, int bid)
 {
 	u32 val;
@@ -1253,6 +1325,9 @@ void reset(struct mtk_raw_device *dev)
 	if (ret < 0) {
 		dev_info(dev->dev, "%s: error: timeout!\n", __func__);
 		dump_dma_soft_rst_stat(dev);
+		dump_wla_2_0(dev);
+		dump_raw_slice_gals(dev);
+		dump_vcore_gals(dev);
 		mtk_smi_dbg_hang_detect("camsys-raw");
 		goto RESET_FAILURE;
 	}
@@ -1967,6 +2042,9 @@ static void raw_handle_yuv_dma_err(struct mtk_raw_device *raw_dev,
 	qof_mtcmos_raw_voter(raw_dev, true);
 	dump_topdebug_rdyreq_status(raw_dev);
 	dump_yuv_dma_err_st(yuv_dev);
+	dump_wla_2_0(raw_dev);
+	dump_raw_slice_gals(raw_dev);
+	dump_vcore_gals(raw_dev);
 	dump_tcyso_dma_debug(yuv_dev);
 	qof_mtcmos_raw_voter(raw_dev, false);
 }
@@ -2001,6 +2079,12 @@ static void raw_handle_tg_overrun_err(struct mtk_raw_device *raw_dev,
 
 	qof_mtcmos_raw_voter(raw_dev, true);
 
+	if (cnt == 0) {
+		dump_wla_2_0(raw_dev);
+		dump_raw_slice_gals(raw_dev);
+		dump_vcore_gals(raw_dev);
+	}
+
 	if (cnt < (OVERRUN_DUMP_CNT + raw_dev->sub_sensor_ctrl_en * 10))
 		dump_topdebug_rdyreq_status(raw_dev);
 
@@ -2016,6 +2100,10 @@ static void raw_handle_tg_overrun_err(struct mtk_raw_device *raw_dev,
 				   raw_dev->cam, CAMSYS_ENGINE_RAW, raw_dev->id,
 				   fh_cookie, MSG_TG_OVERRUN);
 	}
+
+	if (cnt == 0)
+		mtk_smi_dbg_hang_detect("camsys-raw");
+
 	qof_mtcmos_raw_voter(raw_dev, false);
 }
 
@@ -3575,6 +3663,9 @@ int raw_dump_debug_status(struct mtk_raw_device *dev, int dma_debug_dump)
 	dump_awb_reg(dev, 1);
 	dump_af_reg(dev, 1);
 	dump_dmatop_slc(dev, 1);
+	dump_wla_2_0(dev);
+	dump_raw_slice_gals(dev);
+	dump_vcore_gals(dev);
 	qof_force_dump_all(dev);
 
 	if (dma_debug_dump) {
