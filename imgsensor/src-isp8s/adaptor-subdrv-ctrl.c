@@ -3988,6 +3988,14 @@ void streaming_control(struct subdrv_ctx *ctx, bool enable)
 		ctx->mcss_init_info.enable_mcss = 0;
 		if (ctx->s_ctx.mcss_init != NULL)
 			ctx->s_ctx.mcss_init((void *) ctx); // disable MCSS
+
+		if (ctx->s_ctx.mode[ctx->current_scenario_id].force_wr_mode_setting) {
+			DRV_LOG(ctx,
+				"force_wr_mode_setting:%u,is_sensor_scenario_inited:%u->0\n",
+				ctx->s_ctx.mode[ctx->current_scenario_id].force_wr_mode_setting,
+				_adaptor_ctx->is_sensor_scenario_inited);
+			_adaptor_ctx->is_sensor_scenario_inited = 0;
+		}
 	}
 	ctx->sof_no = 0;
 	ctx->is_streaming = enable;

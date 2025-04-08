@@ -3003,17 +3003,6 @@ void control_sensor(struct adaptor_ctx *ctx)
 		ADAPTOR_SYSTRACE_END();
 	}
 
-	if (ctx->is_sensor_scenario_inited &&
-		!ctx->is_streaming &&
-		ctx->subctx.s_ctx.mode[ctx->cur_mode->id].force_wr_mode_setting) {
-		adaptor_logm(ctx, "force_wr_mode_setting:%u\n",
-			ctx->subctx.s_ctx.mode[ctx->cur_mode->id].force_wr_mode_setting);
-		subdrv_call(ctx, control,
-				ctx->cur_mode->id,
-				&image_window,
-				&sensor_config_data);
-	}
-
 	adaptor_logm(ctx, "-\n");
 }
 
