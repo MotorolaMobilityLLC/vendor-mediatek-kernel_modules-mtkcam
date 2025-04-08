@@ -64,6 +64,7 @@ const struct mtk_imgsys_init_array
 			mtk_imgsys_wpe_init_ary[] = {
 	{0x0014, 0x80000000}, /* WPE_TOP_CTL_INT_EN, en w-clr */
 	{0x001C, 0xFFFFFFFF}, /* WPE_TOP_CTL_INT_STATUSX, w-clr */
+	{0x0028, 0x00000001}, /* WPE_TOP_CTL_DDREN_SW_CTL */
 	{0x00C8, 0x80000000}, /* WPE_TOP_CQ_IRQ_EN, en w-clr */
 	{0x00D8, 0xFFFFFFFF}, /* WPE_TOP_CQ_IRQ_STX, w-clr */
 	{0x00E0, 0xFFFFFFFF}, /* WPE_TOP_CQ_IRQ_STX2, w-clr */
