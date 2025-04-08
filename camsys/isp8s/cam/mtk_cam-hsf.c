@@ -24,12 +24,18 @@
 #include <media/v4l2-subdev.h>
 #include "mtk_cam.h"
 #include "mtk_cam-engine.h"
+#include "mtk_cam-raw_regs.h"
 #include "mtk_heap.h"
 #include <linux/soc/mediatek/mtk_sip_svc.h>
 #include "iommu_debug.h"
 #include <public/trusted_mem_api.h>
 
 #define SKIP_IN_FPGA_EP
+
+#define raw_readl_relaxed(raw, base, off) \
+({\
+		raw->io_ops->__readl_relaxed(raw, base, off); \
+})
 
 uint64_t chk_pa;
 
@@ -708,8 +714,12 @@ int mtk_cam_hsf_uninit(struct mtk_cam_ctx *ctx)
 	raw_dev = dev_get_drvdata(cam->engines.raw_devs[raw_id]);
 
 	reset(raw_dev);
-	ccu_hsf_config(ctx, 0);
 	ccu_hsf_camsv_config(ctx, 0);
+	ccu_hsf_config(ctx, 0);
+	dev_info(cam->dev, "%s: REG_CAMCQ_CQ_THR0_BASEADDR: in/out: 0x%x/0x%x\n",
+		__func__,
+		raw_readl_relaxed(raw_dev, raw_dev->base_inner, REG_CAMCQ_CQ_THR0_BASEADDR),
+		raw_readl_relaxed(raw_dev, raw_dev->base, REG_CAMCQ_CQ_THR0_BASEADDR));
 	mtk_cam_dmabuf_free_iova(ctx, hsf_config->cq_buf);
 	mtk_cam_dmabuf_free_iova(ctx, hsf_config->chk_buf);
 
