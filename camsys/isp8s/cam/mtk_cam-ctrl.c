@@ -1917,6 +1917,16 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 
 	trigger_fake_sof_event(ctrl);  /* trigger apply sensor done */
 
+	for (i = 0; i < cam->engines.num_raw_devices; ++i) {
+		struct mtk_raw_device *raw = NULL;
+
+		if (!(BIT(i) & raw_after_change))
+			continue;
+
+		raw = dev_get_drvdata(cam->engines.raw_devs[i]);
+		qof_enable_cq_trigger_by_qof(raw, true);
+	}
+
 	/* start to wait sof */
 	set_engines_mux_ready(ctx, job->seninf, job->used_engine, true,
 		scen_is_dcg_vs(&job->prev_scen));
@@ -1941,7 +1951,6 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 			continue;
 
 		raw = dev_get_drvdata(cam->engines.raw_devs[i]);
-		qof_enable_cq_trigger_by_qof(raw, true);
 
 		qof_setup_hw_timer(raw, get_sensor_interval_us(job));
 
