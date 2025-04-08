@@ -11,6 +11,7 @@
 #include <linux/dma-buf.h>
 #include <linux/irqflags.h>
 #include <linux/timekeeping.h>
+#include <soc/mediatek/smi.h>
 
 #include "mtk_ccu_common.h"
 
@@ -327,6 +328,8 @@ void mtk_ccu_ipc_assert_handle(uint32_t data, uint32_t len, void *priv)
 	 * CCU EXTRA CSR @ccu->ccu_base + MTK_CCU_EXTRA_REG_OFFSET, size MTK_CCU_EXTRA_REG_LOG_BUF_SIZE
 	 */
 #endif
+
+	mtk_smi_dbg_hang_detect("CCU");
 }
 
 void mtk_ccu_ipc_warning_handle(uint32_t data, uint32_t len, void *priv)

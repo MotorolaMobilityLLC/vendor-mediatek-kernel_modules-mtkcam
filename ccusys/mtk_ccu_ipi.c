@@ -7,6 +7,7 @@
 #include <linux/delay.h>
 #include <linux/platform_device.h>
 #include <linux/module.h>
+#include <soc/mediatek/smi.h>
 
 #include "mtk_ccu_common.h"
 #include "mtk_ccu_isp71.h"
@@ -185,6 +186,7 @@ static int mtk_ccu_rproc_ipc_trigger(struct mtk_ccu *ccu,
 			readl(ccu->ccu_base + MTK_CCU_RV55_MON_SP));
 		ccu->ipc_tout_fid = msg->feature_type;
 		ccu->ipc_tout_mid = msg->msg_id;
+		mtk_smi_dbg_hang_detect("CCU");
 		return -ETIMEDOUT;
 	}
 
