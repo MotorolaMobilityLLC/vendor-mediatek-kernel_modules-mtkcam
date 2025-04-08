@@ -213,6 +213,16 @@ static int g_ostdl_en = 1;
 module_param(g_ostdl_en, int, 0644);
 MODULE_PARM_DESC(g_ostdl_en, "imgsys ostd limiter en");
 
+static int g_ostdl_mae_min_r = 5;
+
+module_param(g_ostdl_mae_min_r, int, 0644);
+MODULE_PARM_DESC(g_ostdl_mae_min_r, "imgsys mae read ostd limiter");
+
+static int g_ostdl_mae_min_w = 2;
+
+module_param(g_ostdl_mae_min_w, int, 0644);
+MODULE_PARM_DESC(g_ostdl_mae_min_w, "imgsys mae write ostd limiter");
+
 /* AXI monitor limiter */
 static bool g_axi_limiter_en;
 
@@ -959,6 +969,36 @@ static void imgsys_qos_set_bw_ratio(struct cmdq_pkt *pkt)
 	}
 }
 
+static void imgsys_qos_set_mae_floor_bw(struct cmdq_pkt *pkt)
+{
+	uint16_t cpr_idx;
+	uint32_t mae_floor_bw;
+
+	GCE_OP_DECLARE;
+	GCE_COND_DECLARE;
+	GCE_COND_ASSIGN(pkt, SPR1);
+
+	cpr_idx = CPR_AVG_R + 8 * QOS_CPR_STEP;
+	mae_floor_bw = clamp_t(u32, (g_ostdl_mae_min_r - 1), OSTDL_MIN_VALUE, OSTDL_MAX_VALUE)
+			<< (OSTDL_R2_RIGHT_SHIFT + BWR_MB_RIGHT_SHIFT);
+	GCE_IF(IDX, cpr_idx, R_CMDQ_LESS,
+		VAL, mae_floor_bw);
+	{
+		cmdq_pkt_assign_command(pkt, cpr_idx, mae_floor_bw);
+	}
+	GCE_FI;
+
+	cpr_idx = CPR_AVG_W + 8 * QOS_CPR_STEP;
+	mae_floor_bw = clamp_t(u32, (g_ostdl_mae_min_w - 1), OSTDL_MIN_VALUE, OSTDL_MAX_VALUE)
+			<< (OSTDL_W2_RIGHT_SHIFT + BWR_MB_RIGHT_SHIFT);
+	GCE_IF(IDX, cpr_idx, R_CMDQ_LESS,
+		VAL, mae_floor_bw);
+	{
+		cmdq_pkt_assign_command(pkt, cpr_idx, mae_floor_bw);
+	}
+	GCE_FI;
+}
+
 static void imgsys_qos_set_chn_avg_bw(struct cmdq_pkt *pkt)
 {
 	imgsys_qos_set_chn_avg_eng_bw(pkt, 0, 1 /* count */, 0);
@@ -1133,6 +1173,7 @@ static void imgsys_qos_set_bw(struct cmdq_pkt *pkt)
 				CPR_SUM_W + i * QOS_CPR_STEP,
 				CPR_AVG_W + i * QOS_CPR_STEP);
 		}
+		imgsys_qos_set_mae_floor_bw(pkt);
 		imgsys_qos_set_chn_avg_bw(pkt);
 		imgsys_qos_set_ttl_bw(pkt, /* is_avg */ true, 0);
 		imgsys_qos_set_limiter(pkt, /* is_avg */ true, 0);
