@@ -818,41 +818,41 @@ struct timeval {
 };
 
 struct swfrm_info_t {
+	uint64_t frm_owner;
+	uint64_t imgstm_inst;
+	uint64_t req_vaddr;
+	uint64_t *req_stat;
+	char *hw_ts_log;
+	void *req;		/*mtk_dip_request*/
+	void *pipe;
 	uint32_t req_sbuf_goft;
+	uint32_t fail_uinfo_idx;
+	uint32_t memory_mode; /* refer to IMGSYS_MEMORY_MODE_XXX */
+	int timeout_event;
+	int chan_id;
 	int swfrminfo_ridx;
 	int request_fd;
 	int request_no;
 	int frame_no;
-	uint64_t frm_owner;
-	uint64_t imgstm_inst;
-	uint8_t is_secReq;
 	int fps;
 	int cb_frmcnt;
 	int total_taskcnt;
 	int exp_totalcb_cnt;
 	int handle;
-	uint64_t req_vaddr;
 	int sync_id;
 	int total_frmnum;
-	struct img_swfrm_info user_info[TIME_MAX];
-	uint8_t is_earlycb;
 	int earlycb_sidx;
+	uint8_t is_secReq;
+	uint8_t is_earlycb;
 	uint8_t is_lastfrm;
 	int8_t group_id;
 	int8_t batchnum;
 	int8_t is_sent;	/*check the frame is sent to gce or not*/
-	void *req;		/*mtk_dip_request*/
-	void *pipe;
-	uint32_t fail_uinfo_idx;
 	int8_t fail_isHWhang;
-	int timeout_event;
-	int chan_id;
-	uint64_t *req_stat;
-	char *hw_ts_log;
 	uint8_t is_capture;   /* deprecated */
-	uint32_t memory_mode; /* refer to IMGSYS_MEMORY_MODE_XXX */
 	uint8_t is_ndd;
 	int8_t is_ctrl_cache;
+	struct img_swfrm_info user_info[TIME_MAX];
 };
 #define HWTOKEN_MAX 100
 struct cleartoken_info_t {

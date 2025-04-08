@@ -144,8 +144,11 @@ void imgsys_ltraw_cmdq_set_initial_value_hw(struct mtk_imgsys_dev *imgsys_dev,
 void imgsys_traw_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 							unsigned int engine);
 void imgsys_traw_updatecq(struct mtk_imgsys_dev *imgsys_dev,
-			struct img_swfrm_info *user_info, int req_fd, u64 tuning_iova,
-			unsigned int mode);
+			  struct img_swfrm_info *user_info,
+			  struct private_data *priv_data,
+			  int req_fd,
+			  u64 tuning_iova,
+			  unsigned int mode);
 void imgsys_traw_uninit(struct mtk_imgsys_dev *imgsys_dev);
 int imgsys_traw_tfault_callback(int port, dma_addr_t mva, void *cb_data);
 int imgsys_ltraw_tfault_callback(int port, dma_addr_t mva, void *cb_data);

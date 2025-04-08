@@ -54,7 +54,10 @@ const struct mtk_imgsys_init_array mtk_imgsys_mmg_init_ary[] = {
 
 
 void imgsys_me_updatecq(struct mtk_imgsys_dev *imgsys_dev,
-			struct img_swfrm_info *user_info, int req_fd, u64 tuning_iova,
+			struct img_swfrm_info *user_info,
+			struct private_data *priv_data,
+			int req_fd,
+			u64 tuning_iova,
 			unsigned int mode)
 {
 	const struct mtk_hcp_ops *hcp_ops = mtk_hcp_fetch_ops(imgsys_dev->scp_pdev);
@@ -69,10 +72,10 @@ void imgsys_me_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 		cq_base = hcp_ops->fetch_me_cq_mb_virt(imgsys_dev->scp_pdev, mode);
 
 	/* HWID defined in hw_definition.h */
-	if (user_info->priv[IMGSYS_HW_ME].need_update_desc) {
+	if (priv_data->need_update_desc) {
 		if (iova_addr) {
 			cq_desc = (u64 *)((void *)(cq_base +
-				user_info->priv[IMGSYS_HW_ME].desc_offset));
+				priv_data->desc_offset));
 			for (i = 0; i < ME_CQ_DESC_NUM; i++) {
 				dtable = (struct mtk_imgsys_me_dtable *)cq_desc + i;
 				if (!dtable) {
@@ -87,7 +90,7 @@ void imgsys_me_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 					if (imgsys_me_8s_dbg_enable())
 						pr_debug("%s: tuning_buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
 							__func__, iova_addr,
-							user_info->priv[IMGSYS_HW_ME].desc_offset,
+							priv_data->desc_offset,
 							cq_desc, dtable->cmd1, dtable->addr,
 							dtable->cmd2);
 				}
@@ -96,7 +99,7 @@ void imgsys_me_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 		//
 		if (hcp_ops && hcp_ops->fetch_me_cq_mb_fd)
 			me_buf_info.fd = hcp_ops->fetch_me_cq_mb_fd(imgsys_dev->scp_pdev, mode);
-		me_buf_info.offset = user_info->priv[IMGSYS_HW_ME].desc_offset;
+		me_buf_info.offset = priv_data->desc_offset;
 		me_buf_info.len =
 			(sizeof(struct mtk_imgsys_me_dtable) * ME_CQ_DESC_NUM) + ME_REG_SIZE;
 		me_buf_info.mode = mode;

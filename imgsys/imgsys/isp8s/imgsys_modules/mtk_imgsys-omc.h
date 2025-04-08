@@ -33,7 +33,10 @@ void imgsys_omc_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 							unsigned int engine);
 void imgsys_omc_uninit(struct mtk_imgsys_dev *imgsys_dev);
 void imgsys_omc_updatecq(struct mtk_imgsys_dev *imgsys_dev,
-			struct img_swfrm_info *user_info, int req_fd, u64 tuning_iova,
+			struct img_swfrm_info *user_info,
+			struct private_data *priv_data,
+			int req_fd,
+			u64 tuning_iova,
 			unsigned int mode);
 int imgsys_omc_tfault_callback(int port,
 			dma_addr_t mva, void *data);

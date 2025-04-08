@@ -139,30 +139,74 @@ struct img_init_info_v2 {
 } __packed;
 
 struct private_data {
-	int8_t need_update_desc;
-	int8_t need_flush_tdr;
 	uint32_t buf_fd;
 	uint32_t buf_offset;
 	uint32_t desc_offset;
 	uint32_t tdr_offset;
-} __packed;
+	int8_t need_update_desc;
+	int8_t need_flush_tdr;
+	int8_t rsv[2];
+};
+
+#define IMGSYS_DL_HW_MAX 6
+
 
 struct img_swfrm_info {
+	uint64_t sw_goft;
+	uint64_t sw_bwoft;
+	uint64_t pixel_bw;
+	void *g_swbuf;
+	void *bw_swbuf;
 	uint32_t hw_comb;
 	int sw_ridx;
+	int subfrm_idx;
+	int tunmeta_size;
 	uint8_t is_time_shared;
 	uint8_t is_secFrm;
 	uint8_t is_earlycb;
 	uint8_t is_lastingroup;
-	uint64_t sw_goft;
-	uint64_t sw_bwoft;
-	int subfrm_idx;
-	void *g_swbuf;
-	void *bw_swbuf;
-	uint64_t pixel_bw;
-	int tunmeta_size;
-	struct private_data priv[IMGSYS_HW_NUM_MAX];
-} __packed;
+	int8_t rsv[4];
+	struct private_data priv[IMGSYS_DL_HW_MAX];
+};
+
+
+/**
+ * @brief Get the private data index.
+ *
+ * This function returns the private data index corresponding to a given
+ * hardware ID (hw_id). It iterates through the hardware identifiers and
+ * compares them with the provided hw_id until a match is found or the maximum
+ * limit is reached.
+ *
+ * @param hw_id The ID of the hardware whose private data index is required.
+ *
+ * @retval The private data index if the specified hardware ID exists.
+ * @retval IMGSYS_DL_HW_MAX if the specified hardware ID does not exist or
+ *         the maximum limit is exceeded.
+ */
+static inline uint32_t imgsys_get_priv_data_idx_of_hw(const struct img_swfrm_info *user_info,
+						      uint32_t hw_id)
+{
+	uint32_t i, j;
+
+	if (unlikely(!user_info)) {
+		pr_err("user_info is NULL\n");
+		return IMGSYS_DL_HW_MAX;
+	}
+	if (unlikely(hw_id >= IMGSYS_HW_NUM_MAX))
+		return IMGSYS_DL_HW_MAX;
+
+	for (i = 0, j = 0; i <= hw_id && j < IMGSYS_DL_HW_MAX ; i++) {
+		if ((1 << i) & user_info->hw_comb) {
+			if (i == hw_id)
+				return j;
+
+			j++;
+		}
+	}
+
+	return IMGSYS_DL_HW_MAX;
+}
 
 struct img_addr {
 	u64	va;	/* Used by Linux OS access */

@@ -1430,8 +1430,8 @@ static void imgsys_runner_func(void *data)
 	union request_track *req_track = NULL;
 	struct swfrm_info_t *frm_info;
 	int swfrm_cnt;
-	int i, ret;
-	unsigned int subfidx;
+	int i, j, ret;
+	unsigned int subfidx, mod_id;
 #ifdef MTK_IOVA_SINK2KERNEL
 	struct tuning_meta_info module_tuning_info;
 	unsigned int mode;
@@ -1469,11 +1469,25 @@ static void imgsys_runner_func(void *data)
 				module_tuning_info.offset, mode,
 				frm_info->user_info[subfidx].hw_comb);
 		}
-		for (i = 0; i < (imgsys_dev->modules_num); i++) {
-			if (imgsys_dev->modules[i].updatecq) {
-				imgsys_dev->modules[i].updatecq(imgsys_dev,
-					&frm_info->user_info[subfidx], frm_info->request_fd,
-					iova_addr, mode);
+
+		for (i = 0, j = 0; (i < IMGSYS_HW_NUM_MAX) && (j < IMGSYS_DL_HW_MAX); i++) {
+			if ((1 << i) & frm_info->user_info[subfidx].hw_comb) {
+				mod_id = imgsys_hw_id_to_mod_id(i);
+				/*
+				 *pr_debug("(%s/%d/%d/%d/%u) hw_combo_sets(%u) i(%d->%u) j(%d) offset(%u)\n",
+				 *	((char *)&frm_info->frm_owner), frm_info->request_fd, frm_info->request_no,
+				 *	frm_info->frame_no, subfidx, frm_info->user_info[subfidx].hw_comb,
+				 *	i, mod_id, j, frm_info->user_info[subfidx].priv[j].desc_offset);
+				 */
+				if ((mod_id < imgsys_dev->modules_num) && imgsys_dev->modules[mod_id].update_wbuf) {
+					imgsys_dev->modules[mod_id].update_wbuf(
+						imgsys_dev,
+						&frm_info->user_info[subfidx],
+						&frm_info->user_info[subfidx].priv[j],
+						frm_info->request_fd,
+						iova_addr, mode);
+				}
+				j++;
 			}
 		}
 		/* mark by bj due to buffer usage need to do further discuss */

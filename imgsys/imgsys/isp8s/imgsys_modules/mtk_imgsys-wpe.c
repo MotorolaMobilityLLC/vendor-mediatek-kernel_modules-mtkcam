@@ -302,11 +302,14 @@ bool imgsys_wpe_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine)
 }
 
 void imgsys_wpe_updatecq(struct mtk_imgsys_dev *imgsys_dev,
-			struct img_swfrm_info *user_info, int req_fd, u64 tuning_iova,
-			unsigned int mode)
+			 struct img_swfrm_info *user_info,
+			 struct private_data *priv_data,
+			 int req_fd,
+			 u64 tuning_iova,
+			 unsigned int mode)
 {
 	const struct mtk_hcp_ops *hcp_ops = mtk_hcp_fetch_ops(imgsys_dev->scp_pdev);
-	unsigned int i = 0, j = 0;
+	unsigned int j = 0;
 	u64 u_iova_addr = 0;
 	struct mtk_imgsys_req_fd_info *fd_info = NULL;
 	struct dma_buf *dbuf = NULL;
@@ -321,30 +324,26 @@ void imgsys_wpe_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 	if (hcp_ops && hcp_ops->fetch_wpe_cq_mb_virt)
 		cq_base = hcp_ops->fetch_wpe_cq_mb_virt(imgsys_dev->scp_pdev, mode);
 
+	if (unlikely(cq_base == NULL)) {
+		pr_err("[%s][%d] cq base is null!\n", __func__, __LINE__);
+		return;
+	}
 
-
-	for (i = IMGSYS_HW_WPE_EIS; i <= IMGSYS_HW_WPE_LITE; i++) {
-		if (!user_info->priv[i].need_update_desc)
-			continue;
-
+	if (priv_data->need_update_desc) {
 		// Update WPE_A_UFOD_P2 cq descriptor
-		if (user_info->priv[i].buf_fd) {
+		if (priv_data->buf_fd) {
 			#ifndef MTK_IOVA_NOTCHECK
-			dbuf = dma_buf_get(user_info->priv[i].buf_fd);
+			dbuf = dma_buf_get(priv_data->buf_fd);
 			#endif
 			fd_info = &imgsys_dev->req_fd_cache.info_array[req_fd];
 			req = (struct mtk_imgsys_request *) fd_info->req_addr_va;
 			dev_b = req->buf_map[imgsys_dev->is_singledev_mode(req)];
 			u_iova_addr = imgsys_dev->imgsys_get_iova(dbuf,
-					user_info->priv[i].buf_fd,
-					imgsys_dev, dev_b) + user_info->priv[i].buf_offset;
+					priv_data->buf_fd,
+					imgsys_dev, dev_b) + priv_data->buf_offset;
 
-			if (cq_base == NULL) {
-				pr_err("[%s][%d] cq base is null!\n", __func__, __LINE__);
-				continue;
-			}
 			u_cq_desc = (u64 *)((void *)(cq_base +
-				user_info->priv[i].desc_offset +
+				priv_data->desc_offset +
 				(WPE_UFOD_P2_DESC_OFST * (sizeof(union wpe_cq_cmd_desc_t)))));
 
 			cq_desc = (union wpe_cq_cmd_desc_t *)u_cq_desc;
@@ -352,21 +351,17 @@ void imgsys_wpe_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 			cq_desc->dram_addr_msb = (u_iova_addr >> 32) & 0xF;
 			if (imgsys_wpe_8s_dbg_enable()) {
 				pr_debug("%s: buf_fd(0x%08x) buf_ofst(0x%08x) buf_iova(0x%llx)\n",
-					__func__, user_info->priv[i].buf_fd,
-					user_info->priv[i].buf_offset, u_iova_addr);
+					__func__, priv_data->buf_fd,
+					priv_data->buf_offset, u_iova_addr);
 				pr_debug("%s: des_ofst(0x%08x) cq_kva(0x%p) cq_desc(0x%x/0x%x/0x%x)\n",
-					__func__, user_info->priv[i].desc_offset,
+					__func__, priv_data->desc_offset,
 					u_cq_desc, cq_desc->raw[0], cq_desc->raw[1], cq_desc->raw[2]);
 			}
 		}
 
 		// Update PSP tuning cq descriptor
 		if (tuning_iova) {
-			if (cq_base == NULL) {
-				pr_err("[%s][%d] cq base is null!\n", __func__, __LINE__);
-				continue;
-			}
-			u_cq_desc = (u64 *)((void *)(cq_base + user_info->priv[i].desc_offset));
+			u_cq_desc = (u64 *)((void *)(cq_base + priv_data->desc_offset));
 			cq_desc = (union wpe_cq_cmd_desc_t *)u_cq_desc;
 			for (j = 0; j < WPE_CQ_DESC_NUM; j++) {
 				if (cq_desc->dummy_1 == PSEUDO_DESC_TUNING) {
@@ -379,7 +374,7 @@ void imgsys_wpe_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 						pr_debug("%s: tuning_buf_iova(0x%llx) tun_ofst(0x%08x)\n",
 							__func__, tuning_iova, tun_ofst);
 						pr_debug("%s: des_ofst(0x%08x) cq_kva(0x%p) cq_desc(0x%x/0x%x/0x%x)\n",
-							__func__, user_info->priv[i].desc_offset,
+							__func__, priv_data->desc_offset,
 							u_cq_desc, cq_desc->raw[0], cq_desc->raw[1], cq_desc->raw[2]);
 					}
 				}
@@ -388,7 +383,7 @@ void imgsys_wpe_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 		}
 		if (hcp_ops && hcp_ops->fetch_wpe_cq_mb_fd)
 			wpe_buf_info.fd = hcp_ops->fetch_wpe_cq_mb_fd(imgsys_dev->scp_pdev, mode);
-		wpe_buf_info.offset = user_info->priv[i].desc_offset;
+		wpe_buf_info.offset = priv_data->desc_offset;
 		wpe_buf_info.len =
 			((sizeof(union wpe_cq_cmd_desc_t) * WPE_CQ_DESC_NUM) + WPE_REG_SIZE);
 		wpe_buf_info.mode = mode;
@@ -403,16 +398,14 @@ void imgsys_wpe_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 				hcp_ops->fetch_wpe_cq_mb_id(imgsys_dev->scp_pdev, mode),
 				wpe_buf_info.offset,
 				wpe_buf_info.len);
+
 	}
 
-	for (i = IMGSYS_HW_WPE_EIS; i <= IMGSYS_HW_WPE_LITE; i++) {
-		if (!user_info->priv[i].need_flush_tdr)
-			continue;
-
+	if (priv_data->need_flush_tdr) {
 		// tdr buffer
 		if (hcp_ops && hcp_ops->fetch_wpe_tdr_mb_fd)
 			wpe_buf_info.fd = hcp_ops->fetch_wpe_tdr_mb_fd(imgsys_dev->scp_pdev, mode);
-		wpe_buf_info.offset = user_info->priv[i].tdr_offset;
+		wpe_buf_info.offset = priv_data->tdr_offset;
 		wpe_buf_info.len = WPE_TDR_BUF_MAXSZ;
 		wpe_buf_info.mode = mode;
 		wpe_buf_info.is_tuning = false;
@@ -426,6 +419,7 @@ void imgsys_wpe_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 				hcp_ops->fetch_wpe_tdr_mb_id(imgsys_dev->scp_pdev, mode),
 				wpe_buf_info.offset,
 				wpe_buf_info.len);
+
 	}
 }
 

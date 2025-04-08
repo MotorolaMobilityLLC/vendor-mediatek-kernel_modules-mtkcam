@@ -610,8 +610,11 @@ void imgsys_pqdip_uninit(struct mtk_imgsys_dev *imgsys_dev)
 }
 
 void imgsys_pqdip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
-			struct img_swfrm_info *user_info, int req_fd, u64 tuning_iova,
-			unsigned int mode)
+			   struct img_swfrm_info *user_info,
+			   struct private_data *priv_data,
+			   int req_fd,
+			   u64 tuning_iova,
+			   unsigned int mode)
 {
 	const struct mtk_hcp_ops *hcp_ops = mtk_hcp_fetch_ops(imgsys_dev->scp_pdev);
 	u64 iova_addr = tuning_iova;
@@ -631,11 +634,9 @@ void imgsys_pqdip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 	}
 
 	/* HWID defined in hw_definition.h */
-	for (pq_hw = IMGSYS_HW_PQDIP_A; pq_hw <= IMGSYS_HW_PQDIP_B; pq_hw++) {
-		if (!user_info->priv[pq_hw].need_update_desc)
-			continue;
+	if (priv_data->need_update_desc) {
 		if (iova_addr) {
-			cq_desc = (u64 *)((void *)(cq_base + user_info->priv[pq_hw].desc_offset));
+			cq_desc = (u64 *)((void *)(cq_base + priv_data->desc_offset));
 			for (i = 0; i < PQDIP_CQ_DESC_NUM; i++) {
 				dtable = (struct mtk_imgsys_pqdip_dtable *)cq_desc + i;
 				if ((dtable->addr_msb & PSEUDO_DESC_TUNING) == PSEUDO_DESC_TUNING) {
@@ -644,10 +645,10 @@ void imgsys_pqdip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 					dtable->addr_msb |= ((tun_ofst + iova_addr) >> 32) & 0xF;
 					if (imgsys_pqdip_8s_dbg_enable())
 						pr_debug("%s: pq%d tuning_buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
-							__func__, pq_hw, iova_addr,
-							user_info->priv[pq_hw].desc_offset,
-							cq_desc, dtable->empty, dtable->addr,
-							dtable->addr_msb);
+								__func__, pq_hw, iova_addr,
+								priv_data->desc_offset,
+								cq_desc, dtable->empty, dtable->addr,
+								dtable->addr_msb);
 				}
 			}
 		}
@@ -655,7 +656,7 @@ void imgsys_pqdip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 		if (hcp_ops && hcp_ops->fetch_pqdip_cq_mb_fd)
 			pqdip_buf_info.fd =
 				hcp_ops->fetch_pqdip_cq_mb_fd(imgsys_dev->scp_pdev, mode);
-		pqdip_buf_info.offset = user_info->priv[pq_hw].desc_offset;
+		pqdip_buf_info.offset = priv_data->desc_offset;
 		pqdip_buf_info.len =
 			((dtbl_sz * PQDIP_CQ_DESC_NUM) + PQDIP_REG_SIZE);
 		pqdip_buf_info.mode = mode;
@@ -671,28 +672,25 @@ void imgsys_pqdip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 				pqdip_buf_info.offset,
 				pqdip_buf_info.len);
 	}
-
-	for (pq_hw = IMGSYS_HW_PQDIP_A; pq_hw <= IMGSYS_HW_PQDIP_B; pq_hw++) {
-		if (user_info->priv[pq_hw].need_flush_tdr) {
-			// tdr buffer
-			if (hcp_ops && hcp_ops->fetch_pqdip_tdr_mb_fd)
-				pqdip_buf_info.fd =
-					hcp_ops->fetch_pqdip_tdr_mb_fd(imgsys_dev->scp_pdev, mode);
-			pqdip_buf_info.offset = user_info->priv[pq_hw].tdr_offset;
-			pqdip_buf_info.len = PQDIP_TDR_BUF_MAXSZ;
-			pqdip_buf_info.mode = mode;
-			pqdip_buf_info.is_tuning = false;
-			if (imgsys_pqdip_8s_dbg_enable())
-				pr_debug("imgsys_fw tdr pqdip_buf_info (%d/%d/%d), mode(%d)",
-					pqdip_buf_info.fd, pqdip_buf_info.len,
-					pqdip_buf_info.offset, pqdip_buf_info.mode);
-			if (hcp_ops && hcp_ops->flush_mb && hcp_ops->fetch_pqdip_tdr_mb_id)
-				hcp_ops->flush_mb(
-					imgsys_dev->scp_pdev,
-					hcp_ops->fetch_pqdip_tdr_mb_id(imgsys_dev->scp_pdev, mode),
-					pqdip_buf_info.offset,
-					pqdip_buf_info.len);
-		}
+	if (priv_data->need_flush_tdr) {
+		// tdr buffer
+		if (hcp_ops && hcp_ops->fetch_pqdip_tdr_mb_fd)
+			pqdip_buf_info.fd =
+				hcp_ops->fetch_pqdip_tdr_mb_fd(imgsys_dev->scp_pdev, mode);
+		pqdip_buf_info.offset = priv_data->tdr_offset;
+		pqdip_buf_info.len = PQDIP_TDR_BUF_MAXSZ;
+		pqdip_buf_info.mode = mode;
+		pqdip_buf_info.is_tuning = false;
+		if (imgsys_pqdip_8s_dbg_enable())
+			pr_debug("imgsys_fw tdr pqdip_buf_info (%d/%d/%d), mode(%d)",
+				pqdip_buf_info.fd, pqdip_buf_info.len,
+				pqdip_buf_info.offset, pqdip_buf_info.mode);
+		if (hcp_ops && hcp_ops->flush_mb && hcp_ops->fetch_pqdip_tdr_mb_id)
+			hcp_ops->flush_mb(
+				imgsys_dev->scp_pdev,
+				hcp_ops->fetch_pqdip_tdr_mb_id(imgsys_dev->scp_pdev, mode),
+				pqdip_buf_info.offset,
+				pqdip_buf_info.len);
 	}
 }
 

@@ -92,6 +92,55 @@ enum mtk_imgsys_module {
 	IMGSYS_MOD_MAX,
 };
 
+static inline unsigned int imgsys_hw_id_to_mod_id(unsigned int hw)
+{
+	unsigned int mod_id = IMGSYS_MOD_MAX;
+
+	switch (hw) {
+	case IMGSYS_HW_WPE_EIS:
+	case IMGSYS_HW_WPE_TNR:
+	case IMGSYS_HW_WPE_LITE:
+		mod_id = IMGSYS_MOD_WPE;
+		break;
+	case IMGSYS_HW_OMC_TNR:
+	case IMGSYS_HW_OMC_LITE:
+		mod_id = IMGSYS_MOD_OMC;
+		break;
+	case IMGSYS_HW_ADL_A:
+	case IMGSYS_HW_ADL_B:
+		mod_id = IMGSYS_MOD_ADL;
+		break;
+	case IMGSYS_HW_TRAW:
+	case IMGSYS_HW_LTRAW:
+	case IMGSYS_HW_XTRAW:
+		mod_id = IMGSYS_MOD_TRAW;
+		break;
+	case IMGSYS_HW_DIP:
+		mod_id = IMGSYS_MOD_DIP;
+		break;
+	case IMGSYS_HW_PQDIP_A:
+	case IMGSYS_HW_PQDIP_B:
+		mod_id = IMGSYS_MOD_PQDIP;
+		break;
+	case IMGSYS_HW_ME:
+		mod_id = IMGSYS_MOD_ME;
+		break;
+	case IMGSYS_HW_MAE:
+		mod_id = IMGSYS_MOD_MAE;
+		break;
+	case IMGSYS_HW_DFP:
+		mod_id = IMGSYS_MOD_DFP;
+		break;
+	case IMGSYS_HW_DPE:
+		mod_id = IMGSYS_MOD_DPE;
+		break;
+	default:
+		break;
+	}
+
+	return mod_id;
+}
+
 /**
  * enum mtk_imgsys_engine
  *

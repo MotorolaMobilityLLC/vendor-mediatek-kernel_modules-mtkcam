@@ -38,7 +38,10 @@ int imgsys_me_tfault_callback(int port, dma_addr_t mva, void *data);
 int imgsys_mmg_tfault_callback(int port, dma_addr_t mva, void *data);
 bool imgsys_me_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine);
 void imgsys_me_updatecq(struct mtk_imgsys_dev *imgsys_dev,
-			struct img_swfrm_info *user_info, int req_fd, u64 tuning_iova,
+			struct img_swfrm_info *user_info,
+			struct private_data *priv_data,
+			int req_fd,
+			u64 tuning_iova,
 			unsigned int mode);
 
 #endif /* _MTK_IMGSYS_ME_H_ */

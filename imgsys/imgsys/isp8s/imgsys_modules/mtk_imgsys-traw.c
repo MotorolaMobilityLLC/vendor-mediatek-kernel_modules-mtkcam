@@ -824,14 +824,17 @@ int imgsys_ltraw_tfault_callback(int port, dma_addr_t mva, void *cb_data)
 }
 
 void imgsys_traw_updatecq(struct mtk_imgsys_dev *imgsys_dev,
-			struct img_swfrm_info *user_info, int req_fd, u64 tuning_iova,
-			unsigned int mode)
+			  struct img_swfrm_info *user_info,
+			  struct private_data *priv_data,
+			  int req_fd,
+			  u64 tuning_iova,
+			  unsigned int mode)
 {
 	const struct mtk_hcp_ops *hcp_ops = mtk_hcp_fetch_ops(imgsys_dev->scp_pdev);
 	u64 iova_addr = tuning_iova;
 	u64 *cq_desc = NULL;
 	struct mtk_imgsys_traw_dtable *dtable = NULL;
-	unsigned int i = 0, j = 0, tun_ofst = 0;
+	unsigned int j = 0, tun_ofst = 0;
 	struct flush_buf_info traw_buf_info;
 	void *virt_mem_base = NULL;
 	size_t dtbl_sz = sizeof(struct mtk_imgsys_traw_dtable);
@@ -840,83 +843,79 @@ void imgsys_traw_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 		virt_mem_base = hcp_ops->fetch_traw_cq_mb_virt(imgsys_dev->scp_pdev, mode);
 
 	/* HWID defined in hw_definition.h */
-	for (i = IMGSYS_HW_TRAW; i <= IMGSYS_HW_LTRAW; i++) {
-		if (user_info->priv[i].need_update_desc) {
-			if (iova_addr) {
-				cq_desc = (u64 *)
-					((void *)(virt_mem_base + user_info->priv[i].desc_offset));
-				if (cq_desc == NULL) {
-					pr_err("%s: cq_desc = NULL\n", __func__);
-					return;
+	if (priv_data->need_update_desc) {
+		if (iova_addr) {
+			cq_desc = (u64 *)
+				((void *)(virt_mem_base + priv_data->desc_offset));
+			if (cq_desc == NULL) {
+				pr_err("%s: cq_desc = NULL\n", __func__);
+				return;
+			}
+			for (j = 0; j < TRAW_CQ_DESC_NUM; j++) {
+				dtable = (struct mtk_imgsys_traw_dtable *)cq_desc + j;
+				if (dtable->empty == 0xC0000000)  /*  End token */
+					break;
+				if ((dtable->addr_msb & PSEUDO_DESC_TUNING) == PSEUDO_DESC_TUNING) {
+					tun_ofst = dtable->addr;
+					dtable->addr = (tun_ofst + iova_addr) & 0xFFFFFFFF;
+					unsigned int reg_cnt =
+					((dtable->addr_msb & 0xFFFF0000) >> 16);
+
+					dtable->addr_msb =
+			((reg_cnt << 16) | (((tun_ofst + iova_addr) >> 32) & 0xF));
+
+				if (imgsys_traw_8s_dbg_enable()) {
+					pr_debug("%s: tuning_buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
+						__func__, iova_addr,
+						priv_data->desc_offset,
+						cq_desc, dtable->empty, dtable->addr,
+						dtable->addr_msb);
 				}
-				for (j = 0; j < TRAW_CQ_DESC_NUM; j++) {
-					dtable = (struct mtk_imgsys_traw_dtable *)cq_desc + j;
-					if (dtable->empty == 0xC0000000)  /*  End token */
-						break;
-					if ((dtable->addr_msb & PSEUDO_DESC_TUNING) == PSEUDO_DESC_TUNING) {
-						tun_ofst = dtable->addr;
-						dtable->addr = (tun_ofst + iova_addr) & 0xFFFFFFFF;
-						unsigned int reg_cnt =
-						((dtable->addr_msb & 0xFFFF0000) >> 16);
-
-						dtable->addr_msb =
-				((reg_cnt << 16) | (((tun_ofst + iova_addr) >> 32) & 0xF));
-
-					if (imgsys_traw_8s_dbg_enable()) {
-						pr_debug("%s: tuning_buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
-							__func__, iova_addr,
-							user_info->priv[i].desc_offset,
-							cq_desc, dtable->empty, dtable->addr,
-							dtable->addr_msb);
-					}
-					}
 				}
 			}
-			//
-			if (hcp_ops && hcp_ops->fetch_traw_cq_mb_fd)
-				traw_buf_info.fd = hcp_ops->fetch_traw_cq_mb_fd(
-					imgsys_dev->scp_pdev, mode);
-			traw_buf_info.offset = user_info->priv[i].desc_offset;
-			traw_buf_info.len =
-				((dtbl_sz * TRAW_CQ_DESC_NUM) + TRAW_REG_SIZE);
-			traw_buf_info.mode = mode;
-			traw_buf_info.is_tuning = false;
-			if (imgsys_traw_8s_dbg_enable())
-				pr_debug("imgsys_fw cq traw_buf_info (%d/%d/%d), mode(%d)",
-					traw_buf_info.fd, traw_buf_info.len,
-					traw_buf_info.offset, traw_buf_info.mode);
-			if (hcp_ops && hcp_ops->flush_mb && hcp_ops->fetch_traw_cq_mb_id)
-				hcp_ops->flush_mb(
-					imgsys_dev->scp_pdev,
-					hcp_ops->fetch_traw_cq_mb_id(imgsys_dev->scp_pdev, mode),
-					traw_buf_info.offset,
-					traw_buf_info.len);
 		}
+		//
+		if (hcp_ops && hcp_ops->fetch_traw_cq_mb_fd)
+			traw_buf_info.fd = hcp_ops->fetch_traw_cq_mb_fd(
+				imgsys_dev->scp_pdev, mode);
+		traw_buf_info.offset = priv_data->desc_offset;
+		traw_buf_info.len =
+			((dtbl_sz * TRAW_CQ_DESC_NUM) + TRAW_REG_SIZE);
+		traw_buf_info.mode = mode;
+		traw_buf_info.is_tuning = false;
+		if (imgsys_traw_8s_dbg_enable())
+			pr_debug("imgsys_fw cq traw_buf_info (%d/%d/%d), mode(%d)",
+				traw_buf_info.fd, traw_buf_info.len,
+				traw_buf_info.offset, traw_buf_info.mode);
+		if (hcp_ops && hcp_ops->flush_mb && hcp_ops->fetch_traw_cq_mb_id)
+			hcp_ops->flush_mb(
+				imgsys_dev->scp_pdev,
+				hcp_ops->fetch_traw_cq_mb_id(imgsys_dev->scp_pdev, mode),
+				traw_buf_info.offset,
+				traw_buf_info.len);
 	}
 
-	for (i = IMGSYS_HW_TRAW; i <= IMGSYS_HW_LTRAW; i++) {
-		if (user_info->priv[i].need_flush_tdr) {
-			// tdr buffer
-			if (hcp_ops && hcp_ops->fetch_traw_tdr_mb_fd)
-				traw_buf_info.fd = hcp_ops->fetch_traw_tdr_mb_fd(
-					imgsys_dev->scp_pdev, mode);
-			traw_buf_info.offset = user_info->priv[i].tdr_offset;
-			traw_buf_info.len = TRAW_TDR_BUF_MAXSZ;
-			traw_buf_info.mode = mode;
-			traw_buf_info.is_tuning = false;
-			if (imgsys_traw_8s_dbg_enable()) {
-				pr_debug("imgsys_fw tdr traw_buf_info (%d/%d/%d), mode(%d)",
-					traw_buf_info.fd, traw_buf_info.len,
-					traw_buf_info.offset, traw_buf_info.mode);
-			}
-			if (hcp_ops && hcp_ops->flush_mb && hcp_ops->fetch_traw_tdr_mb_id)
-				hcp_ops->flush_mb(
-					imgsys_dev->scp_pdev,
-					hcp_ops->fetch_traw_tdr_mb_id(imgsys_dev->scp_pdev, mode),
-					traw_buf_info.offset,
-					traw_buf_info.len);
+	if (priv_data->need_flush_tdr) {
+		// tdr buffer
+		if (hcp_ops && hcp_ops->fetch_traw_tdr_mb_fd)
+			traw_buf_info.fd = hcp_ops->fetch_traw_tdr_mb_fd(
+				imgsys_dev->scp_pdev, mode);
+		traw_buf_info.offset = priv_data->tdr_offset;
+		traw_buf_info.len = TRAW_TDR_BUF_MAXSZ;
+		traw_buf_info.mode = mode;
+		traw_buf_info.is_tuning = false;
+		if (imgsys_traw_8s_dbg_enable()) {
+			pr_debug("imgsys_fw tdr traw_buf_info (%d/%d/%d), mode(%d)",
+				traw_buf_info.fd, traw_buf_info.len,
+				traw_buf_info.offset, traw_buf_info.mode);
 		}
-	}
+		if (hcp_ops && hcp_ops->flush_mb && hcp_ops->fetch_traw_tdr_mb_id)
+			hcp_ops->flush_mb(
+				imgsys_dev->scp_pdev,
+				hcp_ops->fetch_traw_tdr_mb_id(imgsys_dev->scp_pdev, mode),
+				traw_buf_info.offset,
+				traw_buf_info.len);
+		}
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

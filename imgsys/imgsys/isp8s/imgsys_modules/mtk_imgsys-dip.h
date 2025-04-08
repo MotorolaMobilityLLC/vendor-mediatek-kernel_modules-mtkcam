@@ -158,11 +158,16 @@ void imgsys_dip_debug_dump(struct mtk_imgsys_dev *imgsys_dev,
 
 void imgsys_dip_uninit(struct mtk_imgsys_dev *imgsys_dev);
 void imgsys_dip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
-			struct img_swfrm_info *user_info, int req_fd, u64 tuning_iova,
-			unsigned int mode);
+			 struct img_swfrm_info *user_info,
+			 struct private_data *priv_data,
+			 int req_fd,
+			 u64 tuning_iova,
+			 unsigned int mode);
 int imgsys_dip_tfault_callback(int port,
 			dma_addr_t mva, void *data);
 bool imgsys_dip_done_chk(struct mtk_imgsys_dev *imgsys_dev, uint32_t engine);
 int imgsys_dip_check_power_domain(struct mtk_imgsys_dev *imgsys_dev,
-			struct img_swfrm_info *user_info, unsigned int mode);
+				  struct img_swfrm_info *user_info,
+				  struct private_data *priv_data,
+				  unsigned int mode);
 #endif /* _MTK_DIP_DIP_H_ */

@@ -416,7 +416,10 @@ void imgsys_dip_set_hw_initial_value(struct mtk_imgsys_dev *imgsys_dev)
 }
 
 void imgsys_dip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
-			struct img_swfrm_info *user_info, int req_fd, u64 tuning_iova,
+			struct img_swfrm_info *user_info,
+			struct private_data *priv_data,
+			int req_fd,
+			u64 tuning_iova,
 			unsigned int mode)
 {
 	const struct mtk_hcp_ops *hcp_ops = mtk_hcp_fetch_ops(imgsys_dev->scp_pdev);
@@ -436,10 +439,10 @@ void imgsys_dip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 	}
 
 	/* HWID defined in hw_definition.h */
-	if (user_info->priv[IMGSYS_HW_DIP].need_update_desc) {
+	if (priv_data->need_update_desc) {
 		if (iova_addr) {
 			cq_desc = (u64 *)((void *)(cq_base +
-					user_info->priv[IMGSYS_HW_DIP].desc_offset));
+					priv_data->desc_offset));
 
 			for (i = 0; i < DIP_CQ_DESC_NUM; i++) {
 				dtable = (struct mtk_imgsys_dip_dtable *)cq_desc + i;
@@ -450,7 +453,7 @@ void imgsys_dip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 					if (imgsys_dip_8s_dbg_enable())
 						pr_debug("%s: tuning_buf_iova(0x%llx) des_ofst(0x%08x) cq_kva(0x%p) dtable(0x%x/0x%x/0x%x)\n",
 							__func__, iova_addr,
-							user_info->priv[IMGSYS_HW_DIP].desc_offset,
+							priv_data->desc_offset,
 							cq_desc, dtable->empty, dtable->addr,
 							dtable->addr_msb);
 				}
@@ -459,7 +462,7 @@ void imgsys_dip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 		//
 		if (hcp_ops && hcp_ops->fetch_dip_cq_mb_fd)
 			dip_buf_info.fd = hcp_ops->fetch_dip_cq_mb_fd(imgsys_dev->scp_pdev, mode);
-		dip_buf_info.offset = user_info->priv[IMGSYS_HW_DIP].desc_offset;
+		dip_buf_info.offset = priv_data->desc_offset;
 		dip_buf_info.len =
 			(sizeof(struct mtk_imgsys_dip_dtable) * DIP_CQ_DESC_NUM) + DIP_REG_SIZE;
 		dip_buf_info.mode = mode;
@@ -477,11 +480,11 @@ void imgsys_dip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 				dip_buf_info.len);
 	}
 
-	if (user_info->priv[IMGSYS_HW_DIP].need_flush_tdr) {
+	if (priv_data->need_flush_tdr) {
 		// tdr buffer
 		if (hcp_ops && hcp_ops->fetch_dip_tdr_mb_fd)
 			dip_buf_info.fd = hcp_ops->fetch_dip_tdr_mb_fd(imgsys_dev->scp_pdev, mode);
-		dip_buf_info.offset = user_info->priv[IMGSYS_HW_DIP].tdr_offset;
+		dip_buf_info.offset = priv_data->tdr_offset;
 		dip_buf_info.len = DIP_TDR_BUF_MAXSZ;
 		dip_buf_info.mode = mode;
 		dip_buf_info.is_tuning = false;
@@ -499,7 +502,9 @@ void imgsys_dip_updatecq(struct mtk_imgsys_dev *imgsys_dev,
 }
 
 int imgsys_dip_check_power_domain(struct mtk_imgsys_dev *imgsys_dev,
-			struct img_swfrm_info *user_info, unsigned int mode)
+				  struct img_swfrm_info *user_info,
+				  struct private_data *priv_data,
+				  unsigned int mode)
 {
 	const struct mtk_hcp_ops *hcp_ops = mtk_hcp_fetch_ops(imgsys_dev->scp_pdev);
 	uint32_t *cq_desc = NULL, *cine_sel = NULL;
@@ -511,11 +516,11 @@ int imgsys_dip_check_power_domain(struct mtk_imgsys_dev *imgsys_dev,
 	if (cq_base == NULL)
 		return 0;
 
-	if (user_info->priv[IMGSYS_HW_DIP].desc_offset == 0xffffffff)
+	if (priv_data->desc_offset == 0xffffffff)
 		return 0;
 
 	cq_desc = (uint32_t *)((void *)(cq_base +
-		user_info->priv[IMGSYS_HW_DIP].desc_offset));
+		priv_data->desc_offset));
 
 	cine_sel = cq_desc + (DIP_CINE_SEL_VA_OFST / sizeof(uint32_t));
 	if (*cine_sel & 0x1000000)
