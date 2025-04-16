@@ -2324,6 +2324,11 @@ static int apply_engines_cq(struct mtk_cam_job *job,
 	unsigned long subset;
 	u64 ts;
 
+	if (ctx->is_error_triggered) {
+		pr_info("%s: skip cq trigger after error", __func__);
+		return 0;
+	}
+
 	cq_engine = engines_to_trigger_cq(job, cq_rst);
 	used_engine = engines_to_check_inner(job);
 	/* raw change job already modify ctx->used_engines */
@@ -2570,6 +2575,11 @@ static void trigger_error_dump(struct mtk_cam_job *job,
 		int seninf_dump_ret = 0;
 
 		job_dump_engines_debug_status(job);
+		/**
+		 * NOTE: clear_reg() called after debug dump to
+		 * avoid read DMA TF, expect no cq apply after.
+		 */
+		ctx->is_error_triggered = true;
 
 		seninf_dump_ret = (ctx->seninf) ?
 			mtk_cam_seninf_dump(ctx->seninf, job->frame_seq_no, true, true) : 0;
@@ -4150,7 +4160,7 @@ static int apply_cq_mstream(struct mtk_cam_job *job)
 {
 	struct mtk_cam_mstream_job *mjob =
 		container_of(job, struct mtk_cam_mstream_job, job);
-	int ret;
+	int ret = 0;
 
 	if (mjob->apply_isp_idx == 0) {
 		if (WARN_ON(!mjob->composed_1st))

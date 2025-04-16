@@ -228,6 +228,7 @@ struct mtk_cam_ctx {
 	struct mtk_cam_exp_shutter last_req_exposue;
 	bool is_sv_mraw_error;
 	bool is_seninf_error_trigger;
+	bool is_error_triggered;
 
 	atomic_t cq_rdy_mask_en_cnt;
 
