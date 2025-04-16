@@ -411,12 +411,15 @@ static int mtk_cam_vb2_buf_prepare(struct vb2_buffer *vb)
 	const struct v4l2_format *fmt = &node->active_fmt;
 	unsigned int size, plane;
 
-	if ((V4L2_TYPE_IS_OUTPUT(vb->type) &&
-	    !(mtk_buf->flags & FLAG_NO_CACHE_CLEAN)) || mtk_buf->is_acp) {
+	if ((V4L2_TYPE_IS_OUTPUT(vb->type) && !(mtk_cam_buf_is_no_cache_clean(mtk_buf)))
+		|| mtk_buf->is_acp) {
 
 		if (CAM_DEBUG_ENABLED(V4L2))
-			dev_info(vb->vb2_queue->dev, "%s: %s: index:%d is_acp:%d\n", __func__,
-				node->desc.name, mtk_buf->v4l2_buffer_idx, mtk_buf->is_acp);
+			dev_info(vb->vb2_queue->dev,
+				"%s:%s: flags:%#x index:%d is_acp:%d\n", __func__,
+				node->desc.name, mtk_buf->flags,
+				mtk_buf->v4l2_buffer_idx, mtk_buf->is_acp);
+
 		mtk_cam_vb2_sync_for_device(vb);
 	}
 
@@ -485,12 +488,14 @@ static void mtk_cam_vb2_buf_finish(struct vb2_buffer *vb)
 	struct mtk_cam_buffer *mtk_buf = mtk_cam_vb2_buf_to_dev_buf(vb);
 	// unsigned long offset = 0;
 
-	if ((V4L2_TYPE_IS_CAPTURE(vb->type) &&
-	    !(mtk_buf->flags & FLAG_NO_CACHE_INVALIDATE)) || mtk_buf->is_acp) {
+	if ((V4L2_TYPE_IS_CAPTURE(vb->type) && !(mtk_cam_buf_is_no_cache_invalidate(mtk_buf)))
+		|| mtk_buf->is_acp) {
 
 		if (CAM_DEBUG_ENABLED(V4L2))
-			dev_info(vb->vb2_queue->dev, "%s: %s: index:%d is_acp:%d\n", __func__,
-				node->desc.name, mtk_buf->v4l2_buffer_idx, mtk_buf->is_acp);
+			dev_info(vb->vb2_queue->dev,
+				"%s:%s: flags:%#x index:%d is_acp:%d\n", __func__,
+				node->desc.name, mtk_buf->flags,
+				mtk_buf->v4l2_buffer_idx, mtk_buf->is_acp);
 
 		mtk_cam_vb2_sync_for_cpu(vb);
 /*
@@ -1557,25 +1562,12 @@ int mtk_cam_vidioc_s_selection(struct file *file, void *fh,
 	return 0;
 }
 
-static struct mtk_cam_buffer *
+static inline struct mtk_cam_buffer *
 mtk_cam_vb2_queue_get_mtkbuf(struct vb2_queue *q, struct v4l2_buffer *b)
 {
-	struct vb2_buffer *vb;
+	struct vb2_buffer *vb = vb2_get_buffer(q, b->index);
 
-#if (KERNEL_VERSION(6, 10, 0) > LINUX_VERSION_CODE)
-	if (b->index >= q->num_buffers) {
-		dev_info(q->dev, "%s: buffer index out of range (idx/num: %d/%d)\n",
-			 __func__, b->index, q->num_buffers);
-#else
-	if (b->index >= vb2_get_num_buffers(q)) {
-		dev_info(q->dev, "%s: buffer index out of range (idx/num: %d/%d)\n",
-			 __func__, b->index, vb2_get_num_buffers(q));
-#endif
-		return NULL;
-	}
-
-	vb = q->bufs[b->index];
-	if (vb == NULL) {
+	if (IS_ERR_OR_NULL(vb)) {
 		/* Should never happen */
 		dev_info(q->dev, "%s: buffer is NULL\n", __func__);
 		return NULL;
@@ -1592,20 +1584,17 @@ int mtk_cam_vidioc_qbuf(struct file *file, void *priv,
 	struct mtk_cam_video_device *node;
 
 	cam_buf = mtk_cam_vb2_queue_get_mtkbuf(vdev->queue, buf);
-	if (cam_buf == NULL)
+	if (IS_ERR_OR_NULL(cam_buf))
 		return -EINVAL;
-	node = mtk_cam_vbq_to_vdev(cam_buf->vbb.vb2_buf.vb2_queue);
-	cam_buf->flags = 0;
+
 	cam_buf->v4l2_buffer_idx = buf->index;
-	if (buf->flags & V4L2_BUF_FLAG_NO_CACHE_CLEAN)
-		cam_buf->flags |= FLAG_NO_CACHE_CLEAN;
+	cam_buf->flags = buf->flags;
 
-	if (buf->flags & V4L2_BUF_FLAG_NO_CACHE_INVALIDATE)
-		cam_buf->flags |= FLAG_NO_CACHE_INVALIDATE;
-
-	if (CAM_DEBUG_ENABLED(V4L2))
-		pr_info("%s: flag:0x%x, node:%s, idx:%d\n",
-		__func__, cam_buf->flags, node->desc.name, buf->index);
+	if (CAM_DEBUG_ENABLED(V4L2)) {
+		node = mtk_cam_vbq_to_vdev(cam_buf->vbb.vb2_buf.vb2_queue);
+		pr_info("%s:%s: flag:%#x, idx:%d\n", __func__, node->desc.name,
+			cam_buf->flags, cam_buf->v4l2_buffer_idx);
+	}
 
 	return vb2_qbuf(vdev->queue, vdev->v4l2_dev->mdev, buf);
 }

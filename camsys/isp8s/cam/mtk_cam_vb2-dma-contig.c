@@ -100,15 +100,14 @@ static void *mtk_cam_vb2_vaddr(struct vb2_buffer *vb, void *buf_priv)
 
 	return buf->vaddr;
 }
-
-
+/*
 static unsigned int mtk_cam_vb2_num_users(void *buf_priv)
 {
 	struct mtk_cam_vb2_buf *buf = buf_priv;
 
 	return refcount_read(&buf->refcount);
 }
-
+*/
 static void mtk_cam_vb2_prepare(void *buf_priv)
 {
 	struct mtk_cam_vb2_buf *buf = buf_priv;
@@ -290,12 +289,12 @@ static void *mtk_cam_vb2_attach_dmabuf(
 
 	/* acp - io coherence buffer */
 	if (cam->smmu_dev_acp && node_support_acp(node) &&
-	    (!region_heap_is_prot(dbuf)) &&
-	    (mtk_buf->flags & (FLAG_NO_CACHE_CLEAN | FLAG_NO_CACHE_INVALIDATE))) {
+	    !region_heap_is_prot(dbuf) &&
+	    mtk_cam_buf_is_no_cache_clean_or_invalidate(mtk_buf)) {
 		buf->dev = cam->smmu_dev_acp;
 		mtk_buf->is_acp = 1;
 
-		dev_info(buf->dev, "%s node:%s flags:0x%x index:%d", __func__,
+		dev_info(buf->dev, "%s:%s: flags:%#x index:%d", __func__,
 			node->desc.name, mtk_buf->flags, mtk_buf->v4l2_buffer_idx);
 	}
 
@@ -340,7 +339,7 @@ const struct vb2_mem_ops mtk_cam_dma_contig_memops = {
 	.unmap_dmabuf	= mtk_cam_vb2_unmap_dmabuf,
 	.attach_dmabuf	= mtk_cam_vb2_attach_dmabuf,
 	.detach_dmabuf	= mtk_cam_vb2_detach_dmabuf,
-	.num_users	= mtk_cam_vb2_num_users,
+	/* .num_users	= mtk_cam_vb2_num_users, */
 };
 
 void mtk_cam_vb2_sync_for_device(struct vb2_buffer *vb)

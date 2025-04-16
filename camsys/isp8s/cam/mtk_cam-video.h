@@ -39,10 +39,6 @@ struct mtk_cam_cached_meta_info {
 	bool remap;
 };
 
-/* Flags used in struct mtk_cam_buffer */
-#define FLAG_NO_CACHE_INVALIDATE		0x00000001
-#define FLAG_NO_CACHE_CLEAN			0x00000002
-
 /*
  * struct mtk_cam_buffer - MTK camera device buffer.
  *
@@ -197,6 +193,25 @@ static inline bool mtk_cam_buf_is_mp(struct mtk_cam_buffer *buf)
 static inline bool mtk_cam_buf_is_valid_mp(struct mtk_cam_buffer *buf)
 {
 	return buf->valid_mp > 1;
+}
+
+static inline bool
+mtk_cam_buf_is_no_cache_clean(struct mtk_cam_buffer *buf)
+{
+	return !!(buf->flags & V4L2_BUF_FLAG_NO_CACHE_CLEAN);
+}
+
+static inline bool
+mtk_cam_buf_is_no_cache_invalidate(struct mtk_cam_buffer *buf)
+{
+	return !!(buf->flags & V4L2_BUF_FLAG_NO_CACHE_INVALIDATE);
+}
+
+static inline bool
+mtk_cam_buf_is_no_cache_clean_or_invalidate(struct mtk_cam_buffer *buf)
+{
+	return !!(buf->flags & (V4L2_BUF_FLAG_NO_CACHE_CLEAN |
+				V4L2_BUF_FLAG_NO_CACHE_INVALIDATE));
 }
 
 const struct v4l2_format *
