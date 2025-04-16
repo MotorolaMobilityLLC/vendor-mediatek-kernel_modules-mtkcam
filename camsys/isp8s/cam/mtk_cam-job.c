@@ -57,6 +57,9 @@ static unsigned int disable_ufbc;
 module_param(disable_ufbc, int, 0644);
 MODULE_PARM_DESC(disable_ufbc, "disable_ufbc (default enabled)");
 
+static int sentest_use_other_camsv;
+module_param(sentest_use_other_camsv, int, 0644);
+
 //static unsigned int rms_freerun;
 //module_param(rms_freerun, int, 0644);
 //MODULE_PARM_DESC(rms_freerun, "rms_freerun");
@@ -700,7 +703,15 @@ static unsigned long mtk_cam_select_hw(struct mtk_cam_job *job)
 			 "select sv hw end (raw_idx:%d/sv_available:0x%lx/selected:0x%lx)\n",
 			 raw_idx, sv_available, selected);
 	} else {
+
 		int rsv_id = GET_PLAT_V4L2(reserved_camsv_dev_id);
+		if (sentest_use_other_camsv == 1)
+			rsv_id = 0; // camsv_a
+		else if (sentest_use_other_camsv == 2)
+			rsv_id = 1; // camsv_b
+		else if (sentest_use_other_camsv == 3)
+			rsv_id = 2; // camsv_c
+
 		struct device *dev;
 		struct mtk_camsv_device *sv_dev;
 
@@ -5744,6 +5755,8 @@ static int mtk_cam_job_fill_ipi_config_only_sv(struct mtk_cam_job *job,
 
 			sv_input->dev_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
 			sv_input->tag_id = i;
+			if (sentest_use_other_camsv)
+				sv_input->is_two_smi_out = 1;
 			sv_input->tag_order = job->tag_info[i].tag_order;
 			sv_input->is_first_frame = (job->first_job) ? 1 : 0;
 			sv_input->is_unpack_msb = job->ipi_config.sv_input[i].is_unpack_msb;
