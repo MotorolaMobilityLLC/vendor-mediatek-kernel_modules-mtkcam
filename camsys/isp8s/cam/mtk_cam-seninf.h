@@ -583,6 +583,9 @@ struct seninf_ctx {
 
 	/* Rdy msk for DCG+VS */
 	struct mtk_cam_seninf_rdy_msk_defer_info rdy_msk_defer_info;
+
+	/* temp for hp9 signal interference used */
+	bool is_sof_delay_support;
 };
 
 struct mtk_cam_seninf_irq_event_st {

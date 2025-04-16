@@ -1561,6 +1561,12 @@ static int get_csi_port(struct device *dev, int *port)
 	return -1;
 }
 
+static void get_sof_delay_support(struct seninf_ctx *ctx)
+{
+	ctx->is_sof_delay_support = of_property_read_bool(ctx->dev->of_node, "is-sof-delay-apply");
+	pr_info("[%s] is_sof_delay_support %d\n", __func__, ctx->is_sof_delay_support);
+}
+
 
 static void init_fmt(struct seninf_ctx *ctx)
 {
@@ -3971,6 +3977,8 @@ static int seninf_probe(struct platform_device *pdev)
 	mutex_init(&ctx->stream_mutex);
 	mutex_init(&ctx->mutex_vsync_in);
 
+	get_sof_delay_support(ctx);
+
 	ret = get_csi_port(dev, &port);
 	if (ret) {
 		dev_info(dev, "get_csi_port ret %d\n", ret);
@@ -5028,6 +5036,26 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 	return asserted ? -ESTRPIPE : (ret && reset_by_user);
 }
 
+bool mtk_cam_seninf_is_sof_delay_enabled(struct v4l2_subdev *sd)
+{
+	struct seninf_ctx *ctx = NULL;
+
+	if (unlikely(sd == NULL)) {
+		pr_info("[%s][ERR] sd is NULL", __func__);
+		return 0;
+	}
+
+	ctx = sd_to_ctx(sd);
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s][ERR] ctx is NULL", __func__);
+		return 0;
+	}
+
+	/* return true only when hp9 (for signal interference camsv work around only) */
+	return (ctx->is_sof_delay_support == 1) ? true : false;
+}
+
 int mtk_cam_seninf_get_csi_irq_status(struct v4l2_subdev *sd, struct v4l2_ctrl *ctrl)
 {
 	struct seninf_ctx *ctx = sd_to_ctx(sd);
@@ -5639,6 +5667,7 @@ int mtk_cam_seninf_aov_set_dualsync(unsigned int sensor_id, unsigned int cmd)
 	return 0;
 }
 EXPORT_SYMBOL(mtk_cam_seninf_aov_set_dualsync);
+
 
 int mtk_cam_seninf_aov_sensor_set_mclk(unsigned int sensor_id, bool enable)
 {

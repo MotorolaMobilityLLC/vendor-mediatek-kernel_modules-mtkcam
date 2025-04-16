@@ -373,6 +373,14 @@ void mtk_cam_seninf_frame_event_notify(struct v4l2_subdev *sd,
 	u32 sensor_sequence, u32 sensor_sync_id);
 
 /**
+ * Temp API for HP9 signal interference used,
+ * sof delay only enable when HP9 signal interference case
+ *
+ * @param sd v4l2_subdev
+ */
+bool mtk_cam_seninf_is_sof_delay_enabled(struct v4l2_subdev *sd);
+
+/**
  * Notify seninf to start test model for stress test
  *
  * @param sd v4l2_subdev
