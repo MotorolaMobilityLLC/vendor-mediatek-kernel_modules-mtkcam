@@ -621,14 +621,34 @@ static int push_msgfifo(struct mtk_camsv_device *sv_dev,
 {
 	int len;
 
+	spin_lock(&sv_dev->msg_lock);
 	if (unlikely(kfifo_avail(&sv_dev->msg_fifo) < sizeof(*info))) {
 		atomic_set(&sv_dev->is_fifo_overflow, 1);
+		spin_unlock(&sv_dev->msg_lock);
 		return -1;
 	}
 
 	len = kfifo_in(&sv_dev->msg_fifo, info, sizeof(*info));
-	WARN_ON(len != sizeof(*info));
 
+	spin_unlock(&sv_dev->msg_lock);
+	WARN_ON(len != sizeof(*info));
+	return 0;
+}
+
+static int pop_msgfifo(struct mtk_camsv_device *sv_dev,
+			struct mtk_camsys_irq_info *info)
+{
+	int len;
+
+	spin_lock(&sv_dev->msg_lock);
+	if (kfifo_len(&sv_dev->msg_fifo) >= sizeof(*info)) {
+		len = kfifo_out(&sv_dev->msg_fifo, info, sizeof(*info));
+		spin_unlock(&sv_dev->msg_lock);
+		WARN_ON(len != sizeof(*info));
+		return 1;
+	}
+
+	spin_unlock(&sv_dev->msg_lock);
 	return 0;
 }
 
@@ -3586,10 +3606,7 @@ static irqreturn_t mtk_thread_irq_camsv(int irq, void *data)
 	if (unlikely(atomic_cmpxchg(&sv_dev->is_fifo_overflow, 1, 0)))
 		dev_info(sv_dev->dev, "msg fifo overflow\n");
 
-	while (kfifo_len(&sv_dev->msg_fifo) >= sizeof(irq_info)) {
-		int len = kfifo_out(&sv_dev->msg_fifo, &irq_info, sizeof(irq_info));
-
-		WARN_ON(len != sizeof(irq_info));
+	while (pop_msgfifo(sv_dev, &irq_info)) {
 
 		if (CAM_DEBUG_ENABLED(CTRL))
 			dev_info(sv_dev->dev, "ts=%llu irq_type %d, req:0x%x/0x%x, tg_cnt:%d\n",
@@ -3708,6 +3725,8 @@ static int mtk_camsv_of_probe(struct platform_device *pdev,
 	unsigned int i, j;
 	int ret, num_clks, num_iommus, num_ports, smmus;
 	unsigned int raw_lock_sel_addr = 0;
+
+	spin_lock_init(&sv_dev->msg_lock);
 
 	ret = of_property_read_u32(dev->of_node, "mediatek,camsv-id",
 						       &sv_dev->id);

@@ -8,6 +8,7 @@
 
 #include <linux/kfifo.h>
 #include <linux/suspend.h>
+#include <linux/spinlock.h>
 
 #include "mtk_cam-engine.h"
 #include "mtk_cam-dvfs_qos.h"
@@ -210,6 +211,7 @@ struct mtk_camsv_device {
 
 	int fifo_size;
 	void *msg_buffer;
+	spinlock_t msg_lock;
 	struct kfifo msg_fifo;
 	atomic_t is_fifo_overflow;
 
