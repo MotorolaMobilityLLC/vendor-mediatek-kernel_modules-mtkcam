@@ -21,7 +21,7 @@
 #undef dev_dbg
 #define dev_dbg(dev, fmt, arg...)			\
 	do {						\
-		if (mtk_ccd_debug_enabled())		\
+		if (unlikely(mtk_ccd_debug_enabled()))	\
 			dev_info(dev, fmt, ## arg);	\
 	} while (0)
 
@@ -171,9 +171,10 @@ static long ccd_unlocked_ioctl(struct file *filp, unsigned int cmd,
 	struct ccd_worker_item work_obj;
 	struct ccd_master_status_item master_obj;
 
-	memset(&work_obj, 0, sizeof(work_obj));
-	memset(&listen_obj, 0, sizeof(listen_obj));
-	memset(&master_obj, 0, sizeof(master_obj));
+	/**
+	 * no need memset for listen_obj/work_obj/master_obj,
+	 * all of them would be overwrited.
+	 */
 
 	switch (cmd) {
 	case IOCTL_CCD_MASTER_INIT:
@@ -194,7 +195,7 @@ static long ccd_unlocked_ioctl(struct file *filp, unsigned int cmd,
 		}
 		master_obj.state = CCD_MASTER_EXIT;
 
-		if (copy_from_user(&master_obj, user_addr, sizeof(master_obj)))
+		if (copy_to_user(user_addr, &master_obj, sizeof(master_obj)))
 			ret = -EFAULT;
 
 		break;

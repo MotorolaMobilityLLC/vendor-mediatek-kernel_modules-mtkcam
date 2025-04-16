@@ -6396,12 +6396,13 @@ static int update_ltms_buf_to_ipi_frame(struct mtk_cam_job *job,
 
 	return 0;
 }
-
+/*
 static void reset_img_ufd_io_param(struct mtkcam_ipi_frame_param *fp)
 {
 	memset(&fp->img_ufdi_params, 0, sizeof(fp->img_ufdi_params));
 	memset(&fp->img_ufdo_params, 0, sizeof(fp->img_ufdo_params));
 }
+*/
 
 static void reset_dcif_param(struct mtkcam_ipi_dcif_ring_param *p)
 {
@@ -6428,7 +6429,7 @@ static int mtk_cam_job_fill_ipi_frame(struct mtk_cam_job *job,
 
 	fp = (struct mtkcam_ipi_frame_param *)job->ipi.vaddr;
 
-	reset_img_ufd_io_param(fp);
+	// reset_img_ufd_io_param(fp);  // job->ipi.vaddr is already reset
 	reset_dcif_param(&fp->dcif_param);
 
 	update_cq_hw_rdy_param(job, fp);
