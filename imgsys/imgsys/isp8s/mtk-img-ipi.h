@@ -165,7 +165,8 @@ struct img_swfrm_info {
 	uint8_t is_secFrm;
 	uint8_t is_earlycb;
 	uint8_t is_lastingroup;
-	int8_t rsv[4];
+	uint8_t boost;
+	int8_t rsv[3];
 	struct private_data priv[IMGSYS_DL_HW_MAX];
 };
 
