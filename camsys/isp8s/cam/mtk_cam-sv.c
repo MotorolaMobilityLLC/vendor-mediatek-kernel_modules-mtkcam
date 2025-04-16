@@ -33,6 +33,9 @@
 // place below all other include
 #include "mtk_cam-virt-isp.h"
 
+#define CAMSV_TS_CNT 0x2
+#define CAMSV_MIN_SOF_DELAY_CYCLES 32
+
 #define MTK_CAMSV_STOP_HW_TIMEOUT			(33 * USEC_PER_MSEC)
 #define CAMSV_DEBUG 0
 #define FRAME_TIME 33000000
@@ -67,6 +70,10 @@ MODULE_PARM_DESC(disable_camsv_df_mode, "disable camsv df mode");
 static unsigned int camsv_stress_test_mode;
 module_param(camsv_stress_test_mode, int, 0644);
 MODULE_PARM_DESC(camsv_stress_test_mode, "camsv_stress_test_mode");
+
+static int camsv_debug_dump_once;
+module_param(camsv_debug_dump_once, int, 0644);
+MODULE_PARM_DESC(camsv_debug_dump_once, "camsv debug dump once");
 
 #undef dev_dbg
 #define dev_dbg(dev, fmt, arg...)		\
@@ -1404,6 +1411,16 @@ void mtk_cam_update_sensor_resource(struct mtk_cam_ctx *ctx)
 	}
 }
 
+unsigned int mtk_cam_sv_get_sof_delay_period(void)
+{
+	unsigned int cycle = 0, period = 0;
+
+	cycle = (CAMSV_TS_CNT + 1) * 2;
+	period = (CAMSV_MIN_SOF_DELAY_CYCLES + cycle - 1) / cycle;
+
+	return period;
+}
+
 struct mtk_cam_seninf_sentest_param *
 	mtk_cam_get_sentest_param(struct mtk_cam_ctx *ctx)
 {
@@ -2099,7 +2116,6 @@ int mtk_cam_sv_ddren_qos_coh_config(struct mtk_camsv_device *sv_dev, int frm_tim
 	return 0;
 }
 
-#define CAMSV_TS_CNT 0x2
 void mtk_cam_sv_update_start_period(
 	struct mtk_camsv_device *sv_dev, int scq_ms)
 {
@@ -3038,11 +3054,11 @@ void mtk_cam_sv_stg_dump(struct mtk_camsv_device *sv_dev)
 int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tags)
 {
 	unsigned int i;
-	unsigned int tg_sen_mode, tg_vf_con, tg_path_cfg;
+	unsigned int tg_sen_mode, tg_vf_con, tg_path_cfg, sof_delay_en;
 	unsigned int seq_no_inner, seq_no_outer;
 	unsigned int tag_fmt, tag_cfg;
 	unsigned int tag_fbc_status, tag_addr, tag_addr_msb;
-	unsigned int frm_size, frm_size_r, grab_pix, grab_lin;
+	unsigned int frm_size, frm_size_r, grab_pix, grab_lin, sof_delay_period;
 	unsigned int dcif_set, dcif_sel;
 	unsigned int first_tag, last_tag, group_info;
 	int need_smi_dump = false;
@@ -3053,9 +3069,10 @@ int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tag
 	tg_sen_mode = readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_SEN_MODE);
 	tg_vf_con = readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_VF_CON);
 	tg_path_cfg = readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_PATH_CFG);
+	sof_delay_en = readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_SOF_DELAY_EN);
 	dev_info(sv_dev->dev,
-		"tg_sen_mode:0x%x tg_vf_con:0x%x tg_path_cfg:0x%x\n",
-		tg_sen_mode, tg_vf_con, tg_path_cfg);
+		"tg_sen_mode:0x%x tg_vf_con:0x%x tg_path_cfg:0x%x sof_delay_en:0x%x\n",
+		tg_sen_mode, tg_vf_con, tg_path_cfg, sof_delay_en);
 
 	/* check frame setting and status for each tag */
 	for (i = 0; i < CAMSV_MAX_TAGS; i++) {
@@ -3097,12 +3114,16 @@ int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tag
 		grab_lin =
 			readl_relaxed(sv_dev->base_inner + REG_CAMSVCENTRAL_GRAB_LIN_TAG1 +
 			CAMSVCENTRAL_GRAB_LIN_TAG_SHIFT * i);
+		sof_delay_period =
+			readl_relaxed(sv_dev->base_inner +
+				REG_CAMSVCENTRAL_SOF_DELAY_PERIOD_TAG1 +
+				CAMSVCENTRAL_SOF_DELAY_PERIOD_TAG_SHIFT * i);
 
 		dev_info_ratelimited(sv_dev->dev,
-			"tag_idx:%d seq_no:%d_%d fmt:0x%x cfg:0x%x fbc_status:0x%x addr:0x%x_%x frm_size:0x%x frm_size_r:0x%x grab_pix:0x%x grab_lin:0x%x\n",
+			"tag_idx:%d seq_no:%d_%d fmt:0x%x cfg:0x%x fbc_status:0x%x addr:0x%x_%x frm_size:0x%x frm_size_r:0x%x grab_pix:0x%x grab_lin:0x%x sof_delay_period:0x%x\n",
 			i, seq_no_inner, seq_no_outer, tag_fmt, tag_cfg,
 			tag_fbc_status, tag_addr_msb, tag_addr,
-			frm_size, frm_size_r, grab_pix, grab_lin);
+			frm_size, frm_size_r, grab_pix, grab_lin, sof_delay_period);
 	}
 
 	/* check dcif setting */
@@ -3598,6 +3619,13 @@ static irqreturn_t mtk_thread_irq_camsv(int irq, void *data)
 			irq_info.frame_idx_inner,
 			irq_info.frame_idx,
 			irq_info.tg_cnt);
+
+		/* debug dump once */
+		if (camsv_debug_dump_once &&
+			(irq_info.irq_type & (1 << CAMSYS_IRQ_FRAME_START))) {
+			camsv_debug_dump_once = 0;
+			mtk_cam_sv_debug_dump(sv_dev, 0);
+		}
 
 		/* error case */
 		if (unlikely(irq_info.irq_type & (1 << CAMSYS_IRQ_ERROR)) &&

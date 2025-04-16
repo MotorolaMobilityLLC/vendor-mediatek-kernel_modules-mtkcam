@@ -5764,6 +5764,9 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 					atomic_set(&pipe->res_config.is_fmt_change, 1);
 				}
 				sv_input->fps = get_sensor_fps(job);
+				sv_input->sof_delay_period =
+					(mtk_cam_seninf_is_sof_delay_enabled(ctx->seninf)) ?
+					mtk_cam_sv_get_sof_delay_period() : 0;
 			}
 		}
 	}
