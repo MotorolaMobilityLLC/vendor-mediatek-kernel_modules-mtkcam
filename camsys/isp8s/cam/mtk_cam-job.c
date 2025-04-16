@@ -2764,6 +2764,7 @@ static int job_pda_hw_init(struct mtk_cam_job *job, int pda_idx)
 	unsigned long pda_need_init = 0, pda_need_uninit = 0;
 	unsigned long pda_selected = 0;
 	struct mtk_cam_ctx *ctx = job->src_ctx;
+	struct mtk_cam_ctrl *ctrl = &ctx->cam_ctrl;
 	unsigned int i;
 
 	/* disable pda dc mode*/
@@ -2784,9 +2785,12 @@ static int job_pda_hw_init(struct mtk_cam_job *job, int pda_idx)
 		pr_info("%s pda_need_init %lx pda_need_unint %lx use engine %lx ",
 			__func__, pda_need_init, pda_need_uninit, ctx->used_engine);
 		mtk_cam_ctx_fetch_pda_devices(ctx, pda_selected);
-		if (mtk_cam_occupy_engine(ctx->cam, pda_selected))
+		if (mtk_cam_occupy_engine(ctx->cam, pda_selected)) {
 			dev_info(ctx->cam->dev, "%s warning: occupy resource prev:0x%lx/cur:0x%lx",
 			__func__, ctx->used_engine, pda_selected);
+			mtk_cam_event_error(ctrl, MSG_PDA_OCCUPY_FAILURE);
+			WRAP_AEE_EXCEPTION(MSG_PDA_OCCUPY_FAILURE, __func__);
+		}
 		ctx->used_engine |= pda_need_init;
 		ctx->pda_modules |= pda_need_init;
 		mtk_cam_pm_runtime_engines(&ctx->cam->engines, pda_need_init, 1);
@@ -2827,15 +2831,16 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job, int pda_idx)
 	unsigned long selected_need_init;
 	unsigned long unselected_need_uninit;
 	bool qof_enabled = false;
+	bool pda_already_used = false;
+
+	if (ctx->used_engine & bit_map_bit(MAP_HW_PDA, pda_idx))
+		pda_already_used = true;
 
 	if (mtk_cam_release_engine(ctx->cam, ctx->used_engine))
 		dev_info(ctx->cam->dev, "%s warning: release resource prev:0x%lx",
 			__func__, ctx->used_engine);
-	selected = mtk_cam_select_hw(job);
 
-	/* select pda hw */
-	if (pda_idx != -1)
-		selected |= bit_map_bit(MAP_HW_PDA, pda_idx);
+	selected = mtk_cam_select_hw(job);
 
 	if (!selected)
 		return -1;
@@ -2850,6 +2855,8 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job, int pda_idx)
 		__func__, ctx->used_engine, selected, selected_need_init, unselected_need_uninit);
 	/* ToDo - YM */
 	ctx->used_engine = selected;
+	if (pda_already_used)
+		ctx->used_engine |= bit_map_bit(MAP_HW_PDA, pda_idx);
 	if (selected_need_init) {
 		mtk_cam_pm_runtime_engines(&ctx->cam->engines, selected_need_init, 1);
 		/* init new slave raw */
