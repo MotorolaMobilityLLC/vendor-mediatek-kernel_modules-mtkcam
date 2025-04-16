@@ -39,9 +39,6 @@ struct clk_bulk_data imgsys_isp8s_clks_mt6993[] = {
 	{  // imgsys_main_clk IMG_IPESYS_CVFS26_CAM_P2
 		.id = "IMG_IPE_CVFS26",
 	},
-	{  // imgsys_main_clk IMG_ODPM26_CAM_P2
-		.id = "IMG_ODPM26",
-	},
 	{  // imgsys_main_clk IMG_LARB9_CAM_P2
 		.id = "IMG_LARB9",
 	},
@@ -66,15 +63,6 @@ struct clk_bulk_data imgsys_isp8s_clks_mt6993[] = {
 	{  // imgsys_main_clk IMG_WPE2_CAM_P2
 		.id = "IMG_WPE2",
 	},
-	{  // imgsys_main_clk IMG_ADL_LARB_CAM_P2
-		.id = "IMG_ADL_LARB",
-	},
-	{  // imgsys_main_clk IMG_ADLRD_CAM_P2
-		.id = "IMG_ADLRD",
-	},
-	{  // imgsys_main_clk IMG_ADLWR0_CAM_P2
-		.id = "IMG_ADLWR0",
-	},
 	{  // imgsys_main_clk IMG_AVS_CAM_P2
 		.id = "IMG_AVS",
 	},
@@ -89,18 +77,6 @@ struct clk_bulk_data imgsys_isp8s_clks_mt6993[] = {
 	},
 	{  // imgsys_main_clk IMG_BLS_CAM_P2
 		.id = "IMG_BLS",
-	},
-	{  // imgsys_main_clk IMG_SDL0_CAM_P2
-		.id = "IMG_SDL0",
-	},
-	{  // imgsys_main_clk IMG_SDL1_CAM_P2
-		.id = "IMG_SDL1",
-	},
-	{  // imgsys_main_clk IMG_SDL2_CAM_P2
-		.id = "IMG_SDL2",
-	},
-	{  // imgsys_main_clk IMG_SDL3_CAM_P2
-		.id = "IMG_SDL3",
 	},
 	{  // imgsys_main_clk IMG_SUB_COMMON0_CAM_P2
 		.id = "IMG_SUB_COMMON0",
@@ -123,39 +99,6 @@ struct clk_bulk_data imgsys_isp8s_clks_mt6993[] = {
 	{  // imgsys_main_clk IMG_SUB_COMMON6_CAM_P2
 		.id = "IMG_SUB_COMMON6",
 	},
-	{  // imgsys_main_clk IMG_GALS7_CAM_P2
-		.id = "IMG_GALS7",
-	},
-	{  // imgsys_main_clk IMG_GALS_CAM_P2
-		.id = "IMG_GALS",
-	},
-	{  // imgsys_main_clk IMG_GALS_RX_DIP0_CAM_P2
-		.id = "IMG_GALS_RX_DIP0",
-	},
-	{  // imgsys_main_clk IMG_GALS_RX_DIP1_CAM_P2
-		.id = "IMG_GALS_RX_DIP1",
-	},
-	{  // imgsys_main_clk IMG_GALS_RX_TRAW0_CAM_P2
-		.id = "IMG_GALS_RX_TRAW0",
-	},
-	{  // imgsys_main_clk IMG_GALS_RX_WPE0_CAM_P2
-		.id = "IMG_GALS_RX_WPE0",
-	},
-	{  // imgsys_main_clk IMG_GALS_RX_WPE1_CAM_P2
-		.id = "IMG_GALS_RX_WPE1",
-	},
-	{  // imgsys_main_clk IMG_GALS_RX_WPE2_CAM_P2
-		.id = "IMG_GALS_RX_WPE2",
-	},
-	{  // imgsys_main_clk IMG_GALS_RX_WPE3_CAM_P2
-		.id = "IMG_GALS_RX_WPE3",
-	},
-	{  // imgsys_main_clk IMG_GALS_TRX_IPE0_CAM_P2
-		.id = "IMG_GALS_TRX_IPE0",
-	},
-	{  // imgsys_main_clk IMG_GALS_TRX_IPE1_CAM_P2
-		.id = "IMG_GALS_TRX_IPE1",
-	},
 	{  // imgsys_main_clk IMG26_CAM_P2
 		.id = "IMG26",
 	},
@@ -170,18 +113,6 @@ struct clk_bulk_data imgsys_isp8s_clks_mt6993[] = {
 	},
 	{  // dip_top_dip1_clk DIP_TOP_DIP1_DIP_TOP_CAM_P2
 		.id = "DIP_TOP_DIP1_DIP_TOP",
-	},
-	{  // dip_top_dip1_clk DIP_TOP_DIP1_DIP_TOP_GALS0_CAM_P2
-		.id = "DIP_TOP_DIP1_DIP_TOP_GALS0",
-	},
-	{  // dip_top_dip1_clk DIP_TOP_DIP1_DIP_TOP_GALS1_CAM_P2
-		.id = "DIP_TOP_DIP1_DIP_TOP_GALS1",
-	},
-	{  // dip_top_dip1_clk DIP_TOP_DIP1_DIP_TOP_GALS2_CAM_P2
-		.id = "DIP_TOP_DIP1_DIP_TOP_GALS2",
-	},
-	{  // dip_top_dip1_clk DIP_TOP_DIP1_DIP_TOP_GALS3_CAM_P2
-		.id = "DIP_TOP_DIP1_DIP_TOP_GALS3",
 	},
 	{  // dip_top_dip1_clk DIP_TOP_DIP1_LARB10_CAM_P2
 		.id = "DIP_TOP_DIP1_LARB10",
@@ -216,12 +147,6 @@ struct clk_bulk_data imgsys_isp8s_clks_mt6993[] = {
 	{  // wpe_eis_dip1_clk WPE_EIS_DIP1_LARB_U1_CAM_P2
 		.id = "WPE_EIS_DIP1_LARB_U1",
 	},
-	{  // wpe_eis_dip1_clk WPE_EIS_DIP1_GALS_U0_CAM_P2
-		.id = "WPE_EIS_DIP1_GALS_U0",
-	},
-	{  // wpe_eis_dip1_clk WPE_EIS_DIP1_GALS_U1_CAM_P2
-		.id = "WPE_EIS_DIP1_GALS_U1",
-	},
 	{  // wpe_eis_dip1_clk WPE_EIS_DIP1_WPE_MACRO_CAM_P2
 		.id = "WPE_EIS_DIP1_WPE_MACRO",
 	},
@@ -249,9 +174,6 @@ struct clk_bulk_data imgsys_isp8s_clks_mt6993[] = {
 	{  // wpe_eis_dip1_clk WPE_EIS_DIP1_DFP1_CAM_P2
 		.id = "WPE_EIS_DIP1_DFP1",
 	},
-	{  // wpe_eis_dip1_clk WPE_EIS_DIP1_DWPE_CAM_P2
-		.id = "WPE_EIS_DIP1_DWPE",
-	},
 	{  // wpe_eis_dip1_clk WPE_EIS_DIP1_ME_CAM_P2
 		.id = "WPE_EIS_DIP1_ME",
 	},
@@ -266,12 +188,6 @@ struct clk_bulk_data imgsys_isp8s_clks_mt6993[] = {
 	},
 	{  // wpe_tnr_dip1_clk WPE_TNR_DIP1_LARB_U1_CAM_P2
 		.id = "WPE_TNR_DIP1_LARB_U1",
-	},
-	{  // wpe_tnr_dip1_clk WPE_TNR_DIP1_GALS_U0_CAM_P2
-		.id = "WPE_TNR_DIP1_GALS_U0",
-	},
-	{  // wpe_tnr_dip1_clk WPE_TNR_DIP1_GALS_U1_CAM_P2
-		.id = "WPE_TNR_DIP1_GALS_U1",
 	},
 	{  // wpe_tnr_dip1_clk WPE_TNR_DIP1_WPE_MACRO_CAM_P2
 		.id = "WPE_TNR_DIP1_WPE_MACRO",
@@ -300,9 +216,6 @@ struct clk_bulk_data imgsys_isp8s_clks_mt6993[] = {
 	{  // wpe_tnr_dip1_clk WPE_TNR_DIP1_DFP1_CAM_P2
 		.id = "WPE_TNR_DIP1_DFP1",
 	},
-	{  // wpe_tnr_dip1_clk WPE_TNR_DIP1_DWPE_CAM_P2
-		.id = "WPE_TNR_DIP1_DWPE",
-	},
 	{  // wpe_tnr_dip1_clk WPE_TNR_DIP1_ME_CAM_P2
 		.id = "WPE_TNR_DIP1_ME",
 	},
@@ -314,12 +227,6 @@ struct clk_bulk_data imgsys_isp8s_clks_mt6993[] = {
 	},
 	{  // wpe_lite_dip1_clk WPE_LITE_DIP1_LARB_U1_CAM_P2
 		.id = "WPE_LITE_DIP1_LARB_U1",
-	},
-	{  // wpe_lite_dip1_clk WPE_LITE_DIP1_GALS_U0_CAM_P2
-		.id = "WPE_LITE_DIP1_GALS_U0",
-	},
-	{  // wpe_lite_dip1_clk WPE_LITE_DIP1_GALS_U1_CAM_P2
-		.id = "WPE_LITE_DIP1_GALS_U1",
 	},
 	{  // wpe_lite_dip1_clk WPE_LITE_DIP1_WPE_MACRO_CAM_P2
 		.id = "WPE_LITE_DIP1_WPE_MACRO",
@@ -348,9 +255,6 @@ struct clk_bulk_data imgsys_isp8s_clks_mt6993[] = {
 	{  // wpe_lite_dip1_clk WPE_LITE_DIP1_DFP1_CAM_P2
 		.id = "WPE_LITE_DIP1_DFP1",
 	},
-	{  // wpe_lite_dip1_clk WPE_LITE_DIP1_DWPE_CAM_P2
-		.id = "WPE_LITE_DIP1_DWPE",
-	},
 	{  // wpe_lite_dip1_clk WPE_LITE_DIP1_ME_CAM_P2
 		.id = "WPE_LITE_DIP1_ME",
 	},
@@ -365,9 +269,6 @@ struct clk_bulk_data imgsys_isp8s_clks_mt6993[] = {
 	},
 	{  // traw_dip1_clk TRAW_DIP1_TRAW_CAM_P2
 		.id = "TRAW_DIP1_TRAW",
-	},
-	{  // traw_dip1_clk TRAW_DIP1_GALS_CAM_P2
-		.id = "TRAW_DIP1_GALS",
 	},
 	{  // traw_cap_dip1_clk TRAW_CAP_DIP1_TRAW_CAP_CAM_P2
 		.id = "TRAW_CAP_DIP1_TRAW_CAP",
