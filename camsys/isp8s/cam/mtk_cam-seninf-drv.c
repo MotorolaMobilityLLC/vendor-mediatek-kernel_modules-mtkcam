@@ -1174,6 +1174,7 @@ static int seninf_core_probe(struct platform_device *pdev)
 	int index;
 	u32 port_id = 0;
 	u32 seninf_async_idx = 0;
+	u32 cam_main_csi_afifo_addr = 0;
 
 #ifndef REDUCE_KO_DEPENDENCY_FOR_SMT
 	u32 tmp_no = 0;
@@ -1201,7 +1202,6 @@ static int seninf_core_probe(struct platform_device *pdev)
 		pr_info("[%s][%d] reg_seninf_top ioremap failed\n", __func__, __LINE__);
 		return PTR_ERR(core->reg_seninf_top);
 	}
-
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "seninf-async-top");
 	core->reg_seninf_async = devm_ioremap_resource(dev, res);
@@ -1351,6 +1351,16 @@ static int seninf_core_probe(struct platform_device *pdev)
 
 		// no need to call of_node_put, due to next
 		// of_find_compatble_node will call it.
+	}
+
+	if (of_property_read_u32(dev->of_node, "cam-main-csi-afifo-addr", &cam_main_csi_afifo_addr) < 0)
+		dev_err(dev, "[%s] get cam_main_csi_afifo address failed\n", __func__);
+	else {
+		core->reg_cam_main_csi_afifo = ioremap(cam_main_csi_afifo_addr, 0x4);
+		if (IS_ERR(core->reg_cam_main_csi_afifo)) {
+			dev_err(dev, "[%s] failed to map cam_main_csi_afifo_addr\n", __func__);
+			core->reg_cam_main_csi_afifo = NULL;
+		}
 	}
 
 	mtk_cam_seninf_tsrec_init(dev, core->reg_seninf_top);
@@ -3973,7 +3983,9 @@ static int seninf_probe(struct platform_device *pdev)
 					core->reg_seninf_outmux,
 					core->reg_seninf_outmux_inner,
 					core->reg_csi_top_0,
+					core->reg_cam_main_csi_afifo,
 					core->reg_csi_base);
+
 	if (ret) {
 		dev_info(dev, "g_seninf_ops->_init_iomem failed ret %d\n", ret);
 		return ret;

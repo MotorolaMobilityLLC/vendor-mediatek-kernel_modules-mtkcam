@@ -204,6 +204,7 @@ struct mtk_cam_seninf_ops {
 			      void __iomem *if_tm_base, void __iomem *if_outmux[],
 			      void __iomem *if_outmux_inner[],
 			      void __iomem *csi_top_0,
+			      void __iomem *cam_main_csi_afifo,
 				  struct csi_reg_base *csi_base);
 	int (*_init_port)(struct seninf_ctx *ctx, int port, struct csi_reg_base *csi_base);
 	int (*_disable_outmux)(struct seninf_ctx *ctx, int outmux, bool immed);

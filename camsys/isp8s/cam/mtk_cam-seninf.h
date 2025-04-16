@@ -236,6 +236,7 @@ struct seninf_core {
 	void __iomem *reg_csi_top_0;
 	void __iomem *reg_csi_top_1;
 	struct csi_reg_base reg_csi_base[CSI_PORT_PHYSICAL_MAX_NUM];
+	void __iomem *reg_cam_main_csi_afifo;
 	//void __iomem *reg_if;
 	//void __iomem *reg_ana;
 	int refcnt;
@@ -423,6 +424,7 @@ struct seninf_ctx {
 	void __iomem *reg_if_tg[SENINF_ASYNC_NUM];
 	void __iomem *reg_csi_top_0;
 	void __iomem *reg_csi_top_1;
+	void __iomem *reg_cam_main_csi_afifo;
 
 	/* resources */
 	struct list_head list_outmux;

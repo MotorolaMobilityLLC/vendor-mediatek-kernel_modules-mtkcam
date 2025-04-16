@@ -21,6 +21,7 @@
 #include "mtk_csi_phy_3_0/mtk_cam-seninf-sensor-monitor.h"
 #include "mtk_csi_phy_3_0/mtk_cam-seninf-tg1.h"
 #include "mtk_csi_phy_3_0/mtk_cam-seninf-outmux.h"
+#include "mtk_csi_phy_3_0/mtk_cam-cam-main-csi-afifo.h"
 
 #include "mtk_cam-seninf_control-8s.h"
 #include "mtk_cam-seninf-route.h"
@@ -37,7 +38,7 @@
 #define PIX_MODE_16_REG_VAL 4
 //#define SCAN_SETTLE
 
-#define MT6993_IOMOM_VERSIONS "mt6993" //jeff porting
+#define MT6993_IOMOM_VERSIONS "mt6993"
 #define MT6899_IOMOM_VERSIONS "mt6899"
 #define MT6991_IOMOM_VERSIONS "mt6991"
 
@@ -216,6 +217,15 @@ SENINF_BITS(ptr, SENINF_TG_SENINF_TG_TM_STAGGER_CON##num, SENINF_TG_SENINF_TG_TM
 SENINF_BITS(ptr, SENINF_TG_SENINF_TG_TM_EXP##num##_CTL, SENINF_TG_SENINF_TG_TM_EXP##num##_VC_MODE, 1); \
 SENINF_BITS(ptr, SENINF_TG_SENINF_TG_TM_EXP##num##_CTL, SENINF_TG_SENINF_TG_TM_EXP##num##_DELAY, (vs_diff * num)); \
 } while (0)
+
+#define SET_CAM_MAIN_CSI_AFIFO_CTRL(ctx, ptr, port, split) do { \
+if (ptr != NULL) { \
+	SENINF_BITS(ptr, CAM_MAIN_CSI_AFIFO_CTL, CAM_MAIN_CSR_AFIFO_##port##A_MIPI_SPLIT_VMM, split); \
+	seninf_logd(ctx, "Setting CAM_MAIN_CSI_AFIFO_CTRL split(%d)\n", split); \
+} else \
+	seninf_logd(ctx, "Ptr is NULL, skip setting CAM_MAIN_CSI_AFIFO_CTRL\n"); \
+} while (0)
+
 
 #define PORTING_FIXME 0
 
@@ -460,6 +470,7 @@ static int mtk_cam_seninf_init_iomem(struct seninf_ctx *ctx,
 				void __iomem *if_tm_base, void __iomem *if_outmux[],
 				void __iomem *if_outmux_inner[],
 				void __iomem *csi_top_0,
+				void __iomem *cam_main_csi_afifo,
 				struct csi_reg_base *csi_base)
 {
 	int i;
@@ -639,7 +650,7 @@ static int mtk_cam_seninf_init_iomem(struct seninf_ctx *ctx,
 		ctx->reg_if_outmux_inner[i] = if_outmux_inner[i];
 
 	ctx->reg_csi_top_0 = csi_top_0;
-
+	ctx->reg_cam_main_csi_afifo = cam_main_csi_afifo;
 	return 0;
 }
 
@@ -1424,6 +1435,7 @@ static int mtk_cam_seninf_en_async_overrun_irq(struct seninf_ctx *ctx, int async
 static int mtk_cam_seninf_set_async(struct seninf_ctx *ctx, int async, int split, int tm)
 {
 	void *pSeninf_async = ctx->reg_if_async;
+	void *pCam_main_csi_afifo = ctx->reg_cam_main_csi_afifo;
 	int val = 0;
 
 	if (async >= _seninf_ops->async_num)
@@ -1435,21 +1447,27 @@ static int mtk_cam_seninf_set_async(struct seninf_ctx *ctx, int async, int split
 	switch(async) {
 	case 0:
 		SENINF_BITS(pSeninf_async, SENINF_ASYTOP_MIPI_SPLIT, SENINF_ASYTOP_MIPI_SPLIT_0, split);
+		SET_CAM_MAIN_CSI_AFIFO_CTRL(ctx, pCam_main_csi_afifo, 0, split);
 		break;
 	case 1:
 		SENINF_BITS(pSeninf_async, SENINF_ASYTOP_MIPI_SPLIT, SENINF_ASYTOP_MIPI_SPLIT_1, split);
+		SET_CAM_MAIN_CSI_AFIFO_CTRL(ctx, pCam_main_csi_afifo, 1, split);
 		break;
 	case 2:
 		SENINF_BITS(pSeninf_async, SENINF_ASYTOP_MIPI_SPLIT, SENINF_ASYTOP_MIPI_SPLIT_2, split);
+		SET_CAM_MAIN_CSI_AFIFO_CTRL(ctx, pCam_main_csi_afifo, 2, split);
 		break;
 	case 3:
 		SENINF_BITS(pSeninf_async, SENINF_ASYTOP_MIPI_SPLIT, SENINF_ASYTOP_MIPI_SPLIT_3, split);
+		SET_CAM_MAIN_CSI_AFIFO_CTRL(ctx, pCam_main_csi_afifo, 3, split);
 		break;
 	case 4:
 		SENINF_BITS(pSeninf_async, SENINF_ASYTOP_MIPI_SPLIT, SENINF_ASYTOP_MIPI_SPLIT_4, split);
+		SET_CAM_MAIN_CSI_AFIFO_CTRL(ctx, pCam_main_csi_afifo, 4, split);
 		break;
 	case 5:
 		SENINF_BITS(pSeninf_async, SENINF_ASYTOP_MIPI_SPLIT, SENINF_ASYTOP_MIPI_SPLIT_5, split);
+		SET_CAM_MAIN_CSI_AFIFO_CTRL(ctx, pCam_main_csi_afifo, 5, split);
 		break;
 	default:
 		seninf_logi(ctx, "[ERR] invalid async %d\n" ,async);
@@ -1775,7 +1793,7 @@ static int csirx_phyA_power_on(struct seninf_ctx *ctx, int portIdx, int en)
 	udelay(200);
 
 	if (en) {
-		SENINF_BITS(base, CDPHY_RX_ANA_0, RG_CSI0_BG_CORE_EN, 1);//jeff porting ana page27
+		SENINF_BITS(base, CDPHY_RX_ANA_0, RG_CSI0_BG_CORE_EN, 1);
 		udelay(30);
 		SENINF_BITS(base, CDPHY_RX_ANA_0, RG_CSI0_BG_LPF_EN, 1);
 		udelay(5);
@@ -1787,14 +1805,13 @@ static int csirx_phyA_power_on(struct seninf_ctx *ctx, int portIdx, int en)
 		SENINF_BITS(base, CDPHY_RX_ANA_8, RG_CSI0_XX_T0BC_EQ_OS_CAL_EN, 1);
 		SENINF_BITS(base, CDPHY_RX_ANA_8, RG_CSI0_XX_T0CA_EQ_OS_CAL_EN, 1);
 		SENINF_BITS(base, CDPHY_RX_ANA_8, RG_CSI0_XX_T1CA_EQ_OS_CAL_EN, 1);
-		udelay(25);//jeff porting ana page27
+		udelay(25);
 		SENINF_BITS(base, CDPHY_RX_ANA_9, RGS_CSI0_CDPHY_L0_T0AB_OS_CAL_CPLT, 1);
 		SENINF_BITS(base, CDPHY_RX_ANA_9, RGS_CSI0_CDPHY_L1_T1AB_OS_CAL_CPLT, 1);
 		SENINF_BITS(base, CDPHY_RX_ANA_9, RGS_CSI0_CDPHY_L2_T1BC_OS_CAL_CPLT, 1);
 		SENINF_BITS(base, CDPHY_RX_ANA_9, RGS_CSI0_CPHY_T0BC_OS_CAL_CPLT, 1);
 		SENINF_BITS(base, CDPHY_RX_ANA_9, RGS_CSI0_CPHY_T0CA_OS_CAL_CPLT, 1);
 		SENINF_BITS(base, CDPHY_RX_ANA_9, RGS_CSI0_CPHY_T1CA_OS_CAL_CPLT, 1);
-		//jeff porting ana page27
 	}
 
 	seninf_logd(ctx, "portIdx %d en %d CDPHY_RX_ANA_0 0x%x ANA_8 0x%x\n",
@@ -1867,7 +1884,7 @@ static int csirx_phyA_init(struct seninf_ctx *ctx)
 		SENINF_BITS(base, CDPHY_RX_ANA_1, RG_CSI0_BG_LPRX_VTH_SEL, 0x4);
 		SENINF_BITS(base, CDPHY_RX_ANA_2, RG_CSI0_BG_ALP_RX_VTL_SEL, 0x4);
 		SENINF_BITS(base, CDPHY_RX_ANA_2, RG_CSI0_BG_ALP_RX_VTH_SEL, 0x4);
-		if (!strcasecmp(_seninf_ops->iomem_ver, MT6993_IOMOM_VERSIONS)) {//jeff porting ana page5
+		if (!strcasecmp(_seninf_ops->iomem_ver, MT6993_IOMOM_VERSIONS)) {
 			SENINF_BITS(base, CDPHY_RX_ANA_1, RG_CSI0_BG_VREF_SEL, 0x4);
 			SENINF_BITS(base, CDPHY_RX_ANA_3, RG_CSI0_EQ_DES_VREF_SEL, 0x10);
 		} else {
@@ -1876,7 +1893,7 @@ static int csirx_phyA_init(struct seninf_ctx *ctx)
 		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_BW, 0x1);
 		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_IS, 0x1);
 		SENINF_BITS(base, CDPHY_RX_ANA_14, RG_CSI0_CDPHY_EQ_OS_IS, 0x1);
-		// SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_LATCH_EN, 0x1);//jeff porting ana page5 no this
+		// SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_LATCH_EN, 0x1);
 		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x0);
 		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
 		SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, 0x0);
@@ -2197,22 +2214,14 @@ static int csirx_mac_top_setting(struct seninf_ctx *ctx)
 
 	/* Enable C / D phy */
 	if (ctx->is_cphy) {
-		dev_info(ctx->dev, "[%s] jeff 2 before set CSIRX_MAC_TOP_PHY_CTRL_CSI0(0x%x)\n",
-			__func__, SENINF_READ_REG(csirx_mac_top, CSIRX_MAC_TOP_PHY_CTRL_CSI0));
 		SENINF_BITS(csirx_mac_top, CSIRX_MAC_TOP_PHY_CTRL_CSI0, PHY_SENINF_MUX0_DPHY_EN, 0);
 		SENINF_BITS(csirx_mac_top, CSIRX_MAC_TOP_PHY_CTRL_CSI0, PHY_SENINF_MUX0_CPHY_EN, 1);
 		/* Select split mode */
 		SENINF_BITS(csirx_mac_top, CSIRX_MAC_TOP_PHY_CTRL_CSI0, RG_PHY_SENINF_MUX0_CPHY_MODE,
 					(ctx->port >= CSI_PORT_MIN_SPLIT_PORT) ? 2 : 0);
-		dev_info(ctx->dev, "[%s] jeff 2 after set CSIRX_MAC_TOP_PHY_CTRL_CSI0(0x%x)\n",
-			__func__, SENINF_READ_REG(csirx_mac_top, CSIRX_MAC_TOP_PHY_CTRL_CSI0));
 	} else {
-		dev_info(ctx->dev, "[%s] jeff 3 before set CSIRX_MAC_TOP_PHY_CTRL_CSI0(0x%x)\n",
-			__func__, SENINF_READ_REG(csirx_mac_top, CSIRX_MAC_TOP_PHY_CTRL_CSI0));
 		SENINF_BITS(csirx_mac_top, CSIRX_MAC_TOP_PHY_CTRL_CSI0, PHY_SENINF_MUX0_CPHY_EN, 0);
 		SENINF_BITS(csirx_mac_top, CSIRX_MAC_TOP_PHY_CTRL_CSI0, PHY_SENINF_MUX0_DPHY_EN, 1);
-		dev_info(ctx->dev, "[%s] jeff 3 after set CSIRX_MAC_TOP_PHY_CTRL_CSI0(0x%x)\n",
-			__func__, SENINF_READ_REG(csirx_mac_top, CSIRX_MAC_TOP_PHY_CTRL_CSI0));
 	}
 
 	return 0;
@@ -2454,7 +2463,6 @@ static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 	return 0;
 }
 
-//jeff porting cdphy page14
 #ifdef DPHY_LRTE_SUPPORT
 static int csirx_dphy_lrte_setting(struct seninf_ctx *ctx)
 {
@@ -2584,7 +2592,7 @@ static void csirx_phyA_dphy_setting(void *base, u64 data_rate)
 	if (!strcasecmp(_seninf_ops->iomem_ver, MT6993_IOMOM_VERSIONS)) {
 		/* data rate < 1.5 Gbps */
 		if (data_rate < 1500000000) {
-			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);//jeff porting ana page17
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x0);
@@ -2595,7 +2603,7 @@ static void csirx_phyA_dphy_setting(void *base, u64 data_rate)
 		}
 		/* 1.5 Gbps <= data date < 2.5 Gbps */
 		else if (data_rate < 2500000000) {
-			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);//jeff porting ana page17
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x0);
@@ -2606,7 +2614,7 @@ static void csirx_phyA_dphy_setting(void *base, u64 data_rate)
 		}
 		/* 2.5 Gbps <= data date < 4.5 Gbps */
 		else if (data_rate < 4500000000) {
-			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);//jeff porting ana page16
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
@@ -2617,7 +2625,7 @@ static void csirx_phyA_dphy_setting(void *base, u64 data_rate)
 		}
 		/* 4.5 Gbps <= data date < 6.5 Gbps */
 		else if (data_rate < 6500000000) {
-			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);//jeff porting ana page16
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, 0x1);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
@@ -2628,7 +2636,7 @@ static void csirx_phyA_dphy_setting(void *base, u64 data_rate)
 		}
 		/* 6.5 Gbps <= data date */
 		else {
-			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);//jeff porting ana page16
+			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR0, 0x1);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
@@ -2683,10 +2691,10 @@ static void csirx_phyA_cphy_setting(void *base, u64 data_rate)
 	if (!strcasecmp(_seninf_ops->iomem_ver, MT6993_IOMOM_VERSIONS)) {
 		SENINF_BITS(base, CDPHY_RX_ANA_14, RG_CSI0_LDO_X26M_EN, 0x0);
 		SENINF_BITS(base, CDPHY_RX_ANA_14, RG_CSI0_LDO_LP_EN, 0x1);
-		SENINF_BITS(base, CDPHY_RX_ANA_3, RG_CSI0_EQ_DES_VREF_SEL, 0x14);//jeff porting ana page20
-		SENINF_BITS(base, CDPHY_RX_ANA_0, RG_CSI0_CPHY_EN, 1);//jeff porting ana page20
+		SENINF_BITS(base, CDPHY_RX_ANA_3, RG_CSI0_EQ_DES_VREF_SEL, 0x14);
+		SENINF_BITS(base, CDPHY_RX_ANA_0, RG_CSI0_CPHY_EN, 1);
 		/* data rate < 2.5 Gsps */
-		if (data_rate < 2500000000) {//jeff porting ana page20
+		if (data_rate < 2500000000) {
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_BW, 0x1);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
@@ -2709,7 +2717,7 @@ static void csirx_phyA_cphy_setting(void *base, u64 data_rate)
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_IS_RDC, 0x1);
 		}
 		/* 2.5 Gsps<= data rate < 4.5 Gsps */
-		else if (data_rate < 4500000000) {//jeff porting ana page20
+		else if (data_rate < 4500000000) {
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_BW, 0x3);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
@@ -2732,7 +2740,7 @@ static void csirx_phyA_cphy_setting(void *base, u64 data_rate)
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_IS_RDC, 0x0);
 		}
 		/* 4.5 Gsps<= data rate < 6.37 Gsps */
-		else if (data_rate < 6370000000) {//jeff porting ana page20
+		else if (data_rate < 6370000000) {
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_BW, 0x3);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_DG1_EN, 0x0);
@@ -3312,16 +3320,6 @@ static int csirx_dphy_init_periodic_deskew_setting(struct seninf_ctx *ctx, u64 s
 	seninf_logd(ctx, "dphy_init_deskew_support = %d\n", ctx->csi_param.dphy_init_deskew_support);
 	seninf_logd(ctx, "dphy_periodic_deskew_support = %d\n", ctx->csi_param.dphy_periodic_deskew_support);
 
-	//jeff porting cdphy page13 jayer
-	//if (!ctx->csi_param.dphy_INIT_PERIODIC_DESKEW_SUPPORT) {
-	///* Disable DESKEW LANE0~3 CTRL */
-	//SENINF_BITS(dphy_base, DPHY_RX_DESKEW_LANE0_CTRL, DPHY_RX_DESKEW_L0_DELAY_EN, 0);
-	//SENINF_BITS(dphy_base, DPHY_RX_DESKEW_LANE1_CTRL, DPHY_RX_DESKEW_L1_DELAY_EN, 0);
-	//SENINF_BITS(dphy_base, DPHY_RX_DESKEW_LANE2_CTRL, DPHY_RX_DESKEW_L2_DELAY_EN, 0);
-	//SENINF_BITS(dphy_base, DPHY_RX_DESKEW_LANE3_CTRL, DPHY_RX_DESKEW_L3_DELAY_EN, 0);
-	//return 0;
-	//}
-
 	if (vc)
 		bit_per_pixel = vc->bit_depth;
 	else if (vc1)
@@ -3715,7 +3713,7 @@ static int csirx_dphy_init_periodic_deskew_setting(struct seninf_ctx *ctx, u64 s
 }
 
 #ifdef DPHY_ALP_SUPPORT
-static int csirx_dphy_alp_setting(struct seninf_ctx *ctx) //jeff porting cdphy page13
+static int csirx_dphy_alp_setting(struct seninf_ctx *ctx)
 {
 	void *dphy_base = ctx->reg_ana_dphy_top[(unsigned int)ctx->port];
 
@@ -3834,7 +3832,6 @@ static int csirx_dphy_setting(struct seninf_ctx *ctx)
 				// SENINF_BITS(base, DPHY_RX_LANE_SELECT, RG_DPHY_RX_LD2_SEL, 0);
 				// SENINF_BITS(base, DPHY_RX_LANE_SELECT, RG_DPHY_RX_LD3_SEL, 0);
 				SENINF_BITS(baseA, CDPHY_RX_ASYM_AFIFO_CTRL_0, L1_AFIFO_FLUSH_EN, 0x1);
-				//jeff porting cdphy page11
 				break;
 			case CSI_PORT_0B:
 			case CSI_PORT_1B:
@@ -3886,7 +3883,6 @@ static int csirx_dphy_setting(struct seninf_ctx *ctx)
 				// SENINF_BITS(base, DPHY_RX_LANE_SELECT, RG_DPHY_RX_LD3_SEL, 0);
 				SENINF_BITS(baseA, CDPHY_RX_ASYM_AFIFO_CTRL_0, L0_AFIFO_FLUSH_EN, 0x1);
 				SENINF_BITS(baseA, CDPHY_RX_ASYM_AFIFO_CTRL_0, L2_AFIFO_FLUSH_EN, 0x1);
-				//jeff porting cdphy page12
 				break;
 			default:
 				dev_info(ctx->dev, "[%s][ERROR] invalid port(%d on lane %d\n",
@@ -3939,7 +3935,7 @@ static int csirx_dphy_setting(struct seninf_ctx *ctx)
 }
 
 #ifdef CPHY_ALP_SUPPORT
-static int csirx_cphy_alp_setting(struct seninf_ctx *ctx) //jeff porting cdphy page34
+static int csirx_cphy_alp_setting(struct seninf_ctx *ctx)
 {
 	void *cphy_base = ctx->reg_ana_cphy_top[(unsigned int)ctx->port];
 	void *baseA = ctx->reg_ana_csi_rx[(unsigned int)ctx->portA];
