@@ -6483,6 +6483,8 @@ int mtk_cam_job_fill_dump_param(struct mtk_cam_job *job,
 	p->cq_cpu_addr	= job->cq.vaddr;
 	p->cq_size	= job->cq.size;
 	p->cq_iova	= job->cq.daddr;
+	p->camsv_cq_desc_offset = job->cq_rst.camsv.offset;
+	p->camsv_cq_desc_size = job->cq_rst.camsv.size;
 	p->cq_desc_offset	= job->cq_rst.main.offset;
 	p->cq_desc_size		= job->cq_rst.main.size;
 	p->sub_cq_desc_offset	= job->cq_rst.sub.offset;

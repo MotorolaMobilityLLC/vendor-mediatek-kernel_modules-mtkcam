@@ -662,10 +662,13 @@ static int mtk_cam_write_header(struct mtk_cam_dump_param *p,
 	hdr->cq_dump_buf_offset = hdr->payload_offset;
 	hdr->cq_size = p->cq_size;
 	hdr->cq_iova = p->cq_iova;
+	hdr->camsv_cq_desc_offset = p->camsv_cq_desc_offset;
+	hdr->camsv_cq_desc_size = p->camsv_cq_desc_size;
 	hdr->cq_desc_offset = p->cq_desc_offset;
 	hdr->cq_desc_size = p->cq_desc_size;
 	hdr->sub_cq_desc_offset = p->sub_cq_desc_offset;
 	hdr->sub_cq_desc_size = p->sub_cq_desc_size;
+
 
 	/* meta in */
 	hdr->meta_in_dump_buf_offset = hdr->cq_dump_buf_offset +

@@ -29,6 +29,9 @@ struct mtk_cam_dump_param {
 	void *cq_cpu_addr;
 	__u32 cq_size;
 	__u64 cq_iova;
+	/* camsv CQ*/
+	__u32 camsv_cq_desc_offset;
+	__u32 camsv_cq_desc_size;
 	__u32 cq_desc_offset;
 	__u32 cq_desc_size;
 	__u32 sub_cq_desc_offset;
