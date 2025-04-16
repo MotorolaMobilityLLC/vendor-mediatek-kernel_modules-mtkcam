@@ -36,6 +36,8 @@
 #include "mtk_cam-virt-isp.h"
 
 #define SCQ_DEADLINE_US(fi)		((fi) * 9 / 10) // 0.9 frame interval
+#define STG_TRIG_LINPROTECT		10
+#define LEADING_MOST_US			20
 
 static unsigned int debug_buf_fmt_sel = -1;
 module_param(debug_buf_fmt_sel, int, 0644);
@@ -5698,9 +5700,13 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 	int used_engine = ctx->used_engine;
 	struct mtkcam_ipi_input_param *input = &config->input;
 	struct mtkcam_ipi_sv_input_param *sv_input;
+	struct mtk_seninf_sensor_linetime_list result;
 	unsigned int i, is_two_smi_out = 0;
+	unsigned int line_time_trig_ofst = 0;
+	unsigned int fps = 0;
 
 	memset(config, 0, sizeof(*config));
+	memset(&result, 0, sizeof(struct mtk_seninf_sensor_linetime_list));
 
 	/* assume: at most one raw-subdev is used */
 	if (ctx->has_raw_subdev) {
@@ -5742,7 +5748,18 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 	/* camsv */
 	if (ctx->hw_sv) {
 		struct mtk_camsv_device *sv_dev = dev_get_drvdata(ctx->hw_sv);
+		if (is_dcg_with_vs(job)) {
+			struct mtk_raw_sink_data *sink = get_raw_sink_data(job);
 
+			if (sink) {
+				mtk_seninf_g_read_linetime_list(job->seninf, sink->mbus_code, &result);
+				// check dcg_vs api
+				for (int i = 0; i < result.linetime_cnt; i++)
+					pr_info("%s: dcg_vs line_t result[%d]: %d",
+						__func__, i, result.lut_read_linetimes_in_ns[i]);
+			} else
+				pr_info("%s: sink data not found\n", __func__);
+		}
 		for (i = SVTAG_START; i < SVTAG_END; i++) {
 			if (job->enabled_tags & (1 << i)) {
 				sv_input = &config->sv_input[i];
@@ -5773,7 +5790,59 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 					pipe->res_config.tg_crop = v4l2_rect_to_ipi_crop(&sink->crop);
 					atomic_set(&pipe->res_config.is_fmt_change, 1);
 				}
-				sv_input->fps = get_sensor_fps(job);
+				//fps -> trig offset : linet*line
+				if (is_dcg_with_vs(job) && job_sensor_exp_num(job) == 3
+					&& i < SVTAG_META_START) {
+					// ap merge
+					if (job->tag_info[i].tag_order
+							== MTKCAM_IPI_ORDER_FIRST_TAG) {
+						line_time_trig_ofst =
+							(result.lut_read_linetimes_in_ns[0] *
+								(get_sensor_h(job) + STG_TRIG_LINPROTECT))
+								/ 1000 * 208 / 6;
+					} else if (job->tag_info[i].tag_order
+							== MTKCAM_IPI_ORDER_NORMAL_TAG) {
+						line_time_trig_ofst =
+							(result.lut_read_linetimes_in_ns[0] *
+								(get_sensor_h(job) + STG_TRIG_LINPROTECT))
+								/ 1000 * 208 / 6;
+					} else if (job->tag_info[i].tag_order
+							== MTKCAM_IPI_ORDER_LAST_TAG) {
+						line_time_trig_ofst =
+							(result.lut_read_linetimes_in_ns[1] *
+								(get_sensor_h(job) + STG_TRIG_LINPROTECT))
+								/ 1000 * 208 / 6;
+					} else
+						pr_info("%s: not support dcg_vs tag", __func__);
+					pr_info("line_time_trig_ofst: %d", line_time_trig_ofst);
+					sv_input->stg_trig_offset = line_time_trig_ofst;
+				} else if (is_dcg_with_vs(job) && job_sensor_exp_num(job) == 2
+					&& i < SVTAG_META_START) {
+					// sensor merge
+					if (job->tag_info[i].tag_order
+							== MTKCAM_IPI_ORDER_FIRST_TAG) {
+						line_time_trig_ofst =
+							(result.lut_read_linetimes_in_ns[0] *
+								(get_sensor_h(job) + STG_TRIG_LINPROTECT))
+								/ 1000 * 208 / 6;
+					} else if (job->tag_info[i].tag_order
+							== MTKCAM_IPI_ORDER_LAST_TAG) {
+						line_time_trig_ofst =
+							(result.lut_read_linetimes_in_ns[1] *
+								(get_sensor_h(job) + STG_TRIG_LINPROTECT))
+								/ 1000 * 208 / 6;
+					} else
+						pr_info("%s: not support dcg_vs tag", __func__);
+					pr_info("line_time_trig_ofst: %d", line_time_trig_ofst);
+					sv_input->stg_trig_offset = line_time_trig_ofst;
+				} else {
+					fps = get_sensor_fps(job);
+					if (fps != 0)
+						line_time_trig_ofst =
+							((1000000 / fps) - LEADING_MOST_US) * (208 / 6);
+					sv_input->stg_trig_offset = line_time_trig_ofst;
+					pr_info("line_time_trig_ofst: %d", line_time_trig_ofst);
+				}
 				sv_input->sof_delay_period =
 					(mtk_cam_seninf_is_sof_delay_enabled(ctx->seninf)) ?
 					mtk_cam_sv_get_sof_delay_period() : 0;
@@ -5790,13 +5859,30 @@ static int mtk_cam_job_fill_ipi_config_only_sv(struct mtk_cam_job *job,
 	struct mtk_cam_ctx *ctx = job->src_ctx;
 	struct mtk_camsv_device *sv_dev = dev_get_drvdata(ctx->hw_sv);
 	struct mtkcam_ipi_sv_input_param *sv_input;
+	struct mtk_camsv_sink_data *sv_sink;
+	struct mtk_seninf_sensor_linetime_list result;
 	struct mtk_camsv_pipeline *sv_pipe;
 	int i;
+	unsigned int line_time_trig_ofst = 0;
+	unsigned int fps = 0;
 
 	memset(config, 0, sizeof(*config));
+	memset(&result, 0, sizeof(struct mtk_seninf_sensor_linetime_list));
 
 	config->flags = MTK_CAM_IPI_CONFIG_TYPE_INIT;
 	config->sw_feature = get_sw_feature(job);
+	if (is_dcg_with_vs(job)) {
+		sv_sink = get_sv_sink_data(job);
+		if (sv_sink) {
+			mtk_seninf_g_read_linetime_list(job->seninf, sv_sink->mbus_code, &result);
+			// check dcg_vs api
+			for (int i = 0; i < result.linetime_cnt; i++)
+				pr_info("%s: dcg_vs line_t result[%d]: %d",
+					__func__, i, result.lut_read_linetimes_in_ns[i]);
+
+		} else
+			pr_info("%s: sv sink data not found\n", __func__);
+	}
 
 	for (i = SVTAG_START; i < SVTAG_END; i++) {
 		if (job->enabled_tags & (1 << i)) {
@@ -5813,7 +5899,51 @@ static int mtk_cam_job_fill_ipi_config_only_sv(struct mtk_cam_job *job,
 			sv_input->is_early_return =
 				(sv_pipe && sv_pipe->ctrl_data.is_buf_early_return) ? 1 : 0;
 			sv_input->input = job->ipi_config.sv_input[i].input;
-			sv_input->fps = get_sensor_fps(job);
+			//fps -> trig offset : linet*line
+			if (is_dcg_with_vs(job) && job_sensor_exp_num(job) == 3) {
+				// ap merge
+				if (job->tag_info[i].tag_order
+						== MTKCAM_IPI_ORDER_FIRST_TAG) {
+					line_time_trig_ofst =
+						(result.lut_read_linetimes_in_ns[0] *
+							(get_sensor_h(job) + STG_TRIG_LINPROTECT)) / 1000 * 208 / 6;
+				} else if (job->tag_info[i].tag_order
+						== MTKCAM_IPI_ORDER_NORMAL_TAG) {
+					line_time_trig_ofst =
+						(result.lut_read_linetimes_in_ns[1] *
+							(get_sensor_h(job) + STG_TRIG_LINPROTECT)) / 1000 * 208 / 6;
+				} else if (job->tag_info[i].tag_order
+						== MTKCAM_IPI_ORDER_LAST_TAG) {
+					line_time_trig_ofst =
+						(result.lut_read_linetimes_in_ns[2] *
+							(get_sensor_h(job) + STG_TRIG_LINPROTECT)) / 1000 * 208 / 6;
+				} else {
+					pr_info("%s: not support dcg_vs tag", __func__);
+				}
+				sv_input->stg_trig_offset = line_time_trig_ofst;
+			} else if (is_dcg_with_vs(job) && job_sensor_exp_num(job) == 2) {
+				// sensor merge
+				if (job->tag_info[i].tag_order
+						== MTKCAM_IPI_ORDER_FIRST_TAG) {
+					line_time_trig_ofst =
+						(result.lut_read_linetimes_in_ns[0] *
+							(get_sensor_h(job) + STG_TRIG_LINPROTECT)) / 1000 * 208 / 6;
+				} else if (job->tag_info[i].tag_order
+						== MTKCAM_IPI_ORDER_LAST_TAG) {
+					line_time_trig_ofst =
+						(result.lut_read_linetimes_in_ns[1] *
+							(get_sensor_h(job) + STG_TRIG_LINPROTECT)) / 1000 * 208 / 6;
+				} else {
+					pr_info("%s: not support dcg_vs tag", __func__);
+				}
+				sv_input->stg_trig_offset = line_time_trig_ofst;
+			} else {
+				fps = get_sensor_fps(job);
+				if (fps != 0)
+					line_time_trig_ofst =
+						((1000000 / fps) - LEADING_MOST_US) * (208 / 6);
+				sv_input->stg_trig_offset = line_time_trig_ofst;
+			}
 		}
 	}
 

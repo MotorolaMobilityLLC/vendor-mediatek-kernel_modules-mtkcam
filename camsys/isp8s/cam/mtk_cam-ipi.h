@@ -121,8 +121,8 @@ struct mtkcam_ipi_sv_input_param {
 	__u8	is_queue_mode;
 	__u8	is_unpack_msb;
 	__u8	is_early_return;
-	__u8	fps;
 	__u8	is_sv_bin;
+	__u32	stg_trig_offset;
 	__u32	sof_delay_period;
 	struct mtkcam_ipi_input_param input;
 } __packed;
