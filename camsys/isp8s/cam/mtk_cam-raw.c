@@ -1126,17 +1126,65 @@ static void dump_wla_2_0(struct mtk_raw_device *raw)
 
 static void dump_raw_slice_gals(struct mtk_raw_device *raw)
 {
-	static const u32 debug_sel[] = {
+	static const u32 raw_debug_sel[] = {
 		0x0, 0x1, 0x2, 0x3, 0x4, 0x1f,
 	};
 
-	void __iomem *dbg_sel =  raw->base + 0x234;
-	void __iomem *dbg_port = raw->base + 0x238;
+	static const u32 yuv_debug_sel[] = {
+		0x1, 0xe,
+	};
+
+	struct mtk_cam_device *cam = raw->cam;
+	struct mtk_yuv_device *yuv = get_yuv_dev(raw);
+	void __iomem *dbg_sel;
+	void __iomem *dbg_port;
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(debug_sel); i++) {
-		writel(debug_sel[i], dbg_sel);
+	switch (raw->id) {
+	case RAW_A:
+		dbg_sel = cam->rawa_cg_con + 0x234;
+		dbg_port = cam->rawa_cg_con + 0x238;
+		break;
+	case RAW_B:
+		dbg_sel = cam->rawb_cg_con + 0x234;
+		dbg_port = cam->rawb_cg_con + 0x238;
+		break;
+	case RAW_C:
+		dbg_sel = cam->rawc_cg_con + 0x234;
+		dbg_port = cam->rawc_cg_con + 0x238;
+		break;
+	default:
+		dev_info(raw->dev, "%s unknown raw %d\n", __func__, raw->id);
+		return;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(raw_debug_sel); i++) {
+		writel(raw_debug_sel[i], dbg_sel);
 		dev_info(raw->dev, "%s sel 0x%08x port 0x%08x\n",
+			 __func__, readl(dbg_sel), readl(dbg_port));
+	}
+
+	switch (raw->id) {
+	case RAW_A:
+		dbg_sel = cam->yuva_cg_con + 0x234;
+		dbg_port = cam->yuva_cg_con + 0x238;
+		break;
+	case RAW_B:
+		dbg_sel = cam->yuvb_cg_con + 0x234;
+		dbg_port = cam->yuvb_cg_con + 0x238;
+		break;
+	case RAW_C:
+		dbg_sel = cam->yuvc_cg_con + 0x234;
+		dbg_port = cam->yuvc_cg_con + 0x238;
+		break;
+	default:
+		dev_info(yuv->dev, "%s unknown raw %d\n", __func__, raw->id);
+		return;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(yuv_debug_sel); i++) {
+		writel(yuv_debug_sel[i], dbg_sel);
+		dev_info(yuv->dev, "%s sel 0x%08x port 0x%08x\n",
 			 __func__, readl(dbg_sel), readl(dbg_port));
 	}
 }
