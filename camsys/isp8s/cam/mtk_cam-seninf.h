@@ -163,6 +163,16 @@ struct outmux_cfg {
 	struct outmux_tag_cfg tag_cfg[MAX_OUTMUX_TAG_NUM];
 };
 
+struct outmux_cfg_for_camsv_stress {
+	bool is_reset_immedate;
+	u8 outmux_idx;
+	u8 src_mipi;
+	u8 src_sen;
+	u8 pix_mode;
+	u8 tag_id;
+	struct outmux_tag_cfg tag_cfg;
+};
+
 struct mtk_cam_seninf_bit_error {
 	u32 bit_err_ctrl;
 	u32 bit_err_cnt;
@@ -321,6 +331,13 @@ struct seninf_core {
 
 	/* add dts info for hw ccf*/
 	bool hwccf_apply;
+
+	/* for camsv stress test*/
+	struct seninf_vcinfo vcinfo_stress_test;
+	u32 camsv_test_mode;
+	u32 camsv_test_mode_en;
+	u32 outmux_id; // 1-1 mapping camsvA,B,C...)
+	u32 async_id; // use free seninf async to send test pattern
 };
 
 struct mtk_cam_sentest_watchdog {

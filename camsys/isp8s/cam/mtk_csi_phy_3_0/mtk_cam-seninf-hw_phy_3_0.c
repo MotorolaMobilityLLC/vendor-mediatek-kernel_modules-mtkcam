@@ -5972,7 +5972,76 @@ static int mtk_cam_seninf_debug_current_status(struct seninf_ctx *ctx)
 			}
 		}
 	}
+	// for camsv stress debug
+	if (ctx->core->camsv_test_mode_en){
+		unsigned int used_outmux = ctx->core->outmux_id;
+		unsigned int used_tag = 0;
+		u32 filt, filt_in, res, exp_sz, irq_st;
 
+		pSeninf_outmux = ctx->reg_if_outmux[used_outmux];
+
+		filt = mtk_cam_seninf_get_outmux_vcdt_filt(ctx, used_outmux,
+				used_tag, false);
+		filt_in = mtk_cam_seninf_get_outmux_vcdt_filt(ctx, used_outmux,
+				used_tag, true);
+		res = mtk_cam_seninf_get_outmux_res(ctx, used_outmux, used_tag);
+		exp_sz = mtk_cam_seninf_get_outmux_exp(ctx, used_outmux, used_tag);
+
+		irq_st = mtk_cam_seninf_get_outmux_irq_st(ctx, used_outmux, 0);
+		seninf_logi(ctx,
+			"dump outmux%d,tag%u,CFG_M(0x%x)/PIX_M(0x%x)/CFG0_out-in(0x%x-0x%x)/CFG1_out-in(0x%x-0x%x)/CFG2_out-in(0x%x-0x%x)/SRC_out-in(0x%x-0x%x)/CFG_DONE(0x%x)/CFG_CTL(0x%x)/CFG_RDY(0x%x)/DBG_PORT0(0x%x)/DBG_PORT1(0x%x),filt_out/in=(0x%x/0x%x),expSize=0x%x,dbgRecSize=0x%x,rdy_msk(grp_en=0x%x/grp_sel=0x%x/cq_en=0x%x/cq_rdy_status=0x%x/sw_en=0x%x/sw_rdy_status=0x%x)irq=0x%x\n",
+			used_outmux, used_tag,
+			seninf_get_outmux_rg_val(ctx, used_outmux,
+				SENINF_OUTMUX_SW_CONFIG_MODE),
+			seninf_get_outmux_rg_val(ctx, used_outmux,
+				SENINF_OUTMUX_PATH_CFG),
+			seninf_get_outmux_rg_val(ctx, used_outmux,
+				SENINF_OUTMUX_SOURCE_CONFIG_0),
+			seninf_get_outmux_rg_val_inner(ctx, used_outmux,
+				SENINF_OUTMUX_SOURCE_CONFIG_0),
+			seninf_get_outmux_rg_val(ctx, used_outmux,
+				SENINF_OUTMUX_SOURCE_CONFIG_1),
+			seninf_get_outmux_rg_val_inner(ctx, used_outmux,
+				SENINF_OUTMUX_SOURCE_CONFIG_1),
+			seninf_get_outmux_rg_val(ctx, used_outmux,
+				SENINF_OUTMUX_SOURCE_CONFIG_2),
+			seninf_get_outmux_rg_val_inner(ctx, used_outmux,
+				SENINF_OUTMUX_SOURCE_CONFIG_2),
+			seninf_get_outmux_rg_val(ctx, used_outmux,
+				SENINF_OUTMUX_SRC_SEL),
+			seninf_get_outmux_rg_val_inner(ctx, used_outmux,
+				SENINF_OUTMUX_SRC_SEL),
+			seninf_get_outmux_rg_val(ctx, used_outmux,
+				SENINF_OUTMUX_SW_CFG_DONE_STATUS),
+			seninf_get_outmux_rg_val(ctx, used_outmux,
+				SENINF_OUTMUX_CSR_CFG_CTRL),
+			seninf_get_outmux_rg_val(ctx, used_outmux,
+				SENINF_OUTMUX_CAM_CFG_RDY),
+			seninf_get_outmux_rg_val(ctx, used_outmux,
+				SENINF_OUTMUX_PATH_DBG_PORT_0),
+			seninf_get_outmux_rg_val(ctx, used_outmux,
+				SENINF_OUTMUX_PATH_DBG_PORT_1),
+			filt, filt_in, exp_sz, res,
+			SENINF_READ_BITS(pSeninf_outmux,
+				SENINF_OUTMUX_CSR_CFG_CTRL,
+				SENINF_OUTMUX_CAM_RDY_GRP_EN),
+			SENINF_READ_BITS(pSeninf_outmux,
+				SENINF_OUTMUX_CAM_RDY_GRP_SEL,
+				SENINF_OUTMUX_CAM_RDY_GRP_SEL),
+			SENINF_READ_BITS(pSeninf_outmux,
+				SENINF_OUTMUX_CSR_CFG_CTRL3,
+				SENINF_OUTMUX_CAM_CFG_RDY_CQ_EN),
+			SENINF_READ_BITS(pSeninf_outmux,
+				SENINF_OUTMUX_CAM_CFG_RDY_CQ_STATUS,
+				SENINF_OUTMUX_CAM_CFG_RDY_CQ_STATUS),
+			SENINF_READ_BITS(pSeninf_outmux,
+				SENINF_OUTMUX_CSR_CFG_CTRL,
+				SENINF_OUTMUX_CAM_CFG_RDY_EN),
+			SENINF_READ_BITS(pSeninf_outmux,
+				SENINF_OUTMUX_CAM_CFG_RDY,
+				SENINF_OUTMUX_CAM_CFG_RDY),
+			irq_st);
+	}
 	/* reset all out mux irq status */
 	for (i = 0; i < _seninf_ops->outmux_num; i++)
 		mtk_cam_seninf_get_outmux_irq_st(ctx, i, 1);
@@ -8777,6 +8846,244 @@ static int mtk_cam_mac_get_chk_result(struct seninf_ctx *ctx)
 	return 0;
 }
 
+/* ADD comment */
+int mtk_cam_seninf_config_outmux_for_camsv_stress(struct seninf_ctx *ctx, u8 outmux_idx, u8 src_mipi, u8 src_sen,
+			u8 cfg_mode, struct outmux_cfg_for_camsv_stress *outmux_cfg)
+{
+	void *pSeninf_mux;
+	const u8 bit2byte = 8;
+	u32 filt_vc, filt_dt;
+	u32 exp_img_v;
+	u32 exp_img_h_in_bit;
+	u32 pix_mode = outmux_cfg->pix_mode;
+	u8 bit_to_pixel_fmt = 4; // Initialize bit_to_pixel_fmt by raw16 for test mode
+	u8 tag_id = outmux_cfg->tag_id;
+	struct outmux_tag_cfg *tag_cfg = &outmux_cfg->tag_cfg;
+
+	if (unlikely(outmux_idx > _seninf_ops->outmux_num)) {
+		dev_info(ctx->dev, "[Error][%s] invalid outmux_idx (%d)\n", __func__, outmux_idx);
+		return -EINVAL;
+	}
+
+	pSeninf_mux = ctx->reg_if_outmux[outmux_idx];
+	filt_vc = tag_cfg->filt_vc;
+	filt_dt = tag_cfg->filt_dt;
+	exp_img_v = tag_cfg->exp_vsize;
+	exp_img_h_in_bit = ((tag_cfg->exp_hsize * tag_cfg->bit_depth) % bit2byte) ?
+						((tag_cfg->exp_hsize * tag_cfg->bit_depth) / bit2byte) + 1 :
+						((tag_cfg->exp_hsize * tag_cfg->bit_depth) / bit2byte);
+
+	seninf_logi(ctx, "outmux%d set outer src/sen %u/%u with cfg mode %d, DBG0(0x%x)",
+		    outmux_idx, src_mipi, src_sen, cfg_mode,
+		    SENINF_READ_REG(pSeninf_mux, SENINF_OUTMUX_PATH_DBG_PORT_0));
+
+	seninf_logd(ctx, "outmux%d force reset, DBG0 (0x%x)", outmux_idx,
+		SENINF_READ_REG(pSeninf_mux, SENINF_OUTMUX_PATH_DBG_PORT_0));
+
+	SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_SW_RST,
+			SENINF_OUTMUX_LOCAL_SW_RST, 1);
+	udelay(1);
+	SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_SW_RST,
+			SENINF_OUTMUX_LOCAL_SW_RST, 0);
+
+	SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_SOURCE_CONFIG_0,
+					SENINF_OUTMUX_VSYNC_SRC_SEL_MIPI, src_mipi);
+	SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_SOURCE_CONFIG_0,
+					SENINF_OUTMUX_VSYNC_SRC_SEL_SEN, src_sen);
+	/* This test mode only use one vc, set first vc= last vc */
+	SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_SOURCE_CONFIG_0,
+					SENINF_OUTMUX_REF_VC,filt_vc);
+	SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_SOURCE_CONFIG_0,
+					SENINF_OUTMUX_LAST_VC, filt_vc);
+	SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_SRC_SEL,
+					SENINF_OUTMUX_SRC_SEL_MIPI, src_mipi);
+	SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_SRC_SEL,
+					SENINF_OUTMUX_SRC_SEL_SEN, src_sen);
+	SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_SW_CONFIG_MODE,
+					SENINF_OUTMUX_CONFIG_MODE, cfg_mode);
+
+	mtk_cam_seninf_set_out_mux_irq_en_by_tag(ctx, outmux_idx, tag_id, true);
+
+
+	switch(tag_cfg->bit_depth) {
+	case 8:
+		bit_to_pixel_fmt = 0;
+		break;
+	case 10:
+		bit_to_pixel_fmt = 1;
+		break;
+	case 12:
+		bit_to_pixel_fmt = 2;
+		break;
+	case 14:
+		bit_to_pixel_fmt = 3;
+		break;
+	case 16:
+		bit_to_pixel_fmt = 4;
+		break;
+	case 18:
+		bit_to_pixel_fmt = 5;
+		break;
+	case 20:
+		bit_to_pixel_fmt = 6;
+		break;
+	case 22:
+		bit_to_pixel_fmt = 7;
+		break;
+	case 24:
+		bit_to_pixel_fmt = 8;
+		break;
+	default:
+		bit_to_pixel_fmt = 1;
+		dev_info(ctx->dev,
+			"[Error][%s]invalid out_mux bit depth fmt(%d) plz check\n",
+			__func__, tag_cfg->bit_depth);
+		break;
+	}
+
+	switch (tag_id) {
+	case 0:
+		SET_TAG(ctx, pSeninf_mux, 1, 0, filt_vc, filt_dt,
+			exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
+		break;
+	case 1:
+		SET_TAG(ctx, pSeninf_mux, 1, 1, filt_vc, filt_dt,
+			exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
+		break;
+	case 2:
+		SET_TAG(ctx, pSeninf_mux, 1, 2, filt_vc, filt_dt,
+			exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
+		break;
+	case 3:
+		SET_TAG(ctx, pSeninf_mux, 1, 3, filt_vc, filt_dt,
+			exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
+		break;
+	case 4:
+		SET_TAG(ctx, pSeninf_mux, 1, 4, filt_vc, filt_dt,
+			exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
+		break;
+	case 5:
+		SET_TAG(ctx, pSeninf_mux, 1, 5, filt_vc, filt_dt,
+			exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
+		break;
+	case 6:
+		SET_TAG(ctx, pSeninf_mux, 1, 6, filt_vc, filt_dt,
+			exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
+		break;
+	case 7:
+		SET_TAG(ctx, pSeninf_mux, 1, 7, filt_vc, filt_dt,
+			exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
+		break;
+	default:
+		break;
+	}
+
+	SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_PATH_CFG, SENINF_OUTMUX_PIX_MODE,
+	    (pix_mode == pix_mode_16p));
+
+	SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_CSR_CFG_CTRL,
+				    SENINF_OUTMUX_SENINF_DL_EN, 1);
+
+	seninf_logi(ctx,
+		"outmux%d tag%d filt_vc 0x%x filt_dt 0x%x hsize %d bit_depth %d exp_img_h_in_bit %d hsize %d pixel_mode %d and then raise cfg done, curr irq st:0x%x",
+		outmux_idx,
+		tag_id,
+		filt_vc,
+		filt_dt,
+		tag_cfg->exp_hsize,
+		tag_cfg->bit_depth,
+		exp_img_h_in_bit,
+		exp_img_v,
+		pix_mode,
+		_seninf_ops->_get_outmux_irq_st(ctx, outmux_idx, 0));
+
+	SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_SW_CFG_DONE, SENINF_OUTMUX_SW_CFG_DONE, 1);
+
+	return 0;
+}
+
+static int mtk_cam_seninf_set_test_model_for_camsv_stress(struct seninf_ctx *ctx, int intf, int mode)
+{
+	void *pSeninf;
+	void *pSeninf_tg;
+	struct seninf_vcinfo *vcinfo = &ctx->core->vcinfo_stress_test;
+	struct seninf_vc *vc = &vcinfo->vc[0];
+	int tm_width = vc->exp_hsize;
+	int tm_height = vc->exp_vsize;
+	int bit_depth = vc->bit_depth;
+	int width_tm = (tm_width >> 1);
+	int width_tm_bit = width_tm * bit_depth;
+	u16 fps;
+	u16  dum_vsync = 128;
+	const u16 c_fps_mode[3] = {30, 45, 60};
+	u8 c_clk_div_cnt = 0xb;
+	u16 c_dummy_pxl = 0x200;
+
+	if (unlikely(intf >= _seninf_ops->async_num)) {
+		dev_info(ctx->dev, "[Error][%s] invalid async_idx (%d)\n", __func__, intf);
+		return -EINVAL;
+	}
+
+	pSeninf = ctx->reg_if_async;
+	pSeninf_tg = ctx->reg_if_tg[(unsigned int)intf];
+
+	if (mode == 0) {
+		SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL, SENINF_TG_SENINF_TG_TM_CORE0_RST, 1);
+		udelay(1);
+		SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL, SENINF_TG_SENINF_TG_TM_CORE0_RST, 0);
+		return 0;
+	}
+
+	fps = c_fps_mode[mode - 1];
+
+	if (mode == 2) {
+		c_clk_div_cnt = 0x7;
+		c_dummy_pxl = 0x140;
+	}
+	if (mode == 3) {
+		c_clk_div_cnt = 0x5;
+		c_dummy_pxl = 0x100;
+	}
+
+	dev_info(ctx->dev, "%s: intf %d, mode %d vc/dt 0%d/0x%x, tm_width %d, tm_height %d, fps %d, dum_vsync %d c_dummy_pxl%d bit_depth %d c_clk_div_cnt%d\n",
+		__func__, intf, mode, vc->vc, vc->dt, tm_width, tm_height,
+		fps, dum_vsync, c_dummy_pxl, bit_depth, c_clk_div_cnt);
+
+	mtk_cam_seninf_set_async(ctx, intf, 0, 1);
+
+	/* tm rst */
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL, SENINF_TG_SENINF_TG_TM_CORE0_RST, 1);
+	udelay(1);
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL, SENINF_TG_SENINF_TG_TM_CORE0_RST, 0);
+
+	/* tm size */
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_SIZE,SENINF_TG_SENINF_TG_TM_LINE, tm_height);
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_SIZE, SENINF_TG_SENINF_TG_TM_PXL, width_tm);
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_BIT, SENINF_TG_SENINF_TG_TM_BIT, width_tm_bit);
+	/* tm vb hb */
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_DUM, SENINF_TG_SENINF_TG_TM_VB, dum_vsync);
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_DUM, SENINF_TG_SENINF_TG_TM_HB, c_dummy_pxl);
+	/* vc dt setup */
+	SET_TG_TM0(pSeninf_tg, 0, vc->vc, vc->dt, 0);
+
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL,
+				SENINF_TG_SENINF_TG_TM_CORE0_EXP_NUM, 0);
+
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL,
+				SENINF_TG_SENINF_TG_TM_CORE0_CLK_CNT, c_clk_div_cnt);
+
+	/* tm pattern */
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL, SENINF_TG_SENINF_TG_TM_CORE0_PAT, 0x8);
+
+	/* Set as non single mode */
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL, SENINF_TG_SENINF_TG_TM_CORE0_SINGLE, 0);
+
+	/* tm enable */
+	SENINF_BITS(pSeninf_tg, SENINF_TG_SENINF_TG_TM_CORE0_CTL, SENINF_TG_SENINF_TG_TM_CORE0_EN, 1);
+
+	return 0;
+}
+
 struct mtk_cam_seninf_ops mtk_csi_phy_3_0 = {
 	._init_iomem = mtk_cam_seninf_init_iomem,
 	._init_port = mtk_cam_seninf_init_port,
@@ -8790,6 +9097,7 @@ struct mtk_cam_seninf_ops mtk_csi_phy_3_0 = {
 	._disable_all_outmux = mtk_cam_seninf_disable_all_outmux,
 	._wait_outmux_cfg_done = mtk_cam_seninf_wait_outmux_cfg_done,
 	._config_outmux = mtk_cam_seninf_config_outmux,
+	._config_outmux_for_camsv_stress = mtk_cam_seninf_config_outmux_for_camsv_stress,
 	._apply_outmux_for_v2 = mtk_cam_seninf_apply_outmux_for_v2,
 	._set_outmux_ref_vsync_inner = mtk_cam_seninf_set_outmux_ref_vsync_inner,
 	._chk_sensor_delay_with_wait = chk_sensor_delay_with_wait,
@@ -8804,6 +9112,7 @@ struct mtk_cam_seninf_ops mtk_csi_phy_3_0 = {
 	._get_outmux_curr_vs_order = mtk_cam_seninf_get_outmux_curr_vs_order,
 	._set_test_model = mtk_cam_seninf_set_test_model,
 	._set_test_model_fake_sensor = mtk_cam_seninf_set_test_model_fake_sensor,
+	._set_test_model_camsv_stress = mtk_cam_seninf_set_test_model_for_camsv_stress,
 	._get_async_irq_st = mtk_cam_seninf_get_async_irq_st,
 	._set_csi_mipi = mtk_cam_seninf_set_csi_mipi,
 	._poweroff = mtk_cam_seninf_poweroff,

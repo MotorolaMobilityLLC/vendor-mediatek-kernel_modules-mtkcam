@@ -372,4 +372,19 @@ int seninf_s_stream(struct v4l2_subdev *sd, int enable);
 void mtk_cam_seninf_frame_event_notify(struct v4l2_subdev *sd,
 	u32 sensor_sequence, u32 sensor_sync_id);
 
+/**
+ * Notify seninf to start test model for stress test
+ *
+ * @param sd v4l2_subdev
+ * @param mode test model mode
+ */
+void mtk_cam_seninf_start_test_model_for_camsv(struct v4l2_subdev *sd, u32 mode);
+
+/**
+ * Notify seninf to stoptest model for stress test
+ *
+ * @param sd v4l2_subdev
+ */
+void mtk_cam_seninf_stop_test_model_for_camsv(struct v4l2_subdev *sd);
+
 #endif

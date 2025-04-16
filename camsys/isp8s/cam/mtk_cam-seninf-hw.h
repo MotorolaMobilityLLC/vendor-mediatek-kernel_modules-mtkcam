@@ -220,6 +220,8 @@ struct mtk_cam_seninf_ops {
 	int (*_wait_outmux_cfg_done)(struct seninf_ctx *ctx, u8 outmux_idx);
 	int (*_config_outmux)(struct seninf_ctx *ctx, u8 outmux_idx, u8 src_mipi, u8 src_sen,
 			u8 cfg_mode, struct outmux_tag_cfg *tag_cfg);
+	int (*_config_outmux_for_camsv_stress)(struct seninf_ctx *ctx, u8 outmux_idx, u8 src_mipi, u8 src_sen,
+			u8 cfg_mode, struct outmux_cfg_for_camsv_stress *tag_cfg);
 	int (*_apply_outmux_for_v2)(struct seninf_ctx *ctx, u8 outmux_idx,
 			u8 cfg_mode, struct outmux_tag_cfg *tag_cfg, bool is_sensor_delay);
 	int (*_set_outmux_ref_vsync_inner)(struct seninf_ctx *ctx, u8 outmux_idx);
@@ -236,6 +238,7 @@ struct mtk_cam_seninf_ops {
 		struct seninf_fakesensor_tm_param *tm_param, u8 is_switch);
 	int (*_get_outmux_curr_vs_order)(struct seninf_ctx *ctx, u8 outmux, u8 *furst_vc, u8 *last_vc);
 	int (*_set_test_model)(struct seninf_ctx *ctx, int intf, const int bit_depth);
+	int (*_set_test_model_camsv_stress)(struct seninf_ctx *ctx, int intf, int mode);
 	int (*_get_async_irq_st)(struct seninf_ctx *ctx, int async, bool clear);
 	int (*_set_csi_mipi)(struct seninf_ctx *ctx);
 	int (*_poweroff)(struct seninf_ctx *ctx);

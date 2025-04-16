@@ -2862,6 +2862,93 @@ int aov_switch_mclk_ulposc(struct seninf_ctx *ctx,
 }
 
 /**
+ * For camsv stress test, set vc, dt and outmux cfg info
+ *
+ * @param ctx seninf ctx
+ * @param outmux_cfg outmux cfg info
+ */
+static void mtk_cam_seninf_set_test_mode_info(struct seninf_ctx *ctx,
+		struct outmux_cfg_for_camsv_stress *outmux_cfg)
+{
+	struct seninf_core *core = ctx->core;
+	struct seninf_vcinfo *vcinfo = &core->vcinfo_stress_test;
+	struct seninf_vc *vc;
+
+	core->outmux_id = SENINF_OUTMUX3; // test camsvD (map to outmux3)
+	core->async_id = SENINF_ASYNC_5; // use free seninf_async
+
+	/* set vc info */
+	vcinfo->cnt = 0;
+	vc = &vcinfo->vc[vcinfo->cnt++];
+	vc->vc = 0;
+	vc->dt = 0x2b;
+	vc->feature = VC_RAW_DATA;
+	vc->out_pad = PAD_SRC_RAW0;
+	vc->group = 0;
+	vc->exp_hsize = 4096;
+	vc->exp_vsize = 3072;
+	vc->bit_depth = 16;
+
+	outmux_cfg->outmux_idx = core->outmux_id;
+	outmux_cfg->src_mipi = core->async_id;
+	outmux_cfg->src_sen = 0; // test mode is not split mode
+	outmux_cfg->pix_mode = pix_mode_8p; // use camsv only support 8p
+	outmux_cfg->tag_id = 0; // fixed tag0 for stress test
+	outmux_cfg->tag_cfg.enable = true;
+	outmux_cfg->tag_cfg.filt_vc = vc->vc;
+	outmux_cfg->tag_cfg.filt_dt = vc->dt;
+	outmux_cfg->tag_cfg.exp_hsize = vc->exp_hsize;
+	outmux_cfg->tag_cfg.exp_vsize = vc->exp_vsize;
+	outmux_cfg->tag_cfg.bit_depth = vc->bit_depth;
+}
+
+/**
+ * Notify seninf to start test model for stress test
+ *
+ * @param sd v4l2_subdev
+ * @param mode test model mode
+ */
+void mtk_cam_seninf_start_test_model_for_camsv(struct v4l2_subdev *sd, u32 mode)
+{
+	struct seninf_ctx *ctx = container_of(sd, struct seninf_ctx, subdev);
+	struct seninf_core *core = ctx->core;
+	struct outmux_cfg_for_camsv_stress outmux_cfg;
+	int cfg_mode = MTK_CAM_OUTMUX_CFG_MODE_NORMAL_CFG;
+
+
+	memset(&outmux_cfg, 0, sizeof(struct outmux_cfg_for_camsv_stress));
+	mtk_cam_seninf_set_test_mode_info(ctx, &outmux_cfg);
+
+	g_seninf_ops->_set_test_model_camsv_stress(ctx, core->async_id, mode);
+	g_seninf_ops->_config_outmux_for_camsv_stress(
+					ctx,
+					outmux_cfg.outmux_idx,
+					outmux_cfg.src_mipi,
+					outmux_cfg.src_sen,
+					cfg_mode,
+					&outmux_cfg);
+	ctx->core->camsv_test_mode_en = 1;
+	dev_info(ctx->dev, "[%s] start stress test mode %d\n",
+		__func__, mode);
+}
+
+/**
+ * Notify seninf to stoptest model for stress test
+ *
+ * @param sd v4l2_subdev
+ */
+void mtk_cam_seninf_stop_test_model_for_camsv(struct v4l2_subdev *sd)
+{
+	struct seninf_ctx *ctx = container_of(sd, struct seninf_ctx, subdev);
+	int outmux = ctx->core->outmux_id;
+
+	g_seninf_ops->_disable_outmux(ctx, outmux, 1);
+	g_seninf_ops->_set_test_model_camsv_stress(ctx, ctx->core->async_id, 0);
+	dev_info(ctx->dev, "[%s] stop stress test\n",__func__);
+	ctx->core->camsv_test_mode_en = 0;
+}
+
+/**
  * @brief: send apmcu param to scp.
  *
  * As a callee, For sending value/address to caller: scp.
