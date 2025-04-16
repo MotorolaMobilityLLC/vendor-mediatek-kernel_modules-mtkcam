@@ -170,7 +170,7 @@ void pda_mmqos_bw_set(struct PDA_Data_t *pda_Pdadata)
 
 	unsigned int Freqency = 360;
 	unsigned int FOV = 0;
-	unsigned int ROI_Number = PDA_MAXROI_PER_ROUND;
+	//unsigned int ROI_Number = PDA_MAXROI_PER_ROUND;
 	unsigned int Frame_Rate = 30;
 	unsigned int Search_Range = 40;
 	#define Operation_Margin (12 / 10)
@@ -193,7 +193,10 @@ void pda_mmqos_bw_set(struct PDA_Data_t *pda_Pdadata)
 	unsigned int IMAGE_IMAGE_RDMA_PEAK_BW = 0;
 	unsigned int IMAGE_IMAGE_RDMA_AVG_BW = 0;
 
+	unsigned int width_roi = 0, height_roi = 0;
+	unsigned int nbx_roi = 0, nby_roi = 0;
 	unsigned int total_area = 0;
+	unsigned int total_roi = 0;
 
 	unsigned int pda_rdma_bw_port = 0, pda_wdma_bw_port = 0;
 	unsigned int rdma_bw_temp = 0, wdma_bw_temp = 0, ttl_bw_temp = 0;
@@ -214,18 +217,63 @@ void pda_mmqos_bw_set(struct PDA_Data_t *pda_Pdadata)
 		LOG_INF("roi_num:%d\n", pda_Pdadata->roi_num);
 
 	for (i = 0; i < pda_Pdadata->roi_num; ++i) {
+		width_roi = pda_Pdadata->roi_w[i];
+		height_roi = pda_Pdadata->roi_h[i];
+
+		nbx_roi = pda_Pdadata->roi_nbx[i];
+		nby_roi = pda_Pdadata->roi_nby[i];
+
+		total_roi += nbx_roi * nby_roi;
+		total_area += width_roi * height_roi * nbx_roi * nby_roi;
+
 		if (pda_log_dbg_en == 1)
-			LOG_INF("ROI:%d, w:%d, h:%d\n",
-				i, pda_Pdadata->roi_w[i], pda_Pdadata->roi_h[i]);
-		total_area += pda_Pdadata->roi_w[i] * pda_Pdadata->roi_h[i];
+			LOG_INF("ROI:%d, x/y/w/h/nbx/nby/obx/oby:%d/%d/%d/%d/%d/%d/%d/%d, total_area/total_roi:%d/%d\n",
+				i, pda_Pdadata->roi_x[i], pda_Pdadata->roi_y[i],
+				width_roi, height_roi, nbx_roi, nby_roi,
+				pda_Pdadata->roi_obx[i], pda_Pdadata->roi_oby[i],
+				total_area, total_roi);
 	}
 
 	FOV = total_area * 100 / (Inter_Frame_Size_Width*Inter_Frame_Size_Height);
 	if (FOV > ((B_N > 0) ? 100 : 200)) {
 		LOG_INF("FOV(%d) is out of range, max FOV is %d\n",
 			FOV, (B_N > 0) ? 100 : 200);
+
+		//for debug
+		LOG_INF("roi_num:%d\n", pda_Pdadata->roi_num);
+		total_roi = 0;
+		total_area = 0;
+
+		for (i = 0; i < pda_Pdadata->roi_num; ++i) {
+			width_roi = pda_Pdadata->roi_w[i];
+			height_roi = pda_Pdadata->roi_h[i];
+
+			nbx_roi = pda_Pdadata->roi_nbx[i];
+			nby_roi = pda_Pdadata->roi_nby[i];
+
+			total_roi += nbx_roi * nby_roi;
+			total_area += width_roi * height_roi * nbx_roi * nby_roi;
+
+			LOG_INF("ROI:%d, x/y/w/h/nbx/nby/obx/oby:%d/%d/%d/%d/%d/%d/%d/%d, total_area/total_roi:%d/%d\n",
+				i, pda_Pdadata->roi_x[i], pda_Pdadata->roi_y[i],
+				width_roi, height_roi, nbx_roi, nby_roi,
+				pda_Pdadata->roi_obx[i], pda_Pdadata->roi_oby[i],
+				total_area, total_roi);
+		}
+
+		LOG_INF("Frame WIDTH/HEIGHT/B_N: %d/%d/%d\n",
+			Inter_Frame_Size_Width,
+			Inter_Frame_Size_Height,
+			B_N);
 		FOV = (B_N > 0) ? 100 : 200;
 	}
+
+	if (total_roi > 1024) {
+		LOG_INF("total ROI num(%d) is out of range, max ROI num is 1024\n",
+			total_roi);
+		total_roi = 1024;
+	}
+
 	if (pda_log_dbg_en == 1) {
 		LOG_INF("FOV:%d, total_area:%d\n", FOV, total_area);
 		LOG_INF("Frame WIDTH/HEIGHT/B_N: %d/%d/%d\n",
@@ -258,7 +306,7 @@ void pda_mmqos_bw_set(struct PDA_Data_t *pda_Pdadata)
 	Inter_Input_Total_pixel_Itar = Inter_Frame_Size_FOV;
 	Inter_Input_Total_pixel_Iref = Inter_Frame_Size_FOV;
 	Mach_Input_Total_pixel_Itar =
-		(ROI_Number*Search_Range*Mach_ROI_Max_Height) +
+		(total_roi*Search_Range*Mach_ROI_Max_Height) +
 		Mach_Frame_Size_FOV +
 		(1*Mach_ROI_Max_Width);
 
@@ -267,7 +315,7 @@ void pda_mmqos_bw_set(struct PDA_Data_t *pda_Pdadata)
 		Operation_Margin *
 		(Search_Range+1)) /
 		Search_Range + 1;
-	WDMA_Data = OUT_BYTE_PER_ROI*ROI_Number;
+	WDMA_Data = OUT_BYTE_PER_ROI * total_roi;
 	temp = Inter_Input_Total_pixel_Itar+Inter_Input_Total_pixel_Iref;
 	RDMA_Data = temp*(16+2)/8;
 	if (pda_log_dbg_en == 1)
@@ -323,8 +371,9 @@ void pda_mmqos_bw_set(struct PDA_Data_t *pda_Pdadata)
 		}
 	}
 #endif
-	LOG_INF("RDMA_BW_PORT ImageTable AVG/PEAK: %d/%d\n",
-		rdma_bw_temp, IMAGE_TABLE_RDMA_PEAK_BW);
+	if (pda_log_dbg_en == 1)
+		LOG_INF("RDMA_BW_PORT ImageTable AVG/PEAK: %d/%d\n",
+			rdma_bw_temp, IMAGE_TABLE_RDMA_PEAK_BW);
 
 	// MMQOS set bw, image and image port
 	if (B_N <= 3) {

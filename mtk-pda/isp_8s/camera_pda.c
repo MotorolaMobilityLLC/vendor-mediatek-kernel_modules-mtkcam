@@ -81,6 +81,8 @@ void __iomem *CAMSYS_CONFIG_BASE;
 #define PDA_RESET_VALUE 0x00000001
 #define PDA_HW_RESET 0x00000004
 
+#define PDA_CFG_0_DEFAULT 0x40014
+
 struct device *g_dev1, *g_dev2;
 struct device *g_smmu_dev1;
 
@@ -122,7 +124,7 @@ struct timespec64 pda1_done_b, pda1_done_e;
 struct timespec64 pda2_done_b, pda2_done_e;
 #endif
 
-//calculate 1024 roi data
+//record roi data
 unsigned int g_rgn_x_buf[PDA_MAXROI_PER_ROUND];
 unsigned int g_rgn_y_buf[PDA_MAXROI_PER_ROUND];
 unsigned int g_rgn_h_buf[PDA_MAXROI_PER_ROUND];
@@ -171,6 +173,11 @@ static int g_last_sensor_dev;
 struct device *larb1;
 struct device *larb2;
 
+// ****************** MIPS/MCPS optimization *****************************
+unsigned int config_record[2][19];
+unsigned int config_ROI_record[24][4];
+// ***********************************************************************
+
 #ifndef FPGA_UT
 static void pda_reset_nocheckclk(unsigned int PDA_Index)
 {
@@ -211,14 +218,14 @@ static void pda_reset_nocheckclk(unsigned int PDA_Index)
 			return;
 		}
 
-		LOG_INF("PDA%d Wait EMI request, DMA_RST:0x%x\n",
-			PDA_Index,
-			PDA_RD32(PDA_devs[PDA_Index].m_pda_base + PDA_PDA_DMA_RST_REG));
+		//LOG_INF("PDA%d Wait EMI request, DMA_RST:0x%x\n", PDA_Index,
+		//	PDA_RD32(PDA_devs[PDA_Index].m_pda_base + PDA_PDA_DMA_RST_REG));
 
 		usleep_range(10, 20);
 	}
 
-	LOG_INF("reset PDA%d hw timeout\n", PDA_Index);
+	LOG_INF("PDA%d reset pda timeout, DMA_RST:0x%x\n", PDA_Index,
+		PDA_RD32(PDA_devs[PDA_Index].m_pda_base + PDA_PDA_DMA_RST_REG));
 }
 
 static void pda_nontransaction_reset_nocheckclk(unsigned int PDA_Index)
@@ -502,14 +509,14 @@ static void pda_reset(unsigned int PDA_Index)
 			return;
 		}
 
-		LOG_INF("PDA%d Wait EMI request, DMA_RST:0x%x\n",
-			PDA_Index,
-			PDA_RD32(PDA_devs[PDA_Index].m_pda_base + PDA_PDA_DMA_RST_REG));
+		//LOG_INF("PDA%d Wait EMI request, DMA_RST:0x%x\n", PDA_Index,
+		//	PDA_RD32(PDA_devs[PDA_Index].m_pda_base + PDA_PDA_DMA_RST_REG));
 
 		usleep_range(10, 20);
 	}
 
-	LOG_INF("reset PDA%d hw timeout\n", PDA_Index);
+	LOG_INF("PDA%d reset pda timeout, DMA_RST:0x%x\n", PDA_Index,
+		PDA_RD32(PDA_devs[PDA_Index].m_pda_base + PDA_PDA_DMA_RST_REG));
 }
 
 static void pda_nontransaction_reset(unsigned int PDA_Index)
@@ -606,52 +613,11 @@ static void pda_put_dma_buffer(struct pda_mmu *mmu)
 	}
 }
 
-static void HWDMASettings(struct PDA_Data_t *pda_PdaConfig)
+static void initHWDMASettings(void)
 {
 	unsigned int i;
 
 	for (i = 0; i < g_PDA_quantity; i++) {
-		// --------- Frame setting part -----------
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_0_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_0.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_1_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_1.Raw);
-		// need set roi number every process
-		// PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_2_REG,
-		//     pda_PdaConfig->PDA_HW_Register.PDA_CFG_2.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_3_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_3.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_4_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_4.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_5_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_5.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_6_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_6.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_7_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_7.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_8_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_8.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_9_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_9.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_10_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_10.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_11_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_11.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_12_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_12.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_13_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_13.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_14_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_14.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_15_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_15.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_16_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_16.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_17_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_17.Raw);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_18_REG,
-			pda_PdaConfig->PDA_HW_Register.PDA_CFG_18.Raw);
-
 		// --------- DMA Secure part -------------
 		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_SECURE_REG, 0x00000000);
 		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_SECURE_1_REG, 0x00000000);
@@ -741,7 +707,6 @@ static void HWDMASettings(struct PDA_Data_t *pda_PdaConfig)
 		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDAO_P1_CON4_REG, 0x00200020);
 
 		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_DMA_EN_REG, 0x7ff);
-		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_DMA_RST_REG, 0x1);
 		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_DMA_TOP_REG, 0x7802);
 
 		// DCM all off: 0x00001FFF
@@ -804,21 +769,215 @@ static void HWDMASettings(struct PDA_Data_t *pda_PdaConfig)
 
 		// setting read clear
 		PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDA_ERR_STAT_EN_REG, 0x00000001);
+	}
+}
+
+static void HWDMASettings(struct PDA_Data_t *pda_PdaConfig)
+{
+	unsigned int i;
+	unsigned int cfg_0_value = 0;
+
+	for (i = 0; i < g_PDA_quantity; i++) {
+		cfg_0_value = PDA_RD32(PDA_devs[i].m_pda_base + PDA_CFG_0_REG);
+		if (pda_log_dbg_en == 1)
+			LOG_INF("config_record[i][0]:0x%x, config 0 value: 0x%x\n",
+				config_record[i][0],
+				cfg_0_value);
+
+		// --------- Frame setting part -----------
+		if (config_record[i][0] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_0.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 0 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][0],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_0.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_0_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_0.Raw);
+			config_record[i][0] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_0.Raw;
+		}
+		if (config_record[i][1] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_1.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 1 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][1],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_1.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_1_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_1.Raw);
+			config_record[i][1] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_1.Raw;
+		}
+		if (config_record[i][2] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_2.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 2 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][2],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_2.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_2_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_2.Raw);
+			config_record[i][2] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_2.Raw;
+		}
+		if (config_record[i][3] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_3.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 3 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][3],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_3.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_3_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_3.Raw);
+			config_record[i][3] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_3.Raw;
+		}
+		if (config_record[i][4] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_4.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 4 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][4],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_4.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_4_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_4.Raw);
+			config_record[i][4] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_4.Raw;
+		}
+		if (config_record[i][5] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_5.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 5 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][5],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_5.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_5_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_5.Raw);
+			config_record[i][5] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_5.Raw;
+		}
+		if (config_record[i][6] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_6.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 6 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][6],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_6.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_6_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_6.Raw);
+			config_record[i][6] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_6.Raw;
+		}
+		if (config_record[i][7] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_7.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 7 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][7],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_7.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_7_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_7.Raw);
+			config_record[i][7] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_7.Raw;
+		}
+		if (config_record[i][8] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_8.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 8 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][8],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_8.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_8_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_8.Raw);
+			config_record[i][8] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_8.Raw;
+		}
+		if (config_record[i][9] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_9.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 9 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][9],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_9.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_9_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_9.Raw);
+			config_record[i][9] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_9.Raw;
+		}
+		if (config_record[i][10] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_10.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 10 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][10],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_10.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_10_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_10.Raw);
+			config_record[i][10] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_10.Raw;
+		}
+		if (config_record[i][11] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_11.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 11 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][11],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_11.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_11_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_11.Raw);
+			config_record[i][11] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_11.Raw;
+		}
+		if (config_record[i][12] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_12.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 12 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][12],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_12.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_12_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_12.Raw);
+			config_record[i][12] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_12.Raw;
+		}
+		if (config_record[i][13] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_13.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 13 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][13],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_13.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_13_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_13.Raw);
+			config_record[i][13] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_13.Raw;
+		}
+		if (config_record[i][14] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_14.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 14 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][14],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_14.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_14_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_14.Raw);
+			config_record[i][14] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_14.Raw;
+		}
+		if (config_record[i][15] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_15.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 15 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][15],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_15.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_15_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_15.Raw);
+			config_record[i][15] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_15.Raw;
+		}
+		if (config_record[i][16] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_16.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 16 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][16],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_16.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_16_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_16.Raw);
+			config_record[i][16] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_16.Raw;
+		}
+		if (config_record[i][17] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_17.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 17 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][17],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_17.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_17_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_17.Raw);
+			config_record[i][17] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_17.Raw;
+		}
+		if (config_record[i][18] != pda_PdaConfig->PDA_HW_Register.PDA_CFG_18.Raw ||
+				cfg_0_value == PDA_CFG_0_DEFAULT) {
+			if (pda_log_dbg_en == 1)
+				LOG_INF("config 18 resetting, before/after: 0x%x/0x%x\n",
+					config_record[i][18],
+					pda_PdaConfig->PDA_HW_Register.PDA_CFG_18.Raw);
+			PDA_WR32(PDA_devs[i].m_pda_base + PDA_CFG_18_REG,
+				pda_PdaConfig->PDA_HW_Register.PDA_CFG_18.Raw);
+			config_record[i][18] = pda_PdaConfig->PDA_HW_Register.PDA_CFG_18.Raw;
+		}
 
 		// read 0x3b4, avoid the impact of previous data
 		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDA_ERR_STAT_REG);
-		// read clear dma status
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDAI_P1_ERR_STAT_REG);
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDATI_P1_ERR_STAT_REG);
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDAI_P2_ERR_STAT_REG);
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDATI_P2_ERR_STAT_REG);
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDAO_P1_ERR_STAT_REG);
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDALI_P3_ERR_STAT_REG);
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDARI_P3_ERR_STAT_REG);
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDALI_P4_ERR_STAT_REG);
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDARI_P4_ERR_STAT_REG);
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDALI_P5_ERR_STAT_REG);
-		PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDARI_P5_ERR_STAT_REG);
 	}
 }
 
@@ -838,6 +997,11 @@ static int ProcessROIData(struct PDA_Data_t *pda_data,
 		g_rgn_oby_buf[i] = pda_data->roi_oby[ROIIndex+i];
 		g_rgn_nbx_buf[i] = pda_data->roi_nbx[ROIIndex+i];
 		g_rgn_nby_buf[i] = pda_data->roi_nby[ROIIndex+i];
+
+		if (pda_log_dbg_en == 1)
+			pr_info("ROI:%d, x/y/w/h/iw/obx/oby/nbx/nby:%d/%d/%d/%d/%d/%d/%d/%d/%d\n",
+				i, g_rgn_x_buf[i], g_rgn_y_buf[i], g_rgn_w_buf[i], g_rgn_h_buf[i], g_rgn_iw_buf[i],
+				g_rgn_obx_buf[i], g_rgn_oby_buf[i], g_rgn_nbx_buf[i], g_rgn_nby_buf[i]);
 	}
 
 	if (pda_log_dbg_en == 1)
@@ -1098,6 +1262,7 @@ static void FillRegSettings(struct PDA_Data_t *pda_PdaConfig,
 	unsigned int RegIndex = 19;
 	int ROI_MAX_INDEX = RoiProcNum-1;
 	unsigned int i = 0;
+	unsigned int xy_value = 0;
 
 	if (RoiProcNum > PDA_MAXROI_PER_ROUND) {
 		LOG_INF("RoiProcNum out of range (%d)\n", RoiProcNum);
@@ -1118,14 +1283,61 @@ static void FillRegSettings(struct PDA_Data_t *pda_PdaConfig,
 
 	//ROI data sequentially fill to PDA_CFG[19] ~ PDA_CFG[114]
 	for (i = 0; i <= ROI_MAX_INDEX; i++) {
-		PDA_WR32((PDA_devs[PDA_Index].m_pda_base + 0x004*(RegIndex++)),
-			(g_rgn_y_buf[i] << 16) + g_rgn_x_buf[i]);
-		PDA_WR32((PDA_devs[PDA_Index].m_pda_base + 0x004*(RegIndex++)),
-			(g_rgn_h_buf[i] << 16) + g_rgn_w_buf[i]);
-		PDA_WR32((PDA_devs[PDA_Index].m_pda_base + 0x004*(RegIndex++)),
-			(g_rgn_nby_buf[i] << 22) + (g_rgn_nbx_buf[i] << 16) + g_rgn_iw_buf[i]);
-		PDA_WR32((PDA_devs[PDA_Index].m_pda_base + 0x004*(RegIndex++)),
-			(g_rgn_oby_buf[i] << 16) + g_rgn_obx_buf[i]);
+
+		xy_value = PDA_RD32((PDA_devs[PDA_Index].m_pda_base + 0x004*(RegIndex)));
+		if (pda_log_dbg_en == 1)
+			LOG_INF("xy_value = 0x%x\n", xy_value);
+
+		if (config_ROI_record[i][0] != ((g_rgn_y_buf[i] << 16) + g_rgn_x_buf[i]) ||
+				xy_value == 0x0) {
+			config_ROI_record[i][0] = (g_rgn_y_buf[i] << 16) + g_rgn_x_buf[i];
+			PDA_WR32((PDA_devs[PDA_Index].m_pda_base + 0x004*(RegIndex)),
+				config_ROI_record[i][0]);
+		}
+		if (pda_log_dbg_en == 1)
+			LOG_INF("config_ROI_record[%d][0] = 0x%x, PDA_CFG[%d]: 0x%x\n",
+				i, config_ROI_record[i][0],
+				RegIndex, PDA_RD32(PDA_devs[PDA_Index].m_pda_base + 0x004*RegIndex));
+		RegIndex++;
+
+		if (config_ROI_record[i][1] != ((g_rgn_h_buf[i] << 16) + g_rgn_w_buf[i]) ||
+				xy_value == 0x0) {
+			config_ROI_record[i][1] = (g_rgn_h_buf[i] << 16) + g_rgn_w_buf[i];
+			PDA_WR32((PDA_devs[PDA_Index].m_pda_base + 0x004*(RegIndex)),
+				config_ROI_record[i][1]);
+		}
+		if (pda_log_dbg_en == 1)
+			LOG_INF("config_ROI_record[%d][1] = 0x%x, PDA_CFG[%d]: 0x%x\n",
+				i, config_ROI_record[i][1],
+				RegIndex, PDA_RD32(PDA_devs[PDA_Index].m_pda_base + 0x004*RegIndex));
+		RegIndex++;
+
+
+		if (config_ROI_record[i][2] != ((g_rgn_nby_buf[i] << 22) +
+				(g_rgn_nbx_buf[i] << 16) + g_rgn_iw_buf[i]) || xy_value == 0x0) {
+			config_ROI_record[i][2] = (g_rgn_nby_buf[i] << 22) +
+				(g_rgn_nbx_buf[i] << 16) + g_rgn_iw_buf[i];
+			PDA_WR32((PDA_devs[PDA_Index].m_pda_base + 0x004*(RegIndex)),
+				config_ROI_record[i][2]);
+		}
+		if (pda_log_dbg_en == 1)
+			LOG_INF("config_ROI_record[%d][2] = 0x%x, PDA_CFG[%d]: 0x%x\n",
+				i, config_ROI_record[i][2],
+				RegIndex, PDA_RD32(PDA_devs[PDA_Index].m_pda_base + 0x004*RegIndex));
+		RegIndex++;
+
+
+		if (config_ROI_record[i][3] != ((g_rgn_oby_buf[i] << 16) + g_rgn_obx_buf[i]) ||
+				xy_value == 0x0) {
+			config_ROI_record[i][3] = (g_rgn_oby_buf[i] << 16) + g_rgn_obx_buf[i];
+			PDA_WR32((PDA_devs[PDA_Index].m_pda_base + 0x004*(RegIndex)),
+				config_ROI_record[i][3]);
+		}
+		if (pda_log_dbg_en == 1)
+			LOG_INF("config_ROI_record[%d][3] = 0x%x, PDA_CFG[%d]: 0x%x\n",
+				i, config_ROI_record[i][3],
+				RegIndex, PDA_RD32(PDA_devs[PDA_Index].m_pda_base + 0x004*RegIndex));
+		RegIndex++;
 
 		if (pda_log_dbg_en == 1) {
 			LOG_INF("PDA_CFG[%d:%d]: 0x%x/0x%x/0x%x/0x%x\n",
@@ -1921,26 +2133,6 @@ static int PDAProcessFunction(unsigned int nUserROINumber,
 			}
 
 			CheckAddress =
-			PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDAI_P2_BASE_ADDR_REG);
-			CheckAddressMSB =
-			PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDAI_P2_BASE_ADDR_MSB_REG);
-			if (CheckAddress == 0 && CheckAddressMSB == 0) {
-				LOG_INF("PDA_%d PDA_PDAI_P2_BASE_ADDR is zero\n", i);
-				g_pda_Pdadata.status = -30;
-				return -1;
-			}
-
-			CheckAddress =
-			PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDATI_P2_BASE_ADDR_REG);
-			CheckAddressMSB =
-			PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDATI_P2_BASE_ADDR_MSB_REG);
-			if (CheckAddress == 0 && CheckAddressMSB == 0) {
-				LOG_INF("PDA_%d PDA_PDATI_P2_BASE_ADDR is zero\n", i);
-				g_pda_Pdadata.status = -30;
-				return -1;
-			}
-
-			CheckAddress =
 			PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDAO_P1_BASE_ADDR_REG);
 			CheckAddressMSB =
 			PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDAO_P1_BASE_ADDR_MSB_REG);
@@ -2193,12 +2385,6 @@ static long PDA_Ioctl(struct file *a_pstFile,
 
 #ifdef GET_PDA_TIME
 		ktime_get_real_ts64(&total_time_begin);
-#endif
-
-#ifndef FPGA_UT
-		// MRAW PDA reset
-		for (i = 0; i < g_PDA_quantity; i++)
-			pda_nontransaction_reset(i);
 #endif
 
 		// reset HW status
@@ -2707,7 +2893,7 @@ static long PDA_Ioctl(struct file *a_pstFile,
 		}
 
 		for (i = 0; i < g_PDA_quantity; i++) {
-			// Left image buffer
+			// Output buffer
 			PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDAO_P1_BASE_ADDR_MSB_REG,
 				(unsigned int)(g_OutputBufferAddr[cur_out_idx] >> 32));
 			PDA_WR32(PDA_devs[i].m_pda_base + PDA_PDAO_P1_BASE_ADDR_REG,
@@ -2729,6 +2915,13 @@ static long PDA_Ioctl(struct file *a_pstFile,
 		// update sensor dev
 		g_last_sensor_dev = g_pda_Pdadata.sensor_dev;
 
+		// PDA HW and DMA setting
+		for (i = 0; i < g_PDA_quantity; i++) {
+			if (PDA_RD32(PDA_devs[i].m_pda_base + PDA_PDA_DMA_EN_REG) == 0) {
+				LOG_INF("config PDA setting\n");
+				initHWDMASettings();
+			}
+		}
 		HWDMASettings(&g_pda_Pdadata);
 
 		// ------------------------ PDA pre-process done -----------------

@@ -282,7 +282,6 @@
 #define PDA_PDA_SECURE_3_REG (0x380)
 #define PDA_PDA_AUTO_TRIG_REG (0x384)
 
-//以下新增的
 #define PDA_PDA_P1_AXSLC_REG (0x388)
 #define PDA_PDA_P2_AXSLC_REG (0x38c)
 #define PDA_PDA_P3_AXSLC_REG (0x390)
@@ -293,10 +292,8 @@
 #define PDA_PDA_SMI_PORT_PSUEDO_MODE_DLE_DELAY_CNT_REG (0x3a4)
 #define PDA_PDA_SMI_PORT_PSUEDO_MODE_RAND_SEED_REG (0x3a8)
 
-//這個之前就有。但是換順序
 #define PDA_DDREN_CFG_REG (0x3ac)
 
-//以下新增的
 #define PDA_PACK_MODE_REG (0x3b0)
 #define PDA_DILATION_CFG_REG (0x3b4)
 #define PDA_OFL_SKIP_MODE_REG (0x3b8)
