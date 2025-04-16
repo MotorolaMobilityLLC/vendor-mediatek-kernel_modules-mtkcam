@@ -5386,6 +5386,50 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 	seninf_irq = mtk_cam_seninf_get_async_irq_st(ctx, ctx->seninfAsyncIdx, 1);
 	temp = SENINF_READ_REG(base_csi_mac,
 		CSIRX_CSI2_IRQ_MULTI_ERR_FRAME_SYNC_STATUS);
+
+	seninf_logi(ctx,
+		"CSI-%d,deskew_fifo_overflow_irq_L0/L1/L2/L3 (0x%x/0x%x/0x%x/0x%x)\n",
+		(uint32_t)ctx->portNum,
+		SENINF_READ_BITS(base_csi_mac,
+			CSIRX_MAC_CSI2_IRQ_G1_STATUS,
+			RO_CSI2_DESKEW_FIFO_OVERFLOW_L0_IRQ),
+		SENINF_READ_BITS(base_csi_mac,
+			CSIRX_MAC_CSI2_IRQ_G1_STATUS,
+			RO_CSI2_DESKEW_FIFO_OVERFLOW_L1_IRQ),
+		SENINF_READ_BITS(base_csi_mac,
+			CSIRX_MAC_CSI2_IRQ_G1_STATUS,
+			RO_CSI2_DESKEW_FIFO_OVERFLOW_L2_IRQ),
+		SENINF_READ_BITS(base_csi_mac,
+			CSIRX_MAC_CSI2_IRQ_G1_STATUS,
+			RO_CSI2_DESKEW_FIFO_OVERFLOW_L3_IRQ));
+
+	seninf_logi(ctx,
+		"CSI-%d,post_det_gating_lane_irq L0/L1/L2/L3(0x%x/0x%x/0x%x/0x%x)\n",
+		(uint32_t)ctx->portNum,
+		SENINF_READ_BITS(base_csi_mac,
+				CSIRX_MAC_CSI2_IRQ_G1_STATUS,
+				RO_CSI2_POST_DET_GATING_LANE0_IRQ),
+		SENINF_READ_BITS(base_csi_mac,
+				CSIRX_MAC_CSI2_IRQ_G1_STATUS,
+				RO_CSI2_POST_DET_GATING_LANE1_IRQ),
+		SENINF_READ_BITS(base_csi_mac,
+				CSIRX_MAC_CSI2_IRQ_G1_STATUS,
+				RO_CSI2_POST_DET_GATING_LANE2_IRQ),
+		SENINF_READ_BITS(base_csi_mac,
+				CSIRX_MAC_CSI2_IRQ_G1_STATUS,
+				RO_CSI2_POST_DET_GATING_LANE3_IRQ));
+
+	seninf_logi(ctx,
+		"CSI-%d,chk_bit_err_cnt_irq(0x%x) b2p_wc_mismatch(0x%x)\n",
+		(uint32_t)ctx->portNum,
+		SENINF_READ_BITS(base_csi_mac,
+				CSIRX_MAC_CSI2_IRQ_G1_STATUS,
+				RO_CSI2_CHK_BIT_ERR_CNT_IRQ),
+		SENINF_READ_BITS(base_csi_mac,
+				CSIRX_MAC_CSI2_IRQ_G1_STATUS,
+				RO_CSI2_B2P_WC_MISMATCH_IRQ));
+
+
 	// always clear irq status and multi-framesync status
 	SENINF_WRITE_REG(base_csi_mac, CSIRX_MAC_CSI2_IRQ_STATUS, 0xffffffff);
 	SENINF_WRITE_REG(base_csi_mac, CSIRX_CSI2_IRQ_MULTI_ERR_FRAME_SYNC_STATUS, temp);
