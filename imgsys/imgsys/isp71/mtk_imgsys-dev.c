@@ -460,6 +460,14 @@ void mtk_imgsys_pipe_try_fmt(struct mtk_imgsys_pipe *pipe,
 		unsigned int stride;
 		unsigned int sizeimage;
 
+		if (i >= IMGBUF_MAX_PLANES) {
+			dev_info(pipe->imgsys_dev->dev,
+			"%s:%s: invalid idx(%d), num_planes(%d) must < IMGBUF_MAX_PLANES(%d)\n",
+			__func__, node->desc->name,
+			i, fmt->fmt.pix_mp.num_planes, IMGBUF_MAX_PLANES);
+			break;
+		}
+
 		if (is_desc_fmt(dfmt)) {
 			fmt->fmt.pix_mp.plane_fmt[i].sizeimage =
 							dfmt->buffer_size;
