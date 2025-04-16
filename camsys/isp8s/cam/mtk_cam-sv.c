@@ -3192,6 +3192,8 @@ void camsv_handle_err(
 #if !IS_ENABLED(CONFIG_MTK_EMI_LEGACY)
 		mtk_emiisu_record_off();
 #endif
+		mmqos_stop_record();
+		mmdvfs_stop_record();
 		atomic_set(&sv_dev->is_fifo_full, 1);
 
 		if (DISABLE_RECOVER_FLOW) {

@@ -17,6 +17,7 @@
 #include <linux/rtc.h>
 
 #include <soc/mediatek/smi.h>
+#include <soc/mediatek/emi.h>
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
 
 #include "mtk_cam.h"
@@ -1522,6 +1523,11 @@ static void raw_handle_skip_frame(struct mtk_raw_device *raw_dev,
 			__func__, err_status, fh_cookie);
 
 	if (err_status & FBIT(CAMCTL_P1_SKIP_FRAME_DC_STAG_INT_ST)) {
+#if !IS_ENABLED(CONFIG_MTK_EMI_LEGACY)
+		mtk_emiisu_record_off();
+#endif
+		mmqos_stop_record();
+		mmdvfs_stop_record();
 		mtk_cam_main_dbg_dump(raw_dev->cam);
 		mtk_cam_isp8s_bwr_dbg_dump(raw_dev->cam->bwr);
 		mmdvfs_debug_status_dump(NULL);
@@ -2137,6 +2143,11 @@ static void raw_handle_tg_overrun_err(struct mtk_raw_device *raw_dev,
 		dump_topdebug_rdyreq_status(raw_dev);
 
 	else if (cnt == (OVERRUN_DUMP_CNT + raw_dev->sub_sensor_ctrl_en * 10)) {
+#if !IS_ENABLED(CONFIG_MTK_EMI_LEGACY)
+		mtk_emiisu_record_off();
+#endif
+		mmqos_stop_record();
+		mmdvfs_stop_record();
 		mtk_cam_main_dbg_dump(raw_dev->cam);
 		mtk_cam_isp8s_bwr_dbg_dump(raw_dev->cam->bwr);
 		mmdvfs_debug_status_dump(NULL);
