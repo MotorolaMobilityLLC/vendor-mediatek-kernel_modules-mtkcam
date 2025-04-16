@@ -2041,6 +2041,49 @@ void mtk_imgsys_cmdq_qof_dump(uint32_t hwcomb, bool need_dump_cg)
 		mtk_qof_print_cg_status();
 }
 
+int mtk_qof_WPE_EIS_retry_vote_on(void)
+{
+	int ret = -1;
+	u32 tmp;
+	void __iomem *io_addr;
+
+	QOF_LOGI("vote SCP SET for retry");
+	if (is_qof_engine_enabled(ISP8S_PWR_WPE_1_EIS)) {
+		QOF_WRITE_VAL(qof_reg_table[ISP8S_PWR_WPE_1_EIS][QOF_REG_IMG_SCP_SET], 0x1);
+		io_addr = QOF_GET_REMAP_ADDR(qof_reg_table[ISP8S_PWR_WPE_1_EIS][QOF_REG_IMG_QOF_STATE_DBG].addr);
+		if (readl_poll_timeout_atomic
+			(io_addr, tmp, (tmp & BIT(1)) == BIT(1), POLL_DELAY_US, TIMEOUT_1000US) < 0 ||
+			qof_check_module_cg_status(ISP8S_PWR_WPE_1_EIS) == false) {
+			QOF_LOGE("Error: WPE_EIS waiting qof pwr on timeout");
+			mtk_imgsys_cmdq_qof_dump(0, false);
+		} else
+			ret = 0;
+	} else
+		QOF_LOGE("QOF engine not ready");
+	return ret;
+}
+
+int mtk_qof_WPE_EIS_retry_vote_off(void)
+{
+	int ret = -1;
+	u32 tmp;
+	void __iomem *io_addr;
+
+	QOF_LOGI("unvote SCP SET for retry");
+	if (is_qof_engine_enabled(ISP8S_PWR_WPE_1_EIS)) {
+		QOF_WRITE_VAL(qof_reg_table[ISP8S_PWR_WPE_1_EIS][QOF_REG_IMG_SCP_CLR], 0x1);
+		io_addr = QOF_GET_REMAP_ADDR(qof_reg_table[ISP8S_PWR_WPE_1_EIS][QOF_REG_IMG_QOF_STATE_DBG].addr);
+		if (readl_poll_timeout_atomic
+			(io_addr, tmp, (tmp & BIT(3)) == 0, POLL_DELAY_US, TIMEOUT_1000US) < 0) {
+			QOF_LOGE("Error: WPE_EIS waiting qof pwr off proc timeout");
+			mtk_imgsys_cmdq_qof_dump(0, false);
+		} else
+			ret = 0;
+	} else
+		QOF_LOGE("QOF engine not ready");
+	return ret;
+}
+
 static void imgsys_qof_dbg_print_trace(int mod)
 {
 	u32 value;

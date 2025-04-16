@@ -54,6 +54,8 @@ void mtk_imgsys_cmdq_qof_release(struct mtk_imgsys_dev *imgsys_dev, struct cmdq_
 void mtk_imgsys_cmdq_get_non_qof_module(u32 *non_qof_modules);
 void mtk_imgsys_cmdq_qof_stream_on(struct mtk_imgsys_dev *imgsys_dev);
 void mtk_imgsys_cmdq_qof_stream_off(struct mtk_imgsys_dev *imgsys_dev);
+int mtk_qof_WPE_EIS_retry_vote_on(void);
+int mtk_qof_WPE_EIS_retry_vote_off(void);
 
 void mtk_imgsys_cmdq_qof_add(struct cmdq_pkt *pkt, bool *qof_need_sub, u32 hw_comb,
 		struct img_swfrm_info *user_info, unsigned int mode, bool *need_cine, bool sec);
