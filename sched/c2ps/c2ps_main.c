@@ -772,7 +772,7 @@ out:
 int c2ps_notify_single_shot_task_start(int pid, u32 uclamp)
 {
 	C2PS_LOGD("pid: %d, uclamp: %d", pid, uclamp);
-	set_uclamp(pid, uclamp, uclamp);
+	set_uclamp(pid, MAX_UCLAMP, uclamp);
 	return 0;
 }
 
