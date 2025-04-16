@@ -467,11 +467,11 @@ struct seninf_vc *mtk_cam_seninf_get_vc_by_pad(struct seninf_ctx *ctx, int idx)
 	}
 
 	/* if can not target any vc, print vc info */
-	seninf_logi(ctx, "[%s] target_pad %u format_code: 0x%x, cur_dt:0x%x vcinfo->cnt %d\n",
+	seninf_logd(ctx, "[%s] target_pad %u format_code: 0x%x, cur_dt:0x%x vcinfo->cnt %d\n",
 		__func__, idx, format_code, cur_dt, vcinfo->cnt);
 
 	for (i = 0; i < vcinfo->cnt; i++)
-		seninf_logi(ctx, "[%s] vc[%d],vc[%d] dt 0x%x remap to %d, pad %d\n",
+		seninf_logd(ctx, "[%s] vc[%d],vc[%d] dt 0x%x remap to %d, pad %d\n",
 		__func__, i,
 		vcinfo->vc[i].vc,
 		vcinfo->vc[i].dt,
@@ -1430,17 +1430,14 @@ static int mtk_cam_seninf_outmux_switch_config(struct seninf_ctx *ctx, struct ou
 	int pix_mode = cfg->pix_mode;
 	int cfg_mode = MTK_CAM_OUTMUX_CFG_MODE_NORMAL_CFG;
 
-	seninf_logi(ctx, "outmux_idx %d, src_mipi %d, src_sen %d, pixmode %d, cfg_mode %d",
-		    outmux_idx, src_mipi, src_sen, pix_mode, cfg_mode);
+	// pixel mode
+	g_seninf_ops->_set_outmux_pixel_mode(ctx, outmux_idx, pix_mode);
 
 	// Program double buffer register
 	g_seninf_ops->_config_outmux(ctx, outmux_idx, src_mipi, src_sen, cfg_mode, cfg->tag_cfg);
 
 	// set rdy msk config
 	g_seninf_ops->_set_outmux_rdy_msk_cfg(ctx, outmux_idx);
-
-	// pixel mode
-	g_seninf_ops->_set_outmux_pixel_mode(ctx, outmux_idx, pix_mode);
 
 	// set seninf DL EN
 	g_seninf_ops->_set_outmux_dl_en(ctx, outmux_idx, true);
@@ -1859,11 +1856,8 @@ static bool mtk_cam_seninf_set_mux_rdy_msk_cfg_by_cmd(struct seninf_ctx *ctx, u8
 	for (i = 0; i < vcinfo->cnt; i++) {
 		vc = &vcinfo->vc[i];
 
-		if (!vc->dest_cnt) {
-			dev_info(ctx->dev, "[%s]not set camtg yet->skip, vc[%d] pad %d intf %d dest_cnt %u\n",
-				 __func__, i, vc->out_pad, ctx->seninfAsyncIdx, vc->dest_cnt);
+		if (!vc->dest_cnt)
 			continue;
-		}
 
 		for (j =0; j < vc->dest_cnt; j++) {
 			switch (cmd) {

@@ -1332,7 +1332,7 @@ static int mtk_cam_seninf_set_outmux_rdy_msk_sw_rdy_status(
 	pSeninf_outmux = ctx->reg_if_outmux[outmux];
 
 	SENINF_BITS(pSeninf_outmux, SENINF_OUTMUX_CAM_CFG_RDY, SENINF_OUTMUX_CAM_CFG_RDY, rdy_status);
-	seninf_logi(ctx, "[%s] set rdy_status %d done", __func__, rdy_status);
+	seninf_logd(ctx, "[%s] set outmux %d rdy_status %d done", __func__, outmux, rdy_status);
 
 	return 0;
 }
@@ -8036,10 +8036,6 @@ int mtk_cam_seninf_config_outmux(struct seninf_ctx *ctx, u8 outmux_idx, u8 src_m
 		}
 	}
 
-	seninf_logi(ctx, "outmux%d set outer src/sen %u/%u with cfg mode %d, DBG0(0x%x)",
-		    outmux_idx, src_mipi, src_sen, cfg_mode,
-		    SENINF_READ_REG(pSeninf_mux, SENINF_OUTMUX_PATH_DBG_PORT_0));
-
 	SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_SOURCE_CONFIG_0,
 					SENINF_OUTMUX_VSYNC_SRC_SEL_MIPI, src_mipi);
 	SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_SOURCE_CONFIG_0,
@@ -8143,9 +8139,14 @@ int mtk_cam_seninf_config_outmux(struct seninf_ctx *ctx, u8 outmux_idx, u8 src_m
 		}
 
 		seninf_logi(ctx,
-			"outmux%d tag%d filt_vc 0x%x filt_dt 0x%x hsize %d bit_depth %d exp_img_h_in_bit %d hsize %d",
-		    outmux_idx,
+			"outmux%d tag%d outer_src/sen(%u/%u)cfg_mode(%d)DBG0(0x%x)pix_mode(%d)filt_vc/dt(0x%x/0x%x)hsize(%d)bit_depth(%d)exp_img_h_in_bit(%d)hsize(%d)",
+			outmux_idx,
 			i,
+			src_mipi,
+			src_sen,
+			cfg_mode,
+			SENINF_READ_REG(pSeninf_mux, SENINF_OUTMUX_PATH_DBG_PORT_0),
+			SENINF_READ_BITS(pSeninf_mux, SENINF_OUTMUX_PATH_CFG, SENINF_OUTMUX_PIX_MODE),
 			filt_vc,
 			filt_dt,
 			tag_cfg[i].exp_hsize,
