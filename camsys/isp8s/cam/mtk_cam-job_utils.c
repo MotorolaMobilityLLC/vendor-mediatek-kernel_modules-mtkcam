@@ -2832,6 +2832,14 @@ void fill_hdr_timestamp(struct mtk_cam_job *job,
 {
 	int exp_order = get_exp_order(&job->job_scen);
 
+	if (job->hdr_ts_dcg) {
+		job->hdr_ts_cache.le = info->sof_ts_ns;
+		job->hdr_ts_cache.le_mono = info->sof_ts_mono_ns;
+		job->hdr_ts_cache.se = info->sof_ts_ns;
+		job->hdr_ts_cache.se_mono = info->sof_ts_mono_ns;
+		goto EXIT;
+	}
+
 	switch (job->job_type) {
 	case JOB_TYPE_STAGGER:
 		if (exp_order == MTKCAM_IPI_ORDER_SE_NE) {
@@ -2868,4 +2876,13 @@ void fill_hdr_timestamp(struct mtk_cam_job *job,
 	default:
 		break;
 	}
+
+EXIT:
+
+	if (CAM_DEBUG_ENABLED(JOB))
+		pr_info("%s: hdr_ts: %llu/%llu/%llu/%llu/%llu/%llu",
+				 __func__,
+				 job->hdr_ts_cache.le, job->hdr_ts_cache.le_mono,
+				 job->hdr_ts_cache.ne, job->hdr_ts_cache.ne_mono,
+				 job->hdr_ts_cache.se, job->hdr_ts_cache.se_mono);
 }

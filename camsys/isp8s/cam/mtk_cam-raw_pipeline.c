@@ -1140,6 +1140,13 @@ void mtk_raw_hdr_tsfifo_push(struct mtk_raw_pipeline *pipe,
 
 	len = kfifo_in(&pipe->hdr_ts_fifo, ts_info, sizeof(*ts_info));
 
+	if (CAM_DEBUG_ENABLED(JOB))
+		dev_info(dev, "%s: hdr_ts: %llu/%llu/%llu/%llu/%llu/%llu",
+				 __func__,
+				 ts_info->le, ts_info->le_mono,
+				 ts_info->ne, ts_info->ne_mono,
+				 ts_info->se, ts_info->se_mono);
+
 	if (len != sizeof(*ts_info))
 		dev_info(dev, "%s: (pipe:%d) push fail\n", __func__, pipe->id);
 }
@@ -1155,6 +1162,13 @@ void mtk_raw_hdr_tsfifo_pop(struct mtk_raw_pipeline *pipe,
 
 	if (kfifo_len(&pipe->hdr_ts_fifo) >= sizeof(*ts_info)) {
 		len = kfifo_out(&pipe->hdr_ts_fifo, ts_info, sizeof(*ts_info));
+
+		if (CAM_DEBUG_ENABLED(JOB))
+			dev_info(dev, "%s: hdr_ts: %llu/%llu/%llu/%llu/%llu/%llu",
+				 __func__,
+				 ts_info->le, ts_info->le_mono,
+				 ts_info->ne, ts_info->ne_mono,
+				 ts_info->se, ts_info->se_mono);
 
 		if (len != sizeof(*ts_info))
 			dev_info(dev, "%s: (pipe:%d) pop fail\n", __func__, pipe->id);

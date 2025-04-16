@@ -1056,6 +1056,9 @@ handle_raw_frame_done(struct mtk_cam_job *job)
 			struct mtk_raw_pipeline *pipe =
 				&ctx->cam->pipelines.raw[ctx->raw_subdev_idx];
 
+			if (job->hdr_ts_dcg)
+				fill_hdr_timestamp(job, &ctx->cam_ctrl.r_info);
+
 			mtk_raw_hdr_tsfifo_push(pipe, &job->hdr_ts_cache);
 		}
 	}
@@ -5261,6 +5264,12 @@ static bool check_is_raw_trigger_sensor(struct mtk_cam_job *job)
 		(packed_ctrl->exposure.shutter > 0 && packed_ctrl->exposure.gain > 0);
 }
 
+static bool check_inner_pre_frame(struct mtk_cam_job *job)
+{
+	return (is_dcg_with_vs(job) &&
+			(job_exp_num(job) != job_sensor_exp_num(job)));
+}
+
 static int job_sen_req_pack(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -5289,6 +5298,7 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 	job->first_frm_switch = false;
 	job->do_pending_aid_config = false;
 	job->is_raw_trigger_sensor = check_is_raw_trigger_sensor(job);
+	job->hdr_ts_dcg = check_inner_pre_frame(job);
 
 	if (ctrl_data && ctrl_data->resource.user_data.raw_res.sen_apply_ctrl ==
 		MTK_CAM_SEN_APPLY_BY_XVS)
