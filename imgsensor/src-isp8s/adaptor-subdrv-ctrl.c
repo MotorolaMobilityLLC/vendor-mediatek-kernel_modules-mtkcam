@@ -3971,6 +3971,9 @@ void streaming_control(struct subdrv_ctx *ctx, bool enable)
 			if (stream_ctrl_delay_timing < stream_ctrl_delay)
 				mdelay(stream_ctrl_delay - stream_ctrl_delay_timing);
 		}
+		if (ctx->s_ctx.chk_streaming_st != NULL)
+			ctx->s_ctx.chk_streaming_st((void *) ctx);
+
 		subdrv_ixc_wr_u8(ctx, ctx->s_ctx.reg_addr_stream, 0x00);
 		if (ctx->s_ctx.reg_addr_fast_mode && ctx->fast_mode_on) {
 			DRV_LOG(ctx, "seamless_switch disabled.");

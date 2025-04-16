@@ -507,6 +507,7 @@ struct subdrv_static_ctx {
 	u32 list_len;
 	u8 chk_s_off_sta;
 	u8 chk_s_off_end;
+	int (*chk_streaming_st)(void *arg);
 
 	u16 *i3c_precfg_setting_table;
 	u32 i3c_precfg_setting_len;
@@ -596,6 +597,7 @@ struct subdrv_static_ctx_ext_ops {
 	int (*mcss_update_subdrv_para)(void *arg, int scenario_id);
 	int (*cust_get_linetime_in_us)(void *arg, u32 scenario_id,
 		u32 *linetime_in_ns, enum GET_LINETIME_ENUM linetime_type);
+	int (*chk_streaming_st)(void *arg);
 
 	/* customed function pointer by sensor mode */
 	struct subdrv_static_ctx_mode_ext_ops *mode_ext_ops_list;

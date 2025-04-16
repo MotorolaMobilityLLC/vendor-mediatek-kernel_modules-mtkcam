@@ -37,6 +37,8 @@ static int s5khp9sp_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int vsync_notify(struct subdrv_ctx *ctx,	unsigned int sof_cnt, u64 sof_ts);
 static int s5khp9sp_set_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int s5khp9sp_i3c_pre_config(struct subdrv_ctx *ctx);
+static int s5khp9sp_set_ctrl_locker(struct subdrv_ctx *ctx, u32 cid, bool *is_lock);
+static int s5khp9sp_chk_streaming_st(void *arg);
 
 static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, s5khp9sp_set_test_pattern},
@@ -53,6 +55,7 @@ static struct subdrv_static_ctx_ext_ops static_ext_ops = {
 	.s_gph = set_group_hold,
 	.list = feature_control_list,
 	.list_len = ARRAY_SIZE(feature_control_list),
+	.chk_streaming_st = s5khp9sp_chk_streaming_st,
 
 #ifdef S5KHP9SP_ISF_DBG
 	.debug_check_with_exist_s_ctx = &s5khp9sp_legacy_s_ctx,
@@ -73,6 +76,7 @@ static struct subdrv_ops ops = {
 	.update_sof_cnt = common_update_sof_cnt,
 	.vsync_notify = vsync_notify,
 	.i3c_pre_config = s5khp9sp_i3c_pre_config,
+	.set_ctrl_locker = s5khp9sp_set_ctrl_locker,
 };
 
 const struct subdrv_entry s5khp9sp_mipi_raw_entry = {
@@ -328,3 +332,62 @@ static int s5khp9sp_i3c_pre_config(struct subdrv_ctx *ctx)
 	}
 	return ERROR_NONE;
 } /* pre_config */
+
+static int s5khp9sp_set_ctrl_locker(struct subdrv_ctx *ctx,
+		u32 cid, bool *is_lock)
+{
+	bool lock_set_ctrl = false;
+	u32 lock_f =
+			(ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode == HDR_RAW_LBMF)
+			? 2 : 1;
+
+	if (unlikely(is_lock == NULL)) {
+		pr_info("[%s][ERROR] is_lock %p is NULL\n", __func__, is_lock);
+		return -EINVAL;
+	}
+
+	switch (cid) {
+	case V4L2_CID_MTK_STAGGER_AE_CTRL:
+	case V4L2_CID_MTK_MAX_FPS:
+
+		if ((ctx->sof_no < lock_f) && (ctx->is_streaming)) {
+			lock_set_ctrl = true;
+			DRV_LOG(ctx,
+				"[%s] Target lock cid(%u) lock_set_ctrl(%d), sof_no(%d) is_streaming(%d), lock_f(%d)\n",
+				__func__,
+				cid,
+				lock_set_ctrl,
+				ctx->sof_no,
+				ctx->is_streaming,
+				lock_f);
+		}
+		break;
+	default:
+		break;
+	}
+
+	*is_lock = lock_set_ctrl;
+	return ERROR_NONE;
+} /* s5khp9sp_set_ctrl_locker */
+
+static int s5khp9sp_chk_streaming_st(void *arg)
+{
+	struct subdrv_ctx *ctx = (struct subdrv_ctx *)arg;
+	u64 cur_time = 0;
+	u64 start_time = ctx->stream_ctrl_start_time;
+	u32 cur_fc = 0xff;
+	u64 timeout = 1000000000/(u64)ctx->current_fps*10;
+	int ret = ERROR_NONE;
+
+	subdrv_ixc_wr_u16(ctx, 0xFCFC, 0x4000);
+	while (1) {
+		cur_time = ktime_get_boottime_ns();
+		cur_fc = subdrv_ixc_rd_u8(ctx, 0x0005);
+		if ((cur_fc > 0 && cur_fc != 0xff) || (cur_time - start_time > timeout))
+			break;
+		DRV_LOG(ctx, "current_fps: %d, timeout: %lld, cur_fc: %d, cur_time: %lld, start_time: %lld\n",
+			ctx->current_fps, timeout, cur_fc, cur_time, start_time);
+		mdelay(1);
+	}
+	return ret;
+}
