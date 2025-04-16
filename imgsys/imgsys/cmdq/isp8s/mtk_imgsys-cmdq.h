@@ -119,6 +119,7 @@ struct mtk_imgsys_cb_param {
 	struct mtk_imgsys_hw_info hw_info;
 	int is_ctrl_cache;
 	bool isPktReuse;
+	int is2ndflush;
 };
 
 enum mtk_imgsys_cmd {

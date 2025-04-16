@@ -67,6 +67,9 @@ module_param(imgsys_isc_xfd_dbg_en, int, 0644);
 int imgsys_iova_dbg_en;
 module_param(imgsys_iova_dbg_en, int, 0644);
 
+int wpe_retry_en;
+module_param(wpe_retry_en, int, 0644);
+
 int imgsys_iova_dbg_port_en;
 module_param(imgsys_iova_dbg_port_en, int, 0644);
 

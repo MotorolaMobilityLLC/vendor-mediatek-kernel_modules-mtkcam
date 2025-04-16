@@ -75,9 +75,15 @@ static dma_addr_t mae_pa;
 static u32 *mae_va;
 static dma_addr_t g_pkt_mae_pa_end;
 static u32 *g_pkt_mae_va_end;
-#define SRAM_SIZE (4096)
+#define MAE_SRAM_SIZE (4092)
 #define REG_SIZE (4)
 static struct mutex cpr_lock;
+#endif
+
+#ifdef IMGSYS_WPE_CHECK_FUNC_EN
+static u32 is_wpe_read_cmd;
+static dma_addr_t g_pkt_wpe_pa;
+static u32 *g_pkt_wpe_va;
 #endif
 
 static int isc_irq_enabled;
@@ -278,11 +284,14 @@ void imgsys_cmdq_streamon_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 	g_pkt_mae_va = cmdq_mbox_buf_alloc(imgsys_clt[0], &g_pkt_mae_pa);
 	mae_va = g_pkt_mae_va;
 	mae_pa = g_pkt_mae_pa;
-	g_pkt_mae_pa_end = g_pkt_mae_pa + SRAM_SIZE;
-	g_pkt_mae_va_end = g_pkt_mae_va + SRAM_SIZE / REG_SIZE;
+	g_pkt_mae_pa_end = g_pkt_mae_pa + MAE_SRAM_SIZE;
+	g_pkt_mae_va_end = g_pkt_mae_va + MAE_SRAM_SIZE / REG_SIZE;
 	mutex_init(&cpr_lock);
 #endif
-
+#ifdef IMGSYS_WPE_CHECK_FUNC_EN
+	g_pkt_wpe_va = g_pkt_mae_va_end;
+	g_pkt_wpe_pa = g_pkt_mae_pa_end;
+#endif
 #ifdef IMGSYS_CMDQ_PKT_REUSE
 	for (idx = IMGSYS_MCNR_THD_START; idx <= IMGSYS_MCNR_THD_END; idx++) {
 		g_pkt_reuse[idx] = NULL;
@@ -325,6 +334,9 @@ void imgsys_cmdq_streamoff_plat8s(struct mtk_imgsys_dev *imgsys_dev)
 	mae_va = NULL;
 	mae_pa = 0;
 	is_mae_read_cmd = 0;
+	#endif
+	#ifdef IMGSYS_WPE_CHECK_FUNC_EN
+	is_wpe_read_cmd = 0;
 	#endif
 
 #ifdef IMGSYS_CMDQ_PKT_REUSE
@@ -482,7 +494,10 @@ static void imgsys_cmdq_cb_work_plat8s(struct work_struct *work)
 
 	if (imgsys_cmdq_dbg_enable_plat8s())
 		pr_debug("%s: +\n", __func__);
-
+#ifdef IMGSYS_WPE_CHECK_FUNC_EN
+	int ret_flush;
+	u64 frm_owner;
+#endif
 	cb_param = container_of(work, struct mtk_imgsys_cb_param, cmdq_cb_work);
 	cb_param->cmdqTs.tsCmdqCbWorkStart = ktime_get_boottime_ns()/1000;
 	imgsys_dev = cb_param->imgsys_dev;
@@ -498,8 +513,71 @@ static void imgsys_cmdq_cb_work_plat8s(struct work_struct *work)
 			cb_param->pkt_ofst[0], cb_param->pkt_ofst[1], cb_param->pkt_ofst[2],
 			cb_param->pkt_ofst[3], cb_param->pkt_ofst[4]);
 
+#ifdef IMGSYS_WPE_CHECK_FUNC_EN
+
+	if (!imgsys_cmdq_wpe_retry_enable_plat8s())
+		goto wpe_normal_flow;
+
+	frm_owner = cb_param->frm_info->frm_owner;
+	if ((cb_param->err == -IMGSYS_HW_FLAG_WPE_EIS) &&
+		(cb_param->hw_comb == (IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_PQDIP_A))) {
+
+		if (cb_param->is2ndflush == 1) {
+			cmdq_pkt_refinalize(cb_param->pkt);
+			ret_flush = cmdq_pkt_flush_async(cb_param->pkt, imgsys_cmdq_task_cb_plat8s,
+									(void *)cb_param);
+			if (ret_flush < 0)
+				pr_info("%s: failed to cmdq_pkt_flush_async ret(%d) for WPE_EIS!\n",
+					__func__, ret_flush);
+			else {
+				pr_info("%s: cmdq_pkt_flush_async ret(%d) for WPE_EIS run (%d) for user(%s)!\n",
+					__func__, ret_flush, cb_param->is2ndflush, (char *)(&frm_owner));
+			}
+			if (cb_param->hw_comb == (IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_PQDIP_A)) {
+				cmdq_clear_event(imgsys_clt[0]->chan,
+					imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_WPE_EIS].event);
+				cmdq_clear_event(imgsys_clt[0]->chan,
+					imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_PQDIP_A].event);
+			}
+			pr_info("%s: [ERROR] WPE_EIS-PQDIP-A HW timeout with retry wfe(%d) event(%d) user(%s)",
+				__func__, cb_param->pkt->err_data.wfe_timeout,
+				cb_param->pkt->err_data.event, (char *)(&frm_owner));
+			aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_WPE-EIS_PQDIPA",
+			"DISPATCH:IMGSYS_WPE-PQDIPA_1st, hwcomb:0x%x", cb_param->hw_comb);
+		} else {
+			pr_info("%s: [ERROR] WPE_EIS-PQDIP-A HW timeout still! wfe(%d) event(%d) user(%s)",
+				__func__, cb_param->pkt->err_data.wfe_timeout,
+				cb_param->pkt->err_data.event, (char *)(&frm_owner));
+
+			if (cb_param->user_cmdq_err_cb) {
+				struct cmdq_cb_data user_cb_data;
+
+				user_cb_data.err = cb_param->err;
+				user_cb_data.data = (void *)cb_param->frm_info;
+				cb_param->user_cmdq_err_cb(user_cb_data, cb_param->frm_idx, 1, 0);
+			}
+			aee_kernel_exception("CRDISPATCH_KEY:IMGSYS_WPE-EIS_PQDIPA",
+			"DISPATCH:IMGSYS_WPE-PQDIPA_2nd, hwcomb:0x%x", cb_param->hw_comb);
+
+			if (cb_param->hw_comb == (IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_PQDIP_A)) {
+				cmdq_clear_event(imgsys_clt[0]->chan,
+					imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_WPE_EIS].event);
+				cmdq_clear_event(imgsys_clt[0]->chan,
+					imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_PQDIP_A].event);
+			}
+		}
+
+
+		if (cb_param->is2ndflush == 1)
+			return;
+	}
+
+wpe_normal_flow:
+
+#endif
+
 #if CMDQ_TIMEOUT_KTHREAD
-	if ((cb_param->err != 0) && cb_param->user_cmdq_err_cb) {
+	if ((cb_param->err != 0) && cb_param->user_cmdq_err_cb && (cb_param->err != -IMGSYS_HW_FLAG_WPE_EIS)) {
 		struct cmdq_cb_data user_cb_data;
 
 		user_cb_data.err = cb_param->err;
@@ -800,6 +878,10 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 	u32 read_cnt = 0;
 	struct mtk_imgsys_hw_info *mae_info = NULL;
 #endif
+#ifdef IMGSYS_WPE_CHECK_FUNC_EN
+	u32 wpe_done_reg[2] = {0};
+	u64 frm_owner;
+#endif
 #ifdef IMGSYS_CMDQ_PKT_REUSE
 	u32 cookie = 0;
 	u32 cb_cnt = 0;
@@ -882,7 +964,53 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 	}
 #endif
 
-	if ((cb_param->err != 0) && (cb_param->err != -800)) {
+#ifdef IMGSYS_WPE_CHECK_FUNC_EN
+	if (!imgsys_cmdq_wpe_retry_enable_plat8s())
+		goto wpe_normal_flow;
+
+	frm_owner = cb_param->frm_info->frm_owner;
+	if ((cb_param->err == 0) && (cb_param->hw_comb == (IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_PQDIP_A))
+		&& (is_wpe_read_cmd == 1) && (is_stream_off == 0)) {
+
+		wpe_done_reg[0] = g_pkt_wpe_va[0];
+		if (((wpe_done_reg[0] & 0x00000001) == 0)) {
+			pr_info("%s: [ERROR] WPE_EIS-PQDIP_A hang detected! done_reg(0x%x)\n",
+				__func__, wpe_done_reg[0]);
+
+			if (cb_param->is2ndflush == -1) {
+				cb_param->is2ndflush = 1;
+				pr_info("%s: [WARN] Do reset in GCE buffer and retry for user(%s)\n",
+					__func__, (char *)(&frm_owner));
+				if (mtk_qof_WPE_EIS_retry_vote_on() < 0)
+					pr_err("power on WPE-EIS fail!");
+			} else {
+				cb_param->is2ndflush = 0;
+				pr_info("%s: [WARN] Do WPE_LITE retried for user(%s)\n",
+					__func__, (char *)(&frm_owner));
+			}
+			/* mark vsdof wpe_lite hang */
+			cb_param->err = -IMGSYS_HW_FLAG_WPE_EIS;
+		} else {
+			if (cb_param->is2ndflush == 1) {
+				// retry success, need clear voter
+				if (mtk_qof_WPE_EIS_retry_vote_off() < 0)
+					pr_err("power off WPE-EIS fail!");
+			}
+		}
+	}
+
+	if ((cb_param->err == 0) && (cb_param->hw_comb == (IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_PQDIP_A))) {
+		cmdq_clear_event(imgsys_clt[0]->chan,
+			imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_WPE_EIS].event);
+		cmdq_clear_event(imgsys_clt[0]->chan,
+			imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_PQDIP_A].event);
+	}
+
+wpe_normal_flow:
+
+#endif
+
+	if ((cb_param->err != 0) && (cb_param->err != -IMGSYS_HW_FLAG_WPE_LITE)) {
 		err_ofst = cb_param->pkt->err_data.offset;
 		err_idx = 0;
 		for (idx = 0; idx < cb_param->task_cnt; idx++)
@@ -2674,6 +2802,7 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 #endif
 			task_cnt++;
 			if ((frm_info->user_info[frm_idx].is_time_shared)
+				|| (hw_comb == (IMGSYS_HW_FLAG_PQDIP_A|IMGSYS_HW_FLAG_WPE_LITE))
 				|| (frm_info->user_info[frm_idx].is_secFrm)
 				|| (frm_info->user_info[frm_idx].is_earlycb)
 				|| ((frm_idx + 1) == frm_num)) {
@@ -2837,6 +2966,7 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				}
 				cb_param->batchnum = frm_info->batchnum;
 				cb_param->memory_mode = frm_info->memory_mode;
+				cb_param->is2ndflush = -1;
 				cb_param->is_ctrl_cache = frm_info->is_ctrl_cache;
 				cb_param->isPktReuse = 0;
 
@@ -3121,6 +3251,12 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				cmdq_pkt_mem_move(pkt, NULL, (dma_addr_t)cmd->u.source,
 					dma_pa + (4*(*num)), CMDQ_THR_SPR_IDX3);
 				(*num)++;
+#ifdef IMGSYS_WPE_CHECK_FUNC_EN
+			} else if (hw_comb == (IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_PQDIP_A)) {
+				cmdq_pkt_mem_move(pkt, NULL, (dma_addr_t)cmd->u.source,
+					g_pkt_wpe_pa , CMDQ_THR_SPR_IDX2);
+				is_wpe_read_cmd = 1;
+#endif
 			} else
 				pr_info(
 					"%s: [ERROR]Not enable imgsys read cmd!!\n",
@@ -3644,9 +3780,23 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 			if ((is_ctrl_cache <= 0) ||
 				((is_ctrl_cache == 0) && (is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM)))
 #endif
+			#ifdef IMGSYS_WPE_CHECK_FUNC_EN
+			{
+				if ((gpr_idx == 3) && (hw_comb == (IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_PQDIP_A)))
+					cmdq_pkt_poll_timeout(pkt, cmd->u.value, SUBSYS_NO_SUPPORT,
+						cmd->u.address, cmd->u.mask, IMGSYS_POLL_TIME_10MS,
+						CMDQ_GPR_R03+gpr_idx);
+				else
+					cmdq_pkt_poll_timeout(pkt, cmd->u.value, SUBSYS_NO_SUPPORT,
+						cmd->u.address, cmd->u.mask, IMGSYS_POLL_TIME_INFINI,
+						CMDQ_GPR_R03+gpr_idx);
+			}
+			#else
+
 				cmdq_pkt_poll_timeout(pkt, cmd->u.value, SUBSYS_NO_SUPPORT,
 					cmd->u.address, cmd->u.mask, IMGSYS_POLL_TIME_INFINI,
 					CMDQ_GPR_R03+gpr_idx);
+			#endif
 		}
 			break;
 		case IMGSYS_CMD_WAIT:
@@ -4193,6 +4343,12 @@ bool imgsys_iova_dbg_enable_plat8s(void)
 {
 	return imgsys_iova_dbg_en;
 }
+
+bool imgsys_cmdq_wpe_retry_enable_plat8s(void)
+{
+	return wpe_retry_en;
+}
+
 
 u32 imgsys_iova_dbg_port_plat8s(void)
 {

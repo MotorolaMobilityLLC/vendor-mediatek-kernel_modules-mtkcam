@@ -156,6 +156,7 @@ enum ISP8S_IMG_PWR {
 #define IMGSYS_CMDQ_CBPARAM_NUM	(90*5)
 
 #define IMGSYS_MAE_WRITE_BACK_SUPPORT
+#define IMGSYS_WPE_CHECK_FUNC_EN	(1)
 
 #define IMGSYS_POLL_TIME_10MS	(0x341)
 #define IMGSYS_POLL_TIME_20MS	(IMGSYS_POLL_TIME_10MS*2)
@@ -1638,8 +1639,11 @@ bool imgsys_fence_dbg_enable_plat8s(void);
 bool imgsys_fine_grain_dvfs_enable_plat8s(void);
 bool imgsy_isc_xfd_dbg_enable_plat8s(void);
 bool imgsys_iova_dbg_enable_plat8s(void);
+bool imgsys_cmdq_wpe_retry_enable_plat8s(void);
 u32 imgsys_iova_dbg_port_plat8s(void);
 u32 imgsys_cmdq_is_stream_off(void);
+void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data);
+
 #ifdef IMGSYS_CMDQ_PKT_REUSE
 bool imgsys_cmdq_pkt_reuse_disable_plat8s(void);
 #endif
