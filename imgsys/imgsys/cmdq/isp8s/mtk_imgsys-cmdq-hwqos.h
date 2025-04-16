@@ -19,6 +19,7 @@ void mtk_imgsys_cmdq_hwqos_streamoff(void);
 void mtk_imgsys_cmdq_hwqos_report(
 	struct cmdq_pkt *pkt,
 	const struct mtk_imgsys_hwqos *hwqos_info,
-	const int *fps);
+	const int *fps,
+	const uint8_t *boost);
 
 #endif  // IMGSYS_PLATFORMS_ISP8S_MTK_IMGSYS_CMDQ_HWQOS_H_

@@ -1419,9 +1419,11 @@ void mtk_imgsys_cmdq_hwqos_streamoff(void)
 void mtk_imgsys_cmdq_hwqos_report(
 	struct cmdq_pkt *pkt,
 	const struct mtk_imgsys_hwqos *hwqos_info,
-	const int *fps)
+	const int *fps,
+	const uint8_t *boost)
 {
-	if ((*fps == 0) || (g_hwqos_state == QOS_STATE_INIT) || (g_hwqos_high_bw)) {
+	if ((*fps == 0) || (*boost == 0xFF) ||
+		(g_hwqos_state == QOS_STATE_INIT) || (g_hwqos_high_bw)) {
 		if (g_hwqos_buf_pa && g_hwqos_buf_va) {
 			cmdq_pkt_acquire_event(pkt, hwqos_info->hwqos_sync_token);
 			cmdq_pkt_write(pkt, NULL, g_hwqos_buf_pa,

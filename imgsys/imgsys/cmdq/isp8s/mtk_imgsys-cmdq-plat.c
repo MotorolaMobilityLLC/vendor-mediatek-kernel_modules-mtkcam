@@ -2757,7 +2757,8 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 #endif
 				MTK_IMGSYS_QOS_ENABLE(imgsys_dev->hwqos_info.hwqos_support,
 					mtk_imgsys_cmdq_hwqos_report(
-						pkt, &imgsys_dev->hwqos_info, &frm_info->fps);
+						pkt, &imgsys_dev->hwqos_info,
+						&frm_info->fps, &frm_info->user_info[frm_idx].boost);
 				);
 			ret = imgsys_cmdq_parser_plat8s(imgsys_dev, frm_info, pkt,
 				&cmd[cmd_idx], hw_comb, frm_info->user_info[frm_idx].sw_ridx,
