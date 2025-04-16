@@ -227,7 +227,8 @@ static void fmon_tx_mux(struct mtk_fmon_device *fmon,
 	writel(((dbg_fmon_tx_csr != -1) ? 5 : tx_mux) << 1 | 0x3f1 |
 		((dbg_fmon_tx_csr != -1) ? dbg_fmon_tx_csr << 10 : 0), base);
 
-	pr_info("%s: engine:%d tx_mux:0x%x\n", __func__, engine, readl(base));
+	if (CAM_DEBUG_ENABLED(FMON))
+		pr_info("%s: engine:%d tx_mux:0x%x\n", __func__, engine, readl(base));
 }
 
 static void fmon_threshold(struct mtk_fmon_device *fmon,
@@ -237,7 +238,8 @@ static void fmon_threshold(struct mtk_fmon_device *fmon,
 	u32 fifo_thr = 0;
 
 	if (!fifo_size) {
-		pr_info("%s: skip for montor-%d\n", __func__, fmon_idx);
+		if (CAM_DEBUG_ENABLED(FMON))
+			pr_info("%s: skip for montor-%d\n", __func__, fmon_idx);
 		return;
 	}
 
@@ -287,14 +289,15 @@ static void fmon_threshold(struct mtk_fmon_device *fmon,
 	break;
 	}
 
-	pr_info("%s: montor-%d delay_thr_0/1: 0x%x/0x%x fmon_threshold0/1/2/3: 0x%x/0x%x/0x%x/0x%x\n",
-		__func__, fmon_idx,
-		readl(fmon->base + REG_CAM_FMON_WIN_DELAY_THR_0),
-		readl(fmon->base + REG_CAM_FMON_WIN_DELAY_THR_1),
-		readl(fmon->base + REG_CAM_FMON_THRESHOLD_0),
-		readl(fmon->base + REG_CAM_FMON_THRESHOLD_1),
-		readl(fmon->base + REG_CAM_FMON_THRESHOLD_2),
-		readl(fmon->base + REG_CAM_FMON_THRESHOLD_3));
+	if (CAM_DEBUG_ENABLED(FMON))
+		pr_info("%s: montor-%d delay_thr_0/1: 0x%x/0x%x fmon_threshold0/1/2/3: 0x%x/0x%x/0x%x/0x%x\n",
+			__func__, fmon_idx,
+			readl(fmon->base + REG_CAM_FMON_WIN_DELAY_THR_0),
+			readl(fmon->base + REG_CAM_FMON_WIN_DELAY_THR_1),
+			readl(fmon->base + REG_CAM_FMON_THRESHOLD_0),
+			readl(fmon->base + REG_CAM_FMON_THRESHOLD_1),
+			readl(fmon->base + REG_CAM_FMON_THRESHOLD_2),
+			readl(fmon->base + REG_CAM_FMON_THRESHOLD_3));
 }
 
 static void fmon_debug_setings(enum FMON_INDEX index, struct fmon_settings *setting)
@@ -333,8 +336,9 @@ static void fmon_debug_setings(enum FMON_INDEX index, struct fmon_settings *sett
 	break;
 	}
 
-	pr_info("%s: monitor/engine/tx_mux/rx_mux:%d/%d/%d/%d\n",
-		__func__, index, setting->engine, setting->tx_mux, setting->rx_mux);
+	if (CAM_DEBUG_ENABLED(FMON))
+		pr_info("%s: monitor/engine/tx_mux/rx_mux:%d/%d/%d/%d\n",
+			__func__, index, setting->engine, setting->tx_mux, setting->rx_mux);
 }
 
 static void fmon_bind_engine(struct mtk_fmon_device *fmon)
@@ -350,8 +354,7 @@ static void fmon_bind_engine(struct mtk_fmon_device *fmon)
 		fmon_threshold(fmon, i, setting.fifo_size, is_camsv_engine(setting.engine));
 	}
 
-	pr_info("%s: fmon_setting:0x%x\n",
-		__func__, readl(fmon->base + REG_CAM_FMON_SETTING));
+	mtk_cam_fmon_dump(fmon);
 }
 
 void mtk_cam_fmon_bind(struct mtk_fmon_device *fmon, unsigned int used_raw, bool sv_on)
@@ -562,15 +565,18 @@ void mtk_cam_fmon_dump(struct mtk_fmon_device *fmon)
 	if (!is_fmon_support())
 		return;
 
-	pr_info("%s: dbg_status:0x%x, setting:0x%x, setting_2:0x%x ft_pat_st:0x%x/0x%x/0x%x/0x%x\n",
+	pr_info("%s: pipes:%d/%d/%d setting/2/3:0x%x/0x%x/0x%x delay_thr_0/1: 0x%x/0x%x fmon_threshold0/1/2/3: 0x%x/0x%x/0x%x/0x%x\n",
 		__func__,
-		readl(fmon->base + REG_CAM_FMON_DBG_STATUS),
+		fmon->pipes[0], fmon->pipes[1], fmon->pipes[2],
 		readl(fmon->base + REG_CAM_FMON_SETTING),
 		readl(fmon->base + REG_CAM_FMON_SETTING_2),
-		readl(fmon->base + REG_CAM_FMON_FT_PAT_STATUS_0),
-		readl(fmon->base + REG_CAM_FMON_FT_PAT_STATUS_1),
-		readl(fmon->base + REG_CAM_FMON_FT_PAT_STATUS_2),
-		readl(fmon->base + REG_CAM_FMON_FT_PAT_STATUS_3));
+		readl(fmon->base + REG_CAM_FMON_SETTING_3),
+		readl(fmon->base + REG_CAM_FMON_WIN_DELAY_THR_0),
+		readl(fmon->base + REG_CAM_FMON_WIN_DELAY_THR_1),
+		readl(fmon->base + REG_CAM_FMON_THRESHOLD_0),
+		readl(fmon->base + REG_CAM_FMON_THRESHOLD_1),
+		readl(fmon->base + REG_CAM_FMON_THRESHOLD_2),
+		readl(fmon->base + REG_CAM_FMON_THRESHOLD_3));
 }
 
 static irqreturn_t mtk_irq_fmon(int irq, void *data)
