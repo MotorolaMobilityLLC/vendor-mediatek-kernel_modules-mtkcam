@@ -881,7 +881,9 @@ mtk_cam_job_initialize_engines(struct mtk_cam_ctx *ctx,
 
 		if (qof_enabled)
 			mtk_cam_sv_set_queue_mode(sv, true);
-		mtk_cam_sv_dev_config(sv, job->sub_ratio - 1, get_sensor_interval_us(job));  /* TODO(AY): remove -1 */
+
+		mtk_cam_sv_dev_config(ctx, sv, job->sub_ratio - 1,
+			get_sensor_interval_us(job));/* TODO(AY): remove -1 */
 	}
 
 	return 0;
@@ -4386,7 +4388,7 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 	sv_dev = dev_get_drvdata(cam->engines.sv_devs[uninit_raw_id]);
 	mtk_cam_sv_dev_stream_on(sv_dev, false,
 		job->enabled_tags, job->used_tag_cnt);
-	mtk_cam_sv_dev_config(sv_dev, 0, get_sensor_interval_us(job));
+	mtk_cam_sv_dev_config(ctx, sv_dev, 0, get_sensor_interval_us(job));
 
 	mtk_cam_ctx_slc_stream(ctx, 0, 0xFF);
 	raw_dev = dev_get_drvdata(cam->engines.raw_devs[uninit_raw_id]);

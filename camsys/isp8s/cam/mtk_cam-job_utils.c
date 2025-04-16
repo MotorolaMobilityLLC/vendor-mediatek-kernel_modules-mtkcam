@@ -2465,7 +2465,7 @@ int handle_sv_tag(struct mtk_cam_job *job)
 	ctx->enabled_tags = job->enabled_tags;
 	memcpy(ctx->tag_info, job->tag_info,
 		sizeof(struct mtk_camsv_tag_info) * CAMSV_MAX_TAGS);
-
+	sv_dev->seninf = ctx->seninf;
 	return ret;
 }
 

@@ -29,6 +29,7 @@
 #include "iommu_debug.h"
 #include "mtk-mmdvfs-debug.h"
 
+
 // place below all other include
 #include "mtk_cam-virt-isp.h"
 
@@ -62,6 +63,10 @@ MODULE_PARM_DESC(debug_ddren_camsv_sw_mode, "debug: 1 : active camsv sw mode");
 static int disable_camsv_df_mode = 1;
 module_param(disable_camsv_df_mode, int, 0644);
 MODULE_PARM_DESC(disable_camsv_df_mode, "disable camsv df mode");
+
+static unsigned int camsv_stress_test_mode;
+module_param(camsv_stress_test_mode, int, 0644);
+MODULE_PARM_DESC(camsv_stress_test_mode, "camsv_stress_test_mode");
 
 #undef dev_dbg
 #define dev_dbg(dev, fmt, arg...)		\
@@ -1670,7 +1675,119 @@ unsigned int mtk_cam_get_seninf_pad_index(struct mtk_camsv_tag_info *arr_tag,
 	return 0;
 }
 
-int mtk_cam_sv_dev_config(struct mtk_camsv_device *sv_dev,
+int mtk_camsv_get_stress_mode(struct mtk_camsv_device *slave_sv_dev,
+	unsigned int stress_mode)
+{
+	if (stress_mode >= 1 && stress_mode <= 3)
+		return stress_mode;
+	else if (stress_mode >= 4 && stress_mode <= 6)
+		return stress_mode - 3;
+	else if (stress_mode >= 7 && stress_mode <= 9)
+		return stress_mode - 6;
+
+	return 0;
+}
+
+int mtk_cam_slave_sv_report_bw(struct mtk_cam_ctx *ctx,
+	struct mtk_camsv_device *slave_sv_dev)
+{
+#define SLAVE_SV_PORT_NUM 2
+	unsigned int hrt_bw_stress_table[3] = {469, 682, 938};
+	unsigned int srt_bw_stress_table[3] = {451, 653, 904};
+	int i;
+	unsigned int stress_mode = 0;
+
+	if (slave_sv_dev->stress_test_mode == 0)
+		return 0;
+
+	stress_mode = slave_sv_dev->stress_test_mode - 1;
+	for (i = 1; i <= SLAVE_SV_PORT_NUM; i++) {
+		mtk_icc_set_bw(slave_sv_dev->qos.cam_path[i].path,
+			srt_bw_stress_table[stress_mode] * 1024 / SLAVE_SV_PORT_NUM,
+			hrt_bw_stress_table[stress_mode] * 1024 / SLAVE_SV_PORT_NUM);
+		mtk_cam_isp8s_bwr_set_chn_bw(ctx->cam->bwr,
+			get_sv_bwr_engine(slave_sv_dev->id), get_sv_axi_port(slave_sv_dev->id, i),
+			0, srt_bw_stress_table[stress_mode] / SLAVE_SV_PORT_NUM, 0,
+			hrt_bw_stress_table[stress_mode]/ SLAVE_SV_PORT_NUM, false);
+	}
+
+	mtk_cam_isp8s_bwr_set_ttl_bw(ctx->cam->bwr,
+		get_sv_bwr_engine(slave_sv_dev->id), srt_bw_stress_table[stress_mode], hrt_bw_stress_table[stress_mode],
+		false);
+	return 0;
+}
+
+int mtk_cam_slave_sv_dev_config(struct mtk_cam_ctx *ctx,
+	struct mtk_camsv_device *slave_sv_dev)
+{
+	int ret;
+	struct mtk_cam_pool_buffer *buf;
+	unsigned int imgo_lsb, imgo_msb, imgo_stride;
+
+	if (CAMSV_READ_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_VF_CON) & 0x1) {
+		pr_info("%s already config bypass\n", __func__);
+		return 0;
+	}
+
+	CAMSV_WRITE_BITS(slave_sv_dev->base + REG_CAMSVCENTRAL_SEN_MODE,
+		CAMSVCENTRAL_SEN_MODE, CMOS_EN, 1);
+	CAMSV_WRITE_BITS(slave_sv_dev->base + REG_CAMSVCENTRAL_ERR_CTL,
+		CAMSVCENTRAL_ERR_CTL, CAMSVCENTRAL_GRAB_ERR_EN, 1);
+	CAMSV_WRITE_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_DMA_EN_IMG, 0x1);
+	CAMSV_WRITE_BITS(slave_sv_dev->base + REG_CAMSVCENTRAL_DONE_STATUS_EN,
+		CAMSVCENTRAL_DONE_STATUS_EN, SW_PASS1_DONE_0_ST_EN, 1);
+	CAMSV_WRITE_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_ERR_STATUS_EN, 0x7 << 8);
+	CAMSV_WRITE_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_SOF_STATUS_EN, 0x1 << 2);
+	CAMSV_WRITE_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_FIRST_TAG, 0x1);
+	CAMSV_WRITE_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_LAST_TAG, 0x1);
+	CAMSV_WRITE_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_GROUP_TAG0 + CAMSVCENTRAL_GROUP_TAG_SHIFT * 0, 0x1);
+	CAMSV_WRITE_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_GROUP_TAG0 + CAMSVCENTRAL_GROUP_TAG_SHIFT * 1, 0x0);
+	CAMSV_WRITE_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_GROUP_TAG0 + CAMSVCENTRAL_GROUP_TAG_SHIFT * 2, 0x0);
+	CAMSV_WRITE_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_GROUP_TAG0 + CAMSVCENTRAL_GROUP_TAG_SHIFT * 3, 0x0);
+
+	CAMSV_WRITE_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_GRAB_PXL_TAG1, 0x1000 << 16);
+	CAMSV_WRITE_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_GRAB_LIN_TAG1, 0xc00 << 16);
+
+	ret = mtk_cam_buffer_pool_fetch(
+			&ctx->camsv_stress_pool, &ctx->camsv_stress_buf);
+	if (ret)
+		pr_info("[%s] fail to fetch\n", __func__);
+
+	buf = &ctx->camsv_stress_buf;
+	imgo_lsb = buf->daddr & 0xffffffff;
+	imgo_msb = buf->daddr >> 32;
+	imgo_stride = 0x1400 << 16 | 0x10;
+	pr_info("wen-jie debug %s buf address %llx", __func__, buf->daddr);
+	/* wdma basic / base address / format*/
+	CAMSV_WRITE_REG(slave_sv_dev->base_dma + REG_CAMSVDMATOP_WDMA_BASIC_IMG1_A, imgo_stride);
+	CAMSV_WRITE_REG(slave_sv_dev->base_dma + REG_CAMSVDMATOP_WDMA_BASE_ADDR_IMG1_A, imgo_lsb);
+	CAMSV_WRITE_REG(slave_sv_dev->base_dma + REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG1_A, imgo_msb);
+	CAMSV_WRITE_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_FORMAT_TAG1, 0x1);
+	mtk_cam_sv_dmao_common_config(slave_sv_dev, 0, 0, 0, 0, 0, 0);
+	mtk_cam_sv_ddren_qos_coh_config(slave_sv_dev, 0);
+
+	pr_info("%s sen_mod0x%x dma_en0x%x err_en0x%x sof_en0x%x first_tag0x%x last_tag0x%x group0x%x grab0x%x_%x dma_basic0x%x addr0x%x_%x fmt 0x%x\n",
+		__func__,
+		CAMSV_READ_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_SEN_MODE),
+		CAMSV_READ_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_DMA_EN_IMG),
+		CAMSV_READ_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_ERR_STATUS_EN),
+		CAMSV_READ_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_SOF_STATUS_EN),
+		CAMSV_READ_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_FIRST_TAG),
+		CAMSV_READ_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_LAST_TAG),
+		CAMSV_READ_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_GROUP_TAG0),
+		CAMSV_READ_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_GRAB_PXL_TAG1),
+		CAMSV_READ_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_GRAB_LIN_TAG1),
+		CAMSV_READ_REG(slave_sv_dev->base_dma + REG_CAMSVDMATOP_WDMA_BASIC_IMG1_A),
+		CAMSV_READ_REG(slave_sv_dev->base_dma + REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG1_A),
+		CAMSV_READ_REG(slave_sv_dev->base_dma + REG_CAMSVDMATOP_WDMA_BASE_ADDR_IMG1_A),
+		CAMSV_READ_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_FORMAT_TAG1));
+	mtk_cam_sv_toggle_db(slave_sv_dev);
+	mtk_cam_slave_sv_report_bw(ctx, slave_sv_dev);
+	return 0;
+}
+
+int mtk_cam_sv_dev_config(struct mtk_cam_ctx *ctx,
+	struct mtk_camsv_device *sv_dev,
 	unsigned int sub_ratio, int frm_time_us)
 {
 	engine_fsm_reset(&sv_dev->fsm, sv_dev->dev);
@@ -1698,6 +1815,9 @@ int mtk_cam_sv_dev_config(struct mtk_camsv_device *sv_dev,
 	mtk_cam_sv_cq_config(sv_dev, sub_ratio);
 	mtk_cam_sv_ddren_qos_coh_config(sv_dev, frm_time_us);
 	mtk_cam_sv_fifo_dbg_port_config(sv_dev);
+
+	if (atomic_read(&sv_dev->is_slave_on))
+		mtk_cam_slave_sv_dev_config(ctx, sv_dev->slave_sv_dev);
 
 	dev_info(sv_dev->dev, "[%s] sub_ratio:%d set seamless check\n", __func__, sub_ratio);
 
@@ -2020,14 +2140,25 @@ int mtk_cam_sv_dev_pertag_stream_on(
 			goto EXIT;
 
 		sv_dev->streaming_tag_cnt++;
-		if (sv_dev->streaming_tag_cnt == sv_dev->used_tag_cnt)
+		if (sv_dev->streaming_tag_cnt == sv_dev->used_tag_cnt) {
 			ret |= mtk_cam_sv_central_common_enable(sv_dev);
+			if (atomic_read(&sv_dev->is_slave_on)) {
+				mtk_cam_sv_central_common_enable(sv_dev->slave_sv_dev);
+				mtk_cam_seninf_start_test_model_for_camsv(sv_dev->seninf,
+					sv_dev->slave_sv_dev->stress_test_mode);
+			}
+		}
 	} else {
 		if (sv_dev->streaming_tag_cnt == 0)
 			goto EXIT;
 		if (sv_dev->streaming_tag_cnt == sv_dev->used_tag_cnt) {
 			ret |= mtk_cam_sv_cq_disable(sv_dev);
 			ret |= mtk_cam_sv_central_common_disable(sv_dev);
+			if (atomic_read(&sv_dev->is_slave_on)) {
+				mtk_cam_sv_central_common_disable(sv_dev->slave_sv_dev);
+				/* todo: call seninf stream off */
+				mtk_cam_seninf_stop_test_model_for_camsv(sv_dev->seninf);
+			}
 		}
 
 		ret |= mtk_cam_sv_fbc_disable(sv_dev, tag_idx);
@@ -3483,6 +3614,9 @@ static irqreturn_t mtk_thread_irq_camsv(int irq, void *data)
 			mtk_cam_sv_run_df_action_ack(sv_dev, irq_info.n.status);
 		}
 
+		if (sv_dev->id == 3 && atomic_read(&sv_dev->is_sv_stress_test))
+			continue;
+
 		/* normal case */
 		do_recover = sv_process_fsm(sv_dev, &irq_info,
 					    &recovered_done);
@@ -4027,6 +4161,31 @@ int mtk_camsv_runtime_suspend(struct device *dev)
 
 	dev_dbg(dev, "%s:disable clock\n", __func__);
 
+	if (atomic_read(&sv_dev->is_slave_on)) {
+		struct mtk_camsv_device *slave_sv_dev = sv_dev->slave_sv_dev;
+
+		for (i = 0; i < CAMSV_IRQ_NUM; i++) {
+			disable_irq(slave_sv_dev->irq[i]);
+			dev_info(slave_sv_dev->dev, "%s:disable irq %d\n", __func__, slave_sv_dev->irq[i]);
+		}
+
+		pr_info("open slave power/clock/larb/irq -");
+		pr_info("%s slave sv device off", __func__);
+		mtk_cam_reset_qos(slave_sv_dev->dev, &slave_sv_dev->qos);
+		for (i = slave_sv_dev->num_clks - 1; i >= 0; i--)
+			clk_disable_unprepare(slave_sv_dev->clks[i]);
+
+		for (i = slave_sv_dev->num_larbs - 1; i >=0; i--)
+			mtk_smi_larb_disable(&slave_sv_dev->larb_pdev[i]->dev);
+		for (i = 1; i < SLAVE_SV_PORT_NUM; i++)
+			mtk_cam_isp8s_bwr_clr_bw(slave_sv_dev->cam->bwr,
+				get_sv_bwr_engine(slave_sv_dev->id),
+				get_sv_axi_port(slave_sv_dev->id, i));
+		sv_dev->slave_sv_dev = NULL;
+		atomic_set(&sv_dev->is_slave_on, 0);
+		atomic_set(&slave_sv_dev->is_sv_stress_test, 0);
+	}
+
 	if (camsv_fifo_detect) {
 		if (atomic_read(&sv_dev->enable_fifo_detect))
 			ret |= mtk_cam_sv_stop_fifo_detection(sv_dev);
@@ -4064,16 +4223,75 @@ int mtk_camsv_runtime_suspend(struct device *dev)
 	for (i = sv_dev->num_clks - 1; i >= 0; i--)
 		clk_disable_unprepare(sv_dev->clks[i]);
 
-	for (i = sv_dev->num_larbs - 1; i >=0 ; i--)
+	for (i = sv_dev->num_larbs - 1; i >=0; i--)
 		mtk_smi_larb_disable(&sv_dev->larb_pdev[i]->dev);
 
 	return 0;
 }
+bool mtk_camsv_check_stress_mode_on(struct mtk_camsv_device *sv_dev)
+{
+	struct device *slave_dev = sv_dev->cam->engines.sv_devs[3];
+	struct mtk_camsv_device *slave_sv_dev = dev_get_drvdata(slave_dev);
 
+	if (atomic_read(&slave_sv_dev->is_sv_stress_test))
+		return false;
+
+	if (camsv_stress_test_mode >= 1 && camsv_stress_test_mode <= 3
+		&& sv_dev->id == 0 && !atomic_read(&slave_sv_dev->is_sv_stress_test))
+		return true;
+	else if (camsv_stress_test_mode >= 4 && camsv_stress_test_mode <= 6
+		&& sv_dev->id == 1 && !atomic_read(&slave_sv_dev->is_sv_stress_test))
+		return true;
+	else if (camsv_stress_test_mode >= 7 && camsv_stress_test_mode <= 9
+		&& sv_dev->id == 2 && !atomic_read(&slave_sv_dev->is_sv_stress_test))
+		return true;
+
+
+	return false;
+}
 int mtk_camsv_runtime_resume(struct device *dev)
 {
 	struct mtk_camsv_device *sv_dev = dev_get_drvdata(dev);
 	int i, ret;
+
+	if (mtk_camsv_check_stress_mode_on(sv_dev)) {
+		struct device *slave_dev = sv_dev->cam->engines.sv_devs[3];
+		struct mtk_camsv_device *slave_sv_dev = dev_get_drvdata(slave_dev);
+
+		pr_info("%s open slave power/clock/larb/irq", __func__);
+
+		atomic_set(&sv_dev->is_slave_on, 1);
+		atomic_set(&slave_sv_dev->is_sv_stress_test, 1);
+
+		slave_sv_dev->stress_test_mode = mtk_camsv_get_stress_mode(slave_sv_dev,
+			camsv_stress_test_mode);
+
+		sv_dev->slave_sv_dev = slave_sv_dev;
+
+		for (i = 0; i < slave_sv_dev->num_larbs; i++)
+			mtk_smi_larb_enable(&slave_sv_dev->larb_pdev[i]->dev);
+		/* reset_msgfifo before enable_irq */
+		ret = mtk_cam_sv_reset_msgfifo(slave_sv_dev);
+		if (ret)
+			return ret;
+		for (i = 0; i < slave_sv_dev->num_clks; i++) {
+			ret = clk_prepare_enable(slave_sv_dev->clks[i]);
+			if (ret) {
+				dev_info(slave_sv_dev->dev, "enable failed at clk #%d, ret = %d\n",
+						i, ret);
+				i--;
+				while (i >= 0)
+					clk_disable_unprepare(slave_sv_dev->clks[i--]);
+
+				return ret;
+			}
+		}
+		sv_reset_by_camsys_top(slave_sv_dev);
+		for (i = 0; i < CAMSV_IRQ_NUM; i++) {
+			enable_irq(slave_sv_dev->irq[i]);
+			dev_info(slave_sv_dev->dev, "%s:enable irq %d\n", __func__, slave_sv_dev->irq[i]);
+		}
+	}
 
 	for (i = 0; i < sv_dev->num_larbs; i++)
 		mtk_smi_larb_enable(&sv_dev->larb_pdev[i]->dev);

@@ -72,6 +72,8 @@ extern void set_task_ls(int pid);
 
 #define SENSOR_META_BUF_SIZE 0x8000
 #define SENSOR_META_BUF_NUM 8
+#define CAMSV_STRESS_BUF_SIZE 0xF00000
+#define CAMSV_STRESS_BUF_NUM 1
 #define MUX_SETTING_NUM 16
 #define MUX_SETTING_PACK_NUM (MUX_SETTING_NUM * 2)
 //#define RUN_ADL_FRAME_MODE_FROM_RAWI
@@ -228,6 +230,11 @@ struct mtk_cam_ctx {
 	bool is_seninf_error_trigger;
 
 	atomic_t cq_rdy_mask_en_cnt;
+
+	/* camsv stress test */
+	struct mtk_cam_device_buf camsv_stress_buffer;
+	struct mtk_cam_pool_buffer camsv_stress_buf;
+	struct mtk_cam_pool camsv_stress_pool;
 };
 
 struct mtk_cam_v4l2_pipelines {

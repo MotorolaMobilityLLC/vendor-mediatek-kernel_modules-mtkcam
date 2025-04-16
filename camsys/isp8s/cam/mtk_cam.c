@@ -2739,6 +2739,23 @@ static int mtk_cam_ctx_alloc_sensor_meta_pool(struct mtk_cam_ctx *ctx)
 	return ret;
 }
 
+static int mtk_cam_ctx_alloc_camsv_stress_buf_pool(struct mtk_cam_ctx *ctx)
+{
+	struct device *dev_to_attach;
+	int ret = 0;
+
+
+	dev_to_attach = get_dev_to_attach(ctx);
+
+	ret = _alloc_pool("CAMSV_STRESS_BUF", &ctx->camsv_stress_buffer,
+			&ctx->camsv_stress_pool,
+			dev_to_attach, CAMSV_STRESS_BUF_SIZE, CAMSV_STRESS_BUF_NUM,
+			false);
+	pr_info("wenjie debug %s", __func__);
+
+	return ret;
+}
+
 static void mtk_cam_ctx_destroy_pool(struct mtk_cam_ctx *ctx)
 {
 	_destroy_pool(&ctx->cq_buffer, &ctx->cq_pool);
@@ -2760,6 +2777,11 @@ void mtk_cam_ctx_clean_img_pool(struct mtk_cam_ctx *ctx)
 
 	mtk_cam_pool_wrapper_put(ctx->pack_job_img_wbuf_pool_wrapper);
 	ctx->pack_job_img_wbuf_pool_wrapper = NULL;
+}
+
+static void mtk_cam_ctx_destroy_camsv_stress_buf_pool(struct mtk_cam_ctx *ctx)
+{
+	_destroy_pool(&ctx->camsv_stress_buffer, &ctx->camsv_stress_pool);
 }
 
 static void mtk_cam_ctx_destroy_sensor_meta_pool(struct mtk_cam_ctx *ctx)
@@ -2952,8 +2974,11 @@ int mtk_cam_ctx_prepare(struct mtk_cam_ctx *ctx)
 	if (mtk_cam_ctx_alloc_sensor_meta_pool(ctx))
 		goto fail_destroy_img_pool;
 
-	if (mtk_cam_ctx_prepare_session(ctx))
+	if (mtk_cam_ctx_alloc_camsv_stress_buf_pool(ctx))
 		goto fail_destroy_sensor_meta_pool;
+
+	if (mtk_cam_ctx_prepare_session(ctx))
+		goto fail_destroy_camsv_stress_buf_pool;
 
 	if (mtk_cam_ctx_init_job_pool(ctx))
 		goto fail_unprepare_session;
@@ -2966,6 +2991,8 @@ int mtk_cam_ctx_prepare(struct mtk_cam_ctx *ctx)
 
 fail_unprepare_session:
 	mtk_cam_ctx_unprepare_session(ctx);
+fail_destroy_camsv_stress_buf_pool:
+	mtk_cam_ctx_destroy_camsv_stress_buf_pool(ctx);
 fail_destroy_sensor_meta_pool:
 	mtk_cam_ctx_destroy_sensor_meta_pool(ctx);
 fail_destroy_img_pool:
@@ -3036,6 +3063,7 @@ void mtk_cam_ctx_unprepare(struct mtk_cam_ctx *ctx)
 	}
 
 	mtk_cam_ctx_unprepare_session(ctx);
+	mtk_cam_ctx_destroy_camsv_stress_buf_pool(ctx);
 	mtk_cam_ctx_destroy_sensor_meta_pool(ctx);
 	mtk_cam_ctx_destroy_pool(ctx);
 	mtk_cam_ctx_clean_img_pool(ctx);
@@ -4090,7 +4118,7 @@ void mtk_cam_ctx_engine_dc_sw_recovery(struct mtk_cam_ctx *ctx)
 
 	if (ctx->hw_sv) {
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
-		mtk_cam_sv_dev_config(sv_dev, 0, -1);
+		mtk_cam_sv_dev_config(ctx, sv_dev, 0, -1);
 		mtk_cam_sv_restore(sv_dev);
 		mtk_cam_sv_dev_stream_on(sv_dev, 1,
 					 ctx->enabled_tags, ctx->used_tag_cnt);

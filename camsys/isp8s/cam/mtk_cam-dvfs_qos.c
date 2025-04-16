@@ -28,7 +28,7 @@
 #include "swpm_isp_wrapper.h"
 
 #define BOOST_DVFS_OPP    2
-#define ICCPATH_NAME_SIZE 32
+
 #define LCM(a,b) ((a) / gcd(a, b) * (b))
 
 struct dvfs_stream_info {
@@ -358,14 +358,6 @@ int mtk_cam_dvfs_switch_end(struct mtk_camsys_dvfs *dvfs, int stream_id, int raw
 	else
 		return dvfs_switch_end(dvfs, stream_id);
 }
-
-/* qos */
-struct mtk_camsys_qos_path {
-	char name[ICCPATH_NAME_SIZE];
-	struct icc_path *path;
-	s64 applied_bw;
-	s64 pending_bw;
-};
 
 int mtk_cam_qos_probe(struct device *dev,
 		      struct mtk_camsys_qos *qos, int qos_num)

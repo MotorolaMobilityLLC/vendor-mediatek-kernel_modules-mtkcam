@@ -260,6 +260,14 @@ struct mtk_camsv_device {
 	bool is_skip_raw_unlock_done;
 	unsigned int ois_updated_seq;
 	void __iomem *raw_lock_done_sel;
+
+	/* camsv stress test*/
+	atomic_t is_slave_on;
+	atomic_t is_sv_stress_test;
+	unsigned int stress_test_mode;
+	struct mtk_camsv_device *slave_sv_dev;
+	struct v4l2_subdev *seninf;
+
 };
 enum mqe_mode {
 	UL_MODE = 0,
@@ -308,8 +316,8 @@ void mtk_cam_sv_fifo_dbg_port_config(struct mtk_camsv_device *sv_dev);
 void mtk_cam_sv_fifo_dump(struct mtk_camsv_device *sv_dev);
 void mtk_cam_sv_stg_dump(struct mtk_camsv_device *sv_dev);
 int mtk_cam_sv_debug_dump(struct mtk_camsv_device *sv_dev, unsigned int dump_tags);
-int mtk_cam_sv_dev_config(struct mtk_camsv_device *sv_dev, unsigned int sub_ratio,
-	int frm_time_us);
+int mtk_cam_sv_dev_config(struct mtk_cam_ctx *ctx, struct mtk_camsv_device *sv_dev,
+	unsigned int sub_ratio, int frm_time_us);
 int mtk_cam_sv_cq_config(struct mtk_camsv_device *sv_dev, unsigned int sub_ratio);
 int mtk_cam_sv_ddren_qos_coh_config(struct mtk_camsv_device *sv_dev, int frm_time_us);
 void mtk_cam_sv_update_start_period(struct mtk_camsv_device *sv_dev, int scq_ms);

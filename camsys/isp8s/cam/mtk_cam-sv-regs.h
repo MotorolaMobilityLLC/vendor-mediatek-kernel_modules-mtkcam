@@ -121,6 +121,24 @@ union CAMSVCENTRAL_BW_QOS_CFG {
 
 #define REG_CAMSVCENTRAL_BW_QOS_THRESHOLD		0x015c
 
+#define REG_CAMSVCENTRAL_ERR_CTL				0x0170
+union CAMSVCENTRAL_ERR_CTL {
+	struct {
+		unsigned int CAMSVCENTRAL_GRAB_ERR_FLIMIT_NO			:  4;
+		unsigned int CAMSVCENTRAL_GRAB_ERR_FLIMIT_EN			:  1;
+		unsigned int CAMSVCENTRAL_GRAB_ERR_EN					:  1;
+		unsigned int rsv_6										:  2;
+		unsigned int CAMSVCENTRAL_REZ_OVRUN_FLIMIT_NO			:  4;
+		unsigned int CAMSVCENTRAL_REZ_OVRUN_FLIMIT_EN			:  1;
+		unsigned int rsv_13										:  3;
+		unsigned int CAMSVCENTRAL_GROUP_PXL_ERR_EN				:  1;
+		unsigned int rsv_17										:  3;
+		unsigned int CAMSVCENTRAL_DC_ERR_RECOVER_EN				:  1;
+		unsigned int rsv_21										: 11;
+	} Bits;
+	unsigned int Raw;
+};
+
 #define REG_CAMSVCENTRAL_TAG_R_SEL				0x0174
 
 #define REG_CAMSVCENTRAL_FRMSIZE_ST_R			0x0180
@@ -314,6 +332,29 @@ union CAMSVCENTRAL_FBC1_TAG1 {
 #define CAMSVCENTRAL_VF_ST_TAG_SHIFT			0x40
 
 #define REG_CAMSVCENTRAL_FORMAT_TAG1			0x0554
+union  CAMSVCENTRAL_FORMAT_TAG1 {
+	struct {
+		unsigned int CAMSVCENTRAL_FMT_TAG1				:  5;
+		unsigned int rsv_5								:  1;
+		unsigned int CAMSVCENTRAL_UNPACK_MODE_TAG1		:  1;
+		unsigned int CAMSVCENTRAL_MQE_MODE_TAG1			:  4;
+		unsigned int CAMSVCENTRAL_MQE_EN_TAG1			:  1;
+		unsigned int rsv_12								:  1;
+		unsigned int CAMSVCENTRAL_YUV_U2S_DIS_TAG1		:  1;
+		unsigned int CAMSVCENTRAL_DATA_SWAP_TAG1		:  2;
+		unsigned int CAMSVCENTRAL_UFE_CODE_MODE_TAG1	:  2;
+		unsigned int CAMSVCENTRAL_UFE_CELL_MODE_TAG1	:  2;
+		unsigned int CAMSVCENTRAL_UFE_IS_LUMA_TAG1		:  1;
+		unsigned int rsv_21								:  3;
+		unsigned int CAMSVCENTRAL_UFE_FORCE_PCM_TAG1	:  1;
+		unsigned int CAMSVCENTRAL_UFE_TCCT_BYP_TAG1		:  1;
+		unsigned int CAMSVCENTRAL_UFE_EN_TAG1			:  1;
+		unsigned int CAMSVCENTRAL_QBN_RATIO_TAG1		:  2;
+		unsigned int CAMSVCENTRAL_QBN_MODE_TAG1			:  2;
+		unsigned int CAMSVCENTRAL_QBN_EN_TAG1			:  1;
+	} Bits;
+	unsigned int Raw;
+};
 #define CAMSVCENTRAL_FORMAT_TAG_SHIFT			0x40
 
 #define REG_CAMSVCENTRAL_CONFIG_TAG1			0x055C
@@ -340,6 +381,22 @@ union CAMSVCENTRAL_FBC1_TAG1 {
 
 #define REG_CAMSVDMATOP_SW_RST_CTL				0x0020
 #define REG_CAMSVDMATOP_CTL						0x0024
+union CAMSVDMATOP_CTL {
+	struct {
+		unsigned int CAMSVDMATOP_PSUEDO_MODE_EN			:  1;
+		unsigned int CAMSVDMATOP_DMA_INT_WCLR_EN		:  1;
+		unsigned int CAMSVDMATOP_CCU_DMA_INT_WCLR_EN	:  1;
+		unsigned int CAMSVDMATOP_SMI_ID_DISABLE			:  1;
+		unsigned int CAMSVDMATOP_FPGA_DV_EN				:  1;
+		unsigned int CAMSVDMATOP_EOT_FORCE_ULTRA		:  1;
+		unsigned int CAMSVDMATOP_DSPCH_PRI_EN			:  3;
+		unsigned int rsv_9								:  3;
+		unsigned int CAMSVDMATOP_ALIGN_32BYTE			:  1;
+		unsigned int rsv_13								:  3;
+		unsigned int CAMSVDMATOP_RSV1					: 16;
+	} Bits;
+	unsigned int Raw;
+};
 #define REG_CAMSVDMATOP_SLC_CTRL				0x002C
 
 /* fifo core */
@@ -405,6 +462,15 @@ union CAMSVDMATOP_DMA_INT_FIFO_EN {
 #define REG_CAMSVDMATOP_WDMA_BASE_ADDR_IMG1_A	0x0200
 #define REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG1_A	0x0204
 #define REG_CAMSVDMATOP_WDMA_BASIC_IMG1_A		0x0210
+union CAMSVDMATOP_WDMA_BASIC_IMG1A {
+	struct {
+		unsigned int CAMSVDMATOP_MAX_BURST_LEN_IMG1A	:  5;
+		unsigned int rsv_5								:  3;
+		unsigned int CAMSVDMATOP_WDMA_RSV_IMG1A			:  8;
+		unsigned int CAMSVDMATOP_STRIDE_IMG1A			: 16;
+	} Bits;
+	unsigned int Raw;
+};
 
 #define REG_CAMSVDMATOP_WDMA_BASE_ADDR_IMG1_B		0x0600
 #define REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG1_B	0x0604

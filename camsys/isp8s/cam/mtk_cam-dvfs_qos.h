@@ -66,7 +66,15 @@ int mtk_cam_dvfs_get_opp_table(struct mtk_camsys_dvfs *dvfs,
 }
 
 /* qos */
-struct mtk_camsys_qos_path;
+#define ICCPATH_NAME_SIZE 32
+
+struct mtk_camsys_qos_path {
+	char name[ICCPATH_NAME_SIZE];
+	struct icc_path *path;
+	s64 applied_bw;
+	s64 pending_bw;
+};
+
 struct mtk_camsys_qos {
 	int n_path;
 	struct mtk_camsys_qos_path *cam_path;
