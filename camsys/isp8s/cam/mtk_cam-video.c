@@ -35,12 +35,10 @@ static void log_fmt_ops(struct mtk_cam_video_device *node,
 			struct v4l2_format *f,
 			const char *caller)
 {
-	struct media_pad *remote_pad;
 	const char *remote_name = "null";
 
-	remote_pad = media_pad_remote_pad_unique(&node->pad);
-	if (remote_pad)
-		remote_name = remote_pad->entity->name;
+	if (node->remote_pad)
+		remote_name = node->remote_pad->entity->name;
 
 	if (f->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE ||
 	    f->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
@@ -337,7 +335,7 @@ static int refine_valid_selection(struct mtk_cam_video_device *node,
 		struct mtk_raw_pipeline *pipe;
 		int sink_w, sink_h;
 
-		remote_pad = media_pad_remote_pad_unique(&node->pad);
+		remote_pad = node->remote_pad;
 		if (IS_ERR_OR_NULL(remote_pad)) {
 			pr_info("%s: remote pad is null\n", __func__);
 			return -1;
@@ -720,6 +718,8 @@ static long mtk_cam_vidioc_streamon_handler(struct file *file,
 		ret = _stream_on_handler_locked(ctx, node);
 	else  /* should not happen */
 		WARN(1, "%s: no ctx found for %s\n", __func__, node->desc.name);
+
+	node->remote_pad = media_pad_remote_pad_unique(&node->pad);
 
 	return ret;
 }

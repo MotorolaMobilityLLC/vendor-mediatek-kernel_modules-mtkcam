@@ -1738,7 +1738,9 @@ static int mtk_cam_ctx_pipeline_start(struct mtk_cam_ctx *ctx,
 	struct device *dev = ctx->cam->dev;
 	struct v4l2_subdev **target_sd;
 	struct mtk_cam_video_device *mtk_vdev;
+	struct mtk_raw_pipeline *raw_pipe;
 	struct media_pipeline_pad *ppad;
+	struct media_pad *remote_pad;
 	struct media_entity *entity_walked[MTK_CAM_CTX_MAX_ENTITIES] = {0};
 	int last_entity_walked = 0;
 	bool walked;
@@ -1830,6 +1832,16 @@ static int mtk_cam_ctx_pipeline_start(struct mtk_cam_ctx *ctx,
 	mutex_unlock(&ctx->cam->v4l2_dev.mdev->graph_mutex);
 
 	mtk_cam_ctx_match_pipe_subdevs(ctx);
+
+	if (ctx->has_raw_subdev && ctx->raw_subdev_idx >= 0) {
+		raw_pipe = &ctx->cam->pipelines.raw[ctx->raw_subdev_idx];
+		/*
+		 * choose pad from seninf or rawi
+		 */
+		remote_pad = media_pad_remote_pad_unique(raw_pipe->pads + MTK_RAW_SINK);
+		raw_pipe->sink_pad_idx =
+			IS_ERR_OR_NULL(remote_pad) ? MTK_RAW_RAWI_2_IN : MTK_RAW_SINK;
+	}
 
 	return 0;
 

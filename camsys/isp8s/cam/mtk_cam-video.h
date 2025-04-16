@@ -133,6 +133,7 @@ struct mtk_cam_video_device {
 	struct vb2_queue vb2_q;
 	struct video_device vdev;
 	struct media_pad pad;
+	struct media_pad *remote_pad;
 	struct v4l2_format active_fmt;
 	struct v4l2_selection active_crop;
 	/* Serializes vb2 queue and video device operations */

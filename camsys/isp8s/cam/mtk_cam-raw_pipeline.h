@@ -176,6 +176,7 @@ struct mtk_raw_pipeline {
 	struct media_pad pads[MTK_RAW_PIPELINE_PADS_NUM];
 	struct mtk_raw_pad_config pad_cfg[MTK_RAW_PIPELINE_PADS_NUM];
 	struct v4l2_ctrl_handler ctrl_handler;
+	unsigned int sink_pad_idx;
 
 	/* special resource management
 	 * some resources may be required before stream-on, should handle cases

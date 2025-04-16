@@ -4206,14 +4206,5 @@ void mtk_raw_unregister_entities(struct mtk_raw_pipeline *arr_pipe, int num)
 
 struct mtk_raw_pad_config *mtk_raw_current_sink(struct mtk_raw_pipeline *pipe)
 {
-	int sink_id;
-	struct media_pad *remote_pad;
-
-	/*
-	 * choose pad from seninf or rawi
-	 */
-
-	remote_pad = media_pad_remote_pad_unique(pipe->pads + MTK_RAW_SINK);
-	sink_id = IS_ERR_OR_NULL(remote_pad) ? MTK_RAW_RAWI_2_IN : MTK_RAW_SINK;
-	return &pipe->pad_cfg[sink_id];
+	return &pipe->pad_cfg[pipe->sink_pad_idx];
 }
