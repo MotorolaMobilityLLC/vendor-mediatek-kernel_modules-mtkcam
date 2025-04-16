@@ -1652,7 +1652,7 @@ static void qof_set_engine_on(const u32 mod)
 	if (readl_poll_timeout_atomic
 		(io_addr, tmp, (tmp & BIT(4)) == BIT(4), POLL_DELAY_US, TIMEOUT_1000US) < 0) {
 		QOF_LOGI("Warning: mod[%d] waiting qof state pwr off timeout, qof may be voted by smi\n",mod);
-		mtk_imgsys_cmdq_qof_dump(0, false);
+		mtk_imgsys_cmdq_qof_dump(0, true);
 		// engine off
 	}
 }
@@ -1818,7 +1818,7 @@ void mtk_imgsys_cmdq_qof_stream_on(struct mtk_imgsys_dev *imgsys_dev)
 
 	spin_unlock_irqrestore(&qof_lock, flag);
 
-	mtk_imgsys_cmdq_qof_dump(0, false);
+	mtk_imgsys_cmdq_qof_dump(0, true);
 
 	imgsys_qof_set_dbg_thread(true);
 
