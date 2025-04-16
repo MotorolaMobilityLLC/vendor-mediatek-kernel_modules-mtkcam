@@ -627,17 +627,18 @@ static int push_msgfifo(struct mtk_camsv_device *sv_dev,
 			struct mtk_camsys_irq_info *info)
 {
 	int len;
+	unsigned long flags;
 
-	spin_lock(&sv_dev->msg_lock);
+	spin_lock_irqsave(&sv_dev->msg_lock, flags);
 	if (unlikely(kfifo_avail(&sv_dev->msg_fifo) < sizeof(*info))) {
 		atomic_set(&sv_dev->is_fifo_overflow, 1);
-		spin_unlock(&sv_dev->msg_lock);
+		spin_unlock_irqrestore(&sv_dev->msg_lock, flags);
 		return -1;
 	}
 
 	len = kfifo_in(&sv_dev->msg_fifo, info, sizeof(*info));
 
-	spin_unlock(&sv_dev->msg_lock);
+	spin_unlock_irqrestore(&sv_dev->msg_lock, flags);
 	WARN_ON(len != sizeof(*info));
 	return 0;
 }
@@ -646,16 +647,17 @@ static int pop_msgfifo(struct mtk_camsv_device *sv_dev,
 			struct mtk_camsys_irq_info *info)
 {
 	int len;
+	unsigned long flags;
 
-	spin_lock(&sv_dev->msg_lock);
+	spin_lock_irqsave(&sv_dev->msg_lock, flags);
 	if (kfifo_len(&sv_dev->msg_fifo) >= sizeof(*info)) {
 		len = kfifo_out(&sv_dev->msg_fifo, info, sizeof(*info));
-		spin_unlock(&sv_dev->msg_lock);
+		spin_unlock_irqrestore(&sv_dev->msg_lock, flags);
 		WARN_ON(len != sizeof(*info));
 		return 1;
 	}
 
-	spin_unlock(&sv_dev->msg_lock);
+	spin_unlock_irqrestore(&sv_dev->msg_lock, flags);
 	return 0;
 }
 
