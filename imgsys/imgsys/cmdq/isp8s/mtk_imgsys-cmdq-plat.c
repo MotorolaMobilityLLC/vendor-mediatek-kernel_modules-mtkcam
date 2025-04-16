@@ -803,6 +803,9 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 #ifdef IMGSYS_CMDQ_PKT_REUSE
 	u32 cookie = 0;
 	u32 cb_cnt = 0;
+	s32 pkt_err = 0;
+	bool isReuseErr = 0;
+	struct mtk_imgsys_cb_param *cb_param_pkt = NULL;
 #endif
 
 	if (imgsys_cmdq_dbg_enable_plat8s())
@@ -816,8 +819,10 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 	cb_param = (struct mtk_imgsys_cb_param *)data.data;
 #ifdef IMGSYS_CMDQ_PKT_REUSE
 	if (cb_param->pkt->loop == true) {
+		cb_param_pkt = (struct mtk_imgsys_cb_param *)data.data;
 		cookie = cb_param->pkt->cookie;
 		cb_cnt = cb_param->pkt->cookie_diff;
+		pkt_err = data.err;
 		if (imgsys_cmdq_dbg_enable_plat8s())
 			pr_info(
 				"%s: [pkt_reuse] cb(%p) thd_idx(%d) cb_idx(%d/%d) cookie(%u) cb_cnt(%u)",
@@ -829,9 +834,11 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 			cur_cb_idx[cb_param->thd_idx]++;
 			if (cur_cb_idx[cb_param->thd_idx] == IMGSYS_PKT_REUSE_CB_NUM)
 				cur_cb_idx[cb_param->thd_idx] = 0;
+			if (pkt_err != 0)
+				isReuseErr = 1;
 		} else {
 			pr_info(
-				"%s: [ERROR] No more cb_param is left, run pkt_reuse uninit flow! pkt_cb(%p) error(%d)  gid(%d) for frm(%d/%d) blk(%d/%d) ofst(0x%lx) task(%d/%d/%d) thd_idx(%d) cb_idx(%d/%d) cookie(%u) cb_cnt(%u)",
+				"%s: [pkt_reuse] No more cb_param is left, run pkt_reuse uninit flow! pkt_cb(%p) error(%d)  gid(%d) for frm(%d/%d) blk(%d/%d) ofst(0x%lx) task(%d/%d/%d) thd_idx(%d) cb_idx(%d/%d) cookie(%u) cb_cnt(%u)",
 				__func__, cb_param, data.err, cb_param->group_id,
 				cb_param->frm_idx, cb_param->frm_num,
 				cb_param->blk_idx, cb_param->blk_num,
@@ -1600,6 +1607,41 @@ imgsys_cmdq_queue_cb_work:
 #else
 	INIT_WORK(&cb_param->cmdq_cb_work, imgsys_cmdq_cb_work_plat8s);
 	queue_work(imgsys_cmdq_wq, &cb_param->cmdq_cb_work);
+#endif
+
+#ifdef IMGSYS_CMDQ_PKT_REUSE
+	/* For timeout case, cmdq will not trigger no more cb. */
+	/* So we have to check if there is request left in task list*/
+	if (isReuseErr == 1) {
+		if (g_reuse_cb_param[cb_param_pkt->thd_idx][cur_cb_idx[cb_param_pkt->thd_idx]] != NULL) {
+			cb_param = g_reuse_cb_param[cb_param_pkt->thd_idx][cur_cb_idx[cb_param_pkt->thd_idx]];
+			g_reuse_cb_param[cb_param_pkt->thd_idx][cur_cb_idx[cb_param_pkt->thd_idx]] = NULL;
+			cur_cb_idx[cb_param_pkt->thd_idx]++;
+			if (cur_cb_idx[cb_param_pkt->thd_idx] == IMGSYS_PKT_REUSE_CB_NUM)
+				cur_cb_idx[cb_param_pkt->thd_idx] = 0;
+			pr_info(
+				"%s: [ERROR] More cb_param is left, run pkt_reuse uninit flow! pkt_cb(%p) error(%d)  gid(%d) for frm(%d/%d) blk(%d/%d) ofst(0x%lx) task(%d/%d/%d) thd_idx(%d) cb_idx(%d/%d) cookie(%u) cb_cnt(%u)",
+				__func__, cb_param, pkt_err, cb_param->group_id,
+				cb_param->frm_idx, cb_param->frm_num,
+				cb_param->blk_idx, cb_param->blk_num,
+				cb_param->pkt->err_data.offset,
+				cb_param->task_id, cb_param->task_num, cb_param->task_cnt, cb_param->thd_idx,
+				cur_cb_idx[cb_param->thd_idx], g_cb_idx[cb_param->thd_idx], cookie, cb_cnt);
+		} else {
+			isReuseErr = 0;
+			pr_info(
+				"%s: [ERROR] No more cb_param is left, run pkt_reuse uninit flow! pkt_cb(%p) error(%d)  gid(%d) for frm(%d/%d) blk(%d/%d) ofst(0x%lx) task(%d/%d/%d) thd_idx(%d) cb_idx(%d/%d) cookie(%u) cb_cnt(%u)",
+				__func__, cb_param_pkt, pkt_err, cb_param_pkt->group_id,
+				cb_param_pkt->frm_idx, cb_param_pkt->frm_num,
+				cb_param_pkt->blk_idx, cb_param_pkt->blk_num,
+				cb_param_pkt->pkt->err_data.offset,
+				cb_param_pkt->task_id, cb_param_pkt->task_num, cb_param_pkt->task_cnt,
+				cb_param_pkt->thd_idx,
+				cur_cb_idx[cb_param_pkt->thd_idx], g_cb_idx[cb_param_pkt->thd_idx], cookie, cb_cnt);
+				cb_param = cb_param_pkt;
+		}
+		goto imgsys_cmdq_queue_cb_work;
+	}
 #endif
 }
 
