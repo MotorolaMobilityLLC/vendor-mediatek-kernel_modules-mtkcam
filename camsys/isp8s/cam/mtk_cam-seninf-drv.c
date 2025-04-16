@@ -4927,7 +4927,6 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 	int reset_by_user = 0;
 	bool in_reset = 0;
 	bool asserted = false;
-	bool i2c_is_err = false;
 
 	if (!sd)
 		return -EINVAL;
@@ -4990,23 +4989,22 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 
 		if (assert_when_error) {
 			switch (ret) {
-			case SENINF_DEBUG_ECC_CRC_LANE_ERR:
+			case -SENINF_DEBUG_ECC_CRC_LANE_ERR:
 				seninf_aee_print(SENINF_AEE_FRMERR,
 					"Seninf dump with error code: %d\n", ret);
 				asserted = true;
 				break;
-			case SENINF_DEBUG_SOCKET_ERR:
+			case -SENINF_DEBUG_SOCKET_ERR:
 				mtk_cam_seninf_ixc_connector_check(ctx);
 				asserted = true;
 				break;
+			case -SENINF_DEBUG_SENSOR_SOT_ERR:
+				seninf_aee_print(SENINF_AEE_SENSOR_SOT_ERR,
+					"with %s\n", ctx->sensor_sd->name);
+				asserted = true;
 			}
 		}
 
-		if (assert_when_error && (i2c_is_err == 0) && ret != 0) {
-			seninf_aee_print(SENINF_AEE_FRMERR,
-					"Seninf dump with error code: %d\n", ret);
-			asserted = true;
-		}
 #if ESD_RESET_SUPPORT
 		else if (ret != 0 && !ctx->is_test_model) {
 			reset_by_user = is_reset_by_user(sd_to_ctx(sd));

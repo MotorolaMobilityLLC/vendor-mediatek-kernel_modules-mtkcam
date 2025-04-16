@@ -12,11 +12,12 @@
 
 #include "mtk_cam-seninf_control-8s.h"
 
-#define SENINF_AEE_GENERAL "Seninf"
-#define SENINF_AEE_OUTMUX "Seninf: outmux error"
-#define SENINF_AEE_FS_SEQ "Seninf: sensor fs sequence"
-#define SENINF_AEE_FRMERR "Seninf: frame error"
-#define SENINF_AEE_SENSOR_SOCKER_ERR "Seninf: sensor socket disconnect"
+#define SENINF_AEE_GENERAL "CRDISPATCH_KEY: Seninf"
+#define SENINF_AEE_OUTMUX "CRDISPATCH_KEY: Seninf: outmux error"
+#define SENINF_AEE_FS_SEQ "CRDISPATCH_KEY: Seninf: sensor fs sequence"
+#define SENINF_AEE_FRMERR "CRDISPATCH_KEY: Seninf: frame error"
+#define SENINF_AEE_SENSOR_SOCKER_ERR "CRDISPATCH_KEY: Seninf: sensor socket disconnect"
+#define SENINF_AEE_SENSOR_SOT_ERR "CRDISPATCH_KEY: Seninf: sensor SOT error"
 
 #if IS_ENABLED(CONFIG_MTK_AEE_FEATURE)
 #define seninf_aee_print(title, string, args...) do { \
@@ -61,6 +62,7 @@ enum SENINF_DEBUG_ERR_TYPE {
 	SENINF_DEBUG_PKCNT_ERR,
 	SENINF_DEBUG_ECC_CRC_LANE_ERR,
 	SENINF_DEBUG_SOCKET_ERR,
+	SENINF_DEBUG_SENSOR_SOT_ERR,
 };
 
 enum CSIRX_LANE_NUM {

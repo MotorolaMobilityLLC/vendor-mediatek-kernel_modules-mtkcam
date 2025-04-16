@@ -5100,6 +5100,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 	unsigned int frame_cnt1 = 0, frame_cnt2 = 0;
 	unsigned int dphy_irq = 0;
 	unsigned int cphy_irq = 0;
+	unsigned int sot_err = 0;
 	unsigned int temp = 0;
 	void *pSeninf_top = ctx->reg_if_top;
 	void *pSeninf_asytop = ctx->reg_if_async;
@@ -5165,6 +5166,7 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		base_dphy = ctx->reg_ana_dphy_top[csi_port];
 		cphy_irq = SENINF_READ_REG(base_cphy, CPHY_RX_IRQ_CLR);
 		dphy_irq = SENINF_READ_REG(base_dphy, DPHY_RX_IRQ_STATUS);
+		sot_err = (ctx->is_cphy) ? cphy_irq : dphy_irq;
 
 		seninf_logi(ctx,
 			"Csi%d_Dphy_Top:LANE_EN/_SELECT:(0x%x)/(0x%x),CLK_LANE0_HS/1_HS:(0x%x)/(0x%x),DATA_LANE0_HS(0x%x)/1_HS(0x%x)/2_HS(0x%x)/3_HS(0x%x),DPHY_RX_SPARE0:(0x%x)\n",
@@ -5543,6 +5545,14 @@ static int mtk_cam_seninf_debug(struct seninf_ctx *ctx)
 		base_dphy = ctx->reg_ana_dphy_top[csi_port];
 		cphy_irq = SENINF_READ_REG(base_cphy, CPHY_RX_IRQ_CLR);
 		dphy_irq = SENINF_READ_REG(base_dphy, DPHY_RX_IRQ_STATUS);
+		sot_err = (ctx->is_cphy) ? cphy_irq : dphy_irq;
+	}
+
+	if (sot_err) {
+		seninf_logi(ctx,
+		"[ERROR] sensor sot err is_cphy %d sot_err: 0x%x\n",
+			ctx->is_cphy, sot_err);
+		return -SENINF_DEBUG_SENSOR_SOT_ERR;
 	}
 
 	seninf_logi(ctx,
@@ -5900,7 +5910,7 @@ static int mtk_cam_seninf_debug_current_status(struct seninf_ctx *ctx)
 
 	if ((ctx->debug_cur_mac_irq & 0xD0) ||
 		(ctx->debug_cur_seninf_irq & 0x10000000))
-		ret = -2; //multi lanes sync error, crc error, ecc error
+		ret = -SENINF_DEBUG_ECC_CRC_LANE_ERR; //multi lanes sync error, crc error, ecc error
 
 	dev_info(ctx->dev,
 		"current async%d:ASYNC_CFG(0x%x),ASYNC0_DBG0(0x%x),ASYNC1_DBG0(0x%x),ASYNC2_DBG0(0x%x),ASYNC3_DBG0(0x%x),ASYNC4_DBG0(0x%x),ASYNC5_DBG0(0x%x)\n",
