@@ -4880,10 +4880,10 @@ static int raw_qof_init(struct mtk_cam_job *job, struct device *dev)
 		get_sv_tag_idx(exp, MTKCAM_IPI_ORDER_LAST_TAG, false,
 			is_dcg_with_vs(job), is_fusion);
 
+	qof_setup_rtc(raw);
 	qof_sof_src_sel(raw, job_exp_num(job),
 					!res_raw_is_dc_mode(&res->raw_res), sv_last_tag);
 	qof_setup_hw_timer(raw, get_sensor_interval_us(job));
-	qof_setup_rtc(raw);
 	qof_setup_ctrl(raw, true);
 	qof_hwccf_link(raw, false);
 

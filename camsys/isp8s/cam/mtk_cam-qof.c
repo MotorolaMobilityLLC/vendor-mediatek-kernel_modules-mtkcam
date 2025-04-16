@@ -44,6 +44,8 @@ static u32 force_dump_raw_map;
 //#define HW_SEQ_MODE
 //#define QOF_ITC_ALWAYS_ON
 
+#define QOF_RTC_DELAY 210
+
 static u32 itc_readl(struct mtk_raw_device *raw,
 					 void __iomem *base, u32 offset);
 static u32 itc_readl_relaxed(struct mtk_raw_device *raw,
@@ -1240,11 +1242,6 @@ void qof_setup_rtc(struct mtk_raw_device *dev)
 	u32 base = (u32)((u64)dev->base_reg_addr - (u64)cam->base_reg_addr + 0x10000);
 	u32 base_inner = (u32)((u64)dev->base_inner_reg_addr - (u64)cam->base_reg_addr + 0x10000);
 
-	if (CAM_DEBUG_ENABLED(QOF))
-		dev_info(dev->dev,
-				 "qof: %s: base_reg_addr 0x%x base_inner_reg_addr 0x%x",
-				 __func__, base, base_inner);
-
 	writel_relaxed(base + REG_FRAME_IDX,
 				   dev->qof_base + REG_QOF_CAM_A_TRANS1_ADDR);
 	writel_relaxed(base_inner + REG_FRAME_IDX,
@@ -1253,6 +1250,17 @@ void qof_setup_rtc(struct mtk_raw_device *dev)
 				   dev->qof_base + REG_QOF_CAM_A_TRANS3_ADDR);
 	writel_relaxed(base_inner + REG_CAMCTL_MOD5_EN,
 				   dev->qof_base + REG_QOF_CAM_A_TRANS4_ADDR);
+
+	writel_relaxed(QOF_RTC_DELAY, dev->qof_base + REG_QOF_CAM_A_QOF_RTC_DLY_CNT);
+
+	if (CAM_DEBUG_ENABLED(QOF)) {
+		dev_info(dev->dev,
+				 "qof: %s: base_reg_addr 0x%x base_inner_reg_addr 0x%x",
+				 __func__, base, base_inner);
+
+		dev_info(dev->dev, "qof: rtc_dly_cnt %d",
+				 readl(dev->qof_base + REG_QOF_CAM_A_QOF_RTC_DLY_CNT));
+	}
 }
 
 static inline int write_replace_cq_baseaddr(const struct mtk_raw_device *raw,
