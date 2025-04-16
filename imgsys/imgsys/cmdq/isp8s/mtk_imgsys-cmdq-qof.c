@@ -241,6 +241,13 @@ void gce_dip_cine_pwr_ctrl(struct cmdq_pkt *pkt, u32 act)
 			qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_EVENT_CNT_SUB].addr,
 			qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_EVENT_CNT_SUB].val,
 			qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_EVENT_CNT_SUB].mask);
+
+		/* make sure dip not in off proc*/
+		cmdq_pkt_poll_sleep(pkt,
+			0,
+			(qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_QOF_STATE_DBG].addr),
+			BIT(3));
+
 		break;
 	case 1 :
 
@@ -250,6 +257,12 @@ void gce_dip_cine_pwr_ctrl(struct cmdq_pkt *pkt, u32 act)
 			qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_EVENT_CNT_ADD].addr,
 			qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_EVENT_CNT_ADD].val,
 			qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_EVENT_CNT_ADD].mask);
+
+		/* DIP on, DIP_CINE need off*/
+		cmdq_pkt_poll_sleep(pkt,
+			BIT(1)/*poll val*/,
+			qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_QOF_STATE_DBG].addr,
+			BIT(1) /*mask*/);
 
 		cmdq_pkt_poll_sleep(pkt,
 			0/*poll val*/,
@@ -330,6 +343,13 @@ void gce_dip_cine_pwr_ctrl(struct cmdq_pkt *pkt, u32 act)
 			qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_EVENT_CNT_SUB].addr,
 			qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_EVENT_CNT_SUB].val,
 			qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_EVENT_CNT_SUB].mask);
+
+		/* make sure dip not in off proc */
+		cmdq_pkt_poll_sleep(pkt,
+			0,
+			(qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_QOF_STATE_DBG].addr),
+			BIT(3));
+
 		break;
 	default:
 		QOF_LOGE("incorrect action %u\n", act);
@@ -340,7 +360,7 @@ void gce_add_dip_cine(struct cmdq_pkt *pkt, dma_addr_t work_buf_pa)
 {
 	struct cmdq_operand lop, rop;
 	//const u16 var0 = CMDQ_THR_SPR_IDX0;
-	const u16 var1 = CMDQ_THR_SPR_IDX2;
+	const u16 var1 = CMDQ_THR_SPR_IDX3;
 	const u16 reg_jump = CMDQ_THR_SPR_IDX1;
 	dma_addr_t dip_cine_count_pa = work_buf_pa;
 	u32 inst_condi_jump, inst_jump_end;
@@ -352,17 +372,30 @@ void gce_add_dip_cine(struct cmdq_pkt *pkt, dma_addr_t work_buf_pa)
 	rop.reg = false;
 	rop.value = 1;
 	/* inc on dip_cine counter */
-	cmdq_pkt_logic_command(pkt, CMDQ_LOGIC_ADD, CMDQ_THR_SPR_IDX2, &lop, &rop);
+	cmdq_pkt_logic_command(pkt, CMDQ_LOGIC_ADD, CMDQ_THR_SPR_IDX3, &lop, &rop);
 	/* restore back to counter pa */
-	cmdq_pkt_write_indriect(pkt, NULL, dip_cine_count_pa, CMDQ_THR_SPR_IDX2, ~0);
+	cmdq_pkt_write_indriect(pkt, NULL, dip_cine_count_pa, CMDQ_THR_SPR_IDX3, ~0);
 
 	/* check if dip_cine counter == 1 and run power on flow */
 	/* mark condition jump and change offset later */
-	inst_condi_jump = pkt->cmd_buf_size;
 	cmdq_pkt_assign_command(pkt, reg_jump, 0);
+	inst_condi_jump = pkt->cmd_buf_size - 8;
 	/* case: counter != 1 */
 	lop.idx = var1;
 	cmdq_pkt_cond_jump_abs(pkt, reg_jump, &lop, &rop, CMDQ_EQUAL);
+
+	/* make sure dip_cine power on. since we need to do disable cine */
+	cmdq_pkt_poll_sleep(pkt,
+		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_HWCCF_DIP_CINE].val/*poll val*/,
+		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_HWCCF_DIP_CINE].addr /*addr*/,
+		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_HWCCF_DIP_CINE].mask /*mask*/);
+
+	/* check cine power on and ack exist */
+	cmdq_pkt_poll_sleep(pkt,
+		(BIT(26) | BIT(27)),
+		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_QOF_STATE_DBG].addr,
+		(BIT(26) | BIT(27)));
+
 	inst_jump_end = pkt->cmd_buf_size;
 	/* Finish else statement, jump to the end of if-else braces. */
 	/* Assign jump address as zero initially and we will modify it later. */
@@ -381,6 +414,7 @@ void gce_add_dip_cine(struct cmdq_pkt *pkt, dma_addr_t work_buf_pa)
 	/* case: counter == 1 */
 	//TODO power up flow
 	gce_dip_cine_pwr_ctrl(pkt, 1);
+	cmdq_pkt_poll_timeout(pkt, 0x1, SUBSYS_NO_SUPPORT, dip_cine_count_pa, 0xffffffff, U16_MAX, CMDQ_GPR_R15);
 	/* this is the end of whole condition, thus condition FALSE part should jump here */
 	jump_pa = cmdq_pkt_get_pa_by_offset(pkt, pkt->cmd_buf_size);
 	inst = cmdq_pkt_get_va_by_offset(pkt, inst_jump_end);
@@ -396,7 +430,7 @@ void gce_sub_dip_cine(struct cmdq_pkt *pkt, dma_addr_t work_buf_pa)
 {
 	struct cmdq_operand lop, rop;
 	//const u16 var0 = CMDQ_THR_SPR_IDX0;
-	const u16 var1 = CMDQ_THR_SPR_IDX2;
+	const u16 var1 = CMDQ_THR_SPR_IDX3;
 	const u16 reg_jump = CMDQ_THR_SPR_IDX1;
 	dma_addr_t dip_cine_count_pa = work_buf_pa;
 	u32 inst_condi_jump, inst_jump_end;
@@ -408,18 +442,31 @@ void gce_sub_dip_cine(struct cmdq_pkt *pkt, dma_addr_t work_buf_pa)
 	rop.reg = false;
 	rop.value = 1;
 	/* dec on dip_cine counter */
-	cmdq_pkt_logic_command(pkt, CMDQ_LOGIC_SUBTRACT, CMDQ_THR_SPR_IDX2, &lop, &rop);
+	cmdq_pkt_logic_command(pkt, CMDQ_LOGIC_SUBTRACT, CMDQ_THR_SPR_IDX3, &lop, &rop);
 	/* restore back to counter pa */
-	cmdq_pkt_write_indriect(pkt, NULL, dip_cine_count_pa, CMDQ_THR_SPR_IDX2, ~0);
+	cmdq_pkt_write_indriect(pkt, NULL, dip_cine_count_pa, CMDQ_THR_SPR_IDX3, ~0);
 
 	/* check if dip_cine counter == 0 and run power on flow */
 	/* mark condition jump and change offset later */
-	inst_condi_jump = pkt->cmd_buf_size;
 	cmdq_pkt_assign_command(pkt, reg_jump, 0);
+	inst_condi_jump = pkt->cmd_buf_size - 8;
 	/* case: counter != 0 */
 	rop.value = 0;
 	lop.idx = var1;
 	cmdq_pkt_cond_jump_abs(pkt, reg_jump, &lop, &rop, CMDQ_EQUAL);
+
+	/* make sure dip_cine power on. since we need to do disable cine */
+	cmdq_pkt_poll_sleep(pkt,
+		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_HWCCF_DIP_CINE].val/*poll val*/,
+		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_HWCCF_DIP_CINE].addr /*addr*/,
+		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_HWCCF_DIP_CINE].mask /*mask*/);
+
+	/* check cine power on and ack exist */
+	cmdq_pkt_poll_sleep(pkt,
+		(BIT(26) | BIT(27)),
+		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_QOF_STATE_DBG].addr,
+		(BIT(26) | BIT(27)));
+
 	//FIXME write footprint record counter
 	inst_jump_end = pkt->cmd_buf_size;
 	/* Finish else statement, jump to the end of if-else braces. */
@@ -439,6 +486,7 @@ void gce_sub_dip_cine(struct cmdq_pkt *pkt, dma_addr_t work_buf_pa)
 	/* case: counter == 1 */
 	//TODO power off flow
 	gce_dip_cine_pwr_ctrl(pkt, 0);
+	cmdq_pkt_poll_timeout(pkt, 0x0, SUBSYS_NO_SUPPORT, dip_cine_count_pa, 0xffffffff, U16_MAX, CMDQ_GPR_R15);
 	/* this is the end of whole condition, thus condition FALSE part should jump here */
 	jump_pa = cmdq_pkt_get_pa_by_offset(pkt, pkt->cmd_buf_size);
 	inst = cmdq_pkt_get_va_by_offset(pkt, inst_jump_end);
@@ -992,7 +1040,8 @@ void mtk_imgsys_qof_print_hw_info(u32 mod)
 
 	event = &qof_events_isp8s[mod];
 
-	QOF_LOGI("MOD[%d]A_event_cnt(0x%x):0x%x;B_event_cnt(0x%x):0x%x;C_event_cnt(0x%x):0x%x;DIP_CINE_CNT:%u;",
+	QOF_LOGI("mod[%d]rg(0x%x):0x%x;rg(0x%x):0x%x;rg(0x%x):0x%x;cnt:%u;rg(0x%x):0x%x;rg(0x%x):0x%x;rg(0x%x):0x%x;"
+		"rg(0x%x):0x%x;rg(0x%x):0x%x;rg(0x%x):0x%x;rg(0x%x):0x%08x;rg(0x%x):0x%x;rg(0x%x):0x%x;\n",
 	mod,
 	qof_reg_table[mod][QOF_REG_IMG_VM_A].addr,
 	readl
@@ -1003,9 +1052,7 @@ void mtk_imgsys_qof_print_hw_info(u32 mod)
 	qof_reg_table[mod][QOF_REG_IMG_VM_C].addr,
 	readl
 	(g_maped_rg[MAPED_RG_QOF_CNT_C_REG_BASE] + (qof_reg_table[mod][QOF_REG_IMG_VM_C].addr - QOF_IMG_EVENT_C)),
-	**((unsigned int **)g_qof_work_buf_va));
-
-	QOF_LOGI("VOTE_DEBUG(0x%x):0x%x;TRIG_CNT(0x%x):0x%x;ITC_SRC_SEL(0x%x):0x%x;ACK_2ND_WAIT_TH(0x%x):0x%x;",
+	**((unsigned int **)g_qof_work_buf_va),
 	qof_reg_table[mod][QOF_REG_IMG_QOF_VOTER_DBG].addr,
 	readl(QOF_GET_REMAP_ADDR(qof_reg_table[mod][QOF_REG_IMG_QOF_VOTER_DBG].addr)),
 	qof_reg_table[mod][QOF_REG_IMG_TRG_ON_CNT].addr,
@@ -1013,9 +1060,7 @@ void mtk_imgsys_qof_print_hw_info(u32 mod)
 	qof_reg_table[mod][QOF_REG_IMG_ITC_SRC_SEL].addr,
 	readl(QOF_GET_REMAP_ADDR(qof_reg_table[mod][QOF_REG_IMG_ITC_SRC_SEL].addr)),
 	qof_reg_table[mod][QOF_REG_IMG_PWR_ACK_2ND_WAIT_TH].addr,
-	readl(QOF_GET_REMAP_ADDR(qof_reg_table[mod][QOF_REG_IMG_PWR_ACK_2ND_WAIT_TH].addr)));
-
-	QOF_LOGI("PWR_ST(0x%x):0x%x;SAVE_DONE(0x%x):0x%x;SP2_TOP(0x%x):0x%08x;QOF(0x%x):0x%x;GCE(0x%x):0x%x;\n",
+	readl(QOF_GET_REMAP_ADDR(qof_reg_table[mod][QOF_REG_IMG_PWR_ACK_2ND_WAIT_TH].addr)),
 	qof_reg_table[mod][QOF_REG_IMG_POWER_STATE].addr,
 	readl(QOF_GET_REMAP_ADDR(qof_reg_table[mod][QOF_REG_IMG_POWER_STATE].addr)),
 	qof_reg_table[mod][QOF_REG_IMG_GCE_SAVE_DONE].addr,
@@ -1029,7 +1074,7 @@ void mtk_imgsys_qof_print_hw_info(u32 mod)
 
 
 	QOF_LOGI("qof_hw_info:rg(0x%x):0x%x;rg(0x%x):0x%x;rg(0x%x):0x%x;rg(0x%x):0x%x;rg(0x%x):0x%x;rg(0x%x):0x%08x;\n",
-	qof_reg_table[mod][QOF_REG_IMG_QOF_VOTER_DBG].addr,
+		qof_reg_table[mod][QOF_REG_IMG_QOF_VOTER_DBG].addr,
 	readl(QOF_GET_REMAP_ADDR(qof_reg_table[mod][QOF_REG_IMG_QOF_VOTER_DBG].addr)),
 	qof_reg_table[mod][QOF_REG_IMG_QOF_DONE_STATUS].addr,
 	readl(QOF_GET_REMAP_ADDR(qof_reg_table[mod][QOF_REG_IMG_QOF_DONE_STATUS].addr)),
@@ -1673,10 +1718,10 @@ static void qof_locked_stream_off_sync(void)
 	u32 qof_module = QOF_SUPPORT_START;
 
 	QOF_LOGI("qof stream off+\n");
-	mtk_imgsys_cmdq_qof_dump(0, false);
 	for (; qof_module < QOF_TOTAL_MODULE; qof_module++) {
 		qof_locked_set_engine_off(qof_module);
 	}
+	mtk_imgsys_cmdq_qof_dump(0, false);
 	QOF_LOGI("qof stream off-\n");
 }
 
