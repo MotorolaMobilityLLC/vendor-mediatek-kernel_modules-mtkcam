@@ -2540,6 +2540,19 @@ static int job_print_warn_desc(struct mtk_cam_job *job, const char *desc,
 			job->req_seq, job->frame_seq_no, desc);
 }
 
+static inline bool skip_trigger_KE(const char *desc)
+{
+	return (!strcmp(desc, MSG_M4U_TF));
+}
+
+static inline bool skip_when_sensor_error(const char *desc)
+{
+	return (!strcmp(desc, MSG_TG_GRAB_ERROR) ||
+			!strcmp(desc, MSG_TG_OVERRUN) ||
+			!strcmp(desc, MSG_DEQUE_ERROR) ||
+			!strcmp(desc, MSG_VSYNC_TIMEOUT));
+}
+
 static void trigger_error_dump(struct mtk_cam_job *job,
 			       const char *desc)
 {
@@ -2554,8 +2567,12 @@ static void trigger_error_dump(struct mtk_cam_job *job,
 		 job->scen_str, desc, warn_desc);
 
 	if (!job_debug_exception_dump(job, desc)) {
+		int seninf_dump_ret = 0;
 
 		job_dump_engines_debug_status(job);
+
+		seninf_dump_ret = (ctx->seninf) ?
+			mtk_cam_seninf_dump(ctx->seninf, job->frame_seq_no, true, true) : 0;
 
 		/**
 		 * NOTE: skip raise aee exception if
@@ -2563,7 +2580,8 @@ static void trigger_error_dump(struct mtk_cam_job *job,
 		 */
 		if (!ctx->is_sv_mraw_error) {
 			mtk_cam_event_error(&ctx->cam_ctrl, desc);
-			if (strcmp(desc, MSG_M4U_TF)) {
+			if (!(seninf_dump_ret && skip_when_sensor_error(desc)) &&
+				!skip_trigger_KE(desc)) {
 				// let SMMU trigger M4F TF KE
 				WRAP_AEE_EXCEPTION(desc, warn_desc);
 			}
@@ -6678,9 +6696,6 @@ static void job_dump_engines_debug_status(struct mtk_cam_job *job)
 
 	mtk_engine_dump_debug_status(cam, job->used_engine, dma_debug_dump);
 	if (ctx->seninf) {
-#ifdef NOT_FPGA_STAGE
-		mtk_cam_seninf_dump(ctx->seninf, job->frame_seq_no, false, false);
-#endif
 		vsync_collector_dump(&ctx->cam_ctrl.vsync_col);
 	}
 }
