@@ -213,6 +213,40 @@ void dump_topdebug_rdyreq(struct mtk_raw_device *dev)
 	}
 }
 
+static void dump_topdebug_fbc(struct mtk_raw_device *dev)
+{
+	static const u32 debug_fbc_sel[] = {
+		/* req group 1~7 */
+		0x0, 0x1, 0x2, 0x3,
+	};
+	void __iomem *dbg_set, *dbg_port;
+	u32 set = 0;
+	int i;
+
+	/* raw fbc */
+	dbg_set = dev->base + REG_CAMCTL_DBG_SET;
+	dbg_port = dev->base + REG_CAMCTL_DBG_PORT;
+	for (i = 0; i < ARRAY_SIZE(debug_fbc_sel); i++) {
+		SET_FIELD(&set, CAMCTL_DEBUG_TOP_SEL, 0x24);
+		SET_FIELD(&set, CAMCTL_DEBUG_MOD_SEL, debug_fbc_sel[i]);
+		writel(set | debug_fbc_sel[i], dbg_set);
+		dev_info(dev->dev, "RAW FBC debug_set 0x%08x port 0x%08x\n",
+			 readl(dbg_set), readl(dbg_port));
+	}
+
+	/* yuv fbc */
+	dbg_set = dev->yuv_base + REG_CAMCTL_DBG_SET;
+	dbg_port = dev->yuv_base + REG_CAMCTL_DBG_PORT;
+	for (i = 0; i < ARRAY_SIZE(debug_fbc_sel); i++) {
+		SET_FIELD(&set, CAMCTL_DEBUG_TOP_SEL, 0x24);
+		SET_FIELD(&set, CAMCTL_DEBUG_MOD_SEL, debug_fbc_sel[i]);
+		writel(set | debug_fbc_sel[i], dbg_set);
+		dev_info(dev->dev, "YUV FBC debug_set 0x%08x port 0x%08x\n",
+			 readl(dbg_set), readl(dbg_port));
+	}
+}
+
+
 void dump_topdebug_rdyreq_status(struct mtk_raw_device *dev)
 {
 	static const u32 debug_sel[] = {
@@ -248,6 +282,8 @@ void dump_topdebug_rdyreq_status(struct mtk_raw_device *dev)
 		dev_info(dev->dev, "RMS debug_req 0x%08x debug_rdy 0x%08x\n",
 			 readl(dbg_req), readl(dbg_rdy));
 	}
+
+	dump_topdebug_fbc(dev);
 }
 
 #define MAX_DEBUG_SIZE (32)

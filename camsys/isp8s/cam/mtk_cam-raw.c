@@ -1210,6 +1210,24 @@ static void dump_vcore_gals(struct mtk_raw_device *raw)
 	}
 }
 
+static void dump_dcm_status(struct mtk_raw_device *raw)
+{
+	struct mtk_cam_device *cam = raw->cam;
+	struct mtk_yuv_device *yuv = get_yuv_dev(raw);
+
+	dev_info(cam->dev, "%s RAW DCM status10/11/15 0x%08x 0x%08x 0x%08x\n",
+			 __func__,
+			 readl(raw->base + REG_CAMCTL_MOD10_DCM_STATUS),
+			 readl(raw->base + REG_CAMCTL_MOD11_DCM_STATUS),
+			 readl(raw->base + REG_CAMCTL_MOD15_DCM_STATUS));
+
+	dev_info(cam->dev, "%s YUV DCM status10/11/15 0x%08x 0x%08x 0x%08x\n",
+			 __func__,
+			 readl(yuv->base + REG_CAMCTL2_MOD10_DCM_STATUS),
+			 readl(yuv->base + REG_CAMCTL2_MOD11_DCM_STATUS),
+			 readl(yuv->base + REG_CAMCTL2_MOD15_DCM_STATUS));
+}
+
 int rawi_r2_slc_config(struct mtk_raw_device *raw_dev, int gid, int bid)
 {
 	u32 val;
@@ -2099,6 +2117,7 @@ static void raw_handle_yuv_dma_err(struct mtk_raw_device *raw_dev,
 	dump_wla_2_0(raw_dev);
 	dump_raw_slice_gals(raw_dev);
 	dump_vcore_gals(raw_dev);
+	dump_dcm_status(raw_dev);
 	dump_tcyso_dma_debug(yuv_dev);
 	qof_mtcmos_raw_voter(raw_dev, false);
 }
@@ -2137,6 +2156,7 @@ static void raw_handle_tg_overrun_err(struct mtk_raw_device *raw_dev,
 		dump_wla_2_0(raw_dev);
 		dump_raw_slice_gals(raw_dev);
 		dump_vcore_gals(raw_dev);
+		dump_dcm_status(raw_dev);
 	}
 
 	if (cnt < (OVERRUN_DUMP_CNT + raw_dev->sub_sensor_ctrl_en * 10))
@@ -3725,6 +3745,7 @@ int raw_dump_debug_status(struct mtk_raw_device *dev, int dma_debug_dump)
 	dump_wla_2_0(dev);
 	dump_raw_slice_gals(dev);
 	dump_vcore_gals(dev);
+	dump_dcm_status(dev);
 	qof_force_dump_all(dev);
 
 	if (dma_debug_dump) {
