@@ -262,9 +262,9 @@ struct mtkcam_ipi_config_param {
 	__u8 n_maps; /* maximum # of subdevs per stream */
 	struct mtkcam_ipi_hw_mapping maps[6];
 	__u8	sw_feature;
-	__u32	exp_order : 4;
-	__u32	frame_order : 4;
-	__u32	vsync_order : 4;
+	__u8	exp_order : 4;
+	__u8	frame_order : 4;
+	__u8	vsync_order : 4;
 	__u8	line_interleave;
 	__u8	ois_compensation;
 	__u8	all_exp_in_slc;
