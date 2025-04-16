@@ -656,7 +656,6 @@ void sv_reset_by_camsys_top(struct mtk_camsv_device *sv_dev)
 {
 	int cq_dma_sw_ctl;
 	int ret;
-	unsigned int vcore_gal;
 
 	dev_info(sv_dev->dev, "%s camsv_id:%d\n", __func__, sv_dev->id);
 
@@ -681,25 +680,10 @@ void sv_reset_by_camsys_top(struct mtk_camsv_device *sv_dev)
 	}
 	/* debug only, rm soon */
 	writel(0, sv_dev->base_scq + REG_CAMSVCQTOP_SW_RST_CTL);
-	// mraw
-	writel(0xDEADBEEF, sv_dev->top + 0x10);
-	pr_info("mraw sram_del: 0x%x", readl(sv_dev->top + 0x10));
-	// main
-	writel(0xDEADBEEF, sv_dev->cam->base + 0x10);
-	pr_info("main sram_del: 0x%x", readl(sv_dev->cam->base + 0x10));
-	// vcore
-	vcore_gal = readl(sv_dev->cam->vcore_base + 0x10);
-	pr_info("vcore gal read: 0x%x", readl(sv_dev->cam->vcore_base + 0x10));
-	vcore_gal &= ~(0x2000);
-	vcore_gal |= (1 << 13);
-	writel(vcore_gal, sv_dev->cam->vcore_base + 0x10);
-	pr_info("vcore gal write: 0x%x", readl(sv_dev->cam->vcore_base + 0x10));
+
 	writel(0, sv_dev->top + REG_CAM_MAIN_SW_RST_1);
-	pr_info("reset_dbg_step 1");
 	writel(3 << ((sv_dev->id) * 2 + 4), sv_dev->top + REG_CAM_MAIN_SW_RST_1);
-	pr_info("reset_dbg_step 2");
 	writel(0, sv_dev->top + REG_CAM_MAIN_SW_RST_1);
-	pr_info("reset_dbg_step 3");
 	wmb(); /* make sure committed */
 
 RESET_FAILURE:
@@ -1777,7 +1761,6 @@ int mtk_cam_slave_sv_dev_config(struct mtk_cam_ctx *ctx,
 	imgo_lsb = buf->daddr & 0xffffffff;
 	imgo_msb = buf->daddr >> 32;
 	imgo_stride = 0x1400 << 16 | 0x10;
-	pr_info("wen-jie debug %s buf address %llx", __func__, buf->daddr);
 	/* wdma basic / base address / format*/
 	CAMSV_WRITE_REG(slave_sv_dev->base_dma + REG_CAMSVDMATOP_WDMA_BASIC_IMG1_A, imgo_stride);
 	CAMSV_WRITE_REG(slave_sv_dev->base_dma + REG_CAMSVDMATOP_WDMA_BASE_ADDR_IMG1_A, imgo_lsb);
@@ -4190,7 +4173,6 @@ int mtk_camsv_runtime_suspend(struct device *dev)
 			dev_info(slave_sv_dev->dev, "%s:disable irq %d\n", __func__, slave_sv_dev->irq[i]);
 		}
 
-		pr_info("open slave power/clock/larb/irq -");
 		pr_info("%s slave sv device off", __func__);
 		mtk_cam_reset_qos(slave_sv_dev->dev, &slave_sv_dev->qos);
 		for (i = slave_sv_dev->num_clks - 1; i >= 0; i--)
