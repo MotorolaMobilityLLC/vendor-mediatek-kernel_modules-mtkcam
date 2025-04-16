@@ -592,8 +592,9 @@ static irqreturn_t mtk_irq_fmon(int irq, void *data)
 	fmon_setting2 = readl_relaxed(fmon->base + REG_CAM_FMON_SETTING_2);
 	fmon_setting3 = readl_relaxed(fmon->base + REG_CAM_FMON_SETTING_3);
 
-	dev_info(dev, "FMON INT: setting2:0x%x, setting3:0x%x, systimer:%llu ns, ktime: %llu ns\n",
-		fmon_setting2, fmon_setting3, systimer_cnt, sched_clock_value);
+	dev_info(dev, "FMON INT: setting2:0x%x, setting3:0x%x, funnel:0x%x, systimer:%llu ns, ktime: %llu ns\n",
+		fmon_setting2, fmon_setting3, readl(fmon->mminfra_funnel),
+		systimer_cnt, sched_clock_value);
 
 	/* fifo > 40% urgent start */
 	if (READ_FIELD(fmon_setting2, CAM_FMON_STATUS_0) & BIT(1) ||
@@ -695,6 +696,10 @@ int mtk_cam_fmon_probe(struct platform_device *pdev, struct mtk_cam_device *cam)
 	fmon->cti_clear = ioremap(0x3c82c018, 0x4);
 	if (IS_ERR(fmon->cti_clear))
 		dev_err(dev, "%s: failed to map cti_clear\n", __func__);
+
+	fmon->mminfra_funnel = ioremap(0x30a2f000, 0x4);
+	if (IS_ERR(fmon->mminfra_funnel))
+		dev_err(dev, "%s: failed to map mminfra_funnel\n", __func__);
 
 	/* raw/yuv */
 	fmon->raw_a_tx = ioremap(0x3a7d0900, 0x4);

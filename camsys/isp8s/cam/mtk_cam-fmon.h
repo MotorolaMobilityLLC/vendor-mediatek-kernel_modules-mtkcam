@@ -88,6 +88,7 @@ struct mtk_fmon_device {
 	void __iomem *ela_ctrl;
 	void __iomem *cti_set;
 	void __iomem *cti_clear;
+	void __iomem *mminfra_funnel;
 
 	struct mutex op_lock;
 	enum FMON_PIPE_INFO pipes[3];
