@@ -78,19 +78,25 @@ static inline unsigned int g_lbmf_exp_order(struct adaptor_ctx *ctx,
 		ret = (type == HDR_RAW_LBMF)
 			? EXP_ORDER_SE_1ST : EXP_ORDER_LE_1ST;
 
-		FSYNC_MGR_LOGI(ctx,
-			"[%s] ERROR: sidx:%d, detect sensor mode is LBMF type %d, but exp order is %d(LE_1st:%d/SE_1st:%d/NONE:%d/unknown:others) => treat as LBMF(hdr_mode:%d => SE_1st) / other(=> LE_1st, DCG+VSL(hdr_mode:%d,%d) => ret:%u(LE_1st:%u/SE_1st:%u)\n",
-			caller,
-			ctx->idx,
-			type,
-			prop_exp_order,
-			IMGSENSOR_LBMF_EXPOSURE_LE_FIRST,
-			IMGSENSOR_LBMF_EXPOSURE_SE_FIRST,
-			IMGSENSOR_LBMF_EXPOSURE_ORDER_SUPPORT_NONE,
-			HDR_RAW_LBMF,
-			HDR_RAW_DCG_RAW_VS, HDR_RAW_DCG_COMPOSE_VS,
-			ret,
-			EXP_ORDER_LE_1ST, EXP_ORDER_SE_1ST);
+		/**
+		 * when in LBMF mode => drv need to report the exp order => print.
+		 * when in DCG+VSL mode => currently force default LE 1st.
+		 */
+		if (type == HDR_RAW_LBMF) {
+			FSYNC_MGR_LOGI(ctx,
+				"[%s] ERROR: sidx:%d, detect sensor mode is LBMF type %d, but exp order is %d(LE_1st:%d/SE_1st:%d/NONE:%d/unknown:others) => treat as LBMF(hdr_mode:%d => SE_1st) / other(=> LE_1st, DCG+VSL(hdr_mode:%d,%d) => ret:%u(LE_1st:%u/SE_1st:%u)\n",
+				caller,
+				ctx->idx,
+				type,
+				prop_exp_order,
+				IMGSENSOR_LBMF_EXPOSURE_LE_FIRST,
+				IMGSENSOR_LBMF_EXPOSURE_SE_FIRST,
+				IMGSENSOR_LBMF_EXPOSURE_ORDER_SUPPORT_NONE,
+				HDR_RAW_LBMF,
+				HDR_RAW_DCG_RAW_VS, HDR_RAW_DCG_COMPOSE_VS,
+				ret,
+				EXP_ORDER_LE_1ST, EXP_ORDER_SE_1ST);
+		}
 		break;
 	}
 
