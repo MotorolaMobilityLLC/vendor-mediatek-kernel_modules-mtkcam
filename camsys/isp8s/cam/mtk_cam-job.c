@@ -1430,7 +1430,7 @@ _stream_on_only_sv(struct mtk_cam_job *job, bool on)
 	return 0;
 }
 
-static bool mtk_cam_fs_sync_frame(struct mtk_cam_job *job, int state)
+static bool sensor_command(struct mtk_cam_job *job, unsigned int cmd, void *arg)
 {
 	struct mtk_cam_request *req = job->req;
 	bool ret = false;
@@ -1440,15 +1440,27 @@ static bool mtk_cam_fs_sync_frame(struct mtk_cam_job *job, int state)
 	    job->sensor->ops->core &&
 	    job->sensor->ops->core->command) {
 		job->sensor->ops->core->command(job->sensor,
-						V4L2_CMD_FSYNC_SYNC_FRAME_START_END,
-						&state);
+						cmd, arg);
 		ret = true;
-	} else {
-		pr_info("%s:%s: find sensor command failed, state(%d)\n",
-			__func__, req->debug_str, state);
-	}
+	} else
+		pr_info("%s:%s: find sensor command failed, cmd(%d)\n",
+			__func__, req->debug_str, cmd);
 
 	return ret;
+}
+
+signed long long mtk_cam_fs_get_anchor(struct mtk_cam_job *job)
+{
+	signed long long anchor = 0;
+
+	sensor_command(job, V4L2_CMD_G_FSYNC_ANCHOR_INFO , (void *)&anchor);
+
+	return anchor;
+}
+
+static bool mtk_cam_fs_sync_frame(struct mtk_cam_job *job, int state)
+{
+	return sensor_command(job, V4L2_CMD_FSYNC_SYNC_FRAME_START_END, (void *)&state);
 }
 
 static bool frame_sync_start(struct mtk_cam_job *job)
@@ -1738,14 +1750,19 @@ _apply_sensor(struct mtk_cam_job *job)
 	struct mtk_cam_device *cam = ctx->cam;
 	struct mtk_cam_request *req = job->req;
 	struct v4l2_ctrl *ctrl;
+	struct mtk_seninf_frame_event_info seninf_fr_info;
 
 	if (!job->sensor_hdl_obj) {
 		dev_info(cam->dev, "[%s] warn. no sensor_hdl_obj to apply: ctx-%d seq 0x%x\n",
 			 __func__, ctx->stream_id, job->frame_seq_no);
-		ctx->cam_ctrl.sensor_sync_id= job->req_info_id;
-		ctx->cam_ctrl.sensor_seq = job->req_seq;
-		mtk_cam_seninf_frame_event_notify(job->seninf,
-			ctx->cam_ctrl.sensor_seq, ctx->cam_ctrl.sensor_sync_id);
+		seninf_fr_info.sensor_sync_id =
+			ctx->cam_ctrl.sensor_sync_id= job->req_info_id;
+		seninf_fr_info.sensor_sequence =
+			ctx->cam_ctrl.sensor_seq = job->req_seq;
+		seninf_fr_info.fs_anchor_ns =
+			ctx->cam_ctrl.frame_sync_anchor = mtk_cam_fs_get_anchor(job);
+
+		mtk_cam_seninf_frame_event_notify(job->seninf, &seninf_fr_info);
 		return 0;
 	}
 	if (job->req_sensor)
@@ -1757,12 +1774,17 @@ _apply_sensor(struct mtk_cam_job *job)
 		mtk_cam_set_sensor_mstream_mode(ctx, 0);
 
 	update_sensor_fmt(job);
-	ctx->cam_ctrl.sensor_sync_id = job->req_info_id;
-	ctx->cam_ctrl.sensor_seq = job->req_seq;
-	mtk_cam_seninf_frame_event_notify(job->seninf,
-		ctx->cam_ctrl.sensor_seq, ctx->cam_ctrl.sensor_sync_id);
 	v4l2_ctrl_request_setup(&req->req, job->sensor->ctrl_handler);
 	job->local_apply_sensor_ts = local_clock();
+
+	seninf_fr_info.sensor_sequence =
+		ctx->cam_ctrl.sensor_sync_id = job->req_info_id;
+	seninf_fr_info.sensor_sync_id =
+		ctx->cam_ctrl.sensor_seq = job->req_seq;
+	seninf_fr_info.fs_anchor_ns =
+		ctx->cam_ctrl.frame_sync_anchor = mtk_cam_fs_get_anchor(job);
+
+	mtk_cam_seninf_frame_event_notify(job->seninf, &seninf_fr_info);
 
 	frame_sync_end(job);
 

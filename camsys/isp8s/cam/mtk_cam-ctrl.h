@@ -163,6 +163,7 @@ struct mtk_cam_ctrl {
 	unsigned int sensor_seq;
 	unsigned int frame_sync_id;
 	unsigned int sensor_sync_id;
+	signed long long frame_sync_anchor;
 
 	struct mtk_cam_sof_gen sof_timer;
 };

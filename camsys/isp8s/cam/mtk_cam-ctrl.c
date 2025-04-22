@@ -374,8 +374,9 @@ void mtk_cam_event_frame_sync(struct mtk_cam_ctrl *cam_ctrl,
 		.frame_sync_id = cam_ctrl->frame_sync_id,
 		.sensor_sync_id = cam_ctrl->sensor_sync_id,
 		.ts_ns = cam_ctrl->r_info.sof_ts_ns,
+		.fs_anchor_ns = cam_ctrl->frame_sync_anchor,
 	};
-	memcpy(event.u.data, &data, 24);
+	memcpy(event.u.data, &data, 32);
 	if (ctx->has_raw_subdev)
 		mtk_cam_ctx_send_raw_event(ctx, &event);
 	else
@@ -2282,10 +2283,16 @@ void mtk_cam_ctrl_sensor_job_enque(struct mtk_cam_ctrl *cam_ctrl,
 	mtk_cam_ctrl_update_seq(cam_ctrl, job);
 
 	if (!job->sensor_hdl_obj && !job->is_raw_trigger_sensor) {
-		cam_ctrl->sensor_sync_id= job->req_info_id;
-		cam_ctrl->sensor_seq = job->req_seq;
-		mtk_cam_seninf_frame_event_notify(job->seninf,
-			cam_ctrl->sensor_seq, cam_ctrl->sensor_sync_id);
+		struct mtk_seninf_frame_event_info seninf_fr_info;
+
+		seninf_fr_info.sensor_sync_id =
+			cam_ctrl->sensor_sync_id = job->req_info_id;
+		seninf_fr_info.sensor_sequence =
+			cam_ctrl->sensor_seq = job->req_seq;
+		seninf_fr_info.fs_anchor_ns =
+			cam_ctrl->frame_sync_anchor = mtk_cam_fs_get_anchor(job);
+
+		mtk_cam_seninf_frame_event_notify(job->seninf, &seninf_fr_info);
 		pr_info("no sensor obj: #%d , sync_id:%d\n",
 				job->req_seq, job->req_info_id);
 	}

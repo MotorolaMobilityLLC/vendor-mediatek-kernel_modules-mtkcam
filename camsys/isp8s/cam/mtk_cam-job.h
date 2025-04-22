@@ -762,4 +762,6 @@ int mtk_cam_job_uninit_pda_engine(struct mtk_cam_job *job,
 	unsigned long unit_engs);
 bool mtk_cam_job_enable_cq_rdy_mask(struct mtk_cam_job *job);
 
+signed long long mtk_cam_fs_get_anchor(struct mtk_cam_job *job);
+
 #endif //__MTK_CAM_JOB_H
