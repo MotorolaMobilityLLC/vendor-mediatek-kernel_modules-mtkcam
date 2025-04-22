@@ -709,6 +709,12 @@ static void handle_frame_done(struct mtk_cam_ctrl *ctrl,
 	struct mtk_cam_job *job;
 	int req_seq_no;
 
+	if (atomic_read(&ctrl->is_error) && engine_type == CAMSYS_ENGINE_RAW) {
+		pr_info("%s: warn. bypass eng %d-%d seq 0x%x frame done\n",
+			__func__, engine_type, engine_id, seq_no);
+		return;
+	}
+
 	job = mtk_cam_ctrl_get_job(ctrl, cond_frame_no_belong, &seq_no);
 
 	/*
@@ -965,8 +971,10 @@ static void ctrl_vsync_preprocess(struct mtk_cam_ctrl *ctrl,
 			ctrl->hw_hang_count_down);
 
 		--ctrl->hw_hang_count_down;
-		if (!ctrl->hw_hang_count_down)
+		if (!ctrl->hw_hang_count_down) {
+			atomic_set(&ctrl->is_error, 0);
 			mtk_cam_ctrl_send_event(ctrl, CAMSYS_EVENT_HW_HANG);
+		}
 	}
 
 	spin_lock(&ctrl->info_lock);
@@ -2536,6 +2544,7 @@ void mtk_cam_ctrl_start(struct mtk_cam_ctrl *cam_ctrl, struct mtk_cam_ctx *ctx)
 
 	atomic_set(&cam_ctrl->stopped, 0);
 	atomic_set(&cam_ctrl->stream_on_cnt, 1);
+	atomic_set(&cam_ctrl->is_error, 0);
 
 	init_waitqueue_head(&cam_ctrl->event_wq);
 	init_waitqueue_head(&cam_ctrl->done_wq);
@@ -3364,7 +3373,7 @@ int mtk_cam_ctrl_notify_hw_hang(struct mtk_cam_device *cam,
 	if (!current_job)
 		return 0;
 
-	if (is_dc_mode(current_job)) {
+	if (is_dc_mode(current_job) && !atomic_cmpxchg(&ctrl->is_error, 0, 1)) {
 		next_job = mtk_cam_ctrl_get_job(ctrl, cond_frame_no_belong, &next_seq_no);
 		if (next_job && next_job->seamless_switch) {
 			ctrl->hw_hang_count_down = 0;
@@ -3376,7 +3385,7 @@ int mtk_cam_ctrl_notify_hw_hang(struct mtk_cam_device *cam,
 			 * count frames before doing recovery to avoid various hw timing.
 			 * 'set 10 to enable recovery'
 			 */
-			ctrl->hw_hang_count_down = (DISABLE_RECOVER_FLOW) ? 0 : 10;
+			ctrl->hw_hang_count_down = (DISABLE_RECOVER_FLOW) ? 0 : 2;
 			current_job->is_error = 1;
 		}
 

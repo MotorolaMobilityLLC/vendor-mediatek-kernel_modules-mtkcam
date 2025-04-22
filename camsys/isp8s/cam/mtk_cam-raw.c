@@ -1429,7 +1429,6 @@ void reset(struct mtk_raw_device *dev)
 	raw_writel(0, dev, dev->base, REG_CAMCTL_SW_CTL);
 	raw_writel(0, dev, dev->base, REG_CAMCTL_GLOBAL_HW_RST_CTL);
 
-	reset_int_en(dev);
 	set_dl_en(dev);
 
 RESET_FAILURE:
@@ -2825,6 +2824,7 @@ int mtk_raw_runtime_resume(struct device *dev)
 		cg_dump_and_test(dev, CG_RAW, 0);
 
 	reset(drvdata);
+	reset_int_en(drvdata);
 	reset_camctl_misc(drvdata);
 	qof_dump_int_en_addr(drvdata);
 	dump_raw_slice_gals(drvdata);
