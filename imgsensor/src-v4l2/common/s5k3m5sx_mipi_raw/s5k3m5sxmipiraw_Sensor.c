@@ -28,6 +28,7 @@ static int s5k3m5sx_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 static int s5k3m5sx_set_test_pattern_data(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
 static void s5k3m5sx_sensor_init(struct subdrv_ctx *ctx);
+static int get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
 static int open(struct subdrv_ctx *ctx);
 
 /* STRUCT */
@@ -655,7 +656,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.eeprom_info = PARAM_UNDEFINED,
 	.eeprom_num = PARAM_UNDEFINED,
 	.resolution = {4208, 3120},
-	.mirror = IMAGE_HV_MIRROR,
+	.mirror = IMAGE_NORMAL,
 
 	.mclk = 24,
 	.isp_driving_current = ISP_DRIVING_4MA,
@@ -664,7 +665,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.mipi_lane_num = SENSOR_MIPI_4_LANE,
 	.ob_pedestal = 0x40,
 
-	.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_Gb,
+	.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_Gr,
 	.ana_gain_def = BASEGAIN * 4,
 	.ana_gain_min = BASEGAIN * 1,
 	.ana_gain_max = BASEGAIN * 16,
@@ -717,7 +718,7 @@ static struct subdrv_static_ctx static_ctx = {
 };
 
 static struct subdrv_ops ops = {
-	.get_id = common_get_imgsensor_id,
+	.get_id = get_imgsensor_id,
 	.init_ctx = init_ctx,
 	.open = open,
 	.get_info = common_get_info,
@@ -832,13 +833,50 @@ static void s5k3m5sx_sensor_init(struct subdrv_ctx *ctx)
 	DRV_LOG(ctx, "X\n");
 }
 
+static int get_imgsensor_id(struct subdrv_ctx *ctx, UINT32 *sensor_id)
+{
+	kal_uint8 i = 0;
+	kal_uint8 retry = 2;
+
+	while (ctx->s_ctx.i2c_addr_table[i] != 0xFF) {
+		ctx->i2c_write_id = ctx->s_ctx.i2c_addr_table[i];
+		do {
+			*sensor_id = (subdrv_i2c_rd_u8(ctx, 0x0000) << 8) |
+				subdrv_i2c_rd_u8(ctx, 0x0001);
+			if (*sensor_id == 0x30d5) {
+				*sensor_id = ctx->s_ctx.sensor_id;
+				DRV_LOG(ctx, "i2c write id: 0x%x, sensor id: 0x%x\n",
+					ctx->i2c_write_id, *sensor_id);
+				if (ctx->i2c_write_id == 0x5a) {
+					ctx->s_ctx.mirror = IMAGE_HV_MIRROR;
+					ctx->s_ctx.sensor_output_dataformat =
+						SENSOR_OUTPUT_FORMAT_RAW_Gb;
+				}
+				return ERROR_NONE;
+			}
+			DRV_LOG(ctx, "Read sensor id fail, id: 0x%x\n",
+				ctx->i2c_write_id);
+			DRV_LOG(ctx, "sensor_id = 0x%x, ctx->s_ctx.sensor_id = 0x%x\n",
+				*sensor_id, ctx->s_ctx.sensor_id);
+			retry--;
+		} while (retry > 0);
+		i++;
+		retry = 2;
+	}
+	if (*sensor_id != ctx->s_ctx.sensor_id) {
+		*sensor_id = 0xFFFFFFFF;
+		return ERROR_SENSOR_CONNECT_FAIL;
+	}
+	return ERROR_NONE;
+}
+
 static int open(struct subdrv_ctx *ctx)
 {
 	u32 sensor_id = 0;
 	u32 scenario_id = 0;
 
 	/* get sensor id */
-	if (common_get_imgsensor_id(ctx, &sensor_id) != ERROR_NONE)
+	if (get_imgsensor_id(ctx, &sensor_id) != ERROR_NONE)
 		return ERROR_SENSOR_CONNECT_FAIL;
 
 	/* initail setting */
