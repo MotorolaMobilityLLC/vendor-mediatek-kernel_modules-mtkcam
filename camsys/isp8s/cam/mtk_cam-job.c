@@ -5783,10 +5783,13 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 		for (i = SVTAG_START; i < SVTAG_END; i++) {
 			if (job->enabled_tags & (1 << i)) {
 				sv_input = &config->sv_input[i];
-
-				if (scen_support_sv_bin(&job->job_scen))
-					sv_input->is_sv_bin = true;
-
+				sv_input->is_sv_bin = false;
+				if (scen_support_sv_bin(&job->job_scen)) {
+					if (scen_is_dcg_vs(&job->job_scen) && i == SVTAG_1)
+						sv_input->is_sv_bin = true;
+					else if (scen_is_stagger_dol(&job->job_scen) && i == SVTAG_2)
+						sv_input->is_sv_bin = true;
+				}
 				sv_input->dev_id = sv_dev->id + MTKCAM_SUBDEV_CAMSV_START;
 				sv_input->tag_id = i;
 				sv_input->tag_order = job->tag_info[i].tag_order;
