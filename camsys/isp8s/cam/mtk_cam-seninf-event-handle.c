@@ -757,7 +757,7 @@ void notify_sensor_set_fl_prolong(struct v4l2_subdev *sd,
 }
 
 void mtk_cam_seninf_frame_event_notify(struct v4l2_subdev *sd,
-	u32 sensor_sequence, u32 sensor_sync_id)
+	struct mtk_seninf_frame_event_info *info)
 {
 	struct seninf_ctx *ctx = container_of(sd, struct seninf_ctx, subdev);
 
@@ -766,8 +766,14 @@ void mtk_cam_seninf_frame_event_notify(struct v4l2_subdev *sd,
 		return;
 	}
 
+	if (unlikely(info == 0)) {
+		pr_info("[error] info is NULL\n");
+		return;
+	}
+
 	mutex_lock(&ctx->mutex_vsync_in);
-	ctx->sensor_sequence = sensor_sequence;
-	ctx->sensor_sync_id = sensor_sync_id;
+	ctx->vsync_in_event_info.sensor_sequence = info->sensor_sequence;
+	ctx->vsync_in_event_info.sensor_sync_id = info->sensor_sync_id;
+	ctx->vsync_in_event_info.fs_anchor_ns = info->fs_anchor_ns;
 	mutex_unlock(&ctx->mutex_vsync_in);
 }

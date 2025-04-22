@@ -362,15 +362,28 @@ void notify_sensor_set_fl_prolong(struct v4l2_subdev *sd,
  */
 int seninf_s_stream(struct v4l2_subdev *sd, int enable);
 
+
+
+/**
+ * struct for mtk_cam_seninf_frame_event_notify
+ *
+ * @param sensor_sequence sensor sequence number from middleware event
+ * @param sensor_sync_id  sensor sync id number from middleware event
+ * @param fs_anchor_ns  sensor anchor offset info in ns as unit
+ */
+struct mtk_seninf_frame_event_info {
+	u32 sensor_sequence;
+	u32 sensor_sync_id;
+	long long fs_anchor_ns;
+};
 /**
  * Notify event frame sync info to seninf
  *
  * @param sd v4l2_subdev
- * @param sensor_sequence sensor sequence number from middleware event
- * @param sensor_sync_id  sensor sync id number from middleware event
+ * @param info mtk_seninf_pad_data_info
  */
 void mtk_cam_seninf_frame_event_notify(struct v4l2_subdev *sd,
-	u32 sensor_sequence, u32 sensor_sync_id);
+	struct mtk_seninf_frame_event_info *info);
 
 /**
  * Temp API for HP9 signal interference used,

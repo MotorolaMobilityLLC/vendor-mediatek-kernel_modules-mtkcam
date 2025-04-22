@@ -71,12 +71,13 @@ void mtk_cam_seninf_v4l2_event_sof_notify(
 
 	mutex_lock(&ctx->mutex_vsync_in);
 	ctx->vsync_in_frame_seq_no++;
-	data.sensor_sequence = ctx->sensor_sequence;
-	data.sensor_sync_id = ctx->sensor_sync_id;
+	data.sensor_sequence = ctx->vsync_in_event_info.sensor_sequence;
+	data.sensor_sync_id = ctx->vsync_in_event_info.sensor_sync_id;
+	data.fs_anchor_ns = ctx->vsync_in_event_info.fs_anchor_ns;
 	data.ts_ns = p_info->sys_ts_ns;
 	mutex_unlock(&ctx->mutex_vsync_in);
 
-	memcpy(event.u.data, &data, 24);
+	memcpy(event.u.data, &data, 32);
 	event.type = V4L2_EVENT_FRAME_SYNC;
 	event.u.frame_sync.frame_sequence = ctx->vsync_in_frame_seq_no;
 

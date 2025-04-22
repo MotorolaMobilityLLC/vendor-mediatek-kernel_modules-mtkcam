@@ -16,6 +16,7 @@
 #include "mtk_cam-seninf-rproc-ctrl.h"
 #include "imgsensor-user.h"
 #include "mtk_cam-seninf-regs.h"
+#include "mtk_cam-seninf-if.h"
 #include "mtk_cam-aov.h"
 #include "mtk_cam-aov-data-isp8s.h"
 #include <linux/atomic.h>
@@ -578,9 +579,8 @@ struct seninf_ctx {
 
 	/* Vsync in*/
 	struct mutex mutex_vsync_in;
-	u32 sensor_sequence;
-	u32 sensor_sync_id;
 	u32 vsync_in_frame_seq_no;
+	struct mtk_seninf_frame_event_info vsync_in_event_info;
 
 	/* Rdy msk for DCG+VS */
 	struct mtk_cam_seninf_rdy_msk_defer_info rdy_msk_defer_info;
