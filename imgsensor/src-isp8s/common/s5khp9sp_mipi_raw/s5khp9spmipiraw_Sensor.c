@@ -320,15 +320,17 @@ static int s5khp9sp_i3c_pre_config(struct subdrv_ctx *ctx)
 				0x6068, 0x1B73);
 		ret |= adaptor_ixc_wr_u16(&ctx->i2c_vir_client, ctx->pre_cfg_addr,
 				0x6014, 0x0001);
+		mdelay(20);
 		ret |= adaptor_ixc_wr_u16(&ctx->i2c_vir_client, ctx->pre_cfg_addr,
 				0x6094, 0x0000);
+		ret |= adaptor_ixc_wr_u16(&ctx->i2c_vir_client, ctx->pre_cfg_addr,
+				0x6062, 0x0000);
 		if (ret) {
 			DRV_LOGE(ctx, "fail. ret=%d\n", ret);
 			return ERROR_SENSOR_CONNECT_FAIL;
 		}
 		DRV_LOG_MUST(ctx, "success. ret=%d, setting_len: %d\n",
 				ret, ctx->s_ctx.i3c_precfg_setting_len);
-		mdelay(20);
 	}
 	return ERROR_NONE;
 } /* pre_config */
