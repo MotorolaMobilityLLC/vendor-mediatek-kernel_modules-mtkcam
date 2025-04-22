@@ -729,8 +729,23 @@ static int mtk_cam_seninf_enable_cam_mux_vsync_irq(struct seninf_ctx *ctx, bool 
 
 static int mtk_cam_seninf_set_outmux_cg(struct seninf_ctx *ctx, int outmux, int en)
 {
-	// Always on outmux cg to avoid write racing between aov scp side
+	void *pSeninf_top = ctx->reg_if_top;
+	u32 outmux_current_cg = 0;
 
+	if (outmux >= _seninf_ops->outmux_num) {
+		seninf_logi(ctx, "[ERR]raise outmux%d is out of boundary %d",
+			outmux, _seninf_ops->outmux_num);
+		return -EINVAL;
+	}
+
+	// dynamic on / off specific outmux
+	mutex_lock(&ctx->core->seninf_top_rg_mutex);
+	outmux_current_cg = SENINF_READ_REG(pSeninf_top, SENINF_TOP_OUTMUX_CG_EN);
+	outmux_current_cg = (en) ?
+		(outmux_current_cg | (1 << outmux)) :
+		(outmux_current_cg & ~(1 << outmux));
+	SENINF_BITS(pSeninf_top, SENINF_TOP_OUTMUX_CG_EN, SENINF_TOP_OUTMUX_CG_EN, outmux_current_cg);
+	mutex_unlock(&ctx->core->seninf_top_rg_mutex);
 	return 0;
 }
 
@@ -5748,6 +5763,7 @@ static int mtk_cam_seninf_debug_current_status(struct seninf_ctx *ctx)
 	enum CSI_PORT csi_port = CSI_PORT_0;
 	char *fmeter_dbg = kzalloc(sizeof(char) * 256, GFP_KERNEL);
 	void *pSeninf_asytop = ctx->reg_if_async;
+	void *pSeninf_top = ctx->reg_if_top;
 	void *pSeninf_outmux = NULL;
 	static unsigned long long last_caller_ts;
 	const unsigned long long dump_duration  = 33000000; // 33ms
@@ -5947,6 +5963,11 @@ static int mtk_cam_seninf_debug_current_status(struct seninf_ctx *ctx)
 		SENINF_READ_BITS(pSeninf_asytop, SENINF_ASYTOP_SENINF_ASYNC_FIFO_BIST_CTRL_5,
 				 SENINF_ASYTOP_AFIFO_BIST_RST_5));
 
+	seninf_logi(ctx, "seninf_top TOP_CTL(0x%x),ASY_CG(0x%x),OUTMUX_CG(0x%x),ASY_OVERRUN_IRQEN(0x%x)",
+		    SENINF_READ_REG(pSeninf_top, SENINF_TOP_CTRL),
+		    SENINF_READ_REG(pSeninf_top, SENINF_TOP_ASYNC_CG_EN),
+		    SENINF_READ_REG(pSeninf_top, SENINF_TOP_OUTMUX_CG_EN),
+		    SENINF_READ_REG(pSeninf_top, SENINF_TOP_ASYNC_OVERRUN_IRQ_EN));
 	/* dump all outmux */
 	for (j = 0; j < ctx->vcinfo.cnt; j++) {
 		if (ctx->vcinfo.vc[j].enable) {
@@ -8213,9 +8234,8 @@ static int mtk_cam_seninf_common_reg_setup(struct seninf_ctx *ctx)
 	mutex_lock(&ctx->core->seninf_top_rg_mutex);
 	//SENINF_BITS(pSeninf_top, SENINF_TOP_CTRL, SENINF_TOP_SW_CFG_LEVEL, 1);
 
-	// enable all async and outmux cg
+	// enable all async
 	SENINF_BITS(pSeninf_top, SENINF_TOP_ASYNC_CG_EN, SENINF_TOP_ASYNC_CG_EN, 0xffffffff);
-	SENINF_BITS(pSeninf_top, SENINF_TOP_OUTMUX_CG_EN, SENINF_TOP_OUTMUX_CG_EN, 0xffffffff);
 
 	// async overrun irq en
 	SENINF_WRITE_REG(pSeninf_top, SENINF_TOP_ASYNC_OVERRUN_IRQ_EN, 0xffffffff);
