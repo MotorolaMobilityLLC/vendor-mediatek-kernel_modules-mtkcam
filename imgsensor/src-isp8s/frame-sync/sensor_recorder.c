@@ -772,7 +772,7 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 void frec_setup_frame_rec_by_fs_streaming_st(struct FrameRecord *p_frame_rec,
 	const struct fs_streaming_st *sensor_info)
 {
-	memset(p_frame_rec, 0, sizeof(*p_frame_rec));
+	memset(p_frame_rec, 0, sizeof(struct FrameRecord));
 
 	/* init/setup sensor frame recorder */
 	p_frame_rec->shutter_lc = sensor_info->def_shutter_lc;
@@ -804,7 +804,7 @@ void frec_setup_frame_rec_by_fs_streaming_st(struct FrameRecord *p_frame_rec,
 void frec_setup_frame_rec_by_fs_perframe_st(struct FrameRecord *p_frame_rec,
 	const struct fs_perframe_st *pf_ctrl)
 {
-	memset(p_frame_rec, 0, sizeof(*p_frame_rec));
+	memset(p_frame_rec, 0, sizeof(struct FrameRecord));
 
 	/* init/setup sensor frame recorder */
 	p_frame_rec->shutter_lc = pf_ctrl->shutter_lc;

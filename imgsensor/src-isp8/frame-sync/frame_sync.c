@@ -1112,9 +1112,9 @@ static void fs_set_hw_sync_info(const unsigned int idx, const unsigned int flag,
 {
 	/* means no using HW solution */
 	/* hw sync mode equal to 0 (means using SW solution) */
-	/* will be retruned at the start of this function, */
-	/* so exclude that case should all using hw sync solution */
-	if (hw_sync_mode == 0)
+	/* will be retruned at the start of this function while streamon */
+	/* But excute the function to clear info when streamoff */
+	if ((hw_sync_mode == 0) && flag)
 		return;
 
 	/* error handling */

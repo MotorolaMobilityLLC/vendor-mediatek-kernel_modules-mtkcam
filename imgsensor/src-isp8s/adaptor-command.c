@@ -406,6 +406,29 @@ static int g_cmd_dgc_vsl_linetime_info(struct adaptor_ctx *ctx, void *arg)
 	return ret;
 }
 
+static int g_cmd_fsync_anchor_info(struct adaptor_ctx *ctx, void *arg)
+{
+	long long *buf = NULL;
+	int ret = 0;
+
+	/* unexpected case, arg is nullptr */
+	if (unlikely((chk_input_arg(ctx, arg, &ret, __func__)) != 0))
+		return ret;
+
+	buf = (long long *)arg;
+
+	/* call to fsync to fill in the info */
+	notify_fsync_mgr_g_latest_anchor_info(ctx, buf);
+
+#ifndef REDUCE_ADAPTOR_COMMAND_LOG
+	adaptor_logi(ctx,
+		"V4L2_CMD_G_FSYNC_ANCHOR_INFO, idx:%d, result:%lld\n",
+		ctx->idx, *buf);
+#endif
+
+	return ret;
+}
+
 static int s_cmd_sensor_broadcast_event(struct adaptor_ctx *ctx, void *arg)
 {
 	int ret = 0;
@@ -949,6 +972,7 @@ static const struct command_entry command_list[] = {
 	{V4L2_CMD_G_INSERTION_LOSS_PARAM, g_cmd_insertion_loss_param},
 	{V4L2_CMD_G_CUST_CTLE_CONFIG, g_cmd_cust_ctle_config},
 	{V4L2_CMD_G_DCG_VSL_LINETIME_INFO, g_cmd_dgc_vsl_linetime_info},
+	{V4L2_CMD_G_FSYNC_ANCHOR_INFO, g_cmd_fsync_anchor_info},
 
 	/* SET */
 	{V4L2_CMD_SET_CB_FUNC_OF_FAKE_SENSOR, set_cb_func_of_fake_sensor},

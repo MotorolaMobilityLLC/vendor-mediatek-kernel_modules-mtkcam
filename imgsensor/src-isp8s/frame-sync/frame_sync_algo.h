@@ -77,6 +77,13 @@ void fs_alg_get_fl_rec_st_info(const unsigned int idx,
 
 
 /*******************************************************************************
+ * For MW get anchor bias (to 1st-SOF) functions
+ ******************************************************************************/
+void fs_alg_get_latest_anchor_info(const unsigned int idx,
+	long long *p_anchor_bias_ns);
+
+
+/*******************************************************************************
  * fs algo operation functions (set information data)
  ******************************************************************************/
 void fs_alg_set_n_1_on_off_flag(const unsigned int idx, const unsigned int flag);

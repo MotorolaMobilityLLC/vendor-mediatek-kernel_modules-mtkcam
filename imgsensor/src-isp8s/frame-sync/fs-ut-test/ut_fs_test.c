@@ -2979,7 +2979,9 @@ static void ut_trigger_ext_ctrl(struct fs_perframe_st *p_pf_ctrl)
 
 
 			if (g_ext_ctrls[i].do_seamless_switch_at_n_run == g_counter) {
-				printf(GREEN
+				long long anchor_bias_ns;
+
+				printf(PURPLE
 					"[UT seamless ctrl] call seamless switch, g_counter:%u\n"
 					NONE,
 					g_counter);
@@ -2997,17 +2999,26 @@ static void ut_trigger_ext_ctrl(struct fs_perframe_st *p_pf_ctrl)
 					frameSync->fs_seamless_switch(p_pf_ctrl->sensor_id,
 							&seamless_info, g_counter);
 
+					frameSync->fs_get_latest_anchor_info(
+						p_pf_ctrl->sensor_id, &anchor_bias_ns);
 					break;
 				case BY_SENSOR_IDX:
 					frameSync->fs_seamless_switch(p_pf_ctrl->sensor_idx,
 							&seamless_info, g_counter);
 
+					frameSync->fs_get_latest_anchor_info(
+						p_pf_ctrl->sensor_idx, &anchor_bias_ns);
 					break;
 				default:
 					printf(
 						"\n=== Run in defalut case, not assign register method ===\n");
 					break;
 				}
+
+				printf(PURPLE
+					"[UT seamless ctrl] call seamless switch, g_counter:%u ==> anchor_bias:%lld(us)\n"
+					NONE,
+					g_counter, (anchor_bias_ns/1000));
 
 			} else {
 
@@ -3178,6 +3189,7 @@ static void ut_ctrl_request_setup(void)
 	int user_select_idx = 2147483647, /*input = 0,*/ ret = 0;
 	unsigned int target_min_fl_us, out_fl_us;
 	unsigned int i = 0;
+	long long anchor_bias_ns;
 
 
 	for (i = 0; ; ++i) {
@@ -3250,12 +3262,18 @@ static void ut_ctrl_request_setup(void)
 			frameSync->fs_get_fl_record_info(
 				pf_ctrl.sensor_id,
 				&target_min_fl_us, &out_fl_us);
+
+			frameSync->fs_get_latest_anchor_info(
+				pf_ctrl.sensor_id, &anchor_bias_ns);
 			break;
 
 		case BY_SENSOR_IDX:
 			frameSync->fs_get_fl_record_info(
 				pf_ctrl.sensor_idx,
 				&target_min_fl_us, &out_fl_us);
+
+			frameSync->fs_get_latest_anchor_info(
+				pf_ctrl.sensor_idx, &anchor_bias_ns);
 			break;
 
 		default:
@@ -3265,11 +3283,12 @@ static void ut_ctrl_request_setup(void)
 			break;
 		}
 		printf(GREEN
-			"[UT ctrl_request_setup] g_counter:%u => i:%u, sensor_id:%#x, sensor_idx:%u, target_min_fl_us:%u, out_fl_us:%u\n"
+			"[UT ctrl_request_setup] g_counter:%u => i:%u, sensor_id:%#x, sensor_idx:%u ==> target_min_fl_us:%u, out_fl_us:%u, anchor_bias:%lld(us)\n"
 			NONE,
 			g_counter, i, pf_ctrl.sensor_id, pf_ctrl.sensor_idx,
 			target_min_fl_us,
-			out_fl_us);
+			out_fl_us,
+			(anchor_bias_ns/1000));
 
 
 		if (!g_auto_run)

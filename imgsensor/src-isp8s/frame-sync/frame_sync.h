@@ -450,6 +450,9 @@ struct FrameSync {
 	void (*fs_get_fl_record_info)(const unsigned int ident,
 		unsigned int *p_target_min_fl_us, unsigned int *p_out_fl_us);
 
+	void (*fs_get_latest_anchor_info)(const unsigned int ident,
+		long long *p_anchor_bias_ns);
+
 	void (*fs_clear_fl_restore_status_if_needed)(const unsigned int ident);
 
 	unsigned int (*fs_chk_bcast_for_re_ctrl_fl)(const unsigned int ident,

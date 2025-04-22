@@ -125,6 +125,7 @@ struct FrameSyncDynamicPara {
 	/* sync target ts bias (for feature that sync to non-1st exp) */
 	unsigned int ts_bias_us;
 	unsigned int m_last_ts_bias_us;
+	int anchor_bias_us;             /* For MW, SOF anchor bias */
 
 	/* N:1 sync */
 	unsigned int f_tag;
@@ -257,6 +258,7 @@ struct FrameSyncInst {
 	/* => last ts bias will be updated when receive pre-latch from SenRec */
 	FS_Atomic_T ts_bias_us;
 	FS_Atomic_T last_ts_bias_us; /* => preivous ts bias */
+	FS_Atomic_T anchor_bias_us;  /* For MW, SOF anchor bias */
 
 	unsigned int vsyncs_updated:1;
 
@@ -1326,7 +1328,7 @@ static inline void fs_alg_sa_adjust_diff_m_s_general_msg_connector(
 	const char *caller)
 {
 	FS_SNPRF(log_str_len, log_buf, len,
-		", [((%u:%u)c:%u/n:%u/o:%u/s:%u/e:%u(%u/%u|m_p:%u)/t:%u(%u/%u),%u(%u->%u))/((%u:%u)c:%u/n:%u/o:%u/s:%u/e:%u(%u/%u)/t:%u(%u/%u),%u(%u->%u))],mFL:%u/%u,lineT:%u/%u,roT(%#x):%u/%u",
+		", [((%u:%u)c:%u/n:%u/o:%u/s:%u/e:%u(%u/%u|m_p:%u)/t:%u(%u/%u),%u(%u->%u))/((%u:%u)c:%u/n:%u/o:%u/s:%u/e:%u(%u/%u)/t:%u(%u/%u),%u(%u->%u))],mFL:%u/%u,lineT:%u/%u,roT(%#x):%u/%u,anch:%d/%d",
 		fs_inst[s_idx].fl_active_delay,
 		p_para_s->delta,
 		p_para_s->pred_fl_us[0],
@@ -1364,7 +1366,9 @@ static inline void fs_alg_sa_adjust_diff_m_s_general_msg_connector(
 		fs_inst[m_idx].lineTimeInNs,
 		p_para_s->sa_cfg.rout_center_en_bits,
 		fs_inst[s_idx].readout_time_us,
-		fs_inst[m_idx].readout_time_us);
+		fs_inst[m_idx].readout_time_us,
+		p_para_s->anchor_bias_us,
+		p_para_m->anchor_bias_us);
 
 	fs_alg_sa_ts_info_m_s_msg_connector(
 		m_idx, s_idx, p_para_m, p_para_s,
@@ -1477,7 +1481,7 @@ static inline void fs_alg_dump_perframe_data(unsigned int idx)
 void fs_alg_dump_fs_inst_data(const unsigned int idx)
 {
 	LOG_MUST(
-		"[%u] ID:%#x(sidx:%u/inf:%u), (req:%d/f:%u/%u), tg:%u, fdelay:%u, fl_lc(def/min/max/out):%u/%u/%u/%u(%u), pred_fl(c:%u(%u)/n:%u(%u)), shut_lc:%u(def:%u), margin_lc:%u, flk_en:%u, lineTime:%u, readout(us):%u, f_cell:%u, f_tag:%u, n_1:%u, hdr_exp(c(%u/%u/%u/%u/%u, %u/%u, %u/%u), prev(%u/%u/%u/%u/%u, %u/%u, %u/%u), cnt:(mode/ae), read(len/margin)), ts(%llu/%llu/%llu/%llu, %llu/+(%llu)/%u)\n",
+		"[%u] ID:%#x(sidx:%u/inf:%u), (req:%d/f:%u/%u), tg:%u, fdelay:%u, fl_lc(def/min/max/out):%u/%u/%u/%u(%u), pred_fl(c:%u(%u)/n:%u(%u)), shut_lc:%u(def:%u), margin_lc:%u, flk_en:%u, lineTime:%u, readout(us):%u, f_cell:%u, f_tag:%u, n_1:%u, hdr_exp(c(%u/%u/%u/%u/%u, %u/%u, %u/%u), prev(%u/%u/%u/%u/%u, %u/%u, %u/%u), cnt:(mode/ae), read(len/margin)), anchor:%d, ts(%llu/%llu/%llu/%llu, %llu/+(%llu)/%u)\n",
 		idx,
 		fs_get_reg_sensor_id(idx),
 		fs_get_reg_sensor_idx(idx),
@@ -1523,6 +1527,7 @@ void fs_alg_dump_fs_inst_data(const unsigned int idx)
 		fs_inst[idx].prev_hdr_exp.ae_exp_cnt,
 		fs_inst[idx].prev_hdr_exp.readout_len_lc,
 		fs_inst[idx].prev_hdr_exp.read_margin_lc,
+		FS_ATOMIC_READ(&fs_inst[idx].anchor_bias_us),
 		fs_inst[idx].timestamps[0],
 		fs_inst[idx].timestamps[1],
 		fs_inst[idx].timestamps[2],
@@ -1561,7 +1566,7 @@ void fs_alg_sa_dump_dynamic_para(const unsigned int idx)
 	fs_alg_sa_get_dynamic_para(idx, &para);
 
 	FS_SNPRF(log_str_len, log_buf, len,
-		"[%u] ID:%#x(sidx:%u), #%u(%u), req:%d/f:%u, out_fl:%u(%u) +%lld(%u), flk(%u), ref([%d](#%u)), adj_diff(M:%u/corr:%lld(%u))(%lld(v:%u/chg:%u/sub:%u(min:%u)/ask_chg:%u)/%lld,+%lld(%#x),unstable:%u/%u), ((%u:%u)c:%u/n:%u/o:%u/s:%u/e:%u(%u/%u|m_p:%u)/t:%u(%u/%u),%u), lineT:%u, routT:%u",
+		"[%u] ID:%#x(sidx:%u), #%u(%u), req:%d/f:%u, out_fl:%u(%u) +%lld(%u), flk(%u), ref([%d](#%u)), adj_diff(M:%u/corr:%lld(%u))(%lld(v:%u/chg:%u/sub:%u(min:%u)/ask_chg:%u)/%lld,+%lld(%#x),unstable:%u/%u), ((%u:%u)c:%u/n:%u/o:%u/s:%u/e:%u(%u/%u|m_p:%u)/t:%u(%u/%u),%u),lineT:%u,routT:%u,anchor:%d",
 		idx,
 		fs_get_reg_sensor_id(idx),
 		fs_get_reg_sensor_idx(idx),
@@ -1607,7 +1612,8 @@ void fs_alg_sa_dump_dynamic_para(const unsigned int idx)
 		para.f_cell,
 		para.target_min_fl_us,
 		fs_inst[idx].lineTimeInNs,
-		fs_inst[idx].readout_time_us);
+		fs_inst[idx].readout_time_us,
+		para.anchor_bias_us);
 
 	/* print per-frame config info */
 	FS_SNPRF(log_str_len, log_buf, len,
@@ -1773,6 +1779,34 @@ void fs_alg_get_fl_rec_st_info(const unsigned int idx,
 		fs_inst[idx].fl_rec[4].target_min_fl_us,
 		fs_inst[idx].fl_rec[4].out_fl_us,
 		f_cell);
+}
+/******************************************************************************/
+
+
+
+
+
+/*******************************************************************************
+ * For MW get anchor bias (to 1st-SOF) functions
+ ******************************************************************************/
+void fs_alg_get_latest_anchor_info(const unsigned int idx,
+	long long *p_anchor_bias_ns)
+{
+	if (unlikely(p_anchor_bias_ns == NULL)) {
+		LOG_MUST(
+			"ERROR: [%u][sidx:%u], #%u, (req:%d/f:%u/%u), p_anchor_bias_ns:%p is nullptr, return\n",
+			idx,
+			fs_get_reg_sensor_idx(idx),
+			fs_sa_inst.dynamic_paras[idx].magic_num,
+			fs_inst[idx].req_id,
+			fs_inst[idx].frame_id,
+			fs_inst[idx].sof_cnt,
+			p_anchor_bias_ns);
+		return;
+	}
+
+	*p_anchor_bias_ns = (long long)
+		(1000 * FS_ATOMIC_READ(&fs_inst[idx].anchor_bias_us));
 }
 /******************************************************************************/
 
@@ -2201,6 +2235,34 @@ static unsigned int fs_alg_sa_calc_target_pred_fl_us(
 }
 
 
+/**
+ * Calculate the anchor bias by the newest sensor ctrl.
+ * Anchor bias/offset will change by sync type that user assign.
+ *
+ * So, need to take below item into account.
+ * 1. vsync target bias, e.g, 1st-exp(LE) / last-exp(SE).
+ * 2. readout center bias.
+ * 3. etc.
+ */
+static int fs_alg_calc_anchor_bias_us(const unsigned int idx,
+	const struct FrameSyncDynamicPara *p_para)
+{
+	const unsigned int vsync_bias_us = p_para->ts_bias_us;
+	const unsigned int ro_cent_bias_us = (fs_inst[idx].readout_time_us / 2);
+	const int rout_center_en = p_para->sa_cfg.rout_center_en_bits;
+	int result = 0;
+
+	result = (rout_center_en)
+		? (vsync_bias_us + ro_cent_bias_us)
+		: (vsync_bias_us);
+
+	/* update anchor bias us in fs inst for dumping fs inst data to check */
+	FS_ATOMIC_SET(result, &fs_inst[idx].anchor_bias_us);
+
+	return result;
+}
+
+
 static inline unsigned int fs_alg_sa_update_ts_bias_us(const unsigned int idx,
 	struct FrameSyncDynamicPara *p_para)
 {
@@ -2255,6 +2317,10 @@ static void fs_alg_sa_update_pred_fl_and_ts_bias(const unsigned int idx,
 				p_para->pred_fl_us, p_para->stable_fl_us,
 				fs_inst[idx].fl_active_delay, i, 1);
 	}
+
+
+	/* update anchor bias for MW using */
+	p_para->anchor_bias_us = fs_alg_calc_anchor_bias_us(idx, p_para);
 }
 
 
@@ -2416,13 +2482,16 @@ static void fs_alg_sa_update_seamless_dynamic_para(const unsigned int idx,
 				fs_inst[idx].fl_active_delay, i, 1);
 	}
 
+	/* update anchor bias for MW using */
+	p_para->anchor_bias_us = fs_alg_calc_anchor_bias_us(idx, p_para);
+
 	/* finally update result */
 	fs_alg_sa_update_dynamic_para(idx, p_para);
 
 
 #if !defined(REDUCE_FS_ALGO_LOG)
 	LOG_INF(
-		"[%u] ID:%#x(sidx:%u), #%u, stable_fl_us:%u, pred_fl(c:%u(%u), n:%u(%u))(%u), bias(exp:%u/tag:%u), delta:%u(fdelay:%u)\n",
+		"[%u] ID:%#x(sidx:%u), #%u, stable_fl_us:%u, pred_fl(c:%u(%u), n:%u(%u))(%u), bias(exp:%u/tag:%u), delta:%u(fdelay:%u), anchor_bias:%u\n",
 		idx,
 		fs_inst[idx].sensor_id,
 		fs_inst[idx].sensor_idx,
@@ -2436,7 +2505,8 @@ static void fs_alg_sa_update_seamless_dynamic_para(const unsigned int idx,
 		p_para->ts_bias_us,
 		p_para->tag_bias_us,
 		p_para->delta,
-		fs_inst[idx].fl_active_delay);
+		fs_inst[idx].fl_active_delay,
+		p_para->anchor_bias_us);
 #endif
 
 
@@ -2444,26 +2514,14 @@ static void fs_alg_sa_update_seamless_dynamic_para(const unsigned int idx,
 }
 
 
-static unsigned int fs_alg_sa_get_last_vts_info(const unsigned int idx,
+static inline void fs_alg_sa_get_last_vts_info(const unsigned int idx,
 	struct FrameSyncDynamicPara *p_para)
 {
-	if (unlikely(fs_inst[idx].is_nonvalid_ts)) {
-		LOG_INF(
-			"ERROR: [%u] ID:%#x(sidx:%u), get Vsync data ERROR, SA ctrl mag_num:%u\n",
-			idx,
-			fs_inst[idx].sensor_id,
-			fs_inst[idx].sensor_idx,
-			p_para->magic_num);
-		return 1;
-	}
-
 	/* write back newest last_ts and cur_tick data */
 	p_para->ts_src_type = fs_inst[idx].ts_src_type;
 	p_para->last_ts = fs_inst[idx].last_vts;
 	p_para->cur_tick = fs_inst[idx].cur_tick;
 	p_para->vsyncs = fs_inst[idx].vsyncs;
-
-	return 0;
 }
 
 
@@ -5166,14 +5224,25 @@ unsigned int fs_alg_solve_frame_length_sa(
 	/* prepare new dynamic para */
 	fs_alg_sa_init_new_ctrl(p_sa_cfg, &para);
 
-	/* get Vsync data by Frame Monitor */
-	ret = fs_alg_sa_get_last_vts_info(idx, &para);
-	if (unlikely(ret != 0)) {
+	/* check ts info status */
+	if (unlikely(fs_inst[idx].is_nonvalid_ts)) {
 		/* for set shutter with frame length API, */
 		/*     give a min FL for sensor driver auto judgment */
 		*fl_lc = fs_inst[idx].min_fl_lc;
+		LOG_INF(
+			"ERROR: [%u][sidx:%u], #%u(%u), req:%d/f:%u, ts data is non-valid, skip FL ctrl => assign fl to minFL:%u\n",
+			idx,
+			fs_get_reg_sensor_idx(idx),
+			para.magic_num,
+			para.extra_magic_num,
+			para.req_id,
+			para.frame_id,
+			*fl_lc);
 		return ret;
 	}
+
+	/* copy/get last timestamp info */
+	fs_alg_sa_get_last_vts_info(idx, &para);
 
 	/* check this idx is normal sync or async slave idx */
 	if (!((p_sa_cfg->async_s_bits >> idx) & 0x01)) {

@@ -1512,6 +1512,21 @@ void notify_fsync_mgr_g_fl_record_info(struct adaptor_ctx *ctx,
 }
 
 
+void notify_fsync_mgr_g_latest_anchor_info(struct adaptor_ctx *ctx,
+	long long *p_anchor_bias_ns)
+{
+	/* not expected case */
+	if (unlikely(ctx->fsync_mgr == NULL)) {
+		FSYNC_MGR_LOGI(ctx,
+			"ERROR: sidx:%d, ctx->fsync_mgr:%p is NULL, return\n",
+			ctx->idx, ctx->fsync_mgr);
+		return;
+	}
+
+	ctx->fsync_mgr->fs_get_latest_anchor_info(ctx->idx, p_anchor_bias_ns);
+}
+
+
 void notify_fsync_mgr_clear_fl_restore_info_if_needed(struct adaptor_ctx *ctx)
 {
 	/* not expected case */

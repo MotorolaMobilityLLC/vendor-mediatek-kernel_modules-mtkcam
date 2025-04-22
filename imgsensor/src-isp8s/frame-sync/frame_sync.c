@@ -1206,9 +1206,9 @@ static void fs_set_hw_sync_info(const unsigned int idx, const unsigned int flag,
 {
 	/* means no using HW solution */
 	/* hw sync mode equal to 0 (means using SW solution) */
-	/* will be retruned at the start of this function, */
-	/* so exclude that case should all using hw sync solution */
-	if (hw_sync_mode == 0)
+	/* will be retruned at the start of this function while streamon */
+	/* But excute the function to clear info when streamoff */
+	if ((hw_sync_mode == 0) && flag)
 		return;
 
 	/* error handling */
@@ -3429,6 +3429,19 @@ void fs_get_fl_record_info(const unsigned int ident,
 }
 
 
+void fs_get_latest_anchor_info(const unsigned int ident,
+	long long *p_anchor_bias_ns)
+{
+	unsigned int idx;
+
+	/* get registered idx and check if it is valid */
+	if (unlikely(fs_g_registered_idx_by_ident(ident, &idx, __func__)))
+		return;
+
+	fs_alg_get_latest_anchor_info(idx, p_anchor_bias_ns);
+}
+
+
 void fs_clear_fl_restore_status_if_needed(const unsigned int ident)
 {
 	unsigned int idx;
@@ -3853,6 +3866,7 @@ static struct FrameSync frameSync = {
 	fs_is_set_sync,
 	fs_is_hw_sync,
 	fs_get_fl_record_info,
+	fs_get_latest_anchor_info,
 	fs_clear_fl_restore_status_if_needed,
 	fs_chk_bcast_for_re_ctrl_fl,
 	fs_is_ts_src_type_tsrec,
