@@ -97,6 +97,7 @@ int seninf_sentest_flag_init(struct seninf_ctx *ctx)
 	ctx->sentest_mipi_measure_en = false;
 	ctx->sentest_force_tsrec_vc_dt_en = false;
 	ctx->sentest_active_frame_en = false;
+	ctx->sentest_tsrec_update_sof_cnt_en = false;
 	ctx->sentest_active_frame_irq_counter = 0;
 	ctx->sentest_active_frame_measure_result = 0;
 
@@ -584,7 +585,33 @@ static int is_target_vsync(struct seninf_ctx *ctx,
 	return ret;
 }
 
-static int seninf_sentest_ops_after_sensor_seamless(struct seninf_ctx *ctx)
+static int seninf_sentest_update_sof_cnt(struct seninf_ctx *ctx)
+{
+	struct v4l2_ctrl *ctrl;
+	struct v4l2_subdev *sensor_sd = ctx->sensor_sd;
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[Error][%s] ctx is NULL", __func__);
+		return -EFAULT;
+	}
+
+	/* notify sensor drv Vsync */
+	ctrl = v4l2_ctrl_find(sensor_sd->ctrl_handler,
+				V4L2_CID_UPDATE_SOF_CNT);
+
+	if (!ctrl) {
+		pr_info("[%s][ERROR], no V4L2_CID_UPDATE_SOF_CNT %s\n",
+			__func__,
+			sensor_sd->name);
+		return -EFAULT;
+	}
+
+	v4l2_ctrl_s_ctrl(ctrl, ctx->sentest_irq_counter);
+
+	return 0;
+}
+
+static int seninf_sentest_vsync_notify(struct seninf_ctx *ctx)
 {
 	struct v4l2_ctrl *ctrl;
 	struct v4l2_subdev *sensor_sd = ctx->sensor_sd;
@@ -592,12 +619,6 @@ static int seninf_sentest_ops_after_sensor_seamless(struct seninf_ctx *ctx)
 
 	if (unlikely(ctx == NULL)) {
 		pr_info("[Error][%s] ctx is NULL", __func__);
-		return -EFAULT;
-	}
-
-	if (!ctx->sentest_seamless_is_set_camtg_done) {
-		pr_info("[Error][%s] sentest_seamless_camtg hasn't been processed", __func__);
-		seninf_sentest_seamless_switch_error_handler(ctx);
 		return -EFAULT;
 	}
 
@@ -616,10 +637,40 @@ static int seninf_sentest_ops_after_sensor_seamless(struct seninf_ctx *ctx)
 	sof_info.ts = ktime_get_boottime_ns();
 
 	v4l2_ctrl_s_ctrl_compound(ctrl, V4L2_CTRL_TYPE_U32, &sof_info);
+
+	return 0;
+}
+
+static int seninf_sentest_notify_vsync_event_to_imgsensor(struct seninf_ctx *ctx)
+{
+	int ret = 0;
+
+	ret |= seninf_sentest_update_sof_cnt(ctx);
+	ret |= seninf_sentest_vsync_notify(ctx);
+
+	return ret;
+}
+
+static int seninf_sentest_ops_after_sensor_seamless(struct seninf_ctx *ctx)
+{
+	if (unlikely(ctx == NULL)) {
+		pr_info("[Error][%s] ctx is NULL", __func__);
+		return -EFAULT;
+	}
+
+	if (!ctx->sentest_seamless_is_set_camtg_done) {
+		pr_info("[Error][%s] sentest_seamless_camtg hasn't been processed", __func__);
+		seninf_sentest_seamless_switch_error_handler(ctx);
+		return -EFAULT;
+	}
+
+	if (seninf_sentest_notify_vsync_event_to_imgsensor(ctx)) {
+		pr_info("[Error][%s] seninf_sentest_notify_vsync_event_to_imgsensor reutrn failed", __func__);
+		return -EFAULT;
+	}
+
 	seninf_sentest_watchingdog_en(&ctx->sentest_watchdog, false);
-
 	ctx->sentest_seamless_ut_en = false;
-
 	mtk_cam_seninf_force_disable_out_mux(&ctx->subdev);
 
 	pr_info("[%s] -", __func__);
@@ -786,6 +837,16 @@ int notify_sentest_irq_for_active_frame(struct seninf_ctx *ctx,
 	return 0;
 }
 
+int notify_sentest_update_imgsensor_sof_cnt(struct seninf_ctx *ctx,
+					const struct mtk_cam_seninf_tsrec_irq_notify_info *p_info)
+{
+	if (!is_target_vsync(ctx, p_info , SENTEST_FIRST_VSYNC))
+		return 0;
+
+	ctx->sentest_irq_counter++;
+	return seninf_sentest_notify_vsync_event_to_imgsensor(ctx);
+}
+
 int notify_sentest_irq(struct seninf_ctx *ctx,
 					const struct mtk_cam_seninf_tsrec_irq_notify_info *p_info)
 {
@@ -794,11 +855,19 @@ int notify_sentest_irq(struct seninf_ctx *ctx,
 		return -EFAULT;
 	}
 
+	if (unlikely(p_info == NULL)) {
+		pr_info("[Error][%s] p_info is NULL", __func__);
+		return -EFAULT;
+	}
+
 	if (ctx->sentest_seamless_ut_en)
 		return notify_sentest_irq_for_seamless_switch(ctx, p_info);
 
 	if (ctx->sentest_active_frame_en)
 		return notify_sentest_irq_for_active_frame(ctx, p_info);
+
+	if (ctx->sentest_tsrec_update_sof_cnt_en)
+		return notify_sentest_update_imgsensor_sof_cnt(ctx, p_info);
 
 	return 0;
 }

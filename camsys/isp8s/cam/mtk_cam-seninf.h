@@ -493,6 +493,7 @@ struct seninf_ctx {
 	unsigned int set_abort_flag;
 
 	/* for sentest use */
+	bool sentest_tsrec_update_sof_cnt_en;
 	bool sentest_active_frame_en;
 	u32 sentest_avtive_frame_fps;
 	u64 sentest_active_frame_irq_counter;

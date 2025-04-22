@@ -281,6 +281,36 @@ static int s_sentest_active_frame_measure_en(struct seninf_ctx *ctx, void *arg)
 	return 0;
 }
 
+static int s_sentest_vsync_notify_to_imgsensor_en(struct seninf_ctx *ctx, void *arg)
+{
+	int *en = kmalloc(sizeof(int), GFP_KERNEL);
+
+	if (unlikely(en == NULL)) {
+		pr_info("[%s][ERROR] en is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (unlikely(ctx == NULL)) {
+		pr_info("[%s][ERROR] ctx is NULL\n", __func__);
+		kfree(en);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(en, arg, sizeof(int))) {
+		pr_info("[%s][ERROR] copy_from_user return failed\n", __func__);
+		kfree(en);
+		return -EFAULT;
+	}
+
+	ctx->sentest_tsrec_update_sof_cnt_en = *en;
+
+	dev_info(ctx->dev, "[%s] en: %d, sentest_tsrec_update_sof_cnt_en is %d\n",
+				__func__, *en, ctx->sentest_tsrec_update_sof_cnt_en);
+
+	kfree(en);
+	return 0;
+}
+
 static int g_sentest_seamless_last_frame_info(struct seninf_ctx *ctx, void *arg)
 {
 
@@ -304,6 +334,7 @@ static const struct seninf_sentest_ioctl sentest_ioctl_table[] = {
 	{SENINF_SENTEST_S_SEAMLESS_UT_CONFIG, s_sentest_seamless_ut_cfg},
 	{SENINF_SENTEST_S_TSREC_VC_DT_MANUAL_CONFIG, s_sentest_tsrec_vc_dt_manual_config},
 	{SENINF_SENTEST_S_ACTIVE_FRAME_MEASURE_EN, s_sentest_active_frame_measure_en},
+	{SENINF_SENTEST_S_VSYNC_NOTIFY_TO_IMGSENSOR_EN, s_sentest_vsync_notify_to_imgsensor_en},
 
 	{SENINF_SENTEST_G_DEBUG_RESULT, g_sentest_debug_result},
 	{SENINF_SENTEST_G_SEAMLESS_STATUS, g_sentest_seamless_current_status},
