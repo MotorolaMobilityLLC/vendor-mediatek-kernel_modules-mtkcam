@@ -31,6 +31,10 @@ static int dbg_fmon_bypass;
 module_param(dbg_fmon_bypass, int, 0644);
 MODULE_PARM_DESC(dbg_fmon_bypass, "fifo monitor bypass mode");
 
+static int dbg_fmon_bypass_trigger;
+module_param(dbg_fmon_bypass_trigger, int, 0644);
+MODULE_PARM_DESC(dbg_fmon_bypass_trigger, "fifo monitor bypass trigger event");
+
 static int dbg_fmon0_mux = -1;
 module_param(dbg_fmon0_mux, int, 0644);
 MODULE_PARM_DESC(dbg_fmon0_mux, "debug fifo monitor 0, engine: 15-8, tx:4-7, rx:0-3");
@@ -465,8 +469,18 @@ void mtk_cam_fmon_enable(struct mtk_fmon_device *fmon)
 	SET_FIELD(&val, CAM_FMON_FIFO_TYPE_2, 1);
 	SET_FIELD(&val, CAM_FMON_FIFO_TYPE_3, 1);
 	writel(val, fmon->base + REG_CAM_FMON_SETTING);
-
+	if (dbg_fmon_bypass_trigger) {
+		SET_FIELD(&val, CAM_FMON_CTI_STOP_PATH_MSK_0, 0);
+		SET_FIELD(&val, CAM_FMON_CTI_STOP_PATH_MSK_1, 0);
+		SET_FIELD(&val, CAM_FMON_CTI_STOP_PATH_MSK_2, 0);
+		SET_FIELD(&val, CAM_FMON_CTI_STOP_PATH_MSK_3, 0);
+		SET_FIELD(&val, CAM_FMON_CTI_START_PATH_MSK_0, 0);
+		SET_FIELD(&val, CAM_FMON_CTI_START_PATH_MSK_1, 0);
+		SET_FIELD(&val, CAM_FMON_CTI_START_PATH_MSK_2, 0);
+		SET_FIELD(&val, CAM_FMON_CTI_START_PATH_MSK_3, 0);
+	}
 	val = readl(fmon->base + REG_CAM_FMON_SETTING_3);
+
 	SET_FIELD(&val, CAM_FMON_FMON_MODE, 1);
 	writel(val, fmon->base + REG_CAM_FMON_SETTING_3);
 
