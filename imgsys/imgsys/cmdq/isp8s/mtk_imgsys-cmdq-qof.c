@@ -384,18 +384,6 @@ void gce_add_dip_cine(struct cmdq_pkt *pkt, dma_addr_t work_buf_pa)
 	lop.idx = var1;
 	cmdq_pkt_cond_jump_abs(pkt, reg_jump, &lop, &rop, CMDQ_EQUAL);
 
-	/* make sure dip_cine power on. since we need to do disable cine */
-	cmdq_pkt_poll_sleep(pkt,
-		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_HWCCF_DIP_CINE].val/*poll val*/,
-		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_HWCCF_DIP_CINE].addr /*addr*/,
-		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_HWCCF_DIP_CINE].mask /*mask*/);
-
-	/* check cine power on and ack exist */
-	cmdq_pkt_poll_sleep(pkt,
-		(BIT(26) | BIT(27)),
-		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_QOF_STATE_DBG].addr,
-		(BIT(26) | BIT(27)));
-
 	inst_jump_end = pkt->cmd_buf_size;
 	/* Finish else statement, jump to the end of if-else braces. */
 	/* Assign jump address as zero initially and we will modify it later. */
@@ -454,18 +442,6 @@ void gce_sub_dip_cine(struct cmdq_pkt *pkt, dma_addr_t work_buf_pa)
 	rop.value = 0;
 	lop.idx = var1;
 	cmdq_pkt_cond_jump_abs(pkt, reg_jump, &lop, &rop, CMDQ_EQUAL);
-
-	/* make sure dip_cine power on. since we need to do disable cine */
-	cmdq_pkt_poll_sleep(pkt,
-		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_HWCCF_DIP_CINE].val/*poll val*/,
-		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_HWCCF_DIP_CINE].addr /*addr*/,
-		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_HWCCF_DIP_CINE].mask /*mask*/);
-
-	/* check cine power on and ack exist */
-	cmdq_pkt_poll_sleep(pkt,
-		(BIT(26) | BIT(27)),
-		qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_QOF_STATE_DBG].addr,
-		(BIT(26) | BIT(27)));
 
 	//FIXME write footprint record counter
 	inst_jump_end = pkt->cmd_buf_size;
