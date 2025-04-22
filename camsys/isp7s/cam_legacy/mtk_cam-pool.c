@@ -117,8 +117,8 @@ int mtk_cam_working_buf_pool_init(struct mtk_cam_ctx *ctx)
 
 	spin_unlock(&ctx->buf_pool.cam_freelist.lock);
 	dev_info(ctx->cam->dev,
-		"%s: ctx(%d): cq buffers init, freebuf cnt(%d),working(%d),msgfd(%d)\n",
-		__func__, ctx->stream_id, ctx->buf_pool.cam_freelist.cnt,
+		"%s: ctx(%d): cq buffers init, working(%d),msgfd(%d)\n",
+		__func__, ctx->stream_id,
 		ctx->buf_pool.working_buf_fd, ctx->buf_pool.msg_buf_fd);
 
 	return 0;
@@ -215,10 +215,11 @@ mtk_cam_img_working_buf_pool_init(struct mtk_cam_ctx *ctx, int buf_num,
 		return 0;
 	}
 
-	INIT_LIST_HEAD(&ctx->img_buf_pool.cam_freeimglist.list);
 	spin_lock_init(&ctx->img_buf_pool.cam_freeimglist.lock);
 
 	spin_lock(&ctx->img_buf_pool.cam_freeimglist.lock);
+	INIT_LIST_HEAD(&ctx->img_buf_pool.cam_freeimglist.list);
+
 	ctx->img_buf_pool.cam_freeimglist.cnt = 0;
 	ctx->img_buf_pool.working_img_buf_size = buf_num * working_buf_size;
 	ctx->img_buf_pool.working_img_buf_va = mem_va;
@@ -244,8 +245,7 @@ mtk_cam_img_working_buf_pool_init(struct mtk_cam_ctx *ctx, int buf_num,
 	spin_unlock(&ctx->img_buf_pool.cam_freeimglist.lock);
 
 	dev_info(ctx->cam->dev,
-		 "%s: ctx(%d): image buffers init, freebuf cnt(%d)\n",
-		 __func__, ctx->stream_id, ctx->img_buf_pool.cam_freeimglist.cnt);
+		 "%s: ctx(%d): image buffers init\n", __func__, ctx->stream_id);
 
 	return 0;
 }
@@ -486,9 +486,11 @@ void mtk_cam_internal_img_working_buf_pool_release(struct mtk_cam_ctx *ctx)
 	struct mtk_ccd *ccd = ctx->cam->rproc_handle->priv;
 	struct mem_obj smem;
 
+	spin_lock(&ctx->img_buf_pool.cam_freeimglist.lock);
 	smem.va = ctx->img_buf_pool.working_img_buf_va;
 	smem.iova = ctx->img_buf_pool.working_img_buf_iova;
 	smem.len = ctx->img_buf_pool.working_img_buf_size;
+	spin_unlock(&ctx->img_buf_pool.cam_freeimglist.lock);
 	mtk_ccd_put_buffer(ccd, &smem);
 
 	dev_info(ctx->cam->dev,
