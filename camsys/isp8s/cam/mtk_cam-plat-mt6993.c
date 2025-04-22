@@ -460,8 +460,9 @@ unsigned int *fifo_core2, unsigned int *fifo_core3)
 	const unsigned int max_fifo_img_p2[CAMSV_END] = {1536, 1536, 1536, 1024, 0, 0};
 	const unsigned int max_fifo_img_p3[CAMSV_END] = {1536, 1536, 1536, 0, 0, 0};
 
-	if (dev_id >= CAMSV_END) {
-		pr_info("%s unexpected dev_id(%d)\n", __func__, dev_id);
+	if (dev_id >= CAMSV_3) {
+		pr_info("%s unexpected dev_id(%d) only camsv a/b/c need fifo monitor\n",
+			__func__, dev_id);
 		*fifo_core1 = 0;
 		*fifo_core2 = 0;
 		*fifo_core3 = 0;
