@@ -303,8 +303,9 @@ u32 g_sensor_lbmf_property(struct adaptor_ctx *ctx, const u32 scenario_id,
 	prop->mode_type = mode_st->mode_type_in_lbmf;
 	prop->hdr_type = mode_st->hdr_mode;
 
-	/* checking property */
-	if (unlikely(prop->exp_order == IMGSENSOR_LBMF_EXPOSURE_ORDER_SUPPORT_NONE)) {
+	/* checking property. For LBMF mode exp_order is mandatory */
+	if (unlikely(mode_st->hdr_mode == HDR_RAW_LBMF
+		     && prop->exp_order == IMGSENSOR_LBMF_EXPOSURE_ORDER_SUPPORT_NONE)) {
 		adaptor_logi(ctx,
 			"ERROR: s_ctx.mode[%u]:(hdr_type:%u(LBMF:%u/DCG_VS:%u/DCG_COMP_VS:%u), but exposure_order_in_lbmf:%u (SUPPORT_NONE:%u/LE:%u/SE:%u)), return 0\n",
 			scenario_id,

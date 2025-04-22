@@ -732,10 +732,13 @@ void write_dcg_vs_frame_length_in_lut(struct subdrv_ctx *ctx, u32 fll, u32 *fll_
 	u32 frame_length_buf;
 	u32 fl_a_step = 0, fl_b_step = 0;
 	struct struct_dcg_vsl_info dcg_vsl_info = {0};
+	u32 linetime_ns_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
 
 	check_current_scenario_id_bound(ctx);
 
 	get_dcg_vsl_info_by_scenario(ctx, ctx->current_scenario_id, &dcg_vsl_info);
+
+	memset(linetime_ns_in_lut, 0, sizeof(linetime_ns_in_lut));
 
 	// manual mode
 	switch (dcg_vsl_info.lut_cnt) {
@@ -753,6 +756,9 @@ void write_dcg_vs_frame_length_in_lut(struct subdrv_ctx *ctx, u32 fll, u32 *fll_
 		ctx->frame_length_in_lut[0] = fll_in_lut[0];
 		ctx->frame_length_in_lut[1] = fll_in_lut[1];
 		ctx->frame_length_in_lut[2] = fll_in_lut[2];
+
+		linetime_ns_in_lut[0] = dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].linetime_in_ns;
+		linetime_ns_in_lut[1] = dcg_vsl_info.lut_info[IMGSENSOR_LUT_B].linetime_in_ns;
 		break;
 	default:
 		break;
@@ -782,8 +788,16 @@ void write_dcg_vs_frame_length_in_lut(struct subdrv_ctx *ctx, u32 fll, u32 *fll_
 				}
 				/* update FL_lut RG value after setting buffer for writing RG */
 				ctx->frame_length_in_lut_rg[i] = fll_in_lut[i];
-				frame_length_buf +=
-					ctx->frame_length_in_lut_rg[i];
+				if (i == 0) {
+					frame_length_buf +=
+						ctx->frame_length_in_lut_rg[i];
+				} else if (linetime_ns_in_lut[i] && linetime_ns_in_lut[0]){
+					/* convert ctx->frame_length base on lut-A line time */
+					frame_length_buf +=
+						ntime2line(line2ntime(ctx->frame_length_in_lut_rg[i],
+							linetime_ns_in_lut[i]),
+							linetime_ns_in_lut[0]);
+				}
 			}
 		}
 		/* update FL RG value simultaneously */
