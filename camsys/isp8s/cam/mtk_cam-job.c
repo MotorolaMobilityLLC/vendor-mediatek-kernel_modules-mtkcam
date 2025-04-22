@@ -2861,16 +2861,16 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job, int pda_idx)
 	unsigned long selected_need_init;
 	unsigned long unselected_need_uninit;
 	bool qof_enabled = false;
-	bool pda_already_used = false;
-
-	if (ctx->used_engine & bit_map_bit(MAP_HW_PDA, pda_idx))
-		pda_already_used = true;
 
 	if (mtk_cam_release_engine(ctx->cam, ctx->used_engine))
 		dev_info(ctx->cam->dev, "%s warning: release resource prev:0x%lx",
 			__func__, ctx->used_engine);
 
 	selected = mtk_cam_select_hw(job);
+
+	/* select pda hw */
+	if (pda_idx != -1)
+		selected |= bit_map_bit(MAP_HW_PDA, pda_idx);
 
 	if (!selected)
 		return -1;
@@ -2885,8 +2885,6 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job, int pda_idx)
 		__func__, ctx->used_engine, selected, selected_need_init, unselected_need_uninit);
 	/* ToDo - YM */
 	ctx->used_engine = selected;
-	if (pda_already_used)
-		ctx->used_engine |= bit_map_bit(MAP_HW_PDA, pda_idx);
 	if (selected_need_init) {
 		mtk_cam_pm_runtime_engines(&ctx->cam->engines, selected_need_init, 1);
 		/* init new slave raw */
