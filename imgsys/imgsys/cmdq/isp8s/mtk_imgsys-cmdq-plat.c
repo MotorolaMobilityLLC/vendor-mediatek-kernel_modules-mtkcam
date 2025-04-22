@@ -518,9 +518,10 @@ static void imgsys_cmdq_cb_work_plat8s(struct work_struct *work)
 	if (!imgsys_cmdq_wpe_retry_enable_plat8s())
 		goto wpe_normal_flow;
 
-	frm_owner = cb_param->frm_info->frm_owner;
-	if ((cb_param->err == -IMGSYS_HW_FLAG_WPE_EIS) &&
+	if ((cb_param->err == -801) &&
 		(cb_param->hw_comb == (IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_PQDIP_A))) {
+
+		frm_owner = cb_param->frm_info->frm_owner;
 
 		if (cb_param->is2ndflush == 1) {
 			cmdq_pkt_refinalize(cb_param->pkt);
@@ -577,7 +578,7 @@ wpe_normal_flow:
 #endif
 
 #if CMDQ_TIMEOUT_KTHREAD
-	if ((cb_param->err != 0) && cb_param->user_cmdq_err_cb && (cb_param->err != -IMGSYS_HW_FLAG_WPE_EIS)) {
+	if ((cb_param->err != 0) && cb_param->user_cmdq_err_cb && (cb_param->err != -801)) {
 		struct cmdq_cb_data user_cb_data;
 
 		user_cb_data.err = cb_param->err;
@@ -968,28 +969,32 @@ void imgsys_cmdq_task_cb_plat8s(struct cmdq_cb_data data)
 	if (!imgsys_cmdq_wpe_retry_enable_plat8s())
 		goto wpe_normal_flow;
 
-	frm_owner = cb_param->frm_info->frm_owner;
 	if ((cb_param->err == 0) && (cb_param->hw_comb == (IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_PQDIP_A))
 		&& (is_wpe_read_cmd == 1) && (is_stream_off == 0)) {
 
 		wpe_done_reg[0] = g_pkt_wpe_va[0];
-		if (((wpe_done_reg[0] & 0x00000001) == 0)) {
-			pr_info("%s: [ERROR] WPE_EIS-PQDIP_A hang detected! done_reg(0x%x)\n",
+		if (((wpe_done_reg[0] & 0x00000003) == 0)) {
+
+			if (imgsys_cmdq_dbg_enable_plat8s())
+				pr_info("%s: [ERROR] WPE_EIS-PQDIP_A hang detected! done_reg(0x%x)\n",
 				__func__, wpe_done_reg[0]);
 
+			frm_owner = cb_param->frm_info->frm_owner;
 			if (cb_param->is2ndflush == -1) {
 				cb_param->is2ndflush = 1;
-				pr_info("%s: [WARN] Do reset in GCE buffer and retry for user(%s)\n",
+				if (imgsys_cmdq_dbg_enable_plat8s())
+					pr_info("%s: [WARN] Do reset in GCE buffer and retry for user(%s)\n",
 					__func__, (char *)(&frm_owner));
 				if (mtk_qof_WPE_EIS_retry_vote_on() < 0)
 					pr_err("power on WPE-EIS fail!");
 			} else {
 				cb_param->is2ndflush = 0;
-				pr_info("%s: [WARN] Do WPE_LITE retried for user(%s)\n",
-					__func__, (char *)(&frm_owner));
+				if (imgsys_cmdq_dbg_enable_plat8s())
+					pr_info("%s: [WARN] Do WPE_LITE retried for user(%s)\n",
+						__func__, (char *)(&frm_owner));
 			}
-			/* mark vsdof wpe_lite hang */
-			cb_param->err = -IMGSYS_HW_FLAG_WPE_EIS;
+			/* mark vsdof wpe_eis hang */
+			cb_param->err = -801;
 		} else {
 			if (cb_param->is2ndflush == 1) {
 				// retry success, need clear voter
@@ -1010,7 +1015,7 @@ wpe_normal_flow:
 
 #endif
 
-	if ((cb_param->err != 0) && (cb_param->err != -IMGSYS_HW_FLAG_WPE_LITE)) {
+	if ((cb_param->err != 0) && (cb_param->err != -801)) {
 		err_ofst = cb_param->pkt->err_data.offset;
 		err_idx = 0;
 		for (idx = 0; idx < cb_param->task_cnt; idx++)
@@ -3785,7 +3790,7 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 			{
 				if ((gpr_idx == 3) && (hw_comb == (IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_PQDIP_A)))
 					cmdq_pkt_poll_timeout(pkt, cmd->u.value, SUBSYS_NO_SUPPORT,
-						cmd->u.address, cmd->u.mask, IMGSYS_POLL_TIME_10MS,
+						cmd->u.address, cmd->u.mask, IMGSYS_POLL_TIME_200MS,
 						CMDQ_GPR_R03+gpr_idx);
 				else
 					cmdq_pkt_poll_timeout(pkt, cmd->u.value, SUBSYS_NO_SUPPORT,
@@ -4347,7 +4352,7 @@ bool imgsys_iova_dbg_enable_plat8s(void)
 
 bool imgsys_cmdq_wpe_retry_enable_plat8s(void)
 {
-	return wpe_retry_en;
+	return !wpe_retry_en;
 }
 
 
