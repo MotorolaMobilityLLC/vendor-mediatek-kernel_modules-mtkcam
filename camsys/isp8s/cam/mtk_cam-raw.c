@@ -1139,7 +1139,13 @@ static void dump_raw_slice_gals(struct mtk_raw_device *raw)
 	struct mtk_yuv_device *yuv = get_yuv_dev(raw);
 	void __iomem *dbg_sel;
 	void __iomem *dbg_port;
-	int i;
+	char str_buf[512];
+	size_t str_buf_size;
+	int i = 0;
+	int n = 0;
+
+	str_buf[0] = '\0';
+	str_buf_size = sizeof(str_buf);
 
 	switch (raw->id) {
 	case RAW_A:
@@ -1161,9 +1167,13 @@ static void dump_raw_slice_gals(struct mtk_raw_device *raw)
 
 	for (i = 0; i < ARRAY_SIZE(raw_debug_sel); i++) {
 		writel(raw_debug_sel[i], dbg_sel);
-		dev_info(raw->dev, "%s sel 0x%08x port 0x%08x\n",
-			 __func__, readl(dbg_sel), readl(dbg_port));
+		n += scnprintf(str_buf + n, str_buf_size - n,
+				"(sel 0x%08x port 0x%08x)", readl(dbg_sel), readl(dbg_port));
 	}
+	dev_info(raw->dev, "%s RAW: %s\n", __func__, str_buf);
+
+	str_buf[0] = '\0';
+	n = 0;
 
 	switch (raw->id) {
 	case RAW_A:
@@ -1185,9 +1195,10 @@ static void dump_raw_slice_gals(struct mtk_raw_device *raw)
 
 	for (i = 0; i < ARRAY_SIZE(yuv_debug_sel); i++) {
 		writel(yuv_debug_sel[i], dbg_sel);
-		dev_info(yuv->dev, "%s sel 0x%08x port 0x%08x\n",
-			 __func__, readl(dbg_sel), readl(dbg_port));
+		n += scnprintf(str_buf + n, str_buf_size - n,
+				"(sel 0x%08x port 0x%08x)", readl(dbg_sel), readl(dbg_port));
 	}
+	dev_info(yuv->dev, "%s YUV: %s\n", __func__, str_buf);
 }
 
 static void dump_vcore_gals(struct mtk_raw_device *raw)
@@ -2816,6 +2827,7 @@ int mtk_raw_runtime_resume(struct device *dev)
 	reset(drvdata);
 	reset_camctl_misc(drvdata);
 	qof_dump_int_en_addr(drvdata);
+	dump_raw_slice_gals(drvdata);
 
 	enable_irq(drvdata->irq);
 
