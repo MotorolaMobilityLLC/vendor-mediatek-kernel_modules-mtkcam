@@ -672,7 +672,7 @@ bool qof_check_module_cg_status(u32 pwr)
 		val = BIT(0)|BIT(1)|BIT(2);
 		if (!check_cg_status(MAPED_RG_IMG_CG_DIP_NR2_DIP1, val))
 			return false;
-		val = BIT(0)|BIT(1)|BIT(2)|BIT(3)|BIT(4)|BIT(5)|BIT(6)|BIT(7)|BIT(8);
+		val = BIT(0)|BIT(5)|BIT(6)|BIT(7)|BIT(8);
 		if (!check_cg_status(MAPED_RG_IMG_CG_DIP_TOP_DIP1, val))
 			return false;
 		break;
@@ -680,22 +680,22 @@ bool qof_check_module_cg_status(u32 pwr)
 		val = BIT(0);
 		if (!check_cg_status(MAPED_RG_IMG_CG_TRAW_CAP_DIP1, val))
 			return false;
-		val = BIT(0)|BIT(1)|BIT(2)|BIT(3);
+		val = BIT(0)|BIT(1)|BIT(2);
 		if (!check_cg_status(MAPED_RG_IMG_CG_TRAW_DIP1, val))
 			return false;
 		break;
 	case ISP8S_PWR_WPE_1_EIS:
-		val = BIT(0)|BIT(1)|BIT(2);
+		val = BIT(0)|BIT(1);
 		if (!check_cg_status(MAPED_RG_IMG_CG_WPE1_DIP1, val))
 			return false;
 		break;
 	case ISP8S_PWR_WPE_2_TNR:
-		val = BIT(0)|BIT(1)|BIT(2);
+		val = BIT(0)|BIT(1);
 		if (!check_cg_status(MAPED_RG_IMG_CG_WPE2_DIP1, val))
 			return false;
 		break;
 	case ISP8S_PWR_WPE_3_LITE:
-		val = BIT(0)|BIT(1)|BIT(2);
+		val = BIT(0)|BIT(1);
 		if (!check_cg_status(MAPED_RG_IMG_CG_WPE3_DIP1, val))
 			return false;
 		break;
@@ -2023,7 +2023,6 @@ int mtk_qof_WPE_EIS_retry_vote_on(void)
 	u32 tmp;
 	void __iomem *io_addr;
 
-	QOF_LOGI("vote SCP SET for retry");
 	if (is_qof_engine_enabled(ISP8S_PWR_WPE_1_EIS)) {
 		QOF_WRITE_VAL(qof_reg_table[ISP8S_PWR_WPE_1_EIS][QOF_REG_IMG_SCP_SET], 0x1);
 		io_addr = QOF_GET_REMAP_ADDR(qof_reg_table[ISP8S_PWR_WPE_1_EIS][QOF_REG_IMG_QOF_STATE_DBG].addr);
@@ -2045,7 +2044,6 @@ int mtk_qof_WPE_EIS_retry_vote_off(void)
 	u32 tmp;
 	void __iomem *io_addr;
 
-	QOF_LOGI("unvote SCP SET for retry");
 	if (is_qof_engine_enabled(ISP8S_PWR_WPE_1_EIS)) {
 		QOF_WRITE_VAL(qof_reg_table[ISP8S_PWR_WPE_1_EIS][QOF_REG_IMG_SCP_CLR], 0x1);
 		io_addr = QOF_GET_REMAP_ADDR(qof_reg_table[ISP8S_PWR_WPE_1_EIS][QOF_REG_IMG_QOF_STATE_DBG].addr);
