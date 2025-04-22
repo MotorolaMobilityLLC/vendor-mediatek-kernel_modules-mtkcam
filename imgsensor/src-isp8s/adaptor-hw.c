@@ -14,6 +14,7 @@
 #include "kd_imgsensor_define_v4l2.h"
 #include "adaptor.h"
 #include "adaptor-hw.h"
+#include "adaptor-trace.h"
 #include "adaptor-profile.h"
 #include "adaptor-util.h"
 #include <linux/clk-provider.h>
@@ -623,10 +624,14 @@ int do_hw_power_on(struct adaptor_ctx *ctx)
 				ent->id, ent->val.para1, ent->val.para2);
 			continue;
 		}
-
+		ADAPTOR_SYSTRACE_BEGIN("imgsensor::op->set[%d], para (%d,%d)",
+			ent->id,
+			ent->val.para1,
+			ent->val.para2);
 		ADAPTOR_PROFILE_BEGIN(&tv);
 		op->set(ctx, op->data, &ent->val);
 		ADAPTOR_PROFILE_END(&tv);
+		ADAPTOR_SYSTRACE_END();
 
 		{
 			static const char * const hw_id_names[] = {
@@ -647,8 +652,12 @@ int do_hw_power_on(struct adaptor_ctx *ctx)
 		adaptor_logm(ctx, "set comp %d para (%d,%d)\n",
 			ent->id, ent->val.para1, ent->val.para2);
 
+		ADAPTOR_SYSTRACE_BEGIN("imgsensor::op->set[%d]_DELAY, delay(%d)",
+			ent->id,
+			ent->delay);
 		if (ent->delay)
 			udelay(ent->delay);
+		ADAPTOR_SYSTRACE_END();
 	}
 
 	if ((subctx->power_on_profile_en != NULL) &&

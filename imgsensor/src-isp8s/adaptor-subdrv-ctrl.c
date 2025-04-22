@@ -24,6 +24,7 @@
 #include "adaptor-ctrls.h"
 #include "adaptor-util.h"
 #include "adaptor-hw.h"
+#include "adaptor-trace.h"
 
 static const char * const clk_names[] = {
 	ADAPTOR_CLK_NAMES
@@ -5403,9 +5404,11 @@ int common_open(struct subdrv_ctx *ctx)
 		return -ENODEV;
 	}
 
+	ADAPTOR_SYSTRACE_BEGIN("imgsensor::common_get_imgsensor_id");
 	/* get sensor id */
 	if (common_get_imgsensor_id(ctx, &sensor_id) != ERROR_NONE)
 		return ERROR_SENSOR_CONNECT_FAIL;
+	ADAPTOR_SYSTRACE_END();
 
 #ifdef SCP_SENSOR_RESET_READY
 	/* no init setting due to scp sensor power on */
@@ -5416,17 +5419,20 @@ int common_open(struct subdrv_ctx *ctx)
 		return ERROR_NONE;
 	}
 #endif
-
+	ADAPTOR_SYSTRACE_BEGIN("imgsensor::sensor_init i2c table write");
 	/* initail setting */
 	if (ctx->s_ctx.aov_sensor_support && !ctx->s_ctx.init_in_open)
 		DRV_LOG_MUST(ctx, "sensor init not in open stage!\n");
 	else
 		sensor_init(ctx);
+	ADAPTOR_SYSTRACE_END();
 
+	ADAPTOR_SYSTRACE_BEGIN("imgsensor::write_sensor_Cali");
 	if (ctx->s_ctx.s_cali != NULL)
 		ctx->s_ctx.s_cali((void *) ctx);
 	else
 		write_sensor_Cali(ctx);
+	ADAPTOR_SYSTRACE_END();
 
 	memset(ctx->exposure, 0, sizeof(ctx->exposure));
 	memset(ctx->ana_gain, 0, sizeof(ctx->gain));

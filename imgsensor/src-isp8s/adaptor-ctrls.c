@@ -1638,7 +1638,14 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 		return ret;
 	}
 
-	ADAPTOR_SYSTRACE_BEGIN("SensorWorker::%s %d", __func__, ctrl->id);
+	ADAPTOR_SYSTRACE_BEGIN("[%s][%s] SensorWorker::%s cid %d enum_ofs %d",
+		ctx->subdrv->name,
+		ctrl->name,
+		__func__,
+		ctrl->id,
+		(ctrl->id > V4L2_CID_USER_MTK_SENSOR_BASE) ?
+		(ctrl->id - V4L2_CID_USER_MTK_SENSOR_BASE) :
+		(ctrl->id - V4L2_CID_USER_MTK_SENSOR_1ST_BASE));
 
 	if (has_register_restore_ctrl(ctx, ctrl->id)) {
 		if (!ctx->is_streaming) {
@@ -2104,11 +2111,13 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 			return -1;
 
 		adaptor_logi(ctx, "V4L2_CID_MTK_SENSOR_POWER val = %d\n", ctrl->val);
+		ADAPTOR_SYSTRACE_BEGIN("imgsensor::power_on/off");
 		if (ctrl->val){
 			adaptor_hw_power_on(ctx);
 		} else {
 			adaptor_hw_power_off(ctx);
 		}
+		ADAPTOR_SYSTRACE_END();
 		}
 		break;
 	case V4L2_CID_MTK_MSTREAM_MODE:
