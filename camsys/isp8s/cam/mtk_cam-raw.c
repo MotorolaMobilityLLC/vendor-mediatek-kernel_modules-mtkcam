@@ -1189,7 +1189,7 @@ static void dump_raw_slice_gals(struct mtk_raw_device *raw)
 		dbg_port = cam->yuvc_cg_con + 0x238;
 		break;
 	default:
-		dev_info(yuv->dev, "%s unknown raw %d\n", __func__, raw->id);
+		dev_info(yuv->dev, "%s unknown yuv %d\n", __func__, yuv->id);
 		return;
 	}
 
