@@ -2883,6 +2883,13 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job, int pda_idx)
 	unsigned long selected_need_init;
 	unsigned long unselected_need_uninit;
 	bool qof_enabled = false;
+	bool pda_already_used = false;
+	unsigned long pda_selected = 0;
+
+	if (pda_idx != -1 && (ctx->used_engine & bit_map_bit(MAP_HW_PDA, pda_idx))) {
+		pda_selected = bit_map_bit(MAP_HW_PDA, pda_idx);
+		pda_already_used = true;
+	}
 
 	if (mtk_cam_release_engine(ctx->cam, ctx->used_engine))
 		dev_info(ctx->cam->dev, "%s warning: release resource prev:0x%lx",
@@ -2890,23 +2897,30 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job, int pda_idx)
 
 	selected = mtk_cam_select_hw(job);
 
-	/* select pda hw */
-	if (pda_idx != -1)
-		selected |= bit_map_bit(MAP_HW_PDA, pda_idx);
-
 	if (!selected)
 		return -1;
 	if (mtk_cam_occupy_engine(ctx->cam, selected))
 		dev_info(ctx->cam->dev, "%s warning: occupy resource prev:0x%lx/cur:0x%lx",
 		__func__, ctx->used_engine, selected);
+
+	if (pda_already_used) {
+		if (mtk_cam_occupy_engine(ctx->cam, pda_selected))
+			dev_info(ctx->cam->dev, "%s warning: occupy resource prev:0x%lx/cur:0x%lx",
+			__func__, ctx->used_engine, pda_selected);
+	}
 	/* eg. a->ab , b'0011 & b'1110 = b'0010 */
 	selected_need_init = selected & ~ctx->used_engine;
 	/* eg. ab->a , b'0011 & b'1110 = b'0010 */
 	unselected_need_uninit = ctx->used_engine & ~selected;
+	if (pda_already_used)
+		unselected_need_uninit = unselected_need_uninit & ~pda_selected;
 	dev_info(ctx->cam->dev, "%s raw resource 0x%lx->0x%lx , need init:0x%lx, need uninit:0x%lx",
 		__func__, ctx->used_engine, selected, selected_need_init, unselected_need_uninit);
 	/* ToDo - YM */
 	ctx->used_engine = selected;
+	if (pda_already_used)
+		ctx->used_engine |= pda_selected;
+
 	if (selected_need_init) {
 		mtk_cam_pm_runtime_engines(&ctx->cam->engines, selected_need_init, 1);
 		/* init new slave raw */
