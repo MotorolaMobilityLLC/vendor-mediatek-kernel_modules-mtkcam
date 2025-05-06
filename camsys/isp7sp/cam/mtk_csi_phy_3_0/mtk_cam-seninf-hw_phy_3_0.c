@@ -3375,8 +3375,13 @@ static int csirx_phyA_setting(struct seninf_ctx *ctx)
 				    RG_CSI0_CDPHY_EQ_SR1, 0x0);
 #else
 			if (data_rate < 2500000000) {
+#ifdef CONFIG_MOTO_CAM_CTLE_FUJI
+				SENINF_WRITE_REG(baseA, CDPHY_RX_ANA_5, 0x755);
+				SENINF_WRITE_REG(baseB, CDPHY_RX_ANA_5, 0x755);
+#else
 				SENINF_WRITE_REG(baseA, CDPHY_RX_ANA_5, 0x55);
 				SENINF_WRITE_REG(baseB, CDPHY_RX_ANA_5, 0x55);
+#endif
 			} else {
 				if (_seninf_ops->iomem_ver == NULL) {
 					SENINF_WRITE_REG(baseA, CDPHY_RX_ANA_5, 0x157);
