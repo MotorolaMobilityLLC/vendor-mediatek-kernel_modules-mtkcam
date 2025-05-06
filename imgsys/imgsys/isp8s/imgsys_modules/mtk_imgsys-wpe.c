@@ -145,7 +145,8 @@ int imgsys_wpe_tfault_callback(int port,
 	unsigned int larb = 0;
 	unsigned int engine = 0;
 	int ret = 0;
-	bool is_qof = false;
+	bool is_qof_wpe1_eis = false;
+	bool is_qof_wpe3_lite = false;
 	unsigned int ofst_idx;
 	int i;
 
@@ -165,9 +166,16 @@ int imgsys_wpe_tfault_callback(int port,
 		return 1;
 	}
 
-	ret = smi_isp_wpe2_tnr_get_if_in_use((void *)&is_qof);
+	ret = smi_isp_wpe1_eis_get_if_in_use((void *)&is_qof_wpe1_eis);
 	if (ret == -1) {
-		pr_info("smi_isp_wpe2_tnr_get_if_in_use = -1. return. stop dump\n");
+		pr_info("smi_isp_wpe1_eis_get_if_in_use = -1. return. stop dump\n");
+		return 1;
+	}
+
+	ret = smi_isp_wpe3_lite_get_if_in_use((void *)&is_qof_wpe3_lite);
+	if (ret == -1) {
+		smi_isp_wpe1_eis_put((void *)&is_qof_wpe1_eis);
+		pr_info("smi_isp_wpe3_lite_get_if_in_use = -1. return. stop dump\n");
 		return 1;
 	}
 	pr_info("%s: ==== Dump WPE_%d, TF port: 0x%x =====",
@@ -197,7 +205,8 @@ int imgsys_wpe_tfault_callback(int port,
 		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xC8)));
 	pr_info("[ACK dgb addr] 0x347800CC = 0x%08X",
 		(unsigned int)ioread32((void *)(gVcoreRegBA + 0xCC)));
-	smi_isp_wpe2_tnr_put((void *)&is_qof);
+	smi_isp_wpe1_eis_put((void *)&is_qof_wpe1_eis);
+	smi_isp_wpe3_lite_put((void *)&is_qof_wpe3_lite);
 
 	return 1;
 }
