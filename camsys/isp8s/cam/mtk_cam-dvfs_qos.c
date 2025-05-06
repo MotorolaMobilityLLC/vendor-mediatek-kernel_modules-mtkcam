@@ -737,6 +737,7 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 	unsigned int i, x_size, img_h, sv_id;
 	u64 avg_bw = 0, peak_bw = 0, total_peak_bw = 0;
 	u64 pd_avg_bw = 0, pd_peak_bw = 0;
+	u64 pure_pd_avg_bw = 0, pure_pd_peak_bw = 0;
 	u64 stash_avg_bw = 0, stash_peak_bw = 0;
 	unsigned int sv_port_num = 0;
 	bool is_smmu_enabled = true;
@@ -786,49 +787,47 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 					calc_bw(DIV_ROUND_UP(in->fmt.s.w, 64) * img_h,
 						linet, img_h + sensor_vb);
 			}
-			if (is_smmu_enabled) {
-				if (avg_bw || peak_bw) {
-					if (x_size == 0) {
-						dev_err(ctx->cam->dev,
-							"%s: Invalid x_size: division by zero", __func__);
-						return -EINVAL;
-					}
-
-					/* stash */
-					stash_peak_bw = peak_bw * 16 / 4096;
-					stash_avg_bw = x_size * img_h * 16 / 4096 * (u64)sensor_fps;
-					stash_avg_bw = to_qos_icc(stash_avg_bw);
-				}
+			if (is_smmu_enabled && (avg_bw || peak_bw) && (x_size != 0)) {
+				/* stash */
+				stash_peak_bw = peak_bw * 16 / 4096;
+				stash_avg_bw = x_size * img_h * 16 / 4096 * (u64)sensor_fps;
+				stash_avg_bw = to_qos_icc(stash_avg_bw);
 			}
 
 		} else {
-			pd_avg_bw =
-				calc_bw(x_size * img_h, linet, sensor_h + sensor_vb);
-			pd_peak_bw =
-				calc_bw(x_size * img_h, linet, sensor_h);
-			total_peak_bw += pd_peak_bw;
-			if (is_smmu_enabled) {
-				if (pd_avg_bw || pd_peak_bw) {
-					if (x_size == 0) {
-						dev_err(ctx->cam->dev,
-							"%s: Invalid x_size: division by zero", __func__);
-						return -EINVAL;
-					}
-
+			if (job->tag_info[i].is_pdp_enable) {
+				pd_avg_bw =
+					calc_bw(x_size * img_h, linet, sensor_h + sensor_vb);
+				pd_peak_bw =
+					calc_bw(x_size * img_h, linet, sensor_h);
+				total_peak_bw += pd_peak_bw;
+				if (is_smmu_enabled && (pd_avg_bw || pd_peak_bw) && x_size != 0) {
 					/* stash */
 					stash_peak_bw = pd_peak_bw * 16 / 4096;
 					stash_avg_bw = x_size * img_h * 16 / 4096 * (u64)sensor_fps;
 					stash_avg_bw = to_qos_icc(stash_avg_bw);
 				}
+			} else {
+				pure_pd_avg_bw =
+					calc_bw(x_size * img_h, linet, sensor_h + sensor_vb);
+				pure_pd_peak_bw =
+					calc_bw(x_size * img_h, linet, sensor_h);
+				total_peak_bw += pure_pd_peak_bw;
+				if (is_smmu_enabled && (pure_pd_avg_bw || pure_pd_peak_bw)
+					&& x_size != 0) {
+					/* stash */
+					stash_peak_bw = pure_pd_peak_bw * 16 / 4096;
+					stash_avg_bw = x_size * img_h * 16 / 4096 * (u64)sensor_fps;
+					stash_avg_bw = to_qos_icc(stash_avg_bw);
+				}
 			}
-
 		}
 
 		if (sv_port_num == SMI_PORT_SV_TYPE0_NUM) {
 			job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw += avg_bw;
 			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += peak_bw;
-			job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw += pd_avg_bw;
-			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += pd_peak_bw;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw += (pd_avg_bw + pure_pd_avg_bw);
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += (pd_peak_bw + pure_pd_peak_bw);
 			if (is_smmu_enabled) {
 				job->sv_mmqos[SMI_PORT_SV_STG_0].avg_bw += stash_avg_bw;
 				job->sv_mmqos[SMI_PORT_SV_STG_0].peak_bw += stash_peak_bw;
@@ -838,10 +837,12 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += peak_bw / 2;
 			job->sv_mmqos[SMI_PORT_SV_WDMA_1].avg_bw += avg_bw / 2;
 			job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw += peak_bw / 2;
-			job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw += pd_avg_bw / 2;
-			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += pd_peak_bw / 2;
-			job->sv_mmqos[SMI_PORT_SV_WDMA_1].avg_bw += pd_avg_bw / 2;
-			job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw += pd_peak_bw / 2;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw += (pd_avg_bw + pure_pd_avg_bw) / 2;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw +=
+				(pd_peak_bw + pure_pd_peak_bw) / 2;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_1].avg_bw += (pd_avg_bw + pure_pd_avg_bw) / 2;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw +=
+				(pd_peak_bw + pure_pd_peak_bw) / 2;
 			if (is_smmu_enabled) {
 				job->sv_mmqos[SMI_PORT_SV_STG_0].avg_bw += stash_avg_bw / 2;
 				job->sv_mmqos[SMI_PORT_SV_STG_0].peak_bw += stash_peak_bw / 2;
@@ -849,13 +850,13 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 				job->sv_mmqos[SMI_PORT_SV_STG_1].peak_bw += stash_peak_bw / 2;
 			}
 		} else if (sv_port_num == SMI_PORT_SV_TYPE2_NUM) {
-			job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw += avg_bw / 3;
-			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += peak_bw / 3;
-			job->sv_mmqos[SMI_PORT_SV_WDMA_1].avg_bw += avg_bw / 3;
-			job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw += peak_bw / 3;
-			job->sv_mmqos[SMI_PORT_SV_WDMA_2].avg_bw += avg_bw / 3;
-			job->sv_mmqos[SMI_PORT_SV_WDMA_2].peak_bw += peak_bw / 3;
-			/* pd data only output dma 0 & dma 1*/
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw += (avg_bw + pure_pd_avg_bw) / 3;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += (peak_bw + pure_pd_peak_bw) / 3;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_1].avg_bw += (avg_bw + pure_pd_avg_bw) / 3;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw += (peak_bw + pure_pd_peak_bw) / 3;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_2].avg_bw += (avg_bw + pure_pd_avg_bw) / 3;
+			job->sv_mmqos[SMI_PORT_SV_WDMA_2].peak_bw += (peak_bw + pure_pd_peak_bw) / 3;
+			/* pdp pd data only output dma 0 & dma 1*/
 			job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw += pd_avg_bw / 2;
 			job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw += pd_peak_bw / 2;
 			job->sv_mmqos[SMI_PORT_SV_WDMA_1].avg_bw += pd_avg_bw / 2;
@@ -872,14 +873,14 @@ static int fill_sv_qos(struct mtk_cam_job *job,
 		if (CAM_DEBUG_ENABLED(MMQOS) && is_smmu_enabled)
 			pr_info("%s: xsize:%u/height:%u sensor_h:%u/vb:%u/linet:%llu(ns)/fps:%u avg_bw:%lluKB/s, %uKB/s, %uKB/s, %uKB/s %uKB/s %uKB/s, %uKB/s, peak_bw:%lluKB/s, %uKB/s, %uKB/s, %uKB/s %uKB/s %uKB/s, %uKB/s\n",
 				__func__, x_size, img_h,
-				sensor_h, sensor_vb, linet, sensor_fps, avg_bw + pd_avg_bw,
+				sensor_h, sensor_vb, linet, sensor_fps, avg_bw + pd_avg_bw + pure_pd_avg_bw,
 				job->sv_mmqos[SMI_PORT_SV_WDMA_0].avg_bw,
 				job->sv_mmqos[SMI_PORT_SV_STG_0].avg_bw,
 				job->sv_mmqos[SMI_PORT_SV_WDMA_1].avg_bw,
 				job->sv_mmqos[SMI_PORT_SV_STG_1].avg_bw,
 				job->sv_mmqos[SMI_PORT_SV_WDMA_2].avg_bw,
 				job->sv_mmqos[SMI_PORT_SV_STG_2].avg_bw,
-				peak_bw + pd_peak_bw,
+				peak_bw + pd_peak_bw + pure_pd_peak_bw,
 				job->sv_mmqos[SMI_PORT_SV_WDMA_0].peak_bw,
 				job->sv_mmqos[SMI_PORT_SV_STG_0].peak_bw,
 				job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw,
