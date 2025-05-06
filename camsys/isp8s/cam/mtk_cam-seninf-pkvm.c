@@ -2,7 +2,10 @@
 //
 // Copyright (c) 2019 MediaTek Inc.
 
+#include <linux/version.h>
+#if (KERNEL_VERSION(6, 13, 0) > LINUX_VERSION_CODE)
 #include <asm/kvm_pkvm_module.h>
+#endif
 #include <linux/arm-smccc.h>
 #include <linux/printk.h>
 #include <linux/soc/mediatek/mtk_sip_svc.h>

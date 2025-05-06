@@ -279,7 +279,13 @@ int mtk_ccd_put_buffer(struct mtk_ccd *ccd,
 					"Free buff = %d iova = %pad va = %p, queue_num = %d, f_count = %ld\n",
 					 buffer, &mem_buff_data->iova,
 					 mem_buff_data->va,
-					 num_buffers, atomic_long_read(&buf->dbuf->file->f_count));
+					 num_buffers,
+#if (KERNEL_VERSION(6, 13, 0) > LINUX_VERSION_CODE)
+					 atomic_long_read(&buf->dbuf->file->f_count)
+#else
+					 file_count(buf->dbuf->file)
+#endif
+					 );
 				mtk_ccd_buf_put(buf);
 				last_buffer = num_buffers - 1U;
 				if (last_buffer != buffer)
@@ -351,8 +357,13 @@ int mtk_ccd_put_fd(struct mtk_ccd *ccd,
 		da = mtk_ccd_buf_get_daddr(buf);
 		if (mem_buff_data->va == va &&
 			mem_buff_data->len == ccd_buffer->size) {
+#if (KERNEL_VERSION(6, 13, 0) > LINUX_VERSION_CODE)
 			if (atomic_long_read(&buf->dbuf->file->f_count) > 1 &&
 			    current->files)
+#else
+			if (file_count(buf->dbuf->file) > 1 &&
+			    current->files)
+#endif
 				close_fd(target_fd);
 			else
 				dev_info(ccd_memory->dev,
