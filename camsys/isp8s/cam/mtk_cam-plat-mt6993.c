@@ -127,7 +127,7 @@ static int set_meta_stat0_info(struct mtk_cam_uapi_meta_raw_stats_0 *stats,
 		(2 * cfg->awb_param.windownum_y) *
 		16;
 	aeo_size = (cfg->ae_enable & (0x1)) *
-		cfg->ae_param.block_win_cfg.block_num_x *
+		(cfg->ae_param.block_win_cfg.block_num_x + MTK_CAM_UAPI_AEO_DUMMY_BLK_XNUM) *
 		cfg->ae_param.block_win_cfg.block_num_y *
 		32;
 
