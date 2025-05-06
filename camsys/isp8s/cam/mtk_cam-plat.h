@@ -236,8 +236,7 @@ struct plat_v4l2_data {
 	/* camsv */
 	int (*set_sv_meta_stats_info)(int ipi_id, void *addr, struct dma_info *info);
 	int (*get_sv_dma_th_setting)(unsigned int dev_id, unsigned int fifo_img_p1,
-		unsigned int fifo_img_p2, unsigned int fifo_img_p3,unsigned int fifo_len_p1,
-		unsigned int fifo_len_p2, unsigned int fifo_len_p3,
+		unsigned int fifo_img_p2, unsigned int fifo_img_p3,
 		struct sv_dma_th_setting *th_setting, struct sv_dma_bw_setting *bw_setting);
 	int (*get_sv_fifo_core_setting)(unsigned int dev_id, unsigned int *fifo_core1,
 		unsigned int *fifo_core2, unsigned int *fifo_core3);

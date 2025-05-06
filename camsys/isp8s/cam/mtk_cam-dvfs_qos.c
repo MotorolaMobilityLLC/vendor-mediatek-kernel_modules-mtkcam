@@ -1264,7 +1264,6 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 	struct mtk_cam_device *cam = ctx->cam;
 	struct mtk_camsv_device *sv_dev = NULL;
 	unsigned int fifo_img_p1, fifo_img_p2, fifo_img_p3 = 0;
-	unsigned int fifo_len_p1, fifo_len_p2, fifo_len_p3 = 0;
 	u32 a_bw, p_bw;
 	int i, port_num = 0;
 	unsigned int raw_id;
@@ -1332,7 +1331,7 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 
 		if (apply_sv_th) {
 			unsigned int fifo_core1 = 0, fifo_core2 = 0, fifo_core3 = 0;
-			unsigned int lb_fifo1 = 0, lb_fifo2 = 0, lb_fifo3 = 0;
+			unsigned int lb_fifo = 0;
 
 			/* fifo monitor */
 			fifo_core1 =
@@ -1346,9 +1345,7 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 					sv_dev->id, 2);
 
 			/* calculate fifo lowerbond */
-			lb_fifo1 = fifo_core1 * 2 / 10;
-			lb_fifo2 = fifo_core2 * 2 / 10;
-			lb_fifo3 = fifo_core3 * 2 / 10;
+			lb_fifo = (fifo_core1 + fifo_core2 + fifo_core3) * 2 / 10;
 
 			/* apply fifo setting according to bandwidth */
 			fifo_img_p1 =
@@ -1357,16 +1354,12 @@ static void apply_sv_qos(struct mtk_cam_job *job)
 				job->sv_mmqos[SMI_PORT_SV_WDMA_1].peak_bw * 64 * 12 / 1000000;
 			fifo_img_p3 =
 				job->sv_mmqos[SMI_PORT_SV_WDMA_2].peak_bw * 64 * 12 / 1000000;
-			fifo_len_p1 = fifo_img_p1 / 80;
-			fifo_len_p2 = fifo_img_p2 / 80;
-			fifo_len_p3 = fifo_img_p3 / 80;
 
-			fifo_img_p1 = max(min(fifo_img_p1, fifo_core1), lb_fifo1);
-			fifo_img_p2 = max(min(fifo_img_p2, fifo_core2), lb_fifo2);
-			fifo_img_p3 = max(min(fifo_img_p3, fifo_core3), lb_fifo3);
+			fifo_img_p1 = max(min(fifo_img_p1, fifo_core1), lb_fifo);
+			fifo_img_p2 = max(min(fifo_img_p2, fifo_core2), lb_fifo);
+			fifo_img_p3 = max(min(fifo_img_p3, fifo_core3), lb_fifo);
 
-			mtk_cam_sv_dmao_common_config(sv_dev, fifo_img_p1, fifo_img_p2, fifo_img_p3,
-				fifo_len_p1, fifo_len_p2, fifo_len_p3);
+			mtk_cam_sv_dmao_common_config(sv_dev, fifo_img_p1, fifo_img_p2, fifo_img_p3);
 
 			/* apply golden setting */
 			mtk_cam_sv_golden_set(sv_dev, is_dc_mode(job) ? true : false);

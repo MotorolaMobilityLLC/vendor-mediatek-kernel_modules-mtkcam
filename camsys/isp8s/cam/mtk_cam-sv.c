@@ -924,8 +924,7 @@ int mtk_cam_sv_fifo_monitor_config(struct mtk_camsv_device *sv_dev,
 
 int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 	unsigned int fifo_img_p1, unsigned int fifo_img_p2,
-	unsigned int fifo_img_p3, unsigned int fifo_len_p1,
-	unsigned int fifo_len_p2, unsigned int fifo_len_p3)
+	unsigned int fifo_img_p3)
 {
 	int ret = 0;
 	struct sv_dma_th_setting th_setting;
@@ -942,8 +941,7 @@ int mtk_cam_sv_dmao_common_config(struct mtk_camsv_device *sv_dev,
 
 	CALL_PLAT_V4L2(
 		get_sv_dma_th_setting, sv_dev->id, fifo_img_p1, fifo_img_p2,
-		fifo_img_p3, fifo_len_p1, fifo_len_p2, fifo_len_p3,
-		&th_setting, &bw_setting);
+		fifo_img_p3, &th_setting, &bw_setting);
 
 	switch (sv_dev->id) {
 	case CAMSV_0:
@@ -1785,7 +1783,7 @@ int mtk_cam_slave_sv_dev_config(struct mtk_cam_ctx *ctx,
 	CAMSV_WRITE_REG(slave_sv_dev->base_dma + REG_CAMSVDMATOP_WDMA_BASE_ADDR_IMG1_A, imgo_lsb);
 	CAMSV_WRITE_REG(slave_sv_dev->base_dma + REG_CAMSVDMATOP_WDMA_BASE_ADDR_MSB_IMG1_A, imgo_msb);
 	CAMSV_WRITE_REG(slave_sv_dev->base + REG_CAMSVCENTRAL_FORMAT_TAG1, 0x1);
-	mtk_cam_sv_dmao_common_config(slave_sv_dev, 0, 0, 0, 0, 0, 0);
+	mtk_cam_sv_dmao_common_config(slave_sv_dev, 0, 0, 0);
 	mtk_cam_sv_ddren_qos_coh_config(slave_sv_dev, 0);
 
 	pr_info("%s sen_mod0x%x dma_en0x%x err_en0x%x sof_en0x%x first_tag0x%x last_tag0x%x group0x%x grab0x%x_%x dma_basic0x%x addr0x%x_%x fmt 0x%x\n",
@@ -1833,7 +1831,7 @@ int mtk_cam_sv_dev_config(struct mtk_cam_ctx *ctx,
 	atomic_set(&sv_dev->is_sub_en, 0);
 
 	mtk_cam_sv_df_config(sv_dev);
-	mtk_cam_sv_dmao_common_config(sv_dev, 0, 0, 0, 0, 0, 0);
+	mtk_cam_sv_dmao_common_config(sv_dev, 0, 0, 0);
 	mtk_cam_sv_cq_config(sv_dev, sub_ratio);
 	mtk_cam_sv_ddren_qos_coh_config(sv_dev, frm_time_us);
 	mtk_cam_sv_fifo_dbg_port_config(sv_dev);
