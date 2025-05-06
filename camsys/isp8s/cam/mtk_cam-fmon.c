@@ -12,6 +12,7 @@
 #include <linux/platform_device.h>
 #include <linux/vmalloc.h>
 #include <soc/mediatek/emi.h>
+#include <linux/delay.h>
 
 #include "mtk_cam.h"
 #include "mtk_cam-job_utils.h"
@@ -223,7 +224,8 @@ static void fmon_tx_mux(struct mtk_fmon_device *fmon,
 		base = fmon->camsv_tx_3;
 	break;
 	default:
-		pr_info("%s: unsupport engine\n", __func__);
+		if (CAM_DEBUG_ENABLED(FMON))
+			pr_info("%s: unsupport engine\n", __func__);
 		return;
 	break;
 	}
@@ -417,11 +419,32 @@ void fmon_reset_timer_fn(struct timer_list *timer)
 		container_of(timer, struct mtk_fmon_device, reset_timer);
 	u32 fmon_setting2 = readl(fmon->base + REG_CAM_FMON_SETTING_2);
 
-	atomic_and(~(FMON_SIG_START), &fmon->fmon_triggered);
 	writel(fmon_setting2 | 0xF, fmon->base + REG_CAM_FMON_SETTING_2);
 
 	pr_info("%s: fmon_setting_2:0x%x\n", __func__,
 					readl(fmon->base + REG_CAM_FMON_SETTING_2));
+}
+
+int mtk_cam_fmon_reset_msgfifo(struct mtk_fmon_device *fmon)
+{
+	atomic_set(&fmon->is_fifo_overflow, 0);
+	return kfifo_init(&fmon->msg_fifo, fmon->msg_buffer, fmon->fifo_size);
+}
+
+static int push_msgfifo(struct mtk_fmon_device *fmon,
+			struct mtk_fmon_irq_info *info)
+{
+	int len;
+
+	if (unlikely(kfifo_avail(&fmon->msg_fifo) < sizeof(*info))) {
+		atomic_set(&fmon->is_fifo_overflow, 1);
+		return -1;
+	}
+
+	len = kfifo_in(&fmon->msg_fifo, info, sizeof(*info));
+	WARN_ON(len != sizeof(*info));
+
+	return 0;
 }
 
 /* once by cam-main pwr on */
@@ -437,6 +460,7 @@ void mtk_cam_fmon_enable(struct mtk_fmon_device *fmon)
 	mutex_lock(&fmon->op_lock);
 
 	atomic_set(&fmon->fmon_triggered, 0);
+	mtk_cam_fmon_reset_msgfifo(fmon);
 
 	if (dbg_fmon_bypass) {
 		writel(0x1e000, fmon->base + REG_CAM_FMON_SETTING_3);
@@ -536,8 +560,7 @@ void mtk_cam_fmon_enable(struct mtk_fmon_device *fmon)
 /* once by cam-main pwr on */
 void mtk_cam_fmon_disable(struct mtk_fmon_device *fmon)
 {
-	u32 val;
-	int signal;
+	u32 val, mminfra_cti_st, apinfra_cti_st, cti_set;
 
 	if (!is_fmon_support())
 		return;
@@ -560,18 +583,22 @@ void mtk_cam_fmon_disable(struct mtk_fmon_device *fmon)
 	del_timer_sync(&fmon->reset_timer);
 	disable_irq(fmon->irq);
 
-	/* toggle cti stop if start is trigged but stop didn't */
-	signal = atomic_read(&fmon->fmon_triggered);
-	if (signal & (FMON_SIG_URGENT | FMON_SIG_START)) {
+	/* cti force stop if start is trigged */
+	if (atomic_read(&fmon->fmon_triggered))
 		writel(1, fmon->cti_set);
-		writel(1, fmon->cti_clear);
-	} else if (signal & FMON_SIG_STOP) {
-		writel(1, fmon->cti_clear);
-	}
 
-	pr_info("%s: fmon_setting:0x%x, cti_set:0x%x cti_clear:0x%x\n", __func__,
-		readl(fmon->base + REG_CAM_FMON_SETTING),
-		readl(fmon->cti_set), readl(fmon->cti_clear));
+	udelay(50);
+	mminfra_cti_st = readl(fmon->mminfra_cti_st);
+	apinfra_cti_st = readl(fmon->apinfra_cti_st);
+	cti_set = readl(fmon->cti_set);
+	writel(1, fmon->cti_clear);
+
+	pr_info("%s: fmon_setting:0x%x, trigged:%d cti_set:0x%x/0x%x mm_cti_st:0x%x/0x%x ap_cti_st:0x%x/0x%x\n",
+		__func__, readl(fmon->base + REG_CAM_FMON_SETTING),
+		atomic_read(&fmon->fmon_triggered),
+		cti_set, readl(fmon->cti_set),
+		mminfra_cti_st, readl(fmon->mminfra_cti_st),
+		apinfra_cti_st, readl(fmon->apinfra_cti_st));
 }
 
 void mtk_cam_fmon_dump(struct mtk_fmon_device *fmon)
@@ -596,19 +623,17 @@ void mtk_cam_fmon_dump(struct mtk_fmon_device *fmon)
 static irqreturn_t mtk_irq_fmon(int irq, void *data)
 {
 	struct mtk_cam_device *drvdata = (struct mtk_cam_device *)data;
-	struct device *dev = drvdata->dev;
 	struct mtk_fmon_device *fmon = &drvdata->fmon;
-	u64 systimer_cnt = arch_timer_read_counter();
-	u64 sched_clock_value = sched_clock();
-	u32 fmon_setting2 = 0, fmon_setting3 = 0;
+	struct mtk_fmon_irq_info irq_info;
+	bool wake_thread = 0;
+	u32 fmon_setting2 = 0;
 	u32 val = 0;
 
 	fmon_setting2 = readl_relaxed(fmon->base + REG_CAM_FMON_SETTING_2);
-	fmon_setting3 = readl_relaxed(fmon->base + REG_CAM_FMON_SETTING_3);
 
-	dev_info(dev, "FMON INT: setting2:0x%x, setting3:0x%x, funnel:0x%x, systimer:%llu ns, ktime: %llu ns\n",
-		fmon_setting2, fmon_setting3, readl(fmon->mminfra_funnel),
-		systimer_cnt, sched_clock_value);
+	irq_info.irq_type = 0;
+	irq_info.ts_ns = ktime_get_boottime_ns();
+	irq_info.irq_status = fmon_setting2;
 
 	/* fifo > 40% urgent start */
 	if (READ_FIELD(fmon_setting2, CAM_FMON_STATUS_0) & BIT(1) ||
@@ -616,7 +641,8 @@ static irqreturn_t mtk_irq_fmon(int irq, void *data)
 		READ_FIELD(fmon_setting2, CAM_FMON_STATUS_2) & BIT(1) ||
 		READ_FIELD(fmon_setting2, CAM_FMON_STATUS_3) & BIT(1)) {
 		writel(fmon_setting2 & ~(0xF00), fmon->base + REG_CAM_FMON_SETTING_2);
-		atomic_or(FMON_SIG_URGENT, &fmon->fmon_triggered);
+		irq_info.irq_type |= FMON_SIG_URGENT;
+		atomic_set(&fmon->fmon_triggered, 1);
 	}
 
 	/* fifo > 60% */
@@ -625,7 +651,8 @@ static irqreturn_t mtk_irq_fmon(int irq, void *data)
 		READ_FIELD(fmon_setting2, CAM_FMON_STATUS_2) & BIT(0) ||
 		READ_FIELD(fmon_setting2, CAM_FMON_STATUS_3) & BIT(0)) {
 		writel(fmon_setting2 & ~(0xF), fmon->base + REG_CAM_FMON_SETTING_2);
-		atomic_or(FMON_SIG_START, &fmon->fmon_triggered);
+		irq_info.irq_type |= FMON_SIG_START;
+		atomic_set(&fmon->fmon_triggered, 1);
 	}
 
 	/* fifo > 90% */
@@ -642,7 +669,7 @@ static irqreturn_t mtk_irq_fmon(int irq, void *data)
 		SET_FIELD(&val, CAM_FMON_FIFO_MON_EN, 0);
 		SET_FIELD(&val, CAM_FMON_ELA_BUS_SEL, 0);
 		writel(val, fmon->base + REG_CAM_FMON_SETTING);
-		atomic_or(FMON_SIG_STOP, &fmon->fmon_triggered);
+		irq_info.irq_type |= FMON_SIG_STOP;
 	}
 
 	val = readl(fmon->base + REG_CAM_FMON_SETTING);
@@ -650,7 +677,10 @@ static irqreturn_t mtk_irq_fmon(int irq, void *data)
 	SET_FIELD(&val, CAM_FMON_URGENT_CLEAR, 1);
 	writel(val, fmon->base + REG_CAM_FMON_SETTING);
 
-	return IRQ_WAKE_THREAD;
+	if (push_msgfifo(fmon, &irq_info) == 0)
+		wake_thread = 1;
+
+	return wake_thread ? IRQ_WAKE_THREAD : IRQ_HANDLED;
 }
 
 #define FMON_RECOVER_TIMER 10000
@@ -658,18 +688,32 @@ static irqreturn_t mtk_thread_irq_fmon(int irq, void *data)
 {
 	struct mtk_cam_device *cam = (struct mtk_cam_device *)data;
 	struct mtk_fmon_device *fmon = &cam->fmon;
-	int signal = atomic_read(&fmon->fmon_triggered);
+	struct mtk_fmon_irq_info irq_info;
+	u64 systimer_cnt = arch_timer_read_counter();
+	u64 sched_clock_value = sched_clock();
 
-	if (signal & FMON_SIG_STOP) {
-		mtk_hrt_issue_flag_set(true);
-		//WRAP_AEE_EXCEPTION(MSG_FMON_FIFO_FULL, __func__);
-	} else if (signal & FMON_SIG_START) {
-		if (fmon_mbrain_enable) {
+	if (unlikely(atomic_cmpxchg(&fmon->is_fifo_overflow, 1, 0)))
+		pr_info("msg fifo overflow\n");
+
+	while (kfifo_len(&fmon->msg_fifo) >= sizeof(irq_info)) {
+		int len = kfifo_out(&fmon->msg_fifo, &irq_info, sizeof(irq_info));
+
+		WARN_ON(len != sizeof(irq_info));
+
+		pr_info("FMON INT: setting2:0x%x, funnel:0x%x, systimer:%llu ns, ktime: %llu ns\n",
+			irq_info.irq_status, readl(fmon->mminfra_funnel),
+			systimer_cnt, sched_clock_value);
+
+		if (irq_info.irq_type & FMON_SIG_STOP) {
+			mtk_hrt_issue_flag_set(true);
+		} else if (irq_info.irq_type & FMON_SIG_START) {
+			if (fmon_mbrain_enable) {
 #if IS_ENABLED(CONFIG_MTK_MBRAINK_BRIDGE)
-			mtk_mbrain2isp_hrt_cb(dbg_threshold_pr);
-			/* trigger timer to recovery settings */
-			mod_timer(&fmon->reset_timer, jiffies + msecs_to_jiffies(FMON_RECOVER_TIMER));
+				mtk_mbrain2isp_hrt_cb(dbg_threshold_pr);
+				/* trigger timer to recovery settings */
+				mod_timer(&fmon->reset_timer, jiffies + msecs_to_jiffies(FMON_RECOVER_TIMER));
 #endif
+			}
 		}
 	}
 
@@ -681,7 +725,7 @@ int mtk_cam_fmon_probe(struct platform_device *pdev, struct mtk_cam_device *cam)
 	struct mtk_fmon_device *fmon = &cam->fmon;
 	struct resource *res;
 	struct device *dev = &pdev->dev;
-	int ret;
+	int ret = 0;
 
 	dev_info(dev, "fmon probe\n");
 
@@ -714,6 +758,14 @@ int mtk_cam_fmon_probe(struct platform_device *pdev, struct mtk_cam_device *cam)
 	fmon->mminfra_funnel = ioremap(0x30a2f000, 0x4);
 	if (IS_ERR(fmon->mminfra_funnel))
 		dev_err(dev, "%s: failed to map mminfra_funnel\n", __func__);
+
+	fmon->mminfra_cti_st = ioremap(0x30a2b138, 0x4);
+	if (IS_ERR(fmon->mminfra_cti_st))
+		dev_err(dev, "%s: failed to map mminfra_cti_st\n", __func__);
+
+	fmon->apinfra_cti_st = ioremap(0xd032138, 0x4);
+	if (IS_ERR(fmon->apinfra_cti_st))
+		dev_err(dev, "%s: failed to map apinfra_cti_st\n", __func__);
 
 	/* raw/yuv */
 	fmon->raw_a_tx = ioremap(0x3a7d0900, 0x4);
@@ -773,5 +825,12 @@ int mtk_cam_fmon_probe(struct platform_device *pdev, struct mtk_cam_device *cam)
 
 	memset(&fmon->pipes, 0, sizeof(fmon->pipes));
 
-	return 0;
+	fmon->fifo_size =
+		roundup_pow_of_two(8 * sizeof(struct mtk_fmon_irq_info));
+
+	fmon->msg_buffer = devm_kzalloc(dev, fmon->fifo_size, GFP_KERNEL);
+	if (!fmon->msg_buffer)
+		ret = -ENOMEM;
+
+	return ret;
 }

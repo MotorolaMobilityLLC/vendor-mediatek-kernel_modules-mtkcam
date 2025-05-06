@@ -68,9 +68,19 @@ struct fmon_settings {
 	u32 fifo_size;
 };
 
+struct mtk_fmon_irq_info {
+	int irq_type;
+	u64 ts_ns;
+	u32 irq_status;
+};
+
 struct mtk_fmon_device {
 	void __iomem *base;
 	int irq;
+	int		fifo_size;
+	void		*msg_buffer;
+	struct kfifo	msg_fifo;
+	atomic_t	is_fifo_overflow;
 
 	/* remap raw/yuv/camsv tx mux control */
 	void __iomem *raw_a_tx;
@@ -88,7 +98,10 @@ struct mtk_fmon_device {
 	void __iomem *ela_ctrl;
 	void __iomem *cti_set;
 	void __iomem *cti_clear;
+	/* debug */
 	void __iomem *mminfra_funnel;
+	void __iomem *mminfra_cti_st;
+	void __iomem *apinfra_cti_st;
 
 	struct mutex op_lock;
 	enum FMON_PIPE_INFO pipes[3];
