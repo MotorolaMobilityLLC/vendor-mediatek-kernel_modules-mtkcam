@@ -5177,10 +5177,11 @@ int mtk_camsys_ctrl_start(struct mtk_cam_ctx *ctx)
 
 	if (ctx->sensor) {
 		fi.pad = 0;
-		v4l2_set_frame_interval_which(fi, V4L2_SUBDEV_FORMAT_ACTIVE);
 #if (KERNEL_VERSION(6, 7, 0) < LINUX_VERSION_CODE)
+		fi.which = V4L2_SUBDEV_FORMAT_ACTIVE;
 		v4l2_subdev_call_state_active(ctx->sensor, pad, get_frame_interval, &fi);
 #else
+		v4l2_set_frame_interval_which(fi, V4L2_SUBDEV_FORMAT_ACTIVE);
 		v4l2_subdev_call(ctx->sensor, video, g_frame_interval, &fi);
 #endif
 	}
@@ -5266,11 +5267,12 @@ void mtk_camsys_ctrl_update(struct mtk_cam_ctx *ctx, int sensor_ctrl_factor)
 		if (sensor_ctrl_factor > 0) {
 			fps_factor = sensor_ctrl_factor;
 		} else {
-			v4l2_set_frame_interval_which(fi, V4L2_SUBDEV_FORMAT_ACTIVE);
 			if (ctx->sensor) {
 #if (KERNEL_VERSION(6, 7, 0) < LINUX_VERSION_CODE)
+				fi.which = V4L2_SUBDEV_FORMAT_ACTIVE;
 				v4l2_subdev_call_state_active(ctx->sensor, pad, get_frame_interval, &fi);
 #else
+				v4l2_set_frame_interval_which(fi, V4L2_SUBDEV_FORMAT_ACTIVE);
 				v4l2_subdev_call(ctx->sensor, video, g_frame_interval, &fi);
 #endif
 			}
