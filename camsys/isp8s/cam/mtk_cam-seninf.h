@@ -351,6 +351,12 @@ struct mtk_cam_seninf_rdy_msk_defer_info {
 	u8 camtg;
 };
 
+struct mtk_cam_seninf_lastest_debug_info {
+	struct mutex lastest_debug_info_mutex;
+	u64 lastest_ts_in_ns;
+	int lastest_seninf_dump_ret;
+};
+
 struct seninf_ctx {
 	struct v4l2_subdev subdev;
 	struct v4l2_async_notifier notifier;
@@ -587,6 +593,8 @@ struct seninf_ctx {
 
 	/* temp for hp9 signal interference used */
 	bool is_sof_delay_support;
+
+	struct mtk_cam_seninf_lastest_debug_info lastest_debug_info;
 };
 
 struct mtk_cam_seninf_irq_event_st {

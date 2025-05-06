@@ -3976,6 +3976,7 @@ static int seninf_probe(struct platform_device *pdev)
 	mutex_init(&ctx->mutex);
 	mutex_init(&ctx->stream_mutex);
 	mutex_init(&ctx->mutex_vsync_in);
+	mutex_init(&ctx->lastest_debug_info.lastest_debug_info_mutex);
 
 	get_sof_delay_support(ctx);
 
@@ -4886,7 +4887,7 @@ static int mtk_cam_seninf_ixc_connector_check(struct seninf_ctx *ctx)
 {
 	struct v4l2_subdev *sensor_sd;
 	bool i2c_is_err = false;
-	const int assert_socket_disconnect_threshold = 5;
+	const int assert_socket_disconnect_threshold = 3;
 
 	if (unlikely(ctx == NULL)) {
 		pr_info("ctx is NULL\n");
@@ -4922,6 +4923,46 @@ static int mtk_cam_seninf_ixc_connector_check(struct seninf_ctx *ctx)
 	}
 
 	return 0;
+}
+
+static int mtk_cam_seninf_check_lastest_debug_duration(struct seninf_ctx *ctx, int *lastest_ret)
+{
+	const long frame_time_of_30_fps = 33;
+	unsigned long debug_ft = frame_time_of_30_fps;
+	u64 lastest_ts_in_ns;
+	u64 diff_in_ns = 0;
+	int ret;
+
+	mutex_lock(&ctx->lastest_debug_info.lastest_debug_info_mutex);
+	lastest_ts_in_ns = ctx->lastest_debug_info.lastest_ts_in_ns;
+	ret = ctx->lastest_debug_info.lastest_seninf_dump_ret;
+	mutex_unlock(&ctx->lastest_debug_info.lastest_debug_info_mutex);
+
+	if (ctx->dbg_timeout != 0)
+		debug_ft = ctx->dbg_timeout / 1000;
+
+	if (lastest_ret == NULL) {
+		dev_info(ctx->dev,"[ERR] lastest_ret is NULL\n");
+		return false;
+	};
+	diff_in_ns = ktime_get_boottime_ns() - lastest_ts_in_ns;
+	if ((diff_in_ns / 1000000) < debug_ft) {
+		*lastest_ret = ret;
+		dev_info(ctx->dev,"detect multi debug dump in same frame (diff %llu ns)return last_ret %d dicectly,\n",
+			diff_in_ns, *lastest_ret);
+		return true;
+	}
+
+	return false;
+}
+
+static void mtk_cam_seninf_update_lastest_debug_status(struct seninf_ctx *ctx, int lastest_ret)
+{
+	mutex_lock(&ctx->lastest_debug_info.lastest_debug_info_mutex);
+	memset(&ctx->lastest_debug_info, 0, sizeof(struct mtk_cam_seninf_lastest_debug_info));
+	ctx->lastest_debug_info.lastest_ts_in_ns = ktime_get_boottime_ns();
+	ctx->lastest_debug_info.lastest_seninf_dump_ret = lastest_ret;
+	mutex_unlock(&ctx->lastest_debug_info.lastest_debug_info_mutex);
 }
 
 int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
@@ -4991,6 +5032,10 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 		sensor_sd->ops->core->command(sensor_sd, V4L2_CMD_SENSOR_IN_RESET, &in_reset);
 
 	if (!in_reset) {
+		if (mtk_cam_seninf_check_lastest_debug_duration(ctx, &ret)) {
+			dev_info(ctx->dev, "[%s]check_lastest_debug_duration true, force return func\n", __func__);
+			return ret;
+		}
 
 		ret = g_seninf_ops->_debug(sd_to_ctx(sd));
 		/* assert */
@@ -5029,6 +5074,8 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 
 	dev_info(ctx->dev, "[%s] ret(%d), req(%u), force(%d) reset_by_user(%d) asserted(%d)\n",
 		 __func__, ret, seq_id, force_check, reset_by_user, asserted);
+
+	mtk_cam_seninf_update_lastest_debug_status(ctx, ret);
 
 	/* return -ESTRPIPE if seninf already assertion,
 	 * or non-zero 1 if need to reset by user
@@ -5096,6 +5143,11 @@ int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd, bool assert_when_
 			V4L2_CMD_SENSOR_IN_RESET, &in_reset);
 
 	if (!in_reset) {
+		if (mtk_cam_seninf_check_lastest_debug_duration(ctx, &ret)) {
+			dev_info(ctx->dev, "[%s]check_lastest_debug_duration true, force return func\n", __func__);
+			return ret;
+		}
+
 		ret = g_seninf_ops->_debug_current_status(sd_to_ctx(sd));
 		/* assert */
 		if (assert_when_error) {
@@ -5122,6 +5174,8 @@ int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd, bool assert_when_
 
 	dev_info(ctx->dev, "[%s] ret(%d),asserted(%d)\n",
 		 __func__, ret, asserted);
+
+	mtk_cam_seninf_update_lastest_debug_status(ctx, ret);
 
 	/* return -ESTRPIPE if seninf already assertion,
 	 * or non-zero 1 if need to reset by user

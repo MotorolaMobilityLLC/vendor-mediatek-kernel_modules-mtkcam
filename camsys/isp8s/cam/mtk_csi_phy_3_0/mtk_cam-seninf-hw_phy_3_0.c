@@ -744,6 +744,9 @@ static int mtk_cam_seninf_set_outmux_cg(struct seninf_ctx *ctx, int outmux, int 
 	outmux_current_cg = (en) ?
 		(outmux_current_cg | (1 << outmux)) :
 		(outmux_current_cg & ~(1 << outmux));
+
+	// always usip cg
+	outmux_current_cg |= 0x200;
 	SENINF_BITS(pSeninf_top, SENINF_TOP_OUTMUX_CG_EN, SENINF_TOP_OUTMUX_CG_EN, outmux_current_cg);
 	mutex_unlock(&ctx->core->seninf_top_rg_mutex);
 	return 0;
