@@ -46,6 +46,7 @@
 #include "mtk_cam-trace.h"
 #include "mtk_cam-timesync.h"
 #include "mtk_cam-job.h"
+#include "mtk_cam-job_state.h"
 #include "mtk_cam-fmt_utils.h"
 #include "mtk_cam-job_utils.h"
 #include "mtk_cam-raw_ctrl.h"
@@ -1076,7 +1077,17 @@ void mtk_cam_req_buffer_done(struct mtk_cam_job *job,
 	if (is_buf_empty) {
 		/* assume: all ctrls are finished before buffers */
 		req->is_buf_empty = 1;
-		// remove from running job list
+
+		/* force stop the sensor fsm to avoid of unexpected trigger */
+		mtk_cam_job_state_set(&job->job_state, SENSOR_STATE, S_SENSOR_LATCHED);
+
+		/* cancel sensor work */
+		if (kthread_cancel_work_sync(&job->sensor_work)) {
+			/* flush if it is running/complete */
+			kthread_flush_work(&job->sensor_work);
+		}
+
+		/* remove from running job list */
 		remove_from_running_list(dev_get_drvdata(dev), req);
 	}
 
