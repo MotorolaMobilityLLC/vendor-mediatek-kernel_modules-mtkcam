@@ -3198,12 +3198,13 @@ void camsv_handle_err(
 	/* dump seninf debug data */
 	if (ctx && ctx->seninf) {
 		sv_dev->camsv_error_count += 1;
-		if (sv_dev->camsv_error_count >= 2 && !ctx->is_seninf_error_trigger)
-			ctx->is_seninf_error_trigger = mtk_cam_seninf_dump_current_status(ctx->seninf,
-				true);
-		else
-			ctx->is_seninf_error_trigger = mtk_cam_seninf_dump_current_status(ctx->seninf,
-				false);
+		if (!ctx->is_seninf_error_trigger) {
+			if (sv_dev->camsv_error_count >= 2)
+				ctx->is_seninf_error_trigger =
+					mtk_cam_seninf_dump_current_status(ctx->seninf, true);
+			else
+				mtk_cam_seninf_dump_current_status(ctx->seninf, false);
+		}
 	}
 
 	/* dump camsv debug data */

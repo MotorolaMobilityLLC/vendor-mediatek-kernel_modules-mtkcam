@@ -2612,7 +2612,7 @@ static void trigger_error_dump(struct mtk_cam_job *job,
 		 * NOTE: skip raise aee exception if
 		 * camsv/mraw has received error interrupt status
 		 */
-		if (!ctx->is_sv_mraw_error) {
+		if (!ctx->is_seninf_error_trigger) {
 			mtk_cam_event_error(&ctx->cam_ctrl, desc);
 			if (!(seninf_dump_ret && skip_when_sensor_error(desc)) &&
 				!skip_trigger_KE(desc)) {
@@ -2620,7 +2620,7 @@ static void trigger_error_dump(struct mtk_cam_job *job,
 				WRAP_AEE_EXCEPTION(desc, warn_desc);
 			}
 		} else {
-			ctx->is_sv_mraw_error = false;
+			ctx->is_seninf_error_trigger = false;
 		}
 	}
 }

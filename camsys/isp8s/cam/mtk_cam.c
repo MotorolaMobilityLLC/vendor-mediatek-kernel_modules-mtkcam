@@ -2763,7 +2763,6 @@ static int mtk_cam_ctx_alloc_camsv_stress_buf_pool(struct mtk_cam_ctx *ctx)
 			&ctx->camsv_stress_pool,
 			dev_to_attach, CAMSV_STRESS_BUF_SIZE, CAMSV_STRESS_BUF_NUM,
 			false);
-	pr_info("wenjie debug %s", __func__);
 
 	return ret;
 }
@@ -3095,6 +3094,7 @@ void mtk_cam_ctx_unprepare(struct mtk_cam_ctx *ctx)
 		mtk_cam_release_engine(ctx->cam, ctx->used_engine);
 	}
 
+	ctx->is_seninf_error_trigger = false;
 	ctx->used_pipe = 0;
 }
 
