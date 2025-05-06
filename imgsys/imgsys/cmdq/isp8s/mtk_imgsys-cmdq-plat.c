@@ -2808,7 +2808,7 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 #endif
 			task_cnt++;
 			if ((frm_info->user_info[frm_idx].is_time_shared)
-				|| (hw_comb == (IMGSYS_HW_FLAG_PQDIP_A|IMGSYS_HW_FLAG_WPE_LITE))
+				|| (hw_comb == (IMGSYS_HW_FLAG_PQDIP_A|IMGSYS_HW_FLAG_WPE_EIS))
 				|| (frm_info->user_info[frm_idx].is_secFrm)
 				|| (frm_info->user_info[frm_idx].is_earlycb)
 				|| ((frm_idx + 1) == frm_num)) {
