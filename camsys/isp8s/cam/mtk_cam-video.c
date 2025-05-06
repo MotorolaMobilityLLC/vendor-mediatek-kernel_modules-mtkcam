@@ -1584,7 +1584,9 @@ int mtk_cam_vidioc_qbuf(struct file *file, void *priv,
 	struct mtk_cam_video_device *node;
 
 	cam_buf = mtk_cam_vb2_queue_get_mtkbuf(vdev->queue, buf);
-	if (IS_ERR_OR_NULL(cam_buf))
+
+	// for coverity
+	if (!cam_buf || IS_ERR_OR_NULL(cam_buf))
 		return -EINVAL;
 
 	cam_buf->v4l2_buffer_idx = buf->index;
