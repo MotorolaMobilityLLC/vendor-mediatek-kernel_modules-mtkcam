@@ -1824,6 +1824,7 @@ int mtk_cam_sv_dev_config(struct mtk_cam_ctx *ctx,
 	sv_dev->sof_count = 0;
 	sv_dev->tg_cnt = 0;
 	sv_dev->ois_updated_seq = 0;
+	sv_dev->camsv_error_count = 0;
 
 	atomic_set(&sv_dev->is_otf, 0);
 	atomic_set(&sv_dev->is_seamless, 0);
@@ -3338,7 +3339,6 @@ static irqreturn_t mtk_irq_camsv_hybrid(int irq, void *data)
 	if (done_status) {
 		dev_dbg(sv_dev->dev, "camsv-%d: done status:0x%x seq_no:0x%x_0x%x",
 			sv_dev->id, done_status, frm_seq_no_inner, frm_seq_no);
-		sv_dev->camsv_error_count = 0;
 		irq_info.ts_ns = ktime_get_boottime_ns();
 		irq_info.irq_type |= (1 << CAMSYS_IRQ_FRAME_DONE);
 		if (done_status & CAMSVCENTRAL_SW_GP_PASS1_DONE_0_ST)
