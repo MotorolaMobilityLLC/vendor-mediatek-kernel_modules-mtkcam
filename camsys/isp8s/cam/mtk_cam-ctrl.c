@@ -2401,7 +2401,8 @@ void mtk_cam_ctrl_job_composed(struct mtk_cam_ctrl *cam_ctrl,
 #endif
 
 	spin_lock(&cam_ctrl->info_lock);
-	cam_ctrl->r_info.ack_seq_no = seq;
+	cam_ctrl->r_info.ack_seq_no =
+		(seq) ? max(cam_ctrl->r_info.ack_seq_no, seq) : seq;
 	spin_unlock(&cam_ctrl->info_lock);
 
 	cam_ctrl->sof_timer.data.frame_sequence = job_composed->req_seq;
