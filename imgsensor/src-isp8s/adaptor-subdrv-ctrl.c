@@ -4716,7 +4716,7 @@ void get_multi_exp_static_info_by_scenario(struct subdrv_ctx *ctx,
 	info->exp_cnt = ctx->s_ctx.mode[scenario_id].exp_cnt
 				? ctx->s_ctx.mode[scenario_id].exp_cnt : 1;
 
-	DRV_LOG_MUST(ctx, "scenario_id:%u,exp_cnt:%u\n", scenario_id, info->exp_cnt);
+	DRV_LOG(ctx, "scenario_id:%u,exp_cnt:%u\n", scenario_id, info->exp_cnt);
 
 	get_dcg_vsl_info_by_scenario(ctx, scenario_id, &dcg_vsl_info);
 
