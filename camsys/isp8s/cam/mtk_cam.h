@@ -307,6 +307,7 @@ struct mtk_cam_device {
 	struct v4l2_device v4l2_dev;
 	struct v4l2_async_notifier notifier;
 	struct media_device media_dev;
+	atomic_t req_cnt;
 	struct clk **clks;
 	unsigned int num_clks;
 	u64 base_reg_addr;

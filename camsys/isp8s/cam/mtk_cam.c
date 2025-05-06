@@ -412,9 +412,21 @@ put_permit:
 	_put_permit_to_queue(cam);
 }
 
+/* 10 request for 1 streaming and 10 for extra margin */
+#define RESONABLE_REQ_NUM 40 /* 3*10+10 */
 static struct media_request *mtk_cam_req_alloc(struct media_device *mdev)
 {
+	struct mtk_cam_device *cam =
+		container_of(mdev, struct mtk_cam_device, media_dev);
 	struct mtk_cam_request *cam_req;
+	int curr_req_cnt = atomic_read(&cam->req_cnt);
+
+	if (unlikely(curr_req_cnt > RESONABLE_REQ_NUM)) {
+		pr_info("%s: request mighe be leaked, req_cnt:%d",
+			__func__, atomic_read(&cam->req_cnt));
+		if (WARN_ON(curr_req_cnt > RESONABLE_REQ_NUM * 2))
+			return NULL;
+	}
 
 	cam_req = vzalloc(sizeof(*cam_req));
 	if (WARN_ON(!cam_req))
@@ -423,16 +435,23 @@ static struct media_request *mtk_cam_req_alloc(struct media_device *mdev)
 	spin_lock_init(&cam_req->buf_lock);
 	frame_sync_init(&cam_req->fs);
 
+	atomic_inc(&cam->req_cnt);
+
 	return &cam_req->req;
 }
 
 static void mtk_cam_req_free(struct media_request *req)
 {
+	struct mtk_cam_device *cam =
+		container_of(req->mdev, struct mtk_cam_device, media_dev);
 	struct mtk_cam_request *cam_req = to_mtk_cam_req(req);
 
+	atomic_dec(&cam->req_cnt);
+
 	/* debug only */
-	pr_info("%s:%s:%s:%p",
-		__func__, cam_req->req.debug_str, cam_req->debug_str, cam_req);
+	pr_info("%s:%s:%s:%p req_cnt:%d",
+		__func__, cam_req->req.debug_str, cam_req->debug_str, cam_req,
+		atomic_read(&cam->req_cnt));
 
 	vfree(cam_req);
 }
@@ -4462,6 +4481,7 @@ static int mtk_cam_master_bind(struct device *dev)
 	media_dev->hw_revision = 0;
 	media_dev->ops = &mtk_cam_dev_ops;
 	media_device_init(media_dev);
+	atomic_set(&cam_dev->req_cnt, 0);
 
 	cam_dev->v4l2_dev.mdev = media_dev;
 	ret = v4l2_device_register(cam_dev->dev, &cam_dev->v4l2_dev);

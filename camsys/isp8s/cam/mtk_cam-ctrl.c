@@ -2144,17 +2144,10 @@ static void mtk_cam_flow_runner(struct kthread_work *work)
 	struct mtk_cam_flow_work *flow_work =
 		container_of(work, struct mtk_cam_flow_work, work);
 	struct mtk_cam_job *job = mtk_cam_job_get(flow_work->job);
-	struct media_request *req = (job && job->req) ? &job->req->req : NULL;
-	struct media_request *req_sensor =
-		(job && job->req_sensor) ? &job->req_sensor->req : NULL;
 
 	if (job) {
-		if (flow_work->exec) {
-			two_media_request_get(req, req_sensor);
+		if (flow_work->exec)
 			flow_work->exec(job);
-			two_media_request_put(req, req_sensor);
-		}
-
 		mtk_cam_job_put(job);
 	}
 
@@ -2758,7 +2751,6 @@ static void mtk_cam_ctrl_dump_first_job(struct mtk_cam_ctrl *ctrl,
 			int *seq, const char *desc)
 {
 	struct mtk_cam_job *job;
-	struct media_request *req, *req_sensor;
 
 	job = mtk_cam_ctrl_get_job(ctrl, cond_first_job, 0);
 	if (job) {
@@ -2769,11 +2761,8 @@ static void mtk_cam_ctrl_dump_first_job(struct mtk_cam_ctrl *ctrl,
 		else
 			seq_no = ctrl_fetch_inner(ctrl);
 
-		req = &job->req->req;
-		req_sensor = &job->req_sensor->req;
-		two_media_request_get(req, req_sensor);
 		call_jobop(job, dump, seq_no, desc);
-		two_media_request_put(req, req_sensor);
+
 		mtk_cam_job_put(job);
 	} else
 		pr_info("%s: no job to dump", __func__);
@@ -3004,7 +2993,6 @@ static int mtk_cam_watchdog_monitor_job(struct mtk_cam_watchdog *wd)
 		container_of(wd, struct mtk_cam_ctrl, watchdog);
 	struct mtk_cam_ctx *ctx = ctrl->ctx;
 	struct mtk_cam_job *job;
-	struct media_request *req, *req_sensor;
 	int req_seq, is_dc;
 	u64 job_ts;
 	u64 ts;
@@ -3017,9 +3005,6 @@ static int mtk_cam_watchdog_monitor_job(struct mtk_cam_watchdog *wd)
 	job = mtk_cam_ctrl_get_job(ctrl, cond_first_job, 0);
 	if (!job)
 		return 0;
-	req = &job->req->req;
-	req_sensor = &job->req_sensor->req;
-	two_media_request_get(req, req_sensor);
 
 	req_seq = job->req_seq;
 	job_ts = job->timestamp;
@@ -3027,7 +3012,6 @@ static int mtk_cam_watchdog_monitor_job(struct mtk_cam_watchdog *wd)
 
 	if (req_seq != wd->req_seq) {
 		wd->req_seq = req_seq;
-		two_media_request_put(req, req_sensor);
 		mtk_cam_job_put(job);
 		return 0;
 	}
@@ -3037,7 +3021,6 @@ static int mtk_cam_watchdog_monitor_job(struct mtk_cam_watchdog *wd)
 		if (!job_ts || in_valid_hw_processing_time(ts - job_ts)) {
 			dev_info(ctx->cam->dev, "[inner check] job #%d job_ts %llu ts %llu, skip\n",
 				 req_seq, job_ts, ts);
-			two_media_request_put(req, req_sensor);
 			mtk_cam_job_put(job);
 			return 0;
 		}
@@ -3048,7 +3031,6 @@ static int mtk_cam_watchdog_monitor_job(struct mtk_cam_watchdog *wd)
 			 job->local_compose_isp_ts, job->local_ack_isp_ts,
 			 job->local_trigger_cq_ts, job->local_ispdone_ts);
 	}
-	two_media_request_put(req, req_sensor);
 	mtk_cam_job_put(job);
 
 	completed = try_wait_for_completion(&wd->work_complete);

@@ -153,19 +153,8 @@ static void mtk_cam_sensor_work(struct kthread_work *work)
 {
 	struct mtk_cam_job *job =
 		container_of(work, struct mtk_cam_job, sensor_work);
-	struct media_request *req = &job->req->req;
-	struct media_request *req_sensor = &job->req_sensor->req;
 
-	/**
-	 * Both sensor req and isp req will update "job->req" and the isp req
-	 * might be enqued during the "apply_sensor", that is, the "job->req"
-	 * would be different after the "apply_sensor" is called. Recording the
-	 * media_request in the beginning to avoid of unbalanced get/put.
-	 */
-
-	two_media_request_get(req, req_sensor);
 	call_jobop(job, apply_sensor);
-	two_media_request_put(req, req_sensor);
 
 	mtk_cam_job_put(job);  /* pair with mtk_cam_job_apply_pending_action */
 }
@@ -195,11 +184,7 @@ static void mtk_cam_tuning_work(struct kthread_work *work)
 {
 	struct mtk_cam_job *job =
 		container_of(work, struct mtk_cam_job, tuning_work);
-	struct media_request *req = &job->req->req;
-	struct media_request *req_sensor = &job->req_sensor->req;
 	struct mtk_cam_tuning *p = &job->tuning_param;
-
-	two_media_request_get(req, req_sensor);
 
 	/* shading update */
 	MTK_CAM_TRACE_BEGIN(BASIC, "%s:update-%d", __func__, job->frame_seq_no);
@@ -229,7 +214,6 @@ static void mtk_cam_tuning_work(struct kthread_work *work)
 				p->end_ts_ns - p->begin_ts_ns,
 				p->begin_ts_ns, p->end_ts_ns);
 
-	two_media_request_put(req, req_sensor);
 	mtk_cam_job_put(job);  /* pair with handle_tuning_update */
 }
 
@@ -528,7 +512,14 @@ static int mtk_cam_job_pack_init(struct mtk_cam_job *job,
 	atomic_set(&job->refs, 1);
 	INIT_LIST_HEAD(&job->list);
 
+	/* put at job->req clean */
+	if (job->req) {
+		dev_info(dev, "%s job#%d %s might be leaked\n", __func__,
+			 job->req_seq, job->req->debug_str);
+	}
+	media_request_get(&req->req);
 	job->req = req;
+
 	job->src_ctx = ctx;
 	job->img_wbuf_pool_wrapper = NULL;
 	job->img_wbuf_pool_wrapper_prev = NULL;
@@ -602,8 +593,14 @@ static int mtk_cam_job_pack_init(struct mtk_cam_job *job,
 
 	job->long_exp_cq_rdy_mask = false;
 
-	if (raw_data &&
-		raw_data->ctrl.req_info.req_type == SENSOR_REQUEST) {
+	if (raw_data && (raw_data->ctrl.req_info.req_type == SENSOR_REQUEST)) {
+		/* put at job->req_sensor clean */
+		if (job->req_sensor) {
+			dev_info(dev, "%s job#%d %s might be leaked\n", __func__,
+				 job->req_seq, job->req_sensor->debug_str);
+		}
+		media_request_get(&req->req);
+
 		job->req_info_id = raw_data->ctrl.req_info.req_sync_id;
 		job->req_sensor = req;
 	}
@@ -4021,6 +4018,17 @@ static void job_finalize(struct mtk_cam_job *job)
 
 	mtk_cam_buffer_pool_return(&job->cq);
 	mtk_cam_buffer_pool_return(&job->ipi);
+
+	/* pair to fetch mtk_cam_[sensor/isp/normal]_job_pack */
+	if (job->req) {
+		media_request_put(&job->req->req);
+		job->req = NULL;
+	}
+
+	if (job->req_sensor) {
+		media_request_put(&job->req_sensor->req);
+		job->req_sensor = NULL;
+	}
 }
 
 static void update_mstream_ufd_offset(struct mtk_cam_pool_buffer *fir_ipi,
@@ -5592,11 +5600,17 @@ int mtk_cam_sensor_job_pack(struct mtk_cam_job *job, struct mtk_cam_ctx *ctx,
 	return ret;
 }
 int mtk_cam_isp_job_pack(struct mtk_cam_job *job, struct mtk_cam_ctx *ctx,
-		     struct mtk_cam_request *req)
+			 struct mtk_cam_request *req)
 {
 	int ret;
 
+	if (job->req) { /* overwrite sensor req */
+		media_request_put(&job->req->req);
+	}
+	/* put at job->req clean */
+	media_request_get(&req->req);
 	job->req = req;
+
 	job->local_enqueue_isp_ts = local_clock();
 	// update job's feature
 	ret = update_job_type_feature(job);
