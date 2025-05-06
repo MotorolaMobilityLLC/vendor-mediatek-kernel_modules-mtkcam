@@ -1194,7 +1194,7 @@ static void imgsys_qos_config_bwr(struct cmdq_pkt *pkt,
 		imgsys_qos_set_bw_ratio(pkt);
 		imgsys_qos_set_report_mode(pkt);
 		cmdq_pkt_write(pkt, NULL, BWR_IMG_E1A_BASE + BWR_IMG_MTCMOS_EN_VLD_OFT,
-			BWR_IMG_EMI_ENG_EN, CMDQ_REG_MASK);
+			BWR_IMG_MTCMOS_EN_VLD_EN, CMDQ_REG_MASK);
 		cmdq_pkt_write(pkt, NULL, BWR_IMG_E1A_BASE + BWR_IMG_RPT_CTRL_OFT,
 			BIT(BWR_IMG_RPT_START), CMDQ_REG_MASK);
 		break;
