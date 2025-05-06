@@ -67,7 +67,7 @@ static int dbg_fmon_tx_csr = -1;
 module_param(dbg_fmon_tx_csr, int, 0644);
 MODULE_PARM_DESC(dbg_fmon_tx_csr, "fifo monitor tx csr");
 
-static int fmon_mbrain_enable = 1;
+static int fmon_mbrain_enable;
 module_param(fmon_mbrain_enable, int, 0644);
 
 #define FMON_THRS_RATIO_N 60
