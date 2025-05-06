@@ -3131,6 +3131,13 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 						cb_param->user_cmdq_cb = NULL;
 						cb_param->user_cmdq_err_cb = NULL;
 						cb_param->isPktReuse = 1;
+					/* Add cmdq thread list check to avoid irq missing */
+					while (cmdq_thread_check_list_empty(imgsys_clt[thd_idx]->chan) == false) {
+						dev_dbg(imgsys_dev->dev,
+							"%s: waiting for thd_idx(%d) empty\n",
+							__func__, thd_idx);
+						usleep_range(1000, 1050);
+					}
 					} else
 						pkt->skip_add_cookie = true;
 
