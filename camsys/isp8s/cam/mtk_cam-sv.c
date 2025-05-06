@@ -3181,6 +3181,41 @@ void camsv_handle_cq_err(
 
 	mtk_smi_dbg_hang_detect("camsys-camsv");
 }
+void mtk_cam_sv_fifo_full_dbg_dump(struct mtk_camsv_device *sv_dev)
+{
+	int i;
+
+	pr_info("%s vcore cg0 cg1:0x%x_0x%x / main cg0 cg1:0x%x_0x%x / mraw cg:0x%x",
+		__func__,
+		readl(sv_dev->cam->vcore_base),
+		readl(sv_dev->cam->vcore_base + 0x10),
+		readl(sv_dev->cam->base + 0x00),
+		readl(sv_dev->cam->base + 0x4c),
+		readl(sv_dev->top));
+
+	for (i = 0; i <= 0x1a; i++) {
+		unsigned int base_val = (1 << 16) | (1 << 10);
+
+		base_val |= i;
+		writel(base_val, sv_dev->cam->vcore_base + 0x300);
+		pr_info("vcore write value:0x300:0x%x 0x304:0x%x",
+			base_val, readl(sv_dev->cam->vcore_base + 0x304));
+	}
+
+	for (i = 0; i <= 0x1b; i++) {
+		unsigned int base_val = (1 << 16) | (1 << 10) | 0x1b;
+
+		base_val |= (i << 5);
+		writel(base_val, sv_dev->cam->vcore_base + 0x300);
+		pr_info("vcore write value:0x300:0x%x 0x304:0x%x",
+			base_val, readl(sv_dev->cam->vcore_base + 0x304));
+	}
+
+	for (i = 0x101; i <= 0x10d; i++) {
+		writel(i, sv_dev->top + 0x234);
+		pr_info("mraw macro dbg 0x234:0x%x 0x238:0x%x", i, readl(sv_dev->top + 0x238));
+	}
+}
 void camsv_handle_err(
 	struct mtk_camsv_device *sv_dev,
 	struct mtk_camsys_irq_info *data)
@@ -3218,6 +3253,7 @@ void camsv_handle_err(
 
 		dev_info(sv_dev->dev, "camsv dma fifo full\n");
 
+		mtk_cam_sv_fifo_full_dbg_dump(sv_dev);
 #if !IS_ENABLED(CONFIG_MTK_EMI_LEGACY)
 		mtk_emiisu_record_off();
 #endif
@@ -4365,7 +4401,6 @@ int mtk_camsv_runtime_resume(struct device *dev)
 		if (ret)
 			dev_info(dev, "enable fifo_detection fail\n");
 	}
-
 	return 0;
 }
 
