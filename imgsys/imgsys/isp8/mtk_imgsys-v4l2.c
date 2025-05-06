@@ -3525,6 +3525,10 @@ int mtk_imgsys_runtime_resume(struct device *dev)
 EXPORT_SYMBOL(mtk_imgsys_runtime_resume);
 MODULE_AUTHOR("Frederic Chen <frederic.chen@mediatek.com>");
 MODULE_LICENSE("GPL");
+#if (KERNEL_VERSION(6, 13, 0) > LINUX_VERSION_CODE)
 MODULE_IMPORT_NS(DMA_BUF);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+#endif
 MODULE_DESCRIPTION("Mediatek DIP driver");
 

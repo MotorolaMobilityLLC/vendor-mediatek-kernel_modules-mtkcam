@@ -386,6 +386,11 @@ int mtk_ccd_put_buffer_fd(struct mtk_ccd *ccd,
 }
 EXPORT_SYMBOL_GPL(mtk_ccd_put_buffer_fd);
 MODULE_LICENSE("GPL v2");
+#if (KERNEL_VERSION(6, 13, 0) > LINUX_VERSION_CODE)
 MODULE_IMPORT_NS(DMA_BUF);
 MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
+#endif
 MODULE_DESCRIPTION("MediaTek ccd memory interface");

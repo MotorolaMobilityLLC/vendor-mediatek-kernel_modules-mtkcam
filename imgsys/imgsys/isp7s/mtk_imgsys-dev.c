@@ -11,6 +11,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/hashtable.h>
 #include <linux/platform_device.h>
+#include <linux/version.h>
 #include <linux/vmalloc.h>
 #include <media/videobuf2-dma-contig.h>
 #include <media/v4l2-event.h>
@@ -1804,4 +1805,8 @@ void mtk_imgsys_pipe_try_enqueue(struct mtk_imgsys_pipe *pipe)
 		pipe->num_jobs);
 }
 }
+#if (KERNEL_VERSION(6, 13, 0) > LINUX_VERSION_CODE)
 MODULE_IMPORT_NS(DMA_BUF);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+#endif

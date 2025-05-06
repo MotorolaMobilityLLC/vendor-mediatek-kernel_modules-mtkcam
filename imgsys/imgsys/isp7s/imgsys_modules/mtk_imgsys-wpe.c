@@ -10,6 +10,7 @@
 #include <linux/of_address.h>
 #include <linux/pm_runtime.h>
 #include <linux/remoteproc.h>
+#include <linux/version.h>
 
 #include "iommu_debug.h"
 #ifdef WPE_TF_DUMP_7S_1
@@ -783,4 +784,8 @@ void imgsys_wpe_uninit(struct mtk_imgsys_dev *imgsys_dev)
 	}
 
 }
+#if (KERNEL_VERSION(6, 13, 0) > LINUX_VERSION_CODE)
 MODULE_IMPORT_NS(DMA_BUF);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+#endif

@@ -1654,7 +1654,11 @@ static void __exit ccu_exit(void)
 module_init(ccu_init);
 module_exit(ccu_exit);
 
+#if (KERNEL_VERSION(6, 13, 0) > LINUX_VERSION_CODE)
 MODULE_IMPORT_NS(DMA_BUF);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+#endif
 
 MODULE_DESCRIPTION("MTK CCU Rproc Driver");
 MODULE_LICENSE("GPL v2");

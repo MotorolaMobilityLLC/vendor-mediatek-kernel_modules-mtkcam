@@ -4,6 +4,7 @@
  */
 #include <linux/slab.h>
 #include <linux/kref.h>
+#include <linux/version.h>
 #include <mtk_heap.h>
 #include "mtk-hcp_isp7s.h"
 
@@ -3718,4 +3719,8 @@ struct mtk_hcp_data isp7s_hcp_data = {
 	.partial_flush = NULL,
 };
 #endif
+#if (KERNEL_VERSION(6, 13, 0) > LINUX_VERSION_CODE)
 MODULE_IMPORT_NS(DMA_BUF);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+#endif

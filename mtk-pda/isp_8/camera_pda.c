@@ -3250,5 +3250,9 @@ module_init(camera_pda_init);
 module_exit(camera_pda_exit);
 MODULE_DESCRIPTION("Camera PDA driver");
 MODULE_AUTHOR("MM6SW3");
+#if (KERNEL_VERSION(6, 13, 0) > LINUX_VERSION_CODE)
 MODULE_IMPORT_NS(DMA_BUF);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+#endif
 MODULE_LICENSE("GPL");

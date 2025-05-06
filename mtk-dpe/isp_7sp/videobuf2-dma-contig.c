@@ -792,5 +792,9 @@ EXPORT_SYMBOL_GPL(vb2_dpe_dma_contig_clear_max_seg_size_isp7s);
 
 MODULE_DESCRIPTION("DMA-contig memory handling routines for videobuf2");
 MODULE_AUTHOR("Pawel Osciak <pawel@osciak.com>");
+#if (KERNEL_VERSION(6, 13, 0) > LINUX_VERSION_CODE)
 MODULE_IMPORT_NS(DMA_BUF);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+#endif
 MODULE_LICENSE("GPL");

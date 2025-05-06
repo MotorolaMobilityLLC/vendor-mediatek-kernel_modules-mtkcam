@@ -10,6 +10,7 @@
 #include <linux/of_address.h>
 #include <linux/pm_runtime.h>
 #include <linux/remoteproc.h>
+#include <linux/version.h>
 
 // GCE header
 #include <linux/soc/mediatek/mtk-cmdq-ext.h>
@@ -946,4 +947,8 @@ void imgsys_wpe_uninit(struct mtk_imgsys_dev *imgsys_dev)
 		gVcoreRegBA = 0L;
 	}
 }
+#if (KERNEL_VERSION(6, 13, 0) > LINUX_VERSION_CODE)
 MODULE_IMPORT_NS(DMA_BUF);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+#endif

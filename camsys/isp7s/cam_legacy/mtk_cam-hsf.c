@@ -683,4 +683,8 @@ int mtk_cam_hsf_aid(struct mtk_cam_ctx *ctx, unsigned int enable, unsigned int f
 
 	return 0;
 }
+#if (KERNEL_VERSION(6, 13, 0) > LINUX_VERSION_CODE)
 MODULE_IMPORT_NS(DMA_BUF);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+#endif

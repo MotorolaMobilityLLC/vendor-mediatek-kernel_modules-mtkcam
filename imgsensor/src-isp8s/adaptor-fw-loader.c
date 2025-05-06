@@ -9,6 +9,7 @@
 #include <linux/namei.h>
 #include <linux/dirent.h>
 #include <linux/firmware.h>
+#include <linux/version.h>
 
 #include "adaptor-fw-loader.h"
 #include "adaptor-fw-types.h"
@@ -17,7 +18,11 @@
 #define IMGSENSOR_FW_PATH "/vendor/firmware/sensor"
 #define IMGSENSOR_FW_SUB_FOLDER "sensor"
 
+#if (KERNEL_VERSION(6, 13, 0) > LINUX_VERSION_CODE)
 MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+#else
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
+#endif
 
 static LIST_HEAD(all_sensor_fw_list);
 static int all_sensor_fw_list_cnt;
