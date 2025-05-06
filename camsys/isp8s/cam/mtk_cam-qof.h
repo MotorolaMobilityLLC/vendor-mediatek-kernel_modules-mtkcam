@@ -72,7 +72,7 @@ void __qof_mtcmos_voter_handle(struct mtk_cam_engines *eng,
 
 int qof_reset_mtcmos_voter(struct mtk_cam_ctx *ctx);
 int qof_reset_mtcmos_raw_voter(struct mtk_raw_device *raw);
-void qof_ddren_setting(struct mtk_raw_device *raw, int frm_time_us);
+void qof_ddren_setting(struct mtk_raw_device *raw, int frm_time_us, int is_srt);
 
 u32 qof_on_off_cnt(struct mtk_raw_device *raw);
 

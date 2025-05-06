@@ -1629,35 +1629,50 @@ void qof_force_dump_all(struct mtk_raw_device *raw)
 
 #define DDR_GEN_BEFORE_US     10
 #define QOS_GEN_BEFORE_US     100
-void qof_ddren_setting(struct mtk_raw_device *raw, int frm_time_us)
+void qof_ddren_setting(struct mtk_raw_device *raw, int frm_time_us, int is_srt)
 {
 	int ddr_gen_pulse, qos_gen_pulse;
 	int val;
 	unsigned long flags;
 
-	ddr_gen_pulse =
-		(frm_time_us - DDR_GEN_BEFORE_US) * SCQ_DEFAULT_CLK_RATE /
-		(2 * (QOF_TIMER_FREQ_DIV + 1)) - 1;
-	qos_gen_pulse =
-		(frm_time_us - QOS_GEN_BEFORE_US) * SCQ_DEFAULT_CLK_RATE /
-		(2 * (QOF_TIMER_FREQ_DIV + 1)) - 1;
+	if (is_srt) {
+		spin_lock_irqsave(&raw->qof_ctrl_lock, flags);
 
-	spin_lock_irqsave(&raw->qof_ctrl_lock, flags);
+		val = readl_relaxed(raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
+		writel_relaxed(
+			val & ~(FBIT(QOF_CAM_A_DDREN_HW_EN) | FBIT(QOF_CAM_A_BW_QOS_HW_EN)),
+			raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
 
-	val = readl_relaxed(raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
-	writel_relaxed(
-		val | FBIT(QOF_CAM_A_DDREN_HW_EN) | FBIT(QOF_CAM_A_BW_QOS_HW_EN),
-		raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
+		val = readl_relaxed(raw->qof_base + REG_QOF_CAM_A_QOF_COH_CTL);
+		writel_relaxed(val & ~FBIT(QOF_CAM_A_COH_HW_EN),
+			raw->qof_base + REG_QOF_CAM_A_QOF_COH_CTL);
 
-	val = readl_relaxed(raw->qof_base + REG_QOF_CAM_A_QOF_COH_CTL);
-	writel_relaxed(val | FBIT(QOF_CAM_A_COH_HW_EN),
-		raw->qof_base + REG_QOF_CAM_A_QOF_COH_CTL);
+		spin_unlock_irqrestore(&raw->qof_ctrl_lock, flags);
+	} else {
+		ddr_gen_pulse =
+			(frm_time_us - DDR_GEN_BEFORE_US) * SCQ_DEFAULT_CLK_RATE /
+			(2 * (QOF_TIMER_FREQ_DIV + 1)) - 1;
+		qos_gen_pulse =
+			(frm_time_us - QOS_GEN_BEFORE_US) * SCQ_DEFAULT_CLK_RATE /
+			(2 * (QOF_TIMER_FREQ_DIV + 1)) - 1;
 
-	spin_unlock_irqrestore(&raw->qof_ctrl_lock, flags);
+		spin_lock_irqsave(&raw->qof_ctrl_lock, flags);
 
-	writel_relaxed(ddr_gen_pulse, raw->qof_base + REG_QOF_CAM_A_QOF_DDREN_CYC_MAX);
-	writel_relaxed(qos_gen_pulse, raw->qof_base + REG_QOF_CAM_A_QOF_BWQOS_CYC_MAX);
-	writel_relaxed(ddr_gen_pulse, raw->qof_base + REG_QOF_CAM_A_QOF_COH_CYC_MAX);
+		val = readl_relaxed(raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
+		writel_relaxed(
+			val | FBIT(QOF_CAM_A_DDREN_HW_EN) | FBIT(QOF_CAM_A_BW_QOS_HW_EN),
+			raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
+
+		val = readl_relaxed(raw->qof_base + REG_QOF_CAM_A_QOF_COH_CTL);
+		writel_relaxed(val | FBIT(QOF_CAM_A_COH_HW_EN),
+			raw->qof_base + REG_QOF_CAM_A_QOF_COH_CTL);
+
+		spin_unlock_irqrestore(&raw->qof_ctrl_lock, flags);
+
+		writel_relaxed(ddr_gen_pulse, raw->qof_base + REG_QOF_CAM_A_QOF_DDREN_CYC_MAX);
+		writel_relaxed(qos_gen_pulse, raw->qof_base + REG_QOF_CAM_A_QOF_BWQOS_CYC_MAX);
+		writel_relaxed(ddr_gen_pulse, raw->qof_base + REG_QOF_CAM_A_QOF_COH_CYC_MAX);
+	}
 
 	if (CAM_DEBUG_ENABLED(QOF) || FORCE_DUMP(raw->id))
 		pr_info("qof: %s: frm_time_us:%d, qof_ctrl:0x%x coh_ctrl:0x%x time_stamp:0x%x ddren/qos/coh cyc_max:0x%x/0x%x/0x%x\n",

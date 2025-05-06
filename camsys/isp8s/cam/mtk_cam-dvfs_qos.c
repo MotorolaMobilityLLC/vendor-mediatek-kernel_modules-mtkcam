@@ -448,6 +448,11 @@ static struct mtkcam_qos_desc *get_qos_desc_by_uid(int uid)
 	return &mmqos_table[uid];
 }
 
+static inline bool is_bitstream(u8 ufbc_type)
+{
+	return (ufbc_type == UFBC_BITSTREAM_0) || (ufbc_type == UFBC_BITSTREAM_1);
+}
+
 static int get_ufbc_size(int ipi_fmt, int ufbc_type, int img_w, int img_h)
 {
 	int size = 0, aligned_w = 0, stride = 0;
@@ -458,10 +463,10 @@ static int get_ufbc_size(int ipi_fmt, int ufbc_type, int img_w, int img_h)
 
 		switch (ufbc_type) {
 		case UFBC_BITSTREAM_0:
-			size = apply_ufo_com_ratio(stride * img_h);
+			size = stride * img_h;
 		break;
 		case UFBC_BITSTREAM_1:
-			size = apply_ufo_com_ratio(stride * img_h / 2);
+			size = stride * img_h / 2;
 		break;
 		case UFBC_TABLE_0:
 			size = ALIGN((aligned_w / 64),
@@ -525,6 +530,8 @@ static int fill_raw_out_qos(struct mtk_cam_job *job,
 		/* srt */
 		active_h = sensor_h + sensor_vb;
 		avg_bw = calc_bw(size, linet, active_h);
+		avg_bw = is_bitstream(qos_desc->dma_desc[i].ufbc_type) ?
+				apply_ufo_com_ratio(avg_bw) : avg_bw;
 
 		/* hrt (otf case) */
 		active_h = (out->crop.s.h == 0) ? out->fmt.s.h : out->crop.s.h;
@@ -597,6 +604,8 @@ static int fill_raw_in_qos(struct mtk_cam_job *job,
 
 		/* srt */
 		avg_bw = calc_bw(size, linet, sensor_h + sensor_vb);
+		avg_bw = is_bitstream(qos_desc->dma_desc[i].ufbc_type) ?
+				apply_ufo_com_ratio(avg_bw) : avg_bw;
 		/* hrt */
 		peak_bw = is_srt(job) ? 0 : calc_bw(size, linet, sensor_h);
 
