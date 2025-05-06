@@ -443,6 +443,7 @@ struct mtk_imgsys_dev {
 	const struct mtk_imgsys_port_table *dma_ports;
 	unsigned int dma_ports_num;
 	int isc_irq;
+	struct completion isc_init;
 	int hwccf_apply;
 };
 

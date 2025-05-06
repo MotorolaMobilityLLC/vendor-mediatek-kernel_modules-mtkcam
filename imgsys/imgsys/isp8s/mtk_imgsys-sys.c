@@ -2423,6 +2423,7 @@ static int mtk_imgsys_hw_connect(struct mtk_imgsys_dev *imgsys_dev)
 			__func__, user_cnt);
 
 	init_completion(&imgsys_dev->comp);
+	init_completion(&imgsys_dev->isc_init);
 	power_task =
 		kthread_create(mtk_imgsys_worker_power_on, (void *)imgsys_dev, "imgsys_power_on");
 	if (!IS_ERR_OR_NULL(power_task)) {
@@ -2432,7 +2433,9 @@ static int mtk_imgsys_hw_connect(struct mtk_imgsys_dev *imgsys_dev)
 		mtk_imgsys_worker_power_on((void *)imgsys_dev);
 	ret = mtk_imgsys_worker_hcp_init(imgsys_dev);
 	wait_for_completion(&imgsys_dev->comp);
-
+#ifdef MTK_ISC_SUPPORT
+	wait_for_completion(&imgsys_dev->isc_init);
+#endif
 	IMGSYS_SYSTRACE_END();
 	if (ret != 0) {
 		dev_info(imgsys_dev->dev, "hcp init fail");
