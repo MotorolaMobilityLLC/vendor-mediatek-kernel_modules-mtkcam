@@ -5098,10 +5098,22 @@ int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd, bool assert_when_
 	if (!in_reset) {
 		ret = g_seninf_ops->_debug_current_status(sd_to_ctx(sd));
 		/* assert */
-		if (assert_when_error && ret != 0) {
-			seninf_aee_print(SENINF_AEE_FRMERR,
+		if (assert_when_error) {
+			switch (ret) {
+			case -SENINF_DEBUG_ECC_CRC_LANE_ERR:
+				seninf_aee_print(SENINF_AEE_FRMERR,
 					"Seninf dump with error code: %d\n", ret);
-			asserted = true;
+				asserted = true;
+				break;
+			case -SENINF_DEBUG_SOCKET_ERR:
+				mtk_cam_seninf_ixc_connector_check(ctx);
+				asserted = true;
+				break;
+			case -SENINF_DEBUG_SENSOR_SOT_ERR:
+				seninf_aee_print(SENINF_AEE_SENSOR_SOT_ERR,
+					"with %s\n", ctx->sensor_sd->name);
+				asserted = true;
+			}
 		}
 	} else
 		dev_info(ctx->dev, "[%s] skip dump, sensor is in resetting\n", __func__);

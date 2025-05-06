@@ -5767,6 +5767,7 @@ static int mtk_cam_seninf_debug_current_status(struct seninf_ctx *ctx)
 	void *pSeninf_outmux = NULL;
 	static unsigned long long last_caller_ts;
 	const unsigned long long dump_duration  = 33000000; // 33ms
+	unsigned int sot_err = 0;
 
 	ctx->debug_cur_sys_time_in_ns = ktime_get_boottime_ns();
 
@@ -5825,6 +5826,7 @@ static int mtk_cam_seninf_debug_current_status(struct seninf_ctx *ctx)
 		base_dphy = ctx->reg_ana_dphy_top[csi_port];
 		ctx->debug_cur_cphy_irq = SENINF_READ_REG(base_cphy, CPHY_RX_IRQ_CLR);
 		ctx->debug_cur_dphy_irq = SENINF_READ_REG(base_dphy, DPHY_RX_IRQ_STATUS);
+		sot_err = (ctx->is_cphy) ? ctx->debug_cur_cphy_irq : ctx->debug_cur_dphy_irq;
 
 		seninf_logi(ctx,
 			"Csi%d_Dphy_Top:LANE_EN/_SELECT:(0x%x)/(0x%x),CLK_LANE0_HS/1_HS:(0x%x)/(0x%x),DATA_LANE0_HS/1_HS/2_HS/3_HS:(0x%x)/(0x%x)/(0x%x)/(0x%x),DPHY_RX_SPARE0:(0x%x)\n",
@@ -5922,6 +5924,13 @@ static int mtk_cam_seninf_debug_current_status(struct seninf_ctx *ctx)
 				(uint32_t)ctx->portNum, ctx->lrte_sd.valid_cnt,
 				ctx->lrte_sd.num_hs1, ctx->lrte_sd.num_hs2, ctx->lrte_sd.wc, ctx->lrte_sd.trio);
 		}
+	}
+
+	if (sot_err) {
+		seninf_logi(ctx,
+		"[ERROR] sensor sot err is_cphy %d sot_err: 0x%x\n",
+			ctx->is_cphy, sot_err);
+		return -SENINF_DEBUG_SENSOR_SOT_ERR;
 	}
 
 	if ((ctx->debug_cur_mac_irq & 0xD0) ||
