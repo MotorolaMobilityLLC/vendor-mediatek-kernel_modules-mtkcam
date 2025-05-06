@@ -1340,7 +1340,7 @@ bool is_rawi_ufdi_rdone_zero(struct mtk_raw_device *dev)
 	return false;
 }
 
-#define SOFT_RST_STAT_RAW_DMA		0x1FEF5
+#define SOFT_RST_STAT_RAW_DMA		0x1FEFF
 /* NOTE: BIT(8) not used; RAWI/UFDI ignore temporarily */
 
 #define SOFT_RST_STAT_YUV_DMA		0xFF
@@ -1403,6 +1403,9 @@ void reset(struct mtk_raw_device *dev)
 	if (ret < 0) {
 		dev_info(dev->dev, "%s: error: timeout!\n", __func__);
 		dump_dma_soft_rst_stat(dev);
+		qof_mtcmos_raw_voter(dev, true);
+		raw_dump_debug_ufbc_status(dev);
+		qof_mtcmos_raw_voter(dev, false);
 		dump_wla_2_0(dev);
 		dump_raw_slice_gals(dev);
 		dump_vcore_gals(dev);
