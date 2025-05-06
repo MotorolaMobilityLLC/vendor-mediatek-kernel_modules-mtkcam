@@ -142,8 +142,8 @@ enum GCE_COND_REVERSE_COND {
 	lop.reg ? (lop.idx = l) : (lop.value = l); \
 	rop.reg = r_reg; \
 	rop.reg ? (rop.idx = r) : (rop.value = r); \
-	_inst_condi_jump = _cond_pkt->cmd_buf_size; \
 	cmdq_pkt_assign_command(_cond_pkt, _reg_jump, 0); \
+	_inst_condi_jump = _cond_pkt->cmd_buf_size - 8; \
 	cmdq_pkt_cond_jump_abs( \
 		_cond_pkt, _reg_jump, &lop, &rop, (enum CMDQ_CONDITION_ENUM) cond); \
 	_inst_jump_end = _inst_condi_jump; \
@@ -179,6 +179,11 @@ static int g_hwqos_active_multiply = 4;
 static int g_hwqos_multiply = 1;
 static int g_hwqos_right_shift;
 static bool g_hwqos_high_bw;
+
+static int g_hwqos_max_rw_eng_bw = 2400;
+static int g_hwqos_max_bw_multiply = 5;
+static int g_hwqos_max_bw_right_shift = 2;
+
 static bool g_hwqos_dbg_en;
 static bool g_hwqos_sw_en;
 static bool imgsys_ftrace_thread_en;
@@ -197,6 +202,15 @@ MODULE_PARM_DESC(g_hwqos_right_shift, "imgsys hwqos right shift");
 
 module_param(g_hwqos_high_bw, bool, 0644);
 MODULE_PARM_DESC(g_hwqos_high_bw, "imgsys hwqos high bw");
+
+module_param(g_hwqos_max_rw_eng_bw, int, 0644);
+MODULE_PARM_DESC(g_hwqos_max_rw_eng_bw, "imgsys hwqos max rw bw");
+
+module_param(g_hwqos_max_bw_multiply, int, 0644);
+MODULE_PARM_DESC(g_hwqos_max_bw_multiply, "imgsys hwqos max bw multiply");
+
+module_param(g_hwqos_max_bw_right_shift, int, 0644);
+MODULE_PARM_DESC(g_hwqos_max_bw_right_shift, "imgsys hwqos max bw right shift");
 
 module_param(g_hwqos_dbg_en, bool, 0644);
 MODULE_PARM_DESC(g_hwqos_dbg_en, "imgsys hwqos log enable");
@@ -811,7 +825,9 @@ static void imgsys_qos_set_ttl_eng_bw(struct cmdq_pkt *pkt,
 	} else {
 		cmdq_pkt_write(pkt, NULL,
 			BWR_IMG_E1A_BASE + bwr_ttl_offset,
-			((bwr_bw >> 2) * 3 * count) >> QOS_TTL_RIGHT_SHIFT, CMDQ_REG_MASK);
+			((bwr_bw >> g_hwqos_max_bw_right_shift) *
+				g_hwqos_max_bw_multiply * count) >> QOS_TTL_RIGHT_SHIFT,
+			CMDQ_REG_MASK);
 	}
 	va_end(args);
 }
@@ -1106,26 +1122,30 @@ static void imgsys_qos_set_fix_bw(struct cmdq_pkt *pkt,
 	const uint32_t bwr_bw)
 {
 	uint32_t i, bw, reg = 0;
+	uint32_t current_bwr_bw = bwr_bw;
 
 	/* set bwr bw and ostdl */
 	bw = bwr_bw >> BWR_BW_POINT;
 	for (i = 0; i < ARRAY_SIZE(qos_map_data); i++) {
 		if (reg == qos_map_data[i].bwr_r_offset) {
-			/* skip current BWR value since same as previous */
-			continue;
+			/* accumulate previous bwr_bw for sharing reg */
+			current_bwr_bw += bwr_bw;
+		} else {
+			/* reset to initial bwr_bw */
+			current_bwr_bw = bwr_bw;
 		}
 		reg = qos_map_data[i].bwr_r_offset;
 		/* skip DFP for high BW */
-		if (bwr_bw != 0 &&
+		if (current_bwr_bw != 0 &&
 			qos_map_data[i].engine == BWR_DWPE__DFP__DVS) {
 			continue;
 		}
 		cmdq_pkt_write(pkt, NULL,
 				BWR_IMG_E1A_BASE + qos_map_data[i].bwr_r_offset,
-				bwr_bw, CMDQ_REG_MASK);
+				current_bwr_bw, CMDQ_REG_MASK);
 		cmdq_pkt_write(pkt, NULL,
 				BWR_IMG_E1A_BASE + qos_map_data[i].bwr_w_offset,
-				bwr_bw, CMDQ_REG_MASK);
+				current_bwr_bw, CMDQ_REG_MASK);
 	}
 	imgsys_qos_set_limiter(pkt, /* is_avg */ false, bw);
 	if (bwr_bw == 0) {
@@ -1252,7 +1272,7 @@ static void imgsys_qos_report_switch(struct cmdq_pkt *pkt,
 	switch (qos_state) {
 	case QOS_STATE_MAX:
 		imgsys_qos_set_fix_bw(pkt,
-			BWR_IMG_SRT_ENG_MAX_RW_ENG_BW);
+			FLOAT2FIX(g_hwqos_max_rw_eng_bw, BWR_BW_POINT));
 		cmdq_pkt_sleep(pkt, CMDQ_US_TO_TICK(IMGSYS_QOS_INTERVAL_US), 0 /*don't care*/);
 		imgsys_qos_config_bls(pkt, BLS_TRIG);
 		imgsys_qos_init_counter(pkt, false);

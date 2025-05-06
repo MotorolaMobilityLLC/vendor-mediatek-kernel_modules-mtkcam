@@ -44,7 +44,6 @@
 #define BWR_IMG_RW_DVFS_FREQ                1     /* 16 MB/s */
 
 #define BWR_IMG_SRT_ENG_BW_RAT              FLOAT2FIX(BW_RAT, BWR_BW_RAT_POINT)
-#define BWR_IMG_SRT_ENG_MAX_RW_ENG_BW       FLOAT2FIX(2300, BWR_BW_POINT)
 
 /* BWR engine ID */
 #define BWR_WPE_EIS__PQDIP_A     0
