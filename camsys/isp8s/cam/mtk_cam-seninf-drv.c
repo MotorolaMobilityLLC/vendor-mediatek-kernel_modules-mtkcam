@@ -5034,6 +5034,7 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 	if (!in_reset) {
 		if (mtk_cam_seninf_check_lastest_debug_duration(ctx, &ret)) {
 			dev_info(ctx->dev, "[%s]check_lastest_debug_duration true, force return func\n", __func__);
+			pm_runtime_put_sync(ctx->dev);
 			return ret;
 		}
 
@@ -5145,6 +5146,7 @@ int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd, bool assert_when_
 	if (!in_reset) {
 		if (mtk_cam_seninf_check_lastest_debug_duration(ctx, &ret)) {
 			dev_info(ctx->dev, "[%s]check_lastest_debug_duration true, force return func\n", __func__);
+			pm_runtime_put_sync(ctx->dev);
 			return ret;
 		}
 
