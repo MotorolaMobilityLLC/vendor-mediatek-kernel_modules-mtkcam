@@ -179,7 +179,7 @@ static struct SET_PD_BLOCK_INFO_T s5k3k1_pd_info = {
 	.sPDMapInfo[0] = {
 		.i4PDPattern = 3, // sparse PD non-interleaved
 		.i4PDRepetition = 8,
-		.i4PDOrder = { 1, 0, 0, 1, 0, 1, 1, 0 }, // L = 0, R = 1
+		.i4PDOrder = { 0, 1, 1, 0, 1, 0, 0, 1 }, // L = 0, R = 1
 	},
 };
 
@@ -223,7 +223,7 @@ static struct SET_PD_BLOCK_INFO_T s5k3k1_pd_info_60fps = {
 	.sPDMapInfo[0] = {
 		.i4PDPattern = 3, // sparse PD non-interleaved
 		.i4PDRepetition = 8,
-		.i4PDOrder = { 1, 0, 0, 1, 0, 1, 1, 0 }, // L = 0, R = 1
+		.i4PDOrder = { 0, 1, 1, 0, 1, 0, 0, 1 }, // L = 0, R = 1
 	},
 };
 #endif
