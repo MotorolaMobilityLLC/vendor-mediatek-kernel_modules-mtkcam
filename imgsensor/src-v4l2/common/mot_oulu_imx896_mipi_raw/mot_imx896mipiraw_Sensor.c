@@ -320,7 +320,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
-		{0, 0}, {0, 384}, {0, 0}, {0, }, {0, 0},
+		{0, 0}, {0, 384}, {0, 0}, {0, 0}, {0, 0},
 	},
 	.i4BlockNumX = 508,
 	.i4BlockNumY = 94,
@@ -337,7 +337,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 		.i4PDPattern = 3, //pair PD
 		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
 		.i4PDRepetition = 8,
-		.i4PDOrder = {1,1,0,0,0,0,1,1}, // R = 1, L = 0
+		.i4PDOrder = {0,0,1,1,1,1,0,0}, // R = 1, L = 0
 	},
 };
 
