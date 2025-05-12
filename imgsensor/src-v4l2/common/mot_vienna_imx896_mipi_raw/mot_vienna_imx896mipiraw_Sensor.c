@@ -194,7 +194,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = {
 			.hsize = 0x0200,
 			.vsize = 0x0240,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 			.is_active_line = TRUE,
 		},
 	},
@@ -266,6 +266,13 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	},
 	.i4ModeIndex = 3,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
+		.sPDMapInfo[0] = {
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
+		.i4PDPattern = 1,//all-pd
+		.i4BinFacX = 2,
+		.i4BinFacY = 4,
+		.i4PDOrder = {1}, //R=1, L=0
+	},
 };
 
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus1_info = {
@@ -292,6 +299,13 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus1_info = {
 	.i4FullRawH = 6144,
 	.i4ModeIndex = 3,
 	.i4VCPackNum = 1,
+	.sPDMapInfo[0] = {
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
+		.i4PDPattern = 1,//all-pd
+		.i4BinFacX = 4,
+		.i4BinFacY = 2,
+		.i4PDOrder = {1}, //R=1, L=0
+	},
 };
 
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
@@ -308,10 +322,10 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
-		{0, 0}, {0, 384}, {0, 0}, {0, }, {0, 0},
+		{0, 0}, {0, 384}, {0, 0}, {0, 0}, {0, 0},
 	},
 	.i4BlockNumX = 508,
-	.i4BlockNumY = 72,
+	.i4BlockNumY = 94,
 	.i4VolumeX = 1,
 	.i4VolumeY = 2,
 	.iMirrorFlip = IMAGE_NORMAL,
@@ -323,8 +337,9 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 	/* VC's PD pattern description */
 	.sPDMapInfo[0] = {
 		.i4PDPattern = 3, //pair PD
+		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
 		.i4PDRepetition = 8,
-		.i4PDOrder = {1,1,0,0,0,0,1,1}, // R = 1, L = 0
+		.i4PDOrder = {0,0,1,1,1,1,0,0}, // R = 1, L = 0
 	},
 };
 
