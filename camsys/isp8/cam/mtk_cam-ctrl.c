@@ -2183,7 +2183,8 @@ static void reset_runtime_info(struct mtk_cam_ctrl *ctrl)
 	info->inner_seq_no = -1;
 	info->done_seq_no = -1;
 	info->ae_wa_enable = ctrl->ctx->raw_subdev_idx >= 0 &&
-		ctrl->ctx->cam->sw_ver != 0x0001;
+		ctrl->ctx->cam->sw_ver != 0x0001 &&
+		cur_platform->hw->platform_id == 6991;
 
 	spin_unlock(&ctrl->info_lock);
 }
