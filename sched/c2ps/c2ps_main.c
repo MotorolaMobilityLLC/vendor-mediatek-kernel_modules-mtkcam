@@ -69,6 +69,7 @@ static int picked_wl_table = 0;
 static unsigned int background_monitor_duration = BACKGROUND_MONITOR_DURATION;
 static unsigned int c2ps_vip_throttle_time = 12;
 static atomic_t processing_count = ATOMIC_INIT(0);
+static atomic_t is_self_uninit = ATOMIC_INIT(0);
 unsigned int c2ps_nr_clusters;
 struct timer_list background_info_update_timer;
 struct timer_list self_uninit_timer;
@@ -428,6 +429,7 @@ int c2ps_notify_init(
 		ineff_cpu_ceiling_freq0, ineff_cpu_ceiling_freq1, ineff_cpu_ceiling_freq2);
 	C2PS_LOGD("lcore_mcore_um_ratio: %d, um_floor: %d",
 		lcore_mcore_um_ratio, um_floor);
+	pr_warn("%s c2ps init", __func__);
 
 	/* last uninit is not finished */
 	if (unlikely(atomic_read(&processing_count) > 0)) {
@@ -475,6 +477,7 @@ int c2ps_notify_init(
 	set_curr_uclamp_ctrl(1);
 	set_eas_setting();
 	atomic_set(&processing_count, 0);
+	atomic_set(&is_self_uninit, 0);
 	c2ps_notifier_init(cfg_camfps);
 
 	// QoS setting
@@ -498,7 +501,7 @@ int c2ps_notify_uninit(void)
 	struct C2PS_NOTIFIER_PUSH_TAG *vpPush = NULL;
 	int ret = 0;
 
-	C2PS_LOGD("+\n");
+	pr_warn("%s c2ps uninit", __func__);
 
 	vpPush = (struct C2PS_NOTIFIER_PUSH_TAG *)
 		c2ps_alloc_atomic(sizeof(*vpPush));
@@ -544,6 +547,11 @@ int c2ps_notify_task_start(int pid, int task_id)
 	C2PS_LOGD("task_id: %d\n", task_id);
 
 	atomic_inc(&processing_count);
+	if (unlikely(atomic_read(&is_self_uninit))) {
+		C2PS_LOGW("c2ps has self-uninited");
+		atomic_dec(&processing_count);
+		return -1;
+	}
 	if (likely(timer_pending(&self_uninit_timer)))
 		mod_timer(&self_uninit_timer, jiffies + 5*HZ);
 	if (unlikely(monitor_task_start(pid, task_id))) {
@@ -736,7 +744,8 @@ out:
 
 static void self_uninit_timer_callback(struct timer_list *t)
 {
-	C2PS_LOGD("uninit expired");
+	pr_warn("%s uninit expired", __func__);
+	atomic_set(&is_self_uninit, 1);
 	c2ps_uninit_wo_lock();
 }
 
