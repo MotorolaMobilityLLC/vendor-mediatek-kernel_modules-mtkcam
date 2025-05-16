@@ -2122,6 +2122,47 @@ void set_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 		break;
 	}
 }
+
+/**
+ * dcg exposure use dcg Tline and convert to previous lut's Tline
+ * vs exposure use vs Tline and convert to previous lut's Tline
+ */
+static u32 convert_to_cit_in_lut(struct subdrv_ctx *ctx, struct struct_dcg_vsl_info *info, int exp_idx, u64 shutter)
+{
+	u32 linetime_ns_in_shutter_lut, linetime_ns_in_pre_lut;
+	u8 shutter_lut_id, pre_lut_id;
+	u32 result = 0;
+
+	if (unlikely(info == NULL)) {
+		DRV_LOGE(ctx, "parameter info is invalid\n");
+		return (u32)shutter;
+	}
+	if (unlikely(exp_idx >= info->exp_cnt || exp_idx < 0)) {
+		DRV_LOGE(ctx, "parameter exp_idx %d is invalid\n", exp_idx);
+		return (u32)shutter;
+	}
+	shutter_lut_id = info->exp_info[exp_idx].lut_idx;
+	/* Get previous lut id */
+	if (shutter_lut_id == IMGSENSOR_LUT_A)
+		pre_lut_id = info->lut_cnt ? (info->lut_cnt - 1) : 0;
+	else
+		pre_lut_id = shutter_lut_id - 1;
+
+	linetime_ns_in_shutter_lut = info->lut_info[shutter_lut_id].linetime_in_ns;
+	linetime_ns_in_pre_lut = info->lut_info[pre_lut_id].linetime_in_ns;
+
+
+	result = ntime2line(line2ntime(shutter, linetime_ns_in_shutter_lut),
+			    linetime_ns_in_pre_lut);
+
+	DRV_LOG(ctx, "shutter:%llu, exp_idx:%d, Tline_shu:%u, Tline_pre_lut:%u, convert result: %u\n",
+		shutter, exp_idx,
+		linetime_ns_in_shutter_lut, linetime_ns_in_pre_lut,
+		result);
+
+	return result;
+}
+
 /**
  * @brief: This api is used to assign FLL_A/FLL_B in lut for dcg+vs mode.
  * It should refer to previous shutter because per-frame multi shutter framelength
@@ -2154,8 +2195,8 @@ void set_dcg_vs_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 	if (exp_cnt == 3 && dcg_vsl_info.lut_cnt == 2) {
 		/* DCG + VS.  lut-a + lut-b */
 		for (i = 0; i < exp_cnt; i++) {
-			/*  update cit_in_lut */
-			cit_in_lut[i] = ctx->exposure[i];
+			/* update cit_in_lut */
+			cit_in_lut[i] = convert_to_cit_in_lut(ctx, &dcg_vsl_info, i, ctx->exposure[i]);
 		}
 		if (ctx->s_ctx.mode[scenario_id].exposure_order_in_lbmf == IMGSENSOR_LBMF_EXPOSURE_SE_FIRST) {
 			// SE first
@@ -3304,9 +3345,8 @@ void set_dcg_vs_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 		ctx->frame_length_in_lut[i] =
 			min(ctx->frame_length_in_lut[i], ctx->s_ctx.frame_length_max);
 
-		/* update cit_in_lut, always dcg first */
-		/* 2exp: cit_lut_a = DCG / cit_lut_b = VS */
-		cit_in_lut[i] = shutters[i];
+		/* update cit_in_lut */
+		cit_in_lut[i] = convert_to_cit_in_lut(ctx, &dcg_vsl_info, dcg_vs_exp_id[i], shutters[i]);
 	}
 
 	DRV_LOG_MUST(ctx,
@@ -3417,27 +3457,19 @@ void set_dcg_vs_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 		}
 
 		/* set cit index 0 LE(DCG) & 2 SE(VS) */
-		if (cit_in_lut[0]) {
-			set_i2c_buffer(ctx,
-				ctx->s_ctx.reg_addr_exposure_in_lut[0].addr[0],
-				(cit_in_lut[0] >> 8) & 0xFF);
-			set_i2c_buffer(ctx,
-				ctx->s_ctx.reg_addr_exposure_in_lut[0].addr[1],
-				cit_in_lut[0] & 0xFF);
-		}
 		for (i = 0; i < 2; i++) {
-			if (cit_in_lut[i]) {
+			if (shutters[i]) {
 				set_i2c_buffer(ctx,
 					       ctx->s_ctx.reg_addr_exposure_in_lut[i].addr[0],
-					       (cit_in_lut[i] >> 8) & 0xFF);
+					       (shutters[i] >> 8) & 0xFF);
 				set_i2c_buffer(ctx,
 					       ctx->s_ctx.reg_addr_exposure_in_lut[i].addr[1],
-					       cit_in_lut[i] & 0xFF);
+					       shutters[i] & 0xFF);
 			}
 		}
 
 		DRV_LOG(ctx,
-			"sid:%u,shutter(input/lut):0x%llx/%llx/%llx,%x/%x/%x,flInLUT(input/ctx/output_a/b/c/d/e):%llu/%u/%u/%u/%u/%u/%u,flick_en:%d\n",
+			"sid:%u,shutter(input/lut):0x%llx/%llx/%llx,0x%x/0x%x/0x%x,flInLUT(input/ctx/output_a/b/c/d/e):%llu/%u/%u/%u/%u/%u/%u,flick_en:%d\n",
 			ctx->current_scenario_id,
 			shutters[0], shutters[1], shutters[2],
 			cit_in_lut[0], cit_in_lut[1], cit_in_lut[2],
@@ -4909,16 +4941,7 @@ void get_multi_exp_static_info_by_scenario(struct subdrv_ctx *ctx,
 							   (u32 *)&ae_info->line_time_in_ns,
 							   GET_SHUTTER_LINETIME);
 		} else {
-			lut_id = dcg_vsl_info.exp_info[i].lut_idx;//get_multiexp_belong_lut(ctx, scenario_id, i);
-			if (lut_id == IMGSENSOR_LUT_A) {
-				if (dcg_vsl_info.lut_cnt > 1)
-					lut_id = dcg_vsl_info.lut_cnt - 1;
-				else
-					lut_id = 0;
-			} else {
-				lut_id = lut_id - 1;
-			}
-
+			lut_id = dcg_vsl_info.exp_info[i].lut_idx;
 			ae_info->line_time_in_ns = dcg_vsl_info.lut_info[lut_id].linetime_in_ns;
 		}
 
