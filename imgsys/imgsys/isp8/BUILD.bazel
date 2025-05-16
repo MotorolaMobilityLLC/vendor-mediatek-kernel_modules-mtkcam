@@ -45,6 +45,7 @@ define_mgk_ddk_ko(
     srcs = glob([
         "**/*.c",
         "**/*.h",
+        "local_defines.h",
     ]),
 
     includes = ["."],
@@ -74,6 +75,8 @@ define_mgk_ddk_ko(
     copts = [
         "-I$(DEVICE_MODULES_PATH)/include/soc/mediatek/",
         "-I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/",
+        "-include",
+        "$(location local_defines.h)",
     ],
 
     local_defines = ["MTK_IOVA_SINK2KERNEL", "MTK_IOVA_NOTCHECK", "MTK_DESC_OPS"],
