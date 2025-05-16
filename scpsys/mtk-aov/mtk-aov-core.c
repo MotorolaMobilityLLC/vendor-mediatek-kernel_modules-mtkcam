@@ -468,7 +468,7 @@ static int ipi_receive(unsigned int id, void *unused,
 	if (packet->command & AOV_SCP_CMD_ACK) {
 		uint32_t cmd = packet->command & ~AOV_SCP_CMD_ACK;
 
-		if ((cmd > 0) && (cmd < AOV_SCP_CMD_MAX)) {
+		if (cmd < AOV_SCP_CMD_MAX) {
 			atomic_set(&(core_info->ack_cmd[cmd]), 1);
 			wake_up_interruptible(&core_info->ack_wq[cmd]);
 		}
@@ -1279,7 +1279,7 @@ static int scp_state_notify(struct notifier_block *this,
 		dev_info(aov_dev->dev, "%s: receive scp start event(%lu), session(%d)\n",
 			__func__, event, session);
 
-		ret = send_cmd_internal(core_info, AOV_SCP_CMD_READY, 0, 0, false, false);
+		ret = send_cmd_internal(core_info, AOV_SCP_CMD_READY, 0, 0, false, true);
 		if (ret < 0) {
 			dev_info(aov_dev->dev,
 				"%s: failed to init scp session(%d): %d\n",
