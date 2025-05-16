@@ -20,6 +20,7 @@
 #include <uapi/linux/sched/types.h>
 #include <linux/version.h>
 #include <linux/pm_qos.h>
+#include "pf_ctrl.h"
 
 #define MAX_WINDOW_SIZE 70
 #define MAX_CPU_NUM CONFIG_MAX_NR_CPUS
@@ -449,6 +450,8 @@ int c2ps_get_kf_freq(int curr_freq, int cluster_index);
 int c2ps_cal_pwr_eff(int cluster, struct cpu_info *g_cpu_info);
 
 void set_camera_app_vip(void);
+/* pf policy */
+void c2ps_set_pf_policy(bool enable);
 
 // EAS
 extern void set_curr_uclamp_ctrl(int val);
@@ -513,6 +516,7 @@ extern void unset_task_vvip(int pid);
 #if KERNEL_VERSION(6, 12, 0) <= LINUX_VERSION_CODE
 extern int unset_target_margin(int gearid);
 extern int unset_target_margin_low(int gearid);
+extern int mtk_set_pf_ctrl_enable(bool enable, unsigned int user);
 #endif
 
 // QoS

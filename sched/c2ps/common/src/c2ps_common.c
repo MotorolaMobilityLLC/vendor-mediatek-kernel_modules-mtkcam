@@ -61,6 +61,7 @@ int cpu_on_off_th = 3;
 int cpu_on_um_th = 90;
 int app_vip_prior = 3;
 int app_vip_prior_throttle = 33;
+bool force_disable_pf_policy;
 
 module_param(proc_time_window_size, int, 0644);
 module_param(debug_log_on, int, 0644);
@@ -81,6 +82,7 @@ module_param(cpu_on_off_th, int, 0644);
 module_param(cpu_on_um_th, int, 0644);
 module_param(app_vip_prior, int, 0644);
 module_param(app_vip_prior_throttle, int, 0644);
+module_param(force_disable_pf_policy, bool, 0644);
 
 #if !(IS_ENABLED(CONFIG_MTK_SCHED_GROUP_AWARE) && IS_ENABLED(CONFIG_MTK_SCHED_FAST_LOAD_TRACKING))
 bool flt_ctrl_force_get(void)
@@ -1520,6 +1522,17 @@ void set_camera_app_vip(void)
 	c2ps_main_systrace("Get camera app pid:%d -", glb_info->camera_app_pid);
 }
 
+inline void c2ps_set_pf_policy(bool enable __maybe_unused)
+{
+#if KERNEL_VERSION(6, 12, 0) <= LINUX_VERSION_CODE
+
+	if (unlikely(force_disable_pf_policy))
+		mtk_set_pf_ctrl_enable(false, PF_CTRL_USER_CAM);
+	else
+		mtk_set_pf_ctrl_enable(enable, PF_CTRL_USER_CAM);
+#endif
+}
+
 void update_cpu_idle_rate(void)
 {
 	u64 _idle_time, _wall_time;
@@ -2376,6 +2389,8 @@ void exit_c2ps_common(void)
 	c2ps_clear_task_group_info_table();
 	c2ps_clear_anchor_table();
 	c2ps_remove_qos_setting();
+	c2ps_set_pf_policy(false);
+
 	kfree(glb_info);
 	glb_info = NULL;
 	kfree(g_cpu_info);

@@ -41,6 +41,7 @@ define_mgk_ddk_ko(
         "//kernel_device_modules-{}/drivers/misc/mediatek/sched:cpufreq_sugov_ext".format(kernel_version),
         "//kernel_device_modules-{}/drivers/misc/mediatek/sched:scheduler".format(kernel_version),
         "//kernel_device_modules-{}/drivers/misc/mediatek/sched:mtk_core_ctl".format(kernel_version),
+        "//kernel_device_modules-{}/drivers/misc/mediatek/cpufreq_lite:cpudvfs".format(kernel_version),
     ],
     header_deps = [
         "//vendor/mediatek/kernel_modules/mtkcam/sched:c2ps_header",
