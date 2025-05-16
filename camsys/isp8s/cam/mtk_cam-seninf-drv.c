@@ -4731,6 +4731,8 @@ static void seninf_remove(struct platform_device *pdev)
 	v4l2_ctrl_handler_free(&ctx->ctrl_handler);
 
 	mutex_destroy(&ctx->mutex);
+	mutex_destroy(&ctx->lastest_debug_info.lastest_debug_info_mutex);
+	memset(&ctx->lastest_debug_info, 0, sizeof(struct mtk_cam_seninf_lastest_debug_info));
 
 	mtk_cam_seninf_eint_uninit(pdev, ctx);
 }
@@ -4959,7 +4961,6 @@ static int mtk_cam_seninf_check_lastest_debug_duration(struct seninf_ctx *ctx, i
 static void mtk_cam_seninf_update_lastest_debug_status(struct seninf_ctx *ctx, int lastest_ret)
 {
 	mutex_lock(&ctx->lastest_debug_info.lastest_debug_info_mutex);
-	memset(&ctx->lastest_debug_info, 0, sizeof(struct mtk_cam_seninf_lastest_debug_info));
 	ctx->lastest_debug_info.lastest_ts_in_ns = ktime_get_boottime_ns();
 	ctx->lastest_debug_info.lastest_seninf_dump_ret = lastest_ret;
 	mutex_unlock(&ctx->lastest_debug_info.lastest_debug_info_mutex);
