@@ -404,6 +404,8 @@ static void fsync_mgr_setup_exp_data(struct adaptor_ctx *ctx,
 	fsync_mgr_setup_all_exp_data(ctx,
 		&p_pf_ctrl->shutter_lc, &p_pf_ctrl->hdr_exp,
 		ae_exp_arr, ae_exp_cnt, mode_id);
+
+	fsync_util_sen_chk_and_correct_readout_time(ctx, p_pf_ctrl, mode_id);
 }
 
 /*******************************************************************************
@@ -772,41 +774,10 @@ void fsync_mgr_dump_fs_seamless_st(struct adaptor_ctx *ctx,
 		&seamless_info->seamless_pf_ctrl, mode_id, caller);
 }
 
-static void fsync_mgr_prepare_mode_related_info(struct adaptor_ctx *ctx,
-	const unsigned int mode_id,
-	unsigned int *p_mode_crop_height,
-	unsigned int *p_mode_linetime_readout_ns,
-	const char *caller)
-{
-	if (unlikely(mode_id >= MODE_MAXCNT)) {
-		/* not expected case */
-		*p_mode_crop_height = 0;
-		*p_mode_linetime_readout_ns = 0;
-
-		FSYNC_MGR_LOGI(ctx,
-			"[%s] ERROR: sidx:%d, mode_id:%u >= MODE_MAXCNT:%u, auto set mode_crop_height:%u, mode_linetime_readout_ns:%u\n",
-			caller,
-			ctx->idx,
-			mode_id,
-			MODE_MAXCNT,
-			*p_mode_crop_height,
-			*p_mode_linetime_readout_ns);
-	} else {
-		*p_mode_crop_height = ctx->mode[mode_id].height;
-		*p_mode_linetime_readout_ns =
-			ctx->mode[mode_id].linetime_in_ns_readout;
-	}
-}
-
 static void fsync_mgr_setup_basic_fs_perframe_st(struct adaptor_ctx *ctx,
 	struct fs_perframe_st *pf_ctrl, const unsigned int mode_id)
 {
-	unsigned int mode_crop_height, mode_linetime_readout_ns;
 	u32 linetime_in_ns = 0;
-
-	/* prepare sensor mode property/info */
-	fsync_mgr_prepare_mode_related_info(ctx, mode_id,
-		&mode_crop_height, &mode_linetime_readout_ns, __func__);
 
 	memset(pf_ctrl, 0, sizeof(*pf_ctrl));
 
@@ -833,15 +804,14 @@ static void fsync_mgr_setup_basic_fs_perframe_st(struct adaptor_ctx *ctx,
 		pf_ctrl->lineTimeInNs = linetime_in_ns ? linetime_in_ns : pf_ctrl->lineTimeInNs;
 	}
 
-	pf_ctrl->readout_time_us =
-		(mode_crop_height * mode_linetime_readout_ns / 1000);
+	pf_ctrl->readout_time_us = fsync_util_sen_g_readout_time_us(ctx, mode_id);
 }
 
 static inline void fsync_mgr_setup_seamless_property(struct adaptor_ctx *ctx,
-	const u32 orig_readout_time_us,
-	struct fs_seamless_st *seamless_info)
+	const u32 orig_scenario_id, struct fs_seamless_st *seamless_info)
 {
 	unsigned long long sof_sys_ts_ns, cur_sys_ts_ns;
+	unsigned int dcg_vsl_rdout_time_us = 0;
 
 	if (is_fsync_ts_src_type_tsrec) {
 		spin_lock(&ctx->fsync_pre_latch_ts_info_update_lock);
@@ -854,10 +824,19 @@ static inline void fsync_mgr_setup_seamless_property(struct adaptor_ctx *ctx,
 	cur_sys_ts_ns = ktime_get_boottime_ns();
 
 	/* !!! setup all seamless switch property that needed !!! */
-	/* setup original mode readout time */
-	seamless_info->prop.orig_readout_time_us = orig_readout_time_us;
 	seamless_info->prop.ctrl_receive_time_us = (sof_sys_ts_ns != 0)
 		? ((unsigned int)((cur_sys_ts_ns - sof_sys_ts_ns) / 1000)) : 0;
+
+	/* setup original mode readout time */
+	seamless_info->prop.orig_readout_time_us =
+		fsync_util_sen_g_readout_time_us(ctx, orig_scenario_id);
+	dcg_vsl_rdout_time_us =
+		fsync_util_sen_chk_and_g_dcg_vsl_seamless_readout_time_us(ctx,
+			orig_scenario_id, FS_HDR_MAX);
+	if (dcg_vsl_rdout_time_us != 0) {
+		/* original mode is DCG+VS/L => overwrite readout time info */
+		seamless_info->prop.orig_readout_time_us = dcg_vsl_rdout_time_us;
+	}
 
 	switch ( ctx->subctx.s_ctx.seamless_switch_type ) {
 	case SEAMLESS_SWITCH_CUT_VB_INIT_SHUT :
@@ -1091,8 +1070,7 @@ void notify_fsync_mgr_set_extend_framelength(struct adaptor_ctx *ctx,
 }
 
 void notify_fsync_mgr_seamless_switch(struct adaptor_ctx *ctx,
-	u64 *ae_exp_arr, u32 ae_exp_max_cnt,
-	u32 orig_readout_time_us, u32 target_scenario_id)
+	u64 *ae_exp_arr, u32 orig_scenario_id, u32 target_scenario_id)
 {
 	struct fs_seamless_st seamless_info = {0};
 
@@ -1121,8 +1099,7 @@ void notify_fsync_mgr_seamless_switch(struct adaptor_ctx *ctx,
 		ae_exp_arr, -1);
 
 	/* then setup other fs_seamless_st info */
-	fsync_mgr_setup_seamless_property(ctx,
-		orig_readout_time_us, &seamless_info);
+	fsync_mgr_setup_seamless_property(ctx, orig_scenario_id, &seamless_info);
 
 
 	/* call frame-sync fs seamless switch */

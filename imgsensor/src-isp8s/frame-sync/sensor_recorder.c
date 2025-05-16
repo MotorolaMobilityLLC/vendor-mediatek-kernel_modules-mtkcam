@@ -890,6 +890,41 @@ static inline unsigned int g_margin_lc_by_lut_id(const unsigned int idx,
 }
 
 
+static inline unsigned int g_map_cit_lc_by_lut_id(const unsigned int idx,
+	const unsigned int fll_ref_idx, const unsigned int exp_ref_idx,
+	const unsigned int exp_lc,
+	const struct frec_sen_mode_info_st *mode_info,
+	const struct FrameRecord *curr_rec)
+{
+	const unsigned int multi_exp_type = mode_info->prop.multi_exp_type;
+	unsigned int ret = 0;
+
+	switch (multi_exp_type) {
+	case MULTI_EXP_TYPE_DCG_VSL:
+	{
+		const unsigned int cit_lut_idx = g_lut_id_by_cascade_ref_idx(
+			exp_ref_idx, curr_rec->mode_exp_cnt);
+		const unsigned int fll_lut_idx = g_lut_id_by_cascade_ref_idx(
+			fll_ref_idx, curr_rec->mode_exp_cnt);
+		const unsigned int cit_tline_ns =
+			mode_info->cas_mode_info.lineTimeInNs[cit_lut_idx];
+		const unsigned int fll_tline_ns =
+			mode_info->cas_mode_info.lineTimeInNs[fll_lut_idx];
+
+		/* ret = ((exp_lc * cit_tline_ns) / fll_tline_ns); */
+		ret = FS_CEIL_U((exp_lc * cit_tline_ns), fll_tline_ns);
+	}
+		break;
+	case MULTI_EXP_TYPE_LBMF:
+	default:
+		ret = exp_lc;
+		break;
+	}
+
+	return ret;
+}
+
+
 static inline unsigned int g_based_fll_by_lut_id(const unsigned int idx,
 	const unsigned int ref_idx,
 	const struct frec_sen_mode_info_st *mode_info,
@@ -1058,32 +1093,38 @@ static inline unsigned int g_fll_tgt_req(const unsigned int idx,
 
 
 static unsigned int calc_lut_fll_required_by_exp(const unsigned int idx,
-	const unsigned int ref_idx, const unsigned int exp_lc,
+	const unsigned int fll_ref_idx, const unsigned int exp_ref_idx,
+	const unsigned int exp_lc,
 	const struct frec_sen_mode_info_st *p_mode_info,
 	const struct FrameRecord *curr_rec,
 	const char *caller)
 {
 	const unsigned int margin_lc =
-		g_margin_lc_by_lut_id(idx, ref_idx, p_mode_info, curr_rec);
+		g_margin_lc_by_lut_id(idx, fll_ref_idx, p_mode_info, curr_rec);
 	const unsigned int based_min_fl_lc =
-		g_based_fll_by_lut_id(idx, ref_idx, p_mode_info, curr_rec);
+		g_based_fll_by_lut_id(idx, fll_ref_idx, p_mode_info, curr_rec);
 	const unsigned int cit_loss_lc =
-		g_cit_loss_by_lut_id(idx, ref_idx, p_mode_info, curr_rec);
+		g_cit_loss_by_lut_id(idx, fll_ref_idx, p_mode_info, curr_rec);
+	const unsigned int exp_lc_mapped_for_lut =
+		g_map_cit_lc_by_lut_id(idx, fll_ref_idx, exp_ref_idx, exp_lc,
+			p_mode_info, curr_rec);
 	unsigned int exp_req_fll, result;
 
-	exp_req_fll = (exp_lc + margin_lc + cit_loss_lc);
+	exp_req_fll = (exp_lc_mapped_for_lut + margin_lc + cit_loss_lc);
 	result = (exp_req_fll > based_min_fl_lc) ? exp_req_fll : based_min_fl_lc;
 
 #ifndef REDUCE_SEN_REC_LOG
 	LOG_MUST(
-		"[%s][%u][sidx:%u] result:%u(exp_req_fll:%u/exp_lc:%u/ref_idx:%u:(margin:%u/based_min_fl_lc:%u/loss:%u))\n",
+		"[%s][%u][sidx:%u] result:%u(exp_req_fll:%u/exp_lc:(%u->%u)/ref_idx(fll:%u/exp:%u)/(margin:%u/based_min_fl_lc:%u/loss:%u))\n",
 		caller,
 		idx,
 		fs_get_reg_sensor_idx(idx),
 		result,
 		exp_req_fll,
 		exp_lc,
-		ref_idx,
+		exp_lc_mapped_for_lut,
+		fll_ref_idx,
+		exp_ref_idx,
 		margin_lc,
 		based_min_fl_lc,
 		cit_loss_lc);
@@ -1188,7 +1229,7 @@ static void frec_calc_target_fl_lc_arr_val_fdelay_2(const unsigned int idx,
 		const unsigned int exp_lc = exp_cas[ref_idx]; /* get cit value by the ref idx */
 		/* basic required fll for each lut/turn */
 		const unsigned int req_fl_lc = calc_lut_fll_required_by_exp(idx,
-			i, exp_lc, &mode_info, curr_rec, __func__);
+			i, ref_idx, exp_lc, &mode_info, curr_rec, __func__);
 
 		fl_lc_arr[i] = req_fl_lc;
 	}
@@ -1201,7 +1242,7 @@ static void frec_calc_target_fl_lc_arr_val_fdelay_2(const unsigned int idx,
 		const unsigned int fl_lc = fl_cas[i];
 		/* basic required fll for each lut/turn */
 		const unsigned int req_fl_lc = calc_lut_fll_required_by_exp(idx,
-			i, exp_lc, &mode_info, curr_rec, __func__);
+			i, i, exp_lc, &mode_info, curr_rec, __func__);
 		/* basic output for each turn */
 		unsigned int min_fl_lc = 0;
 
@@ -1293,7 +1334,7 @@ static void frec_calc_target_fl_lc_arr_val_fdelay_3(const unsigned int idx,
 		const unsigned int exp_lc = exp_cas[ref_idx]; /* get cit value by the ref idx */
 		/* basic required fll for each lut/turn */
 		const unsigned int req_fl_lc = calc_lut_fll_required_by_exp(idx,
-			i, exp_lc, &mode_info, curr_rec, __func__);
+			i, ref_idx, exp_lc, &mode_info, curr_rec, __func__);
 
 		fl_lc_arr[i] = req_fl_lc;
 
@@ -1442,7 +1483,8 @@ static void frec_calc_lut_read_offset_by_fdelay(const unsigned int idx,
 		const unsigned int fl_lc = fl_cas[fl_ref_idx];
 		/* basic required fll for each lut/turn */
 		const unsigned int req_fl_lc = calc_lut_fll_required_by_exp(idx,
-			fl_ref_idx, exp_lc, &mode_info, curr_rec, __func__);
+			fl_ref_idx, exp_ref_idx, exp_lc,
+			&mode_info, curr_rec, __func__);
 		/* info for output result */
 		const int exp_id = g_exp_order_idx_mapping(idx,
 			order, curr_mode_exp_cnt, exp_ref_idx, __func__);
@@ -1536,7 +1578,8 @@ static unsigned int frec_calc_lut_valid_min_fl_lc_for_shutters_by_fdelay(
 		const unsigned int fl_lc = fl_cas[fl_ref_idx];
 		/* basic required fll for each lut/turn */
 		const unsigned int req_fl_lc = calc_lut_fll_required_by_exp(idx,
-			fl_ref_idx, exp_lc, &mode_info, curr_rec, __func__);
+			fl_ref_idx, exp_ref_idx, exp_lc,
+			&mode_info, curr_rec, __func__);
 		unsigned int min_fl_lc = 0;
 
 		/* max(based and valid min fl, s+m) */
@@ -2155,11 +2198,12 @@ static unsigned int g_seamless_1st_exp_line_time(
 		/* lineT is different in LUT_A, LUT_B, ... */
 		if (fl_act_delay == 3) {
 			/* => for CIT N+1 active but FLL N+2 active */
-			const unsigned int mode_exp_cnt = frame_rec->mode_exp_cnt;
-			const unsigned int ref_idx = g_lut_id_by_cascade_ref_idx(
-				mode_exp_cnt-1, mode_exp_cnt);
+			/* const unsigned int mode_exp_cnt = frame_rec->mode_exp_cnt; */
+			/* const unsigned int ref_idx = g_lut_id_by_cascade_ref_idx( */
+			/*	mode_exp_cnt-1, mode_exp_cnt); */
 
-			ret = p_mode_info->cas_mode_info.lineTimeInNs[ref_idx];
+			/* ret = p_mode_info->cas_mode_info.lineTimeInNs[ref_idx]; */
+			ret = p_mode_info->cas_mode_info.lineTimeInNs[0];
 		} else {
 			/* => for CIT, FLL all N+1 active */
 			ret = p_mode_info->cas_mode_info.lineTimeInNs[0];

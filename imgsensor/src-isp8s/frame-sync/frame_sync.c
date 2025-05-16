@@ -1847,6 +1847,32 @@ unsigned int fs_is_set_sync(const unsigned int ident)
 }
 
 
+unsigned int fs_g_sync_target_exp_no(const unsigned int ident,
+	const unsigned int exp_order, const unsigned int m_exp_cnt)
+{
+	unsigned int exp_no = 0;	/* default sync target is 1st-exp */
+	unsigned int idx;
+	int sync_type;
+
+	/* get registered idx and check if it is valid */
+	if (unlikely(fs_g_registered_idx_by_ident(ident, &idx, __func__)))
+		return exp_no;
+
+	sync_type = fs_g_set_sync_idx_table_val(idx);
+	/* !!! check if USER has assigned a target sync type !!! */
+	if (sync_type & FS_SYNC_TYPE_LE)
+		exp_no = frec_map_exp_no_by_id(exp_order, m_exp_cnt, FS_HDR_LE);
+	if (sync_type & FS_SYNC_TYPE_SE)
+		exp_no = frec_map_exp_no_by_id(exp_order, m_exp_cnt, FS_HDR_SE);
+
+	LOG_PF_INF(
+		"exp_no:%u (sync_type:%#x/exp_order:%u/m_exp_cnt:%u)\n",
+		exp_no, sync_type, exp_order, m_exp_cnt);
+
+	return exp_no;
+}
+
+
 static void fs_set_sync_extra_ctrl_handle(const unsigned int idx,
 	const unsigned int result, const unsigned int flag)
 {
@@ -3864,6 +3890,7 @@ static struct FrameSync frameSync = {
 	fs_notify_eint_irq_en_status,
 	fs_notify_vsync_by_eint,
 	fs_is_set_sync,
+	fs_g_sync_target_exp_no,
 	fs_is_hw_sync,
 	fs_get_fl_record_info,
 	fs_get_latest_anchor_info,

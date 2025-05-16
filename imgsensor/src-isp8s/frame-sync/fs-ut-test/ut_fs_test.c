@@ -2672,6 +2672,33 @@ static int ut_set_fs_set_shutter_select_sensor_manually(int *select)
 }
 
 
+static void ut_fs_show_sync_target_exp_no(const struct fs_perframe_st *p_pf_ctrl)
+{
+	const unsigned int exp_order = p_pf_ctrl->hdr_exp.exp_order;
+	const unsigned int m_exp_cnt = p_pf_ctrl->hdr_exp.mode_exp_cnt;
+	unsigned int exp_no;
+
+	switch (REGISTER_METHOD) {
+	case BY_SENSOR_ID:
+		exp_no = frameSync->fs_g_sync_target_exp_no(
+			p_pf_ctrl->sensor_id, exp_order, m_exp_cnt);
+		break;
+	case BY_SENSOR_IDX:
+		exp_no = frameSync->fs_g_sync_target_exp_no(
+			p_pf_ctrl->sensor_idx, exp_order, m_exp_cnt);
+		break;
+	default:
+		printf(
+			"\n=== Run in defalut case, not assign register method ===\n");
+		break;
+	}
+	printf(GREEN
+		"[UT sync_target_exp_no] exp_no:%u (exp_order:%u/m_exp_cnt:%u)\n"
+		NONE,
+		exp_no, exp_order, m_exp_cnt);
+}
+
+
 static int ut_fs_ctrl_request_setup_basic_pf_ctrl_data(
 	const unsigned int idx,
 	int *p_user_select_idx,	struct fs_perframe_st *p_pf_ctrl)
@@ -3225,6 +3252,7 @@ static void ut_ctrl_request_setup(void)
 
 		/* 0. try trigger for gen new shutter data */
 		ut_try_gen_new_shutter_data(pf_ctrl.sensor_idx);
+		ut_fs_show_sync_target_exp_no(&pf_ctrl);
 
 		/* 1. setup anti-flicker */
 		ut_fs_ctrl_request_setup_anti_flicker(

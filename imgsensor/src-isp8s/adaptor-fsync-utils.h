@@ -40,6 +40,14 @@ static inline int fsync_util_sen_g_stagger_info(struct adaptor_ctx *ctx,
 	return g_stagger_info(ctx, mode_id, &info);
 }
 
+unsigned int fsync_util_sen_chk_and_g_dcg_vsl_seamless_readout_time_us(
+	struct adaptor_ctx *ctx, const u32 mode_id, unsigned int exp_no);
+
+void fsync_util_sen_chk_and_correct_readout_time(struct adaptor_ctx *ctx,
+	struct fs_perframe_st *p_pf_ctrl, const u32 mode_id);
+
+unsigned int fsync_util_sen_g_readout_time_us(struct adaptor_ctx *ctx,
+	const u32 mode_id);
 
 void fsync_util_sen_g_hw_sync_info(struct adaptor_ctx *ctx,
 	struct fs_streaming_st *s_info);

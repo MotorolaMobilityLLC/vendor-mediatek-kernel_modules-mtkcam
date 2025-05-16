@@ -190,6 +190,7 @@ enum fs_timestamp_src_type {
 
 /*  Implement ceiling, floor functions.  */
 #define FS_CEIL(n, d)   (((n) < 0) ? (-((-(n))/(d))) : (n)/(d) + ((n)%(d) != 0))
+#define FS_CEIL_U(n, d) ((n)/(d) + ((n)%(d) != 0))
 #define FS_FLOOR(n, d)  (((n) < 0) ? (-((-(n))/(d))) - ((n)%(d) != 0) : (n)/(d))
 
 

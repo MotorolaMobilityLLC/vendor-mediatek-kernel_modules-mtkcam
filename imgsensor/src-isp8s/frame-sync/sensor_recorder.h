@@ -101,6 +101,20 @@ static const int exp_order_idx_map[][FS_HDR_MAX+1][FS_HDR_MAX] = {
 		{FS_HDR_SSE, FS_HDR_SSE, FS_HDR_SE, FS_HDR_ME, FS_HDR_LE}
 	}
 };
+
+static inline unsigned int frec_map_exp_no_by_id(const unsigned int exp_order,
+	const unsigned int m_exp_cnt, const int tar_exp_id)
+{
+	unsigned int i, exp_no = 0;
+
+	for (i = 0; i < FS_HDR_MAX; ++i) {
+		if (tar_exp_id == exp_order_idx_map[exp_order][m_exp_cnt][i]) {
+			exp_no = i;
+			break;
+		}
+	}
+	return exp_no;
+}
 /*----------------------------------------------------------------------------*/
 
 

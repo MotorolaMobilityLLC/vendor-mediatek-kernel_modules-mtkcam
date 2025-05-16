@@ -1985,23 +1985,18 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_START_SEAMLESS_SWITCH:
 		{
 			struct mtk_seamless_switch_param *info = ctrl->p_new.p;
-			u64 fsync_exp[5] = {0}; /* preventing drv modified exp value */
+			/* needed by fsync for preventing drv modified exp value */
+			u64 fsync_exp[IMGSENSOR_STAGGER_EXPOSURE_CNT] = {0};
 			u32 orig_scen_id = ctx->subctx.current_scenario_id;
-			u32 orig_readout_time_us =
-				(ctx->mode[orig_scen_id].height
-				*ctx->mode[orig_scen_id].linetime_in_ns_readout
-				/1000);
 			u64 time_boot = ktime_get_boottime_ns();
 			u64 time_mono = ktime_get_ns();
 
-			/* first, notify fsync cancel FL restore proc if needed */
-			notify_fsync_mgr_clear_fl_restore_info_if_needed(ctx);
 			para.u64[0] = info->target_scenario_id;
 			para.u64[1] = (uintptr_t)&info->ae_ctrl[0];
 			para.u64[2] = (uintptr_t)&info->ae_ctrl[1];
 
 			adaptor_logi(ctx,
-				"[inf:%d] idx:%d, req_no:%u, sub_sof_no:%u, seamless scen(%u => %u), [0](req_id:%d s(%llu/%llu/%llu/%llu/%llu) g(%u/%u/%u/%u/%u)), [1](req_id:%d s(%llu/%llu/%llu/%llu/%llu) g(%u/%u/%u/%u/%u)), sys_ts:(%llu/%llu|%llu)\n",
+				"[inf:%d] idx:%d, req_no:%u, sub_sof_no:%u, seamless scen(%u => %u), [0](req_id:%d/frame_id:%u s(%llu/%llu/%llu/%llu/%llu) g(%u/%u/%u/%u/%u)), [1](req_id:%d/frame_id:%u s(%llu/%llu/%llu/%llu/%llu) g(%u/%u/%u/%u/%u)), sys_ts:(%llu/%llu|%llu)\n",
 				ctx->seninf_idx,
 				ctx->idx,
 				ctx->sof_cnt,
@@ -2009,6 +2004,7 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 				orig_scen_id,
 				info->target_scenario_id,
 				info->ae_ctrl[0].req_id,
+				info->ae_ctrl[0].frame_id,
 				info->ae_ctrl[0].exposure.arr[0],
 				info->ae_ctrl[0].exposure.arr[1],
 				info->ae_ctrl[0].exposure.arr[2],
@@ -2020,6 +2016,7 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 				info->ae_ctrl[0].gain.arr[3],
 				info->ae_ctrl[0].gain.arr[4],
 				info->ae_ctrl[1].req_id,
+				info->ae_ctrl[1].frame_id,
 				info->ae_ctrl[1].exposure.arr[0],
 				info->ae_ctrl[1].exposure.arr[1],
 				info->ae_ctrl[1].exposure.arr[2],
@@ -2033,7 +2030,6 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 				ctx->sys_ts_update_sof_cnt,
 				time_boot,
 				time_mono);
-
 			if (info->target_scenario_id == 0 &&
 				info->ae_ctrl[0].exposure.arr[0] == 0 &&
 				info->ae_ctrl[0].gain.arr[0] == 0 &&
@@ -2043,6 +2039,7 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 					info->target_scenario_id);
 				break;
 			}
+
 			ADAPTOR_SYSTRACE_BEGIN(
 				"imgsensor::V4L2_CID_START_SEAMLESS_SWITCH [inf:%d] idx:%d, req_no:%u, sub_sof_no:%u, seamless scen(%u => %u), req_id:%d/frame_id:%u s(%llu/%llu/%llu/%llu/%llu) sys_ts:(%llu/%llu|%llu)",
 				ctx->seninf_idx,
@@ -2062,6 +2059,9 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 				time_boot,
 				time_mono);
 
+			/* first, notify fsync cancel FL restore proc if needed */
+			notify_fsync_mgr_clear_fl_restore_info_if_needed(ctx);
+
 			mutex_lock(&ctx->broadcast_lock);
 			/* update ctx req id */
 			ctx->req_id = info->ae_ctrl[0].req_id;
@@ -2077,8 +2077,7 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 			notify_seninf_eint_seamless_switch(ctx, 1);
 
 			notify_fsync_mgr_seamless_switch(ctx,
-				fsync_exp, IMGSENSOR_STAGGER_EXPOSURE_CNT,
-				orig_readout_time_us, info->target_scenario_id);
+				fsync_exp, orig_scen_id, info->target_scenario_id);
 
 			/*store ae ctrl for ESD reset*/
 			memset(&ctx->ae_memento, 0, sizeof(ctx->ae_memento));

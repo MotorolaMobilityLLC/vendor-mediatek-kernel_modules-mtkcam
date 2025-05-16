@@ -445,6 +445,9 @@ struct FrameSync {
 	/**********************************************************************/
 	unsigned int (*fs_is_set_sync)(const unsigned int ident);
 
+	unsigned int (*fs_g_sync_target_exp_no)(const unsigned int ident,
+		const unsigned int exp_order, const unsigned int m_exp_cnt);
+
 	unsigned int (*fs_is_hw_sync)(const unsigned int ident);
 
 	void (*fs_get_fl_record_info)(const unsigned int ident,

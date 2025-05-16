@@ -754,7 +754,7 @@ static unsigned int fs_alg_chk_if_need_to_setup_fl_restore_ctrl(
 	if (diff < FS_FL_AUTO_RESTORE_TH)
 		return 0;
 	/* !!! FL auto restore mechanism not support LB-MF mode !!! */
-	if (fs_inst[idx].p_frecs[0]->m_exp_type == MULTI_EXP_TYPE_LBMF)
+	if (frec_chk_if_lut_is_used(fs_inst[idx].p_frecs[0]->m_exp_type))
 		return 0;
 
 	get_valid_fl_lc_info(idx, &fl_lc, fl_lc_arr, FS_HDR_MAX);
@@ -3528,6 +3528,7 @@ void fs_alg_set_preset_perframe_streaming_st_data(const unsigned int idx,
 		p_pf_ctrl_data->margin_lc, __func__);
 	fs_inst[idx].flicker_en = p_pf_ctrl_data->flicker_en;
 	fs_inst[idx].lineTimeInNs = p_pf_ctrl_data->lineTimeInNs;
+	fs_inst[idx].readout_time_us = p_pf_ctrl_data->readout_time_us;
 
 	fs_inst[idx].prev_readout_min_fl_lc = fs_inst[idx].readout_min_fl_lc;
 	fs_inst[idx].readout_min_fl_lc = 0;

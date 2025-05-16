@@ -140,6 +140,106 @@ static unsigned int chk_then_s_dcg_vsl_param(struct adaptor_ctx *ctx,
 /*******************************************************************************
  * fsync utils functions --- sensor driver related
  ******************************************************************************/
+unsigned int fsync_util_sen_chk_and_g_dcg_vsl_seamless_readout_time_us(
+	struct adaptor_ctx *ctx, const u32 mode_id, unsigned int exp_no)
+{
+	struct adaptor_sensor_dcg_vsl_property_st prop = {0};
+	unsigned int readout_time_us, readout_length, line_time_ns;
+	u32 ret;
+
+	ret = g_sensor_dcg_vsl_property(ctx, mode_id, &prop);
+	if (unlikely(ret == 0 || prop.lut_cnt == 0))  /* => NOT DCG+VS/L type */
+		return 0;
+	if (unlikely(ctx->subctx.s_ctx.mode == NULL))
+		return 0;
+
+	/* !!! start to calculate !!! */
+	if (exp_no > prop.lut_cnt) {
+		/* auto assign to last valid index */
+		exp_no = (prop.lut_cnt - 1);
+	}
+	readout_length = ctx->subctx.s_ctx.mode[mode_id].readout_length;
+	line_time_ns = prop.params[exp_no].linetime_in_ns;
+
+	readout_time_us = ((readout_length * line_time_ns) / 1000);
+
+#ifndef REDUCE_FSYNC_UTILS_LOG
+	FSYNC_MGR_LOGI(ctx,
+		"sidx:%d, rout_time(us):%u (mode_id:%u/exp_no:%u/readout_len:%u/Tline(ns):%u)\n",
+		ctx->idx, readout_time_us,
+		mode_id, exp_no, readout_length, line_time_ns);
+#endif
+
+	return readout_time_us;
+}
+
+
+void fsync_util_sen_chk_and_correct_readout_time(struct adaptor_ctx *ctx,
+	struct fs_perframe_st *p_pf_ctrl, const u32 mode_id)
+{
+	unsigned int exp_order, m_exp_cnt, exp_no, line_time_ns, height;
+	unsigned int readout_time_us = 0;
+
+	if (p_pf_ctrl->hdr_exp.multi_exp_type != MULTI_EXP_TYPE_DCG_VSL)
+		return;
+	/* error handling */
+	if (unlikely(!chk_is_valid_scenario_id(ctx, mode_id, __func__)))
+		return;
+	if (unlikely((ctx->subctx.s_ctx.mode == NULL) || (p_pf_ctrl == NULL)))
+		return;
+
+	/* !!! Due to the mode (e.g., DCG+VS/L) has 2 different Line-Time !!! */
+	exp_order = p_pf_ctrl->hdr_exp.exp_order;
+	m_exp_cnt = p_pf_ctrl->hdr_exp.mode_exp_cnt;
+	exp_no = ctx->fsync_mgr->fs_g_sync_target_exp_no(ctx->idx,
+		exp_order, m_exp_cnt);
+	height = ctx->subctx.s_ctx.mode[mode_id].imgsensor_winsize_info.h2_tg_size;
+	line_time_ns =
+		p_pf_ctrl->hdr_exp.cas_mode_info.lineTimeInNs[exp_no];
+
+	readout_time_us = ((height * line_time_ns) / 1000);
+
+#ifndef REDUCE_FSYNC_UTILS_LOG
+	FSYNC_MGR_LOGI(ctx,
+		"sidx:%d, rout_time(us):%u->%u (mode_id:%u/exp_no:%u/exp_order:%u/m_exp_cnt:%u/height:%u/Tline(ns):%u(%u/%u/%u/%u/%u))\n",
+		ctx->idx,
+		p_pf_ctrl->readout_time_us, readout_time_us,
+		mode_id, exp_no, exp_order, m_exp_cnt, height, line_time_ns,
+		p_pf_ctrl->hdr_exp.cas_mode_info.lineTimeInNs[0],
+		p_pf_ctrl->hdr_exp.cas_mode_info.lineTimeInNs[1],
+		p_pf_ctrl->hdr_exp.cas_mode_info.lineTimeInNs[2],
+		p_pf_ctrl->hdr_exp.cas_mode_info.lineTimeInNs[3],
+		p_pf_ctrl->hdr_exp.cas_mode_info.lineTimeInNs[4]);
+#endif
+	/* correct/overwrite */
+	p_pf_ctrl->readout_time_us = readout_time_us;
+}
+
+
+unsigned int fsync_util_sen_g_readout_time_us(struct adaptor_ctx *ctx,
+	const u32 mode_id)
+{
+	union feature_para para = {0};
+	unsigned int ret = 0;
+	u32 len = 0;
+
+	para.u64[0] = mode_id;
+	subdrv_call(ctx, feature_control,
+		SENSOR_FEATURE_GET_READOUT_BY_SCENARIO,
+		para.u8, &len);
+
+	ret = (unsigned int)para.u64[1] / 1000;
+
+#ifndef REDUCE_FSYNC_UTILS_LOG
+	FSYNC_MGR_LOGI(ctx,
+		"sidx:%d, mode_id:%u => para.u64[1]:%llu, readout(us):%u\n",
+		ctx->idx, mode_id, para.u64[1], ret);
+#endif
+
+	return ret;
+}
+
+
 void fsync_util_sen_g_hw_sync_info(struct adaptor_ctx *ctx,
 	struct fs_streaming_st *s_info)
 {
