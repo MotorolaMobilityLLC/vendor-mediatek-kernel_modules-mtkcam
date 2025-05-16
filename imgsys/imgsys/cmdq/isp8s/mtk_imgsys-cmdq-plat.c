@@ -3896,7 +3896,7 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 						(hw_comb == (IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_PQDIP_A)))
 
 					cmdq_pkt_poll_timeout(pkt, cmd->u.value, SUBSYS_NO_SUPPORT,
-						cmd->u.address, cmd->u.mask, IMGSYS_POLL_TIME_200MS,
+						cmd->u.address, cmd->u.mask, IMGSYS_POLL_TIME_1000MS,
 						CMDQ_GPR_R03+gpr_idx);
 				else
 					cmdq_pkt_poll_timeout(pkt, cmd->u.value, SUBSYS_NO_SUPPORT,
