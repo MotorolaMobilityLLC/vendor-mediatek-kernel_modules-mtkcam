@@ -230,8 +230,6 @@ void pda_reset(struct mtk_pda_device *pda_dev)
 	pda_dev->ts_ns = 0;
 	pda_dev->err2_count = 0;
 
-	dev_info(pda_dev->dev, "%s +\n", __func__);
-
 	// clear dma_soft_rst_stat
 	writel_relaxed(0x0, pda_dev->base + REG_E_PDA_OTF_PDA_DMA_RST);
 
@@ -438,15 +436,6 @@ static void debug_csr_print(struct mtk_pda_device *pda_dev)
 
 int mtk_cam_pda_dev_config(struct mtk_pda_device *pda_dev)
 {
-
-	dev_info(pda_dev->dev, "%s +", __func__);
-
-	// for debug
-	dev_info(pda_dev->dev, "%s ts_ns/irq_type/err_tags: %llu/%d/%u", __func__,
-		pda_dev->ts_ns,
-		pda_dev->irq_type,
-		pda_dev->err_tags);
-
 	// --------- DMA Secure part -------------
 	writel_relaxed(0x00000000, pda_dev->base + REG_E_PDA_OTF_PDA_SECURE);
 	writel_relaxed(0x00000000, pda_dev->base + REG_E_PDA_OTF_PDA_SECURE_1);
@@ -520,16 +509,15 @@ int mtk_cam_pda_dev_config(struct mtk_pda_device *pda_dev)
 	writel_relaxed(0x0000000F, pda_dev->base + REG_E_PDA_OTF_PDA_ERR_STAT_EN);
 
 	// read ERR_STAT, avoid the impact of previous data
-	dev_info(pda_dev->dev, "REG_E_PDA_OTF_PDA_ERR_STAT(0x678) = 0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_ERR_STAT));
+	dev_info(pda_dev->dev, "%s REG_E_PDA_OTF_PDA_ERR_STAT(0x678) = 0x%x\n",
+		__func__, readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_ERR_STAT));
 
 	// read clear dma status
-	dev_info(pda_dev->dev, "[ERR_STAT]I_P1/TI_P1/I_P2/TI_P2/Out: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P1_ERR_STAT),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P1_ERR_STAT),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P2_ERR_STAT),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P2_ERR_STAT),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAO_P1_ERR_STAT));
+	readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P1_ERR_STAT);
+	readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P1_ERR_STAT);
+	readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P2_ERR_STAT);
+	readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P2_ERR_STAT);
+	readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAO_P1_ERR_STAT);
 
 	//clear pda status
 	pda_dev->ts_ns = 0;
@@ -553,43 +541,10 @@ int mtk_cam_pda_dev_config(struct mtk_pda_device *pda_dev)
 	writel_relaxed(0xE, pda_dev->base + REG_E_PDA_OTF_DCIF_CTL);
 	//--------------------------------------
 
-	//for debug
-	dev_info(pda_dev->dev, "REG_E_PDA_OTF_DCIF_CTL(0x6b8) = 0x%x (expected 0xc)\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DCIF_CTL));
+	if (readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DCIF_CTL) != 0xc)
+		dev_info(pda_dev->dev, "REG_E_PDA_OTF_DCIF_CTL(0x6b8) = 0x%x (expected 0xc)\n",
+			readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DCIF_CTL));
 
-	// dump csr for debug
-	dev_info(pda_dev->dev, "DCIF DEBUG0~7: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA0),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA1),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA2),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA3),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA4),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA5),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA6),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DCIF_DEBUG_DATA7));
-	dev_info(pda_dev->dev, "I_P1/TI_P1/I_P2/TI_P2/Out: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P1_BASE_ADDR),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P1_BASE_ADDR),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P2_BASE_ADDR),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P2_BASE_ADDR),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAO_P1_BASE_ADDR));
-	dev_info(pda_dev->dev, "[MSB]I_P1/TI_P1/I_P2/TI_P2/Out: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P1_BASE_ADDR_MSB),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P1_BASE_ADDR_MSB),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P2_BASE_ADDR_MSB),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P2_BASE_ADDR_MSB),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAO_P1_BASE_ADDR_MSB));
-	dev_info(pda_dev->dev, "[ERR_STAT]I_P1/TI_P1/I_P2/TI_P2/Out: 0x%x/0x%x/0x%x/0x%x/0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P1_ERR_STAT),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P1_ERR_STAT),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAI_P2_ERR_STAT),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDATI_P2_ERR_STAT),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDAO_P1_ERR_STAT));
-	dev_info(pda_dev->dev, "DMA_EN(expected 0x1f)/ERR_STAT_EN(expected 0xf): 0x%x/0x%x\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_DMA_EN),
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_PDA_ERR_STAT_EN));
-
-	dev_info(pda_dev->dev, "%s -", __func__);
 	return 0;
 }
 
@@ -1054,8 +1009,6 @@ int mtk_pda_runtime_suspend(struct device *dev)
 	struct mtk_pda_device *pda_dev = dev_get_drvdata(dev);
 	int i;
 
-	dev_info(dev, "%s +\n", __func__);
-
 	pda_reset(pda_dev);
 
 	//-------- setting ofl mode ---------
@@ -1067,9 +1020,9 @@ int mtk_pda_runtime_suspend(struct device *dev)
 	writel_relaxed(0x9, pda_dev->base + REG_E_PDA_OTF_DCIF_CTL);
 	//----------------------------------
 
-	//for debug
-	dev_info(pda_dev->dev, "REG_E_PDA_OTF_DCIF_CTL(0x6b8) = 0x%x  (expected 0x8)\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DCIF_CTL));
+	if (readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DCIF_CTL) != 0x8)
+		dev_info(pda_dev->dev, "REG_E_PDA_OTF_DCIF_CTL(0x6b8) = 0x%x  (expected 0x8)\n",
+			readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DCIF_CTL));
 
 	for (i = 0; i < PDA_IRQ_NUM; i++) {
 		disable_irq(pda_dev->irq[i]);
@@ -1089,7 +1042,6 @@ int mtk_pda_runtime_suspend(struct device *dev)
 	for (i = pda_dev->num_larbs - 1; i >=0 ; i--)
 		mtk_smi_larb_disable(&pda_dev->larb_pdev[i]->dev);
 
-	dev_info(dev, "%s -\n", __func__);
 	return 0;
 }
 
@@ -1097,8 +1049,6 @@ int mtk_pda_runtime_resume(struct device *dev)
 {
 	struct mtk_pda_device *pda_dev = dev_get_drvdata(dev);
 	int i, ret;
-
-	dev_info(dev, "%s +\n", __func__);
 
 	for (i = 0; i < pda_dev->num_larbs; i++)
 		mtk_smi_larb_enable(&pda_dev->larb_pdev[i]->dev);
@@ -1135,16 +1085,15 @@ int mtk_pda_runtime_resume(struct device *dev)
 	writel_relaxed(0x9, pda_dev->base + REG_E_PDA_OTF_DCIF_CTL);
 	//----------------------------------
 
-	//for debug
-	dev_info(pda_dev->dev, "REG_E_PDA_OTF_DCIF_CTL(0x6b8) = 0x%x  (expected 0x8)\n",
-		readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DCIF_CTL));
+	if (readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DCIF_CTL) != 0x8)
+		dev_info(pda_dev->dev, "REG_E_PDA_OTF_DCIF_CTL(0x6b8) = 0x%x  (expected 0x8)\n",
+			readl_relaxed(pda_dev->base + REG_E_PDA_OTF_DCIF_CTL));
 
 	for (i = 0; i < PDA_IRQ_NUM; i++) {
 		enable_irq(pda_dev->irq[i]);
 		dev_info(dev, "%s:enable irq %d\n", __func__, pda_dev->irq[i]);
 	}
 
-	dev_info(dev, "%s -\n", __func__);
 	return 0;
 }
 
