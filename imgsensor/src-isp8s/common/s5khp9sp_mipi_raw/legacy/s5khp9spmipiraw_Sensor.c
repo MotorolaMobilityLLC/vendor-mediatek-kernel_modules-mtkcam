@@ -2821,9 +2821,9 @@ static int open(struct subdrv_ctx *ctx)
 	ctx->frame_length = ctx->s_ctx.mode[scenario_id].framelength;
 	ctx->frame_length_rg = ctx->frame_length;
 
-	if (ctx->s_ctx.cust_get_linetime_in_us != NULL) {
-		ctx->s_ctx.cust_get_linetime_in_us((void *) ctx,
-			ctx->current_scenario_id, &linetime_in_ns, 0);
+	if (ctx->s_ctx.cust_get_linetime_in_ns != NULL) {
+		ctx->s_ctx.cust_get_linetime_in_ns((void *) ctx,
+			ctx->current_scenario_id, &linetime_in_ns, 0, 0);
 		ctx->current_fps = 1000000000 / linetime_in_ns * 10 / ctx->frame_length;
 	} else {
 		ctx->current_fps = ctx->pclk / ctx->line_length * 10 / ctx->frame_length;

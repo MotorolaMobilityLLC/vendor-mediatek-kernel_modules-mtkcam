@@ -98,6 +98,7 @@ static void dump_perframe_info(struct adaptor_ctx *ctx, struct mtk_hdr_ae *ae_ct
 	struct mtk_ebd_dump *obj;
 	char *ebd_msg = NULL;
 	int sret;
+	u32 line_time_ns = 0;
 
 	calc_ae_ctrl_dbg_info_ts_diff(ctx, curr_sys_ts,
 		&delta_ae_ctrl_sof_cnt_ms, &delta_curr_ae_ctrl_ms);
@@ -138,6 +139,14 @@ static void dump_perframe_info(struct adaptor_ctx *ctx, struct mtk_hdr_ae *ae_ct
 		}
 	}
 	mutex_unlock(&ctx->ebd_lock);
+
+	if (ctx->subctx.s_ctx.cust_get_linetime_in_ns != NULL) {
+		ctx->subctx.s_ctx.cust_get_linetime_in_ns((void *)&ctx->subctx,
+			ctx->subctx.current_scenario_id, (u32 *)&line_time_ns,
+			GET_READOUT_LINETIME, 0);
+	} else {
+		line_time_ns = CALC_LINE_TIME_IN_NS(ctx->subctx.pclk, ctx->subctx.line_length);
+	}
 
 	adaptor_logi(ctx,
 		"[inf:%d] idx:%d, req_no:%u, sub_sof_no:%u, req_id:%d, frame_id:%u, [LLLE->SSSE] 64bit s(%llu/%llu/%llu/%llu/%llu) g(%d/%d/%d/%d/%d), w(%llu/%llu/%llu/%llu/%llu,%d/%d/%d/%d/%d) sub_tag:%u, ctx:(fl:(%u,lut:%u/%u/%u)/RG:(%u,%u/%u/%u/%u/%u), min_fl:%u, flick_en:%u, fsync(%d):(%u,%u/%u/%u/%u/%u), mode:(line_time:%u, margin:%u, scen:%u; STG:(rout_l:%u, r_margin:%u, ext_fl:%u)), fast_mode:%u), sys_ts:(%llu->%llu/%llu(+%u)/%llu(+%u))%s\n",
@@ -187,7 +196,7 @@ static void dump_perframe_info(struct adaptor_ctx *ctx, struct mtk_hdr_ae *ae_ct
 		ctx->fsync_out_fl_arr[2],
 		ctx->fsync_out_fl_arr[3],
 		ctx->fsync_out_fl_arr[4],
-		CALC_LINE_TIME_IN_NS(ctx->subctx.pclk, ctx->subctx.line_length),
+		line_time_ns,
 		ctx->subctx.margin,
 		ctx->subctx.current_scenario_id,
 		ctx->subctx.readout_length,
@@ -881,14 +890,22 @@ static void delay_do_set_ae_ctrl(struct kthread_work *work)
 static u64 get_lbmf_lut_a_delay_time(struct adaptor_ctx *ctx)
 {
 	u64 delay_ms = 0;
+	u32 line_time_ns = 0;
 
 	if (ctx == NULL) {
 		pr_info("[%s] ctx is NULL, skip function\n", __func__);
 		return 0;
 	}
 
-	delay_ms = ctx->subctx.frame_length_in_lut[0] *
-				CALC_LINE_TIME_IN_NS(ctx->subctx.pclk, ctx->subctx.line_length);
+	if (ctx->subctx.s_ctx.cust_get_linetime_in_ns != NULL) {
+		ctx->subctx.s_ctx.cust_get_linetime_in_ns((void *)&ctx->subctx,
+			ctx->subctx.current_scenario_id, (u32 *)&line_time_ns,
+			GET_READOUT_LINETIME, 0);
+	} else {
+		line_time_ns = CALC_LINE_TIME_IN_NS(ctx->subctx.pclk, ctx->subctx.line_length);
+	}
+
+	delay_ms = ctx->subctx.frame_length_in_lut[0] * (u64)line_time_ns;
 	delay_ms /= 1000000;
 
 	return delay_ms;
@@ -1731,6 +1748,15 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_MTK_STAGGER_AE_CTRL:
 		{
 			struct mtk_hdr_ae *ae_ctrl = ctrl->p_new.p;
+			u32 line_time_ns = 0;
+
+			if (ctx->subctx.s_ctx.cust_get_linetime_in_ns != NULL) {
+				ctx->subctx.s_ctx.cust_get_linetime_in_ns((void *)&ctx->subctx,
+					ctx->subctx.current_scenario_id, (u32 *)&line_time_ns,
+					GET_READOUT_LINETIME, 0);
+			} else {
+				line_time_ns = CALC_LINE_TIME_IN_NS(ctx->subctx.pclk, ctx->subctx.line_length);
+			}
 
 			ADAPTOR_SYSTRACE_BEGIN("SensorWorker::s_ae_ctrl %d %d %d %d %d %d",
 				ae_ctrl->req_id,
@@ -1738,7 +1764,7 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 				ae_ctrl->exposure.me_exposure,
 				ae_ctrl->gain.le_gain,
 				ae_ctrl->gain.me_gain,
-				CALC_LINE_TIME_IN_NS(ctx->subctx.pclk, ctx->subctx.line_length));
+				line_time_ns);
 			mutex_lock(&ctx->broadcast_lock);
 			s_ae_ctrl(ctrl);
 			mutex_unlock(&ctx->broadcast_lock);

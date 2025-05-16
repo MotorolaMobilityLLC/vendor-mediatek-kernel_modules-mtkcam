@@ -656,9 +656,9 @@ static void fsync_mgr_setup_fs_streaming_st(struct adaptor_ctx *ctx,
 	s_info->lineTimeInNs =
 		CALC_LINE_TIME_IN_NS(s_info->pclk, s_info->linelength);
 
-	if (ctx->subctx.s_ctx.cust_get_linetime_in_us != NULL) {
-		ctx->subctx.s_ctx.cust_get_linetime_in_us((void *)&ctx->subctx,
-			(u32)ctx->subctx.current_scenario_id, &linetime_in_ns, 0);
+	if (ctx->subctx.s_ctx.cust_get_linetime_in_ns != NULL) {
+		ctx->subctx.s_ctx.cust_get_linetime_in_ns((void *)&ctx->subctx,
+			(u32)ctx->subctx.current_scenario_id, &linetime_in_ns, 0, 0);
 		s_info->lineTimeInNs = linetime_in_ns ? linetime_in_ns : s_info->lineTimeInNs;
 	}
 
@@ -798,9 +798,9 @@ static void fsync_mgr_setup_basic_fs_perframe_st(struct adaptor_ctx *ctx,
 	pf_ctrl->lineTimeInNs =
 		CALC_LINE_TIME_IN_NS(pf_ctrl->pclk, pf_ctrl->linelength);
 
-	if (ctx->subctx.s_ctx.cust_get_linetime_in_us != NULL) {
-		ctx->subctx.s_ctx.cust_get_linetime_in_us((void *)&ctx->subctx,
-			(u32)ctx->subctx.current_scenario_id, &linetime_in_ns, 0);
+	if (ctx->subctx.s_ctx.cust_get_linetime_in_ns != NULL) {
+		ctx->subctx.s_ctx.cust_get_linetime_in_ns((void *)&ctx->subctx,
+			(u32)ctx->subctx.current_scenario_id, &linetime_in_ns, 0, 0);
 		pf_ctrl->lineTimeInNs = linetime_in_ns ? linetime_in_ns : pf_ctrl->lineTimeInNs;
 	}
 

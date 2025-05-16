@@ -3233,7 +3233,7 @@ static int register_ext_ops(struct adaptor_ctx *ctx)
 		COPY_COMMON_MEMBER(target, fw_ext_ops, s_pwr_seq_reset_view_to_sensing);
 		COPY_COMMON_MEMBER(target, fw_ext_ops, mcss_init);
 		COPY_COMMON_MEMBER(target, fw_ext_ops, mcss_update_subdrv_para);
-		COPY_COMMON_MEMBER(target, fw_ext_ops, cust_get_linetime_in_us);
+		COPY_COMMON_MEMBER(target, fw_ext_ops, cust_get_linetime_in_ns);
 		COPY_COMMON_MEMBER(target, fw_ext_ops, chk_streaming_st);
 
 		/* copy by mode ops */

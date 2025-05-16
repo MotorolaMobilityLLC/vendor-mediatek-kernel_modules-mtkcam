@@ -1427,10 +1427,10 @@ static int g_linetime_by_scenario(struct adaptor_ctx *ctx, void *arg)
 	struct mtk_linetime_by_scenario *info = arg;
 	u32 scenario_id = info->scenario_id;
 
-	if (ctx->subctx.s_ctx.cust_get_linetime_in_us != NULL) {
-		ctx->subctx.s_ctx.cust_get_linetime_in_us((void *)&ctx->subctx,
+	if (ctx->subctx.s_ctx.cust_get_linetime_in_ns != NULL) {
+		ctx->subctx.s_ctx.cust_get_linetime_in_ns((void *)&ctx->subctx,
 			scenario_id, (u32 *)&info->linetime_in_ns,
-			(u32)info->get_linetime_type);
+			(u32)info->get_linetime_type, 0);
 	} else {
 		info->linetime_in_ns = CALC_LINE_TIME_IN_NS(ctx->subctx.s_ctx.mode[scenario_id].pclk,
 			ctx->subctx.s_ctx.mode[scenario_id].linelength);
@@ -1470,10 +1470,10 @@ static int g_current_frame_time_in_us(struct adaptor_ctx *ctx, void *arg)
 	u32 linetime_in_ns = 0;
 	u32 get_linetime_type = GET_READOUT_LINETIME;
 
-	if (ctx->subctx.s_ctx.cust_get_linetime_in_us != NULL) {
-		ctx->subctx.s_ctx.cust_get_linetime_in_us((void *)&ctx->subctx,
+	if (ctx->subctx.s_ctx.cust_get_linetime_in_ns != NULL) {
+		ctx->subctx.s_ctx.cust_get_linetime_in_ns((void *)&ctx->subctx,
 			scenario_id, (u32 *)&linetime_in_ns,
-			(u32)get_linetime_type);
+			(u32)get_linetime_type, 0);
 	} else {
 		linetime_in_ns = CALC_LINE_TIME_IN_NS(ctx->subctx.s_ctx.mode[scenario_id].pclk,
 			ctx->subctx.s_ctx.mode[scenario_id].linelength);
@@ -1493,10 +1493,10 @@ static int g_read_margin_in_us_by_scenario(struct adaptor_ctx *ctx, void *arg)
 	u32 linetime_in_ns = 0;
 	u32 get_linetime_type = GET_READOUT_LINETIME;
 
-	if (ctx->subctx.s_ctx.cust_get_linetime_in_us != NULL) {
-		ctx->subctx.s_ctx.cust_get_linetime_in_us((void *)&ctx->subctx,
+	if (ctx->subctx.s_ctx.cust_get_linetime_in_ns != NULL) {
+		ctx->subctx.s_ctx.cust_get_linetime_in_ns((void *)&ctx->subctx,
 			scenario_id, (u32 *)&linetime_in_ns,
-			(u32)get_linetime_type);
+			(u32)get_linetime_type, 0);
 	} else {
 		linetime_in_ns = CALC_LINE_TIME_IN_NS(ctx->subctx.s_ctx.mode[scenario_id].pclk,
 			ctx->subctx.s_ctx.mode[scenario_id].linelength);
@@ -1529,10 +1529,10 @@ static int g_exposure_margin_in_us_by_scenario(struct adaptor_ctx *ctx, void *ar
 	u32 linetime_in_ns = 0;
 	u32 get_linetime_type = GET_SHUTTER_LINETIME;
 
-	if (ctx->subctx.s_ctx.cust_get_linetime_in_us != NULL) {
-		ctx->subctx.s_ctx.cust_get_linetime_in_us((void *)&ctx->subctx,
+	if (ctx->subctx.s_ctx.cust_get_linetime_in_ns != NULL) {
+		ctx->subctx.s_ctx.cust_get_linetime_in_ns((void *)&ctx->subctx,
 			scenario_id, (u32 *)&linetime_in_ns,
-			(u32)get_linetime_type);
+			(u32)get_linetime_type, 0);
 	} else {
 		linetime_in_ns = CALC_LINE_TIME_IN_NS(ctx->subctx.s_ctx.mode[scenario_id].pclk,
 			ctx->subctx.s_ctx.mode[scenario_id].linelength);

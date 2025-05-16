@@ -43,7 +43,7 @@ static int imx06c_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static void imx06c_set_shutter_frame_length(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int imx06c_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int imx06c_get_linetime_in_ns(void *arg, u32 scenario_id, u32 *linetime_in_ns,
-	enum GET_LINETIME_ENUM linetime_type);
+	enum GET_LINETIME_ENUM linetime_type, enum IMGSENSOR_EXPOSURE exp_idx);
 
 static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, imx06c_set_test_pattern},
@@ -55,7 +55,8 @@ static struct subdrv_feature_control feature_control_list[] = {
 };
 
 static int imx06c_get_linetime_in_ns(void *arg,
-	u32 scenario_id, u32 *linetime_in_ns, enum GET_LINETIME_ENUM linetime_type)
+	u32 scenario_id, u32 *linetime_in_ns, enum GET_LINETIME_ENUM linetime_type,
+	enum IMGSENSOR_EXPOSURE exp_idx)
 {
 	struct subdrv_ctx *ctx = (struct subdrv_ctx *)arg;
 	u32 ret;
@@ -67,7 +68,7 @@ static int imx06c_get_linetime_in_ns(void *arg,
 	case SENSOR_SCENARIO_ID_HIGHSPEED_VIDEO:
 	case SENSOR_SCENARIO_ID_SLIM_VIDEO:
 	// ret = common_get_pixel_clk_base_linetime_in_ns(ctx, scenario_id,
-	// linetime_in_ns, linetime_type);
+	/* linetime_in_ns, linetime_type, exp_idx); */
 	// break;
 	case SENSOR_SCENARIO_ID_CUSTOM1:
 	case SENSOR_SCENARIO_ID_CUSTOM2:
@@ -75,7 +76,7 @@ static int imx06c_get_linetime_in_ns(void *arg,
 	case SENSOR_SCENARIO_ID_CUSTOM4:
 	case SENSOR_SCENARIO_ID_CUSTOM5:
 	// ret = common_get_cycle_base_v1_linetime_in_ns(ctx, scenario_id,
-	// linetime_in_ns, linetime_type);
+	/* linetime_in_ns, linetime_type, exp_idx); */
 	// break;
 	case SENSOR_SCENARIO_ID_CUSTOM6:
 	case SENSOR_SCENARIO_ID_CUSTOM7:
@@ -83,11 +84,11 @@ static int imx06c_get_linetime_in_ns(void *arg,
 	case SENSOR_SCENARIO_ID_CUSTOM9:
 	case SENSOR_SCENARIO_ID_CUSTOM10:
 	// ret = custom_formula_get_linetime_in_ns(ctx, scenario_id,
-	// linetime_in_ns, linetime_type);
+	/* linetime_in_ns, linetime_type, exp_idx); */
 	// break;
 	default:
 		ret = common_get_cycle_base_v1_linetime_in_ns(ctx, scenario_id,
-			linetime_in_ns, linetime_type);
+			linetime_in_ns, linetime_type, exp_idx);
 		break;
 	}
 
@@ -123,7 +124,7 @@ struct subdrv_static_ctx_ext_ops static_ext_ops = {
 	.list_len = ARRAY_SIZE(feature_control_list),
 
 	.mcss_update_subdrv_para = imx06c_mcss_update_subdrv_para,
-	.cust_get_linetime_in_us = imx06c_get_linetime_in_ns,
+	.cust_get_linetime_in_ns = imx06c_get_linetime_in_ns,
 	.mcss_init = imx06c_mcss_init,
 #ifdef IMX06C_ISF_DBG
 	.debug_check_with_exist_s_ctx = &imx06c_legacy_s_ctx,
@@ -392,7 +393,7 @@ static int imx06c_mcss_update_subdrv_para(void *arg, int scenario_id)
 	}
 
 	/* cycle_base_v1_linetime formula to get linetime to calculate framerate */
-	common_get_cycle_base_v1_linetime_in_ns(ctx, scenario_id, &linetime_in_ns, 0);
+	common_get_cycle_base_v1_linetime_in_ns(ctx, scenario_id, &linetime_in_ns, 0, 0);
 
 	ctx->min_frame_length = max(ctx->min_frame_length, ctx->s_ctx.mode[scenario_id].framelength);
 	ctx->frame_length = ctx->s_ctx.mode[scenario_id].framelength;

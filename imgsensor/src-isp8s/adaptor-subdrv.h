@@ -549,9 +549,10 @@ struct subdrv_static_ctx {
 	int (*mcss_init)(void *arg);
 	int (*mcss_update_subdrv_para)(void *arg, int scenario_id);
 
-	/* cust_get_linetime_in_us */
-	int (*cust_get_linetime_in_us)(void *arg, u32 scenario_id,
-		u32 *linetime_in_ns, enum GET_LINETIME_ENUM linetime_type);
+	/* cust_get_linetime_in_ns */
+	int (*cust_get_linetime_in_ns)(void *arg, u32 scenario_id,
+		u32 *linetime_in_ns, enum GET_LINETIME_ENUM linetime_type,
+		enum IMGSENSOR_EXPOSURE exp_idx);
 	u32 cycle_base_ratio;
 
 	/* custom reserved field */
@@ -595,8 +596,9 @@ struct subdrv_static_ctx_ext_ops {
 	int (*s_pwr_seq_reset_view_to_sensing)(void *arg);
 	int (*mcss_init)(void *arg);
 	int (*mcss_update_subdrv_para)(void *arg, int scenario_id);
-	int (*cust_get_linetime_in_us)(void *arg, u32 scenario_id,
-		u32 *linetime_in_ns, enum GET_LINETIME_ENUM linetime_type);
+	int (*cust_get_linetime_in_ns)(void *arg, u32 scenario_id,
+		u32 *linetime_in_ns, enum GET_LINETIME_ENUM linetime_type,
+		enum IMGSENSOR_EXPOSURE exp_idx);
 	int (*chk_streaming_st)(void *arg);
 
 	/* customed function pointer by sensor mode */
