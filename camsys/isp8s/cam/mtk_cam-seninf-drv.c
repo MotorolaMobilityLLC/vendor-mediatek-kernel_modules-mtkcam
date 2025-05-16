@@ -5210,7 +5210,7 @@ void mtk_cam_seninf_set_secure(struct v4l2_subdev *sd, int enable, u64 SecInfo_a
 	struct seninf_ctx *ctx = sd_to_ctx(sd);
 
 	ctx->SecInfo_addr = SecInfo_addr;
-	dev_info(ctx->dev, "[%s]: %llx, enable: %d\n", __func__, SecInfo_addr, enable);
+	seninf_logd(ctx, "[%s]: %llx, enable: %d\n", __func__, SecInfo_addr, enable);
 	ctx->is_secure = enable ? 1 : 0;
 }
 

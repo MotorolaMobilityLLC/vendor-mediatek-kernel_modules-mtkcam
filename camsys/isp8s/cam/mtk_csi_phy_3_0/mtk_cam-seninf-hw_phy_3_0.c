@@ -2366,7 +2366,7 @@ static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 			SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_EN, CSI2_LANE0_EN, 1);
 			break;
 		default:
-			dev_info(ctx->dev, "[%s][ERROR] invalid lane num(%d)\n", __func__, ctx->num_data_lanes);
+			seninf_logi(ctx, "[%s][ERROR] invalid lane num(%d)\n", __func__, ctx->num_data_lanes);
 		}
 		break;
 
@@ -2391,7 +2391,7 @@ static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 			SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_EN, CSI2_LANE0_EN, 1);
 			break;
 		default:
-			dev_info(ctx->dev, "[%s][ERROR] invalid lane num(%d)\n", __func__, ctx->num_data_lanes);
+			seninf_logi(ctx, "[%s][ERROR] invalid lane num(%d)\n", __func__, ctx->num_data_lanes);
 		}
 		break;
 
@@ -2409,7 +2409,7 @@ static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 		break;
 
 	default:
-		dev_info(ctx->dev, "[%s] ctx->port %d is invalid\n", __func__, ctx->port);
+		seninf_logi(ctx, "[%s] ctx->port %d is invalid\n", __func__, ctx->port);
 		break;
 	}
 
@@ -2440,7 +2440,7 @@ static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 	if (!ctx->is_cphy) { //Dphy
 		data_rate = ctx->mipi_pixel_rate * bit_per_pixel;
 		do_div(data_rate, ctx->num_data_lanes);
-		dev_info(ctx->dev, "[%s] pixel_rate(%lldpps) data_rate(%lldbps/lane)\n",
+		seninf_logi(ctx, "[%s] pixel_rate(%lldpps) data_rate(%lldbps/lane)\n",
 			__func__, ctx->mipi_pixel_rate, data_rate);
 
 		SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_HDR_MODE_0, RG_CSI2_HEADER_MODE, 0);
@@ -2448,7 +2448,7 @@ static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 	} else { //Cphy
 		data_rate = ctx->mipi_pixel_rate * bit_per_pixel * 7;
 		do_div(data_rate, ctx->num_data_lanes * 16);
-		dev_info(ctx->dev, "[%s] pixel_rate(%lldpps) data_rate(%lldsps/trio)\n",
+		seninf_logi(ctx, "[%s] pixel_rate(%lldpps) data_rate(%lldsps/trio)\n",
 			__func__, ctx->mipi_pixel_rate, data_rate);
 
 		SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_HDR_MODE_0, RG_CSI2_HEADER_MODE, 2);
@@ -2459,12 +2459,12 @@ static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 	/* Set mac checker */
 	if (!strcasecmp(_seninf_ops->iomem_ver, MT6993_IOMOM_VERSIONS)) {
 		csirx_mac_csi_checker_v1(ctx);
-		dev_info(ctx->dev, "[%s] mac checker v1\n", __func__);
+		seninf_logd(ctx, "[%s] mac checker v1\n", __func__);
 	// } else if (!strcasecmp(_seninf_ops->iomem_ver, MT6899_IOMOM_VERSIONS)) {
 	//csirx_mac_csi_checker_v2(ctx);
 	//dev_info(ctx->dev, "[%s] mac checker v2\n", __func__);
 	} else
-		dev_info(ctx->dev, "[%s] warning: iomem_ver is invalid. mac checker is not set.\n", __func__);
+		seninf_logi(ctx, "[%s] warning: iomem_ver is invalid. mac checker is not set.\n", __func__);
 
 	/* Enable BER */
 	SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_BIT_ERR_CTRL, RG_CSI2_BIT_ERR_CNT_EN, 0);
@@ -8830,7 +8830,7 @@ static int mtk_cam_seninf_set_csi_ctle_config(struct seninf_ctx *ctx,
 		if (param->eq_sr1)
 			SENINF_BITS(base, CDPHY_RX_ANA_5, RG_CSI0_CDPHY_EQ_SR1, param->eq_sr1);
 
-			dev_info(ctx->dev, "[%s] csi %d port %s CDPHY_RX_ANA_5 0x%x\n",
+			seninf_logd(ctx, "[%s] csi %d port %s CDPHY_RX_ANA_5 0x%x\n",
 						__func__,
 						ctx->port,
 						(i) ? "B" : "A",
