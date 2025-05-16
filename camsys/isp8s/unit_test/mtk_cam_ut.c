@@ -35,17 +35,43 @@
 #include "mtk_cam_ut-engines.h"
 
 #define CAM_DEV_NAME "mtk_cam_ut"
-#define CAMSV_HW_ID 0
 #define CAMSV_HW_ID_UT 3
+#define RAW_HW_ID_MAX 7
+#define RAW_HW_ID_MIN 1
+#define RAW_WITH_CA_TWIN 5
 #define PDP_TAG 4
 #ifdef dev_dbg
 #undef dev_dbg
 #define dev_dbg dev_info
 #endif
 
+static int master_raw_hw_id;
+module_param(master_raw_hw_id, int, 0644);
+MODULE_PARM_DESC(master_raw_hw_id, "master_raw_hw_id");
+
+static int camsv_hw_id;
+module_param(camsv_hw_id, int, 0644);
+MODULE_PARM_DESC(camsv_hw_id, "camsv hw id");
+
 static int debug_testmdl_pixmode = -1;
 module_param(debug_testmdl_pixmode, int, 0644);
 MODULE_PARM_DESC(debug_testmdl_pixmode, "fixed pixel mode for testmdl");
+
+int get_master_raw_id(unsigned int raw_device)
+{
+	int master_raw_id;
+
+	/* do not support twin ca */
+	if ((raw_device < RAW_HW_ID_MIN) ||
+		(raw_device > RAW_HW_ID_MAX) ||
+		(raw_device == RAW_WITH_CA_TWIN))
+		return -1;
+
+	/* expected ret value: 0 -> rawa, 1 -> rawb, 2 -> rawc */
+	master_raw_id = ffs(raw_device) - 1;
+
+	return master_raw_id;
+}
 
 static int apply_sv_pdp_next_req(struct mtk_cam_ut *ut)
 {
@@ -71,7 +97,7 @@ static int apply_sv_pdp_next_req(struct mtk_cam_ut *ut)
 	ut->enque_list.cnt--;
 	spin_unlock_irqrestore(&ut->enque_list.lock, flags);
 
-	CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID], apply_cq,
+	CALL_CAMSV_OPS(ut->camsv[camsv_hw_id], apply_cq,
 			     buf_entry->cq_buf.iova,
 			     buf_entry->cq_buf.size,
 			     buf_entry->cq_offset,
@@ -161,22 +187,13 @@ static int apply_next_req(struct mtk_cam_ut *ut)
 	ut->enque_list.cnt--;
 	spin_unlock_irqrestore(&ut->enque_list.lock, flags);
 
-#if SUPPORT_RAWB
-	if (ut->hardware_scenario == MTKCAM_IPI_HW_PATH_ON_THE_FLY_RAWB) {
-		CALL_RAW_OPS(ut->raw[1], apply_cq,
-			     buf_entry->cq_buf.iova,
-			     buf_entry->cq_buf.size,
-			     buf_entry->cq_offset,
-			     buf_entry->sub_cq_size,
-			     buf_entry->sub_cq_offset);
-	}
-#endif
-	CALL_RAW_OPS(ut->raw[0], apply_cq,
-		     buf_entry->cq_buf.iova,
-		     buf_entry->cq_buf.size,
-		     buf_entry->cq_offset,
-		     buf_entry->sub_cq_size,
-		     buf_entry->sub_cq_offset);
+	dev_info(ut->dev, "%s: apply raw %d cq\n", __func__, master_raw_hw_id);
+	CALL_RAW_OPS(ut->raw[master_raw_hw_id], apply_cq,
+			buf_entry->cq_buf.iova,
+			buf_entry->cq_buf.size,
+			buf_entry->cq_offset,
+			buf_entry->sub_cq_size,
+			buf_entry->sub_cq_offset);
 
 	spin_lock_irqsave(&ut->processing_list.lock, flags);
 	list_add_tail(&buf_entry->list_entry, &ut->processing_list.list);
@@ -237,7 +254,7 @@ static int apply_sv_pdp_req_on_composed_once(struct mtk_cam_ut *ut)
 
 	sv_pdp_params.subsample = ut->subsample;
 
-	CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID], initialize, &sv_pdp_params);
+	CALL_CAMSV_OPS(ut->camsv[camsv_hw_id], initialize, &sv_pdp_params);
 
 	ut->hdl.on_ipi_composed = on_ipi_composed;
 
@@ -256,18 +273,21 @@ static int apply_sv_req_on_composed_once(struct mtk_cam_ut *ut)
 static int apply_req_on_composed_once(struct mtk_cam_ut *ut)
 {
 	struct mtk_ut_raw_initial_params raw_params;
+	int raw_id;
 
 	raw_params.subsample = ut->subsample;
 	raw_params.streamon_type = STREAM_FROM_TG;
 	raw_params.hardware_scenario = ut->hardware_scenario;
 
-	CALL_RAW_OPS(ut->raw[0], reset);
-
-	CALL_RAW_OPS(ut->raw[0], initialize, &raw_params);
-	CALL_RAW_OPS(ut->raw[1], initialize, &raw_params);
-	CALL_RAW_OPS(ut->raw[2], initialize, &raw_params);
-	if (is_dcif_required(ut->hardware_scenario) && (ut->num_camsv > CAMSV_HW_ID))
-		CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID], initialize, NULL);
+	for (raw_id = MTKCAM_PIPE_RAW_A; raw_id <= MTKCAM_PIPE_RAW_C; raw_id++) {
+		if (ut->raw_module & (1 << raw_id)) {
+			dev_info(ut->dev, "%s: reset & initialize raw %d\n", __func__, raw_id);
+			CALL_RAW_OPS(ut->raw[raw_id], reset);
+			CALL_RAW_OPS(ut->raw[raw_id], initialize, &raw_params);
+		}
+	}
+	if (is_dcif_required(ut->hardware_scenario) && (camsv_hw_id < ut->num_camsv))
+		CALL_CAMSV_OPS(ut->camsv[camsv_hw_id], initialize, NULL);
 
 	ut->hdl.on_ipi_composed = on_ipi_composed;
 	return apply_next_req(ut);
@@ -317,26 +337,23 @@ static int single_sv_case(enum isp_hardware_enum isp_hardware)
 
 static int streamon_on_cqdone_once(struct mtk_cam_ut *ut)
 {
+	int raw_id;
 
-	if (is_dcif_required(ut->hardware_scenario) && (ut->num_camsv > CAMSV_HW_ID)) {
-		if (ut->raw_module & (1 << MTKCAM_PIPE_RAW_A))
-			CALL_RAW_OPS(ut->raw[0], s_stream, streaming_active);
-		if (ut->raw_module & (1 << MTKCAM_PIPE_RAW_B))
-			CALL_RAW_OPS(ut->raw[1], s_stream, streaming_active);
-		if (ut->raw_module & (1 << MTKCAM_PIPE_RAW_C))
-			CALL_RAW_OPS(ut->raw[2], s_stream, streaming_active);
-		if (!is_direct_couple(ut->hardware_scenario))
-			CALL_RAW_OPS(ut->raw[0], s_stream, streaming_vf);
-		CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID], s_stream, streaming_vf);
-	} else {
-		if (ut->raw_module & (1 << MTKCAM_PIPE_RAW_A))
-			CALL_RAW_OPS(ut->raw[0], s_stream, streaming_active);
-		if (ut->raw_module & (1 << MTKCAM_PIPE_RAW_B))
-			CALL_RAW_OPS(ut->raw[1], s_stream, streaming_active);
-		if (ut->raw_module & (1 << MTKCAM_PIPE_RAW_C))
-			CALL_RAW_OPS(ut->raw[2], s_stream, streaming_active);
-		CALL_RAW_OPS(ut->raw[0], s_stream, streaming_vf);
+	for (raw_id = MTKCAM_PIPE_RAW_A; raw_id <= MTKCAM_PIPE_RAW_C; raw_id++) {
+		if (ut->raw_module & (1 << raw_id)) {
+			dev_info(ut->dev, "%s: raw %d s_stream\n", __func__, raw_id);
+			CALL_RAW_OPS(ut->raw[raw_id], s_stream, streaming_active);
+		}
 	}
+
+	if (!is_direct_couple(ut->hardware_scenario)) {
+		dev_info(ut->dev, "%s: raw %d vf_on\n", __func__, master_raw_hw_id);
+		CALL_RAW_OPS(ut->raw[master_raw_hw_id], s_stream, streaming_vf);
+	}
+
+	if (is_dcif_required(ut->hardware_scenario) && (ut->num_camsv > camsv_hw_id))
+		CALL_CAMSV_OPS(ut->camsv[camsv_hw_id], s_stream, streaming_vf);
+
 	ut->hdl.on_isr_cq_done = NULL;
 	return 0;
 }
@@ -353,7 +370,7 @@ static int streamon_sv_on_cqdone_once(struct mtk_cam_ut *ut)
 static int streamon_sv_pdp_on_cqdone_once(struct mtk_cam_ut *ut)
 {
 
-	CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID], s_stream, streaming_vf);
+	CALL_CAMSV_OPS(ut->camsv[camsv_hw_id], s_stream, streaming_vf);
 
 	ut->hdl.on_isr_cq_done = NULL;
 	return 0;
@@ -624,15 +641,17 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 	int width, height;
 	int pixel_mode;
 	int pattern;
+	int raw_tg_id;
 #if WITH_CAMSV_DRIVER
 	struct mtk_ut_camsv_device *camsv_dev = NULL;
 
-	if (ut->num_camsv > CAMSV_HW_ID)
-		camsv_dev = dev_get_drvdata(ut->camsv[CAMSV_HW_ID]);
+	if (ut->num_camsv > camsv_hw_id)
+		camsv_dev = dev_get_drvdata(ut->camsv[camsv_hw_id]);
 #endif
 	width = testmdl->width;
 	height = testmdl->height;
 	pattern = testmdl->pattern;
+	raw_tg_id = master_raw_hw_id + raw_tg_0;
 
 	pixel_mode = 0;//camsv always 8p
 
@@ -669,17 +688,17 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 		if (testmdl->mode == testmdl_stagger_3exp) {
 			struct mtk_cam_ut_tm_para para[3];
 
-			para[0].tg_idx = camsv_tg_0;
+			para[0].tg_idx = camsv_hw_id;
 			para[0].exp_no = testmdl_exp1;
 			para[0].tag = tag_0;
 			para[0].pixmode = pixel_mode;
 
-			para[1].tg_idx = camsv_tg_0;
+			para[1].tg_idx = camsv_hw_id;
 			para[1].exp_no = testmdl_exp2;
 			para[1].tag = tag_1;
 			para[1].pixmode = pixel_mode;
 
-			para[2].tg_idx = raw_tg_0;
+			para[2].tg_idx = raw_tg_id;
 			para[2].exp_no = testmdl_exp3;
 			para[2].tag = tag_0;
 			para[2].pixmode = pixel_mode;
@@ -692,12 +711,12 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 		} else if (testmdl->mode == testmdl_stagger_2exp) {
 			struct mtk_cam_ut_tm_para para[2];
 
-			para[0].tg_idx = camsv_tg_0;
+			para[0].tg_idx = camsv_hw_id;
 			para[0].exp_no = testmdl_exp1;
 			para[0].tag = tag_0;
 			para[0].pixmode = pixel_mode;
 
-			para[1].tg_idx = raw_tg_0;
+			para[1].tg_idx = raw_tg_id;
 			para[1].exp_no = testmdl_exp2;
 			para[1].tag = tag_0;
 			para[1].pixmode = pixel_mode;
@@ -710,7 +729,7 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 		} else if (testmdl->mode == testmdl_stagger_1exp) {
 			struct mtk_cam_ut_tm_para para[1];
 
-			para[0].tg_idx = raw_tg_0;
+			para[0].tg_idx = raw_tg_id;
 			para[0].exp_no = testmdl_exp1;
 			para[0].tag = tag_0;
 			para[0].pixmode = pixel_mode;
@@ -721,6 +740,8 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 					para, ARRAY_SIZE(para));
 
 			camsv_dev->is_dc_mode = 0;
+			dev_info(ut->dev, "%s: use raw %d testmdl\n",
+				__func__, master_raw_hw_id);
 		}
 		break;
 	case MTKCAM_IPI_HW_PATH_DC_STAGGER:
@@ -729,12 +750,12 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 		if (testmdl->mode == testmdl_stagger_2exp) {
 			struct mtk_cam_ut_tm_para para[2];
 
-			para[0].tg_idx = camsv_tg_0;
+			para[0].tg_idx = camsv_hw_id;
 			para[0].exp_no = testmdl_exp1;
 			para[0].tag = tag_0;
 			para[0].pixmode = pixel_mode;
 
-			para[1].tg_idx = camsv_tg_0;
+			para[1].tg_idx = camsv_hw_id;
 			para[1].exp_no = testmdl_exp2;
 			para[1].tag = tag_2;
 			para[1].pixmode = pixel_mode;
@@ -747,17 +768,17 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 		} else if (testmdl->mode == testmdl_stagger_3exp) {
 			struct mtk_cam_ut_tm_para para[3];
 
-			para[0].tg_idx = camsv_tg_0;
+			para[0].tg_idx = camsv_hw_id;
 			para[0].exp_no = testmdl_exp1;
 			para[0].tag = tag_0;
 			para[0].pixmode = pixel_mode;
 
-			para[1].tg_idx = camsv_tg_0;
+			para[1].tg_idx = camsv_hw_id;
 			para[1].exp_no = testmdl_exp2;
 			para[1].tag = tag_1;
 			para[1].pixmode = pixel_mode;
 
-			para[2].tg_idx = camsv_tg_0;
+			para[2].tg_idx = camsv_hw_id;
 			para[2].exp_no = testmdl_exp3;
 			para[2].tag = tag_2;
 			para[2].pixmode = pixel_mode;
@@ -770,7 +791,7 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 		} else if (testmdl->mode == testmdl_stagger_1exp) {
 			struct mtk_cam_ut_tm_para para[1];
 
-			para[0].tg_idx = camsv_tg_0;
+			para[0].tg_idx = camsv_hw_id;
 			para[0].exp_no = testmdl_exp1;
 			para[0].tag = tag_2;
 			para[0].pixmode = pixel_mode;
@@ -785,7 +806,7 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 		if (testmdl->mode == testmdl_normal) {
 			struct mtk_cam_ut_tm_para para[1];
 
-			para[0].tg_idx = camsv_tg_0;
+			para[0].tg_idx = camsv_hw_id;
 			para[0].exp_no = testmdl_exp1;
 			para[0].tag = tag_2;
 			para[0].pixmode = pixel_mode;
@@ -799,23 +820,6 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 		}
 		break;
 #endif
-#if SUPPORT_RAWB
-	case MTKCAM_IPI_HW_PATH_ON_THE_FLY_RAWB:
-		if (ut->with_testmdl == 1) {
-			struct mtk_cam_ut_tm_para para[1];
-
-			para[0].tg_idx = seninf_mux_raw(seninf, 0);
-			para[0].exp_no = testmdl_exp1;
-			para[0].tag = seninf_cammux_raw(seninf, 1);
-			para[0].pixmode = pixel_mode;
-
-			CALL_SENINF_OPS(seninf, set_size,
-					width, height,
-					pattern, 1,
-					para, ARRAY_SIZE(para));
-		}
-		break;
-#endif
 	case MTKCAM_IPI_HW_PATH_OTF_RGBW:
 		height *= 2;
 		fallthrough;
@@ -824,7 +828,7 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 			if (ut->isp_hardware & WITH_RAW) {
 				struct mtk_cam_ut_tm_para para[1];
 
-				para[0].tg_idx = raw_tg_0;
+				para[0].tg_idx = raw_tg_id;
 				para[0].exp_no = testmdl_exp1;
 				para[0].tag = tag_0;
 				para[0].pixmode = pixel_mode;
@@ -833,6 +837,9 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 						width, height,
 						pattern, 1,
 						para, ARRAY_SIZE(para));
+
+				dev_info(ut->dev, "%s: use raw %d testmdl\n",
+					__func__, master_raw_hw_id);
 			}
 			if (ut->isp_hardware & SINGLE_SV) {
 				struct mtk_cam_ut_tm_para para[1];
@@ -850,7 +857,7 @@ static int set_test_mdl(struct mtk_cam_ut *ut,
 			if (ut->isp_hardware & SINGLE_SV_PDP) {
 				struct mtk_cam_ut_tm_para para[1];
 
-				para[0].tg_idx = camsv_tg_0;
+				para[0].tg_idx = camsv_hw_id;
 				para[0].exp_no = testmdl_exp1;
 				para[0].tag = tag_4;
 				para[0].pixmode = pixel_mode;
@@ -880,14 +887,27 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		struct cam_ioctl_set_testmdl testmdl;
 #if WITH_CAMSV_DRIVER
 		struct mtk_ut_camsv_device *camsv_dev = NULL;
-
-		if (ut->num_camsv > CAMSV_HW_ID)
-			camsv_dev = dev_get_drvdata(ut->camsv[CAMSV_HW_ID]);
+#endif
+		if (copy_from_user(&testmdl, (void *)arg,
+				sizeof(struct cam_ioctl_set_testmdl)) != 0) {
+			dev_dbg(dev, "Fail to get testmdl parameter\n");
+			return -EFAULT;
+		}
+#if WITH_CAMSV_DRIVER
+		camsv_hw_id = ffs(testmdl.raw_device) -1;
+		if (ut->num_camsv > camsv_hw_id)
+			camsv_dev = dev_get_drvdata(ut->camsv[camsv_hw_id]);
 		if (!camsv_dev) {
 			dev_info(dev, "camsv_dev or ut is null!\n");
 			return -EFAULT;
 		}
 #endif
+		master_raw_hw_id = get_master_raw_id(testmdl.raw_device);
+		if (master_raw_hw_id < 0) {
+			dev_info(dev, "Invalid master_raw_hw_id! Check raw_device=%d\n",
+				testmdl.raw_device);
+			return -EFAULT;
+		}
 		LOG_CMD(ISP_UT_IOCTL_SET_TESTMDL);
 
 		ut->with_testmdl = 0;
@@ -895,12 +915,6 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 #if WITH_CAMSV_DRIVER
 		camsv_dev->is_dc_mode = 0;
 #endif
-		if (copy_from_user(&testmdl, (void *)arg,
-				   sizeof(struct cam_ioctl_set_testmdl)) != 0) {
-			dev_dbg(dev, "Fail to get testmdl parameter\n");
-			return -EFAULT;
-		}
-
 		// update hardware scenario
 		ut->hardware_scenario = testmdl.hwScenario;
 
@@ -1000,7 +1014,7 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		struct mtkcam_ipi_event event;
 		struct mtk_ccd *ccd = (struct mtk_ccd *)ut->rproc_handle->priv;
 		struct mem_obj smem;
-		int fd;
+		int fd, raw_id;
 
 		LOG_CMD(ISP_UT_IOCTL_DESTROY_SESSION);
 
@@ -1016,19 +1030,24 @@ static long cam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (ut->with_testmdl) {
 			if ((ut->isp_hardware & SINGLE_SV ||
 				is_dcif_required(ut->hardware_scenario)) &&
-				(ut->num_camsv > CAMSV_HW_ID)) {
-				CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID], s_stream, streaming_off);
+				(ut->num_camsv > camsv_hw_id)) {
+				CALL_CAMSV_OPS(ut->camsv[camsv_hw_id], s_stream, streaming_off);
 			}
 
 			if (ut->isp_hardware & SINGLE_SV_PDP)
-				CALL_CAMSV_OPS(ut->camsv[CAMSV_HW_ID], s_stream, streaming_off);
+				CALL_CAMSV_OPS(ut->camsv[camsv_hw_id], s_stream, streaming_off);
 
 			if (!is_direct_couple(ut->hardware_scenario)) {
-				CALL_RAW_OPS(ut->raw[0], s_stream, streaming_off);
-				/* stream off rawb for bc case(or any case)
-				 * w/o send hardware_scenario
-				 */
-				CALL_RAW_OPS(ut->raw[1], s_stream, streaming_off);
+				for (raw_id = MTKCAM_PIPE_RAW_A;
+					raw_id <= MTKCAM_PIPE_RAW_C;
+					raw_id++) {
+					if (ut->raw_module & (1 << raw_id)) {
+						dev_info(ut->dev, "%s: stream off raw %d\n",
+							__func__, raw_id);
+						CALL_RAW_OPS(ut->raw[raw_id], s_stream,
+							streaming_off);
+					}
+				}
 			}
 
 			CALL_SENINF_OPS(ut->seninf, reset);

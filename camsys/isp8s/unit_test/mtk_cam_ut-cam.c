@@ -866,12 +866,14 @@ static irqreturn_t mtk_ut_raw_irq(int irq, void *data)
 {
 
 	struct mtk_ut_raw_device *raw = data;
+	struct mtk_cam_ut *ut = raw->ut;
 	void __iomem *base = raw->base;
 	struct ut_raw_status status;
 	struct ut_raw_msg msg;
 	struct ut_event *event = &msg.event;
 	struct ut_debug_cmd *cmd = &msg.cmd;
 	int wake_thread = 0;
+	int master_raw_id = 0;
 
 	msg.ts_ns = ktime_get_boottime_ns();
 
@@ -944,7 +946,8 @@ static irqreturn_t mtk_ut_raw_irq(int irq, void *data)
 			global_interrupt_union |= SW_ENQUE_ERR_ST;
 	}
 
-	if (raw->id != 0)
+	master_raw_id = get_master_raw_id(ut->raw_module);
+	if (raw->id != master_raw_id)
 		event->mask = 0;
 
 	if (event->mask || cmd->any_debug) {

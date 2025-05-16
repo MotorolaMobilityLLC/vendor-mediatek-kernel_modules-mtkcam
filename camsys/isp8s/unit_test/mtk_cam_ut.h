@@ -160,4 +160,6 @@ struct mtk_cam_ut_data {
 	const char		platform[8];
 };
 
+int get_master_raw_id(unsigned int raw_device);
+
 #endif /* __MTK_CAM_UT_H */
