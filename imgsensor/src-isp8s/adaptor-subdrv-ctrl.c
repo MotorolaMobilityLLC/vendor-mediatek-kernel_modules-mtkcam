@@ -5785,6 +5785,7 @@ int common_get_info(struct subdrv_ctx *ctx,
 		MSDK_SENSOR_CONFIG_STRUCT *sensor_config_data)
 {
 	int i = 0;
+	enum IMGSENSOR_HDR_MODE_ENUM hdr_mode;
 
 	(void) sensor_config_data;
 
@@ -5872,6 +5873,16 @@ int common_get_info(struct subdrv_ctx *ctx,
 	sensor_info->SensorLineInterleaveNum = (ctx->s_ctx.line_interleave_num)
 		? ctx->s_ctx.line_interleave_num : 2;
 	sensor_info->OCL_info = (ctx->s_ctx.ocl_info) ? ctx->s_ctx.ocl_info : 1;
+
+
+	for (i = 0; i < ctx->s_ctx.sensor_mode_num; i++) {
+		hdr_mode = ctx->s_ctx.mode[scenario_id].hdr_mode;
+		if (hdr_mode == HDR_RAW_DCG_RAW || hdr_mode == HDR_RAW_DCG_RAW_VS) {
+			if (ctx->s_ctx.line_interleave_num == 0)
+				WRAP_AEE_EXCEPTION("common_get_info",
+					"line_interleave_num should not be 0");
+		}
+	}
 
 	return ERROR_NONE;
 }
