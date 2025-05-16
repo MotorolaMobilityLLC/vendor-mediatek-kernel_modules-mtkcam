@@ -4809,7 +4809,7 @@ void get_dcg_vsl_info_by_scenario(struct subdrv_ctx *ctx,
 		if (exp_info->lut_idx > max_lut_id)
 			max_lut_id = exp_info->lut_idx;
 
-		DRV_LOG_MUST(ctx,
+		DRV_LOG(ctx,
 			"scenario_id(%d),exp_cnt(%u)=> exp_info[%d]:lut(%u),gain_min/max/stp(%u/%u/%u),dgain_min/max/stp(%u/%u/%u),shut_min/max_stp(%llu/%llu/%u),exp_margin(%u),fil(%i),binRatio(%u)\n",
 			scenario_id, info->exp_cnt, i,
 			exp_info->lut_idx,
@@ -4840,7 +4840,7 @@ void get_dcg_vsl_info_by_scenario(struct subdrv_ctx *ctx,
 		lut_linelength = get_lut_static_info(ctx, u32, linelength, scenario_id, i);
 		lut_info->linetime_in_ns = (u32)CALC_LINE_TIME_IN_NS(lut_pclk, lut_linelength);
 
-		DRV_LOG_MUST(ctx,
+		DRV_LOG(ctx,
 			"scenario_id(%d),lut_cnt(%u)=> lut_info[%d]:rout_len/r_margin/frm_stp/min_vb_lc/cit_loss(%u/%u/%u/%u/%u),pclk/llc(%llu/%u),line_time_ns(%u)\n",
 			scenario_id, info->lut_cnt, i,
 			lut_info->readout_length, lut_info->read_margin,
