@@ -31,6 +31,7 @@ static u16 get_gain2reg(u32 gain);
 static int imx766dual_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int imx766dual_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int imx766dual_check_sensor_id(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int imx766dual_get_stagger_target_scenario(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
 static int open(struct subdrv_ctx *ctx);
 static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2c_write_id);
@@ -42,6 +43,7 @@ static struct subdrv_feature_control feature_control_list[] = {
 	{SENSOR_FEATURE_SET_TEST_PATTERN, imx766dual_set_test_pattern},
 	{SENSOR_FEATURE_SEAMLESS_SWITCH, imx766dual_seamless_switch},
 	{SENSOR_FEATURE_CHECK_SENSOR_ID, imx766dual_check_sensor_id},
+	{SENSOR_FEATURE_GET_STAGGER_TARGET_SCENARIO, imx766dual_get_stagger_target_scenario},
 };
 
 static struct eeprom_info_struct eeprom_info[] = {
@@ -2723,6 +2725,41 @@ static int imx766dual_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *le
 static int imx766dual_check_sensor_id(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	return get_imgsensor_id(ctx, (u32 *)para);
+}
+
+static int imx766dual_get_stagger_target_scenario(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	u64 *feature_data = (u64 *)para;
+
+	if (*feature_data == SENSOR_SCENARIO_ID_NORMAL_VIDEO) {
+		switch (*(feature_data + 1)) {
+		case 0xB:
+			*(feature_data + 2) = SENSOR_SCENARIO_ID_CUSTOM4;
+			break;
+		default:
+			break;
+		}
+	} else if (*feature_data == SENSOR_SCENARIO_ID_CUSTOM4) {
+		switch (*(feature_data + 1)) {
+		case 0x0:
+			*(feature_data + 2) = SENSOR_SCENARIO_ID_NORMAL_VIDEO;
+			break;
+		default:
+			break;
+		}
+	} else if (*feature_data == SENSOR_SCENARIO_ID_NORMAL_PREVIEW) {
+		switch (*(feature_data + 1)) {
+		case 0xB:
+			*(feature_data + 2) = SENSOR_SCENARIO_ID_CUSTOM4;
+			break;
+		default:
+			break;
+		}
+	}
+
+	DRV_LOG(ctx, "SENSOR_FEATURE_GET_STAGGER_TARGET_SCENARIO %llu %llu %llu\n",
+		*feature_data, *(feature_data + 1), *(feature_data + 2));
+	return ERROR_NONE;
 }
 
 static int get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
