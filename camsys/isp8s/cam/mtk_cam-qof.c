@@ -366,7 +366,9 @@ void mtk_cam_reset_itc(struct mtk_cam_device *cam)
 		raw_dev->io_ops = &itc_only_io_ops;
 	}
 #endif
-	dev_info(cam->dev, "qof: %s: top_ctrl 0x%x itc_status 0x%x", __func__,
+
+	if (CAM_DEBUG_ENABLED(QOF))
+		dev_info(cam->dev, "qof: %s: top_ctrl 0x%x itc_status 0x%x", __func__,
 			 readl(cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL),
 			 readl(cam->qoftop_base + REG_QOF_CAM_TOP_ITC_STATUS));
 }
@@ -540,9 +542,10 @@ int qof_setup_twin(struct mtk_raw_device *raw, bool is_master, bool next_raw)
 
 	spin_unlock_irqrestore(&raw->qof_ctrl_lock, flags);
 
-	dev_info(raw->dev, "qof: %s: qof_ctrl val 0x%x top_ctrl 0x%x", __func__,
-			 readl(raw->qof_base + REG_QOF_CAM_A_QOF_CTL),
-			 readl(raw->cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL));
+	if (CAM_DEBUG_ENABLED(QOF) || FORCE_DUMP(raw->id))
+		dev_info(raw->dev, "qof: %s: qof_ctrl val 0x%x top_ctrl 0x%x", __func__,
+				 readl(raw->qof_base + REG_QOF_CAM_A_QOF_CTL),
+				 readl(raw->cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL));
 
 	return ret;
 }
@@ -756,11 +759,7 @@ int qof_hwccf_link(struct mtk_raw_device *raw, bool enable)
 		hwccf_link(raw, true);
 	}
 
-	qof_set_force_dump(raw, true);
 	qof_dump_spare(raw);
-	qof_set_force_dump(raw, false);
-
-	// TODO: dump status
 
 	return 0;
 }

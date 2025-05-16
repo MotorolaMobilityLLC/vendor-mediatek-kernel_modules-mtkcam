@@ -449,9 +449,10 @@ static void mtk_cam_req_free(struct media_request *req)
 	atomic_dec(&cam->req_cnt);
 
 	/* debug only */
-	pr_info("%s:%s:%s:%p req_cnt:%d",
-		__func__, cam_req->req.debug_str, cam_req->debug_str, cam_req,
-		atomic_read(&cam->req_cnt));
+	if (CAM_DEBUG_ENABLED(V4L2))
+		pr_info("%s:%s:%s:%p req_cnt:%d",
+			__func__, cam_req->req.debug_str, cam_req->debug_str, cam_req,
+			atomic_read(&cam->req_cnt));
 
 	vfree(cam_req);
 }
@@ -2989,7 +2990,8 @@ int mtk_cam_ctx_prepare(struct mtk_cam_ctx *ctx)
 {
 	struct mtk_cam_device *cam = ctx->cam;
 
-	dev_info(cam->dev, "%s:%d", __func__, ctx->stream_id);
+	if (CAM_DEBUG_ENABLED(V4L2))
+		dev_info(cam->dev, "%s:%d", __func__, ctx->stream_id);
 
 	if (mtk_cam_ctx_alloc_workers(ctx))
 		goto fail_return;

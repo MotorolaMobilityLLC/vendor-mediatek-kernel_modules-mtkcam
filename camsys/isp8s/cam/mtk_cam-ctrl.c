@@ -96,8 +96,9 @@ static int mtk_cam_ctrl_wait_all_released(struct mtk_cam_ctrl *cam_ctrl)
 {
 	struct mtk_cam_ctx *ctx = cam_ctrl->ctx;
 
-	dev_info(ctx->cam->dev, "[%s] ctx:%d waiting\n",
-		 __func__, ctx->stream_id);
+	if (CAM_DEBUG_ENABLED(CTRL))
+		dev_info(ctx->cam->dev, "[%s] ctx:%d waiting\n",
+			 __func__, ctx->stream_id);
 
 	wait_event_interruptible(cam_ctrl->stop_wq,
 				 !atomic_read(&cam_ctrl->ref_cnt));

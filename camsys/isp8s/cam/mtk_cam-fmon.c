@@ -385,8 +385,9 @@ void mtk_cam_fmon_bind(struct mtk_fmon_device *fmon, unsigned int used_raw, bool
 OUT:
 	mutex_unlock(&fmon->op_lock);
 
-	pr_info("%s: pipes:%d/%d/%d, used_raw:0x%x\n",
-		__func__, fmon->pipes[0], fmon->pipes[1], fmon->pipes[2], used_raw);
+	if (CAM_DEBUG_ENABLED(FMON))
+		pr_info("%s: pipes:%d/%d/%d, used_raw:0x%x\n",
+			__func__, fmon->pipes[0], fmon->pipes[1], fmon->pipes[2], used_raw);
 }
 
 void mtk_cam_fmon_unbind(struct mtk_fmon_device *fmon, unsigned int used_raw)
@@ -409,8 +410,9 @@ void mtk_cam_fmon_unbind(struct mtk_fmon_device *fmon, unsigned int used_raw)
 OUT:
 	mutex_unlock(&fmon->op_lock);
 
-	pr_info("%s: pipes:%d/%d/%d, used_raw:0x%x\n",
-		__func__, fmon->pipes[0], fmon->pipes[1], fmon->pipes[2], used_raw);
+	if (CAM_DEBUG_ENABLED(FMON))
+		pr_info("%s: pipes:%d/%d/%d, used_raw:0x%x\n",
+			__func__, fmon->pipes[0], fmon->pipes[1], fmon->pipes[2], used_raw);
 }
 
 void fmon_reset_timer_fn(struct timer_list *timer)
@@ -544,15 +546,16 @@ void mtk_cam_fmon_enable(struct mtk_fmon_device *fmon)
 
 	timer_setup(&fmon->reset_timer, fmon_reset_timer_fn, 0);
 
-	pr_info("%s: irq_trig:0x%x fmon_wind_set_0/1:0x%x/0x%x fmon_setting0/2/3:0x%x/0x%x/0x%x ela_ctrl:0x%x\n",
-		__func__,
-		readl(fmon->base + REG_CAM_FMON_IRQ_TRIG),
-		readl(fmon->base + REG_CAM_FMON_WIND_SET_0),
-		readl(fmon->base + REG_CAM_FMON_WIND_SET_1),
-		readl(fmon->base + REG_CAM_FMON_SETTING),
-		readl(fmon->base + REG_CAM_FMON_SETTING_2),
-		readl(fmon->base + REG_CAM_FMON_SETTING_3),
-		readl(fmon->ela_ctrl));
+	if (CAM_DEBUG_ENABLED(FMON))
+		pr_info("%s: irq_trig:0x%x fmon_wind_set_0/1:0x%x/0x%x fmon_setting0/2/3:0x%x/0x%x/0x%x ela_ctrl:0x%x\n",
+			__func__,
+			readl(fmon->base + REG_CAM_FMON_IRQ_TRIG),
+			readl(fmon->base + REG_CAM_FMON_WIND_SET_0),
+			readl(fmon->base + REG_CAM_FMON_WIND_SET_1),
+			readl(fmon->base + REG_CAM_FMON_SETTING),
+			readl(fmon->base + REG_CAM_FMON_SETTING_2),
+			readl(fmon->base + REG_CAM_FMON_SETTING_3),
+			readl(fmon->ela_ctrl));
 
 	enable_irq(fmon->irq);
 }

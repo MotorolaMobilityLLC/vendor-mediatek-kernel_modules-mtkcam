@@ -728,8 +728,8 @@ RESET_FAILURE:
 
 void sv_top_reset_by_camsys_top(struct mtk_camsv_device *sv_dev)
 {
-
-	dev_info(sv_dev->dev, "%s camsv_id:%d\n", __func__, sv_dev->id);
+	if (CAM_DEBUG_ENABLED(RAW_INT))
+		dev_info(sv_dev->dev, "%s camsv_id:%d\n", __func__, sv_dev->id);
 
 	writel(0, sv_dev->top + REG_CAM_MAIN_SW_RST_1);
 	writel(3 << 2, sv_dev->top + REG_CAM_MAIN_SW_RST_1);
@@ -938,13 +938,14 @@ int mtk_cam_sv_fifo_monitor_config(struct mtk_camsv_device *sv_dev,
 	CAMSV_WRITE_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE3_THD,
 		1530 << 16);
 
-	pr_info("%s int_en:0x%x fifo_core:0x%x_%x_%x fifo_core_thd:0x%x_%x_%x\n",
-		__func__,
-		CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_INT_FIFO_EN),
-		fifo_core1, fifo_core2, fifo_core3,
-		CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE1_THD),
-		CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE2_THD),
-		CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE3_THD));
+	if (CAM_DEBUG_ENABLED(RAW_INT))
+		pr_info("%s int_en:0x%x fifo_core:0x%x_%x_%x fifo_core_thd:0x%x_%x_%x\n",
+			__func__,
+			CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_INT_FIFO_EN),
+			fifo_core1, fifo_core2, fifo_core3,
+			CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE1_THD),
+			CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE2_THD),
+			CAMSV_READ_REG(sv_dev->base_dma + REG_CAMSVDMATOP_FIFO_INT_CORE3_THD));
 
 	return 0;
 }
@@ -1867,7 +1868,8 @@ int mtk_cam_sv_dev_config(struct mtk_cam_ctx *ctx,
 	if (atomic_read(&sv_dev->is_slave_on))
 		mtk_cam_slave_sv_dev_config(ctx, sv_dev->slave_sv_dev);
 
-	dev_info(sv_dev->dev, "[%s] sub_ratio:%d set seamless check\n", __func__, sub_ratio);
+	if (CAM_DEBUG_ENABLED(RAW_INT))
+		dev_info(sv_dev->dev, "[%s] sub_ratio:%d set seamless check\n", __func__, sub_ratio);
 
 	return 0;
 }
@@ -2232,9 +2234,10 @@ int mtk_cam_sv_dev_stream_on(struct mtk_camsv_device *sv_dev, bool on,
 			mtk_cam_sv_dev_pertag_stream_on(sv_dev, i, on);
 	}
 
-	dev_info(sv_dev->dev,
-		"camsv %d %s en(%d) streaming_tag_cnt:%d\n",
-		sv_dev->id, __func__, (on) ? 1 : 0, sv_dev->streaming_tag_cnt);
+	if (CAM_DEBUG_ENABLED(RAW_INT))
+		dev_info(sv_dev->dev,
+			"camsv %d %s en(%d) streaming_tag_cnt:%d\n",
+			sv_dev->id, __func__, (on) ? 1 : 0, sv_dev->streaming_tag_cnt);
 
 	return ret;
 }

@@ -82,14 +82,15 @@ void mtk_cam_main_sv_halt(struct mtk_cam_device *cam)
 	writel_relaxed(0x3, cam->base + REG_CAM_MAIN_HALT5_EN);
 	writel_relaxed(0x7, cam->base + REG_CAM_MAIN_HALT6_EN);
 
-	pr_info("%s: 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x\n",
-		__func__,
-		REG_CAM_MAIN_HALT1_EN, readl(cam->base + REG_CAM_MAIN_HALT1_EN),
-		REG_CAM_MAIN_HALT2_EN, readl(cam->base + REG_CAM_MAIN_HALT2_EN),
-		REG_CAM_MAIN_HALT3_EN, readl(cam->base + REG_CAM_MAIN_HALT3_EN),
-		REG_CAM_MAIN_HALT4_EN, readl(cam->base + REG_CAM_MAIN_HALT4_EN),
-		REG_CAM_MAIN_HALT5_EN, readl(cam->base + REG_CAM_MAIN_HALT5_EN),
-		REG_CAM_MAIN_HALT6_EN, readl(cam->base + REG_CAM_MAIN_HALT6_EN));
+	if (CAM_DEBUG_ENABLED(V4L2))
+		pr_info("%s: 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x, 0x%x:0x%x\n",
+			__func__,
+			REG_CAM_MAIN_HALT1_EN, readl(cam->base + REG_CAM_MAIN_HALT1_EN),
+			REG_CAM_MAIN_HALT2_EN, readl(cam->base + REG_CAM_MAIN_HALT2_EN),
+			REG_CAM_MAIN_HALT3_EN, readl(cam->base + REG_CAM_MAIN_HALT3_EN),
+			REG_CAM_MAIN_HALT4_EN, readl(cam->base + REG_CAM_MAIN_HALT4_EN),
+			REG_CAM_MAIN_HALT5_EN, readl(cam->base + REG_CAM_MAIN_HALT5_EN),
+			REG_CAM_MAIN_HALT6_EN, readl(cam->base + REG_CAM_MAIN_HALT6_EN));
 }
 
 void mtk_cam_main_dbg_dump(struct mtk_cam_device *cam)
@@ -126,9 +127,10 @@ void mtk_cam_vcore_qos_remap(struct mtk_raw_device *raw, int is_srt)
 		SET_FIELD(&val, CAM_VCORE_sub_comm2_0_awmmqos_en, 1);
 		writel(val, cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM2_0);
 
-		pr_info("%s: raw-a remap: 0x%x/0x%x\n", __func__,
-			readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM0_0),
-			readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM2_0));
+		if (CAM_DEBUG_ENABLED(MMQOS))
+			pr_info("%s: raw-a remap: 0x%x/0x%x\n", __func__,
+				readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM0_0),
+				readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM2_0));
 	break;
 	case RAW_B:
 		/* raw-b lut */
@@ -141,9 +143,10 @@ void mtk_cam_vcore_qos_remap(struct mtk_raw_device *raw, int is_srt)
 		SET_FIELD(&val, CAM_VCORE_sub_comm0_1_awmmqos_en, 1);
 		writel(val, cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM0_1);
 
-		pr_info("%s: raw-b remap: 0x%x/0x%x\n", __func__,
-			readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM1_0),
-			readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM0_1));
+		if (CAM_DEBUG_ENABLED(MMQOS))
+			pr_info("%s: raw-b remap: 0x%x/0x%x\n", __func__,
+				readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM1_0),
+				readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM0_1));
 	break;
 	case RAW_C:
 		/* raw-c lut */
@@ -156,9 +159,10 @@ void mtk_cam_vcore_qos_remap(struct mtk_raw_device *raw, int is_srt)
 		SET_FIELD(&val, CAM_VCORE_sub_comm1_1_awmmqos_en, 1);
 		writel(val, cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM1_1);
 
-		pr_info("%s: raw-c remap: 0x%x/0x%x\n", __func__,
-			readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM3_0),
-			readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM1_1));
+		if (CAM_DEBUG_ENABLED(MMQOS))
+			pr_info("%s: raw-c remap: 0x%x/0x%x\n", __func__,
+				readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM3_0),
+				readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM1_1));
 	break;
 	default:
 		pr_info("%s: unsupport id:%d\n", __func__, raw->id);
@@ -181,13 +185,14 @@ void mtk_cam_vcore_sv_qos_remap(struct mtk_cam_device *cam)
 	writel(val, cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM2_2);
 	writel(val, cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM0_3);
 
-	pr_info("%s: camsv remap: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n", __func__,
-		readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM0_2),
-		readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM1_2),
-		readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM3_1),
-		readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM2_1),
-		readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM2_2),
-		readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM0_3));
+	if (CAM_DEBUG_ENABLED(V4L2))
+		pr_info("%s: camsv remap: 0x%x/0x%x/0x%x/0x%x/0x%x/0x%x\n", __func__,
+			readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM0_2),
+			readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM1_2),
+			readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM3_1),
+			readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM2_1),
+			readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM2_2),
+			readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM0_3));
 }
 
 void mtk_cam_vcore_ccu_qos_remap(struct mtk_cam_device *cam)
@@ -202,8 +207,9 @@ void mtk_cam_vcore_ccu_qos_remap(struct mtk_cam_device *cam)
 	SET_FIELD(&val, CAM_VCORE_sub_comm1_3_awmmqos_en, 1);
 	writel(val, cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM1_3);
 
-	pr_info("%s: ccu remap: 0x%x\n", __func__,
-		readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM1_3));
+	if (CAM_DEBUG_ENABLED(V4L2))
+		pr_info("%s: ccu remap: 0x%x\n", __func__,
+			readl(cam->vcore_base + REG_CAM_VCORE_MMQOS_CTRL_SUB_COMM1_3));
 }
 
 /* todo: must ? */
@@ -226,9 +232,10 @@ void mtk_cam_vcore_ddren(struct mtk_cam_device *cam, int on_off)
 		}
 	}
 
-	dev_info(cam->dev, "%s: ddren:0x%x, ack:0x%x", __func__,
-		readl_relaxed(cam->vcore_base + REG_CAM_VCORE_DDREN_EN),
-		readl_relaxed(cam->vcore_base + REG_CAM_VCORE_DDREN_ACK));
+	if (CAM_DEBUG_ENABLED(V4L2))
+		dev_info(cam->dev, "%s: ddren:0x%x, ack:0x%x", __func__,
+				 readl_relaxed(cam->vcore_base + REG_CAM_VCORE_DDREN_EN),
+				 readl_relaxed(cam->vcore_base + REG_CAM_VCORE_DDREN_ACK));
 }
 
 void mtk_cam_vcore_coh_req(struct mtk_cam_device *cam)
@@ -243,8 +250,9 @@ void mtk_cam_vcore_coh_req(struct mtk_cam_device *cam)
 		writel(val, cam->vcore_base + REG_CAM_VCORE_COH_REQ_CTRL_0);
 	}
 
-	pr_info("%s: 0x%x\n", __func__,
-		readl(cam->vcore_base + REG_CAM_VCORE_COH_REQ_CTRL_0));
+	if (CAM_DEBUG_ENABLED(V4L2))
+		pr_info("%s: 0x%x\n", __func__,
+			readl(cam->vcore_base + REG_CAM_VCORE_COH_REQ_CTRL_0));
 }
 
 #define WLA2P0_DEBOUNCE 0x80006000
@@ -266,9 +274,10 @@ void mtk_cam_vcore_wla20(struct mtk_cam_device *cam, int on_off)
 		writel(0x7d0000, cam->vcore_base + REG_CAM_VCORE_WLA2P0_CTRL_0);
 	}
 
-	pr_info("%s: on:%d ctrl_0: 0x%x wla20_deb: 0x%x\n", __func__, on_off,
-		readl(cam->vcore_base + REG_CAM_VCORE_WLA2P0_CTRL_0),
-		readl(cam->vcore_base + REG_CAM_VCORE_WLA2P0_DEBOUNCE));
+	if (CAM_DEBUG_ENABLED(V4L2))
+		pr_info("%s: on:%d ctrl_0: 0x%x wla20_deb: 0x%x\n", __func__, on_off,
+			readl(cam->vcore_base + REG_CAM_VCORE_WLA2P0_CTRL_0),
+			readl(cam->vcore_base + REG_CAM_VCORE_WLA2P0_DEBOUNCE));
 }
 
 void mtk_cam_vcore_wla20_dbg_dump(struct mtk_cam_device *cam)

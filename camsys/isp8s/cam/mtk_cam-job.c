@@ -7207,10 +7207,6 @@ int mtk_cam_job_manually_apply_isp(struct mtk_cam_job *job, bool wait_completion
 
 	raw_change_handle_before_cq(job, true);
 
-	if (wait_completion)
-		pr_info("[%s] before apply cq_not_ready:%lx", __func__,
-				atomic_long_read(&job->cq_ref.cq_not_ready));
-
 	call_jobop(job, apply_isp);
 
 	if (!wait_completion)

@@ -552,11 +552,12 @@ static void reset_camctl_misc(struct mtk_raw_device *dev)
 	raw_writel(val, dev, dev->base_inner, REG_CAMCTL_MISC);
 	raw_writel(val, dev, dev->base, REG_CAMCTL_MISC);
 
-	dev_info(dev->dev,
-		"[%s] CAMCTL_MISC [in] 0x%x [out] 0x%x",
-		__func__,
-		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_MISC),
-		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_MISC));
+	if (CAM_DEBUG_ENABLED(RAW_INT))
+		dev_info(dev->dev,
+			"[%s] CAMCTL_MISC [in] 0x%x [out] 0x%x",
+			__func__,
+			raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_MISC),
+			raw_readl_relaxed(dev, dev->base, REG_CAMCTL_MISC));
 }
 
 static void reset_int_en(struct mtk_raw_device *dev)
@@ -608,25 +609,26 @@ static void reset_int_en(struct mtk_raw_device *dev)
 	raw_writel(0, dev, dev->yuv_base_inner, REG_CAMCTL2_INT17_EN);
 	raw_writel(0, dev, dev->yuv_base, REG_CAMCTL2_INT17_EN);
 
-	dev_info_ratelimited(dev->dev,
-		"[%s] INT2/3/5/13/17/18/20/21_EN [in] %#x/%#x/%#x/%#x/%#x/%#x/%#x/%#x [out] %#x/%#x/%#x/%#x/%#x/%#x/%#x/%#x",
-		__func__,
-		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT2_EN),
-		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT3_EN),
-		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT5_EN),
-		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT13_EN),
-		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT17_EN),
-		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT18_EN),
-		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT20_EN),
-		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT21_EN),
-		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT2_EN),
-		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT3_EN),
-		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT5_EN),
-		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT13_EN),
-		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT17_EN),
-		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT18_EN),
-		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT20_EN),
-		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT21_EN));
+	if (CAM_DEBUG_ENABLED(RAW_INT))
+		dev_info_ratelimited(dev->dev,
+			"[%s] INT2/3/5/13/17/18/20/21_EN [in] %#x/%#x/%#x/%#x/%#x/%#x/%#x/%#x [out] %#x/%#x/%#x/%#x/%#x/%#x/%#x/%#x",
+			__func__,
+			raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT2_EN),
+			raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT3_EN),
+			raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT5_EN),
+			raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT13_EN),
+			raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT17_EN),
+			raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT18_EN),
+			raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT20_EN),
+			raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_INT21_EN),
+			raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT2_EN),
+			raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT3_EN),
+			raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT5_EN),
+			raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT13_EN),
+			raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT17_EN),
+			raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT18_EN),
+			raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT20_EN),
+			raw_readl_relaxed(dev, dev->base, REG_CAMCTL_INT21_EN));
 }
 
 static void reset_reg(struct mtk_raw_device *dev)
@@ -766,7 +768,8 @@ void lock_done_ctrl_enable(struct mtk_raw_device *dev, int on)
 
 	dev->lock_done_ctrl = on;
 
-	dev_info(dev->dev, "[%s] raw%d - on:%d\n", __func__, dev->id, on);
+	if (CAM_DEBUG_ENABLED(RAW_INT))
+		dev_info(dev->dev, "[%s] raw%d - on:%d\n", __func__, dev->id, on);
 }
 
 void apply_cq(struct mtk_raw_device *dev,
@@ -838,13 +841,14 @@ void toggle_db(struct mtk_raw_device *dev)
 	val = raw_readl(dev, dev->base, REG_CAMCTL_DB_LOAD_CTL1);
 	raw_writel(val | FBIT(CAMCTL_DB_EN), dev, dev->base, REG_CAMCTL_DB_LOAD_CTL1);
 
-	dev_info(dev->dev,
-		"%s: 0x%x seq:0x%x/0x%x, sep_vsize [in] %#x->%#x [out] %#x->%#x\n",
-		__func__, raw_readl(dev, dev->base, REG_CAMCTL_DB_LOAD_CTL1),
-		raw_readl_relaxed(dev, dev->base, REG_FHG_FHG_SPARE_1),
-		raw_readl_relaxed(dev, dev->base_inner, REG_FHG_FHG_SPARE_1),
-		sep_vsz_inner, raw_readl_relaxed(dev, dev->base_inner, REG_SEP_VSIZE),
-		sep_vsz, raw_readl_relaxed(dev, dev->base, REG_SEP_VSIZE));
+	if (CAM_DEBUG_ENABLED(RAW_INT))
+		dev_info(dev->dev,
+			"%s: 0x%x seq:0x%x/0x%x, sep_vsize [in] %#x->%#x [out] %#x->%#x\n",
+			__func__, raw_readl(dev, dev->base, REG_CAMCTL_DB_LOAD_CTL1),
+			raw_readl_relaxed(dev, dev->base, REG_FHG_FHG_SPARE_1),
+			raw_readl_relaxed(dev, dev->base_inner, REG_FHG_FHG_SPARE_1),
+			sep_vsz_inner, raw_readl_relaxed(dev, dev->base_inner, REG_SEP_VSIZE),
+			sep_vsz, raw_readl_relaxed(dev, dev->base, REG_SEP_VSIZE));
 }
 
 void enable_tg_db(struct mtk_raw_device *dev, int en)
@@ -947,13 +951,15 @@ void set_sig_sel_master(struct mtk_raw_device *dev)
 		raw_writel(camctl_sel3 | 0x0, dev, dev->base, REG_CAMCTL_SEL3);
 		raw_writel(camctl_sel3 | 0x0, dev, dev->base_inner, REG_CAMCTL_SEL3);
 	}
-	dev_info(dev->dev, "[%s] (CTRL_SIG_SEL, SEL3) out/in:(0x%x/0x%x, 0x%x->0x%x/0x%x)\n",
-		__func__,
-		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_CTRL_SIG_SEL),
-		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_CTRL_SIG_SEL),
-		camctl_sel3,
-		raw_readl_relaxed(dev, dev->base, REG_CAMCTL_SEL3),
-		raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_SEL3));
+
+	if (CAM_DEBUG_ENABLED(RAW_INT))
+		dev_info(dev->dev, "[%s] (CTRL_SIG_SEL, SEL3) out/in:(0x%x/0x%x, 0x%x->0x%x/0x%x)\n",
+			__func__,
+			raw_readl_relaxed(dev, dev->base, REG_CAMCTL_CTRL_SIG_SEL),
+			raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_CTRL_SIG_SEL),
+			camctl_sel3,
+			raw_readl_relaxed(dev, dev->base, REG_CAMCTL_SEL3),
+			raw_readl_relaxed(dev, dev->base_inner, REG_CAMCTL_SEL3));
 }
 
 void set_dcif_en_slave(struct mtk_raw_device *dev)
@@ -2833,7 +2839,9 @@ int mtk_raw_runtime_resume(struct device *dev)
 	reset_int_en(drvdata);
 	reset_camctl_misc(drvdata);
 	qof_dump_int_en_addr(drvdata);
-	dump_raw_slice_gals(drvdata);
+
+	if (CAM_DEBUG_ENABLED(RAW_INT))
+		dump_raw_slice_gals(drvdata);
 
 	enable_irq(drvdata->irq);
 

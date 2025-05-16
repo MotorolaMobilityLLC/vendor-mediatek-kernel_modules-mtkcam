@@ -2440,22 +2440,25 @@ int handle_sv_tag(struct mtk_cam_job *job)
 		job->used_tag_cnt++;
 		job->enabled_tags |= (1 << tag_idx);
 
-		pr_info("[%s] tag_idx:%d seninf_padidx:%d tag_order:%d pixel_mode:%d sub_ratio:%d width/height/mbus_code:0x%x_0x%x_0x%x\n",
-			__func__,
-			meta_tag_param.tag_idx,
-			meta_tag_param.seninf_padidx,
-			meta_tag_param.tag_order,
-			max_pixel_mode,
-			job->sub_ratio,
-			pad_data_info.exp_hsize,
-			pad_data_info.exp_vsize,
-			pad_data_info.mbus_code);
+		if (CAM_DEBUG_ENABLED(JOB))
+			pr_info("[%s] tag_idx:%d seninf_padidx:%d tag_order:%d pixel_mode:%d sub_ratio:%d width/height/mbus_code:0x%x_0x%x_0x%x\n",
+				__func__,
+				meta_tag_param.tag_idx,
+				meta_tag_param.seninf_padidx,
+				meta_tag_param.tag_order,
+				max_pixel_mode,
+				job->sub_ratio,
+				pad_data_info.exp_hsize,
+				pad_data_info.exp_vsize,
+				pad_data_info.mbus_code);
 	} else {
 		job->is_sensor_meta_dump = false;
-		pr_info("[%s] sensor meta dump is off(enable:%d/tag_idx:%d)\n",
-			__func__,
-			(ctx->enable_sensor_meta_dump) ? 1 : 0,
-			tag_idx);
+
+		if (CAM_DEBUG_ENABLED(JOB))
+			pr_info("[%s] sensor meta dump is off(enable:%d/tag_idx:%d)\n",
+				__func__,
+				(ctx->enable_sensor_meta_dump) ? 1 : 0,
+				tag_idx);
 	}
 
 	/* DX4 camsv cam_sub_en hw bug WA*/
