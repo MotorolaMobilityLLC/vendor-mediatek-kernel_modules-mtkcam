@@ -1227,41 +1227,42 @@ int _add_entry_to_ufbc_header(struct mtk_cam_ufbc_header *ufbc_header,
 
 int add_ufbc_header_entry(struct req_buffer_helper *helper,
 		unsigned int pixelformat, int ipi_video_id,
-		struct mtk_cam_buffer *buf, int plane, unsigned int offset)
+		struct mtk_cam_buffer *buf, int plane, unsigned int offset,
+		int subsample, unsigned int size)
 {
 	struct mtkcam_ipi_frame_param *fp = helper->fp;
 	void *vaddr;
 	int ret = 0;
+	int i;
+
+	if (!is_raw_ufo(pixelformat) && !is_yuv_ufo(pixelformat))
+		return 0;
 
 	vaddr = vb2_plane_vaddr(&buf->vbb.vb2_buf, plane);
 	if (!vaddr)
 		return -1;
-	if (is_raw_ufo(pixelformat)) {
+
+	for (i = 0; i < subsample; ++i) {
 		switch (ipi_video_id) {
 		case MTKCAM_IPI_RAW_IMGO:
 		case MTKCAM_IPI_RAW_IMGO_W:
 			ret = _add_entry_to_ufbc_header(helper->ufbc_header, ipi_video_id,
-							   vaddr + offset,
+							   vaddr + offset + (i * size),
 							   &fp->img_ufdo_params.imgo);
 			break;
 		case MTKCAM_IPI_CAMSV_MAIN_OUT:
 			ret = _add_entry_to_ufbc_header(helper->ufbc_header, ipi_video_id,
-						   vaddr + offset,
+						   vaddr + offset + (i * size),
 						   NULL);
 			break;
-		default:
-			break;
-		}
-	} else if (is_yuv_ufo(pixelformat)) {
-		switch (ipi_video_id) {
 		case MTKCAM_IPI_RAW_YUVO_1:
 			ret = _add_entry_to_ufbc_header(helper->ufbc_header, ipi_video_id,
-							   vaddr + offset,
+							   vaddr + offset + (i * size),
 							   &fp->img_ufdo_params.yuvo1);
 			break;
 		case MTKCAM_IPI_RAW_YUVO_3:
 			ret = _add_entry_to_ufbc_header(helper->ufbc_header, ipi_video_id,
-							   vaddr + offset,
+							   vaddr + offset + (i * size),
 							   &fp->img_ufdo_params.yuvo3);
 			break;
 		default:
@@ -1526,7 +1527,8 @@ int fill_imgo_out_subsample(struct req_buffer_helper *helper,
 	fill_img_fmt(&io->fmt, buf);
 
 	add_ufbc_header_entry(helper, buf->image_info.v4l2_pixelformat,
-					  io->uid.id, buf, 0, 0);
+					  io->uid.id, buf, 0, 0, subsample_ratio,
+					  buf->image_info.size[0]);
 
 	/* addr, 1-plane OR N-plane has same layout */
 	for (i = 0; i < subsample_ratio; i++) {
@@ -1583,7 +1585,7 @@ int fill_mp_img_out_hdr(struct req_buffer_helper *helper,
 	daddr = mtk_cam_buf_is_mp(buf) ? buf->mdaddr[valid_plane] : buf->daddr;
 
 	add_ufbc_header_entry(helper, buf->image_info.v4l2_pixelformat,
-						  id, buf, valid_plane, buf_offset);
+						  id, buf, valid_plane, buf_offset, 1, size);
 
 	/* FIXME: porting workaround */
 	io->buf[0][0].size = size;
@@ -1649,7 +1651,8 @@ int fill_yuvo_out_subsample(struct req_buffer_helper *helper,
 	fill_img_fmt(&io->fmt, buf);
 
 	add_ufbc_header_entry(helper, buf->image_info.v4l2_pixelformat,
-						  io->uid.id, buf, 0, 0);
+						  io->uid.id, buf, 0, 0, sub_ratio,
+						  buf->image_info.size[0]);
 
 	mtk_cam_fill_img_out_buf_subsample(io, buf, sub_ratio);
 
@@ -1716,7 +1719,7 @@ static int _fill_mp_img_out(struct req_buffer_helper *helper,
 	}
 
 	add_ufbc_header_entry(helper, img_info->v4l2_pixelformat, ipi_video_id,
-						  buf, valid_plane, offset);
+						  buf, valid_plane, offset, 1, img_info->size[0]);
 
 	/* pixel format information, yuv has multi plane img info */
 	for (i = 0; i < ARRAY_SIZE(img_info->bytesperline); i++) {

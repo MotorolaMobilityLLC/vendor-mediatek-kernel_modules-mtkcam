@@ -133,7 +133,8 @@ int write_ufbc_header_to_buf(struct mtk_cam_job *job,
 							 struct mtk_cam_ufbc_header *ufbc_header);
 int add_ufbc_header_entry(struct req_buffer_helper *helper,
 		unsigned int pixelformat, int ipi_video_id,
-		struct mtk_cam_buffer *buf, int plane, unsigned int offset);
+		struct mtk_cam_buffer *buf, int plane, unsigned int offset,
+		int subsample, unsigned int size);
 
 struct mtkcam_ipi_crop v4l2_rect_to_ipi_crop(const struct v4l2_rect *r);
 bool ipi_crop_eq(const struct mtkcam_ipi_crop *s,
