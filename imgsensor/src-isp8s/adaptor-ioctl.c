@@ -1578,6 +1578,24 @@ static int g_multi_exp_static_info_by_scenario(struct adaptor_ctx *ctx, void *ar
 	return 0;
 }
 
+static int g_stagger_min_vb_by_scenario(struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_stagger_min_vb_by_scenario *info = arg;
+	union feature_para para;
+	u32 len;
+
+	para.u64[0] = info->scenario_id;
+	para.u64[1] = 0;
+
+	subdrv_call(ctx, feature_control,
+		SENSOR_FEATURE_GET_STAGGER_MIN_VB,
+		para.u8, &len);
+
+	info->min_vblanking_line = para.u64[1];
+
+	return 0;
+}
+
 struct ioctl_entry {
 	unsigned int cmd;
 	int (*func)(struct adaptor_ctx *ctx, void *arg);
@@ -1641,6 +1659,7 @@ static const struct ioctl_entry ioctl_list[] = {
 	{VIDIOC_MTK_G_READ_MARGIN_IN_US_BY_SCENARIO, g_read_margin_in_us_by_scenario},
 	{VIDIOC_MTK_G_EXPOSURE_MARGIN_IN_US_BY_SCENARIO, g_exposure_margin_in_us_by_scenario},
 	{VIDIOC_MTK_G_MULTI_EXP_STATIC_INFO_BY_SCENARIO, g_multi_exp_static_info_by_scenario},
+	{VIDIOC_MTK_G_STAGGER_MIN_VB_BY_SCENARIO, g_stagger_min_vb_by_scenario},
 	/* SET */
 	{VIDIOC_MTK_S_VIDEO_FRAMERATE, s_video_framerate},
 	{VIDIOC_MTK_S_MAX_FPS_BY_SCENARIO, s_max_fps_by_scenario},

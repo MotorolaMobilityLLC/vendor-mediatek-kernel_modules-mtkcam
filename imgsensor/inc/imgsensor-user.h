@@ -768,6 +768,10 @@ struct mtk_sof_info {
 	__u64 ts;
 };
 
+struct mtk_stagger_min_vb_by_scenario {
+	__u32 scenario_id;
+	__u32 min_vblanking_line;
+};
 
 /* GET */
 
@@ -935,6 +939,9 @@ struct mtk_sof_info {
 
 #define VIDIOC_MTK_G_MULTI_EXP_STATIC_INFO_BY_SCENARIO \
 	_IOWR('M', BASE_VIDIOC_PRIVATE + 57, struct mtk_multi_exp_static_info)
+
+#define VIDIOC_MTK_G_STAGGER_MIN_VB_BY_SCENARIO \
+	_IOWR('M', BASE_VIDIOC_PRIVATE + 58, struct mtk_stagger_min_vb_by_scenario)
 
 /* SET */
 

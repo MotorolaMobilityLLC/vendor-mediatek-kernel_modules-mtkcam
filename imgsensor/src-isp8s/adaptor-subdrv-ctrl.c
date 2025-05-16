@@ -2612,17 +2612,6 @@ void set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 	u32 cit_step = 0;
 	u32 fll = 0, fll_temp = 0, s_fll;
 
-	if (ctx->s_ctx.stagger_rg_order == IMGSENSOR_STAGGER_RG_SE_FIRST) {
-		/* swapping for customized sensor */
-		u32 exposure[IMGSENSOR_STAGGER_EXPOSURE_CNT]; /* recover L and S exposure */
-
-		for (i = 0; i < exp_cnt; i++)
-			exposure[exp_cnt -1 - i] = (u32) shutters[i];
-
-		for (i = 0; i < exp_cnt; i++)
-			shutters[i] = exposure[i];
-	}
-
 	fll = frame_length ? frame_length : ctx->min_frame_length;
 	if (exp_cnt > ARRAY_SIZE(ctx->exposure)) {
 		DRV_LOGE(ctx, "invalid exp_cnt:%u>%lu\n", exp_cnt, ARRAY_SIZE(ctx->exposure));
@@ -2727,6 +2716,16 @@ void set_multi_shutter_frame_length(struct subdrv_ctx *ctx,
 		write_frame_length(ctx, ctx->min_frame_length);
 	/* write shutter */
 	set_long_exposure(ctx, exp_cnt);
+	if (ctx->s_ctx.stagger_rg_order == IMGSENSOR_STAGGER_RG_SE_FIRST) {
+		/* swapping for customized sensor */
+		u32 exposure[IMGSENSOR_STAGGER_EXPOSURE_CNT]; /* recover L and S exposure */
+
+		for (i = 0; i < exp_cnt; i++)
+			exposure[exp_cnt -1 - i] = (u32) shutters[i];
+
+		for (i = 0; i < exp_cnt; i++)
+			shutters[i] = exposure[i];
+	}
 	switch (exp_cnt) {
 	case 1:
 		rg_shutters[0] = (u32) shutters[0] / exp_cnt;
@@ -3572,17 +3571,6 @@ void set_multi_gain(struct subdrv_ctx *ctx, u32 *gains, u16 exp_cnt)
 		exp_cnt = ARRAY_SIZE(ctx->ana_gain);
 	}
 
-	if (ctx->s_ctx.stagger_rg_order == IMGSENSOR_STAGGER_RG_SE_FIRST) {
-		/* swapping for customized sensor */
-		u32 ana_gain[IMGSENSOR_STAGGER_EXPOSURE_CNT]; /* recover L and S gain */
-
-		for (i = 0; i < exp_cnt; i++)
-			ana_gain[exp_cnt -1 - i] = (u32) gains[i];
-
-		for (i = 0; i < exp_cnt; i++)
-			gains[i] = ana_gain[i];
-	}
-
 	for (i = 0; i < exp_cnt; i++) {
 		/* check boundary of gain */
 		gains[i] = max(gains[i],
@@ -3604,6 +3592,16 @@ void set_multi_gain(struct subdrv_ctx *ctx, u32 *gains, u16 exp_cnt)
 		ctx->s_ctx.s_gph((void *)ctx, 1);
 	/* write gain */
 	memset(has_gains, 1, sizeof(has_gains));
+	if (ctx->s_ctx.stagger_rg_order == IMGSENSOR_STAGGER_RG_SE_FIRST) {
+		/* swapping for customized sensor */
+		u32 ana_gain[IMGSENSOR_STAGGER_EXPOSURE_CNT]; /* recover L and S gain */
+
+		for (i = 0; i < exp_cnt; i++)
+			ana_gain[exp_cnt -1 - i] = (u32) gains[i];
+
+		for (i = 0; i < exp_cnt; i++)
+			gains[i] = ana_gain[i];
+	}
 	switch (exp_cnt) {
 	case 2:
 		rg_gains[0] = gains[0];
@@ -5122,6 +5120,17 @@ void get_dcg_ratio_group_by_scenario(struct subdrv_ctx *ctx,
 	memcpy(data,
 		(void *)ctx->s_ctx.mode[scenario_id].dcg_info.dcg_ratio_group,
 		sizeof(u32)*IMGSENSOR_EXPOSURE_CNT);
+}
+
+void get_stagger_min_vb_by_scenario(struct subdrv_ctx *ctx,
+		enum SENSOR_SCENARIO_ID_ENUM scenario_id, u64 *min_vblanking_line)
+{
+	if (scenario_id >= ctx->s_ctx.sensor_mode_num) {
+		DRV_LOG(ctx, "invalid sid:%u, mode_num:%u\n",
+			scenario_id, ctx->s_ctx.sensor_mode_num);
+		scenario_id = SENSOR_SCENARIO_ID_NORMAL_PREVIEW;
+	}
+	*min_vblanking_line = ctx->s_ctx.mode[scenario_id].min_vblanking_line;
 }
 
 /**
@@ -7017,6 +7026,11 @@ int common_feature_control(struct subdrv_ctx *ctx, MSDK_SENSOR_FEATURE_ENUM feat
 		get_dcg_vsl_info_by_scenario(ctx,
 			(enum SENSOR_SCENARIO_ID_ENUM)*(feature_data),
 			(void *)(uintptr_t)(*(feature_data + 1)));
+		break;
+	case SENSOR_FEATURE_GET_STAGGER_MIN_VB:
+		get_stagger_min_vb_by_scenario(ctx,
+			(enum SENSOR_SCENARIO_ID_ENUM)*(feature_data),
+			feature_data + 1);
 		break;
 	default:
 		DRV_LOG(ctx, "feature_id %u is invalid\n", feature_id);
