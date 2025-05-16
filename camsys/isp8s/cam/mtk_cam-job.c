@@ -1774,9 +1774,9 @@ _apply_sensor(struct mtk_cam_job *job)
 	v4l2_ctrl_request_setup(&req->req, job->sensor->ctrl_handler);
 	job->local_apply_sensor_ts = local_clock();
 
-	seninf_fr_info.sensor_sequence =
-		ctx->cam_ctrl.sensor_sync_id = job->req_info_id;
 	seninf_fr_info.sensor_sync_id =
+		ctx->cam_ctrl.sensor_sync_id = job->req_info_id;
+	seninf_fr_info.sensor_sequence =
 		ctx->cam_ctrl.sensor_seq = job->req_seq;
 	seninf_fr_info.fs_anchor_ns =
 		ctx->cam_ctrl.frame_sync_anchor = mtk_cam_fs_get_anchor(job);
