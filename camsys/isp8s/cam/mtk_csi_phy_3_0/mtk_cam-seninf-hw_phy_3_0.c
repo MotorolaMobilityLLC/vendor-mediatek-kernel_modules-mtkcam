@@ -8152,19 +8152,19 @@ int mtk_cam_seninf_config_outmux(struct seninf_ctx *ctx, u8 outmux_idx, u8 src_m
 				exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
 			break;
 		case 4:
-			SET_TAG(ctx, pSeninf_mux, 1, 4, filt_vc, filt_dt,
+			SET_TAG(ctx, pSeninf_mux, 2, 4, filt_vc, filt_dt,
 				exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
 			break;
 		case 5:
-			SET_TAG(ctx, pSeninf_mux, 1, 5, filt_vc, filt_dt,
+			SET_TAG(ctx, pSeninf_mux, 2, 5, filt_vc, filt_dt,
 				exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
 			break;
 		case 6:
-			SET_TAG(ctx, pSeninf_mux, 1, 6, filt_vc, filt_dt,
+			SET_TAG(ctx, pSeninf_mux, 2, 6, filt_vc, filt_dt,
 				exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
 			break;
 		case 7:
-			SET_TAG(ctx, pSeninf_mux, 1, 7, filt_vc, filt_dt,
+			SET_TAG(ctx, pSeninf_mux, 2, 7, filt_vc, filt_dt,
 				exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
 			break;
 		default:
@@ -9046,19 +9046,19 @@ int mtk_cam_seninf_config_outmux_for_camsv_stress(struct seninf_ctx *ctx, u8 out
 			exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
 		break;
 	case 4:
-		SET_TAG(ctx, pSeninf_mux, 1, 4, filt_vc, filt_dt,
+		SET_TAG(ctx, pSeninf_mux, 2, 4, filt_vc, filt_dt,
 			exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
 		break;
 	case 5:
-		SET_TAG(ctx, pSeninf_mux, 1, 5, filt_vc, filt_dt,
+		SET_TAG(ctx, pSeninf_mux, 2, 5, filt_vc, filt_dt,
 			exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
 		break;
 	case 6:
-		SET_TAG(ctx, pSeninf_mux, 1, 6, filt_vc, filt_dt,
+		SET_TAG(ctx, pSeninf_mux, 2, 6, filt_vc, filt_dt,
 			exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
 		break;
 	case 7:
-		SET_TAG(ctx, pSeninf_mux, 1, 7, filt_vc, filt_dt,
+		SET_TAG(ctx, pSeninf_mux, 2, 7, filt_vc, filt_dt,
 			exp_img_h_in_bit, exp_img_v, bit_to_pixel_fmt);
 		break;
 	default:
