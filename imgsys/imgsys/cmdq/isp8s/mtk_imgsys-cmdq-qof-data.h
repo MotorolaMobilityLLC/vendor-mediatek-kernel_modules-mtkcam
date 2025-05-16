@@ -48,6 +48,21 @@
 #define IMG_CG_WPE2_DIP1		(0x34500000)
 #define IMG_CG_WPE3_DIP1		(0x34600000)
 
+/*PM related */
+#define IMG_PM_DIP (0x34784000 + 0x80)
+#define IMG_PM_TRAW (0x34785000 + 0x80)
+#define IMG_PM_WPE_EIS (0x34786000 + 0x80)
+#define IMG_PM_WPE_TNR (0x34787000 + 0x80)
+#define IMG_PM_WPE_LITE (0x34788000 + 0x80)
+#define IMG_PM_DIP_CINE (0x34789000 + 0x80)
+
+/* dummy reg */
+#define IMG_DIP_DUMMY_REG (0x34100094)
+#define IMG_TRAW_DUMMY_REG (0x34700094)
+#define IMG_WPE_EIS_DUMMY_REG (0x34200094)
+#define IMG_WPE_TNR_DUMMY_REG (0x34500094)
+#define IMG_WPE_LITE_DUMMY_REG (0x34600094)
+
 /* QOF related */
 #define QOF_SPARE_VALUE_TO_BE_FIX		 (0)
 
@@ -146,9 +161,32 @@ enum MAPED_RG_LIST {
 	MAPED_RG_HWCCF_REG_BASE,
 	/* RTFF related*/
 	MAPED_RG_RTFF_BASE,
-	MAPED_RG_LIST_ED = MAPED_RG_RTFF_BASE,
+	/* PM related */
+	MAPED_RG_QOF_PM_DIP,
+	MAPED_RG_QOF_PM_TRAW,
+	MAPED_RG_QOF_PM_WPE_EIS,
+	MAPED_RG_QOF_PM_WPE_TNR,
+	MAPED_RG_QOF_PM_WPE_LITE,
+	MAPED_RG_DIP_DUMMY_REG,
+	MAPED_RG_TRAW_DUMMY_REG,
+	MAPED_RG_WPE_EIS_DUMMY_REG,
+	MAPED_RG_WPE_TNR_DUMMY_REG,
+	MAPED_RG_WPE_LITE_DUMMY_REG,
+	MAPED_RG_LIST_ED = MAPED_RG_WPE_LITE_DUMMY_REG,
 };
 #define MAPED_RG_LIST_NUM (MAPED_RG_LIST_ED - MAPED_RG_LIST_START + 1)
+
+enum IMG_CG_TYPE {
+	IMG_CG_DIP_NR1_DIP1_TYPE,
+	IMG_CG_DIP_NR2_DIP1_TYPE,
+	IMG_CG_DIP_TOP_DIP1_TYPE,
+	IMG_CG_TRAW_CAP_DIP1_TYPE,
+	IMG_CG_TRAW_DIP1_TYPE,
+	IMG_CG_WPE1_DIP1_TYPE,
+	IMG_CG_WPE2_DIP1_TYPE,
+	IMG_CG_WPE3_DIP1_TYPE,
+	IMG_CG_END,
+};
 
 enum MTCMOS_REG_NAME {
 	MTCMOS_ISP_PWR_CON,
@@ -199,6 +237,11 @@ enum QOF_REG_LIST_NAME {
 	QOF_REG_IMG_HWCCF_DIP_CINE,
 	QOF_REG_IMG_TRG_OFF_CNT,
 	QOF_REG_IMG_TRG_ON_CNT,
+	QOF_REG_IMG_PWR_CG_UNGATING,
+	QOF_REG_IMG_PM_STA,
+	QOF_REG_IMG_HWCCF_ACK_STA,
+	QOF_REG_IMG_HWCCF_REQ_STA,
+	QOF_REG_IMG_DUMMY,
 	QOF_REG_TOTAL_NUM,
 };
 
@@ -495,6 +538,24 @@ const struct reg_table_unit qof_reg_table[QOF_TOTAL_MODULE][QOF_REG_TOTAL_NUM] =
 			.mask = REG_FLD_MASK(QOF_IMG_QOF_TRIG_CNT_1_FLD_QOF_IMG_TRG_ON_CNT_1),
 			.field = QOF_IMG_QOF_TRIG_CNT_1_FLD_QOF_IMG_TRG_ON_CNT_1,
 		},
+		[QOF_REG_IMG_PWR_CG_UNGATING] = {
+			.addr = (IMG_CG_DIP_TOP_DIP1),
+			.val = 0,
+			.mask = BIT(0),
+			.field = BIT(0),
+		},
+		[QOF_REG_IMG_PM_STA] = {
+			.addr = (IMG_PM_DIP),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(REG_FLD(1, 1)),
+			.field = REG_FLD(1, 1),
+		},
+		[QOF_REG_IMG_DUMMY] = {
+			.addr = (IMG_DIP_DUMMY_REG),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(1, 0)),
+			.field = REG_FLD(1, 0),
+		},
 	},
 
 	[QOF_SUPPORT_TRAW] = // TRAW
@@ -756,6 +817,24 @@ const struct reg_table_unit qof_reg_table[QOF_TOTAL_MODULE][QOF_REG_TOTAL_NUM] =
 			.val = BIT(0),
 			.mask = REG_FLD_MASK(QOF_IMG_QOF_TRIG_CNT_2_FLD_QOF_IMG_TRG_ON_CNT_2),
 			.field = QOF_IMG_QOF_TRIG_CNT_2_FLD_QOF_IMG_TRG_ON_CNT_2,
+		},
+		[QOF_REG_IMG_PWR_CG_UNGATING] = {
+			.addr = (IMG_CG_TRAW_DIP1),
+			.val = 0,
+			.mask = BIT(2),
+			.field = BIT(2),
+		},
+		[QOF_REG_IMG_PM_STA] = {
+			.addr = (IMG_PM_TRAW),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(REG_FLD(1, 1)),
+			.field = REG_FLD(1, 1),
+		},
+		[QOF_REG_IMG_DUMMY] = {
+			.addr = (IMG_TRAW_DUMMY_REG),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(1, 0)),
+			.field = REG_FLD(1, 0),
 		},
 	},
 
@@ -1019,6 +1098,24 @@ const struct reg_table_unit qof_reg_table[QOF_TOTAL_MODULE][QOF_REG_TOTAL_NUM] =
 			.mask = REG_FLD_MASK(QOF_IMG_QOF_TRIG_CNT_3_FLD_QOF_IMG_TRG_ON_CNT_3),
 			.field = QOF_IMG_QOF_TRIG_CNT_3_FLD_QOF_IMG_TRG_ON_CNT_3,
 		},
+		[QOF_REG_IMG_PWR_CG_UNGATING] = {
+			.addr = (IMG_CG_WPE1_DIP1),
+			.val = 0,
+			.mask = BIT(8) | BIT(6) | BIT(5) | BIT(4),
+			.field = BIT(8) | BIT(6) | BIT(5) | BIT(4),
+		},
+		[QOF_REG_IMG_PM_STA] = {
+			.addr = (IMG_PM_WPE_EIS),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(REG_FLD(1, 1)),
+			.field = REG_FLD(1, 1),
+		},
+		[QOF_REG_IMG_DUMMY] = {
+			.addr = (IMG_WPE_EIS_DUMMY_REG),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(1, 0)),
+			.field = REG_FLD(1, 0),
+		},
 	},
 
 	[QOF_SUPPORT_WPE_TNR] =
@@ -1281,6 +1378,24 @@ const struct reg_table_unit qof_reg_table[QOF_TOTAL_MODULE][QOF_REG_TOTAL_NUM] =
 			.mask = REG_FLD_MASK(QOF_IMG_QOF_TRIG_CNT_4_FLD_QOF_IMG_TRG_ON_CNT_4),
 			.field = QOF_IMG_QOF_TRIG_CNT_4_FLD_QOF_IMG_TRG_ON_CNT_4,
 		},
+		[QOF_REG_IMG_PWR_CG_UNGATING] = {
+			.addr = (IMG_CG_WPE2_DIP1),
+			.val = 0,
+			.mask = BIT(8) | BIT(6) | BIT(5) | BIT(4),
+			.field = BIT(8) | BIT(6) | BIT(5) | BIT(4),
+		},
+		[QOF_REG_IMG_PM_STA] = {
+			.addr = (IMG_PM_WPE_TNR),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(REG_FLD(1, 1)),
+			.field = REG_FLD(1, 1),
+		},
+		[QOF_REG_IMG_DUMMY] = {
+			.addr = (IMG_WPE_TNR_DUMMY_REG),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(1, 0)),
+			.field = REG_FLD(1, 0),
+		},
 	},
 
 	[QOF_SUPPORT_WPE_LITE] =
@@ -1542,6 +1657,24 @@ const struct reg_table_unit qof_reg_table[QOF_TOTAL_MODULE][QOF_REG_TOTAL_NUM] =
 			.val = BIT(0),
 			.mask = REG_FLD_MASK(QOF_IMG_QOF_TRIG_CNT_5_FLD_QOF_IMG_TRG_ON_CNT_5),
 			.field = QOF_IMG_QOF_TRIG_CNT_5_FLD_QOF_IMG_TRG_ON_CNT_5,
+		},
+		[QOF_REG_IMG_PWR_CG_UNGATING] = {
+			.addr = (IMG_CG_WPE3_DIP1),
+			.val = 0,
+			.mask = BIT(8) | BIT(6) | BIT(5) | BIT(4),
+			.field = BIT(8) | BIT(6) | BIT(5) | BIT(4),
+		},
+		[QOF_REG_IMG_PM_STA] = {
+			.addr = (IMG_PM_WPE_LITE),
+			.val = BIT(1),
+			.mask = REG_FLD_MASK(REG_FLD(1, 1)),
+			.field = REG_FLD(1, 1),
+		},
+		[QOF_REG_IMG_DUMMY] = {
+			.addr = (IMG_WPE_LITE_DUMMY_REG),
+			.val = BIT(0),
+			.mask = REG_FLD_MASK(REG_FLD(1, 0)),
+			.field = REG_FLD(1, 0),
 		},
 	},
 };

@@ -91,6 +91,8 @@ static dma_addr_t g_work_buf_pa;
 static bool imgsys_ftrace_qof_thread_en;
 static int g_qof_debug_level;
 
+u32 g_imgsys_cg_value[IMG_CG_END];
+
 module_param(imgsys_ftrace_qof_thread_en, bool, 0644);
 MODULE_PARM_DESC(imgsys_ftrace_qof_thread_en, "imgsys ftrace thread enable, 0 (default)");
 
@@ -637,6 +639,55 @@ bool is_qof_engine_enabled(enum ISP8S_IMG_PWR mod)
 	return (readl(QOF_GET_REMAP_ADDR(addr)) & BIT(bit_mod)) == BIT(bit_mod);
 }
 
+void gce_check_pm_status(struct cmdq_pkt *pkt, u32 pwr)
+{
+	cmdq_pkt_poll_sleep(pkt, qof_reg_table[pwr][QOF_REG_IMG_PM_STA].val /*poll val*/,
+		qof_reg_table[pwr][QOF_REG_IMG_PM_STA].addr /*addr*/,
+		qof_reg_table[pwr][QOF_REG_IMG_PM_STA].mask /*mask*/);
+}
+
+void gce_check_dummy_reg_status(struct cmdq_pkt *pkt, u32 pwr)
+{
+	cmdq_pkt_write(pkt,
+		NULL,
+		qof_reg_table[pwr][QOF_REG_IMG_DUMMY].addr /* address*/ ,
+		qof_reg_table[pwr][QOF_REG_IMG_DUMMY].val /* val */ ,
+		qof_reg_table[pwr][QOF_REG_IMG_DUMMY].mask /* mask */ );
+
+	cmdq_pkt_poll_sleep(pkt, qof_reg_table[pwr][QOF_REG_IMG_DUMMY].val /*poll val*/,
+		qof_reg_table[pwr][QOF_REG_IMG_DUMMY].addr /*addr*/,
+		qof_reg_table[pwr][QOF_REG_IMG_DUMMY].mask /*mask*/);
+
+}
+
+void gce_check_cg_status(struct cmdq_pkt *pkt, u32 pwr)
+{
+	u32 check_val = 0;
+
+	switch (pwr) {
+	case ISP8S_PWR_DIP:
+		check_val = g_imgsys_cg_value[IMG_CG_DIP_TOP_DIP1_TYPE];
+		break;
+	case ISP8S_PWR_TRAW:
+		check_val = g_imgsys_cg_value[IMG_CG_TRAW_DIP1_TYPE];
+		break;
+	case ISP8S_PWR_WPE_1_EIS:
+		check_val = g_imgsys_cg_value[IMG_CG_WPE1_DIP1_TYPE];
+		break;
+	case ISP8S_PWR_WPE_2_TNR:
+		check_val = g_imgsys_cg_value[IMG_CG_WPE2_DIP1_TYPE];
+		break;
+	case ISP8S_PWR_WPE_3_LITE:
+		check_val = g_imgsys_cg_value[IMG_CG_WPE3_DIP1_TYPE];
+		break;
+	default:
+		QOF_LOGI("invalid pwr %d", pwr);
+	}
+	cmdq_pkt_poll_sleep(pkt, check_val /*poll val*/,
+		qof_reg_table[pwr][QOF_REG_IMG_PWR_CG_UNGATING].addr /*addr*/,
+		0xffffffff /*mask*/);
+}
+
 bool check_cg_status(u32 cg_reg_idx, u32 val)
 {
 	if((readl(g_maped_rg[cg_reg_idx]) & val) != 0) {
@@ -1078,6 +1129,16 @@ static void mtk_qof_print_mtcmos_status(void)
 		(readl(g_maped_rg[MAPED_RG_HWCCF_REG_STA])));
 }
 
+static void mtk_qof_print_pm_status(void)
+{
+	QOF_LOGI("PM:DIP[0x%x]TRAW[0x%x]W1[0x%x]W2[0x%x]W3[0x%x]",
+		(readl(g_maped_rg[MAPED_RG_QOF_PM_DIP])),
+		(readl(g_maped_rg[MAPED_RG_QOF_PM_TRAW])),
+		(readl(g_maped_rg[MAPED_RG_QOF_PM_WPE_EIS])),
+		(readl(g_maped_rg[MAPED_RG_QOF_PM_WPE_TNR])),
+		(readl(g_maped_rg[MAPED_RG_QOF_PM_WPE_LITE])));
+}
+
 static void mtk_qof_print_cg_status(void)
 {
 	void __iomem *addr;
@@ -1087,44 +1148,44 @@ static void mtk_qof_print_cg_status(void)
 	addr_val = readl(addr);
 	if (((addr_val & BIT(1)) == BIT(1)) ||
 		((addr_val & BIT(6)) == BIT(6))) {
-		QOF_LOGI(" dip CG Status: IMG_MAIN[0x%x], NR1[0x%x], NR2[0x%x], DIP_TOP[0x%x]",
+		QOF_LOGI(" dip CG Status: IMG_MAIN[0x%x], NR1[0x%x], NR2[0x%x], DIP_TOP[0x%x] backup[0x%x]",
 		(readl(g_maped_rg[MAPED_RG_IMG_CG_IMGSYS_MAIN])),
 		(readl(g_maped_rg[MAPED_RG_IMG_CG_DIP_NR1_DIP1])),
 		(readl(g_maped_rg[MAPED_RG_IMG_CG_DIP_NR2_DIP1])),
-		(readl(g_maped_rg[MAPED_RG_IMG_CG_DIP_TOP_DIP1])));
+		(readl(g_maped_rg[MAPED_RG_IMG_CG_DIP_TOP_DIP1])), g_imgsys_cg_value[IMG_CG_DIP_TOP_DIP1_TYPE]);
 	} else
 		QOF_LOGI("qof mtcmos dip is off. sta=0x%x", readl(addr));
 	addr = QOF_GET_REMAP_ADDR(qof_reg_table[ISP8S_PWR_TRAW][QOF_REG_IMG_QOF_STATE_DBG].addr);
 	addr_val = readl(addr);
 	if (((addr_val & BIT(1)) == BIT(1)) ||
 		((addr_val & BIT(6)) == BIT(6))) {
-		QOF_LOGI(" traw CG Status: TRAW_CAP[0x%x], TRAW_DIP1[0x%x]",
-		(readl(g_maped_rg[MAPED_RG_IMG_CG_TRAW_CAP_DIP1])),
-		(readl(g_maped_rg[MAPED_RG_IMG_CG_TRAW_DIP1])));
+		QOF_LOGI(" traw CG Status: TRAW_CAP[0x%x] backup[0x%x], TRAW_DIP1[0x%x] backup[0x%x]",
+		(readl(g_maped_rg[MAPED_RG_IMG_CG_TRAW_CAP_DIP1])), g_imgsys_cg_value[IMG_CG_TRAW_CAP_DIP1_TYPE],
+		(readl(g_maped_rg[MAPED_RG_IMG_CG_TRAW_DIP1])), g_imgsys_cg_value[IMG_CG_TRAW_DIP1_TYPE]);
 	} else
 		QOF_LOGI("qof mtcmos traw is off. sta=0x%x",  readl(addr));
 	addr = QOF_GET_REMAP_ADDR(qof_reg_table[ISP8S_PWR_WPE_1_EIS][QOF_REG_IMG_QOF_STATE_DBG].addr);
 	addr_val = readl(addr);
 	if (((addr_val & BIT(1)) == BIT(1)) ||
 		((addr_val & BIT(6)) == BIT(6))) {
-		QOF_LOGI(" wpe1 CG Status: WPE1[0x%x]",
-		(readl(g_maped_rg[MAPED_RG_IMG_CG_WPE1_DIP1])));
+		QOF_LOGI(" wpe1 CG Status: WPE1[0x%x] backup[0x%x]",
+		(readl(g_maped_rg[MAPED_RG_IMG_CG_WPE1_DIP1])), g_imgsys_cg_value[IMG_CG_WPE1_DIP1_TYPE]);
 	} else
 		QOF_LOGI("qof mtcmos wpe1 is off. sta=0x%x", readl(addr));
 	addr = QOF_GET_REMAP_ADDR(qof_reg_table[ISP8S_PWR_WPE_2_TNR][QOF_REG_IMG_QOF_STATE_DBG].addr);
 	addr_val = readl(addr);
 	if (((addr_val & BIT(1)) == BIT(1)) ||
 		((addr_val & BIT(6)) == BIT(6))) {
-		QOF_LOGI(" wpe2 CG Status: WPE2[0x%x]",
-		(readl(g_maped_rg[MAPED_RG_IMG_CG_WPE2_DIP1])));
+		QOF_LOGI(" wpe2 CG Status: WPE2[0x%x] backup[0x%x]",
+		(readl(g_maped_rg[MAPED_RG_IMG_CG_WPE2_DIP1])), g_imgsys_cg_value[IMG_CG_WPE2_DIP1_TYPE]);
 	} else
 		QOF_LOGI("qof mtcmos wpe2 is off. sta=0x%x", readl(addr));
 	addr = QOF_GET_REMAP_ADDR(qof_reg_table[ISP8S_PWR_WPE_3_LITE][QOF_REG_IMG_QOF_STATE_DBG].addr);
 	addr_val = readl(addr);
 	if (((addr_val & BIT(1)) == BIT(1)) ||
 		((addr_val & BIT(6)) == BIT(6))) {
-		QOF_LOGI(" wpe3 CG Status: WPE3[0x%x]",
-		(readl(g_maped_rg[MAPED_RG_IMG_CG_WPE3_DIP1])));
+		QOF_LOGI(" wpe3 CG Status: WPE3[0x%x] backup[0x%x]",
+		(readl(g_maped_rg[MAPED_RG_IMG_CG_WPE3_DIP1])), g_imgsys_cg_value[IMG_CG_WPE3_DIP1_TYPE]);
 	} else
 		QOF_LOGI("qof mtcmos wpe3 is off. sta=0x%x", readl(addr));
 }
@@ -1275,6 +1336,7 @@ static void qof_start_pwr_restore_task(struct mtk_imgsys_dev *imgsys_dev,
 	/* Program start */
 	/* Wait for restore hw event */
 	cmdq_pkt_wfe(restore_pkt, event->hw_event_restore);
+
 	// wa for gce thd lacked
 	imgsys_cmdq_restore_locked(imgsys_dev, restore_pkt,
 		&isp8s_module_data[pwr_id]);
@@ -1441,6 +1503,16 @@ void mtk_imgsys_cmdq_qof_init(struct mtk_imgsys_dev *imgsys_dev, struct cmdq_cli
 	g_maped_rg[MAPED_RG_HWCCF_REG_SET]			= ioremap(HWCCF_LINK_SET_ADDR, 4);
 	g_maped_rg[MAPED_RG_HWCCF_REG_STA]			= ioremap(HWCCF_LINK_STA_ADDR, 4);
 	g_maped_rg[MAPED_RG_RTFF_BASE]				= ioremap(RTFF_REG_BASE, 4);
+	g_maped_rg[MAPED_RG_QOF_PM_DIP]				= ioremap(IMG_PM_DIP, 4);
+	g_maped_rg[MAPED_RG_QOF_PM_TRAW]			= ioremap(IMG_PM_TRAW, 4);
+	g_maped_rg[MAPED_RG_QOF_PM_WPE_EIS]			= ioremap(IMG_PM_WPE_EIS, 4);
+	g_maped_rg[MAPED_RG_QOF_PM_WPE_TNR]			= ioremap(IMG_PM_WPE_TNR, 4);
+	g_maped_rg[MAPED_RG_QOF_PM_WPE_LITE]		= ioremap(IMG_PM_WPE_LITE, 4);
+	g_maped_rg[MAPED_RG_DIP_DUMMY_REG]			= ioremap(IMG_DIP_DUMMY_REG, 4);
+	g_maped_rg[MAPED_RG_TRAW_DUMMY_REG]			= ioremap(IMG_TRAW_DUMMY_REG, 4);
+	g_maped_rg[MAPED_RG_WPE_EIS_DUMMY_REG]		= ioremap(IMG_WPE_EIS_DUMMY_REG, 4);
+	g_maped_rg[MAPED_RG_WPE_TNR_DUMMY_REG]		= ioremap(IMG_WPE_TNR_DUMMY_REG, 4);
+	g_maped_rg[MAPED_RG_WPE_LITE_DUMMY_REG]		= ioremap(IMG_WPE_LITE_DUMMY_REG, 4);
 
 	for (rg_idx = MAPED_RG_LIST_START; rg_idx < MAPED_RG_LIST_NUM; rg_idx++) {
 		if (!g_maped_rg[rg_idx]) {
@@ -1766,6 +1838,17 @@ void disable_dip_cine(u32 mod)
 	}
 }
 
+void backup_cg_value(void)
+{
+	enum IMG_CG_TYPE mod;
+	u32 cg_idx_offset = MAPED_RG_IMG_CG_DIP_NR1_DIP1;
+
+	for (mod = IMG_CG_DIP_NR1_DIP1_TYPE; mod < IMG_CG_END; mod++) {
+		g_imgsys_cg_value[mod] = (readl(g_maped_rg[mod + cg_idx_offset]));
+		QOF_LOGI("backup CG %d = 0x%08x", mod, g_imgsys_cg_value[mod]);
+	}
+}
+
 void mtk_imgsys_cmdq_qof_stream_on(struct mtk_imgsys_dev *imgsys_dev)
 {
 	u32 mod = 0;
@@ -1776,6 +1859,8 @@ void mtk_imgsys_cmdq_qof_stream_on(struct mtk_imgsys_dev *imgsys_dev)
 	qof_start_all_gce_loop(imgsys_dev);
 
 	spin_lock_irqsave(&qof_lock, flag);
+
+	backup_cg_value();
 
 	for (mod = QOF_SUPPORT_START; mod < QOF_TOTAL_MODULE; mod++) {
 		if (IS_MOD_SUPPORT_QOF(mod)) {
@@ -1892,6 +1977,12 @@ static void qof_module_vote_add(struct cmdq_pkt *pkt, u32 pwr, u32 user)
 
 	cmdq_pkt_poll_sleep(pkt, BIT(1)/*poll val*/,
 		(qof_reg_table[pwr][QOF_REG_IMG_QOF_STATE_DBG].addr)/*addr*/, BIT(1) /*mask*/);
+
+	gce_check_pm_status(pkt, pwr);
+
+	gce_check_cg_status(pkt, pwr);
+
+	gce_check_dummy_reg_status(pkt, pwr);
 
 	/* End of critical section */
 	cmdq_pkt_clear_event(pkt, qof_event->sw_event_lock);
@@ -2012,6 +2103,8 @@ void mtk_imgsys_cmdq_qof_dump(uint32_t hwcomb, bool need_dump_cg)
 		mtk_imgsys_qof_print_hw_info(mod);
 
 	mtk_qof_print_mtcmos_status();
+
+	mtk_qof_print_pm_status();
 
 	if (need_dump_cg)
 		mtk_qof_print_cg_status();
