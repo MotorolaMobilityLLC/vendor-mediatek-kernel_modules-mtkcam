@@ -73,6 +73,12 @@ struct mtk_imgsys_hw_info {
 	u32 read_cnt;
 };
 
+#define RETRY_EVENT_NUM (5)
+struct retry_event_table {
+	u16 events[RETRY_EVENT_NUM];
+	u32 event_num;
+};
+
 struct mtk_imgsys_cb_param {
 #if CMDQ_CB_KTHREAD
 	struct kthread_work cmdq_cb_work;
@@ -120,6 +126,7 @@ struct mtk_imgsys_cb_param {
 	int is_ctrl_cache;
 	bool isPktReuse;
 	int is2ndflush;
+	struct retry_event_table retry_tbl;
 };
 
 enum mtk_imgsys_cmd {

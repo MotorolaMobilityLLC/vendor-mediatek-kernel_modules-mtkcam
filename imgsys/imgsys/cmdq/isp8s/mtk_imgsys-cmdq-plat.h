@@ -1618,7 +1618,8 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					struct mtk_imgsys_dev *imgsys_dev,
 					struct mtk_imgsys_dev_buffer *dev_buf),
 				int (*is_singledev_mode)(struct mtk_imgsys_request *req),
-				struct mtk_imgsys_hw_info *hw_info);
+				struct mtk_imgsys_hw_info *hw_info,
+				struct retry_event_table *retry_tbl);
 int imgsys_cmdq_sec_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev);
 int imgsys_cmdq_sec_isc_init_plat8s(struct mtk_imgsys_dev *imgsys_dev);
 void imgsys_cmdq_sec_cmd_plat8s(struct cmdq_pkt *pkt);

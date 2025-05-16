@@ -531,6 +531,15 @@ static void imgsys_cmdq_cb_work_plat8s(struct work_struct *work)
 		frm_owner = cb_param->frm_info->frm_owner;
 
 		if (cb_param->is2ndflush == 1) {
+
+			for (idx = 0; idx < cb_param->retry_tbl.event_num; idx++)
+				cmdq_set_event(imgsys_clt[0]->chan, cb_param->retry_tbl.events[idx]);
+
+			cmdq_clear_event(imgsys_clt[0]->chan,
+				imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_WPE_EIS].event);
+			cmdq_clear_event(imgsys_clt[0]->chan,
+				imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_PQDIP_A].event);
+
 			cmdq_pkt_refinalize(cb_param->pkt);
 			ret_flush = cmdq_pkt_flush_async(cb_param->pkt, imgsys_cmdq_task_cb_plat8s,
 									(void *)cb_param);
@@ -541,12 +550,7 @@ static void imgsys_cmdq_cb_work_plat8s(struct work_struct *work)
 				pr_info("%s: cmdq_pkt_flush_async ret(%d) for WPE_EIS run (%d) for user(%s)!\n",
 					__func__, ret_flush, cb_param->is2ndflush, (char *)(&frm_owner));
 			}
-			if (cb_param->hw_comb == (IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_PQDIP_A)) {
-				cmdq_clear_event(imgsys_clt[0]->chan,
-					imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_WPE_EIS].event);
-				cmdq_clear_event(imgsys_clt[0]->chan,
-					imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_PQDIP_A].event);
-			}
+
 			pr_info("%s: [ERROR] WPE_EIS-PQDIP-A HW timeout with retry wfe(%d) event(%d) user(%s)",
 				__func__, cb_param->pkt->err_data.wfe_timeout,
 				cb_param->pkt->err_data.event, (char *)(&frm_owner));
@@ -585,6 +589,15 @@ static void imgsys_cmdq_cb_work_plat8s(struct work_struct *work)
 		frm_owner = cb_param->frm_info->frm_owner;
 
 		if (cb_param->is2ndflush == 1) {
+
+			for (idx = 0; idx < cb_param->retry_tbl.event_num; idx++)
+				cmdq_set_event(imgsys_clt[0]->chan, cb_param->retry_tbl.events[idx]);
+
+			cmdq_clear_event(imgsys_clt[0]->chan,
+				imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_WPE_EIS].event);
+			cmdq_clear_event(imgsys_clt[0]->chan,
+				imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_PQDIP_A].event);
+
 			cmdq_pkt_refinalize(cb_param->pkt);
 			ret_flush = cmdq_pkt_flush_async(cb_param->pkt, imgsys_cmdq_task_cb_plat8s,
 									(void *)cb_param);
@@ -595,10 +608,6 @@ static void imgsys_cmdq_cb_work_plat8s(struct work_struct *work)
 				pr_info("%s: cmdq_pkt_flush_async ret(%d) for PQDIPA run(%d) for user(%s)!\n",
 					__func__, ret_flush, cb_param->is2ndflush, (char *)(&frm_owner));
 			}
-			cmdq_clear_event(imgsys_clt[0]->chan,
-				imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_WPE_EIS].event);
-			cmdq_clear_event(imgsys_clt[0]->chan,
-				imgsys_event[IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_PQDIP_A].event);
 		} else {
 			pr_info("%s: [ERROR] WPE_EIS-PQDIPA(PQDIPA) timeout still! wfe(%d) event(%d) user(%s)",
 				__func__, cb_param->pkt->err_data.wfe_timeout,
@@ -2545,6 +2554,7 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 	u32 reuse_event_num = 0;
 	u32 reuse_task_idx = 0;
 #endif
+	struct retry_event_table retry_tbl = {0};
 
 	dvfs_info = &imgsys_dev->dvfs_info;
 	/* PMQOS API */
@@ -2840,7 +2850,7 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 			ret = imgsys_cmdq_parser_plat8s(imgsys_dev, frm_info, pkt,
 				&cmd[cmd_idx], hw_comb, frm_info->user_info[frm_idx].sw_ridx,
 				(pkt_ts_pa + 4 * pkt_ts_ofst), &pkt_ts_num, thd_idx,
-				imgsys_get_iova, imgsys_get_kva, is_singledev_mode, &mae_info);
+				imgsys_get_iova, imgsys_get_kva, is_singledev_mode, &mae_info, &retry_tbl);
 			if (ret < 0) {
 				pr_info(
 					"%s: [ERROR] parsing idx(%d) with cmd(%d) in block(%d) for frm(%d/%d) fail\n",
@@ -3045,6 +3055,7 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				cb_param->batchnum = frm_info->batchnum;
 				cb_param->memory_mode = frm_info->memory_mode;
 				cb_param->is2ndflush = -1;
+				cb_param->retry_tbl = retry_tbl;
 				cb_param->is_ctrl_cache = frm_info->is_ctrl_cache;
 				cb_param->isPktReuse = 0;
 
@@ -3293,7 +3304,8 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 						struct mtk_imgsys_dev *imgsys_dev,
 						struct mtk_imgsys_dev_buffer *dev_buf),
 					int (*is_singledev_mode)(struct mtk_imgsys_request *req),
-					struct mtk_imgsys_hw_info *hw_info)
+					struct mtk_imgsys_hw_info *hw_info,
+					struct retry_event_table *retry_tbl)
 {
 	bool stop = 0;
 	int count = 0;
@@ -3324,6 +3336,7 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 	req_no = frm_info->request_no;
 	frm_no = frm_info->frame_no;
 	is_ctrl_cache = frm_info->is_ctrl_cache;
+	retry_tbl->event_num = 0;
 
 	if (imgsys_cmdq_dbg_enable_plat8s())
 		pr_debug("%s: +, cmd(%d)\n", __func__, cmd->opcode);
@@ -3906,9 +3919,22 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					cmd->u.action);
 			if (cmd->u.action == 1) {
 #ifdef IMGSYS_CMDQ_PKT_REUSE
-				if (is_ctrl_cache <= 0)
+				if (is_ctrl_cache <= 0) {
 					cmdq_pkt_wfe(pkt, imgsys_event[cmd->u.event].event);
-				else {
+#ifdef IMGSYS_WPE_CHECK_FUNC_EN
+					if (hw_comb != (IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_PQDIP_A))
+						goto bypass_set_event;
+					if ((cmd->u.event > IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_AISEG_POOL_100) ||
+						(cmd->u.event < IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_POOL_1))
+						goto bypass_set_event;
+					if (retry_tbl->event_num == RETRY_EVENT_NUM) {
+						pr_info("%s: out-of-sw-event.", __func__);
+						goto bypass_set_event;
+					}
+					retry_tbl->events[retry_tbl->event_num] = imgsys_event[cmd->u.event].event;
+					retry_tbl->event_num++;
+#endif
+				} else {
 					if (is_pkt_created[thd_idx] < IMGSYS_PKT_REUSE_POOL_NUM)
 						cmdq_pkt_wfe_reuse(pkt, imgsys_event[cmd->u.event].event,
 							&g_event_reuse[thd_idx][g_reuse_event_num[thd_idx]]);
@@ -3920,9 +3946,26 @@ int imgsys_cmdq_parser_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 					}
 					g_reuse_event_num[thd_idx]++;
 				}
+bypass_set_event:
 #else
 				cmdq_pkt_wfe(pkt, imgsys_event[cmd->u.event].event);
+#ifdef IMGSYS_WPE_CHECK_FUNC_EN
+				if (hw_comb != (IMGSYS_HW_FLAG_WPE_EIS|IMGSYS_HW_FLAG_PQDIP_A))
+					goto bypass_set_event;
+				if ((cmd->u.event > IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_AISEG_POOL_100) ||
+					(cmd->u.event < IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_POOL_1))
+					goto bypass_set_event;
+				if (retry_tbl->event_num == RETRY_EVENT_NUM) {
+					pr_info("%s: out-of-sw-event.", __func__);
+					goto bypass_set_event;
+				}
+				retry_tbl->events[retry_tbl->event_num] = imgsys_event[cmd->u.event].event;
+				retry_tbl->event_num++;
+bypass_set_event:
 #endif
+
+#endif
+
 				if ((cmd->u.event >= IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_POOL_START) &&
 					(cmd->u.event <= IMGSYS_CMDQ_SYNC_TOKEN_IMGSYS_END)) {
 					event = cmd->u.event -
