@@ -60,6 +60,10 @@ struct mtk_camsys_irq_info {
 	unsigned int err_tags;
 	unsigned int tg_cnt;
 	unsigned int debug_en;
+	u64 ts_before_push_msgfifo_sof;
+	u64 ts_after_push_msgfifo_sof;
+	u64 ts_before_pop_msgfifo_sof;
+	u64 ts_after_pop_msgfifo_sof;
 	union {
 		struct mtk_camsys_irq_normal_data	n;
 		struct mtk_camsys_irq_error_data	e;

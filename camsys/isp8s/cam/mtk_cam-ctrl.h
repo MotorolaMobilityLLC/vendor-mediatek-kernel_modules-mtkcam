@@ -41,6 +41,11 @@ struct vsync_collector {
 		int engine;
 		int id;
 		u64 ts_ns;
+		u64 ts_ns_to_camctl;
+		u64 ts_before_push_msgfifo_sof;
+		u64 ts_after_push_msgfifo_sof;
+		u64 ts_before_pop_msgfifo_sof;
+		u64 ts_after_pop_msgfifo_sof;
 	} history[VSYNC_HIST_NUM];
 };
 

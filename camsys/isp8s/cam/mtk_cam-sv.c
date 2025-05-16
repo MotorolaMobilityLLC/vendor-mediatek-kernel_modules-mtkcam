@@ -24,6 +24,7 @@
 #include "mtk_cam-trace.h"
 #include "mtk_cam-hsf.h"
 #include "mtk_cam-fmon.h"
+#include "mtk_cam-ctrl.h"
 
 #include "mmqos-mtk.h"
 #include "iommu_debug.h"
@@ -639,7 +640,7 @@ static int push_msgfifo(struct mtk_camsv_device *sv_dev,
 		spin_unlock_irqrestore(&sv_dev->msg_lock, flags);
 		return -1;
 	}
-
+	info->ts_after_push_msgfifo_sof = ktime_get_boottime_ns();
 	len = kfifo_in(&sv_dev->msg_fifo, info, sizeof(*info));
 
 	spin_unlock_irqrestore(&sv_dev->msg_lock, flags);
@@ -3559,7 +3560,7 @@ static irqreturn_t mtk_irq_camsv_sof(int irq, void *data)
 				  bit_map_bit(MAP_HW_CAMSV, sv_dev->id),
 				  irq_info.frame_idx_inner);
 	}
-
+	irq_info.ts_before_push_msgfifo_sof = ktime_get_boottime_ns();
 	if (irq_info.irq_type && push_msgfifo(sv_dev, &irq_info) == 0)
 		wake_thread = true;
 
@@ -3672,12 +3673,15 @@ static irqreturn_t mtk_thread_irq_camsv(int irq, void *data)
 	struct mtk_camsys_irq_info irq_info;
 	int recovered_done;
 	int do_recover;
+	u64 ts_before_msgfifo;
+	u64 ts_after_msgfifo;
 
 	if (unlikely(atomic_cmpxchg(&sv_dev->is_fifo_overflow, 1, 0)))
 		dev_info(sv_dev->dev, "msg fifo overflow\n");
 
+	ts_before_msgfifo = ktime_get_boottime_ns();
 	while (pop_msgfifo(sv_dev, &irq_info)) {
-
+		ts_after_msgfifo = ktime_get_boottime_ns();
 		if (CAM_DEBUG_ENABLED(CTRL))
 			dev_info(sv_dev->dev, "ts=%llu irq_type %d, req:0x%x/0x%x, tg_cnt:%d\n",
 			irq_info.ts_ns / 1000,
@@ -3716,6 +3720,10 @@ static irqreturn_t mtk_thread_irq_camsv(int irq, void *data)
 		/* normal case */
 		do_recover = sv_process_fsm(sv_dev, &irq_info,
 					    &recovered_done);
+		if (irq_info.irq_type & (1 << CAMSYS_IRQ_FRAME_START)) {
+			irq_info.ts_before_pop_msgfifo_sof = ts_before_msgfifo;
+			irq_info.ts_after_pop_msgfifo_sof = ts_after_msgfifo;
+		}
 		/* inform interrupt information to camsys controller */
 		mtk_cam_ctrl_isr_event(sv_dev->cam,
 				       CAMSYS_ENGINE_CAMSV, sv_dev->id,

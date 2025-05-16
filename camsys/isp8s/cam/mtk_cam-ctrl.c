@@ -799,7 +799,7 @@ static void handle_ss_try_set_sensor(struct mtk_cam_ctrl *cam_ctrl)
 }
 
 static void ctrl_vsync_history_push(struct vsync_collector *c,
-				    int engine, int engine_id, u64 ts)
+				    int engine, int engine_id, struct mtk_camsys_irq_info *irq_info)
 {
 	struct vsync_history *h;
 
@@ -808,7 +808,13 @@ static void ctrl_vsync_history_push(struct vsync_collector *c,
 
 	h->engine = engine;
 	h->id = engine_id;
-	h->ts_ns = ts;
+	h->ts_ns = irq_info->ts_ns;
+	h->ts_before_push_msgfifo_sof = irq_info->ts_before_push_msgfifo_sof;
+	h->ts_after_push_msgfifo_sof = irq_info->ts_after_push_msgfifo_sof;
+	h->ts_before_pop_msgfifo_sof = irq_info->ts_before_pop_msgfifo_sof;
+	h->ts_after_pop_msgfifo_sof = irq_info->ts_after_pop_msgfifo_sof;
+
+	h->ts_ns_to_camctl = ktime_get_boottime_ns();
 
 	c->cur_history_idx = (c->cur_history_idx + 1) % VSYNC_HIST_NUM;
 
@@ -845,6 +851,11 @@ void vsync_collector_dump(struct vsync_collector *c)
 	while (i < VSYNC_HIST_NUM) {
 		struct vsync_history *h = history + idx;
 		u64 ts = h->ts_ns;
+		u64 ts_before_push_msgfifo_sof = h->ts_before_push_msgfifo_sof;
+		u64 ts_after_push_msgfifo_sof = h->ts_after_push_msgfifo_sof;
+		u64 ts_before_pop_msgfifo_sof = h->ts_before_pop_msgfifo_sof;
+		u64 ts_after_pop_msgfifo_sof = h->ts_after_pop_msgfifo_sof;
+		u64 ts_to_camctl = h->ts_ns_to_camctl;
 
 		if (!ts)
 			break;
@@ -852,8 +863,9 @@ void vsync_collector_dump(struct vsync_collector *c)
 		/* note:
 		 * this timestamp is not consitent w. the local_clock() used in printk
 		 */
-		pr_info("%s: [%d] engine %d-%d, ts %llu\n",
-			__func__, i, h->engine, h->id, ts);
+		pr_info("%s: [%d] engine %d-%d, ts %llu (top_h:(%llu_%llu)->bottom_h:(%llu_%llu) to_camctl_ts %llu)\n",
+			__func__, i, h->engine, h->id, ts, ts_before_push_msgfifo_sof, ts_after_push_msgfifo_sof,
+			ts_before_pop_msgfifo_sof, ts_after_pop_msgfifo_sof, ts_to_camctl);
 
 		idx = vsync_history_prev_idx(idx);
 		++i;
@@ -874,7 +886,7 @@ static void ctrl_vsync_preprocess_extisp(struct mtk_cam_ctrl *ctrl,
 	struct apply_cq_ref *cq_ref;
 
 	ctrl_vsync_history_push(&ctrl->vsync_col,
-				engine_type, engine_id, irq_info->ts_ns);
+				engine_type, engine_id, irq_info);
 
 	if (vsync_update_extisp(ctrl, engine_type,
 			irq_info->irq_type, engine_id, vsync_res))
@@ -955,7 +967,7 @@ static void ctrl_vsync_preprocess(struct mtk_cam_ctrl *ctrl,
 	struct apply_cq_ref *cq_ref;
 
 	ctrl_vsync_history_push(&ctrl->vsync_col,
-				engine_type, engine_id, irq_info->ts_ns);
+				engine_type, engine_id, irq_info);
 
 	if (vsync_update(&ctrl->vsync_col, engine_type,
 			irq_info->irq_type, engine_id, vsync_res))
