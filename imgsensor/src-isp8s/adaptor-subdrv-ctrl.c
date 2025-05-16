@@ -1001,6 +1001,144 @@ void set_frame_length_in_lut(struct subdrv_ctx *ctx,
 		ctx->min_frame_length,
 		ctx->s_ctx.mode[ctx->current_scenario_id].delay_frame);
 }
+/**
+ * @brief: implementation for updating fll for dcg vsl.
+ * Basically frame-sync will calculate itself, so this function only need to
+ * simply prevent framelength constraints (no need to consider
+ * previous or current shutter) and finally send them to write framelength.
+ * user: frame-sync.
+ * @param ctx: subdrv_ctx
+ * @param frame_time_ns: overall frame time in ns
+ * @param frame_length_in_lut: frame length array in lut for manual mode
+ */
+void set_dcg_vs_frame_length_in_lut(struct subdrv_ctx *ctx,
+	u64 frame_time_ns, u32 *frame_length_in_lut)
+{
+	u16 lut_cnt = 0;
+	int i = 0;
+	u32 calc_fl_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT] = {0};
+	bool gph = !ctx->is_seamless && (ctx->s_ctx.s_gph != NULL);
+	struct struct_dcg_vsl_info dcg_vsl_info = {0};
+	int dcg_vs_exp_id[] = {
+		IMGSENSOR_EXPOSURE_LE,
+		IMGSENSOR_EXPOSURE_SE
+	};
+	u32 frame_length_step_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
+	u32 readout_length_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
+	u8 read_margin_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
+	u32 linetime_ns_in_lut[IMGSENSOR_STAGGER_EXPOSURE_CNT];
+	u64 lut_0_ft_ns;
+
+	/* fall back to max fps */
+	if (!frame_time_ns && ctx->s_ctx.mode[ctx->current_scenario_id].max_framerate)
+		frame_time_ns = 10000000000 / ctx->s_ctx.mode[ctx->current_scenario_id].max_framerate;
+
+	get_dcg_vsl_info_by_scenario(ctx, ctx->current_scenario_id, &dcg_vsl_info);
+
+	/* get static data of lut */
+	memset(frame_length_step_in_lut, 0, sizeof(frame_length_step_in_lut));
+	memset(readout_length_in_lut, 0, sizeof(readout_length_in_lut));
+	memset(read_margin_in_lut, 0, sizeof(read_margin_in_lut));
+	memset(linetime_ns_in_lut, 0, sizeof(linetime_ns_in_lut));
+	for (i = 0; i < ARRAY_SIZE(dcg_vs_exp_id); i++) {
+		frame_length_step_in_lut[i] = dcg_vsl_info.lut_info[i].framelength_step;
+		readout_length_in_lut[i] = dcg_vsl_info.lut_info[i].readout_length;
+		read_margin_in_lut[i] = dcg_vsl_info.lut_info[i].read_margin;
+		linetime_ns_in_lut[i] = dcg_vsl_info.lut_info[i].linetime_in_ns;
+	}
+
+	lut_cnt = dcg_vsl_info.lut_cnt;
+	if (lut_cnt == 2) {  /* 2 lut only */
+		for (i = 0; i < lut_cnt; i++) {
+			if (frame_length_in_lut[i])
+				ctx->frame_length_in_lut[i] = frame_length_in_lut[i];
+			else {
+				ctx->frame_length_in_lut[i] = 0;
+				DRV_LOG_MUST(ctx,
+					"pls depend on lut_cnt to assign frame_length_in_lut!\n");
+				continue;
+			}
+			/* fll_a/b/c_min = readout + xx lines(margin) */
+			calc_fl_in_lut[i] =
+				readout_length_in_lut[i] + read_margin_in_lut[i];
+			/* fll_a/b/c = max(readout, userInput_fll_a/b/c) */
+			ctx->frame_length_in_lut[i] =
+				max(ctx->frame_length_in_lut[i], calc_fl_in_lut[i]);
+
+			if (i == 1) {
+				/* fll_b = max(fll_b, fll-fll_a) */
+				lut_0_ft_ns = line2ntime(ctx->frame_length_in_lut[0], linetime_ns_in_lut[0]);
+				if (frame_time_ns >= lut_0_ft_ns) {
+					/* fll_b = max(fll_b, fll-fll_a) */
+					ctx->frame_length_in_lut[i] = max(ctx->frame_length_in_lut[i],
+						    ntime2line(frame_time_ns - lut_0_ft_ns, linetime_ns_in_lut[i]));
+				}
+			}
+
+			/* fll_a/b/c = min(fll_a/b/c, fll_max) */
+			ctx->frame_length_in_lut[i] =
+				min(ctx->frame_length_in_lut[i], ctx->s_ctx.frame_length_max);
+
+			ctx->frame_length_in_lut[i] = frame_length_step_in_lut[i] ?
+				roundup(ctx->frame_length_in_lut[i], frame_length_step_in_lut[i]) :
+				ctx->frame_length_in_lut[i];
+		}
+	} else {
+		DRV_LOGE(ctx, "pls check exp_cnt!\n");
+		return;
+	}
+
+	/* convert ctx->frame_length base on lut-A line time */
+	ctx->frame_length = ctx->frame_length_in_lut[0] +
+		ntime2line(line2ntime(ctx->frame_length_in_lut[1], linetime_ns_in_lut[1]),
+			   linetime_ns_in_lut[0]);
+
+	if (gph)
+		ctx->s_ctx.s_gph((void *)ctx, 1);
+	write_dcg_vs_frame_length_in_lut(ctx, ctx->frame_length, ctx->frame_length_in_lut);
+	if (gph)
+		ctx->s_ctx.s_gph((void *)ctx, 0);
+	commit_i2c_buffer(ctx);
+	DRV_LOG(ctx,
+		"sid:%u,fll(input/ctx/output_a/b/c/d/e/min):%llu/%u/%u/%u/%u/%u/%u/%u\n",
+		ctx->current_scenario_id,
+		frame_time_ns,
+		ctx->frame_length,
+		ctx->frame_length_in_lut[0],
+		ctx->frame_length_in_lut[1],
+		ctx->frame_length_in_lut[2],
+		ctx->frame_length_in_lut[3],
+		ctx->frame_length_in_lut[4],
+		ctx->min_frame_length);
+}
+
+void set_lut_multi_frame_length(struct subdrv_ctx *ctx,
+	u32 frame_length, u32 *frame_length_in_lut)
+{
+	switch(ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode) {
+	case HDR_RAW_LBMF:
+		set_frame_length_in_lut(ctx, frame_length, frame_length_in_lut);
+		break;
+	case HDR_RAW_DCG_RAW_VS:
+	case HDR_RAW_DCG_COMPOSE_VS:
+		/* DCG-VS */
+		{
+			struct struct_dcg_vsl_info dcg_vsl_info = {0};
+			u64 frame_time_ns = 0;
+
+			/* convert frame length to frame time (lut-A) based */
+			get_dcg_vsl_info_by_scenario(ctx, ctx->current_scenario_id, &dcg_vsl_info);
+			frame_time_ns = line2ntime(frame_length,
+					dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].linetime_in_ns);
+
+			set_dcg_vs_frame_length_in_lut(ctx,
+				frame_time_ns, frame_length_in_lut);
+		}
+		break;
+	default:
+		break;
+	}
+}
 
 /**
  * @brief: This api is used to assign general FLL for case except for lbmf or
@@ -1120,7 +1258,8 @@ void set_max_framerate(struct subdrv_ctx *ctx, u16 framerate, bool min_frameleng
 				    dcg_vsl_info.lut_info[IMGSENSOR_LUT_B].read_margin);
 			if (framerate && ctx->frame_length >= ctx->frame_length_in_lut[0]) {
 				u64 vs_ft_ns = (1000000000 / framerate * 10)
-					- dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].linetime_in_ns;
+					- line2ntime(ctx->frame_length_in_lut[0],
+						     dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].linetime_in_ns);
 				ctx->frame_length_in_lut[1] =
 					max(ctx->frame_length_in_lut[1],
 					    ntime2line(vs_ft_ns,
@@ -1387,7 +1526,8 @@ void set_max_framerate_base100(struct subdrv_ctx *ctx, u16 framerate, bool min_f
 			// ctx->frame_length is calculated with lut-a's line time
 			if (framerate && ctx->frame_length >= ctx->frame_length_in_lut[0]) {
 				u64 vs_ft_ns = (1000000000 / framerate * 100)
-					- dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].linetime_in_ns;
+					- line2ntime(ctx->frame_length_in_lut[0],
+						     dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].linetime_in_ns);
 				ctx->frame_length_in_lut[1] =
 					max(ctx->frame_length_in_lut[1],
 					    ntime2line(vs_ft_ns,
@@ -2059,7 +2199,7 @@ void set_dcg_vs_max_framerate_in_lut_by_scenario(struct subdrv_ctx *ctx,
 		DRV_LOG_MUST(ctx, "total ft = %llu  nslut-A ft = %llu ns\n", frame_time_ns, lut_0_ft_ns);
 		if (frame_time_ns >= lut_0_ft_ns) {
 			/* fll_b = max(fll_b, fll-fll_a) */
-			ctx->frame_length_in_lut[1] = max(ctx->frame_length_in_lut[1],
+			calc_fl_in_lut[1] = max(calc_fl_in_lut[1],
 				    ntime2line(frame_time_ns - lut_0_ft_ns, lut_b_linet));
 		}
 		/* fll_b = min(fll_b, fll_max) */
@@ -2384,6 +2524,36 @@ void set_hdr_tri_shutter(struct subdrv_ctx *ctx, u64 *shutters, u16 exp_cnt)
 		break;
 	default:
 		set_multi_shutter_frame_length(ctx, values, exp_cnt, 0);
+		break;
+	}
+}
+
+void set_lut_multi_shutter_frame_length(struct subdrv_ctx *ctx,
+	u64 *shutters, u16 exp_cnt, u32 frame_length, u32 *frame_length_in_lut)
+{
+	switch(ctx->s_ctx.mode[ctx->current_scenario_id].hdr_mode) {
+	case HDR_RAW_LBMF:
+		set_multi_shutter_frame_length_in_lut(ctx,
+			shutters, exp_cnt, frame_length, frame_length_in_lut);
+		break;
+	case HDR_RAW_DCG_RAW_VS:
+	case HDR_RAW_DCG_COMPOSE_VS:
+		/* DCG-VS */
+		{
+			struct struct_dcg_vsl_info dcg_vsl_info = {0};
+			u64 frame_time_ns = 0;
+
+			/* convert frame length to frame time (lut-A) based */
+			get_dcg_vsl_info_by_scenario(ctx, ctx->current_scenario_id, &dcg_vsl_info);
+			frame_time_ns = line2ntime(frame_length,
+					dcg_vsl_info.lut_info[IMGSENSOR_LUT_A].linetime_in_ns);
+
+			set_dcg_vs_multi_shutter_frame_length_in_lut(ctx,
+				shutters, exp_cnt, frame_time_ns, frame_length_in_lut);
+		}
+		break;
+	default:
+		set_multi_shutter_frame_length(ctx, shutters, exp_cnt, frame_length);
 		break;
 	}
 }
@@ -3229,14 +3399,16 @@ void set_dcg_vs_multi_shutter_frame_length_in_lut(struct subdrv_ctx *ctx,
 		/* enable auto extend */
 		if (ctx->s_ctx.reg_addr_auto_extend)
 			set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_auto_extend, 0x01);
-		/* write framelength */
+
 		set_auto_flicker(ctx, 0);
-		write_dcg_vs_frame_length_in_lut(ctx, ctx->frame_length, ctx->frame_length_in_lut);
 
 		/* convert ctx->frame_length base on lut-A line time */
 		ctx->frame_length = ctx->frame_length_in_lut[0] +
 				ntime2line(line2ntime(ctx->frame_length_in_lut[1], linetime_ns_in_lut[1]),
 					   linetime_ns_in_lut[0]);
+
+		/* write framelength */
+		write_dcg_vs_frame_length_in_lut(ctx, ctx->frame_length, ctx->frame_length_in_lut);
 
 		/* write shutter: LUT register differs from DOL */
 		if (ctx->s_ctx.reg_addr_exposure_lshift != PARAM_UNDEFINED) {
@@ -6720,14 +6892,14 @@ int common_feature_control(struct subdrv_ctx *ctx, MSDK_SENSOR_FEATURE_ENUM feat
 			(u32 *)(feature_data + 1));
 		break;
 	case SENSOR_FEATURE_SET_FRAMELENGTH_IN_LUT:
-		// DCG-VS need by new feature ID
-		set_frame_length_in_lut(ctx,
+		/* DCG-VS done */
+		set_lut_multi_frame_length(ctx,
 			(u32) (*feature_data),
 			(u32 *) (*(feature_data + 1)));
 		break;
 	case SENSOR_FEATURE_SET_MULTI_SHUTTER_FRAME_TIME_IN_LUT:
-		// DCG-VS need by new feature ID
-		set_multi_shutter_frame_length_in_lut(ctx,
+		/* DCG-VS done */
+		set_lut_multi_shutter_frame_length(ctx,
 			(u64 *)(*feature_data),
 			(u16) (*(feature_data + 1)),
 			(u32) (*(feature_data + 2)),

@@ -637,8 +637,7 @@ static int do_set_dcg_vs_ae_ctrl(struct adaptor_ctx *ctx, struct mtk_hdr_ae *ae_
 	u32 len = 0, exp_count = 0, scenario_exp_cnt = 0, dcg_gain = 0;
 	struct subdrv_mode_struct *mode_info = &ctx->subctx.s_ctx.mode[ctx->cur_mode->id];
 	enum IMGSENSOR_DCG_GAIN_BASE dcg_gain_base = mode_info->dcg_info.dcg_gain_base;
-	// XXX: force disable fsync in dcg-vs
-	// u64 fsync_exp[2] = {0}; /* needed by fsync set_shutter */
+	u64 fsync_exp[2] = {0}; /* needed by fsync set_shutter */
 
 	adaptor_logm(ctx, "+\n");
 
@@ -682,18 +681,18 @@ static int do_set_dcg_vs_ae_ctrl(struct adaptor_ctx *ctx, struct mtk_hdr_ae *ae_
 	switch (exp_count) {
 	case 3:  // 2exp DCG + VS
 		ADAPTOR_SYSTRACE_BEGIN("imgsensor::set_exposure");
-		// fsync_exp[0] = ae_ctrl->exposure.le_exposure;
-		// fsync_exp[1] = ae_ctrl->exposure.se_exposure;
-		// if (!chk_if_need_to_use_s_multi_exp_fl_by_fsync_mgr(
-		//		ctx, fsync_exp, 2)) {
+		fsync_exp[0] = ae_ctrl->exposure.le_exposure;
+		fsync_exp[1] = ae_ctrl->exposure.se_exposure;
+		if (!chk_if_need_to_use_s_multi_exp_fl_by_fsync_mgr(
+				ctx, fsync_exp, 2)) {
 			/* NOT enable frame-sync || using HW sync solution */
 			para.u64[0] = ae_ctrl->exposure.le_exposure;
 			para.u64[1] = ae_ctrl->exposure.se_exposure;
 			subdrv_call(ctx, feature_control,
 						SENSOR_FEATURE_SET_HDR_SHUTTER,
 						para.u8, &len);
-		// }
-		// notify_fsync_mgr_set_shutter(ctx, fsync_exp, 2);
+		}
+		notify_fsync_mgr_set_shutter(ctx, fsync_exp, 2);
 		ADAPTOR_SYSTRACE_END();
 
 		ADAPTOR_SYSTRACE_BEGIN("imgsensor::set_gain_tri");
