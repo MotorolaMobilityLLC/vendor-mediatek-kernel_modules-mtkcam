@@ -904,13 +904,16 @@ static bool not_support_rwfbc(struct mtk_raw_device *dev)
 
 void rwfbc_inc_setup(struct mtk_raw_device *dev)
 {
-	u32 wfbc_en_raw, wfbc_en_yuv;
+	u32 wfbc_en_raw, wfbc_en_yuv, rfbc_en_raw;
 
 	if (not_support_rwfbc(dev))
 		return;
 
+	rfbc_en_raw = raw_readl_relaxed(dev, dev->base, REG_CAMCTL_RFBC_EN);
 	wfbc_en_raw = raw_readl_relaxed(dev, dev->base, REG_CAMCTL_WFBC_EN);
 	wfbc_en_yuv = raw_readl_relaxed(dev, dev->yuv_base, REG_CAMCTL_WFBC_EN);
+
+	raw_writel(rfbc_en_raw, dev, dev->base, REG_CAMCTL_RFBC_INC);
 	raw_writel(wfbc_en_raw, dev, dev->base, REG_CAMCTL_WFBC_INC);
 	raw_writel(wfbc_en_yuv, dev, dev->yuv_base, REG_CAMCTL_WFBC_INC);
 
