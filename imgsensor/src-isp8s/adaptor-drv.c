@@ -464,17 +464,21 @@ static int imgsensor_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 
 	adaptor_logm(ctx, "+\n");
 
-	mutex_lock(&ctx->mutex);
+	mutex_lock(&ctx->open_cnt_mutex);
 
 	ctx->open_refcnt++;
 
-	/* Initialize try_fmt */
-	try_fmt->width = ctx->cur_mode->width;
-	try_fmt->height = ctx->cur_mode->height;
-	try_fmt->code = ctx->fmt_code[ctx->cur_mode->id];
-	try_fmt->field = V4L2_FIELD_NONE;
+	if (ctx->open_refcnt == 1) {
+		mutex_lock(&ctx->mutex);
+		/* Initialize try_fmt */
+		try_fmt->width = ctx->cur_mode->width;
+		try_fmt->height = ctx->cur_mode->height;
+		try_fmt->code = ctx->fmt_code[ctx->cur_mode->id];
+		try_fmt->field = V4L2_FIELD_NONE;
+		mutex_unlock(&ctx->mutex);
+	}
 
-	mutex_unlock(&ctx->mutex);
+	mutex_unlock(&ctx->open_cnt_mutex);
 
 	adaptor_logm(ctx, "-\n");
 
@@ -488,16 +492,19 @@ static int imgsensor_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 
 	adaptor_logm(ctx, "+\n");
 
-	mutex_lock(&ctx->mutex);
+	mutex_lock(&ctx->open_cnt_mutex);
 
 	ctx->open_refcnt--;
 	if (ctx->open_refcnt <= 0) {
+		mutex_lock(&ctx->mutex);
 		for (i = 0; ctx->power_refcnt; i++)
 			adaptor_hw_power_off(ctx);
 		ctx->open_refcnt = 0;
+		mutex_unlock(&ctx->mutex);
 	}
 
-	mutex_unlock(&ctx->mutex);
+	mutex_unlock(&ctx->open_cnt_mutex);
+
 	adaptor_logm(ctx, "-\n");
 	return 0;
 }
@@ -1686,6 +1693,7 @@ static int imgsensor_probe(struct i3c_i2c_device *client)
 	adaptor_tsrec_cb_ctrl_init(ctx);
 
 	mutex_init(&ctx->mutex);
+	mutex_init(&ctx->open_cnt_mutex);
 	mutex_init(&ctx->ebd_lock);
 	mutex_init(&ctx->subctx.i2c_buffer_lock);
 	mutex_init(&ctx->broadcast_lock);

@@ -137,6 +137,7 @@ struct adaptor_work {
 
 struct adaptor_ctx {
 	struct mutex mutex;
+	struct mutex open_cnt_mutex;
 	struct i2c_client *i2c_client;
 	struct i3c_i2c_device ixc_client;
 	struct i3c_i2c_device i2c_vir_client;
