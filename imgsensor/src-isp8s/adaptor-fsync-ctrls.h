@@ -94,6 +94,9 @@ void notify_fsync_mgr_g_fl_record_info(struct adaptor_ctx *ctx,
 void notify_fsync_mgr_g_latest_anchor_info(struct adaptor_ctx *ctx,
 	long long *p_anchor_bias_ns);
 
+void notify_fsync_mgr_g_pred_info(struct adaptor_ctx *ctx,
+	struct mtk_fsync_predicted_info *p_pred_info);
+
 void notify_fsync_mgr_clear_fl_restore_info_if_needed(struct adaptor_ctx *ctx);
 
 

@@ -514,7 +514,7 @@ static int s_cmd_tsrec_notify_sensor_hw_pre_latch(
 	ts_info = (struct mtk_cam_seninf_tsrec_timestamp_info *)arg;
 	sys_ts = ktime_get_boottime_ns();
 
-	ADAPTOR_SYSTRACE_BEGIN(
+	ADAPTOR_TRACE_FORCE_BEGIN("adaptor::",
 		"imgsensor::V4L2_CMD_TSREC_NOTIFY_SENSOR_HW_PRE_LATCH, idx:%d, ts_info(tsrec_no:%u, seninf_idx:%u, tick_factor:%u, sys_ts:%llu(ns), tsrec_ts:%llu(us), tick:%llu, ts(0:(%llu/%llu/%llu/%llu), 1:(%llu/%llu/%llu/%llu), 2:(%llu/%llu/%llu/%llu)), curr_sys_ts:%llu(ns)",
 		ctx->idx,
 		ts_info->tsrec_no,
@@ -540,7 +540,7 @@ static int s_cmd_tsrec_notify_sensor_hw_pre_latch(
 	/* tsrec notify sensor hw pre-latch, call all APIs that needed this info */
 	notify_fsync_mgr_sensor_hw_pre_latch_by_tsrec(ctx, ts_info);
 
-	ADAPTOR_SYSTRACE_END();
+	ADAPTOR_TRACE_FORCE_END();
 
 	return ret;
 }
@@ -559,8 +559,9 @@ static int s_cmd_eint_notify_vsync(
 	ts_info = (struct mtk_cam_seninf_eint_timestamp_info *)arg;
 	sys_ts = ktime_get_boottime_ns();
 
-	adaptor_logd(ctx,
-		"eint_no:%u tsrec_idx:%u ts:%llu(%llu/%u) seq_no:%d (%llu %llu) [%llu %llu %llu %llu]",
+	/* adaptor_logd(ctx, */
+	ADAPTOR_TRACE_FORCE_BEGIN("adaptor::",
+		"imgsensor::V4L2_CMD_EINT_NOTIFY_VSYNC,eint_no:%u,tsrec_idx:%u,ts:%llu(%llu/%u),seq_no:%d,irq(sys:%llu|mono:%llu),ts:[%llu/%llu/%llu/%llu]",
 		ts_info->eint_no,
 		ts_info->tsrec_idx,
 		ts_info->tick / ts_info->tick_factor,
@@ -576,6 +577,8 @@ static int s_cmd_eint_notify_vsync(
 
 	/* notify framesync */
 	notify_fsync_mgr_vsync_by_eint(ctx, ts_info);
+
+	ADAPTOR_TRACE_FORCE_END();
 
 	return 0;
 }

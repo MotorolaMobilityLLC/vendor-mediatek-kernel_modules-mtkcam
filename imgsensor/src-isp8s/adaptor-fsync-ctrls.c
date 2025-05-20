@@ -1504,6 +1504,31 @@ void notify_fsync_mgr_g_latest_anchor_info(struct adaptor_ctx *ctx,
 }
 
 
+void notify_fsync_mgr_g_pred_info(struct adaptor_ctx *ctx,
+	struct mtk_fsync_predicted_info *p_pred_info)
+{
+	struct fs_pred_info_st info = {0};
+	unsigned int i;
+
+	/* not expected case */
+	if (unlikely(ctx->fsync_mgr == NULL)) {
+		FSYNC_MGR_LOGI(ctx,
+			"ERROR: sidx:%d, ctx->fsync_mgr:%p is NULL, return\n",
+			ctx->idx, ctx->fsync_mgr);
+		return;
+	}
+
+	ctx->fsync_mgr->fs_get_predicted_info(ctx->idx, &info);
+
+	/* manually copy result to user */
+	p_pred_info->req_id = info.req_id;
+	p_pred_info->curr_fl_us = info.curr_fl_us;
+	p_pred_info->arr_cnt = info.mode_exp_cnt;
+	for (i = 0; i < FS_HDR_MAX; ++i)
+		p_pred_info->curr_eof_offset_us[i] = info.curr_eof_offset_us[i];
+}
+
+
 void notify_fsync_mgr_clear_fl_restore_info_if_needed(struct adaptor_ctx *ctx)
 {
 	/* not expected case */

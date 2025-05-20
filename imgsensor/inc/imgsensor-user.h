@@ -547,6 +547,17 @@ struct mtk_fs_frame_length_info {
 	__u32 out_fl_us;
 };
 
+struct mtk_fsync_predicted_info {
+	/* for identifying sensor request/setting (info is from MW) */
+	__s32 req_id;
+
+	/* predict the current FL to the latest Vsync/SOF */
+	__u32 curr_fl_us;
+	/* predict the current EOF to the latest Vsync/SOF */
+	__u32 arr_cnt;
+	__u32 curr_eof_offset_us[IMGSENSOR_STAGGER_EXPOSURE_CNT];
+};
+
 struct mtk_test_pattern_data {
 	__u32 Channel_R;
 	__u32 Channel_Gr;
@@ -942,6 +953,9 @@ struct mtk_stagger_min_vb_by_scenario {
 
 #define VIDIOC_MTK_G_STAGGER_MIN_VB_BY_SCENARIO \
 	_IOWR('M', BASE_VIDIOC_PRIVATE + 58, struct mtk_stagger_min_vb_by_scenario)
+
+#define VIDIOC_MTK_G_FSYNC_PREDICTED_INFO \
+	_IOWR('M', BASE_VIDIOC_PRIVATE + 59, struct mtk_fsync_predicted_info)
 
 /* SET */
 

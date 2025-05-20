@@ -13,6 +13,8 @@
 #include "adaptor-sentest-ioctrl.h"
 #include "adaptor-subdrv.h"
 
+#define REDUCE_ADAPTOR_IOCTL_LOG
+
 #define GAIN_TBL_SIZE 32768
 #define sd_to_ctx(__sd) container_of(__sd, struct adaptor_ctx, sd)
 
@@ -1165,6 +1167,42 @@ static int g_fsync_frame_length_info(struct adaptor_ctx *ctx, void *arg)
 }
 
 
+static int g_fsync_predicted_info(struct adaptor_ctx *ctx, void *arg)
+{
+	struct mtk_fsync_predicted_info *p_pred_info = NULL;
+	int ret = 0;
+
+	if (unlikely(arg == NULL)) {
+		ret = -ENOIOCTLCMD;
+		adaptor_loge(ctx,
+			"VIDIOC_MTK_G_FSYNC_PREDICTED_INFO, get input pointer arg:%p, return\n",
+			arg);
+		return ret;
+	}
+
+	p_pred_info = arg;
+
+	notify_fsync_mgr_g_pred_info(ctx, p_pred_info);
+
+#ifndef REDUCE_ADAPTOR_IOCTL_LOG
+	adaptor_logi(ctx,
+		"VIDIOC_MTK_G_FSYNC_PREDICTED_INFO, idx:%u, req:%u/curr_fl_us:%u/eof:(%u)(%u/%u/%u/%u/%u), ret:%d\n",
+		ctx->idx,
+		p_pred_info->req_id,
+		p_pred_info->curr_fl_us,
+		p_pred_info->arr_cnt,
+		p_pred_info->curr_eof_offset_us[0],
+		p_pred_info->curr_eof_offset_us[1],
+		p_pred_info->curr_eof_offset_us[2],
+		p_pred_info->curr_eof_offset_us[3],
+		p_pred_info->curr_eof_offset_us[4],
+		ret);
+#endif
+
+	return ret;
+}
+
+
 static int s_video_framerate(struct adaptor_ctx *ctx, void *arg)
 {
 	u32 *info = arg;
@@ -1660,6 +1698,7 @@ static const struct ioctl_entry ioctl_list[] = {
 	{VIDIOC_MTK_G_EXPOSURE_MARGIN_IN_US_BY_SCENARIO, g_exposure_margin_in_us_by_scenario},
 	{VIDIOC_MTK_G_MULTI_EXP_STATIC_INFO_BY_SCENARIO, g_multi_exp_static_info_by_scenario},
 	{VIDIOC_MTK_G_STAGGER_MIN_VB_BY_SCENARIO, g_stagger_min_vb_by_scenario},
+	{VIDIOC_MTK_G_FSYNC_PREDICTED_INFO, g_fsync_predicted_info},
 	/* SET */
 	{VIDIOC_MTK_S_VIDEO_FRAMERATE, s_video_framerate},
 	{VIDIOC_MTK_S_MAX_FPS_BY_SCENARIO, s_max_fps_by_scenario},
