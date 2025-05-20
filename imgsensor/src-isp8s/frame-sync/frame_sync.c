@@ -337,7 +337,7 @@ static void fs_dump_status(const int idx, const int flag, const char *caller,
 #endif
 
 	LOG_MUST_LOCK("%s\n", log_buf);
-	FS_TRACE_PR_LOG_INF("%s", log_buf);
+	FS_TRACE_PR_LOG_MUST("%s", log_buf);
 
 	FS_FREE(log_buf);
 }
@@ -2692,10 +2692,13 @@ static void fs_streaming_setup_fs_streaming_st_data(const unsigned int idx,
 	int ret;
 
 	ret = fs_get_preset_perframe_data(idx, &p_preset_pf_ctrl);
-	if (ret)
+	if (ret) {
 		fs_alg_set_preset_perframe_streaming_st_data(idx,
 			sensor_info, p_preset_pf_ctrl);
-	else
+
+		/* read back needed info which got from preset perframe data flow */
+		sensor_info->readout_time_us = p_preset_pf_ctrl->readout_time_us;
+	} else
 		fs_alg_set_streaming_st_data(idx, sensor_info);
 
 	hw_fs_alg_set_streaming_st_data(idx, sensor_info);
@@ -3468,6 +3471,19 @@ void fs_get_latest_anchor_info(const unsigned int ident,
 }
 
 
+void fs_get_predicted_info(const unsigned int ident,
+	struct fs_pred_info_st *p_pred_info)
+{
+	unsigned int idx;
+
+	/* get registered idx and check if it is valid */
+	if (unlikely(fs_g_registered_idx_by_ident(ident, &idx, __func__)))
+		return;
+
+	frec_query_pred_info(idx, p_pred_info);
+}
+
+
 void fs_clear_fl_restore_status_if_needed(const unsigned int ident)
 {
 	unsigned int idx;
@@ -3894,6 +3910,7 @@ static struct FrameSync frameSync = {
 	fs_is_hw_sync,
 	fs_get_fl_record_info,
 	fs_get_latest_anchor_info,
+	fs_get_predicted_info,
 	fs_clear_fl_restore_status_if_needed,
 	fs_chk_bcast_for_re_ctrl_fl,
 	fs_is_ts_src_type_tsrec,

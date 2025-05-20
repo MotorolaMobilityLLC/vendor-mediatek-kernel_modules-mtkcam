@@ -343,6 +343,7 @@ struct fs_perframe_st ov64b_sensor_mode[] = {
 		.flicker_en = 0,
 		.margin_lc = 24,
 		.lineTimeInNs = 4584,
+		.readout_time_us = 23870,
 	},
 
 	{
@@ -364,6 +365,7 @@ struct fs_perframe_st ov64b_sensor_mode[] = {
 		.flicker_en = 0,
 		.margin_lc = 24,
 		.lineTimeInNs = 4584,
+		.readout_time_us = 23870,
 	},
 
 	{

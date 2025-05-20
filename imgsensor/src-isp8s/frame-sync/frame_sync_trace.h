@@ -55,6 +55,7 @@ enum fs_trace_category {
 	FS_TRACE_BEGIN(trace_cat, "%s", __func__)
 #define FS_TRACE_END()
 #define FS_TRACE_PR_LOG_INF(fmt, args...)
+#define FS_TRACE_PR_LOG_MUST(fmt, args...)
 
 #else /* => !FS_UT */
 #ifdef USING_ADAPTOR_TRACE
@@ -89,6 +90,13 @@ do { \
 			__adaptor_systrace("E|%d", task_tgid_nr(current)); \
 		} \
 	} \
+} while (0)
+
+#define FS_TRACE_PR_LOG_MUST(fmt, args...) \
+do { \
+	__adaptor_systrace( \
+		"B|%d|%s[%s]" fmt, task_tgid_nr(current), PFX, __func__, ##args); \
+	__adaptor_systrace("E|%d", task_tgid_nr(current)); \
 } while (0)
 
 #endif // USING_ADAPTOR_TRACE

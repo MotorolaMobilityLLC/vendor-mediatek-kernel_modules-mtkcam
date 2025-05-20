@@ -2736,6 +2736,7 @@ static int ut_fs_ctrl_request_setup_basic_pf_ctrl_data(
 
 static void ut_notify_vsync(void)
 {
+	struct fs_pred_info_st pred_info = {0};
 	int user_select_idx = 2147483647, /*input = 0,*/ ret = 0;
 	unsigned int i = 0;
 
@@ -2772,10 +2773,14 @@ static void ut_notify_vsync(void)
 		switch (REGISTER_METHOD) {
 		case BY_SENSOR_ID:
 			frameSync->fs_notify_vsync(pf_ctrl.sensor_id);
+			frameSync->fs_get_predicted_info(pf_ctrl.sensor_id,
+				&pred_info);
 			break;
 
 		case BY_SENSOR_IDX:
 			frameSync->fs_notify_vsync(pf_ctrl.sensor_idx);
+			frameSync->fs_get_predicted_info(pf_ctrl.sensor_idx,
+				&pred_info);
 			break;
 
 		default:
@@ -2783,6 +2788,18 @@ static void ut_notify_vsync(void)
 				"\n=== Run in defalut case, not assign register method ===\n");
 			break;
 		}
+
+		printf(GREEN
+			"[UT notify vsync] => pred_info:(req:%u/currFL:%u/eof(%u)(%u/%u/%u/%u/%u))\n"
+			NONE,
+			pred_info.req_id,
+			pred_info.curr_fl_us,
+			pred_info.mode_exp_cnt,
+			pred_info.curr_eof_offset_us[0],
+			pred_info.curr_eof_offset_us[1],
+			pred_info.curr_eof_offset_us[2],
+			pred_info.curr_eof_offset_us[3],
+			pred_info.curr_eof_offset_us[4]);
 
 		if (!g_auto_run)
 			printf("\n\n");

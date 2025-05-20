@@ -239,6 +239,7 @@ struct fs_streaming_st {
 	unsigned long long pclk;
 	unsigned int linelength;
 	unsigned int lineTimeInNs;
+	unsigned int readout_time_us;
 
 	/* callback function */
 	callback_func_set_fl_info func_ptr;
@@ -314,6 +315,16 @@ struct fs_fl_restore_info_st {
 	unsigned int restored_fl_lc;
 	/* ==> for LB-MF sensor */
 	unsigned int restored_fl_lc_arr[FS_HDR_MAX];
+};
+
+
+struct fs_pred_info_st {
+	int req_id;
+
+	unsigned int curr_fl_us;
+
+	unsigned int mode_exp_cnt;
+	unsigned int curr_eof_offset_us[FS_HDR_MAX];
 };
 /******************************************************************************/
 
@@ -455,6 +466,9 @@ struct FrameSync {
 
 	void (*fs_get_latest_anchor_info)(const unsigned int ident,
 		long long *p_anchor_bias_ns);
+
+	void (*fs_get_predicted_info)(const unsigned int ident,
+		struct fs_pred_info_st *p_pred_info);
 
 	void (*fs_clear_fl_restore_status_if_needed)(const unsigned int ident);
 

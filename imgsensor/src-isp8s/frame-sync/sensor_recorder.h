@@ -139,6 +139,7 @@ struct FrameRecord {
 	unsigned int min_vblank_lc;     /* for DOL */
 
 	unsigned int lineTimeInNs;      /* using it (some sensor has cust line time) */
+	unsigned int readout_time_us;
 
 	/* info for debug */
 	unsigned int mw_req_id;
@@ -222,6 +223,10 @@ void frec_g_valid_min_fl_arr_val_for_lut(const unsigned int idx,
 	const struct FrameRecord *curr_rec,
 	const unsigned int target_fl_lc,
 	unsigned int fl_lc_arr[], const unsigned int arr_len);
+
+
+void frec_query_pred_info(const unsigned int idx,
+	struct fs_pred_info_st *p_pred_info);
 /*----------------------------------------------------------------------------*/
 
 

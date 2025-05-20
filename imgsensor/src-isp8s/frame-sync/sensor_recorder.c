@@ -105,11 +105,16 @@ struct FrameRecorder {
 	unsigned int curr_predicted_fl_us;
 	unsigned int prev_predicted_fl_lc;
 	unsigned int prev_predicted_fl_us;
-	/* predict read offset of each shutters */
+	/* predict read offset for each shutter */
 	unsigned int next_predicted_rd_offset_lc[FS_HDR_MAX];
 	unsigned int next_predicted_rd_offset_us[FS_HDR_MAX];
 	unsigned int curr_predicted_rd_offset_lc[FS_HDR_MAX];
 	unsigned int curr_predicted_rd_offset_us[FS_HDR_MAX];
+	/* predict EOF offset (in sensor HW order) for each shutter */
+	unsigned int next_predicted_eof_offset_us[FS_HDR_MAX];
+	unsigned int curr_predicted_eof_offset_us[FS_HDR_MAX];
+	/* for identifying which settings have been latched */
+	unsigned int mw_req_id_latched;
 
 
 	/* timestamp info */
@@ -558,7 +563,7 @@ void frec_dump_predicted_fl_info_st(const unsigned int idx,
 		fl_info->curr_exp_rd_offset_us[4],
 		fl_info->curr_exp_rd_offset_lc[4],
 		fl_info->next_exp_rd_offset_us[0],
-		fl_info->next_exp_rd_offset_lc[1],
+		fl_info->next_exp_rd_offset_lc[0],
 		fl_info->next_exp_rd_offset_us[1],
 		fl_info->next_exp_rd_offset_lc[1],
 		fl_info->next_exp_rd_offset_us[2],
@@ -574,7 +579,7 @@ void frec_dump_frame_record_info(const struct FrameRecord *p_frame_rec,
 	const char *caller)
 {
 	LOG_MUST(
-		"[%s]: req_id:%d, (exp_lc:%u/fl_lc:%u), (a:%u/m:%u(%u/%u,%u), exp:%u/%u/%u/%u/%u, fl:%u/%u/%u/%u/%u), margin_lc:(%u, read:%u), readout_len_lc:%u, min_vblank_lc:%u, line_time:%u\n",
+		"[%s]: req_id:%d, (exp_lc:%u/fl_lc:%u), (a:%u/m:%u(%u/%u,%u), exp:%u/%u/%u/%u/%u, fl:%u/%u/%u/%u/%u), margin_lc:(%u, read:%u), readout_len_lc:%u, min_vblank_lc:%u, line_time:%u, routT(us):%u\n",
 		caller,
 		p_frame_rec->mw_req_id,
 		p_frame_rec->shutter_lc,
@@ -598,7 +603,8 @@ void frec_dump_frame_record_info(const struct FrameRecord *p_frame_rec,
 		p_frame_rec->read_margin_lc,
 		p_frame_rec->readout_len_lc,
 		p_frame_rec->min_vblank_lc,
-		p_frame_rec->lineTimeInNs);
+		p_frame_rec->lineTimeInNs,
+		p_frame_rec->readout_time_us);
 }
 
 
@@ -626,7 +632,7 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 	}
 
 	FS_SNPRF(log_str_len, log_buf, len,
-		"[%s]:[%u][sidx:%u] fdelay:%u/defFL:%u/lineT:%u/mar(%u,r:%u)/roL:%u/minVB:%u, ",
+		"[%s]:[%u][sidx:%u] fdelay:%u/defFL:%u/lineT:%u/mar(%u,r:%u)/roL:%u/minVB:%u,",
 		caller,
 		idx,
 		fs_get_reg_sensor_idx(idx),
@@ -647,7 +653,7 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 		const unsigned int idx = RING_BACK(depth_idx, i);
 
 		FS_SNPRF(log_str_len, log_buf, len,
-			", ([%u](%llu/req:%d):(%u/%u),(a:%u/m:%u(t:%u/%u,o:%u),%u/%u/%u/%u/%u",
+			",([%u](%llu/req:%d):(%u/%u),(a:%u/m:%u(t:%u/%u,o:%u),%u/%u/%u/%u/%u",
 			idx,
 			pfrec->sys_ts_recs[idx]/1000,
 			pfrec->frame_recs[idx].mw_req_id,
@@ -678,7 +684,8 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 	}
 
 	FS_SNPRF(log_str_len, log_buf, len,
-		", r_offset(%u(%u)/%u(%u)/%u(%u)/%u(%u)/%u(%u))",
+		",ofs(r:%u)(R:(%u(%u)/%u(%u)/%u(%u)/%u(%u)/%u(%u))",
+		pfrec->mw_req_id_latched,
 		pfrec->curr_predicted_rd_offset_us[0],
 		pfrec->curr_predicted_rd_offset_lc[0],
 		pfrec->curr_predicted_rd_offset_us[1],
@@ -691,7 +698,15 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 		pfrec->curr_predicted_rd_offset_lc[4]);
 
 	FS_SNPRF(log_str_len, log_buf, len,
-		", pr(p(%u(%u)/act:%u)/c(%u(%u))",
+		"|E:(%u/%u/%u/%u/%u))",
+		pfrec->curr_predicted_eof_offset_us[0],
+		pfrec->curr_predicted_eof_offset_us[1],
+		pfrec->curr_predicted_eof_offset_us[2],
+		pfrec->curr_predicted_eof_offset_us[3],
+		pfrec->curr_predicted_eof_offset_us[4]);
+
+	FS_SNPRF(log_str_len, log_buf, len,
+		",pr(p(%u(%u)/act:%u)/c(%u(%u))",
 		pfrec->prev_predicted_fl_us,
 		pfrec->prev_predicted_fl_lc,
 		pfrec->act_fl_us,
@@ -717,9 +732,9 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 		/* e.g., MAIN source is TSREC but flow is triggered by EINT */
 		FS_SNPRF(log_str_len, log_buf, len,
 #ifdef TS_TICK_64_BITS
-			", ts_eint(%u/%u/%u,%llu/%llu/%llu/%llu)",
+			",ts_eint(%u/%u/%u,%llu/%llu/%llu/%llu)",
 #else
-			", ts_eint(%u/%u/%u,%u/%u/%u/%u)",
+			",ts_eint(%u/%u/%u,%u/%u/%u/%u)",
 #endif
 			act_fl_arr[0],
 			act_fl_arr[1],
@@ -735,9 +750,9 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 		/* e.g., using CCU */
 		FS_SNPRF(log_str_len, log_buf, len,
 #ifdef TS_TICK_64_BITS
-			", ts(%u/%u/%u,%llu/%llu/%llu/%llu)",
+			",ts(%u/%u/%u,%llu/%llu/%llu/%llu)",
 #else
-			", ts(%u/%u/%u,%u/%u/%u/%u)",
+			",ts(%u/%u/%u,%u/%u/%u/%u)",
 #endif
 			act_fl_arr[0],
 			act_fl_arr[1],
@@ -749,7 +764,7 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 	} else {
 		/* e.g., using TSREC */
 		FS_SNPRF(log_str_len, log_buf, len,
-			", ts(%u/%u/%u)",
+			",ts(%u/%u/%u)",
 			act_fl_arr[0],
 			act_fl_arr[1],
 			act_fl_arr[2]);
@@ -759,7 +774,7 @@ void frec_dump_recorder(const unsigned int idx, const char *caller)
 	}
 
 	LOG_MUST_LOCK("%s\n", log_buf);
-	FS_TRACE_PR_LOG_INF("%s", log_buf);
+	FS_TRACE_PR_LOG_MUST("%s", log_buf);
 
 	FS_FREE(log_buf);
 }
@@ -794,6 +809,7 @@ void frec_setup_frame_rec_by_fs_streaming_st(struct FrameRecord *p_frame_rec,
 	p_frame_rec->min_vblank_lc = sensor_info->hdr_exp.min_vblank_lc;
 
 	p_frame_rec->lineTimeInNs = sensor_info->lineTimeInNs;
+	p_frame_rec->readout_time_us = sensor_info->readout_time_us;
 
 	// p_frame_rec->mw_req_id = // NOT has this info now.
 
@@ -826,6 +842,7 @@ void frec_setup_frame_rec_by_fs_perframe_st(struct FrameRecord *p_frame_rec,
 	p_frame_rec->min_vblank_lc = pf_ctrl->hdr_exp.min_vblank_lc;
 
 	p_frame_rec->lineTimeInNs = pf_ctrl->lineTimeInNs;
+	p_frame_rec->readout_time_us = pf_ctrl->readout_time_us;
 
 	p_frame_rec->mw_req_id = pf_ctrl->req_id;
 
@@ -847,6 +864,39 @@ void frec_setup_seamless_rec_by_fs_seamless_st(
 		&p_seamless_rec->frame_rec, &p_seamless_info->seamless_pf_ctrl);
 
 	// frec_dump_frame_record_info(&p_seamless_rec->frame_rec, __func__);
+}
+
+
+void frec_query_pred_info(const unsigned int idx,
+	struct fs_pred_info_st *p_pred_info)
+{
+	struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
+	unsigned int i, arr_exp_cnt = 0;
+
+	/* error handle */
+	if (unlikely(pfrec == NULL))
+		return;
+	if (unlikely(p_pred_info == NULL)) {
+		LOG_MUST(
+			"ERROR: [%u][sidx:%u] p_pred_info from user is nullptr, return\n",
+			idx, fs_get_reg_sensor_idx(idx));
+		return;
+	}
+
+	frec_mutex_lock(&pfrec->frame_recs_update_lock);
+
+	p_pred_info->req_id = pfrec->mw_req_id_latched;
+	p_pred_info->curr_fl_us = pfrec->curr_predicted_fl_us;
+	for (i = 0; i < FS_HDR_MAX; ++i) {
+		p_pred_info->curr_eof_offset_us[i] =
+			pfrec->curr_predicted_eof_offset_us[i];
+
+		if (p_pred_info->curr_eof_offset_us[i] != 0)
+			arr_exp_cnt++;
+	}
+	p_pred_info->mode_exp_cnt = arr_exp_cnt;
+
+	frec_mutex_unlock(&pfrec->frame_recs_update_lock);
 }
 
 
@@ -1941,6 +1991,55 @@ static unsigned int frec_calc_stg_valid_min_fl_lc_for_shutters(
 /*----------------------------------------------------------------------------*/
 
 
+static void refresh_next_predict_eof_offset(const unsigned int idx,
+	struct FrameRecorder *pfrec,
+	const struct FrameRecord *p_frame_rec)
+{
+	const unsigned int m_exp_cnt = p_frame_rec->mode_exp_cnt;
+	const unsigned int m_exp_order = p_frame_rec->exp_order;
+	unsigned int i;
+
+	memset(pfrec->next_predicted_eof_offset_us, 0,
+		sizeof(unsigned int) * FS_HDR_MAX);
+
+	for (i = 0; (i < m_exp_cnt && i < FS_HDR_MAX); ++i) {
+		const int exp_idx = g_exp_order_idx_mapping(
+			idx, m_exp_order, m_exp_cnt, i, __func__);
+		unsigned int rout_us = 0;
+
+		if (unlikely(exp_idx < 0))
+			break;
+
+		switch (p_frame_rec->m_exp_type) {
+		case MULTI_EXP_TYPE_DCG_VSL:
+		{
+			const unsigned int lut_idx =
+				g_lut_id_by_cascade_ref_idx(i, m_exp_cnt);
+			struct frec_sen_mode_info_st mode_info = {0};
+			unsigned int lineTimeInNs;
+
+			g_sen_mode_info(idx, &mode_info);
+			lineTimeInNs =
+				mode_info.cas_mode_info.lineTimeInNs[lut_idx];
+
+			rout_us = convert2TotalTime(
+				lineTimeInNs,
+				p_frame_rec->readout_len_lc);
+		}
+			break;
+		case MULTI_EXP_TYPE_LBMF:
+		case MULTI_EXP_TYPE_STG:
+		default:
+			rout_us = p_frame_rec->readout_time_us;
+			break;
+		}
+
+		pfrec->next_predicted_eof_offset_us[i] =
+			pfrec->next_predicted_rd_offset_us[exp_idx] + rout_us;
+	}
+}
+
+
 static unsigned int frec_calc_valid_min_fl_lc_for_shutters(
 	const unsigned int idx, const unsigned int fdelay,
 	const struct FrameRecord *curr_rec, const struct FrameRecord *prev_rec,
@@ -2093,18 +2192,21 @@ void frec_get_predicted_frame_length_info(const unsigned int idx,
 	}
 
 	/* !!! copy already calculated info !!! */
-	/* copy current predicted frame length info */
+	/* => copy current predicted frame length info */
 	fl_info->pr_curr_fl_lc = pfrec->curr_predicted_fl_lc;
 	fl_info->pr_curr_fl_us = pfrec->curr_predicted_fl_us;
 
-	/* copy current read offset info and calculate next read offset info */
+	/* => copy current read offset info and calculate next read offset info */
+	memcpy(fl_info->curr_exp_rd_offset_lc,
+		pfrec->curr_predicted_rd_offset_lc,
+		sizeof(unsigned int) * FS_HDR_MAX);
 	memcpy(fl_info->curr_exp_rd_offset_us,
 		pfrec->curr_predicted_rd_offset_us,
 		sizeof(unsigned int) * FS_HDR_MAX);
 
 
-	/* !!! calculate new info by current sensor frame record !!! */
-	/* calculate next predicted frame length info */
+	/* !!! calculate & copy new info by current sensor frame record !!! */
+	/* => calc. & copy next predicted frame length info */
 	fl_info->pr_next_fl_lc =
 		frec_predict_fl_lc_by_curr_rec(
 			idx, curr_rec, PREDICT_NEXT_FL);
@@ -2113,7 +2215,7 @@ void frec_get_predicted_frame_length_info(const unsigned int idx,
 			curr_rec->lineTimeInNs,
 			fl_info->pr_next_fl_lc);
 
-	/* calculate stable predicted frame length info */
+	/* => calc. & copy stable predicted frame length info */
 	fl_info->pr_stable_fl_lc = frec_predict_fl_lc_by_curr_rec(
 		idx, curr_rec, PREDICT_STABLE_FL);
 	fl_info->pr_stable_fl_us =
@@ -2121,7 +2223,7 @@ void frec_get_predicted_frame_length_info(const unsigned int idx,
 			curr_rec->lineTimeInNs,
 			fl_info->pr_stable_fl_lc);
 
-	/* calculate next read offset info */
+	/* => calc. & copy next read offset info */
 	frec_predict_shutters_read_offset_by_curr_rec(idx, curr_rec,
 		fl_info->next_exp_rd_offset_lc,
 		fl_info->next_exp_rd_offset_us);
@@ -2375,7 +2477,7 @@ static unsigned int frec_calc_seamless_frame_length(const unsigned int idx,
 		p_seamless_rec->frame_rec.exp_lc_arr[3],
 		p_seamless_rec->frame_rec.exp_lc_arr[4]);
 	LOG_MUST("%s\n", log_buf);
-	FS_TRACE_PR_LOG_INF("%s", log_buf);
+	FS_TRACE_PR_LOG_MUST("%s", log_buf);
 
 	FS_FREE(log_buf);
 
@@ -2425,16 +2527,26 @@ void frec_chk_fl_pr_match_act(const unsigned int idx)
 	unsigned int diff;
 
 	/* error handle */
-	if (unlikely((pfrec == NULL) || (pfrec->act_fl_us == 0)))
+	if (unlikely(pfrec == NULL))
 		return;
 
 	diff = (pfrec->prev_predicted_fl_us > pfrec->act_fl_us)
 		? (pfrec->prev_predicted_fl_us - pfrec->act_fl_us)
 		: (pfrec->act_fl_us - pfrec->prev_predicted_fl_us);
 
-	if (unlikely(diff > diff_th)) {
-		LOG_MUST_LOCK(
-			"WARNING: [%u] ID:%#x(sidx:%u/inf:%u), frame length (fdelay:%u): pr(p)(%u(%u)/act:%u) seems not match, plz check manually\n",
+	if (unlikely((pfrec->act_fl_us != 0) && (diff > diff_th))) {
+		const unsigned int log_str_len = LOG_BUF_STR_LEN;
+		char *log_buf = NULL;
+		int len = 0, ret;
+
+		ret = alloc_log_buf(log_str_len, &log_buf);
+		if (unlikely(ret != 0)) {
+			LOG_MUST("ERROR: log_buf allocate memory failed\n");
+			return;
+		}
+
+		FS_SNPRF(log_str_len, log_buf, len,
+			"WARNING: [%u] ID:%#x(sidx:%u/inf:%u), frame length (fdelay:%u): pr(p)(%u(%u)/act:%u) seems not match, diff:%u(%u), plz check manually\n",
 			idx,
 			fs_get_reg_sensor_id(idx),
 			fs_get_reg_sensor_idx(idx),
@@ -2442,7 +2554,14 @@ void frec_chk_fl_pr_match_act(const unsigned int idx)
 			pfrec->fl_act_delay,
 			pfrec->prev_predicted_fl_us,
 			pfrec->prev_predicted_fl_lc,
-			pfrec->act_fl_us);
+			pfrec->act_fl_us,
+			diff,
+			diff_th);
+
+		LOG_MUST_LOCK("%s\n", log_buf);
+		FS_TRACE_PR_LOG_MUST("%s", log_buf);
+
+		FS_FREE(log_buf);
 
 		frec_dump_recorder(idx, __func__);
 	} else {
@@ -2541,6 +2660,15 @@ static void frec_init_recorder_fl_related_info(const unsigned int idx,
 	memcpy(pfrec->curr_predicted_rd_offset_us,
 		pfrec->next_predicted_rd_offset_us,
 		sizeof(unsigned int) * (FS_HDR_MAX));
+
+	/* init predict EOF offset */
+	refresh_next_predict_eof_offset(idx, pfrec, curr_rec);
+	memcpy(pfrec->curr_predicted_eof_offset_us,
+		pfrec->next_predicted_eof_offset_us,
+		sizeof(unsigned int) * (FS_HDR_MAX));
+
+	/* init debugging info for identifying settings */
+	pfrec->mw_req_id_latched = p_frame_rec->mw_req_id;
 }
 
 
@@ -2576,28 +2704,25 @@ static void frec_init_recorder_seamless_fl_related_info(const unsigned int idx,
 	memcpy(pfrec->next_predicted_rd_offset_us,
 		&fl_info.next_exp_rd_offset_us,
 		sizeof(unsigned int) * (FS_HDR_MAX));
+
+	/* refresh next predict EOF offset */
+	refresh_next_predict_eof_offset(idx, pfrec, p_frame_rec);
 }
 
 
-static void frec_notify_pre_latch_setup_fl_related_info(const unsigned int idx)
+static inline void frec_refresh_predicted_info(const unsigned int idx,
+	struct FrameRecorder *pfrec,
+	const struct predicted_fl_info_st *p_fl_info,
+	const struct FrameRecord *p_frame_rec)
 {
-	struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
-	struct FrameRecord *curr_rec = NULL;
-	struct predicted_fl_info_st fl_info = {0};
-	unsigned int curr_idx;
-
-	/* error handle */
-	if (unlikely(pfrec == NULL))
-		return;
-
-	curr_idx = FS_ATOMIC_READ(&pfrec->depth_idx);
-	curr_rec = &pfrec->frame_recs[curr_idx];
-
-	/* copy latest curr predicted fl to prev */
+	/* refresh predicted FL */
 	pfrec->prev_predicted_fl_lc = pfrec->curr_predicted_fl_lc;
 	pfrec->prev_predicted_fl_us = pfrec->curr_predicted_fl_us;
 
-	/* copy read offset info of next to current */
+	pfrec->curr_predicted_fl_lc = p_fl_info->pr_next_fl_lc;
+	pfrec->curr_predicted_fl_us = p_fl_info->pr_next_fl_us;
+
+	/* refresh read offset info */
 	memcpy(pfrec->curr_predicted_rd_offset_lc,
 		pfrec->next_predicted_rd_offset_lc,
 		sizeof(unsigned int) * (FS_HDR_MAX));
@@ -2605,21 +2730,21 @@ static void frec_notify_pre_latch_setup_fl_related_info(const unsigned int idx)
 		pfrec->next_predicted_rd_offset_us,
 		sizeof(unsigned int) * (FS_HDR_MAX));
 
-	/* trigger calculate newest predicted fl info */
-	frec_get_predicted_frame_length_info(
-		idx, curr_rec, &fl_info, __func__);
-
-	/* copy result of newest curr predicted fl */
-	pfrec->curr_predicted_fl_lc = fl_info.pr_next_fl_lc;
-	pfrec->curr_predicted_fl_us = fl_info.pr_next_fl_us;
-
-	/* copy result of newest next read offset info */
 	memcpy(pfrec->next_predicted_rd_offset_lc,
-		&fl_info.next_exp_rd_offset_lc,
+		&p_fl_info->next_exp_rd_offset_lc,
 		sizeof(unsigned int) * (FS_HDR_MAX));
 	memcpy(pfrec->next_predicted_rd_offset_us,
-		&fl_info.next_exp_rd_offset_us,
+		&p_fl_info->next_exp_rd_offset_us,
 		sizeof(unsigned int) * (FS_HDR_MAX));
+
+	/* refresh predict EOF offset (curr. part will be updated) */
+	memcpy(pfrec->curr_predicted_eof_offset_us,
+		pfrec->next_predicted_eof_offset_us,
+		sizeof(unsigned int) * (FS_HDR_MAX));
+	refresh_next_predict_eof_offset(idx, pfrec, p_frame_rec);
+
+	/* refresh debugging info for identifying settings */
+	pfrec->mw_req_id_latched = p_frame_rec->mw_req_id;
 }
 
 
@@ -2697,6 +2822,8 @@ void frec_update_record(const unsigned int idx,
 void frec_push_record(const unsigned int idx)
 {
 	struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
+	struct FrameRecord *curr_rec = NULL;
+	struct predicted_fl_info_st fl_info = {0};
 	unsigned long long sys_ts = 0;
 	unsigned int curr_depth_idx, next_depth_idx;
 
@@ -2714,46 +2841,31 @@ void frec_push_record(const unsigned int idx)
 
 	frec_mutex_lock(&pfrec->frame_recs_update_lock);
 
-#ifndef FS_UT
+	/* !!! prepare information !!! */
 	sys_ts = ktime_get_boottime_ns();
-#endif
 	curr_depth_idx = FS_ATOMIC_READ(&pfrec->depth_idx);
-	next_depth_idx = RING_FORWARD(curr_depth_idx, 1);
+	curr_rec = &pfrec->frame_recs[curr_depth_idx];
 
-	/* depth idx ring forward */
+	/* !!! first, calc. then update predicted FL related info !!! */
+	/* => trigger calculate newest predicted fl info */
+	frec_get_predicted_frame_length_info(
+		idx, curr_rec, &fl_info, __func__);
+	frec_refresh_predicted_info(idx, pfrec, &fl_info, curr_rec);
+
+	/* !!! ring forward(update) the recorder !!! */
+	/* => depth idx ring forward */
+	next_depth_idx = RING_FORWARD(curr_depth_idx, 1);
 	FS_ATOMIC_SET(next_depth_idx, &pfrec->depth_idx);
 
-	/* copy latest sensor record to newest depth idx */
+	/* => copy latest sensor record to newest depth idx */
 	memcpy(&pfrec->frame_recs[next_depth_idx],
 		&pfrec->frame_recs[curr_depth_idx],
 		sizeof(pfrec->frame_recs[next_depth_idx]));
 
-	/* update system timestamp for debugging */
+	/* !!! update system timestamp for debugging !!! */
 	pfrec->sys_ts_recs[next_depth_idx] = sys_ts;
 
-#if defined(TRACE_FS_FREC_LOG)
-	LOG_MUST(
-		"[%u] ID:%#x(sidx:%u/inf:%u) => curr/latest at recs[%u]=(%u/%u), sys_ts:%llu, recs:(depth_idx:%u(new), (0:%u/%u), (1:%u/%u), (2:%u/%u), (3:%u/%u) (fl_lc/shut_lc))\n",
-		idx,
-		fs_get_reg_sensor_id(idx),
-		fs_get_reg_sensor_idx(idx),
-		fs_get_reg_sensor_inf_idx(idx),
-		curr_depth_idx,
-		pfrec->frame_recs[curr_depth_idx].framelength_lc,
-		pfrec->frame_recs[curr_depth_idx].shutter_lc,
-		sys_ts,
-		next_depth_idx,
-		pfrec->frame_recs[0].framelength_lc,
-		pfrec->frame_recs[0].shutter_lc,
-		pfrec->frame_recs[1].framelength_lc,
-		pfrec->frame_recs[1].shutter_lc,
-		pfrec->frame_recs[2].framelength_lc,
-		pfrec->frame_recs[2].shutter_lc,
-		pfrec->frame_recs[3].framelength_lc,
-		pfrec->frame_recs[3].shutter_lc);
-#endif
-
-	/* set the results to fs algo and frame monitor */
+	/* !!! set the results to fs algo and frame monitor !!! */
 	frec_notify_setting_frame_record_st_data(idx);
 
 	frec_mutex_unlock(&pfrec->frame_recs_update_lock);
@@ -2903,19 +3015,7 @@ void frec_seamless_switch(const unsigned int idx,
 // void frec_notify_sensor_pre_latch(const unsigned int idx)
 void frec_notify_vsync(const unsigned int idx)
 {
-	const struct FrameRecorder *pfrec = frec_g_recorder_ctx(idx, __func__);
-
-	/* error handle */
-	if (unlikely(pfrec == NULL))
-		return;
-
-	/* !!! do each thing that needed at sensor pre latch timing !!! */
-
-	/* first, calculate newest next predict frame length */
-	/* and update to current predicted frame length */
-	frec_notify_pre_latch_setup_fl_related_info(idx);
-
-	/* then, update/push newest sensor frame record */
+	/* !!! do each thing that needed at the timing sensor HW pre-latch !!! */
 	frec_push_record(idx);
 }
 

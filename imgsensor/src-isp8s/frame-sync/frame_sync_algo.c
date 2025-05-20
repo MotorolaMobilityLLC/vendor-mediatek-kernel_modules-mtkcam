@@ -1632,7 +1632,7 @@ void fs_alg_sa_dump_dynamic_para(const unsigned int idx)
 		log_str_len, log_buf, len, __func__);
 
 	LOG_MUST_LOCK("%s\n", log_buf);
-	FS_TRACE_PR_LOG_INF("%s", log_buf);
+	FS_TRACE_PR_LOG_MUST("%s", log_buf);
 
 	FS_FREE(log_buf);
 }
@@ -3355,7 +3355,7 @@ static long long fs_alg_sa_adjust_slave_diff_resolver(
 		log_str_len, log_buf, len, __func__);
 
 	LOG_MUST_LOCK("%s\n", log_buf);
-	FS_TRACE_PR_LOG_INF("%s", log_buf);
+	FS_TRACE_PR_LOG_MUST("%s", log_buf);
 
 	FS_FREE(log_buf);
 
@@ -4259,7 +4259,7 @@ static unsigned int do_fps_sync_sa_proc_checker(const unsigned int idx,
 			log_str_len, log_buf, len, __func__);
 
 		LOG_MUST_LOCK("%s\n", log_buf);
-		FS_TRACE_PR_LOG_INF("%s", log_buf);
+		FS_TRACE_PR_LOG_MUST("%s", log_buf);
 		FS_FREE(log_buf);
 	}
 end_do_fps_sync_sa:
@@ -4527,7 +4527,7 @@ static unsigned int do_fps_sync_sa_v2(const struct fs_sa_cfg *p_sa_cfg,
 			log_str_len, log_buf, len, __func__);
 
 		LOG_MUST_LOCK("%s\n", log_buf);
-		FS_TRACE_PR_LOG_INF("%s", log_buf);
+		FS_TRACE_PR_LOG_MUST("%s", log_buf);
 		FS_FREE(log_buf);
 	}
 
@@ -4785,7 +4785,7 @@ static unsigned int fps_sync_sa_handler_v2(const struct fs_sa_cfg *p_sa_cfg,
 		log_str_len, log_buf, len, __func__);
 
 	LOG_MUST_LOCK("%s\n", log_buf);
-	FS_TRACE_PR_LOG_INF("%s", log_buf);
+	FS_TRACE_PR_LOG_MUST("%s", log_buf);
 	FS_FREE(log_buf);
 
 end_adjust_vsync_diff_sa_v2:
@@ -4971,7 +4971,7 @@ end_adjust_vsync_diff_sa_v2:
 		log_str_len, log_buf, len, __func__);
 
 	LOG_MUST_LOCK("%s\n", log_buf);
-	FS_TRACE_PR_LOG_INF("%s", log_buf);
+	FS_TRACE_PR_LOG_MUST("%s", log_buf);
 	FS_FREE(log_buf);
 
 end_adjust_vsync_diff_sa_holder:
@@ -5103,7 +5103,7 @@ static unsigned int adjust_async_vsync_diff_sa(
 		log_str_len, log_buf, len, __func__);
 
 	LOG_MUST_LOCK("%s\n", log_buf);
-	FS_TRACE_PR_LOG_INF("%s", log_buf);
+	FS_TRACE_PR_LOG_MUST("%s", log_buf);
 
 	FS_FREE(log_buf);
 
