@@ -186,7 +186,7 @@ int mtk_cam_ctrl_dump_request(struct mtk_cam_device *cam,
 			      int inner_cookie, const char *desc);
 int mtk_cam_ctrl_notify_hw_hang(struct mtk_cam_device *cam,
 				int engine_type, unsigned int engine_id,
-				int inner_cookie);
+				int inner_cookie, int count_down_dis);
 int mtk_cam_ctrl_ae_workaround(struct mtk_cam_device *cam,
 			      int engine_type, unsigned int engine_id,
 			      unsigned int inner_cookie);

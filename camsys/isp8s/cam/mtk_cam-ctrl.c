@@ -3355,7 +3355,7 @@ SKIP_SCHEDULE_WORK:
 
 int mtk_cam_ctrl_notify_hw_hang(struct mtk_cam_device *cam,
 				int engine_type, unsigned int engine_id,
-				int inner_cookie)
+				int inner_cookie, int count_down_dis)
 {
 	unsigned int ctx_id = ctx_from_fh_cookie(inner_cookie);
 	struct mtk_cam_ctrl *ctrl = &cam->ctxs[ctx_id].cam_ctrl;
@@ -3371,10 +3371,10 @@ int mtk_cam_ctrl_notify_hw_hang(struct mtk_cam_device *cam,
 
 	if (is_dc_mode(current_job) && !atomic_cmpxchg(&ctrl->is_error, 0, 1)) {
 		next_job = mtk_cam_ctrl_get_job(ctrl, cond_frame_no_belong, &next_seq_no);
-		if (next_job && next_job->seamless_switch) {
+		if (next_job && (next_job->seamless_switch || count_down_dis)) {
 			ctrl->hw_hang_count_down = 0;
 			current_job->is_error = 1;
-
+			atomic_set(&ctrl->is_error, 0);
 			mtk_cam_ctrl_send_event(ctrl, CAMSYS_EVENT_HW_HANG);
 		} else {
 			/*

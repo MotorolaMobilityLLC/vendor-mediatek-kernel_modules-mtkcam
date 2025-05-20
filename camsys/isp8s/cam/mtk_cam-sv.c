@@ -3313,8 +3313,13 @@ void camsv_handle_err(
 		}
 
 		mtk_cam_ctrl_notify_hw_hang(sv_dev->cam,
-			CAMSYS_ENGINE_CAMSV, sv_dev->id, frame_idx_inner);
+			CAMSYS_ENGINE_CAMSV, sv_dev->id, frame_idx_inner, 0);
 	}
+
+	/* recover incomplete frame */
+	if (atomic_read(&sv_dev->is_fifo_full) == 0 && sv_dev->camsv_error_count == 1)
+		mtk_cam_ctrl_notify_hw_hang(sv_dev->cam,
+			CAMSYS_ENGINE_CAMSV, sv_dev->id, frame_idx_inner, 1);
 }
 
 bool is_all_tag_setting_to_inner(struct mtk_camsv_device *sv_dev,
