@@ -479,29 +479,29 @@ void gce_sub_dip_cine(struct cmdq_pkt *pkt, dma_addr_t work_buf_pa)
 static bool rtff_init(u32 mod)
 {
 	//Main
-	write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x118, BIT(1)|BIT(2), 0xffffffff);
+	write_mask(g_maped_rg[MAPED_RG_RTFF_MAIN_BASE], BIT(1)|BIT(2), 0xffffffff);
 	switch(mod) {
 	case QOF_SUPPORT_DIP:
 		//DIP
-		write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x110, BIT(1)|BIT(2), 0xffffffff);
+		write_mask(g_maped_rg[MAPED_RG_RTFF_DIP_BASE], BIT(1)|BIT(2), 0xffffffff);
 		//DIP_CINE
-		write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x114, BIT(1)|BIT(2), 0xffffffff);
+		write_mask(g_maped_rg[MAPED_RG_RTFF_DIP_CINE_BASE], BIT(1)|BIT(2), 0xffffffff);
 		break;
 	case QOF_SUPPORT_TRAW:
 		//TRAW
-		write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x11C, BIT(1)|BIT(2), 0xffffffff);
+		write_mask(g_maped_rg[MAPED_RG_RTFF_TRAW_BASE], BIT(1)|BIT(2), 0xffffffff);
 		break;
 	case QOF_SUPPORT_WPE_EIS:
 		//WPE0
-		write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x120, BIT(1)|BIT(2), 0xffffffff);
+		write_mask(g_maped_rg[MAPED_RG_RTFF_WPE_EIS_BASE], BIT(1)|BIT(2), 0xffffffff);
 		break;
 	case QOF_SUPPORT_WPE_TNR:
 		//WPE1
-		write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x124, BIT(1)|BIT(2), 0xffffffff);
+		write_mask(g_maped_rg[MAPED_RG_RTFF_WPE_TNR_BASE], BIT(1)|BIT(2), 0xffffffff);
 		break;
 	case QOF_SUPPORT_WPE_LITE:
 		//WPE2
-		write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x128, BIT(1)|BIT(2), 0xffffffff);
+		write_mask(g_maped_rg[MAPED_RG_RTFF_WPE_LITE_BASE], BIT(1)|BIT(2), 0xffffffff);
 		break;
 	default:
 		QOF_LOGE("module not match\n");
@@ -513,29 +513,29 @@ static bool rtff_init(u32 mod)
 static bool rtff_uninit(u32 mod)
 {
 	//Main
-	write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x118, BIT(1), 0xffffffff);
+	write_mask(g_maped_rg[MAPED_RG_RTFF_MAIN_BASE], BIT(1), 0xffffffff);
 	switch(mod) {
 	case QOF_SUPPORT_DIP:
 		//DIP
-		write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x110, BIT(1), 0xffffffff);
+		write_mask(g_maped_rg[MAPED_RG_RTFF_DIP_BASE], BIT(1), 0xffffffff);
 		//DIP_CINE
-		write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x114, BIT(1), 0xffffffff);
+		write_mask(g_maped_rg[MAPED_RG_RTFF_DIP_CINE_BASE], BIT(1), 0xffffffff);
 		break;
 	case QOF_SUPPORT_TRAW:
 		//TRAW
-		write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x11C, BIT(1), 0xffffffff);
+		write_mask(g_maped_rg[MAPED_RG_RTFF_TRAW_BASE], BIT(1), 0xffffffff);
 		break;
 	case QOF_SUPPORT_WPE_EIS:
 		//WPE0
-		write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x120, BIT(1), 0xffffffff);
+		write_mask(g_maped_rg[MAPED_RG_RTFF_WPE_EIS_BASE], BIT(1), 0xffffffff);
 		break;
 	case QOF_SUPPORT_WPE_TNR:
 		//WPE1
-		write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x124, BIT(1), 0xffffffff);
+		write_mask(g_maped_rg[MAPED_RG_RTFF_WPE_TNR_BASE], BIT(1), 0xffffffff);
 		break;
 	case QOF_SUPPORT_WPE_LITE:
 		//WPE2
-		write_mask(g_maped_rg[MAPED_RG_RTFF_BASE] + 0x128, BIT(1), 0xffffffff);
+		write_mask(g_maped_rg[MAPED_RG_RTFF_WPE_LITE_BASE], BIT(1), 0xffffffff);
 		break;
 	default:
 		QOF_LOGE("module not match\n");
@@ -641,23 +641,15 @@ bool is_qof_engine_enabled(enum ISP8S_IMG_PWR mod)
 
 void gce_check_pm_status(struct cmdq_pkt *pkt, u32 pwr)
 {
+	cmdq_pkt_mem_move_mask(pkt, NULL,
+		qof_reg_table[pwr][QOF_REG_IMG_PM_STA].addr,
+		qof_reg_table[pwr][QOF_REG_DEBUG_DUMMY].addr,
+		CMDQ_THR_SPR_IDX3,
+		~0);
+
 	cmdq_pkt_poll_sleep(pkt, qof_reg_table[pwr][QOF_REG_IMG_PM_STA].val /*poll val*/,
 		qof_reg_table[pwr][QOF_REG_IMG_PM_STA].addr /*addr*/,
 		qof_reg_table[pwr][QOF_REG_IMG_PM_STA].mask /*mask*/);
-}
-
-void gce_check_dummy_reg_status(struct cmdq_pkt *pkt, u32 pwr)
-{
-	cmdq_pkt_write(pkt,
-		NULL,
-		qof_reg_table[pwr][QOF_REG_IMG_DUMMY].addr /* address*/ ,
-		qof_reg_table[pwr][QOF_REG_IMG_DUMMY].val /* val */ ,
-		qof_reg_table[pwr][QOF_REG_IMG_DUMMY].mask /* mask */ );
-
-	cmdq_pkt_poll_sleep(pkt, qof_reg_table[pwr][QOF_REG_IMG_DUMMY].val /*poll val*/,
-		qof_reg_table[pwr][QOF_REG_IMG_DUMMY].addr /*addr*/,
-		qof_reg_table[pwr][QOF_REG_IMG_DUMMY].mask /*mask*/);
-
 }
 
 void gce_check_cg_status(struct cmdq_pkt *pkt, u32 pwr)
@@ -683,6 +675,13 @@ void gce_check_cg_status(struct cmdq_pkt *pkt, u32 pwr)
 	default:
 		QOF_LOGI("invalid pwr %d", pwr);
 	}
+
+	cmdq_pkt_mem_move_mask(pkt, NULL,
+		qof_reg_table[pwr][QOF_REG_IMG_PWR_CG_UNGATING].addr,
+		qof_reg_table[pwr][QOF_REG_DEBUG_DUMMY].addr,
+		CMDQ_THR_SPR_IDX3,
+		~0);
+
 	cmdq_pkt_poll_sleep(pkt, check_val /*poll val*/,
 		qof_reg_table[pwr][QOF_REG_IMG_PWR_CG_UNGATING].addr /*addr*/,
 		0xffffffff /*mask*/);
@@ -1139,6 +1138,28 @@ static void mtk_qof_print_pm_status(void)
 		(readl(g_maped_rg[MAPED_RG_QOF_PM_WPE_LITE])));
 }
 
+static void mtk_qof_print_rtff_status(void)
+{
+	QOF_LOGI("DBG:MAIN[0x%x]DIP[0x%x]DIP_CINE[0x%x]TRAW[0x%x]W1[0x%x]W2[0x%x]W3[0x%x]",
+		(readl(g_maped_rg[MAPED_RG_RTFF_MAIN_BASE])),
+		(readl(g_maped_rg[MAPED_RG_RTFF_DIP_BASE])),
+		(readl(g_maped_rg[MAPED_RG_RTFF_DIP_CINE_BASE])),
+		(readl(g_maped_rg[MAPED_RG_RTFF_TRAW_BASE])),
+		(readl(g_maped_rg[MAPED_RG_RTFF_WPE_EIS_BASE])),
+		(readl(g_maped_rg[MAPED_RG_RTFF_WPE_TNR_BASE])),
+		(readl(g_maped_rg[MAPED_RG_RTFF_WPE_LITE_BASE])));
+}
+
+static void mtk_qof_print_debug_dummy_status(void)
+{
+	QOF_LOGI("DBG:DIP[0x%x]TRAW[0x%x]W1[0x%x]W2[0x%x]W3[0x%x]",
+		(readl(g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_0])),
+		(readl(g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_1])),
+		(readl(g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_2])),
+		(readl(g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_3])),
+		(readl(g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_4])));
+}
+
 static void mtk_qof_print_cg_status(void)
 {
 	void __iomem *addr;
@@ -1337,6 +1358,8 @@ static void qof_start_pwr_restore_task(struct mtk_imgsys_dev *imgsys_dev,
 	/* Wait for restore hw event */
 	cmdq_pkt_wfe(restore_pkt, event->hw_event_restore);
 
+	gce_check_pm_status(restore_pkt, pwr_id);
+
 	// wa for gce thd lacked
 	imgsys_cmdq_restore_locked(imgsys_dev, restore_pkt,
 		&isp8s_module_data[pwr_id]);
@@ -1502,17 +1525,24 @@ void mtk_imgsys_cmdq_qof_init(struct mtk_imgsys_dev *imgsys_dev, struct cmdq_cli
 	g_maped_rg[MAPED_RG_HWCCF_REG_CLR]			= ioremap(HWCCF_LINK_CLR_ADDR, 4);
 	g_maped_rg[MAPED_RG_HWCCF_REG_SET]			= ioremap(HWCCF_LINK_SET_ADDR, 4);
 	g_maped_rg[MAPED_RG_HWCCF_REG_STA]			= ioremap(HWCCF_LINK_STA_ADDR, 4);
-	g_maped_rg[MAPED_RG_RTFF_BASE]				= ioremap(RTFF_REG_BASE, 4);
+	g_maped_rg[MAPED_RG_RTFF_MAIN_BASE]			= ioremap(RTFF_REG_MAIN_BASE, 4);
+	g_maped_rg[MAPED_RG_RTFF_DIP_BASE]			= ioremap(RTFF_REG_DIP_BASE, 4);
+	g_maped_rg[MAPED_RG_RTFF_DIP_CINE_BASE]		= ioremap(RTFF_REG_DIP_CINE_BASE, 4);
+	g_maped_rg[MAPED_RG_RTFF_TRAW_BASE]			= ioremap(RTFF_REG_TRAW_BASE, 4);
+	g_maped_rg[MAPED_RG_RTFF_WPE_EIS_BASE]		= ioremap(RTFF_REG_WPE_EIS_BASE, 4);
+	g_maped_rg[MAPED_RG_RTFF_WPE_TNR_BASE]		= ioremap(RTFF_REG_WPE_TNR_BASE, 4);
+	g_maped_rg[MAPED_RG_RTFF_WPE_LITE_BASE]		= ioremap(RTFF_REG_WPE_LITE_BASE, 4);
 	g_maped_rg[MAPED_RG_QOF_PM_DIP]				= ioremap(IMG_PM_DIP, 4);
 	g_maped_rg[MAPED_RG_QOF_PM_TRAW]			= ioremap(IMG_PM_TRAW, 4);
 	g_maped_rg[MAPED_RG_QOF_PM_WPE_EIS]			= ioremap(IMG_PM_WPE_EIS, 4);
 	g_maped_rg[MAPED_RG_QOF_PM_WPE_TNR]			= ioremap(IMG_PM_WPE_TNR, 4);
 	g_maped_rg[MAPED_RG_QOF_PM_WPE_LITE]		= ioremap(IMG_PM_WPE_LITE, 4);
-	g_maped_rg[MAPED_RG_DIP_DUMMY_REG]			= ioremap(IMG_DIP_DUMMY_REG, 4);
-	g_maped_rg[MAPED_RG_TRAW_DUMMY_REG]			= ioremap(IMG_TRAW_DUMMY_REG, 4);
-	g_maped_rg[MAPED_RG_WPE_EIS_DUMMY_REG]		= ioremap(IMG_WPE_EIS_DUMMY_REG, 4);
-	g_maped_rg[MAPED_RG_WPE_TNR_DUMMY_REG]		= ioremap(IMG_WPE_TNR_DUMMY_REG, 4);
-	g_maped_rg[MAPED_RG_WPE_LITE_DUMMY_REG]		= ioremap(IMG_WPE_LITE_DUMMY_REG, 4);
+	g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_0]	= ioremap(IMG_DEBUG_DUMMY_REG_0, 4);
+	g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_1]	= ioremap(IMG_DEBUG_DUMMY_REG_1, 4);
+	g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_2]	= ioremap(IMG_DEBUG_DUMMY_REG_2, 4);
+	g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_3]	= ioremap(IMG_DEBUG_DUMMY_REG_3, 4);
+	g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_4]	= ioremap(IMG_DEBUG_DUMMY_REG_4, 4);
+	g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_5]	= ioremap(IMG_DEBUG_DUMMY_REG_5, 4);
 
 	for (rg_idx = MAPED_RG_LIST_START; rg_idx < MAPED_RG_LIST_NUM; rg_idx++) {
 		if (!g_maped_rg[rg_idx]) {
@@ -1845,7 +1875,6 @@ void backup_cg_value(void)
 
 	for (mod = IMG_CG_DIP_NR1_DIP1_TYPE; mod < IMG_CG_END; mod++) {
 		g_imgsys_cg_value[mod] = (readl(g_maped_rg[mod + cg_idx_offset]));
-		QOF_LOGI("backup CG %d = 0x%08x", mod, g_imgsys_cg_value[mod]);
 	}
 }
 
@@ -1856,11 +1885,11 @@ void mtk_imgsys_cmdq_qof_stream_on(struct mtk_imgsys_dev *imgsys_dev)
 
 	QOF_LOGI("qof stream on+\n");
 
+	backup_cg_value();
+
 	qof_start_all_gce_loop(imgsys_dev);
 
 	spin_lock_irqsave(&qof_lock, flag);
-
-	backup_cg_value();
 
 	for (mod = QOF_SUPPORT_START; mod < QOF_TOTAL_MODULE; mod++) {
 		if (IS_MOD_SUPPORT_QOF(mod)) {
@@ -1977,12 +2006,6 @@ static void qof_module_vote_add(struct cmdq_pkt *pkt, u32 pwr, u32 user)
 
 	cmdq_pkt_poll_sleep(pkt, BIT(1)/*poll val*/,
 		(qof_reg_table[pwr][QOF_REG_IMG_QOF_STATE_DBG].addr)/*addr*/, BIT(1) /*mask*/);
-
-	gce_check_pm_status(pkt, pwr);
-
-	gce_check_cg_status(pkt, pwr);
-
-	gce_check_dummy_reg_status(pkt, pwr);
 
 	/* End of critical section */
 	cmdq_pkt_clear_event(pkt, qof_event->sw_event_lock);
@@ -2105,6 +2128,10 @@ void mtk_imgsys_cmdq_qof_dump(uint32_t hwcomb, bool need_dump_cg)
 	mtk_qof_print_mtcmos_status();
 
 	mtk_qof_print_pm_status();
+
+	mtk_qof_print_rtff_status();
+
+	mtk_qof_print_debug_dummy_status();
 
 	if (need_dump_cg)
 		mtk_qof_print_cg_status();
