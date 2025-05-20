@@ -174,6 +174,7 @@ struct mtk_camsv_backup_setting {
 	unsigned int channel_status_en;
 	unsigned int common_status_en;
 	unsigned int dma_en_img;
+	unsigned int dma_en_len;
 	unsigned int dcif_set;
 	unsigned int dcif_sel;
 };

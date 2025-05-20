@@ -497,6 +497,9 @@ void mtk_cam_sv_backup(struct mtk_camsv_device *sv_dev)
 
 	s->dma_en_img = CAMSV_READ_REG(sv_dev->base +
 				       REG_CAMSVCENTRAL_DMA_EN_IMG);
+	s->dma_en_len = CAMSV_READ_REG(sv_dev->base +
+				       REG_CAMSVCENTRAL_DMA_EN_LEN);
+
 	s->dcif_set = CAMSV_READ_REG(sv_dev->base +
 				     REG_CAMSVCENTRAL_DCIF_SET);
 	s->dcif_sel = CAMSV_READ_REG(sv_dev->base +
@@ -533,6 +536,7 @@ void mtk_cam_sv_restore(struct mtk_camsv_device *sv_dev)
 	}
 
 	CAMSV_WRITE_REG(sv_dev->base + REG_CAMSVCENTRAL_DMA_EN_IMG, s->dma_en_img);
+	CAMSV_WRITE_REG(sv_dev->base + REG_CAMSVCENTRAL_DMA_EN_LEN, s->dma_en_len);
 	CAMSV_WRITE_REG(sv_dev->base + REG_CAMSVCENTRAL_DCIF_SET, s->dcif_set);
 	CAMSV_WRITE_REG(sv_dev->base + REG_CAMSVCENTRAL_DCIF_SEL, s->dcif_sel);
 }
