@@ -7021,8 +7021,10 @@ static int job_sw_recovery(struct mtk_cam_job *job)
 
 bool job_has_done_pending(struct mtk_cam_job *job)
 {
-	return atomic_long_read(&job->done_set) != job->done_handled ||
-		atomic_long_read(&job->afo_done) == 1;
+	return (atomic_long_read(&job->done_set) != job->done_handled) ||
+		(atomic_long_read(&job->afo_done) == 1) ||
+		(atomic_long_read(&job->done_tags) !=
+		atomic_long_read(&job->done_tags_handled));
 }
 
 /* consistent with printk */

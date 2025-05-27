@@ -1180,7 +1180,14 @@ int mtk_cam_sv_toggle_db(struct mtk_camsv_device *sv_dev)
 
 int mtk_cam_sv_central_common_enable(struct mtk_camsv_device *sv_dev)
 {
-	int ret = 0;
+	int ret = 0, i;
+
+	for (i = 0; i < MAX_SV_HW_GROUPS; i++) {
+		sv_dev->active_group_info[i] =
+			CAMSV_READ_REG(sv_dev->base + REG_CAMSVCENTRAL_GROUP_TAG0 +
+				CAMSVCENTRAL_GROUP_TAG_SHIFT * i);
+		sv_dev->used_tags |= sv_dev->active_group_info[i];
+	}
 
 	CAMSV_WRITE_BITS(sv_dev->base + REG_CAMSVCENTRAL_SEN_MODE,
 		CAMSVCENTRAL_SEN_MODE, CMOS_EN, 1);
@@ -3545,6 +3552,16 @@ static irqreturn_t mtk_irq_camsv_sof(int irq, void *data)
 	if (irq_info.done_tags)
 		irq_info.irq_type |= (1 << CAMSYS_IRQ_FRAME_DROP);
 
+	/* dma done */
+	for (i = SVTAG_START; i < SVTAG_END; i++) {
+		m = i * CAMSVCENTRAL_DMA_DONE_BIT_OFFSET +
+			CAMSVCENTRAL_DMA_DONE_BIT_START;
+		if (irq_channel_status & BIT(m))
+			irq_info.dma_done_tags |= (1 << i);
+	}
+	if (irq_info.dma_done_tags)
+		irq_info.irq_type |= (1 << CAMSYS_IRQ_SV_DMAO_DONE);
+
 	if (tg_cnt < sv_dev->tg_cnt)
 		sv_dev->tg_cnt = tg_cnt + BIT(8);
 	else
@@ -3620,8 +3637,10 @@ static irqreturn_t mtk_irq_camsv_debug(int irq, void *data)
 		channel_status = 0;
 
 	if (CAM_DEBUG_ENABLED(RAW_INT))
-		dev_info(sv_dev->dev, "camsv-%d: common_status:0x%x, fifo_status:0x%x, frm_seq_no:0x%x/0x%x, ts:%llu\n",
-			sv_dev->id, common_status, fifo_status, frm_seq_no, frm_seq_no_inner, irq_info.ts_ns);
+		dev_info(sv_dev->dev, "camsv-%d: common_status:0x%x, channel_status:0x%x, fifo_status:0x%x, frm_seq_no:0x%x/0x%x, ts:%llu\n",
+			sv_dev->id, common_status, channel_status,
+			fifo_status, frm_seq_no, frm_seq_no_inner,
+			irq_info.ts_ns);
 
 	if (first_tag) {
 		exp_1_bid = CAMSVCENTRAL_DBG_INT_BIT_START +
@@ -3654,9 +3673,9 @@ static irqreturn_t mtk_irq_camsv_debug(int irq, void *data)
 			j = i * CAMSVCENTRAL_DMA_DONE_BIT_OFFSET +
 				CAMSVCENTRAL_DMA_DONE_BIT_START;
 			if (channel_status & BIT(j))
-				irq_info.done_tags |= (1 << i);
+				irq_info.dma_done_tags |= (1 << i);
 		}
-		if (irq_info.done_tags)
+		if (irq_info.dma_done_tags)
 			irq_info.irq_type |= (1 << CAMSYS_IRQ_SV_DMAO_DONE);
 	}
 

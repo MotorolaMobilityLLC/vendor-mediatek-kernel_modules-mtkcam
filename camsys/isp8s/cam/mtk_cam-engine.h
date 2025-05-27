@@ -58,6 +58,7 @@ struct mtk_camsys_irq_info {
 	unsigned int sof_tags;
 	unsigned int done_tags;
 	unsigned int err_tags;
+	unsigned int dma_done_tags;
 	unsigned int tg_cnt;
 	unsigned int debug_en;
 	u64 ts_before_push_msgfifo_sof;
