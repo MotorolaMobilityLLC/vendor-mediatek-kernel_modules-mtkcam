@@ -1875,7 +1875,8 @@ static bool mtk_cam_seninf_set_mux_rdy_msk_cfg_by_cmd(struct seninf_ctx *ctx, u8
 				break;
 			}
 		}
-		dev_info(ctx->dev, "[%s]set_cmd(%d) value(%d) done\n", __func__, cmd, value);
+		dev_info(ctx->dev, "[%s]set_cmd(%d)camtg(%d)value(%d) done\n",
+			__func__, cmd, camtg, value);
 	}
 	return ret;
 }

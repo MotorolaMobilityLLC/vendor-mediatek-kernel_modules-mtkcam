@@ -8032,7 +8032,6 @@ int mtk_cam_seninf_config_outmux(struct seninf_ctx *ctx, u8 outmux_idx, u8 src_m
 {
 	void *pSeninf_mux;
 	int i;
-	int is_tag_en = 0;
 	const u8 bit2byte = 8;
 	u32 filt_vc, filt_dt;
 	u32 exp_img_v;
@@ -8040,34 +8039,6 @@ int mtk_cam_seninf_config_outmux(struct seninf_ctx *ctx, u8 outmux_idx, u8 src_m
 	u8 bit_to_pixel_fmt = 1; // Initialize bit_to_pixel_fmt by raw10
 
 	pSeninf_mux = ctx->reg_if_outmux[outmux_idx];
-
-	if (cfg_mode == 0) {
-		is_tag_en |= SENINF_READ_BITS(pSeninf_mux, SENINF_OUTMUX_TAG_VCDT_FILT_0,
-					      SENINF_OUTMUX_FILT_EN_0);
-		is_tag_en |= SENINF_READ_BITS(pSeninf_mux, SENINF_OUTMUX_TAG_VCDT_FILT_1,
-					      SENINF_OUTMUX_FILT_EN_1);
-		is_tag_en |= SENINF_READ_BITS(pSeninf_mux, SENINF_OUTMUX_TAG_VCDT_FILT_2,
-					      SENINF_OUTMUX_FILT_EN_2);
-		is_tag_en |= SENINF_READ_BITS(pSeninf_mux, SENINF_OUTMUX_TAG_VCDT_FILT_3,
-					      SENINF_OUTMUX_FILT_EN_3);
-		is_tag_en |= SENINF_READ_BITS(pSeninf_mux, SENINF_OUTMUX_TAG_VCDT_FILT_4,
-					      SENINF_OUTMUX_FILT_EN_4);
-		is_tag_en |= SENINF_READ_BITS(pSeninf_mux, SENINF_OUTMUX_TAG_VCDT_FILT_5,
-					      SENINF_OUTMUX_FILT_EN_5);
-		is_tag_en |= SENINF_READ_BITS(pSeninf_mux, SENINF_OUTMUX_TAG_VCDT_FILT_6,
-					      SENINF_OUTMUX_FILT_EN_6);
-		is_tag_en |= SENINF_READ_BITS(pSeninf_mux, SENINF_OUTMUX_TAG_VCDT_FILT_7,
-					      SENINF_OUTMUX_FILT_EN_7);
-		if (!is_tag_en) {
-			seninf_logd(ctx, "outmux%d force reset, DBG0 (0x%x)", outmux_idx,
-				SENINF_READ_REG(pSeninf_mux, SENINF_OUTMUX_PATH_DBG_PORT_0));
-			SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_SW_RST,
-				    SENINF_OUTMUX_LOCAL_SW_RST, 1);
-			udelay(1);
-			SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_SW_RST,
-				    SENINF_OUTMUX_LOCAL_SW_RST, 0);
-		}
-	}
 
 	SENINF_BITS(pSeninf_mux, SENINF_OUTMUX_SOURCE_CONFIG_0,
 					SENINF_OUTMUX_VSYNC_SRC_SEL_MIPI, src_mipi);
@@ -8172,7 +8143,7 @@ int mtk_cam_seninf_config_outmux(struct seninf_ctx *ctx, u8 outmux_idx, u8 src_m
 		}
 
 		seninf_logi(ctx,
-			"outmux%d tag%d outer_src/sen(%u/%u)cfg_mode(%d)DBG0(0x%x)pix_mode(%d)filt_vc/dt(0x%x/0x%x)hsize(%d)bit_depth(%d)exp_img_h_in_bit(%d)hsize(%d)",
+			"outmux%d tag%d outer_src/sen(%u/%u)cfg_mode(%d)DBG0(0x%x)pix_mode(%d)filt_vc/dt(0x%x/0x%x)hsize(%d)bit_depth(%d)exp_img_h_in_bit(%d)vsize(%d)",
 			outmux_idx,
 			i,
 			src_mipi,
