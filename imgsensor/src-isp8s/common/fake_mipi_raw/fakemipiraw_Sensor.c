@@ -879,6 +879,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.checksum_value = 0xecaae2a0,
 
 	.fake_sensor_cb_init = fake_cb_init,
+	.line_interleave_num = 1,
 };
 
 static struct subdrv_ops ops = {
