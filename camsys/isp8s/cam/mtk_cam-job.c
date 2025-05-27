@@ -201,12 +201,6 @@ static void mtk_cam_tuning_work(struct kthread_work *work)
 
 	/* check time stamp if or not over time */
 	p->end_ts_ns = ktime_get_boottime_ns();
-	MTK_CAM_TRACE_BEGIN(
-		BASIC, "%s:check-(b:%lluns, e:%lluns, diff:%lluns)", __func__,
-		p->begin_ts_ns, p->end_ts_ns, p->end_ts_ns - p->begin_ts_ns);
-	if (p->end_ts_ns - p->begin_ts_ns < CAM_TUNING_DEADLINE_NS)
-		job->is_error = 0;
-	MTK_CAM_TRACE_END(BASIC);
 
 	if (CAM_DEBUG_ENABLED(JOB))
 		pr_info("%s seq_no:0x%x-processing time:%llu ns (b:%llu ns, e:%llu ns)\n",
@@ -5323,8 +5317,6 @@ static void update_tuning_param(struct mtk_cam_job *job)
 	job->tuning_param.seq_num = job->frame_seq_no;
 	job->tuning_param.normal_dump_enabled =
 		  (pipe_idx >= 0 && mtk_cam_debug_dump_enabled(dbg, pipe_idx)) ? 1 : 0;
-
-	job->is_error = (job->first_job || job->seamless_switch) ? 0 : 1;
 }
 
 static bool check_is_raw_trigger_sensor(struct mtk_cam_job *job)
