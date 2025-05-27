@@ -66,7 +66,7 @@ static unsigned int debug_sensor_meta_dump;
 module_param(debug_sensor_meta_dump, uint, 0644);
 MODULE_PARM_DESC(debug_sensor_meta_dump, "activates sensor meta dump");
 
-static unsigned int rms_freerun;
+static unsigned int rms_freerun = 1;
 module_param(rms_freerun, int, 0644);
 MODULE_PARM_DESC(rms_freerun, "rms_freerun");
 
