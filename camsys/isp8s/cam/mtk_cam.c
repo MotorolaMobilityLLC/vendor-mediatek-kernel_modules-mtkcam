@@ -5481,6 +5481,7 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	cam_main_rawa_base, cam_main_rawb_base, cam_main_rawc_base,
 	cam_main_rmsa_base, cam_main_rmsb_base, cam_main_rmsc_base,
 	cam_main_yuva_base, cam_main_yuvb_base, cam_main_yuvc_base;
+	int subsys_pm = 0;
 
 	(void) irq;
 	(void) vcore_pdev;
@@ -5640,6 +5641,54 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	if (IS_ERR(cam_dev->yuvc_cg_con)) {
 		dev_err(dev, "%s: failed to map yuvc_cg_con\n", __func__);
 		cam_dev->yuvc_cg_con = NULL;
+	}
+
+	subsys_pm = 0;
+	CALL_PLAT_HW(query_module_base, PM_RAWA, &subsys_pm);
+	cam_dev->rawa_pm = ioremap(subsys_pm, 0x80);
+	if (IS_ERR(cam_dev->rawa_pm)) {
+		dev_err(dev, "%s: failed to map PM_RAWA\n", __func__);
+		cam_dev->rawa_pm = NULL;
+	}
+
+	subsys_pm = 0;
+	CALL_PLAT_HW(query_module_base, PM_RAWB, &subsys_pm);
+	cam_dev->rawb_pm = ioremap(subsys_pm, 0x80);
+	if (IS_ERR(cam_dev->rawb_pm)) {
+		dev_err(dev, "%s: failed to map PM_RAWB\n", __func__);
+		cam_dev->rawb_pm = NULL;
+	}
+
+	subsys_pm = 0;
+	CALL_PLAT_HW(query_module_base, PM_RAWC, &subsys_pm);
+	cam_dev->rawc_pm = ioremap(subsys_pm, 0x80);
+	if (IS_ERR(cam_dev->rawc_pm)) {
+		dev_err(dev, "%s: failed to map PM_RAWC\n", __func__);
+		cam_dev->rawc_pm = NULL;
+	}
+
+	subsys_pm = 0;
+	CALL_PLAT_HW(query_module_base, PM_RMSA, &subsys_pm);
+	cam_dev->rmsa_pm = ioremap(subsys_pm, 0x80);
+	if (IS_ERR(cam_dev->rmsa_pm)) {
+		dev_err(dev, "%s: failed to map PM_RMSA\n", __func__);
+		cam_dev->rmsa_pm = NULL;
+	}
+
+	subsys_pm = 0;
+	CALL_PLAT_HW(query_module_base, PM_RMSB, &subsys_pm);
+	cam_dev->rmsb_pm = ioremap(subsys_pm, 0x80);
+	if (IS_ERR(cam_dev->rmsb_pm)) {
+		dev_err(dev, "%s: failed to map PM_RMSB\n", __func__);
+		cam_dev->rmsb_pm = NULL;
+	}
+
+	subsys_pm = 0;
+	CALL_PLAT_HW(query_module_base, PM_RMSC, &subsys_pm);
+	cam_dev->rmsc_pm = ioremap(subsys_pm, 0x80);
+	if (IS_ERR(cam_dev->rmsc_pm)) {
+		dev_err(dev, "%s: failed to map PM_RMSC\n", __func__);
+		cam_dev->rmsc_pm = NULL;
 	}
 
 	// qof

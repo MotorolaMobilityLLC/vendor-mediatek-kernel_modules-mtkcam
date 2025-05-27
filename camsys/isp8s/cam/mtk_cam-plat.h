@@ -28,6 +28,12 @@ enum camsys_module_id {
 	CAM_MAIN_YUVA,
 	CAM_MAIN_YUVB,
 	CAM_MAIN_YUVC,
+	PM_RAWA,
+	PM_RAWB,
+	PM_RAWC,
+	PM_RMSA,
+	PM_RMSB,
+	PM_RMSC,
 };
 
 enum mraw_dmao_id {

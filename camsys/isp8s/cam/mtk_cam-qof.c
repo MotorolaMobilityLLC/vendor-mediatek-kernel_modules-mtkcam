@@ -270,6 +270,7 @@ void qof_setup_ctrl(struct mtk_raw_device *raw, int on)
 
 	writel(val, raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
 	raw->trigger_cq_by_qof = !!on;
+	raw->opt_mtc_act = true;
 
 	spin_unlock_irqrestore(&raw->qof_ctrl_lock, flags);
 
@@ -665,6 +666,7 @@ int qof_rms_mtcmos_ctrl_get(struct mtk_raw_device *raw)
 	val = readl(raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
 	SET_FIELD(&val, QOF_CAM_A_OPT_MTC_ACT, 1);
 	writel(val, raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
+	raw->opt_mtc_act = true;
 
 	spin_unlock_irqrestore(&raw->qof_ctrl_lock, flags);
 
@@ -698,6 +700,7 @@ int qof_rms_mtcmos_ctrl_put(struct mtk_raw_device *raw)
 	val = readl(raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
 	SET_FIELD(&val, QOF_CAM_A_OPT_MTC_ACT, 0);
 	writel(val, raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
+	raw->opt_mtc_act = false;
 
 	spin_unlock_irqrestore(&raw->qof_ctrl_lock, flags);
 
@@ -917,15 +920,100 @@ int qof_force_apmcu_voter(struct mtk_raw_device *raw)
 	return ret;
 }
 
+static inline int polling_qof_state(struct mtk_raw_device *raw)
+{
+	int ret = 0;
+	u32 state_dbg = 0;
+	u32 pwr_state_wait = 0;
+
+	SET_FIELD(&pwr_state_wait, QOF_CAM_A_POWER_STATE, PS_ON);
+
+	/* NOTE: could be in isr context */
+	ret = readx_poll_timeout_atomic(readl, raw->qof_base + REG_QOF_CAM_A_QOF_STATE_DBG,
+				 state_dbg, state_dbg & pwr_state_wait,
+				 50 /* delay, us */, PWR_STATE_POLLING_TIMEOUT_LONG_US);
+
+	if (ret < 0)
+		dev_info(raw->dev, "[%s] ERROR: pwr_state polling timeout 0x%x",
+				 __func__, state_dbg);
+
+	return ret;
+}
+
+#define PM_PWR_ACK		BIT(1)
+#define REG_PM_INTF_STATUS		0x80
+
+static inline int polling_pm(struct mtk_raw_device *raw)
+{
+	struct mtk_cam_device *cam = raw->cam;
+	void __iomem *raw_pm;
+	void __iomem *rms_pm;
+	int ret = 0;
+	u32 pm_intf_status = 0;
+
+	switch (raw->id) {
+	case RAW_A:
+		raw_pm = cam->rawa_pm;
+		rms_pm = cam->rmsa_pm;
+		break;
+	case RAW_B:
+		raw_pm = cam->rawb_pm;
+		rms_pm = cam->rmsb_pm;
+		break;
+	case RAW_C:
+		raw_pm = cam->rawc_pm;
+		rms_pm = cam->rmsc_pm;
+		break;
+	default:
+		dev_info(raw->dev, "[%s] ERROR: unknown raw %d",
+			 __func__, raw->id);
+		return -1;
+	}
+
+	/* NOTE: could be in isr context */
+	ret = readx_poll_timeout_atomic(readl, raw_pm + REG_PM_INTF_STATUS,
+				 pm_intf_status, pm_intf_status & PM_PWR_ACK,
+				 50 /* delay, us */, PWR_STATE_POLLING_TIMEOUT_LONG_US);
+
+	if (ret < 0) {
+		dev_info(raw->dev, "[%s] ERROR: ram pwr_ack timeout 0x%x",
+				 __func__, pm_intf_status);
+		goto EXIT;
+	}
+
+	if (!raw->opt_mtc_act) {
+		/* RMS off now */
+		goto EXIT;
+	}
+
+	pm_intf_status = 0;
+	ret = readx_poll_timeout_atomic(readl, rms_pm + REG_PM_INTF_STATUS,
+				 pm_intf_status, pm_intf_status & PM_PWR_ACK,
+				 50 /* delay, us */, PWR_STATE_POLLING_TIMEOUT_LONG_US);
+
+	if (ret < 0) {
+		dev_info(raw->dev, "[%s] ERROR: rms pwr_ack timeout 0x%x",
+				 __func__, pm_intf_status);
+		goto EXIT;
+	}
+
+EXIT:
+	return ret;
+}
+
+static inline int polling_power_on(struct mtk_raw_device *raw)
+{
+	return polling_pm(raw);
+}
+
 int __qof_mtcmos_raw_voter(struct mtk_raw_device *raw, bool enable, const char *caller)
 {
 	u32 qof_ctrl_write = 0;
-	u32 pwr_state_wait = 0;
-	u32 state_dbg = 0;
 	u32 val = 0;
 	int ret = 0;
 	unsigned long flags;
 	unsigned long flags_qof_ctrl;
+	bool wait_pwr_on = false;
 
 	if (!qof_is_enabled(raw)) {
 		if (CAM_DEBUG_ENABLED(QOF))
@@ -945,7 +1033,7 @@ int __qof_mtcmos_raw_voter(struct mtk_raw_device *raw, bool enable, const char *
 
 	if (raw->apmcu_voter_cnt == 1) {
 		qof_ctrl_write = FBIT(QOF_CAM_A_APMCU_SET);
-		SET_FIELD(&pwr_state_wait, QOF_CAM_A_POWER_STATE, PS_ON);
+		wait_pwr_on = true;
 	} else if (raw->apmcu_voter_cnt == 0) {
 		qof_ctrl_write = FBIT(QOF_CAM_A_APMCU_CLR);
 	} else if (raw->apmcu_voter_cnt < 0) {
@@ -961,15 +1049,8 @@ int __qof_mtcmos_raw_voter(struct mtk_raw_device *raw, bool enable, const char *
 	writel(val | qof_ctrl_write, raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
 	spin_unlock_irqrestore(&raw->qof_ctrl_lock, flags_qof_ctrl);
 
-	if (pwr_state_wait) {
-		// NOTE: could be in isr context
-		ret = readx_poll_timeout_atomic(readl, raw->qof_base + REG_QOF_CAM_A_QOF_STATE_DBG,
-					 state_dbg, state_dbg & pwr_state_wait,
-					 50 /* delay, us */, PWR_STATE_POLLING_TIMEOUT_LONG_US);
-
-		if (ret < 0)
-			dev_info(raw->dev, "[%s] ERROR: pwr_state polling timeout", __func__);
-	}
+	if (wait_pwr_on)
+		polling_power_on(raw);
 
 UNLOCK:
 	spin_unlock_irqrestore(&raw->apmcu_voter_lock, flags);
@@ -1456,14 +1537,17 @@ static void qof_writel(struct mtk_raw_device *raw, u32 val,
 		if (CAM_DEBUG_ENABLED(QOF) || FORCE_DUMP(raw->id))
 			dev_info(raw->dev, "%s: trigger CQ by QOF", __func__);
 
+		qof_mtcmos_raw_voter(raw, true);
 		lock_cq_critical_sect(raw);
 	}
 
 OUT:
 	writel(val, base + offset);
 
-	if (ret_trigger_cq)
+	if (ret_trigger_cq) {
 		unlock_cq_critical_sect(raw);
+		qof_mtcmos_raw_voter(raw, false);
+	}
 }
 
 static void qof_writel_relaxed(struct mtk_raw_device *raw, u32 val,
@@ -1484,14 +1568,17 @@ static void qof_writel_relaxed(struct mtk_raw_device *raw, u32 val,
 		if (CAM_DEBUG_ENABLED(QOF) || FORCE_DUMP(raw->id))
 			dev_info(raw->dev, "%s: trigger CQ by QOF", __func__);
 
+		qof_mtcmos_raw_voter(raw, true);
 		lock_cq_critical_sect(raw);
 	}
 
 OUT:
 	writel_relaxed(val, base + offset);
 
-	if (ret_trigger_cq)
+	if (ret_trigger_cq) {
 		unlock_cq_critical_sect(raw);
+		qof_mtcmos_raw_voter(raw, false);
+	}
 }
 
 static u32 itc_readl(struct mtk_raw_device *raw,

@@ -100,6 +100,7 @@ struct mtk_raw_device {
 	spinlock_t qof_ctrl_lock;
 	bool xpc_raw_enabled;
 	bool xpc_rms_enabled;
+	bool opt_mtc_act;
 
 	atomic_t time_share_used;/*identify first and last*/
 	atomic_t time_share_on_process;/*identify busy*/

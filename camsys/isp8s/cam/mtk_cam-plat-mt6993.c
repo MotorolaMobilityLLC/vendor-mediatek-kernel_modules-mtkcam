@@ -905,6 +905,12 @@ static int module_base[] = {
 	[CAM_MAIN_YUVA] = 0x3a810000,
 	[CAM_MAIN_YUVB] = 0x3aa10000,
 	[CAM_MAIN_YUVC] = 0x3ac10000,
+	[PM_RAWA] = 0x3c813000,
+	[PM_RAWB] = 0x3c814000,
+	[PM_RAWC] = 0x3c815000,
+	[PM_RMSA] = 0x3c816000,
+	[PM_RMSB] = 0x3c817000,
+	[PM_RMSC] = 0x3c818000,
 };
 
 static int query_module_base(int module_id, int *module_base_addr)

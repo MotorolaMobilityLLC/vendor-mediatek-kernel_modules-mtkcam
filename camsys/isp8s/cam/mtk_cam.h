@@ -304,6 +304,13 @@ struct mtk_cam_device {
 	void __iomem *yuvb_cg_con;
 	void __iomem *yuvc_cg_con;
 
+	void __iomem *rawa_pm;
+	void __iomem *rawb_pm;
+	void __iomem *rawc_pm;
+	void __iomem *rmsa_pm;
+	void __iomem *rmsb_pm;
+	void __iomem *rmsc_pm;
+
 	struct v4l2_device v4l2_dev;
 	struct v4l2_async_notifier notifier;
 	struct media_device media_dev;
