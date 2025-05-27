@@ -87,6 +87,8 @@ static dma_addr_t g_pkt_wpe_pa;
 static u32 *g_pkt_wpe_va;
 static dma_addr_t g_pkt_pqdipa_pa;
 static u32 *g_pkt_pqdipa_va;
+static u32 retry_cnt;
+#define WPE_EIS_RETRY_DB_CNT (10)
 #endif
 
 static int isc_irq_enabled;
@@ -199,6 +201,11 @@ void imgsys_cmdq_init_plat8s(struct mtk_imgsys_dev *imgsys_dev, const int nr_img
 #endif
 	mutex_init(&imgsys_dev->vss_blk_lock);
 	mutex_init(&imgsys_dev->sec_task_lock);
+
+#ifdef IMGSYS_WPE_CHECK_FUNC_EN
+	retry_cnt = 0;
+#endif
+
 }
 
 void imgsys_cmdq_release_plat8s(struct mtk_imgsys_dev *imgsys_dev)
@@ -554,10 +561,12 @@ static void imgsys_cmdq_cb_work_plat8s(struct work_struct *work)
 			pr_info("%s: [ERROR] WPE_EIS-PQDIP-A HW timeout with retry wfe(%d) event(%d) user(%s)",
 				__func__, cb_param->pkt->err_data.wfe_timeout,
 				cb_param->pkt->err_data.event, (char *)(&frm_owner));
-#ifdef WPE_EIS_RETRY_DB
-			aee_kernel_exception("CRDISPATCH_KEY:MM_IMG_WPE",
-			"DISPATCH:IMGSYS_WPE-PQDIPA_1st, hwcomb:0x%x", cb_param->hw_comb);
-#endif
+
+			retry_cnt++;
+			if (retry_cnt >= WPE_EIS_RETRY_DB_CNT)
+				aee_kernel_exception("CRDISPATCH_KEY:MM_IMG_WPE",
+				"DISPATCH:IMGSYS_WPE-PQDIPA_1st, hwcomb:0x%x", cb_param->hw_comb);
+
 		} else {
 			pr_info("%s: [ERROR] WPE_EIS-PQDIP-A HW timeout still! wfe(%d) event(%d) user(%s)",
 				__func__, cb_param->pkt->err_data.wfe_timeout,
