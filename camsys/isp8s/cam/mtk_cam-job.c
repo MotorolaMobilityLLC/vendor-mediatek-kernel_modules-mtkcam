@@ -831,6 +831,7 @@ mtk_cam_job_initialize_engines(struct mtk_cam_ctx *ctx,
 			}
 			/* the necessity of hw ddren */
 			qof_init_timer_freq(raw);
+			qof_setup_twin(raw, is_master, next_raw);
 
 			initialize(raw, &engine_cb, !is_master, is_srt,
 				get_sensor_interval_us(job));
@@ -846,7 +847,6 @@ mtk_cam_job_initialize_engines(struct mtk_cam_ctx *ctx,
 				int ret = call_init_ops(job, qof_init, ctx->hw_raw[i]);
 
 				if (!ret) {
-					qof_setup_twin(raw, is_master, next_raw);
 					qof_enable(raw, true);
 					qof_enabled = true;
 				}
@@ -2939,6 +2939,7 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job, int pda_idx)
 
 				/* the necessity of hw ddren */
 				qof_init_timer_freq(raw);
+				qof_setup_twin(raw, raw->id == raw_master_id, next_raw);
 
 				// TODO: replace "0x7"
 				if (BIT(raw->id) & (selected_need_init & 0x7)) {
@@ -2951,7 +2952,6 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job, int pda_idx)
 						call_init_ops(job, qof_init, ctx->hw_raw[i]) : -1;
 
 					if (!ret) {
-						qof_setup_twin(raw, raw->id == raw_master_id, next_raw);
 						qof_enable(raw, true);
 						qof_enabled |= true;
 					}
@@ -4566,13 +4566,12 @@ int mtk_cam_job_uninit_engine(struct mtk_cam_job *job, int unit_engs)
 			raw_dev = dev_get_drvdata(cam->engines.raw_devs[i]);
 
 			qof_mtcmos_raw_voter(raw_dev, true);
-
+			qof_setup_twin(raw_dev, true, false);
 			disable_irq(raw_dev->irq);
 			reset(raw_dev);
 			clear_reg(raw_dev);
 
 			if (qof_is_enabled(raw_dev)) {
-				qof_setup_twin(raw_dev, true, false);
 				qof_enable(raw_dev, false);
 				qof_setup_ctrl(raw_dev, false);
 				qof_reset_mtcmos_raw_voter(raw_dev);

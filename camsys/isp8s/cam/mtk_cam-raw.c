@@ -120,10 +120,7 @@ static void init_raw_ddren(struct mtk_raw_device *dev, int is_srt, int frm_time_
 	} else {
 		SET_FIELD(&val, CAMCTL_DDREN_HW_EN, 1);
 		raw_writel(val, dev, dev->base, REG_CAMCTL_DDREN_CTL);
-
-		/* hrt ddren timer for master */
-		if (!dev->is_slave)
-			qof_ddren_setting(dev, frm_time_us, is_srt);
+		qof_ddren_setting(dev, frm_time_us, is_srt);
 	}
 	if (CAM_DEBUG_ENABLED(RAW_INT))
 		dev_info(dev->dev, "ddren_sw_mode:%d\n", debug_ddren_sw_mode);

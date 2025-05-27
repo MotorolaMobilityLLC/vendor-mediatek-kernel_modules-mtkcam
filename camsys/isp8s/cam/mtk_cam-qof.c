@@ -572,6 +572,7 @@ int qof_setup_twin(struct mtk_raw_device *raw, bool is_master, bool next_raw)
 	val = readl(raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
 	SET_FIELD(&val, QOF_CAM_A_ON_SEL, voter_sel);
 	SET_FIELD(&val, QOF_CAM_A_OFF_SEL, voter_sel);
+	SET_FIELD(&val, QOF_CAM_A_DL_EN, 1);
 	writel(val, raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
 
 	spin_unlock_irqrestore(&raw->qof_ctrl_lock, flags);
