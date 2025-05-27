@@ -24,7 +24,7 @@
 #define QOF_TIMER_FREQ_DIV				3
 
 /* TODO: tune this threshold */
-#define HW_TIMER_MARGIN_US					1000
+#define HW_TIMER_MARGIN_US					3000
 /* NOTE: reverse 500ns in HW_TIMER_MARGIN for PWR_ISO_0_DEF = 0xD */
 #define PWR_ISO_0_DEF		0xD
 
