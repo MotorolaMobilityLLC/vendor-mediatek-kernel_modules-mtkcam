@@ -40,7 +40,6 @@
 static u32 force_dump_raw_map;
 #define FORCE_DUMP(raw_id) (force_dump_raw_map & BIT(raw_id))
 
-//#define WORKAROUND_VOTER_SET_OUTSIDE_OFF_PROC
 //#define HW_SEQ_MODE
 //#define QOF_ITC_ALWAYS_ON
 
@@ -135,14 +134,36 @@ static struct qof_bitops qof_raw_to_bit[RAW_NUM] = {
 	},
 };
 
-static inline u32 wait_itc_done(struct mtk_raw_device *raw)
+static inline u32 wait_qof_cq_update(struct mtk_raw_device *raw)
+{
+	int read_ret = 0;
+	u32 ret, raw_cq_addr = 0;
+	u32 qof_cq_addr = readl(raw->qof_base + REG_QOF_CAM_A_QOF_CQ1_DATA);
+
+	/* wait raw cq addr outer = qof cq addr */
+	read_ret = readx_poll_timeout_atomic(readl, raw->base + REG_CAMCQ_CQ_THR0_BASEADDR,
+		raw_cq_addr, (raw_cq_addr == qof_cq_addr), 30 /*us*/, 1000);
+	ret = read_ret == 0 ? 0 : 1;
+
+	if (read_ret)
+		pr_info("%s: wait cq updata fail! raw_cq 0x%x qof_cq 0x%x",
+			__func__, raw_cq_addr, qof_cq_addr);
+
+	return ret;
+}
+
+static inline u32 wait_itc_cq_done(struct mtk_raw_device *raw)
 {
 	int read_ret = 0;
 	u32 ret, val;
+	struct mtk_cam_device *cam = raw->cam;
 
-	read_ret = readx_poll_timeout_atomic(readl, raw->qof_base + REG_QOF_CAM_A_QOF_DONE_STATUS,
-								 val, (val & 0x2), 30 /*us*/, 600);
+	read_ret = readx_poll_timeout_atomic(readl, cam->qoftop_base + REG_QOF_CAM_TOP_ITC_STATUS,
+								 val, (val == 0x0), 30 /*us*/, 1000);
 	ret = read_ret == 0 ? 0 : 1;
+
+	if (read_ret)
+		pr_info("%s: wait itc cq done fail! ret 0x%x", __func__, val);
 
 	return ret;
 }
@@ -482,7 +503,7 @@ int qof_enable(struct mtk_raw_device *raw, bool enable)
 
 	qof_init_timer_freq(raw);
 
-	dev_info(raw->dev, "qof: %s: %s TOP_CTL 0x%08x",
+	dev_info(raw->dev, "qof: %s: %s TOP_CTL 0x%08x (use cq crit section)",
 			 __func__, (enable) ? "enable" : "disable",
 			 readl(cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL));
 	dev_info(raw->dev, "qof: %s: QOF_CAM_TOP_ITC_STATUS 0x%08x", __func__,
@@ -937,13 +958,6 @@ int __qof_mtcmos_raw_voter(struct mtk_raw_device *raw, bool enable, const char *
 	spin_lock_irqsave(&raw->qof_ctrl_lock, flags_qof_ctrl);
 	val = readl(raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
 
-#ifdef WORKAROUND_VOTER_SET_OUTSIDE_OFF_PROC
-	if (qof_ctrl_write | FBIT(QOF_CAM_A_APMCU_SET)) {
-		// NOTE: workaround for HW issue
-		avoid_power_state(raw, PS_OFF_PROC);
-	}
-#endif
-
 	writel(val | qof_ctrl_write, raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
 	spin_unlock_irqrestore(&raw->qof_ctrl_lock, flags_qof_ctrl);
 
@@ -1341,6 +1355,24 @@ static inline int write_replace_cq_baseaddr(const struct mtk_raw_device *raw,
 	return 1;
 }
 
+static inline void lock_cq_critical_sect(struct mtk_raw_device *raw)
+{
+	struct mtk_cam_device *cam = raw->cam;
+
+	mutex_lock(&cam->qof_cq_mutex);
+
+	wait_itc_cq_done(raw);
+}
+
+static inline void unlock_cq_critical_sect(struct mtk_raw_device *raw)
+{
+	struct mtk_cam_device *cam = raw->cam;
+
+	wait_qof_cq_update(raw);
+	wait_itc_cq_done(raw);
+	mutex_unlock(&cam->qof_cq_mutex);
+}
+
 static inline int write_replace_trigger_cq(const struct mtk_raw_device *raw,
 										   void __iomem **base, u32 *offset,
 										   u32 *val)
@@ -1423,14 +1455,15 @@ static void qof_writel(struct mtk_raw_device *raw, u32 val,
 	if (ret_trigger_cq) {
 		if (CAM_DEBUG_ENABLED(QOF) || FORCE_DUMP(raw->id))
 			dev_info(raw->dev, "%s: trigger CQ by QOF", __func__);
-#ifdef WORKAROUND_VOTER_SET_OUTSIDE_OFF_PROC
-		// NOTE: workaround for HW issue
-		avoid_power_state(raw, PS_OFF_PROC);
-#endif
+
+		lock_cq_critical_sect(raw);
 	}
 
 OUT:
 	writel(val, base + offset);
+
+	if (ret_trigger_cq)
+		unlock_cq_critical_sect(raw);
 }
 
 static void qof_writel_relaxed(struct mtk_raw_device *raw, u32 val,
@@ -1450,14 +1483,15 @@ static void qof_writel_relaxed(struct mtk_raw_device *raw, u32 val,
 	if (ret_trigger_cq) {
 		if (CAM_DEBUG_ENABLED(QOF) || FORCE_DUMP(raw->id))
 			dev_info(raw->dev, "%s: trigger CQ by QOF", __func__);
-#ifdef WORKAROUND_VOTER_SET_OUTSIDE_OFF_PROC
-		// NOTE: workaround for HW issue
-		avoid_power_state(raw, PS_OFF_PROC);
-#endif
+
+		lock_cq_critical_sect(raw);
 	}
 
 OUT:
 	writel_relaxed(val, base + offset);
+
+	if (ret_trigger_cq)
+		unlock_cq_critical_sect(raw);
 }
 
 static u32 itc_readl(struct mtk_raw_device *raw,

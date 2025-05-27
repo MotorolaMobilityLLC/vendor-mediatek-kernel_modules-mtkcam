@@ -5727,6 +5727,7 @@ static int mtk_cam_probe(struct platform_device *pdev)
 	spin_lock_init(&cam_dev->running_job_lock);
 	INIT_LIST_HEAD(&cam_dev->pending_job_list);
 	INIT_LIST_HEAD(&cam_dev->running_job_list);
+	mutex_init(&cam_dev->qof_cq_mutex);
 
 	cam_dev->default_printk_cnt = get_detect_count();
 

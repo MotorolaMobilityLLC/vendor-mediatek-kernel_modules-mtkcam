@@ -371,6 +371,7 @@ struct mtk_cam_device {
 	void __iomem *hwccf_link_set;
 	void __iomem *hwccf_link_clr;
 	void __iomem *hwccf_link_status;
+	struct mutex qof_cq_mutex;
 };
 
 static inline struct device *subdev_to_cam_dev(struct v4l2_subdev *sd)
