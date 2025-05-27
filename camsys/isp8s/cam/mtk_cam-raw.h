@@ -84,6 +84,7 @@ struct mtk_raw_device {
 	int tg_grab_err_handle_cnt;
 	int dma_err_handle_cnt;
 	int tg_overrun_handle_cnt;
+	int cq_err_handle_cnt;
 	u64 apply_ts;
 	bool log_en;
 

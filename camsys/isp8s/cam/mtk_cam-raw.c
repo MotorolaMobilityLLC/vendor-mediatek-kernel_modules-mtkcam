@@ -437,6 +437,7 @@ static void reset_error_handling(struct mtk_raw_device *dev)
 	dev->tg_grab_err_handle_cnt = 0;
 	dev->dma_err_handle_cnt = 0;
 	dev->tg_overrun_handle_cnt = 0;
+	dev->cq_err_handle_cnt = 0;
 }
 
 #define CAMCQ_CQ_EN_DEFAULT	0x14
@@ -1475,11 +1476,62 @@ static int push_msgfifo(struct mtk_raw_device *dev,
 	return 0;
 }
 
+/* Frame IRQ Error Mask */
+#define INT_ST_MASK_CAM_ERR_FRAME					\
+	(FBIT(CAMCTL_DMA_ERR_ST)				|	\
+	 FBIT(CAMCTL_CFG_SW_INCOMP_INT_ST))
+
+
+/* CQ IRQ Error Mask */
+#define INT_ST_MASK_CAM_ERR_CQ					\
+	(FBIT(CAMCTL_CQ_MAX_START_DLY_SMALL_INT_ST)	|	\
+	 FBIT(CAMCTL_CQ_MAX_START_DLY_ERR_INT_ST)	|	\
+	 FBIT(CAMCTL_CQ_MAIN_CODE_ERR_ST)		|	\
+	 FBIT(CAMCTL_CQ_DB_LOAD_ERR_ST)		|	\
+	 FBIT(CAMCTL_CQ_MAIN_VS_ERR_ST)			|	\
+	 FBIT(CAMCTL_CQ_MAIN_VS_ERR_ST)			|	\
+	 FBIT(CAMCTL_CQ_TRIG_DLY_INT_ST)		|	\
+	 FBIT(CAMCTL_CQ_SUB_CODE_ERR_ST)		|	\
+	 FBIT(CAMCTL_CQ_SUB_VS_ERR_ST))
+
+#define CQ_ERR_TO_BE_HANDLED	\
+	(FBIT(CAMCTL_CQ_MAIN_CODE_ERR_ST)		|	\
+	 FBIT(CAMCTL_CQ_DB_LOAD_ERR_ST)		|	\
+	 FBIT(CAMCTL_CQ_MAIN_VS_ERR_ST)			|	\
+	 FBIT(CAMCTL_CQ_MAIN_VS_ERR_ST)			|	\
+	 FBIT(CAMCTL_CQ_SUB_CODE_ERR_ST)		|	\
+	 FBIT(CAMCTL_CQ_SUB_VS_ERR_ST))
+
+/* TG IRQ Error Mask */
+#define INT_ST_MASK_CAM_ERR_TG1					\
+	(FBIT(CAMCTL_TG_OVRUN_ST)			|	\
+	 FBIT(CAMCTL_TG_GRABERR_ST)			|	\
+	 FBIT(CAMCTL_TG_SOF_DROP_ST))
+
+#define DCIF_SKIP_MASK \
+	(FBIT(CAMCTL_P1_SKIP_FRAME_ADL_INT_ST)			|	\
+	 FBIT(CAMCTL_P1_SKIP_FRAME_2ND_PASS_TWO_SENSOR_INT_ST)	|	\
+	 FBIT(CAMCTL_P1_SKIP_FRAME_1ST_PASS_TWO_SENSOR_INT_ST)	|	\
+	 FBIT(CAMCTL_P1_SKIP_FRAME_2ND_PASS_RGBW_VHDR_INT_ST)	|	\
+	 FBIT(CAMCTL_P1_SKIP_FRAME_1ST_PASS_RGBW_VHDR_INT_ST)	|	\
+	 FBIT(CAMCTL_P1_SKIP_FRAME_DC_STAG_INT_ST))
+
+#define RING_BUFFER_OFL_MASK \
+	(FBIT(CAMCTL_UFDI_R5_RING_BUFFER_OVERFLOW_ST)		|	\
+	 FBIT(CAMCTL_RAWI_R5_RING_BUFFER_OVERFLOW_ST)		|	\
+	 FBIT(CAMCTL_UFDI_R3_RING_BUFFER_OVERFLOW_ST)		|	\
+	 FBIT(CAMCTL_RAWI_R3_RING_BUFFER_OVERFLOW_ST)		|	\
+	 FBIT(CAMCTL_UFDI_R2_RING_BUFFER_OVERFLOW_ST)		|	\
+	 FBIT(CAMCTL_RAWI_R2_RING_BUFFER_OVERFLOW_ST))
+
 static void raw_handle_tg_grab_err(struct mtk_raw_device *raw_dev,
 				   unsigned int fh_cookie);
 static void raw_handle_dma_err(struct mtk_raw_device *raw_dev,
 			       unsigned int fh_cookie);
 static void raw_handle_tg_overrun_err(struct mtk_raw_device *raw_dev,
+				      unsigned int fh_cookie);
+
+static void raw_handle_cq_error(struct mtk_raw_device *raw_dev,
 				      unsigned int fh_cookie);
 
 static void raw_handle_yuv_dma_err(struct mtk_raw_device *raw_dev,
@@ -1503,6 +1555,9 @@ static void raw_handle_error(struct mtk_raw_device *raw_dev,
 
 	if (err_status & FBIT(CAMCTL_TG_OVRUN_ST))
 		raw_handle_tg_overrun_err(raw_dev, fh_cookie);
+
+	if (err_status & CQ_ERR_TO_BE_HANDLED)
+		raw_handle_cq_error(raw_dev, fh_cookie);
 
 	dev_info(raw_dev->dev, "%s: err_status:0x%x, fh_cookie:0x%x\n",
 			__func__, err_status, fh_cookie);
@@ -1598,46 +1653,6 @@ static bool is_sub_sample_sensor_timing(struct mtk_raw_device *dev)
 {
 	return dev->cur_vsync_idx >= dev->set_sensor_idx;
 }
-
-/* Frame IRQ Error Mask */
-#define INT_ST_MASK_CAM_ERR_FRAME					\
-	(FBIT(CAMCTL_DMA_ERR_ST)				|	\
-	 FBIT(CAMCTL_CFG_SW_INCOMP_INT_ST))
-
-
-/* CQ IRQ Error Mask */
-#define INT_ST_MASK_CAM_ERR_CQ					\
-	(FBIT(CAMCTL_CQ_MAX_START_DLY_SMALL_INT_ST)	|	\
-	 FBIT(CAMCTL_CQ_MAX_START_DLY_ERR_INT_ST)	|	\
-	 FBIT(CAMCTL_CQ_MAIN_CODE_ERR_ST)		|	\
-	 FBIT(CAMCTL_CQ_DB_LOAD_ERR_ST)		|	\
-	 FBIT(CAMCTL_CQ_MAIN_VS_ERR_ST)			|	\
-	 FBIT(CAMCTL_CQ_MAIN_VS_ERR_ST)			|	\
-	 FBIT(CAMCTL_CQ_TRIG_DLY_INT_ST)		|	\
-	 FBIT(CAMCTL_CQ_SUB_CODE_ERR_ST)		|	\
-	 FBIT(CAMCTL_CQ_SUB_VS_ERR_ST))
-
-/* TG IRQ Error Mask */
-#define INT_ST_MASK_CAM_ERR_TG1					\
-	(FBIT(CAMCTL_TG_OVRUN_ST)			|	\
-	 FBIT(CAMCTL_TG_GRABERR_ST)			|	\
-	 FBIT(CAMCTL_TG_SOF_DROP_ST))
-
-#define DCIF_SKIP_MASK \
-	(FBIT(CAMCTL_P1_SKIP_FRAME_ADL_INT_ST)			|	\
-	 FBIT(CAMCTL_P1_SKIP_FRAME_2ND_PASS_TWO_SENSOR_INT_ST)	|	\
-	 FBIT(CAMCTL_P1_SKIP_FRAME_1ST_PASS_TWO_SENSOR_INT_ST)	|	\
-	 FBIT(CAMCTL_P1_SKIP_FRAME_2ND_PASS_RGBW_VHDR_INT_ST)	|	\
-	 FBIT(CAMCTL_P1_SKIP_FRAME_1ST_PASS_RGBW_VHDR_INT_ST)	|	\
-	 FBIT(CAMCTL_P1_SKIP_FRAME_DC_STAG_INT_ST))
-
-#define RING_BUFFER_OFL_MASK \
-	(FBIT(CAMCTL_UFDI_R5_RING_BUFFER_OVERFLOW_ST)		|	\
-	 FBIT(CAMCTL_RAWI_R5_RING_BUFFER_OVERFLOW_ST)		|	\
-	 FBIT(CAMCTL_UFDI_R3_RING_BUFFER_OVERFLOW_ST)		|	\
-	 FBIT(CAMCTL_RAWI_R3_RING_BUFFER_OVERFLOW_ST)		|	\
-	 FBIT(CAMCTL_UFDI_R2_RING_BUFFER_OVERFLOW_ST)		|	\
-	 FBIT(CAMCTL_RAWI_R2_RING_BUFFER_OVERFLOW_ST))
 
 /* TMP for FBC, to be removed */
 #define WCNT_BIT_MASK				0xFF00
@@ -2203,6 +2218,22 @@ static void raw_handle_tg_overrun_err(struct mtk_raw_device *raw_dev,
 		mtk_smi_dbg_hang_detect("camsys-raw");
 
 	qof_mtcmos_raw_voter(raw_dev, false);
+}
+
+static void raw_handle_cq_error(struct mtk_raw_device *raw_dev,
+				      unsigned int fh_cookie)
+{
+	int cnt;
+
+	cnt = raw_dev->cq_err_handle_cnt++;
+
+	if (!(cnt % 5)) {
+		mtk_cam_dump_cq_debug(raw_dev);
+		raw_dump_debug_cqi_status(raw_dev);
+		dump_wla_2_0(raw_dev);
+		if (cnt == 0)
+			mtk_smi_dbg_hang_detect("camsys-raw-cq-err");
+	}
 }
 
 u32 basic_readl(struct mtk_raw_device *raw, void __iomem *base, u32 offset)
