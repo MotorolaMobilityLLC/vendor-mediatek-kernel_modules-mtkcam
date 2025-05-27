@@ -144,6 +144,12 @@ static int set_mclk(struct adaptor_ctx *ctx, void *data, const struct subdrv_pw_
 	adaptor_logm(ctx,
 		"- clk_set_parent(%s),ret(%d)(correct)\n",
 		__clk_get_name(mclk_src), ret);
+	if (val->para2 == MCLK_ULPOSC && ctx->aov_scp_pwr) {
+		clk_disable_unprepare(mclk);
+		adaptor_logm(ctx,
+			"- clk_disable_unprepare(%s)\n",
+			clk_names[idx]);
+	}
 	return 0;
 }
 
@@ -172,6 +178,15 @@ static int unset_mclk(struct adaptor_ctx *ctx, void *data, const struct subdrv_p
 		if ((reset_src == NULL) || IS_ERR(reset_src)) {
 			adaptor_logi(ctx, "no mclk src %dMHz\n", mclk_freq);
 		} else {
+			if (ctx->aov_scp_pwr) {
+				ret = clk_prepare_enable(mclk);
+				if (ret) {
+					adaptor_logi(ctx,
+						"clk_prepare_enable(%s),ret(%d)(fail)\n",
+						clk_names[idx], ret);
+					return ret;
+				}
+			}
 			ret = clk_set_parent(mclk, reset_src);
 			if (ret) {
 				adaptor_loge(ctx,
