@@ -554,8 +554,10 @@ static void imgsys_cmdq_cb_work_plat8s(struct work_struct *work)
 			pr_info("%s: [ERROR] WPE_EIS-PQDIP-A HW timeout with retry wfe(%d) event(%d) user(%s)",
 				__func__, cb_param->pkt->err_data.wfe_timeout,
 				cb_param->pkt->err_data.event, (char *)(&frm_owner));
+#ifdef WPE_EIS_RETRY_DB
 			aee_kernel_exception("CRDISPATCH_KEY:MM_IMG_WPE",
 			"DISPATCH:IMGSYS_WPE-PQDIPA_1st, hwcomb:0x%x", cb_param->hw_comb);
+#endif
 		} else {
 			pr_info("%s: [ERROR] WPE_EIS-PQDIP-A HW timeout still! wfe(%d) event(%d) user(%s)",
 				__func__, cb_param->pkt->err_data.wfe_timeout,
