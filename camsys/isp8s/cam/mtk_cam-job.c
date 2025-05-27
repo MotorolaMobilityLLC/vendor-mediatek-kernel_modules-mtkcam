@@ -5334,7 +5334,7 @@ static bool check_is_raw_trigger_sensor(struct mtk_cam_job *job)
 		(packed_ctrl->exposure.shutter > 0 && packed_ctrl->exposure.gain > 0);
 }
 
-static bool check_inner_pre_frame(struct mtk_cam_job *job)
+static bool check_vs_frame_pure_raw_only(struct mtk_cam_job *job)
 {
 	return (is_dcg_with_vs(job) &&
 			(job_exp_num(job) != job_sensor_exp_num(job)));
@@ -5368,7 +5368,10 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 	job->first_frm_switch = false;
 	job->do_pending_aid_config = false;
 	job->is_raw_trigger_sensor = check_is_raw_trigger_sensor(job);
-	job->hdr_ts_dcg = check_inner_pre_frame(job);
+
+	/* vs frame may or may not enque, */
+	/* frame done timing may be triggered before/after last SOF */
+	job->hdr_ts_dcg = check_vs_frame_pure_raw_only(job);
 
 	if (ctrl_data && ctrl_data->resource.user_data.raw_res.sen_apply_ctrl ==
 		MTK_CAM_SEN_APPLY_BY_XVS)

@@ -2833,16 +2833,39 @@ bool belong_to_current_ctx(struct mtk_cam_job *job, int ipi_pipe_id)
 	return ctx_used_pipe & ipi_pipe_id_to_bit(ipi_pipe_id);
 }
 
+static void fill_dcg_vs_ts(struct mtk_cam_job *job,
+				   struct mtk_cam_ctrl_runtime_info *info)
+{
+	if (is_dcg_ap_merge(job)) {
+		job->hdr_ts_cache.le = info->sof_ts_ns;
+		job->hdr_ts_cache.le_mono = info->sof_ts_mono_ns;
+		job->hdr_ts_cache.ne = info->sof_ts_ns;
+		job->hdr_ts_cache.ne_mono = info->sof_ts_mono_ns;
+	} else {
+		job->hdr_ts_cache.le = info->sof_ts_ns;
+		job->hdr_ts_cache.le_mono = info->sof_ts_mono_ns;
+		job->hdr_ts_cache.ne = 0;
+		job->hdr_ts_cache.ne_mono = 0;
+	}
+
+	if (info->sof_l_ts_ns >= info->sof_ts_ns) {
+		job->hdr_ts_cache.se = info->sof_l_ts_ns;
+		job->hdr_ts_cache.se_mono = info->sof_l_ts_mono_ns;
+	} else {
+		job->hdr_ts_cache.se = 0;
+		job->hdr_ts_cache.se_mono = 0;
+	}
+
+	job->hdr_ts_dcg = false;
+}
+
 void fill_hdr_timestamp(struct mtk_cam_job *job,
 				   struct mtk_cam_ctrl_runtime_info *info)
 {
 	int exp_order = get_exp_order(&job->job_scen);
 
-	if (job->hdr_ts_dcg) {
-		job->hdr_ts_cache.le = info->sof_ts_ns;
-		job->hdr_ts_cache.le_mono = info->sof_ts_mono_ns;
-		job->hdr_ts_cache.se = info->sof_ts_ns;
-		job->hdr_ts_cache.se_mono = info->sof_ts_mono_ns;
+	if (is_dcg_with_vs(job)) {
+		fill_dcg_vs_ts(job, info);
 		goto EXIT;
 	}
 
