@@ -1792,13 +1792,18 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 	int raw_after_change = bit_map_subset_of(MAP_HW_RAW, job->used_engine);
 	int raw_uninit = bit_map_subset_of(MAP_HW_RAW, engine_uninit);
 	int raw_all = raw_after_change | raw_uninit;
+	int master_raw_id = get_master_raw_id(raw_after_change);
+	struct mtk_raw_device *master_raw =
+		dev_get_drvdata(cam->engines.raw_devs[master_raw_id]);
+	bool qof_enabled = qof_is_enabled(master_raw);
 	bool is_fusion;
 	struct mtk_raw_ctrl_data *ctrl_data = get_raw_ctrl_data(job);
 	u8 sen_ctrl = (!ctrl_data) ? MTK_CAM_SEN_APPLY_NORMAL :
 		ctrl_data->resource.user_data.raw_res.sen_apply_ctrl;
 
-	dev_info(dev, "[%s] begin waiting switch no:%d seq 0x%x\n",
-		__func__, job->req_seq, job->frame_seq_no);
+	dev_info(dev, "[%s] ctx-%d begin waiting switch no:%d seq 0x%x master raw-%d qof_enabled:%d\n",
+		 __func__, ctx->stream_id, job->req_seq, job->frame_seq_no,
+			 master_raw_id, qof_enabled);
 
 	prev_seq = prev_frame_seq(job->frame_seq_no);
 	check_args.expect_inner = prev_seq;
@@ -1858,13 +1863,48 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 		ktime_get_boottime_ns() - ctrl->r_info.sof_l_ts_ns);
 	mtk_cam_job_manually_apply_sensor(job);
 
+	if (call_job_seamless_ops(job, after_sensor))
+		goto SWITCH_FAILURE;
+
+	vsync_set_desired(&ctrl->vsync_col, job->master_engine);
+
+	if (mtk_cam_ctrl_wait_event(ctrl, check_done, &prev_seq, 4999)) {
+		dev_info(dev, "[%s] check_done timeout: prev_seq=0x%x\n",
+			 __func__, prev_seq);
+		mtk_cam_job_uninit_engine(job, engine_uninit);
+		goto SWITCH_FAILURE;
+	}
+
+
+	for (i = 0; i < cam->engines.num_raw_devices; i++) {
+		if ((BIT(i) & raw_after_change) && qof_enabled) {
+			struct mtk_raw_device *raw_dev;
+
+			raw_dev = dev_get_drvdata(cam->engines.raw_devs[i]);
+
+			qof_enable_setup_topctrl(raw_dev, false);
+		}
+	}
+
+	for (i = 0; i < cam->engines.num_raw_devices; i++) {
+		if ((BIT(i) & raw_after_change) && qof_enabled) {
+			struct mtk_raw_device *raw_dev;
+
+			raw_dev = dev_get_drvdata(cam->engines.raw_devs[i]);
+
+			qof_reset(raw_dev);
+			qof_init_timer_freq(raw_dev);
+			qof_force_apmcu_voter(raw_dev);
+		}
+	}
+
 	for (i = 0; i < cam->engines.num_raw_devices; ++i) {
 		struct mtk_raw_device *raw = NULL;
 		struct mtk_raw_ctrl_data *ctrl = NULL;
 		const struct mtk_cam_resource_v2 *res = NULL;
 		int exp, sv_last_tag;
 
-		if (!(BIT(i) & raw_after_change))
+		if (!(BIT(i) & raw_after_change) || !qof_enabled)
 			continue;
 
 		raw = dev_get_drvdata(cam->engines.raw_devs[i]);
@@ -1883,22 +1923,20 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 			qof_sof_src_sel(raw, job_exp_num(job),
 						!res_raw_is_dc_mode(&res->raw_res), sv_last_tag);
 			qof_set_cq_start_max(raw, -1);
-			qof_enable_cq_trigger_by_qof(raw, false);
 		} else {
 			dev_info(dev, "[%s] check null at qof_sof_src_sel\n", __func__);
 		}
 	}
 
-	if (call_job_seamless_ops(job, after_sensor))
-		goto SWITCH_FAILURE;
+	for (i = 0; i < cam->engines.num_raw_devices; i++) {
+		if ((BIT(i) & raw_after_change) && qof_enabled) {
+			struct mtk_raw_device *raw_dev;
 
-	vsync_set_desired(&ctrl->vsync_col, job->master_engine);
+			raw_dev = dev_get_drvdata(cam->engines.raw_devs[i]);
 
-	if (mtk_cam_ctrl_wait_event(ctrl, check_done, &prev_seq, 4999)) {
-		dev_info(dev, "[%s] check_done timeout: prev_seq=0x%x\n",
-			 __func__, prev_seq);
-		mtk_cam_job_uninit_engine(job, engine_uninit);
-		goto SWITCH_FAILURE;
+			qof_enable_setup_topctrl(raw_dev, true);
+			qof_enable_cq_trigger_by_qof(raw_dev, false);
+		}
 	}
 
 	for (i = 0; i < cam->engines.num_raw_devices; i++) {

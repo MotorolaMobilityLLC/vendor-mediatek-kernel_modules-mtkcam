@@ -48,6 +48,7 @@ int qof_int_en_yuv_dma_err(struct mtk_yuv_device *dev, bool enable);
 void qof_set_cq_start_max(struct mtk_raw_device *dev, int scq_ms);
 
 bool qof_is_enabled(struct mtk_raw_device *dev);
+int qof_enable_setup_topctrl(struct mtk_raw_device *raw, bool enable);
 int qof_enable(struct mtk_raw_device *dev, bool enable);
 
 int qof_enable_cq_trigger_by_qof(struct mtk_raw_device *dev, bool enable);
@@ -69,6 +70,8 @@ void __qof_mtcmos_voter_handle(struct mtk_cam_engines *eng,
 	const char *caller);
 #define qof_mtcmos_voter_handle(eng, used_raw, handle) \
 	__qof_mtcmos_voter_handle(eng, used_raw, handle, __func__)
+
+int qof_force_apmcu_voter(struct mtk_raw_device *raw);
 
 int qof_reset_mtcmos_voter(struct mtk_cam_ctx *ctx);
 int qof_reset_mtcmos_raw_voter(struct mtk_raw_device *raw);

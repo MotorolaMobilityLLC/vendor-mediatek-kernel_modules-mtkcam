@@ -211,8 +211,6 @@ int qof_reset(struct mtk_raw_device *raw)
 	writel(rst_val, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_SW_RST);
 	writel(rst_val_off, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_SW_RST);
 
-//	qof_init_timer_freq(raw);
-
 	return 0;
 }
 
@@ -415,12 +413,37 @@ void qof_setup_hw_timer(struct mtk_raw_device *raw, u32 interval_us)
 	}
 }
 
+
+int qof_enable_setup_topctrl(struct mtk_raw_device *raw, bool enable)
+{
+	struct mtk_cam_device *cam = raw->cam;
+	u32 val;
+	unsigned long flags;
+
+	spin_lock_irqsave(&cam->qoftop_lock, flags);
+	val = readl(cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
+
+	if (enable)
+		val |= qof_raw_to_bit[raw->id].enable;
+	else
+		val &= ~qof_raw_to_bit[raw->id].enable;
+
+	SET_FIELD(&val, QOF_CAM_TOP_SEQUENCE_MODE, QOF_SEQ_MODE_RTC_THEN_ITC);
+	writel(val, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
+	raw->qof_enabled = enable;
+	spin_unlock_irqrestore(&cam->qoftop_lock, flags);
+
+	dev_info(raw->dev, "qof: %s: %s TOP_CTL 0x%08x",
+			 __func__, (enable) ? "enable" : "disable",
+			 readl(cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL));
+
+	return 0;
+}
+
 int qof_enable(struct mtk_raw_device *raw, bool enable)
 {
 	int en = enable ? 1 : 0;
 	struct mtk_cam_device *cam = raw->cam;
-	u32 val;
-	unsigned long flags;
 
 	if (enable == qof_is_enabled(raw))
 		return 0;
@@ -450,18 +473,7 @@ int qof_enable(struct mtk_raw_device *raw, bool enable)
 	if (en)
 		qof_setup_pwr_th(raw);
 
-	spin_lock_irqsave(&cam->qoftop_lock, flags);
-	val = readl(cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
-
-	if (enable)
-		val |= qof_raw_to_bit[raw->id].enable;
-	else
-		val &= ~qof_raw_to_bit[raw->id].enable;
-
-	SET_FIELD(&val, QOF_CAM_TOP_SEQUENCE_MODE, QOF_SEQ_MODE_RTC_THEN_ITC);
-	writel(val, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_TOP_CTL);
-	raw->qof_enabled = enable;
-	spin_unlock_irqrestore(&cam->qoftop_lock, flags);
+	qof_enable_setup_topctrl(raw, en);
 
 	if (en) {
 		writel(0xfff, cam->qoftop_base + REG_QOF_CAM_TOP_QOF_INT_EN);
@@ -863,6 +875,25 @@ void qof_set_cq_start_max(struct mtk_raw_device *raw, int scq_ms)
 	if (CAM_DEBUG_ENABLED(QOF) || FORCE_DUMP(raw->id))
 		dev_info(raw->dev, "[%s] REG_QOF_CAM_A_QOF_CQ_START_MAX:0x%08x (%dms)\n",
 				 __func__, readl(raw->qof_base + REG_QOF_CAM_A_QOF_CQ_START_MAX), scq_ms);
+}
+
+int qof_force_apmcu_voter(struct mtk_raw_device *raw)
+{
+	u32 val = 0;
+	int ret = 0;
+	unsigned long flags;
+	unsigned long flags_qof_ctrl;
+
+	spin_lock_irqsave(&raw->apmcu_voter_lock, flags);
+	spin_lock_irqsave(&raw->qof_ctrl_lock, flags_qof_ctrl);
+
+	val = readl(raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
+	writel(val | FBIT(QOF_CAM_A_APMCU_SET), raw->qof_base + REG_QOF_CAM_A_QOF_CTL);
+
+	spin_unlock_irqrestore(&raw->qof_ctrl_lock, flags_qof_ctrl);
+	spin_unlock_irqrestore(&raw->apmcu_voter_lock, flags);
+
+	return ret;
 }
 
 int __qof_mtcmos_raw_voter(struct mtk_raw_device *raw, bool enable, const char *caller)
