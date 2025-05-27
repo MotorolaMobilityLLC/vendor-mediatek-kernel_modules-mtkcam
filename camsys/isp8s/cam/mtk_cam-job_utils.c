@@ -2357,7 +2357,7 @@ int handle_sv_tag(struct mtk_cam_job *job)
 			max_pixel_mode,
 			job->sub_ratio,
 			mraw_sink->width, mraw_sink->height,
-			mraw_sink->mbus_code, 1, mraw_pipe);
+			mraw_sink->mbus_code, 0, mraw_pipe);
 
 		job->used_tag_cnt++;
 		job->enabled_tags |= (1 << meta_tag_param.tag_idx);
