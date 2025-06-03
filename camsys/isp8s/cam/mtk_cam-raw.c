@@ -1496,8 +1496,6 @@ static int push_msgfifo(struct mtk_raw_device *dev,
 
 #define CQ_ERR_TO_BE_HANDLED	\
 	(FBIT(CAMCTL_CQ_MAIN_CODE_ERR_ST)		|	\
-	 FBIT(CAMCTL_CQ_DB_LOAD_ERR_ST)		|	\
-	 FBIT(CAMCTL_CQ_MAIN_VS_ERR_ST)			|	\
 	 FBIT(CAMCTL_CQ_MAIN_VS_ERR_ST)			|	\
 	 FBIT(CAMCTL_CQ_SUB_CODE_ERR_ST)		|	\
 	 FBIT(CAMCTL_CQ_SUB_VS_ERR_ST))
