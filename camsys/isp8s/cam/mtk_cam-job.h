@@ -287,6 +287,8 @@ struct mtk_cam_job_state {
 struct mtk_cam_ufbc_header_entry {
 	int ipi_id;
 	void *vaddr;
+	int subsample;
+	int size;
 	struct mtkcam_ipi_img_ufo_param *param;
 };
 

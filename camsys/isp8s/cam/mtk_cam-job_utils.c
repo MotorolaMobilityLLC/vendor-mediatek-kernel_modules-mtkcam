@@ -1178,21 +1178,26 @@ int write_ufbc_header_to_buf(struct mtk_cam_job *job,
 
 	for (i = 0; i < ufbc_header->used; i++) {
 		struct mtk_cam_ufbc_header_entry *param = &ufbc_header->entry[i];
+		int i = 0;
 
-		switch (param->ipi_id) {
-		case MTKCAM_IPI_RAW_IMGO:
-		case MTKCAM_IPI_RAW_IMGO_W:
-		case MTKCAM_IPI_CAMSV_MAIN_OUT:
-			fill_ufbc_header_bayer(job, param->vaddr, param->param);
-			break;
-		case MTKCAM_IPI_RAW_YUVO_1:
-		case MTKCAM_IPI_RAW_YUVO_3:
-			fill_ufbc_header_yuvo(param->vaddr, param->param);
-			break;
-		default:
-			pr_info("%s: unknown IPI(%d) to handle ufbc header",
-					__func__, param->ipi_id);
-			break;
+		for (i = 0; i < param->subsample; ++i) {
+			switch (param->ipi_id) {
+			case MTKCAM_IPI_RAW_IMGO:
+			case MTKCAM_IPI_RAW_IMGO_W:
+			case MTKCAM_IPI_CAMSV_MAIN_OUT:
+				fill_ufbc_header_bayer(job, param->vaddr + (i * param->size),
+					param->param);
+				break;
+			case MTKCAM_IPI_RAW_YUVO_1:
+			case MTKCAM_IPI_RAW_YUVO_3:
+				fill_ufbc_header_yuvo(param->vaddr + (i * param->size),
+					param->param);
+				break;
+			default:
+				pr_info("%s: unknown IPI(%d) to handle ufbc header",
+						__func__, param->ipi_id);
+				break;
+			}
 		}
 	}
 
@@ -1201,7 +1206,8 @@ int write_ufbc_header_to_buf(struct mtk_cam_job *job,
 
 static inline
 int _add_entry_to_ufbc_header(struct mtk_cam_ufbc_header *ufbc_header,
-		int ipi, void *vaddr, struct mtkcam_ipi_img_ufo_param *param)
+		int ipi, void *vaddr, int subsample, int size,
+		struct mtkcam_ipi_img_ufo_param *param)
 {
 	struct mtk_cam_ufbc_header_entry *hdr = NULL;
 
@@ -1220,6 +1226,8 @@ int _add_entry_to_ufbc_header(struct mtk_cam_ufbc_header *ufbc_header,
 
 	hdr->ipi_id = ipi;
 	hdr->vaddr = vaddr;
+	hdr->subsample = subsample;
+	hdr->size = size;
 	hdr->param = param;
 
 	return 0;
@@ -1233,7 +1241,6 @@ int add_ufbc_header_entry(struct req_buffer_helper *helper,
 	struct mtkcam_ipi_frame_param *fp = helper->fp;
 	void *vaddr;
 	int ret = 0;
-	int i;
 
 	if (!is_raw_ufo(pixelformat) && !is_yuv_ufo(pixelformat))
 		return 0;
@@ -1242,32 +1249,29 @@ int add_ufbc_header_entry(struct req_buffer_helper *helper,
 	if (!vaddr)
 		return -1;
 
-	for (i = 0; i < subsample; ++i) {
-		switch (ipi_video_id) {
-		case MTKCAM_IPI_RAW_IMGO:
-		case MTKCAM_IPI_RAW_IMGO_W:
-			ret = _add_entry_to_ufbc_header(helper->ufbc_header, ipi_video_id,
-							   vaddr + offset + (i * size),
-							   &fp->img_ufdo_params.imgo);
-			break;
-		case MTKCAM_IPI_CAMSV_MAIN_OUT:
-			ret = _add_entry_to_ufbc_header(helper->ufbc_header, ipi_video_id,
-						   vaddr + offset + (i * size),
-						   NULL);
-			break;
-		case MTKCAM_IPI_RAW_YUVO_1:
-			ret = _add_entry_to_ufbc_header(helper->ufbc_header, ipi_video_id,
-							   vaddr + offset + (i * size),
-							   &fp->img_ufdo_params.yuvo1);
-			break;
-		case MTKCAM_IPI_RAW_YUVO_3:
-			ret = _add_entry_to_ufbc_header(helper->ufbc_header, ipi_video_id,
-							   vaddr + offset + (i * size),
-							   &fp->img_ufdo_params.yuvo3);
-			break;
-		default:
-			break;
-		}
+	switch (ipi_video_id) {
+	case MTKCAM_IPI_RAW_IMGO:
+	case MTKCAM_IPI_RAW_IMGO_W:
+		ret = _add_entry_to_ufbc_header(helper->ufbc_header, ipi_video_id,
+				vaddr + offset, subsample, size,
+				&fp->img_ufdo_params.imgo);
+		break;
+	case MTKCAM_IPI_CAMSV_MAIN_OUT:
+		ret = _add_entry_to_ufbc_header(helper->ufbc_header, ipi_video_id,
+				vaddr + offset,  subsample, size, NULL);
+		break;
+	case MTKCAM_IPI_RAW_YUVO_1:
+		ret = _add_entry_to_ufbc_header(helper->ufbc_header, ipi_video_id,
+				vaddr + offset, subsample, size,
+				&fp->img_ufdo_params.yuvo1);
+		break;
+	case MTKCAM_IPI_RAW_YUVO_3:
+		ret = _add_entry_to_ufbc_header(helper->ufbc_header, ipi_video_id,
+				vaddr + offset, subsample, size,
+				&fp->img_ufdo_params.yuvo3);
+		break;
+	default:
+		break;
 	}
 
 	return ret;
