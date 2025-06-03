@@ -2840,11 +2840,6 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				frm_info->user_info[frm_idx].hw_comb, frm_info->frm_owner,
 				frm_idx, frm_num, blk_idx);
 
-			#if IMGSYS_SECURE_ENABLE
-			if (frm_info->user_info[frm_idx].is_secFrm &&
-					(frm_info->user_info[frm_idx].hw_comb & IMGSYS_HW_FLAG_MAE))
-				imgsys_cmdq_sec_cmd_fdvt_plat8s(pkt);
-			#endif
 			if (imgsys_cmdq_dbg_enable_plat8s())
 				pr_debug("%s, is_secFrm = %d.",
 					__func__, frm_info->user_info[frm_idx].is_secFrm);
@@ -2873,12 +2868,6 @@ int imgsys_cmdq_sendtask_plat8s(struct mtk_imgsys_dev *imgsys_dev,
 				goto sendtask_done;
 			}
 			cmd_idx += ret;
-
-			#if IMGSYS_SECURE_ENABLE
-			if (frm_info->user_info[frm_idx].is_secFrm &&
-					(frm_info->user_info[frm_idx].hw_comb & IMGSYS_HW_FLAG_MAE))
-				imgsys_cmdq_sec_cmd_fdvt_plat8s(pkt);
-			#endif
 
 			IMGSYS_CMDQ_SYSTRACE_END();
 
