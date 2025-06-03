@@ -5082,6 +5082,9 @@ static int feature_control(
 		pr_debug("ihdr enable :%d\n", (BOOL)*feature_data_32);
 		ctx->ihdr_mode = *feature_data_32;
 		break;
+	case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
+		*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = 1540000;
+		break;
 	case SENSOR_FEATURE_GET_CROP_INFO:
 		wininfo =
 	(struct SENSOR_WINSIZE_INFO_STRUCT *)(uintptr_t)(*(feature_data+1));
