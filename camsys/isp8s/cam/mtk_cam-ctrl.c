@@ -521,6 +521,7 @@ struct seamless_check_args {
 	int expect_inner;
 	int expect_ack;
 	bool check_xvs;
+	bool force_last_sof;
 };
 
 static bool check_for_seamless(struct mtk_cam_ctrl *ctrl, void *arg)
@@ -555,6 +556,11 @@ static bool check_for_seamless(struct mtk_cam_ctrl *ctrl, void *arg)
 		ts_margin = VALID_SWITCH_PERIOD_60FPS_FROM_VSYNC_MS;
 	else
 		ts_margin = VALID_SWITCH_PERIOD_30FPS_FROM_VSYNC_MS;
+
+	/* TODO: check for all scenario? */
+	if ((args->force_last_sof) && (last_sof_ts < first_sof_ts))
+		return 0;
+
 	if (args->check_xvs) {
 		if (ts - last_xvs_ts >= ts_margin)
 			return 0;
@@ -1809,6 +1815,7 @@ static void mtk_cam_ctrl_seamless_switch_flow(struct mtk_cam_job *job)
 	check_args.expect_inner = prev_seq;
 	check_args.expect_ack = job->frame_seq_no;
 	check_args.check_xvs = (sen_ctrl == MTK_CAM_SEN_APPLY_BY_XVS);
+	check_args.force_last_sof = scen_is_stagger_lbmf(&job->prev_scen);
 
 	for (i = 0; i < cam->engines.num_raw_devices; i++) {
 		if (BIT(i) & raw_all) {
