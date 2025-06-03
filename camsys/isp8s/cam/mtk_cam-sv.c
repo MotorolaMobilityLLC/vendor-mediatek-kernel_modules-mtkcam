@@ -3296,7 +3296,7 @@ void camsv_handle_err(
 
 			mmdvfs_debug_status_dump(NULL);
 			mmqos_hrt_dump();
-
+			mtk_hrt_issue_flag_set(true);
 
 			if (atomic_read(&sv_dev->is_seamless))
 				mtk_cam_ctrl_dump_request(sv_dev->cam, CAMSYS_ENGINE_CAMSV, sv_dev->id,

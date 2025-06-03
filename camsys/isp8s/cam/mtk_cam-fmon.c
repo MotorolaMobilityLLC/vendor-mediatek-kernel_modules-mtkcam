@@ -703,13 +703,11 @@ static irqreturn_t mtk_thread_irq_fmon(int irq, void *data)
 
 		WARN_ON(len != sizeof(irq_info));
 
-		pr_info("FMON INT: setting2:0x%x, funnel:0x%x, systimer:%llu ns, ktime: %llu ns\n",
-			irq_info.irq_status, readl(fmon->mminfra_funnel),
+		pr_info("FMON INT: setting2:0x%x, top_funnel:0x%x, mm_funnel:0x%x, systimer:%llu ns, ktime: %llu ns\n",
+			irq_info.irq_status, readl(fmon->trace_top_funnel), readl(fmon->mminfra_funnel),
 			systimer_cnt, sched_clock_value);
 
-		if (irq_info.irq_type & FMON_SIG_STOP) {
-			mtk_hrt_issue_flag_set(true);
-		} else if (irq_info.irq_type & FMON_SIG_START) {
+		if (irq_info.irq_type & FMON_SIG_START) {
 			if (fmon_mbrain_enable) {
 #if IS_ENABLED(CONFIG_MTK_MBRAINK_BRIDGE)
 				mtk_mbrain2isp_hrt_cb(dbg_threshold_pr);
@@ -761,6 +759,10 @@ int mtk_cam_fmon_probe(struct platform_device *pdev, struct mtk_cam_device *cam)
 	fmon->mminfra_funnel = ioremap(0x30a2f000, 0x4);
 	if (IS_ERR(fmon->mminfra_funnel))
 		dev_err(dev, "%s: failed to map mminfra_funnel\n", __func__);
+
+	fmon->trace_top_funnel = ioremap(0x0d070000, 0x4);
+	if (IS_ERR(fmon->trace_top_funnel))
+		dev_err(dev, "%s: failed to map trace_top_funnel\n", __func__);
 
 	fmon->mminfra_cti_st = ioremap(0x30a2b138, 0x4);
 	if (IS_ERR(fmon->mminfra_cti_st))

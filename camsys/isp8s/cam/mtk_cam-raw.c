@@ -2206,6 +2206,7 @@ static void raw_handle_tg_overrun_err(struct mtk_raw_device *raw_dev,
 		mtk_cam_isp8s_bwr_dbg_dump(raw_dev->cam->bwr);
 		mmdvfs_debug_status_dump(NULL);
 		mmqos_hrt_dump();
+		mtk_hrt_issue_flag_set(true);
 		do_engine_callback(raw_dev->engine_cb, reset_sensor,
 				   raw_dev->cam, CAMSYS_ENGINE_RAW, raw_dev->id,
 				   fh_cookie);

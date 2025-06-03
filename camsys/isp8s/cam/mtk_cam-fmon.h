@@ -100,6 +100,7 @@ struct mtk_fmon_device {
 	void __iomem *cti_clear;
 	/* debug */
 	void __iomem *mminfra_funnel;
+	void __iomem *trace_top_funnel;
 	void __iomem *mminfra_cti_st;
 	void __iomem *apinfra_cti_st;
 
