@@ -2440,7 +2440,7 @@ static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 	if (!ctx->is_cphy) { //Dphy
 		data_rate = ctx->mipi_pixel_rate * bit_per_pixel;
 		do_div(data_rate, ctx->num_data_lanes);
-		seninf_logi(ctx, "[%s] pixel_rate(%lldpps) data_rate(%lldbps/lane)\n",
+		seninf_logd(ctx, "[%s] pixel_rate(%lldpps) data_rate(%lldbps/lane)\n",
 			__func__, ctx->mipi_pixel_rate, data_rate);
 
 		SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_HDR_MODE_0, RG_CSI2_HEADER_MODE, 0);
@@ -2448,7 +2448,7 @@ static int csirx_mac_csi_setting(struct seninf_ctx *ctx)
 	} else { //Cphy
 		data_rate = ctx->mipi_pixel_rate * bit_per_pixel * 7;
 		do_div(data_rate, ctx->num_data_lanes * 16);
-		seninf_logi(ctx, "[%s] pixel_rate(%lldpps) data_rate(%lldsps/trio)\n",
+		seninf_logd(ctx, "[%s] pixel_rate(%lldpps) data_rate(%lldsps/trio)\n",
 			__func__, ctx->mipi_pixel_rate, data_rate);
 
 		SENINF_BITS(csirx_mac_csi, CSIRX_MAC_CSI2_HDR_MODE_0, RG_CSI2_HEADER_MODE, 2);
@@ -4213,7 +4213,7 @@ static int _reset_csi_top(struct seninf_ctx *ctx)
 
 	mutex_unlock(&ctx->core->seninf_top_rg_mutex);
 
-	seninf_logi(ctx, "Reset CSI-%d top_ctrl_0, (0x%08x -> 0x%08x -> 0x%08x)\n",
+	seninf_logd(ctx, "Reset CSI-%d top_ctrl_0, (0x%08x -> 0x%08x -> 0x%08x)\n",
 		    csi_port, top_ctrl, rst_val, top_ctrl);
 
 	return 0;
