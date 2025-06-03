@@ -4000,6 +4000,10 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 				dev_info(raw_dev->dev, "time-share: ctx:%d last uninitialize",
 						ctx->stream_id);
 			}
+			if (ctx->ois_comp_en) {
+				ctx->ois_comp_en = false;
+				mtk_cam_tuning_uninit();
+			}
 			stream_on(raw_dev, false, true);
 		}
 	}

@@ -231,6 +231,9 @@ struct mtk_cam_ctx {
 
 	atomic_t cq_rdy_mask_en_cnt;
 
+	/* ois compenstion */
+	bool ois_comp_en;
+
 	/* camsv stress test */
 	struct mtk_cam_device_buf camsv_stress_buffer;
 	struct mtk_cam_pool_buffer camsv_stress_buf;

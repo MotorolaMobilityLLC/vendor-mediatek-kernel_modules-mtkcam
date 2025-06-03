@@ -1347,8 +1347,10 @@ _stream_on(struct mtk_cam_job *job, bool on)
 		(is_dc || is_offline_ts) ? 0 : get_seninf_pad_bitmask(job);
 
 	/* ois compensation */
-	if (is_ois_compensation(job))
+	if (is_ois_compensation(job)) {
+		ctx->ois_comp_en = true;
 		mtk_cam_tuning_init(&job->tuning_param);
+	}
 
 	if (job->enable_hsf_raw) {
 		/* TODO: separate seninf api to cammux setting and enable */
@@ -4471,6 +4473,13 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 	stream_on(raw_dev, 0, false);
 	mtk_cam_fmon_unbind(&cam->fmon, bit_map_subset_of(MAP_HW_RAW, all_engine));
 
+	/* ois compenstion uninit */
+	if (ctx->ois_comp_en) {
+		ctx->ois_comp_en = false;
+		mtk_cam_tuning_uninit();
+		lock_done_ctrl_enable(raw_dev, 0);
+	}
+
 	for (i = 0; i < cam->engines.num_raw_devices; ++i) {
 		if (BIT(i) & bit_map_subset_of(MAP_HW_RAW, all_engine)) {
 			struct mtk_raw_device *r = dev_get_drvdata(cam->engines.raw_devs[i]);
@@ -4496,9 +4505,12 @@ _common_seamless_after_frame_done(struct mtk_cam_job *job)
 	/* uninit pda engine if necessary */
 	mtk_cam_job_uninit_pda_engine(job, job->uninit_pda_engine);
 
-	if (is_ois_comp)
+	/* ois compenstion uninit */
+	if (is_ois_comp) {
+		ctx->ois_comp_en = true;
 		mtk_cam_tuning_init(&job->tuning_param);
-	lock_done_ctrl_enable(raw_dev, is_ois_comp);
+		lock_done_ctrl_enable(raw_dev, 1);
+	}
 
 	job_fetch_opp_idx(job, &opp_idx, &boostable);
 	mtk_cam_dvc_init(&ctx->cam->dvfs.dvc, raw_dev->id,

@@ -12,6 +12,10 @@ void mtk_cam_tuning_init(struct mtk_cam_tuning *param)
 {
 }
 
+void mtk_cam_tuning_uninit(void)
+{
+}
+
 void mtk_cam_tuning_update(struct mtk_cam_tuning *param)
 {
 #ifdef SAMPLE_CODE
