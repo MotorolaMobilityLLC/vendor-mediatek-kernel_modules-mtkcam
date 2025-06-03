@@ -423,6 +423,9 @@ struct mtk_cam_broadcast_info {
 #define V4L2_CMD_G_FSYNC_ANCHOR_INFO \
 	(V4L2_CMD_USER_MTK_SENSOR_BASE + 34)
 
+#define V4L2_CMD_G_CHECK_SENSOR_SEAMLESS_DONE_TS \
+	(V4L2_CMD_USER_MTK_SENSOR_BASE + 35)
+
 
 /**
  * EINT

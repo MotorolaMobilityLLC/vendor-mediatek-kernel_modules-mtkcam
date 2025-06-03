@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0
 // Copyright (c) 2022 MediaTek Inc.
 
+#include <linux/delay.h>
 
 #include "mtk_camera-v4l2-controls.h"
 #include "adaptor.h"
+#include "adaptor-ctrls.h"
 #include "adaptor-trace.h"
 #include "adaptor-fsync-ctrls.h"
 #include "adaptor-common-ctrl.h"
@@ -427,6 +429,38 @@ static int g_cmd_fsync_anchor_info(struct adaptor_ctx *ctx, void *arg)
 #endif
 
 	return ret;
+}
+
+static int g_cmd_chk_seamless_switch_done_ts(struct adaptor_ctx *ctx, void *arg)
+{
+	bool is_seamless_switch_before = false;
+	u64 seamless_switch_i2c_done_ts = 0;
+	const unsigned int Min_sensor_latch_time_in_us = 3000;
+	unsigned int ts_diff_in_us;
+
+
+	/* unexpected case, arg is nullptr */
+	if (unlikely(ctx == 0)) {
+		pr_info("[%s][ERROR] ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	mutex_lock(&ctx->seamless_ts_info.seamless_switch_ts_mutex);
+	is_seamless_switch_before = ctx->seamless_ts_info.is_seamless_switch_before;
+	seamless_switch_i2c_done_ts = ctx->seamless_ts_info.seamless_switch_i2c_done_ts;
+	mutex_unlock(&ctx->seamless_ts_info.seamless_switch_ts_mutex);
+
+	if (!is_seamless_switch_before)
+		return 0;
+
+	ts_diff_in_us = (ktime_get_boottime_ns() - seamless_switch_i2c_done_ts) / 1000;
+
+	if (ts_diff_in_us < Min_sensor_latch_time_in_us)
+		udelay(Min_sensor_latch_time_in_us - ts_diff_in_us);
+
+	clear_seamless_switch_ts_info(ctx);
+
+	return 0;
 }
 
 static int s_cmd_sensor_broadcast_event(struct adaptor_ctx *ctx, void *arg)
@@ -948,6 +982,7 @@ static int s_cmd_notify_mipi_err_cnt(struct adaptor_ctx *ctx, void *arg)
 
 	return 0;
 }
+
 /*---------------------------------------------------------------------------*/
 // adaptor command framework/entry
 /*---------------------------------------------------------------------------*/
@@ -976,6 +1011,7 @@ static const struct command_entry command_list[] = {
 	{V4L2_CMD_G_CUST_CTLE_CONFIG, g_cmd_cust_ctle_config},
 	{V4L2_CMD_G_DCG_VSL_LINETIME_INFO, g_cmd_dgc_vsl_linetime_info},
 	{V4L2_CMD_G_FSYNC_ANCHOR_INFO, g_cmd_fsync_anchor_info},
+	{V4L2_CMD_G_CHECK_SENSOR_SEAMLESS_DONE_TS, g_cmd_chk_seamless_switch_done_ts},
 
 	/* SET */
 	{V4L2_CMD_SET_CB_FUNC_OF_FAKE_SENSOR, set_cb_func_of_fake_sensor},

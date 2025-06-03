@@ -900,6 +900,9 @@ static int imgsensor_start_streaming(struct adaptor_ctx *ctx)
 	/* notify frame-sync streaming ON */
 	notify_fsync_mgr_streaming(ctx, 1);
 
+	/* reset seamless switch ts info */
+	clear_seamless_switch_ts_info(ctx);
+
 	adaptor_logm(ctx, "-\n");
 	return 0;
 }
@@ -933,6 +936,9 @@ static int imgsensor_stop_streaming(struct adaptor_ctx *ctx)
 	memset(&ctx->ae_ctrl_dbg_info, 0, sizeof(ctx->ae_ctrl_dbg_info));
 	ctx->sys_ts_update_sof_cnt = 0;
 	ctx->sof_cnt = 0;
+
+	/* reset seamless switch ts info */
+	clear_seamless_switch_ts_info(ctx);
 
 	/* reset sentest flag */
 	sentest_flag_init(ctx);
@@ -1693,6 +1699,7 @@ static int imgsensor_probe(struct i3c_i2c_device *client)
 	adaptor_tsrec_cb_ctrl_init(ctx);
 
 	mutex_init(&ctx->mutex);
+	mutex_init(&ctx->seamless_ts_info.seamless_switch_ts_mutex);
 	mutex_init(&ctx->open_cnt_mutex);
 	mutex_init(&ctx->ebd_lock);
 	mutex_init(&ctx->subctx.i2c_buffer_lock);

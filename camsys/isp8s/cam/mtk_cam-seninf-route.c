@@ -1891,6 +1891,11 @@ bool mtk_cam_seninf_set_mux_sw_rdy_immediate(
 		return -EINVAL;
 	}
 
+	/* check sensor latch time when pull sw rdy to high */
+	if (sw_rdy_status == true)
+		ctx->sensor_sd->ops->core->command(
+			ctx->sensor_sd, V4L2_CMD_G_CHECK_SENSOR_SEAMLESS_DONE_TS, NULL);
+
 	return mtk_cam_seninf_set_mux_rdy_msk_cfg_by_cmd(
 		ctx, camtg, MTK_CAM_SENINF_RDY_SET_SW_STATUS, sw_rdy_status);
 }

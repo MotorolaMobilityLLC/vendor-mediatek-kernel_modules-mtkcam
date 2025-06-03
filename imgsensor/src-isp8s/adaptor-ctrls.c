@@ -1633,6 +1633,35 @@ static void proc_debug_cmd(struct adaptor_ctx *ctx, char *text)
 		v4l2_async_unregister_subdev(&ctx->sd);
 }
 
+int clear_seamless_switch_ts_info(struct adaptor_ctx *ctx)
+{
+	if (unlikely(ctx == 0)) {
+		pr_info("[%s][ERROR] ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+	mutex_lock(&ctx->seamless_ts_info.seamless_switch_ts_mutex);
+	ctx->seamless_ts_info.is_seamless_switch_before = 0;
+	ctx->seamless_ts_info.seamless_switch_i2c_done_ts = 0;
+	mutex_unlock(&ctx->seamless_ts_info.seamless_switch_ts_mutex);
+
+	return 0;
+}
+
+static int notify_seamless_switch_ts_info(struct adaptor_ctx *ctx)
+{
+	if (unlikely(ctx == 0)) {
+		pr_info("[%s][ERROR] ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	mutex_lock(&ctx->seamless_ts_info.seamless_switch_ts_mutex);
+	ctx->seamless_ts_info.is_seamless_switch_before = true;
+	ctx->seamless_ts_info.seamless_switch_i2c_done_ts = ktime_get_boottime_ns();
+	mutex_unlock(&ctx->seamless_ts_info.seamless_switch_ts_mutex);
+
+	return 0;
+}
+
 
 static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 {
@@ -2095,9 +2124,13 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 			/* copy original input data for fsync using */
 			memcpy(fsync_exp, &info->ae_ctrl[0].exposure.arr, sizeof(fsync_exp));
 
+			clear_seamless_switch_ts_info(ctx);
+
 			subdrv_call(ctx, feature_control,
 				SENSOR_FEATURE_SEAMLESS_SWITCH,
 				para.u8, &len);
+
+			notify_seamless_switch_ts_info(ctx);
 
 			notify_seninf_eint_seamless_switch(ctx, 1);
 

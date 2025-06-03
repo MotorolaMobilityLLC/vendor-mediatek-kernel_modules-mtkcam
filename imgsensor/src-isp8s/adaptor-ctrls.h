@@ -22,4 +22,6 @@ int update_shutter_for_timeout(struct adaptor_ctx *ctx);
 
 int update_shutter_for_timeout_by_ae_ctrl(struct adaptor_ctx *ctx, struct mtk_hdr_ae *ae_ctrl);
 
+int clear_seamless_switch_ts_info(struct adaptor_ctx *ctx);
+
 #endif

@@ -134,6 +134,11 @@ struct adaptor_work {
 	u64 systime_to_queue;
 };
 
+struct adaptor_seamless_switch_ts_recorder {
+	struct mutex seamless_switch_ts_mutex;
+	bool is_seamless_switch_before;
+	u64 seamless_switch_i2c_done_ts;
+};
 
 struct adaptor_ctx {
 	struct mutex mutex;
@@ -269,6 +274,9 @@ struct adaptor_ctx {
 	unsigned int aov_mclk_ulposc_flag;	/* flag for aov switch mclk to ulposc */
 	u32 cust_aov_csi_clk;
 	const char *phy_ctrl_ver;
+
+	/* seamless switch i2c done ts */
+	struct adaptor_seamless_switch_ts_recorder seamless_ts_info;
 
 	/* seninf-eint */
 	struct adaptor_eint_cb_ctrl eint_cb_ctrl;
