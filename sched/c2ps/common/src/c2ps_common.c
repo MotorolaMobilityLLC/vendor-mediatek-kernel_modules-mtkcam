@@ -47,6 +47,8 @@ bool recovery_uclamp_max_immediately;
 bool need_boost_uclamp_max = true;
 bool ignore_bcpu_idle_rate;
 int um_min_virtual_ceiling = 80;
+bool force_disable_pf_policy;
+
 module_param(proc_time_window_size, int, 0644);
 module_param(debug_log_on, int, 0644);
 module_param(background_idlerate_alert, int, 0644);
@@ -56,6 +58,7 @@ module_param(recovery_uclamp_max_immediately, bool, 0644);
 module_param(need_boost_uclamp_max, bool, 0644);
 module_param(um_min_virtual_ceiling, int, 0644);
 module_param(ignore_bcpu_idle_rate, bool, 0644);
+module_param(force_disable_pf_policy, bool, 0644);
 
 struct c2ps_task_info *c2ps_find_task_info_by_tskid(int task_id)
 {
@@ -1366,6 +1369,17 @@ static inline bool need_update_long_period_idle_rate(
 	return likely(idle_rate)? (++idle_rate->counter) % 2 : false;
 }
 
+inline void c2ps_set_pf_policy(bool enable __maybe_unused)
+{
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
+
+	if (unlikely(force_disable_pf_policy))
+		mtk_set_pf_ctrl_enable(false, PF_CTRL_USER_CAM);
+	else
+		mtk_set_pf_ctrl_enable(enable, PF_CTRL_USER_CAM);
+#endif
+}
+
 void update_cpu_idle_rate(void)
 {
 	u64 _idle_time, _wall_time;
@@ -2020,6 +2034,8 @@ void exit_c2ps_common(void)
 	c2ps_clear_task_group_info_table();
 	c2ps_clear_anchor_table();
 	c2ps_remove_qos_setting();
+	c2ps_set_pf_policy(false);
+
 	kfree(glb_info);
 	glb_info = NULL;
 

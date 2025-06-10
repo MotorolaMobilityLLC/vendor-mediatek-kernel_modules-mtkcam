@@ -31,7 +31,7 @@ extern int (*c2ps_notify_single_shot_control_fp)(
 	int *critical_task_ids, int *critical_task_uclamp, u32 util_margin,
 	u32 um_placeholder1, u32 um_placeholder2, u32 um_placeholder3,
 	bool enable_ineff_cpufreq, bool switch_um_idle_rate_mode,
-	int reserved_1, int reserved_2, int reserved_3);
+	int pf_policy_enable, int reserved_2, int reserved_3);
 extern int (*c2ps_notify_single_shot_task_start_fp)(int pid, u32 uclamp);
 extern int (*c2ps_notify_single_shot_task_end_fp)(int pid);
 extern int (*c2ps_notify_anchor_fp)(int anc_id, bool register_fixed,

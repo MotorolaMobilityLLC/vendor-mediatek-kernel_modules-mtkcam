@@ -84,7 +84,7 @@ struct C2PS_SINGLE_SHOT_PARAM {
 	u32 um_placeholder3;
 	bool enable_ineff_cpufreq;
 	bool switch_um_idle_rate_mode;
-	int reserved_1;
+	int pf_policy_enable;
 	int reserved_2;
 	int reserved_3;
 };

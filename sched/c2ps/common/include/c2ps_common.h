@@ -20,6 +20,7 @@
 #include <uapi/linux/sched/types.h>
 #include <linux/version.h>
 #include <linux/pm_qos.h>
+#include "pf_ctrl.h"
 
 #define MAX_WINDOW_SIZE 70
 #define MAX_CPU_NUM CONFIG_MAX_NR_CPUS
@@ -376,6 +377,8 @@ void set_uclamp(const int pid, unsigned int max_util, unsigned int min_util);
 void reset_task_eas_setting(struct c2ps_task_info *tsk_info);
 void reset_task_uclamp(int pid);
 void cache_possible_config_cpu_freq_info(void);
+/* pf policy */
+void c2ps_set_pf_policy(bool enable);
 
 // EAS
 extern void set_curr_uclamp_ctrl(int val);
@@ -420,6 +423,10 @@ extern int get_vip_task_prio(struct task_struct *p);
 extern bool prio_is_vip(int vip_prio, int type);
 extern void unset_task_priority_based_vip(int pid);
 extern void unset_task_vvip(int pid);
+#endif
+
+#if KERNEL_VERSION(6, 6, 0) <= LINUX_VERSION_CODE
+extern int mtk_set_pf_ctrl_enable(bool enable, unsigned int user);
 #endif
 
 // QoS
