@@ -39,7 +39,7 @@ int (*c2ps_notify_single_shot_control_fp)(
 	int *task_ids, int *critical_task_uclamp, u32 util_margin,
 	u32 um_placeholder1, u32 um_placeholder2, u32 um_placeholder3,
 	bool enable_ineff_cpufreq, bool switch_um_idle_rate_mode,
-	int reserved_1, int reserved_2, int reserved_3);
+	int pf_policy_enable, int reserved_2, int reserved_3);
 EXPORT_SYMBOL_GPL(c2ps_notify_single_shot_control_fp);
 int (*c2ps_notify_single_shot_task_start_fp)(int pid, u32 uclamp);
 EXPORT_SYMBOL_GPL(c2ps_notify_single_shot_task_start_fp);
@@ -213,7 +213,7 @@ static long device_ioctl(
 			(&c2ps_single_shot)->um_placeholder3,
 			(&c2ps_single_shot)->enable_ineff_cpufreq,
 			(&c2ps_single_shot)->switch_um_idle_rate_mode,
-			(&c2ps_single_shot)->reserved_1,
+			(&c2ps_single_shot)->pf_policy_enable,
 			(&c2ps_single_shot)->reserved_2,
 			(&c2ps_single_shot)->reserved_3);
 		break;

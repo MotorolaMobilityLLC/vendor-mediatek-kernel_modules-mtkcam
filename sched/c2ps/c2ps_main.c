@@ -47,7 +47,8 @@ struct C2PS_NOTIFIER_PUSH_TAG {
 	bool switch_um_idle_rate_mode;
 	int critical_task_ids[MAX_CRITICAL_TASKS];
 	int critical_task_uclamp[MAX_CRITICAL_TASKS];
-	int reserved_1;
+	/* reserved_1 is replaced by pf_policy_enable */
+	int pf_policy_enable;
 	int reserved_2;
 	int reserved_3;
 	bool anc_register_fixed;
@@ -218,7 +219,7 @@ static void c2ps_notifier_task_single_shot(
 	int *critical_task_ids, int *critical_task_uclamp, u32 util_margin,
 	u32 um_placeholder1, u32 um_placeholder2, u32 um_placeholder3,
 	bool enable_ineff_cpufreq, bool switch_um_idle_rate_mode,
-	int reserved_1, int reserved_2, int reserved_3)
+	int pf_policy_enable, int reserved_2, int reserved_3)
 {
 	struct global_info *g_info = get_glb_info();
 	unsigned int _vip_throttle_time = vip_throttle_time > 0 ?
@@ -294,6 +295,9 @@ static void c2ps_notifier_task_single_shot(
 		g_info->um_placeholder2 = um_placeholder2;
 	if (um_placeholder3)
 		g_info->um_placeholder3 = um_placeholder3;
+	/* reserved_1 is replaced by pf_policy_enable */
+	if (pf_policy_enable > 0)
+		c2ps_set_pf_policy(true);
 }
 
 static void c2ps_queue_work(struct C2PS_NOTIFIER_PUSH_TAG *vpPush, bool update_timer)
@@ -394,7 +398,7 @@ static void c2ps_notifier_wq_cb(void)
 			vpPush->critical_task_uclamp, vpPush->util_margin,
 			vpPush->um_placeholder1, vpPush->um_placeholder2,
 			vpPush->um_placeholder3, vpPush->enable_ineff_cpufreq,
-			vpPush->switch_um_idle_rate_mode, vpPush->reserved_1,
+			vpPush->switch_um_idle_rate_mode, vpPush->pf_policy_enable,
 			vpPush->reserved_2, vpPush->reserved_3);
 		break;
 	case C2PS_NOTIFIER_ANCHOR:
@@ -601,7 +605,7 @@ int c2ps_notify_single_shot_control(
 	int *critical_task_ids, int *critical_task_uclamp, u32 util_margin,
 	u32 um_placeholder1, u32 um_placeholder2, u32 um_placeholder3,
 	bool enable_ineff_cpufreq, bool switch_um_idle_rate_mode,
-	int reserved_1, int reserved_2, int reserved_3)
+	int pf_policy_enable, int reserved_2, int reserved_3)
 {
 	struct C2PS_NOTIFIER_PUSH_TAG *vpPush = NULL;
 	int ret = 0;
@@ -660,7 +664,7 @@ int c2ps_notify_single_shot_control(
 	vpPush->reset_param = reset_param;
 	vpPush->set_task_idle_prefer = set_task_idle_prefer;
 	vpPush->util_margin = util_margin;
-	vpPush->reserved_1 = reserved_1;
+	vpPush->pf_policy_enable = pf_policy_enable;
 	vpPush->reserved_2 = reserved_2;
 	vpPush->reserved_3 = reserved_3;
 	vpPush->um_placeholder1 = um_placeholder1;
