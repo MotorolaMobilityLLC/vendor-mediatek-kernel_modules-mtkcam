@@ -28,6 +28,7 @@ struct C2PS_NOTIFIER_PUSH_TAG {
 	u32 order;
 	int pid;
 	int task_id;
+	int camfps;
 	u64 cur_ts;
 	int overwrite_uclamp_max[MAX_NUMBER_OF_CLUSTERS];
 	int idle_rate_alert;
@@ -54,6 +55,9 @@ struct C2PS_NOTIFIER_PUSH_TAG {
 	u32 anc_order;
 	u32 latency_spec;
 	u32 jitter_spec;
+	int ineff_cpu_ceiling_freq0;
+	int ineff_cpu_ceiling_freq1;
+	int ineff_cpu_ceiling_freq2;
 	struct list_head queue_list;
 };
 
@@ -106,8 +110,12 @@ static void trigger_bg_policy(void)
 	}
 }
 
-static void c2ps_notifier_init(int cfg_camfps)
+static void c2ps_notifier_init(
+	int cfg_camfps, int ineff_cpu_ceiling_freq0,
+	int ineff_cpu_ceiling_freq1, int ineff_cpu_ceiling_freq2)
 {
+	atomic_set(&processing_count, 0);
+	atomic_set(&is_self_uninit, 0);
 	if (unlikely(init_c2ps_common(cfg_camfps))) {
 		C2PS_LOGD("init_c2ps_common failed\n");
 		return;
@@ -126,6 +134,12 @@ static void c2ps_notifier_init(int cfg_camfps)
 	else
 		set_wl_manual(0);
 	c2ps_regulator_init();
+
+	set_eas_setting();
+	c2ps_set_ineff_cpu_freq_ceiling(0, ineff_cpu_ceiling_freq0);
+	c2ps_set_ineff_cpu_freq_ceiling(1, ineff_cpu_ceiling_freq1);
+	c2ps_set_ineff_cpu_freq_ceiling(2, ineff_cpu_ceiling_freq2);
+	cache_possible_config_cpu_freq_info();
 }
 
 static void c2ps_notifier_uninit(void)
@@ -362,18 +376,10 @@ static void c2ps_notifier_wq_cb(void)
 
 	switch (vpPush->ePushType) {
 	case C2PS_NOTIFIER_INIT:
-		atomic_set(&processing_count, 0);
-
-		/* notice that, we reuse vpPush datatype */
-		c2ps_notify_init(vpPush->pid,
-				vpPush->overwrite_uclamp_max[0],
-				vpPush->overwrite_uclamp_max[1],
-				vpPush->overwrite_uclamp_max[2],
-				vpPush->uclamp_max_placeholder1[0],
-				vpPush->uclamp_max_placeholder1[1],
-				vpPush->uclamp_max_placeholder1[2],
-				vpPush->task_id,
-				vpPush->idle_rate_alert);
+		c2ps_notifier_init(vpPush->camfps,
+			vpPush->ineff_cpu_ceiling_freq0,
+			vpPush->ineff_cpu_ceiling_freq1,
+			vpPush->ineff_cpu_ceiling_freq2);
 		break;
 	case C2PS_NOTIFIER_UNINIT:
 		c2ps_notifier_uninit();
@@ -421,6 +427,8 @@ int c2ps_notify_init(
 	int ineff_cpu_ceiling_freq1, int ineff_cpu_ceiling_freq2,
 	int lcore_mcore_um_ratio, int um_floor)
 {
+	struct C2PS_NOTIFIER_PUSH_TAG *vpPush = NULL;
+
 	C2PS_LOGD(
 		"config camfps (frames per 1000 seconds): %d, max_uclamp_cluster0: %d, max_uclamp_cluster1: %d, max_uclamp_cluster2: %d",
 		cfg_camfps, max_uclamp_cluster0, max_uclamp_cluster1, max_uclamp_cluster2);
@@ -431,40 +439,18 @@ int c2ps_notify_init(
 		lcore_mcore_um_ratio, um_floor);
 	pr_warn("%s c2ps init", __func__);
 
-	/* last uninit is not finished */
-	if (unlikely(atomic_read(&processing_count) > 0)) {
-		struct C2PS_NOTIFIER_PUSH_TAG *vpPush = NULL;
+	vpPush = (struct C2PS_NOTIFIER_PUSH_TAG *)
+		c2ps_alloc_atomic(sizeof(*vpPush));
 
-		C2PS_LOGW("last c2ps_notify_uninit is not finished, push this init to queue\n");
+	if (unlikely(!vpPush)) {
+		C2PS_LOGE("OOM\n");
+		return -ENOMEM;
+	}
 
-		vpPush = (struct C2PS_NOTIFIER_PUSH_TAG *)
-			c2ps_alloc_atomic(sizeof(*vpPush));
-
-		if (unlikely(!vpPush)) {
-			C2PS_LOGE("OOM\n");
-			return -ENOMEM;
-		}
-
-		if (unlikely(!c2ps_tsk)) {
-			C2PS_LOGE("NULL WorkQueue\n");
-			c2ps_free(vpPush, sizeof(*vpPush));
-			return -ENOMEM;
-		}
-
-		vpPush->ePushType = C2PS_NOTIFIER_INIT;
-		/* notice that, we reuse vpPush datatype */
-		vpPush->pid = cfg_camfps;
-		vpPush->overwrite_uclamp_max[0] = max_uclamp_cluster0;
-		vpPush->overwrite_uclamp_max[1] = max_uclamp_cluster1;
-		vpPush->overwrite_uclamp_max[2] = max_uclamp_cluster2;
-		vpPush->uclamp_max_placeholder1[0] = ineff_cpu_ceiling_freq0;
-		vpPush->uclamp_max_placeholder1[1] = ineff_cpu_ceiling_freq1;
-		vpPush->uclamp_max_placeholder1[2] = ineff_cpu_ceiling_freq2;
-		vpPush->task_id = lcore_mcore_um_ratio;
-		vpPush->idle_rate_alert = um_floor;
-
-		c2ps_queue_work(vpPush, false /* do not update uninit timer */);
-		return 0;
+	if (unlikely(!c2ps_tsk)) {
+		C2PS_LOGE("NULL WorkQueue\n");
+		c2ps_free(vpPush, sizeof(*vpPush));
+		return -ENOMEM;
 	}
 
 	// enable sugov per-gear uclamp max feature
@@ -475,17 +461,6 @@ int c2ps_notify_init(
 
 	// enable sugov curr_uclamp feature
 	set_curr_uclamp_ctrl(1);
-	set_eas_setting();
-	atomic_set(&processing_count, 0);
-	atomic_set(&is_self_uninit, 0);
-	c2ps_notifier_init(cfg_camfps);
-
-	// QoS setting
-	c2ps_set_ineff_cpu_freq_ceiling(0, ineff_cpu_ceiling_freq0);
-	c2ps_set_ineff_cpu_freq_ceiling(1, ineff_cpu_ceiling_freq1);
-	c2ps_set_ineff_cpu_freq_ceiling(2, ineff_cpu_ceiling_freq2);
-
-	cache_possible_config_cpu_freq_info();
 
 	c2ps_lcore_mcore_um_ratio = lcore_mcore_um_ratio > 0 ?
 						min(LMCORE_UM_RATIO_MAX, lcore_mcore_um_ratio) : 10;
@@ -493,6 +468,13 @@ int c2ps_notify_init(
 	c2ps_regulator_um_min = um_floor > 0 ? um_floor : DEFAULT_UM_MIN;
 
 	trigger_bg_policy();
+	vpPush->ePushType = C2PS_NOTIFIER_INIT;
+	vpPush->camfps = cfg_camfps;
+	vpPush->ineff_cpu_ceiling_freq0 = ineff_cpu_ceiling_freq0;
+	vpPush->ineff_cpu_ceiling_freq1 = ineff_cpu_ceiling_freq1;
+	vpPush->ineff_cpu_ceiling_freq2 = ineff_cpu_ceiling_freq2;
+
+	c2ps_queue_work(vpPush, false /* do not update uninit timer */);
 	return 0;
 }
 
