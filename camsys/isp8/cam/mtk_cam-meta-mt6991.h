@@ -326,6 +326,10 @@ struct mtk_cam_uapi_af_param {
 	__u32 dark_offset;
 	__u32 fus_en;
 	__u32 se_shift_en;
+	__s32 FLT1_H[8];
+	__s32 FLT1_V[8];
+	__s32 FLT2_H[8];
+	__s32 FLT2_V[8];
 };
 
 enum mtk_cam_uapi_flk_hdr_path_control {
@@ -978,7 +982,7 @@ struct mtk_cam_uapi_meta_camsv_stats_0 {
 };
 
 #define MTK_CAM_META_VERSION_MAJOR 1
-#define MTK_CAM_META_VERSION_MINOR 5
+#define MTK_CAM_META_VERSION_MINOR 6
 #define MTK_CAM_META_PLATFORM_NAME "isp80"
 #define MTK_CAM_META_CHIP_NAME "mt6991"
 
