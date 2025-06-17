@@ -582,9 +582,11 @@ static int s_cmd_tsrec_notify_sensor_hw_pre_latch(
 static int s_cmd_eint_notify_vsync(
 	struct adaptor_ctx *ctx, void *arg)
 {
+	const unsigned int log_str_len = 800;
 	struct mtk_cam_seninf_eint_timestamp_info *ts_info = NULL;
 	unsigned long long sys_ts;
-	int ret = 0;
+	char *log_buf = NULL;
+	int ret = 0, len = 0;
 
 	/* unexpected case, arg is nullptr */
 	if (unlikely((chk_input_arg(ctx, arg, &ret, __func__)) != 0))
@@ -593,9 +595,14 @@ static int s_cmd_eint_notify_vsync(
 	ts_info = (struct mtk_cam_seninf_eint_timestamp_info *)arg;
 	sys_ts = ktime_get_boottime_ns();
 
+	log_buf = kcalloc(log_str_len + 1, sizeof(char), GFP_ATOMIC);
+	if (unlikely(log_buf == NULL))
+		goto s_cmd_eint_notify_vsync_end;
+
+	log_buf[0] = '\0';
 	/* adaptor_logd(ctx, */
-	ADAPTOR_TRACE_FORCE_BEGIN("adaptor::",
-		"imgsensor::V4L2_CMD_EINT_NOTIFY_VSYNC,eint_no:%u,tsrec_idx:%u,ts:%llu(%llu/%u),seq_no:%d,irq(sys:%llu|mono:%llu),ts:[%llu/%llu/%llu/%llu]",
+	adaptor_snprf(ctx, log_str_len, log_buf, len,
+		"imgsensor::V4L2_CMD_EINT_NOTIFY_VSYNC, eint_no:%u, tsrec_idx:%u, ts:%llu(%llu/%u), seq_no:%d, irq(sys:%llu|mono:%llu), ts:(%llu/%llu/%llu/%llu)",
 		ts_info->eint_no,
 		ts_info->tsrec_idx,
 		ts_info->tick / ts_info->tick_factor,
@@ -609,10 +616,13 @@ static int s_cmd_eint_notify_vsync(
 		ts_info->ts_us[2],
 		ts_info->ts_us[3]);
 
+	ADAPTOR_SYSTRACE_BEGIN_MUST("%s",log_buf);
+	ADAPTOR_TRACE_FORCE_END();
+	adaptor_logd(ctx, "%s\n", log_buf);
+
+s_cmd_eint_notify_vsync_end:
 	/* notify framesync */
 	notify_fsync_mgr_vsync_by_eint(ctx, ts_info);
-
-	ADAPTOR_TRACE_FORCE_END();
 
 	return 0;
 }

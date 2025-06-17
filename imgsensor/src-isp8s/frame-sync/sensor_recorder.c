@@ -2546,7 +2546,7 @@ void frec_chk_fl_pr_match_act(const unsigned int idx)
 		}
 
 		FS_SNPRF(log_str_len, log_buf, len,
-			"WARNING: [%u] ID:%#x(sidx:%u/inf:%u), frame length (fdelay:%u): pr(p)(%u(%u)/act:%u) seems not match, diff:%u(%u), plz check manually\n",
+			"WARNING: [%u] ID:%#x(sidx:%u/inf:%u), frame length (fdelay:%u): pr(p)(%u(%u)/act:%u) seems not match, diff:%u(%u), plz check manually",
 			idx,
 			fs_get_reg_sensor_id(idx),
 			fs_get_reg_sensor_idx(idx),

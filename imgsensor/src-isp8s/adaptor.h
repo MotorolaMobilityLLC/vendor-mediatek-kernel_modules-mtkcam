@@ -79,6 +79,15 @@
 	} \
 } while (0)
 
+#define adaptor_snprf(_ctx, buf_len, buf, len, fmt, ...) do { \
+	int ret; \
+	ret = snprintf((buf + len), (buf_len - len), fmt, ##__VA_ARGS__); \
+	if (unlikely((ret < 0) || (ret >= (buf_len - len)))) \
+		len = buf_len; \
+	else \
+		len += ret; \
+} while (0)
+
 struct adaptor_ctx;
 static unsigned int sensor_debug;
 static unsigned int set_ctrl_unlock;
