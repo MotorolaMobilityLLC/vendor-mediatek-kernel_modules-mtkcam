@@ -5043,7 +5043,6 @@ static int update_job_raw_change(struct mtk_cam_job *job)
 		if (cur_raws &&
 			cur_raws != res->raws &&
 			!is_offline_timeshare(job)) {
-			job->job_state.cq_trigger_thres_ns -= DYNAMIC_TWIN_SW_OVERHEAD_NS;
 			if (get_master_raw_id(cur_raws) == get_master_raw_id(res->raws))
 				job->raw_change = JOB_RAW_MASTER_UNCHANGED;
 			else
