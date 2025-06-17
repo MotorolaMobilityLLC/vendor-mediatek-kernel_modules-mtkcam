@@ -3979,11 +3979,19 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 {
 	struct mtk_raw_device *raw_dev;
 	struct mtk_camsv_device *sv_dev;
+	struct mtk_pda_device *pda_dev;
 	int i;
 
 	dev_info(ctx->cam->dev, "%s: ctx-%d pipe 0x%lx engine 0x%lx\n",
 		 __func__, ctx->stream_id,
 		 ctx->used_pipe, ctx->used_engine);
+
+	for (i = 0; i < ARRAY_SIZE(ctx->hw_pda); i++) {
+		if (ctx->hw_pda[i]) {
+			pda_dev = dev_get_drvdata(ctx->hw_pda[i]);
+			pda_reset(pda_dev);
+		}
+	}
 
 	if (ctx->hw_sv) {
 		sv_dev = dev_get_drvdata(ctx->hw_sv);
