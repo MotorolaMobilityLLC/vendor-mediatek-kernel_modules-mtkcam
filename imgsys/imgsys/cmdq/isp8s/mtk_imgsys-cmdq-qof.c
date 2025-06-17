@@ -230,6 +230,11 @@ void gce_dip_cine_pwr_ctrl(struct cmdq_pkt *pkt, u32 act)
 
 		cmdq_pkt_poll_sleep(pkt,
 			0/*poll val*/,
+			qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_OPT_MTC_ACT].addr,
+			qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_OPT_MTC_ACT].mask);
+
+		cmdq_pkt_poll_sleep(pkt,
+			0/*poll val*/,
 			qof_reg_table[ISP8S_PWR_DIP][QOF_REG_IMG_HWCCF_DIP_CINE].addr,
 			BIT(20) | BIT(21) | BIT(22) | BIT(31));
 
