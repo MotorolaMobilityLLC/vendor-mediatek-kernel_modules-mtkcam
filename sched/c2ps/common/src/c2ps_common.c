@@ -1572,7 +1572,11 @@ void update_cpu_idle_rate(void)
 		_idle_time = get_cpu_idle_time(_cpu_index, &_wall_time, 1);
 		_cluster_idx = topology_cluster_id(_cpu_index);
 		rq = cpu_rq(_cpu_index);
+#if (KERNEL_VERSION(6, 14, 0) <= LINUX_VERSION_CODE)
+		_nr_running = READ_ONCE(rq->cfs.h_nr_queued);
+#else
 		_nr_running = READ_ONCE(rq->cfs.h_nr_running);
+#endif
 
 		update_short_period_idle_rate(idle_rate, &_idle_time, &_wall_time);
 		if (_nr_running > 0)
