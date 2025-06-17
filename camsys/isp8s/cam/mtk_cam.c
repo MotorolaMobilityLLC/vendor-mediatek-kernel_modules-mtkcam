@@ -70,6 +70,10 @@ static unsigned int rms_freerun;
 module_param(rms_freerun, int, 0644);
 MODULE_PARM_DESC(rms_freerun, "rms_freerun");
 
+static unsigned int camsv_hrt_stress;
+module_param(camsv_hrt_stress, uint, 0644);
+MODULE_PARM_DESC(camsv_hrt_stress, "activates camsv_hrt_stress");
+
 #define CAM_DEBUG 0
 #define ENABLE_CCU
 
@@ -3006,8 +3010,9 @@ int mtk_cam_ctx_prepare(struct mtk_cam_ctx *ctx)
 	if (mtk_cam_ctx_alloc_sensor_meta_pool(ctx))
 		goto fail_destroy_img_pool;
 
-	if (mtk_cam_ctx_alloc_camsv_stress_buf_pool(ctx))
-		goto fail_destroy_sensor_meta_pool;
+	if (camsv_hrt_stress)
+		if (mtk_cam_ctx_alloc_camsv_stress_buf_pool(ctx))
+			goto fail_destroy_sensor_meta_pool;
 
 	if (mtk_cam_ctx_prepare_session(ctx))
 		goto fail_destroy_camsv_stress_buf_pool;
@@ -3024,7 +3029,8 @@ int mtk_cam_ctx_prepare(struct mtk_cam_ctx *ctx)
 fail_unprepare_session:
 	mtk_cam_ctx_unprepare_session(ctx);
 fail_destroy_camsv_stress_buf_pool:
-	mtk_cam_ctx_destroy_camsv_stress_buf_pool(ctx);
+	if (camsv_hrt_stress)
+		mtk_cam_ctx_destroy_camsv_stress_buf_pool(ctx);
 fail_destroy_sensor_meta_pool:
 	mtk_cam_ctx_destroy_sensor_meta_pool(ctx);
 fail_destroy_img_pool:
@@ -3095,7 +3101,8 @@ void mtk_cam_ctx_unprepare(struct mtk_cam_ctx *ctx)
 	}
 
 	mtk_cam_ctx_unprepare_session(ctx);
-	mtk_cam_ctx_destroy_camsv_stress_buf_pool(ctx);
+	if (camsv_hrt_stress)
+		mtk_cam_ctx_destroy_camsv_stress_buf_pool(ctx);
 	mtk_cam_ctx_destroy_sensor_meta_pool(ctx);
 	mtk_cam_ctx_destroy_pool(ctx);
 	mtk_cam_ctx_clean_img_pool(ctx);
@@ -3112,7 +3119,7 @@ void mtk_cam_ctx_unprepare(struct mtk_cam_ctx *ctx)
 		mtk_cam_pm_runtime_engines(&cam->engines, ctx->used_engine, 0);
 		mtk_cam_sv_set_fifo_detect_status(&cam->engines, ctx->used_engine, 1);
 		_log_cg(cam);
-		mtk_cam_release_engine(ctx->cam, ctx->used_engine);
+		mtk_cam_release_engine(ctx, ctx->used_engine);
 	}
 
 	ctx->is_seninf_error_trigger = false;
@@ -4976,10 +4983,11 @@ void mtk_cam_get_hrt_debug(struct mtk_cam_device *cam)
 	}
 }
 
-int mtk_cam_update_engine_status(struct mtk_cam_device *cam,
+int mtk_cam_update_engine_status(struct mtk_cam_ctx *ctx,
 				 unsigned long engine_mask,
 				 bool available)
 {
+	struct mtk_cam_device *cam = ctx->cam;
 	unsigned long err_mask, occupied;
 	unsigned long pass_check;
 
@@ -5004,6 +5012,8 @@ int mtk_cam_update_engine_status(struct mtk_cam_device *cam,
 	if (WARN_ON(err_mask)) {
 		dev_info(cam->dev, "%s: set %d, engine 0x%lx err 0x%lx\n",
 			 __func__, available, engine_mask, err_mask);
+		mtk_cam_event_error(&ctx->cam_ctrl, MSG_UPDATE_ENG_STATUS_ERROR);
+		WRAP_AEE_EXCEPTION(MSG_UPDATE_ENG_STATUS_ERROR, __func__);
 		return -1;
 	}
 	if (CAM_DEBUG_ENABLED(V4L2_TRY))

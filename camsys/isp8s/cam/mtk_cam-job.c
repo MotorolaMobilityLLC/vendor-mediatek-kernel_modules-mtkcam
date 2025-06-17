@@ -2784,7 +2784,7 @@ static int job_related_hw_init(struct mtk_cam_job *job)
 	if (!selected)
 		return -1;
 
-	if (mtk_cam_occupy_engine(ctx->cam, selected))
+	if (mtk_cam_occupy_engine(ctx, selected))
 		return -1;
 
 	ctx->used_engine = selected;
@@ -2832,7 +2832,7 @@ static int job_pda_hw_init(struct mtk_cam_job *job, int pda_idx)
 		pr_info("%s pda_need_init %lx pda_need_unint %lx use engine %lx ",
 			__func__, pda_need_init, pda_need_uninit, ctx->used_engine);
 		mtk_cam_ctx_fetch_pda_devices(ctx, pda_selected);
-		if (mtk_cam_occupy_engine(ctx->cam, pda_selected)) {
+		if (mtk_cam_occupy_engine(ctx, pda_selected)) {
 			dev_info(ctx->cam->dev, "%s warning: occupy resource prev:0x%lx/cur:0x%lx",
 			__func__, ctx->used_engine, pda_selected);
 			mtk_cam_event_error(ctrl, MSG_PDA_OCCUPY_FAILURE);
@@ -2861,9 +2861,11 @@ static int job_pda_hw_init(struct mtk_cam_job *job, int pda_idx)
 	if (pda_need_uninit) {
 		pr_info("%s pda_need_init %lx pda_need_unint %lx use engine %lx ",
 			__func__, pda_need_init, pda_need_uninit, ctx->used_engine);
-		if (mtk_cam_release_engine(ctx->cam, pda_need_uninit))
+		if ((ctx->used_engine & pda_need_uninit) &&
+			mtk_cam_release_engine(ctx, pda_need_uninit)) {
 			dev_info(ctx->cam->dev, "%s warning: release resource prev:0x%lx",
-				__func__, ctx->used_engine);
+					__func__, ctx->used_engine);
+		}
 		ctx->used_engine &= ~pda_need_uninit;
 		ctx->pda_modules = 0;
 	}
@@ -2886,7 +2888,7 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job, int pda_idx)
 		pda_already_used = true;
 	}
 
-	if (mtk_cam_release_engine(ctx->cam, ctx->used_engine))
+	if (mtk_cam_release_engine(ctx, ctx->used_engine))
 		dev_info(ctx->cam->dev, "%s warning: release resource prev:0x%lx",
 			__func__, ctx->used_engine);
 
@@ -2894,12 +2896,12 @@ static int job_raw_change_hw_init(struct mtk_cam_job *job, int pda_idx)
 
 	if (!selected)
 		return -1;
-	if (mtk_cam_occupy_engine(ctx->cam, selected))
+	if (mtk_cam_occupy_engine(ctx, selected))
 		dev_info(ctx->cam->dev, "%s warning: occupy resource prev:0x%lx/cur:0x%lx",
 		__func__, ctx->used_engine, selected);
 
 	if (pda_already_used) {
-		if (mtk_cam_occupy_engine(ctx->cam, pda_selected))
+		if (mtk_cam_occupy_engine(ctx, pda_selected))
 			dev_info(ctx->cam->dev, "%s warning: occupy resource prev:0x%lx/cur:0x%lx",
 			__func__, ctx->used_engine, pda_selected);
 	}
