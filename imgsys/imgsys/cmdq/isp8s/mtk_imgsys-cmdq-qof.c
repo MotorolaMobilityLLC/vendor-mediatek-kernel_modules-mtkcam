@@ -1157,12 +1157,13 @@ static void mtk_qof_print_rtff_status(void)
 
 static void mtk_qof_print_debug_dummy_status(void)
 {
-	QOF_LOGI("DBG:DIP[0x%x]TRAW[0x%x]W1[0x%x]W2[0x%x]W3[0x%x]",
+	QOF_LOGI("DBG:DIP[0x%x]TRAW[0x%x]W1[0x%x]W2[0x%x]W3[0x%x]CINE[0x%x]",
 		(readl(g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_0])),
 		(readl(g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_1])),
 		(readl(g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_2])),
 		(readl(g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_3])),
-		(readl(g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_4])));
+		(readl(g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_4])),
+		(readl(g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_5])));
 }
 
 static void mtk_qof_print_cg_status(void)
@@ -1890,6 +1891,8 @@ void mtk_imgsys_cmdq_qof_stream_on(struct mtk_imgsys_dev *imgsys_dev)
 
 	QOF_LOGI("qof stream on+\n");
 
+	write_mask(g_maped_rg[MAPED_RG_IMG_DEBUG_DUMMY_REG_5], 0x0, 0xffffffff);
+
 	backup_cg_value();
 
 	qof_start_all_gce_loop(imgsys_dev);
@@ -1970,6 +1973,8 @@ void mtk_imgsys_cmdq_qof_stream_off(struct mtk_imgsys_dev *imgsys_dev)
 static void qof_module_vote_dip_cine(struct cmdq_pkt *pkt, u32 pwr, u32 user, u32 act)
 {
 	struct qof_events *qof_event;
+	struct cmdq_operand lop, rop;
+	const u16 var1 = CMDQ_THR_SPR_IDX2;
 
 	// DIP need enable
 	if(IS_MOD_SUPPORT_QOF(QOF_SUPPORT_DIP) == false || pwr != QOF_SUPPORT_DIP)
@@ -1983,10 +1988,45 @@ static void qof_module_vote_dip_cine(struct cmdq_pkt *pkt, u32 pwr, u32 user, u3
 	qof_event = &qof_events_isp8s[pwr];
 	cmdq_pkt_acquire_event(pkt, qof_event->sw_event_lock);
 
+	cmdq_pkt_read(pkt, NULL, IMG_DEBUG_DUMMY_REG_5, var1);
+	lop.reg = true;
+	lop.idx = var1;
+	rop.reg = false;
+	rop.value = 1;
+	/* inc on dip_cine counter */
+	cmdq_pkt_logic_command(pkt, CMDQ_LOGIC_ADD, CMDQ_THR_SPR_IDX2, &lop, &rop);
+	/* restore back to counter pa */
+	cmdq_pkt_write_indriect(pkt, NULL, IMG_DEBUG_DUMMY_REG_5, CMDQ_THR_SPR_IDX2, ~0);
+
+	cmdq_pkt_poll_sleep(pkt,
+		1/*poll val*/,
+		IMG_DEBUG_DUMMY_REG_5,
+		0xffffffff /*mask*/);
+
 	if (act == 1)
 		gce_add_dip_cine(pkt, g_work_buf_pa);
 	else
 		gce_sub_dip_cine(pkt, g_work_buf_pa);
+
+	cmdq_pkt_poll_sleep(pkt,
+		1/*poll val*/,
+		IMG_DEBUG_DUMMY_REG_5,
+		0xffffffff /*mask*/);
+
+	cmdq_pkt_read(pkt, NULL, IMG_DEBUG_DUMMY_REG_5, var1);
+	lop.reg = true;
+	lop.idx = var1;
+	rop.reg = false;
+	rop.value = 1;
+	/* inc on dip_cine counter */
+	cmdq_pkt_logic_command(pkt, CMDQ_LOGIC_SUBTRACT, CMDQ_THR_SPR_IDX2, &lop, &rop);
+	/* restore back to counter pa */
+	cmdq_pkt_write_indriect(pkt, NULL, IMG_DEBUG_DUMMY_REG_5, CMDQ_THR_SPR_IDX2, ~0);
+
+	cmdq_pkt_poll_sleep(pkt,
+		0/*poll val*/,
+		IMG_DEBUG_DUMMY_REG_5,
+		0xffffffff /*mask*/);
 
 	cmdq_pkt_clear_event(pkt, qof_event->sw_event_lock);
 }
