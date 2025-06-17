@@ -355,7 +355,7 @@ static int sv_process_fsm(struct mtk_camsv_device *sv_dev,
 		}
 	}
 
-	if (recovered && !atomic_read(&sv_dev->is_sub_en))
+	if (recovered)
 		dev_info(sv_dev->dev, "recovered done 0x%x in/out: 0x%x 0x%x\n",
 			 *recovered_done,
 			 irq_info->frame_idx_inner,
