@@ -876,7 +876,7 @@ static int mtk_imgsys_vb2_start_streaming(struct vb2_queue *vq,
 			dev_info(pipe->imgsys_dev->dev,
 				"%s:%s: sub dev s_stream(1) failed(%d)\n",
 				pipe->desc->name, node->desc->name, ret);
-
+			pipe->nodes_streaming--;
 			goto fail_stop_pipeline;
 		}
 	}
@@ -893,7 +893,8 @@ static int mtk_imgsys_vb2_start_streaming(struct vb2_queue *vq,
 
 fail_stop_pipeline:
 	mutex_unlock(&pipe->lock);
-	media_pipeline_stop(&node->vdev.entity.pads[0]);
+	if (!pipe->nodes_streaming)
+		media_pipeline_stop(&node->vdev.entity.pads[0]);
 
 fail_return_bufs:
 	mtk_imgsys_return_all_buffers(pipe, node, VB2_BUF_STATE_QUEUED);
