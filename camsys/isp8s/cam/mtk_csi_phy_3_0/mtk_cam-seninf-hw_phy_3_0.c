@@ -3922,7 +3922,7 @@ static int csirx_dphy_setting(struct seninf_ctx *ctx)
 	SENINF_BITS(base, DPHY_RX_HS_RX_EN_SW, RG_DPHY_PHY_PN_SWAP_EN, 0);
 	SENINF_BITS(base, DPHY_DPHYV21_CTRL, RG_DPHY_RX_SYNC_METH_SEL, 1);
 
-	// SENINF_WRITE_REG(base, DPHY_RX_SPARE0, 0xf1);
+	SENINF_WRITE_REG(base, DPHY_RX_SPARE0, 0x31);
 
 	SENINF_BITS(base, DPHY_DPHYV21_CTRL, RG_DPHY_RX_SYNC_METH_SEL, 1);
 
@@ -4045,9 +4045,9 @@ static int csirx_cphy_setting(struct seninf_ctx *ctx)
 		break;
 	}
 	if (!ctx->csi_param.legacy_phy)
-		SENINF_WRITE_REG(dphy_base, DPHY_RX_SPARE0, 0xf1);
+		SENINF_WRITE_REG(dphy_base, DPHY_RX_SPARE0, 0x31);
 	else
-		SENINF_WRITE_REG(dphy_base, DPHY_RX_SPARE0, 0xf0);
+		SENINF_WRITE_REG(dphy_base, DPHY_RX_SPARE0, 0x31);
 
 	/* CPHY_RX_IRQ_EN */
 	SENINF_BITS(base, CPHY_RX_IRQ_EN, RG_CPHY_RX_TR0_ERR_SOT_SYNC_HS_IRQ_EN, 1);
