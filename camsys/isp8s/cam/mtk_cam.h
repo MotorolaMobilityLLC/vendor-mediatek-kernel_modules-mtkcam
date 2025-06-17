@@ -412,18 +412,18 @@ bool mtk_cam_are_all_streaming(struct mtk_cam_device *cam,
 			       unsigned long stream_mask);
 
 int mtk_cam_get_available_engine(struct mtk_cam_device *cam);
-int mtk_cam_update_engine_status(struct mtk_cam_ctx *ctx,
+int mtk_cam_update_engine_status(struct mtk_cam_device *cam,
 				 unsigned long engine_mask, bool available);
-static inline int mtk_cam_release_engine(struct mtk_cam_ctx *ctx,
+static inline int mtk_cam_release_engine(struct mtk_cam_device *cam,
 					 unsigned long engines)
 {
-	return mtk_cam_update_engine_status(ctx, engines, true);
+	return mtk_cam_update_engine_status(cam, engines, true);
 }
 
-static inline int mtk_cam_occupy_engine(struct mtk_cam_ctx *ctx,
+static inline int mtk_cam_occupy_engine(struct mtk_cam_device *cam,
 					unsigned long engines)
 {
-	return mtk_cam_update_engine_status(ctx, engines, false);
+	return mtk_cam_update_engine_status(cam, engines, false);
 }
 
 int mtk_cam_pm_runtime_engines(struct mtk_cam_engines *eng,

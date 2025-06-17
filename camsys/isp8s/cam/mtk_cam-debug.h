@@ -156,6 +156,5 @@ int mtk_cam_debug_exp_dump(struct mtk_cam_debug *dbg,
 #define MSG_SENINF_FRAME_ERROR "Seninf: frame error"
 #define MSG_JOB_TIMEOUT		"Camsys: job timeout"
 #define MSG_PDA_OCCUPY_FAILURE	"Camsys: pda occupy error"
-#define MSG_UPDATE_ENG_STATUS_ERROR	"Camsys: update engine status error"
 
 #endif /* __MTK_CAM_DEBUG__ */
