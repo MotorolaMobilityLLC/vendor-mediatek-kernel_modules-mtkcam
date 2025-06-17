@@ -237,9 +237,13 @@ static int s5khp9sp_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	if (mode != ctx->test_pattern)
 		DRV_LOG(ctx, "mode(%u->%u)\n", ctx->test_pattern, mode);
 	/* 1:Solid Color 2:Color Bar 5:Black */
-	if (mode)
+	if (mode) {
+		if (mode == 5) {
+			DRV_LOG(ctx, "use Solid Color replace Black\n");
+			mode = 1;
+		}
 		subdrv_ixc_wr_u16(ctx, 0x0600, mode); /*100% Color bar*/
-	else if (ctx->test_pattern)
+	} else if (ctx->test_pattern)
 		subdrv_ixc_wr_u16(ctx, 0x0600, 0x0000); /*No pattern*/
 
 	ctx->test_pattern = mode;
@@ -254,8 +258,8 @@ static int s5khp9sp_set_test_pattern_data(struct subdrv_ctx *ctx, u8 *para, u32 
 	u16 Gb = (data->Channel_Gb >> 22) & 0x3ff;
 	u16 B = (data->Channel_B >> 22) & 0x3ff;
 
-	subdrv_ixc_wr_u16(ctx, 0x0602, R);
-	subdrv_ixc_wr_u16(ctx, 0x0604, Gr);
+	subdrv_ixc_wr_u16(ctx, 0x0602, Gr);
+	subdrv_ixc_wr_u16(ctx, 0x0604, R);
 	subdrv_ixc_wr_u16(ctx, 0x0606, B);
 	subdrv_ixc_wr_u16(ctx, 0x0608, Gb);
 

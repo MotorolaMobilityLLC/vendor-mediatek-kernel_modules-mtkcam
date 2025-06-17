@@ -113,9 +113,13 @@ static int s5kjn1_set_test_pattern(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 	if (mode != ctx->test_pattern)
 		DRV_LOG(ctx, "mode(%u->%u)\n", ctx->test_pattern, mode);
 	/* 1:Solid Color 2:Color Bar 5:Black */
-	if (mode)
-		subdrv_i2c_wr_u16(ctx, 0x0600, mode); /*100% Color bar*/
-	else if (ctx->test_pattern)
+	if (mode) {
+		if (mode == 5) {
+			DRV_LOG(ctx, "use Solid Color replace Black\n");
+			mode = 1;
+		}
+		subdrv_ixc_wr_u16(ctx, 0x0600, mode); /*100% Color bar*/
+	} else if (ctx->test_pattern)
 		subdrv_i2c_wr_u16(ctx, 0x0600, 0x0000); /*No pattern*/
 
 	ctx->test_pattern = mode;
