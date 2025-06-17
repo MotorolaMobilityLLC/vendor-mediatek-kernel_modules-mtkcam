@@ -1888,6 +1888,7 @@ static void set_cq_deadline(struct mtk_cam_job *job, int cq_deadline)
 	job->src_ctx->last_cq_deadline = cq_deadline;
 
 	subset = bit_map_subset_of(MAP_HW_RAW, job->used_engine);
+	qof_mtcmos_voter(&cam->engines, job->used_engine, true);
 	for (i = 0; i < cam->engines.num_raw_devices; i++) {
 		if (BIT(i) & subset) {
 			dev = dev_get_drvdata(cam->engines.raw_devs[i]);
@@ -1899,6 +1900,7 @@ static void set_cq_deadline(struct mtk_cam_job *job, int cq_deadline)
 			}
 		}
 	}
+	qof_mtcmos_voter(&cam->engines, job->used_engine, false);
 
 	if (is_m2m(job))
 		dev_info(cam->dev, "skip camsv setting start period\n");

@@ -1004,7 +1004,7 @@ EXIT:
 
 static inline int polling_power_on(struct mtk_raw_device *raw)
 {
-	return polling_pm(raw);
+	return polling_qof_state(raw) && polling_pm(raw);
 }
 
 int __qof_mtcmos_raw_voter(struct mtk_raw_device *raw, bool enable, const char *caller)
