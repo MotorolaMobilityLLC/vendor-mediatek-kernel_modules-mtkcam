@@ -1447,7 +1447,7 @@ static int mtk_cam_ctrl_stream_on_job(struct mtk_cam_job *job)
 			mtk_cam_hsf_aid(ctx, 1, AID_CAM_DC, job->used_engine);
 #else
 		if (is_dc_mode(job) && ctx->slc_data_valid)
-			mtk_cam_job_config_raw_slc(job, true);
+			mtk_cam_job_config_raw_slc(job, job->used_engine, true);
 #endif
 	}
 

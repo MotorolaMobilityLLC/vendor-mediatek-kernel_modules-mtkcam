@@ -756,7 +756,8 @@ bool mtk_cam_job_is_dcif_required(struct mtk_cam_job *job);
 int mtk_cam_job_uninit_engine(
 	struct mtk_cam_job *job, int unit_engs);
 
-int mtk_cam_job_config_raw_slc(struct mtk_cam_job *job, int enable);
+int mtk_cam_job_config_raw_slc(struct mtk_cam_job *job,
+	unsigned int used_engine, int enable);
 
 bool mtk_cam_job_not_support_qof(struct mtk_cam_job *job);
 
