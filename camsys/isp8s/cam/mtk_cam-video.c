@@ -581,15 +581,17 @@ static void mtk_cam_vb2_stop_streaming(struct vb2_queue *vq)
 
 CHECK_EXIT:
 	/* debug only, rm if the root cause is fixed */
-	if (WARN_ON(atomic_read(&vq->owned_by_drv_count))) {
+	if (atomic_read(&vq->owned_by_drv_count)) {
 
 		dev_info(cam->dev, "%s: owned_by_drv_count %d ",
 						__func__, atomic_read(&vq->owned_by_drv_count));
 		dev_info(cam->dev, "%s: pending_list count %zu ",
 				 __func__, list_count_nodes(&cam->pending_job_list));
 
-		mtk_cam_event_error(&ctx->cam_ctrl, "owned_by_drv_count");
-		mdelay(500);
+		if (ctx) {
+			mtk_cam_event_error(&ctx->cam_ctrl, "owned_by_drv_count");
+			mdelay(500);
+		}
 
 		for (i = 0; i < vq->max_num_buffers; i++) {
 			struct vb2_buffer *vb = vb2_get_buffer(vq, i);
