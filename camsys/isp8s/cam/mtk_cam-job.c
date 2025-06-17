@@ -1049,10 +1049,14 @@ handle_raw_frame_done(struct mtk_cam_job *job)
 			struct mtk_raw_pipeline *pipe =
 				&ctx->cam->pipelines.raw[ctx->raw_subdev_idx];
 
-			if (job->hdr_ts_dcg)
-				fill_hdr_timestamp(job, &ctx->cam_ctrl.r_info);
-
-			mtk_raw_hdr_tsfifo_push(pipe, &job->hdr_ts_cache);
+			if (is_dcg_with_vs(job)) {
+				if (!is_sv_pure_raw(job)) {
+					fill_hdr_timestamp(job, &ctx->cam_ctrl.r_info);
+					mtk_raw_hdr_tsfifo_push(pipe, &job->hdr_ts_cache);
+				} /* else fill/push hdr ts at sv pure raw done */
+			} else {
+				mtk_raw_hdr_tsfifo_push(pipe, &job->hdr_ts_cache);
+			}
 		}
 	}
 
@@ -1133,6 +1137,18 @@ handle_sv_frame_done(struct mtk_cam_job *job)
 	/* sv pure raw */
 	if (ctx->has_raw_subdev && is_sv_pure_raw(job) &&
 		!is_offline_timeshare(job)) {
+
+		if (job->job_type == JOB_TYPE_STAGGER ||
+			job->job_type == JOB_TYPE_MSTREAM) {
+			struct mtk_raw_pipeline *pipe =
+				&ctx->cam->pipelines.raw[ctx->raw_subdev_idx];
+
+			if (is_dcg_with_vs(job)) {
+				fill_hdr_timestamp(job, &ctx->cam_ctrl.r_info);
+				mtk_raw_hdr_tsfifo_push(pipe, &job->hdr_ts_cache);
+			}
+		}
+
 		pipe_id = get_raw_subdev_idx(ctx->used_pipe);
 		mtk_cam_req_buffer_done(job, pipe_id, MTK_RAW_PURE_RAW_OUT,
 					job_vb2_buf_state(job), true);
@@ -5354,12 +5370,6 @@ static bool check_is_raw_trigger_sensor(struct mtk_cam_job *job)
 		(packed_ctrl->exposure.shutter > 0 && packed_ctrl->exposure.gain > 0);
 }
 
-static bool check_vs_frame_pure_raw_only(struct mtk_cam_job *job)
-{
-	return (is_dcg_with_vs(job) &&
-			(job_exp_num(job) != job_sensor_exp_num(job)));
-}
-
 static int job_sen_req_pack(struct mtk_cam_job *job)
 {
 	struct mtk_cam_ctx *ctx = job->src_ctx;
@@ -5388,10 +5398,6 @@ static int job_sen_req_pack(struct mtk_cam_job *job)
 	job->first_frm_switch = false;
 	job->do_pending_aid_config = false;
 	job->is_raw_trigger_sensor = check_is_raw_trigger_sensor(job);
-
-	/* vs frame may or may not enque, */
-	/* frame done timing may be triggered before/after last SOF */
-	job->hdr_ts_dcg = check_vs_frame_pure_raw_only(job);
 
 	if (ctrl_data && ctrl_data->resource.user_data.raw_res.sen_apply_ctrl ==
 		MTK_CAM_SEN_APPLY_BY_XVS)

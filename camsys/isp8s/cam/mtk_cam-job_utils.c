@@ -2859,8 +2859,6 @@ static void fill_dcg_vs_ts(struct mtk_cam_job *job,
 		job->hdr_ts_cache.se = 0;
 		job->hdr_ts_cache.se_mono = 0;
 	}
-
-	job->hdr_ts_dcg = false;
 }
 
 void fill_hdr_timestamp(struct mtk_cam_job *job,

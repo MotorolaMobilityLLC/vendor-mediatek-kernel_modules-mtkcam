@@ -433,7 +433,6 @@ struct mtk_cam_job {
 	//int sensor_set_margin;	/* allow apply sensor before SOF + x (ms)*/
 	u64 timestamp;
 	u64 timestamp_mono;
-	bool hdr_ts_dcg;
 	struct mtk_cam_hdr_timestamp_info hdr_ts_cache;
 
 	/* for complete only: not null if current request has sensor ctrl */
