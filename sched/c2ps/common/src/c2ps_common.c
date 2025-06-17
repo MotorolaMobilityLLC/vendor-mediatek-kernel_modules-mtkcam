@@ -42,7 +42,7 @@ u8 Prime_Table[] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
 bool is_release_uclamp_max = false;
 int proc_time_window_size = 1;
 int debug_log_on = 0;
-int background_idlerate_alert = 12;
+int background_idlerate_alert = DEFAULT_IDLE_RATE_ALERT;
 int background_idlerate_dangerous = 5;
 int c2ps_placeholder;
 bool recovery_uclamp_max_immediately;
@@ -825,6 +825,7 @@ inline void set_glb_info_bg_util_margin(void)
 	{
 		glb_info->curr_um = 125;
 		glb_info->curr_um_idle = 125;
+		glb_info->user_idle_alert_prefer_um = 125;
 		glb_info->available_cpus = MAX_CPU_NUM;
 	}
 	c2ps_info_unlock(&glb_info->mlock);
@@ -1554,9 +1555,12 @@ void update_cpu_idle_rate(void)
 
 	_alert = glb_info->overwrite_idle_alert > 0 ?
 			glb_info->overwrite_idle_alert : background_idlerate_alert;
-	C2PS_LOGD("check idle rate alert: %d", _alert);
+	glb_info->user_idle_alert_prefer = (_alert > DEFAULT_IDLE_RATE_ALERT);
+	C2PS_LOGD("check idle rate alert: %d, user_idle_alert_prefer: %d",
+		_alert, glb_info->user_idle_alert_prefer);
 
 	glb_info->is_cpu_boost = false;
+	glb_info->is_new_long_period = false;
 
 	// Only timer callback will call this function, shouldn't lock
 	for (; _cpu_index < MAX_CPU_NUM; _cpu_index++) {
@@ -1609,6 +1613,7 @@ void update_cpu_idle_rate(void)
 		}
 		glb_info->last_sum_idle_rate = _total_idlerate;
 		glb_info->um_updated_by_idle = false;
+		glb_info->is_new_long_period = true;
 	}
 
 	if (unlikely(!g_cpu_info))

@@ -52,6 +52,7 @@
 #define DEFAULT_UM_MIN 65
 #define RESET_VAL 999999
 #define LMCORE_UM_RATIO_MAX 20
+#define DEFAULT_IDLE_RATE_ALERT 12
 
 #define SET_APP_BINDER_VIP_PERIOD_SEC 1
 
@@ -221,6 +222,8 @@ struct global_info {
 	enum c2ps_runnable_signal runnable_count_signal;
 	int available_cpus;
 	bool um_updated_by_idle;
+	bool user_idle_alert_prefer;
+	bool is_new_long_period;
 	int camera_app_pid;
 	unsigned long last_app_vip_jiffies;
 
@@ -260,6 +263,7 @@ struct global_info {
 	// um setting for idle rate control
 	int curr_um_idle;
 	int curr_runnable_boost_um;
+	int user_idle_alert_prefer_um;
 	struct um_update_vote um_vote;
 	/******** single shot um related ********/
 	u32 overwrite_util_margin;

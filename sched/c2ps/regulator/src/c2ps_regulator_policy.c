@@ -242,6 +242,16 @@ void c2ps_regulator_bgpolicy_um_stable_default(struct regulator_req *req)
 		runnable_count_sum += req->glb_info->runnable_count[cluster_index];
 	}
 
+	if (req->glb_info->is_new_long_period) {
+		if (increase_um)
+			req->glb_info->user_idle_alert_prefer_um += um_step;
+		else if (decrease_um)
+			req->glb_info->user_idle_alert_prefer_um -= um_step;
+		req->glb_info->user_idle_alert_prefer_um =
+			min(c2ps_regulator_um_max,
+				max(req->glb_info->user_idle_alert_prefer_um, c2ps_regulator_um_min));
+	}
+
 	if (enable_runnable_monitor) {
 		if (req->glb_info->runnable_count_signal == C2PS_RUNNABLE_DANGER) {
 			C2PS_LOGD("not safe idle due to runnable_count: %u, availabe_cpus: %d",
@@ -280,6 +290,14 @@ void c2ps_regulator_bgpolicy_um_stable_default(struct regulator_req *req)
 		curr_um += um_step;
 	else if (decrease_um)
 		curr_um -= c2ps_regulator_base_update_um;
+
+	if (req->glb_info->user_idle_alert_prefer) {
+		if (curr_um < req->glb_info->user_idle_alert_prefer_um)
+			guided_index = C2PS_GUIDED_INDEX_IDLE;
+		curr_um = max(curr_um, req->glb_info->user_idle_alert_prefer_um);
+		c2ps_main_systrace("user_idle_alert_prefer_um=%d", req->glb_info->user_idle_alert_prefer_um);
+	}
+
 
 	if (dangerous_idle_rate)
 		curr_um = max(curr_um, 100);
@@ -601,6 +619,8 @@ void c2ps_regulator_bgpolicy_um_transient(struct regulator_req *req)
 
 	req->glb_info->curr_um = max(req->glb_info->curr_um, 100);
 	req->glb_info->curr_um_idle = max(req->glb_info->curr_um_idle, 100);
+	req->glb_info->user_idle_alert_prefer_um =
+		max(req->glb_info->user_idle_alert_prefer_um, 100);
 }
 
 void c2ps_regulator_bgpolicy_um_runnable_boost(struct regulator_req *req)
