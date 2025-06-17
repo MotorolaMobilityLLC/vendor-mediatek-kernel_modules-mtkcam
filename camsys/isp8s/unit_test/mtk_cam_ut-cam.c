@@ -272,7 +272,7 @@ static void rwfbc_inc_setup(struct device *dev)
 	struct mtk_ut_raw_device *raw = dev_get_drvdata(dev);
 	void __iomem *base = raw->base;
 	void __iomem *yuv_base = raw->yuv_base;
-	u32 wfbc_en_raw, wfbc_en_yuv;
+	u32 wfbc_en_raw, wfbc_en_yuv, rfbc_en_raw;
 
 	if (not_support_rwfbc()) {
 		dev_info(dev, "[%s] platform:%s bypass using RWFBC\n",
@@ -280,6 +280,8 @@ static void rwfbc_inc_setup(struct device *dev)
 	} else {
 		wfbc_en_raw = readl_relaxed(base + CAM_REG_CTL_WFBC_EN);
 		writel_relaxed(wfbc_en_raw, base + CAM_REG_CTL_WFBC_INC);
+		rfbc_en_raw = readl_relaxed(base + CAM_REG_CTL_RFBC_EN);
+		writel_relaxed(rfbc_en_raw, base + CAM_REG_CTL_RFBC_INC);
 		wfbc_en_yuv = readl_relaxed(yuv_base + CAM_REG_CTL_WFBC_EN);
 		writel_relaxed(wfbc_en_yuv, yuv_base + CAM_REG_CTL_WFBC_INC);
 		dev_info(dev, "[%s] platform:%s WFBC_INC, camctl/camctl2:0x%x/0x%x\n",

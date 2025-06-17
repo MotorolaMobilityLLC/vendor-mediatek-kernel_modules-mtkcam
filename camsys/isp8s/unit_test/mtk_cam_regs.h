@@ -188,6 +188,9 @@ enum topdebug_event {
 #define CAM_REG_CTL_RAW_MOD5_DCM_DIS			0x0D10
 #define CAM_REG_CTL_RAW_MOD6_DCM_DIS			0x0D14
 
+#define CAM_REG_CTL_RFBC_EN				    0x0120
+#define CAM_REG_CTL_RFBC_INC				0x0130
+
 #define CAM_REG_CTL_WFBC_EN				    0x0128
 #define CAM_REG_CTL_WFBC_INC				0x0138
 
