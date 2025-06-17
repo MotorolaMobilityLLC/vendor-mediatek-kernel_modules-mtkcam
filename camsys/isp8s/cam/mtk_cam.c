@@ -3112,7 +3112,7 @@ void mtk_cam_ctx_unprepare(struct mtk_cam_ctx *ctx)
 		mtk_cam_pm_runtime_engines(&cam->engines, ctx->used_engine, 0);
 		mtk_cam_sv_set_fifo_detect_status(&cam->engines, ctx->used_engine, 1);
 		_log_cg(cam);
-		mtk_cam_release_engine(ctx->cam, ctx->used_engine);
+		mtk_cam_release_engine(ctx, ctx->used_engine);
 	}
 
 	ctx->is_seninf_error_trigger = false;
@@ -4976,10 +4976,11 @@ void mtk_cam_get_hrt_debug(struct mtk_cam_device *cam)
 	}
 }
 
-int mtk_cam_update_engine_status(struct mtk_cam_device *cam,
+int mtk_cam_update_engine_status(struct mtk_cam_ctx *ctx,
 				 unsigned long engine_mask,
 				 bool available)
 {
+	struct mtk_cam_device *cam = ctx->cam;
 	unsigned long err_mask, occupied;
 	unsigned long pass_check;
 
@@ -5004,6 +5005,8 @@ int mtk_cam_update_engine_status(struct mtk_cam_device *cam,
 	if (WARN_ON(err_mask)) {
 		dev_info(cam->dev, "%s: set %d, engine 0x%lx err 0x%lx\n",
 			 __func__, available, engine_mask, err_mask);
+		mtk_cam_event_error(&ctx->cam_ctrl, MSG_UPDATE_ENG_STATUS_ERROR);
+		WRAP_AEE_EXCEPTION(MSG_UPDATE_ENG_STATUS_ERROR, __func__);
 		return -1;
 	}
 	if (CAM_DEBUG_ENABLED(V4L2_TRY))
