@@ -611,8 +611,8 @@ static int mtk_raw_update_early_request_slb_data(
 }
 
 #define DVC_VB_MARGIN_NS      5000000
-#define DVC_MIN_FREQ_THRS     343000000
 static int res_update_dvc_hwmode(
+		struct mtk_camsys_dvfs *dvfs,
 		struct mtk_cam_resource_sensor_v2 *s,
 		struct mtk_cam_resource_raw_v2 *r,
 		struct mtk_cam_res_calc *c)
@@ -621,7 +621,7 @@ static int res_update_dvc_hwmode(
 
 	if (!scen_is_stagger_dol(scen)
 		&& !res_raw_is_dc_mode(r)
-		&& (r->freq > DVC_MIN_FREQ_THRS)
+		&& (freq_to_oppidx(dvfs, r->freq) > 1)
 		&& (c->line_time * s->vblank > DVC_VB_MARGIN_NS))
 		return 1;
 
@@ -758,7 +758,7 @@ CALC_RESOURCE:
 			mtk_pixelmode_val(mtk_raw_overall_pixel_mode(&c));
 		drv_data->tgo_pxl_mode_before_raw =
 			mtk_pixelmode_val(c.frontal_pixel_mode);
-		drv_data->dvc_hwmode = res_update_dvc_hwmode(s, r, &c);
+		drv_data->dvc_hwmode = res_update_dvc_hwmode(&cam->dvfs, s, r, &c);
 	}
 
 	/* if s_ctrl check if need to  request for slb directly */
