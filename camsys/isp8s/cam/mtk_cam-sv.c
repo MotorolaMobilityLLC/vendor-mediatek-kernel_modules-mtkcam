@@ -35,7 +35,6 @@
 #include "mtk_cam-virt-isp.h"
 
 #define CAMSV_TS_CNT 0x2
-#define CAMSV_MIN_SOF_DELAY_CYCLES 32
 
 #define MTK_CAMSV_STOP_HW_TIMEOUT			(33 * USEC_PER_MSEC)
 #define CAMSV_DEBUG 0
@@ -1451,16 +1450,6 @@ void mtk_cam_update_sensor_resource(struct mtk_cam_ctx *ctx)
 		sv_dev->sensor_res.interval.denominator = fi.interval.denominator;
 		sv_dev->sensor_res.vblank = vblank;
 	}
-}
-
-unsigned int mtk_cam_sv_get_sof_delay_period(void)
-{
-	unsigned int cycle = 0, period = 0;
-
-	cycle = (CAMSV_TS_CNT + 1) * 2;
-	period = (CAMSV_MIN_SOF_DELAY_CYCLES + cycle - 1) / cycle;
-
-	return period;
 }
 
 struct mtk_cam_seninf_sentest_param *

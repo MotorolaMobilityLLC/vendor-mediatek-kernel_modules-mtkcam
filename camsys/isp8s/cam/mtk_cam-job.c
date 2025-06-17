@@ -5902,9 +5902,6 @@ static int mtk_cam_job_fill_ipi_config(struct mtk_cam_job *job,
 					sv_input->stg_trig_offset = line_time_trig_ofst;
 					pr_info("line_time_trig_ofst: %d", line_time_trig_ofst);
 				}
-				sv_input->sof_delay_period =
-					(mtk_cam_seninf_is_sof_delay_enabled(ctx->seninf)) ?
-					mtk_cam_sv_get_sof_delay_period() : 0;
 			}
 		}
 	}

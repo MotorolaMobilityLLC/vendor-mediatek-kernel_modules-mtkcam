@@ -297,7 +297,6 @@ enum cpi_dir {
 	CPI_POW_SPARSE_CONCATENATION,
 	CPI_POW_SPARSE_INTERLEVING,
 };
-unsigned int mtk_cam_sv_get_sof_delay_period(void);
 int mtk_cam_get_sv_meta_tag(int meta_tag_num, int pad_id);
 int mtk_cam_sv_check_pda_status(struct mtk_cam_ctrl *ctrl, struct mtk_cam_job *job);
 void mtk_cam_sv_set_pda_status(void *vaddr, bool pda_support);
