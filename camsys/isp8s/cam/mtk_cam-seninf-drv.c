@@ -5074,8 +5074,8 @@ int mtk_cam_seninf_dump(struct v4l2_subdev *sd, u32 seq_id, bool force_check,
 
 	pm_runtime_put_sync(ctx->dev);
 
-	dev_info(ctx->dev, "[%s] ret(%d), req(%u), force(%d) reset_by_user(%d) asserted(%d)\n",
-		 __func__, ret, seq_id, force_check, reset_by_user, asserted);
+	dev_info(ctx->dev, "[%s] ret(%d), req(%u), force(%d) reset_by_user(%d) asserted(%d) assert_when_error(%d)\n",
+		 __func__, ret, seq_id, force_check, reset_by_user, asserted, assert_when_error);
 
 	mtk_cam_seninf_update_lastest_debug_status(ctx, ret);
 
@@ -5175,8 +5175,8 @@ int mtk_cam_seninf_dump_current_status(struct v4l2_subdev *sd, bool assert_when_
 
 	pm_runtime_put_sync(ctx->dev);
 
-	dev_info(ctx->dev, "[%s] ret(%d),asserted(%d)\n",
-		 __func__, ret, asserted);
+	dev_info(ctx->dev, "[%s] ret(%d),asserted(%d) assert_when_error(%d)\n",
+		 __func__, ret, asserted, assert_when_error);
 
 	mtk_cam_seninf_update_lastest_debug_status(ctx, ret);
 

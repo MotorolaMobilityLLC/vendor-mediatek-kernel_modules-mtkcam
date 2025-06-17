@@ -8487,35 +8487,49 @@ static int mtk_cam_csi_set_cdr_delay(struct seninf_ctx *ctx, u8 val)
 	u32 i, port;
 	void *base;
 
-	for (i = 0; i <= ctx->is_4d1c; i++) {
-		port = i ? ctx->portB : ctx->port;
-		base = ctx->reg_ana_csi_rx[(unsigned int)port];
-		// L0
-		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_6,
-				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L0_DELAY_CODE, (val & 0b11111111));
-		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_6,
-				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L0_DELAY_APPLY, 0x0);
-		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_6,
-				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L0_DELAY_APPLY, 0x1);
-		// L1
-		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_7,
-				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L1_DELAY_CODE, (val & 0b11111111));
-		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_7,
-				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L1_DELAY_APPLY, 0x0);
-		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_7,
-				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L1_DELAY_APPLY, 0x1);
-		// L2
-		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_8,
-				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L2_DELAY_CODE, (val & 0b11111111));
-		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_8,
-				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L2_DELAY_APPLY, 0x0);
-		SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_8,
+	if (ctx->is_cphy) {
+		for (i = 0; i <= ctx->is_4d1c; i++) {
+			port = i ? ctx->portB : ctx->port;
+			base = ctx->reg_ana_csi_rx[(unsigned int)port];
+
+			SENINF_BITS(base, CDPHY_RX_ANA_6,
+					RG_CSI0_CPHY_T0_CDR_CK_DELAY, val);
+			SENINF_BITS(base, CDPHY_RX_ANA_13,
+					RG_CSI0_CPHY_T0_CDR_SEL_CODE, val);
+			SENINF_BITS(base, CDPHY_RX_ANA_7,
+					RG_CSI0_CPHY_T1_CDR_CK_DELAY, val);
+			SENINF_BITS(base, CDPHY_RX_ANA_13,
+					RG_CSI0_CPHY_T1_CDR_SEL_CODE, val);
+		}
+	} else {
+		for (i = 0; i <= ctx->is_4d1c; i++) {
+			port = i ? ctx->portB : ctx->port;
+			base = ctx->reg_ana_csi_rx[(unsigned int)port];
+
+			SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_6,
+					RG_SW_FORCE_VAL_DA_CSI0_DPHY_L0_DELAY_CODE, val);
+			SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_6,
+					RG_SW_FORCE_VAL_DA_CSI0_DPHY_L0_DELAY_APPLY, 0x0);
+			SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_6,
+					RG_SW_FORCE_VAL_DA_CSI0_DPHY_L0_DELAY_APPLY, 0x1);
+
+			SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_7,
+					RG_SW_FORCE_VAL_DA_CSI0_DPHY_L1_DELAY_CODE, val);
+			SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_7,
+					RG_SW_FORCE_VAL_DA_CSI0_DPHY_L1_DELAY_APPLY, 0x0);
+			SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_7,
+					RG_SW_FORCE_VAL_DA_CSI0_DPHY_L1_DELAY_APPLY, 0x1);
+
+			SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_8,
+					RG_SW_FORCE_VAL_DA_CSI0_DPHY_L2_DELAY_CODE, val);
+			SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_8,
+					RG_SW_FORCE_VAL_DA_CSI0_DPHY_L2_DELAY_APPLY, 0x0);
+			SENINF_BITS(base, CDPHY_RX_ANA_FORCE_MODE_8,
 				RG_SW_FORCE_VAL_DA_CSI0_DPHY_L2_DELAY_APPLY, 0x1);
-
-
-		dev_info(ctx->dev,"[%s]EYE_SCAN_KEYS_CDR_DELAY input val_signed=%d, write to reg val=0x%x\n",
-					__func__ ,val, (val & 0b11111111));
+		}
 	}
+
+	dev_info(ctx->dev,"[%s]EYE_SCAN_KEYS_CDR_DELAY input val_signed=%d,\n", __func__ ,val);
 	return 0;
 }
 
