@@ -73,7 +73,7 @@ module_param(fmon_mbrain_enable, int, 0644);
 
 #define FMON_THRS_RATIO_N 60
 #define FMON_THRS_RATIO_D 100
-#define FMON_STOP_THRS_RATIO_N 90
+#define FMON_STOP_THRS_RATIO_N 100
 #define FMON_STOP_THRS_RATIO_D 100
 #define FMON_STOP_THRS_MAX     0x1FFF
 
@@ -710,9 +710,15 @@ static irqreturn_t mtk_thread_irq_fmon(int irq, void *data)
 		if (irq_info.irq_type & FMON_SIG_START) {
 			if (fmon_mbrain_enable) {
 #if IS_ENABLED(CONFIG_MTK_MBRAINK_BRIDGE)
-				mtk_mbrain2isp_hrt_cb(dbg_threshold_pr);
+				mtk_mbrain2isp_hrt_cb(FMON_THRS_RATIO_N);
 				/* trigger timer to recovery settings */
 				mod_timer(&fmon->reset_timer, jiffies + msecs_to_jiffies(FMON_RECOVER_TIMER));
+#endif
+			}
+		} else if (irq_info.irq_type & FMON_SIG_STOP) {
+			if (fmon_mbrain_enable) {
+#if IS_ENABLED(CONFIG_MTK_MBRAINK_BRIDGE)
+				mtk_mbrain2isp_hrt_cb(FMON_STOP_THRS_RATIO_N);
 #endif
 			}
 		}
