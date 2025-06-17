@@ -29,7 +29,7 @@
 #include "mmqos-mtk.h"
 #include "iommu_debug.h"
 #include "mtk-mmdvfs-debug.h"
-
+#include "mtk-smi-dbg.h"
 
 // place below all other include
 #include "mtk_cam-virt-isp.h"
@@ -1193,6 +1193,8 @@ int mtk_cam_sv_central_common_enable(struct mtk_camsv_device *sv_dev)
 	if (atomic_read(&sv_dev->is_sub_en))
 		CAMSV_WRITE_BITS(sv_dev->base + REG_CAMSVCENTRAL_SEN_MODE,
 			CAMSVCENTRAL_SEN_MODE, CAM_SUB_EN, 1);
+		CAMSV_WRITE_BITS(sv_dev->base + REG_CAMSVCENTRAL_SEN_MODE,
+			CAMSVCENTRAL_SEN_MODE, FLUSH_ALL_SRC_DIS, 1);
 	CAMSV_WRITE_BITS(sv_dev->base + REG_CAMSVCENTRAL_VF_CON,
 		CAMSVCENTRAL_VF_CON, VFDATA_EN, 1);
 
@@ -3201,6 +3203,7 @@ void camsv_handle_cq_err(
 void mtk_cam_sv_fifo_full_dbg_dump(struct mtk_camsv_device *sv_dev)
 {
 	int i;
+	unsigned int debug_sel = 0;
 
 	pr_info("%s vcore cg0 cg1:0x%x_0x%x / main cg0 cg1:0x%x_0x%x / mraw cg:0x%x",
 		__func__,
@@ -3232,6 +3235,44 @@ void mtk_cam_sv_fifo_full_dbg_dump(struct mtk_camsv_device *sv_dev)
 		writel(i, sv_dev->top + 0x234);
 		pr_info("mraw macro dbg 0x234:0x%x 0x238:0x%x", i, readl(sv_dev->top + 0x238));
 	}
+
+	for (i = 0; i < 5 ;i++) {
+		debug_sel = (1 << 7 | 1 << 16);
+		debug_sel++;
+		writel_relaxed(debug_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
+		dev_info(sv_dev->dev, "dbg_sel:0x%x => dbg_port = 0x%x\n",
+				debug_sel, readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT));
+		debug_sel++;
+		writel_relaxed(debug_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
+		dev_info(sv_dev->dev, "dbg_sel:0x%x => dbg_port = 0x%x\n",
+				debug_sel, readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT));
+		debug_sel++;
+		writel_relaxed(debug_sel, sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_SEL);
+		dev_info(sv_dev->dev, "dbg_sel:0x%x => dbg_port = 0x%x\n",
+				debug_sel, readl_relaxed(sv_dev->base_dma + REG_CAMSVDMATOP_DMA_DEBUG_PORT));
+	}
+	if (sv_dev->id == 0) {
+		mtk_smi_dbg_dump_single(true, 14, "camsys");
+		mtk_smi_dbg_dump_single(true, 19, "camsys");
+		mtk_smi_dbg_dump_single(true, 29, "camsys");
+		mtk_smi_dbg_dump_single(false, 29, "camsys");
+		mtk_smi_dbg_dump_single(false, 32, "camsys");
+		mtk_smi_dbg_dump_single(false, 33, "camsys");
+	} else if (sv_dev->id == 1) {
+		mtk_smi_dbg_dump_single(true, 13, "camsys");
+		mtk_smi_dbg_dump_single(true, 19, "camsys");
+		mtk_smi_dbg_dump_single(true, 25, "camsys");
+		mtk_smi_dbg_dump_single(false, 30, "camsys");
+		mtk_smi_dbg_dump_single(false, 32, "camsys");
+		mtk_smi_dbg_dump_single(false, 33, "camsys");
+	} else if (sv_dev->id == 2) {
+		mtk_smi_dbg_dump_single(true, 13, "camsys");
+		mtk_smi_dbg_dump_single(true, 14, "camsys");
+		mtk_smi_dbg_dump_single(true, 26, "camsys");
+		mtk_smi_dbg_dump_single(false, 29, "camsys");
+		mtk_smi_dbg_dump_single(false, 30, "camsys");
+	}
+
 }
 void camsv_handle_err(
 	struct mtk_camsv_device *sv_dev,
