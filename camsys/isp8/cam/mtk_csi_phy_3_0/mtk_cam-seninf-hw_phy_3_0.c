@@ -5831,7 +5831,7 @@ static int mtk_cam_seninf_eye_scan(struct seninf_ctx *ctx, u32 key, int val_sign
 							RG_CSI0_CPHY_T1_CDR_RSTB_CODE, ((val & 0x38) >> 3));
 					SENINF_BITS(base, CDPHY_RX_ANA_4,
 							RG_CSI0_CPHY_T1_CDR_SEC_EDGE_CODE, (val & 0x7));
-					SENINF_BITS(base, CDPHY_RX_ANA_6,
+					SENINF_BITS(base, CDPHY_RX_ANA_7,
 							RG_CSI0_CPHY_T1_CDR_CK_DELAY, val);
 
 					log_len += snprintf(plog + log_len, logbuf_size - log_len,
