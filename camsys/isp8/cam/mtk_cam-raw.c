@@ -1785,9 +1785,8 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 			frame_status_y, err_status_y,
 			wdma_done_status_y, dma_ofl_status_y, tfm_mismatch_status_y);
 
-	if (CAM_DEBUG_ENABLED(RAW_INT))
-		if (err_status_y)
-			dump_yuv_dma_err_st(yuv);
+	if (err_status_y)
+		dump_yuv_dma_err_st(yuv);
 
 	/* trace */
 	trace_yuv_irq(yuv->dev, frame_status_y, wdma_done_status_y,
