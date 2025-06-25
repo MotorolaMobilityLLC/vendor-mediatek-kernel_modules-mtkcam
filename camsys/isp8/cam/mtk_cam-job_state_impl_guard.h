@@ -311,7 +311,7 @@ static inline bool valid_cq_execution_subsample(
 
 	spin_lock(p->info_lock);
 	ret = (p->info->sof_ts_ns <= p->info->sof_l_ts_ns) &&
-		((p->event_ts - p->info->sof_ts_ns) < p->cq_trigger_thres) &&
+		((p->event_ts - p->info->sof_l_ts_ns) < p->cq_trigger_thres) &&
 		frame_seq_diff(s_acc->seq_no, p->info->inner_seq_no) == 1;
 	if (ret == false)
 		pr_info("[mtk-cam:vld_cq_exesubsample:%d/%d] event/l_sof/cq:%llu/%llu/%llu sof:%llu(%llu)",
