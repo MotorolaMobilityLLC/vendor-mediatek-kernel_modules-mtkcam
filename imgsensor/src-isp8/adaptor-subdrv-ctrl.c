@@ -2411,6 +2411,8 @@ void streaming_control(struct subdrv_ctx *ctx, bool enable)
 		subdrv_ixc_wr_u8(ctx, ctx->s_ctx.reg_addr_stream, 0x00);
 		if (ctx->s_ctx.reg_addr_fast_mode && ctx->fast_mode_on) {
 			DRV_LOG(ctx, "seamless_switch disabled.");
+			ctx->fast_mode_on = FALSE;
+			ctx->ref_sof_cnt = 0;
 			set_i2c_buffer(ctx, ctx->s_ctx.reg_addr_fast_mode, 0x00);
 			commit_i2c_buffer(ctx);
 		}
