@@ -495,6 +495,9 @@ static bool check_for_seamless(struct mtk_cam_ctrl *ctrl, void *arg)
 	int ack_seq;
 	u64 ts;
 	u64 frame_interval_ns, ts_margin;
+	int raw_master = bit_map_subset_of(MAP_HW_RAW, ctrl->ctx->used_engine);
+	int i;
+	int overrun_cnt = 0;
 
 	spin_lock(&ctrl->info_lock);
 	inner_seq = ctrl->r_info.inner_seq_no;
@@ -502,7 +505,21 @@ static bool check_for_seamless(struct mtk_cam_ctrl *ctrl, void *arg)
 	first_sof_ts = ctrl->r_info.sof_ts_ns;
 	ack_seq = ctrl->r_info.ack_seq_no;
 	spin_unlock(&ctrl->info_lock);
+	/* overrun check before triggering sensor switch control */
+	/* overrun case may recovered */
+	for (i = 0; i < ctrl->ctx->cam->engines.num_raw_devices; i++) {
+		if (BIT(i) & raw_master) {
+			struct mtk_raw_device *raw_dev;
 
+			raw_dev = dev_get_drvdata(ctrl->ctx->cam->engines.raw_devs[i]);
+			overrun_cnt = raw_dev->tg_overrun_handle_cnt;
+			break;
+		}
+	}
+	if (overrun_cnt > 0) {
+		pr_info("%s: overrun = %d\n", __func__, overrun_cnt);
+		return 0;
+	}
 	if (atomic_read(&ctrl->ctx->streaming) == 0)
 		return 1;
 	if (inner_seq != args->expect_inner)
