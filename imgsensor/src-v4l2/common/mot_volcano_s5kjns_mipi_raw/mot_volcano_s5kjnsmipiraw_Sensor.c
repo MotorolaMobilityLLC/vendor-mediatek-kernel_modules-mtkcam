@@ -171,6 +171,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 			.data_type = 0x2b,
 			.hsize = 0x0F00,
 			.vsize = 0x0B40,
+			.is_active_line = TRUE,
 		},
 	},
 #if ENABLE_S5KJNS_PD
@@ -181,7 +182,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 			.hsize = 0x01E0,
 			.vsize = 0x0B30,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10, // for dt 0x30
-			.user_data_desc = VC_PDAF_STATS,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
 		},
 	}
 #endif
@@ -194,6 +196,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 			.data_type = 0x2b,
 			.hsize = 0x0F00,
 			.vsize = 0x0B40,
+			.is_active_line = TRUE,
 		},
 	},
 #if ENABLE_S5KJNS_PD
@@ -204,7 +207,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 			.hsize = 0x01E0,
 			.vsize = 0x0B30,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
 		},
 	}
 #endif
@@ -216,7 +220,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.channel = 0,
 			.data_type = 0x2b,
 			.hsize = 0x0F00,
-			.vsize = 0x0B40,
+			.vsize = 0x0870,
+			.is_active_line = TRUE,
 		},
 	},
 #if ENABLE_S5KJNS_PD
@@ -225,9 +230,10 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.channel = 1,
 			.data_type = 0x30,
 			.hsize = 0x01E0,
-			.vsize = 0x0B30,
+			.vsize = 0x0860,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
 		},
 	}
 #endif
@@ -240,6 +246,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
 			.data_type = 0x2b,
 			.hsize = 0x0F00,
 			.vsize = 0x0B40,
+			.is_active_line = TRUE,
 		},
 	},
 #if ENABLE_S5KJNS_PD
@@ -250,7 +257,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
 			.hsize = 0x01E0,
 			.vsize = 0x0B30,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
 		},
 	}
 #endif
@@ -263,6 +271,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 			.data_type = 0x2b,
 			.hsize = 0x0F00,
 			.vsize = 0x0B40,
+			.is_active_line = TRUE,
 		},
 	},
 #if ENABLE_S5KJNS_PD
@@ -273,7 +282,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 			.hsize = 0x01E0,
 			.vsize = 0x0B30,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
 		},
 	}
 #endif
@@ -285,7 +295,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cust1[] = {
 			.channel = 0,
 			.data_type = 0x2b,
 			.hsize = 0x0F00,
-			.vsize = 0x0B40,
+			.vsize = 0x0870,
+			.is_active_line = TRUE,
 		},
 	},
 #if ENABLE_S5KJNS_PD
@@ -294,32 +305,10 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cust1[] = {
 			.channel = 1,
 			.data_type = 0x30,
 			.hsize = 0x01E0,
-			.vsize = 0x0B30,
+			.vsize = 0x0860,
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS,
-		},
-	}
-#endif
-};
-
-static struct mtk_mbus_frame_desc_entry frame_desc_cust2[] = {
-	{
-		.bus.csi2 = {
-			.channel = 0,
-			.data_type = 0x2b,
-			.hsize = 0x0F00,
-			.vsize = 0x0B40,
-		},
-	},
-#if ENABLE_S5KJNS_PD
-	{
-		.bus.csi2 = {
-			.channel = 1,
-			.data_type = 0x30,
-			.hsize = 0x01E0,
-			.vsize = 0x0B30,
-			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
-			.user_data_desc = VC_PDAF_STATS,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
 		},
 	}
 #endif
@@ -335,32 +324,22 @@ static struct SET_PD_BLOCK_INFO_T s5kjns_pd_info = {
 	.i4SubBlkW = 8,
 	.i4SubBlkH = 2,
 	.i4PosL = {
-		{3, 8}, {1, 11}, {5, 12}, {7, 15}
+		{1, 8}, {3, 11}, {7, 12}, {5, 15}
 	},
 	.i4PosR = {
-		{2, 8}, {0, 11}, {4, 12}, {6, 15}
+		{0, 8}, {2, 11}, {6, 12}, {4, 15}
 	},
 	.i4BlockNumX = 480,
 	.i4BlockNumY = 358,
 	.i4Crop = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		{0, 0}, {0, 0}, {0, 360}, {0, 0}, {0, 0},
 		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
-		// <cust6> <cust7> <cust8> cust9 cust10
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
-		// cust11 cust12 cust13 <cust14> <cust15>
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
-		// <cust16> <cust17> cust18 <cust19> cust20
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
-		// <cust21> <cust22> <cust23> <cust24> <cust25>
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
-		// cust26 <cust27> cust28
-		{0, 0}, {0, 0}, {0, 0},
+		{0, 360}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 	},
 	.i4FullRawW = 3840,
 	.i4FullRawH = 2880,
-	.iMirrorFlip = IMAGE_HV_MIRROR,
+	.iMirrorFlip = IMAGE_NORMAL,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV,
 	/* VC's PD pattern description */
 	.sPDMapInfo[0] = {
@@ -471,8 +450,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 	{
 		.frame_desc = frame_desc_vid,
 		.num_entries = ARRAY_SIZE(frame_desc_vid),
-		.mode_setting_table = addr_data_pair_preview_mot_volcano_s5kjns,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview_mot_volcano_s5kjns),
+		.mode_setting_table = addr_data_pair_normal_video_mot_volcano_s5kjns,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_normal_video_mot_volcano_s5kjns),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -480,29 +459,29 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.raw_cnt = 1,
 		.exp_cnt = 1,
 		.pclk = 560000000,
-		.linelength = 4416,
-		.framelength = 4224,
+		.linelength = 5280,
+		.framelength = 3520,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 662400000,
+		.mipi_pixel_rate = 513600000,
 		.readout_length = 0,
 		.read_margin = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 7680,
 			.full_h = 5760,
 			.x0_offset = 0,
-			.y0_offset = 0,
+			.y0_offset = 720,
 			.w0_size = 7680,
-			.h0_size = 5760,
+			.h0_size = 4320,
 			.scale_w = 3840,
-			.scale_h = 2880,
+			.scale_h = 2160,
 			.x1_offset = 0,
 			.y1_offset = 0,
 			.w1_size = 3840,
-			.h1_size = 2880,
+			.h1_size = 2160,
 			.x2_tg_offset = 0,
 			.y2_tg_offset = 0,
 			.w2_tg_size = 3840,
-			.h2_tg_size = 2880,
+			.h2_tg_size = 2160,
 		},
 #if ENABLE_S5KJNS_PD
 		.pdaf_cap = ENABLE_S5KJNS_PD,
@@ -614,9 +593,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 	},
 	{
 		.frame_desc = frame_desc_cust1,
-		.num_entries = ARRAY_SIZE(frame_desc_slim_vid),
-		.mode_setting_table = addr_data_pair_preview_mot_volcano_s5kjns,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview_mot_volcano_s5kjns),
+		.num_entries = ARRAY_SIZE(frame_desc_cust1),
+		.mode_setting_table = addr_data_pair_custom1_mot_volcano_s5kjns,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom1_mot_volcano_s5kjns),
 		.seamless_switch_group = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
@@ -624,77 +603,29 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.raw_cnt = 1,
 		.exp_cnt = 1,
 		.pclk = 560000000,
-		.linelength = 4416,
-		.framelength = 4224,
-		.max_framerate = 300,
-		.mipi_pixel_rate = 662400000,
+		.linelength = 4096,
+		.framelength = 2276,
+		.max_framerate = 600,
+		.mipi_pixel_rate = 792000000,
 		.readout_length = 0,
 		.read_margin = 0,
 		.imgsensor_winsize_info = {
 			.full_w = 7680,
 			.full_h = 5760,
 			.x0_offset = 0,
-			.y0_offset = 0,
+			.y0_offset = 720,
 			.w0_size = 7680,
-			.h0_size = 5760,
+			.h0_size = 4320,
 			.scale_w = 3840,
-			.scale_h = 2880,
+			.scale_h = 2160,
 			.x1_offset = 0,
 			.y1_offset = 0,
 			.w1_size = 3840,
-			.h1_size = 2880,
+			.h1_size = 2160,
 			.x2_tg_offset = 0,
 			.y2_tg_offset = 0,
 			.w2_tg_size = 3840,
-			.h2_tg_size = 2880,
-		},
-#if ENABLE_S5KJNS_PD
-		.pdaf_cap = ENABLE_S5KJNS_PD,
-		.imgsensor_pd_info = &s5kjns_pd_info,
-#else
-		.pdaf_cap = PARAM_UNDEFINED,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
-#endif
-		.ae_binning_ratio = 1000,
-		.fine_integ_line = 0,
-		.delay_frame = 2,
-		.csi_param = {0},
-	},
-	{
-		.frame_desc = frame_desc_cust2,
-		.num_entries = ARRAY_SIZE(frame_desc_slim_vid),
-		.mode_setting_table = addr_data_pair_preview_mot_volcano_s5kjns,
-		.mode_setting_len = ARRAY_SIZE(addr_data_pair_preview_mot_volcano_s5kjns),
-		.seamless_switch_group = PARAM_UNDEFINED,
-		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
-		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
-		.hdr_mode = HDR_NONE,
-		.raw_cnt = 1,
-		.exp_cnt = 1,
-		.pclk = 560000000,
-		.linelength = 4416,
-		.framelength = 4224,
-		.max_framerate = 300,
-		.mipi_pixel_rate = 662400000,
-		.readout_length = 0,
-		.read_margin = 0,
-		.imgsensor_winsize_info = {
-			.full_w = 7680,
-			.full_h = 5760,
-			.x0_offset = 0,
-			.y0_offset = 0,
-			.w0_size = 7680,
-			.h0_size = 5760,
-			.scale_w = 3840,
-			.scale_h = 2880,
-			.x1_offset = 0,
-			.y1_offset = 0,
-			.w1_size = 3840,
-			.h1_size = 2880,
-			.x2_tg_offset = 0,
-			.y2_tg_offset = 0,
-			.w2_tg_size = 3840,
-			.h2_tg_size = 2880,
+			.h2_tg_size = 2160,
 		},
 #if ENABLE_S5KJNS_PD
 		.pdaf_cap = ENABLE_S5KJNS_PD,
@@ -719,7 +650,7 @@ static struct subdrv_static_ctx static_ctx = {
 	//.eeprom_info = eeprom_info,
 	//.eeprom_num = ARRAY_SIZE(eeprom_info),
 	.resolution = {7680, 5760},
-	.mirror = IMAGE_HV_MIRROR,
+	.mirror = IMAGE_NORMAL,
 	.mclk = 24,
 	.isp_driving_current = ISP_DRIVING_6MA,
 	.sensor_interface_type = SENSOR_INTERFACE_TYPE_MIPI,
@@ -727,7 +658,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.mipi_lane_num = SENSOR_MIPI_4_LANE,
 	.ob_pedestal = 0x40,
 
-	.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_Gb,
+	.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_Gr,
 	.ana_gain_def = BASEGAIN * 4,
 	.ana_gain_min = BASEGAIN * 1,
 	.ana_gain_max = BASEGAIN * 64,
