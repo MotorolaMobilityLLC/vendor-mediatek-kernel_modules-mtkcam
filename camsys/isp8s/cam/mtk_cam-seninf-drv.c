@@ -327,6 +327,7 @@ static void dbg_deinit_chmux(struct seninf_ctx *ctx)
 	if (!ctx)
 		return;
 
+	mutex_lock(&ctx->dbg_chmux_mutex);
 	if (ctx->dbg_chmux_param) {
 		kfree(ctx->dbg_chmux_param->settings);
 		ctx->dbg_chmux_param->settings = NULL;
@@ -335,6 +336,7 @@ static void dbg_deinit_chmux(struct seninf_ctx *ctx)
 		kfree(ctx->dbg_chmux_param);
 		ctx->dbg_chmux_param = NULL;
 	}
+	mutex_unlock(&ctx->dbg_chmux_mutex);
 }
 
 static void dbg_init_chmux(struct seninf_ctx *ctx)
@@ -344,8 +346,10 @@ static void dbg_init_chmux(struct seninf_ctx *ctx)
 
 	dbg_deinit_chmux(ctx);
 
+	mutex_lock(&ctx->dbg_chmux_mutex);
 	ctx->dbg_chmux_param = kzalloc(sizeof(struct mtk_cam_seninf_mux_param),
 				       GFP_KERNEL);
+	mutex_unlock(&ctx->dbg_chmux_mutex);
 }
 
 static void dbg_commit_chmux(struct seninf_ctx *ctx)
@@ -353,12 +357,14 @@ static void dbg_commit_chmux(struct seninf_ctx *ctx)
 	if (!ctx)
 		return;
 
-	if (ctx->dbg_chmux_param) {
+	mutex_lock(&ctx->dbg_chmux_mutex);
+	if (ctx->dbg_chmux_param && ctx->streaming) {
 		ctx->dbg_chmux_param->rdy_mask_en.rdy_grp_en = false;
 		ctx->dbg_chmux_param->rdy_mask_en.rdy_sw_en = false;
 		ctx->dbg_chmux_param->rdy_mask_en.rdy_cq_en = false;
 		mtk_cam_seninf_mux_setup(&ctx->subdev, ctx->dbg_chmux_param);
 	}
+	mutex_unlock(&ctx->dbg_chmux_mutex);
 }
 
 static void dbg_set_camtg(struct seninf_ctx *ctx, int pad_id, int camtg, int tag_id)
@@ -369,6 +375,7 @@ static void dbg_set_camtg(struct seninf_ctx *ctx, int pad_id, int camtg, int tag
 	if (!ctx)
 		return;
 
+	mutex_lock(&ctx->dbg_chmux_mutex);
 	if (ctx->dbg_chmux_param) {
 		num = ctx->dbg_chmux_param->num + 1;
 		if (num < 1) {
@@ -399,6 +406,7 @@ static void dbg_set_camtg(struct seninf_ctx *ctx, int pad_id, int camtg, int tag
 	} else {
 		dev_info(ctx->dev, "error: dbg_chmux_param is NULL\n");
 	}
+	mutex_unlock(&ctx->dbg_chmux_mutex);
 }
 
 static ssize_t debug_ops_store(struct device *dev,
@@ -3977,6 +3985,7 @@ static int seninf_probe(struct platform_device *pdev)
 	mutex_init(&ctx->stream_mutex);
 	mutex_init(&ctx->mutex_vsync_in);
 	mutex_init(&ctx->lastest_debug_info.lastest_debug_info_mutex);
+	mutex_init(&ctx->dbg_chmux_mutex);
 
 	get_sof_delay_support(ctx);
 
@@ -4732,6 +4741,7 @@ static void seninf_remove(struct platform_device *pdev)
 
 	mutex_destroy(&ctx->mutex);
 	mutex_destroy(&ctx->lastest_debug_info.lastest_debug_info_mutex);
+	mutex_destroy(&ctx->dbg_chmux_mutex);
 	memset(&ctx->lastest_debug_info, 0, sizeof(struct mtk_cam_seninf_lastest_debug_info));
 
 	mtk_cam_seninf_eint_uninit(pdev, ctx);
