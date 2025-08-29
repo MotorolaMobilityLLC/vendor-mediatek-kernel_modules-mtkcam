@@ -663,7 +663,8 @@ void c2ps_check_last_anc(struct c2ps_anchor *anc)
 		anc->is_last_anchor = false;
 	}
 
-	if (unlikely(anc->anchor_id < 0))
+	if (unlikely((anc->anchor_id < 0) ||
+		(anc->anchor_id >= ARRAY_SIZE(Prime_Table))))
 		return;
 
 	if (likely(glb_info->um_vote.last_anchor_decided))
