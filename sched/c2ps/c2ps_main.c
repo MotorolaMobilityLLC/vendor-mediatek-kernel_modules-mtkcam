@@ -653,13 +653,9 @@ int c2ps_notify_task_end(int pid, int task_id)
 	return 0;
 }
 
-int c2ps_notify_task_scene_change(int task_id, int scene_mode)
+int c2ps_notify_task_scene_change(
+	int task_id __maybe_unused, int scene_mode __maybe_unused)
 {
-	C2PS_LOGD("task_id: %d\n", task_id);
-	if (unlikely(monitor_task_scene_change(task_id, scene_mode))) {
-		C2PS_LOGE("monitor_task_scene_change failed\n");
-		return -1;
-	}
 	return 0;
 }
 
@@ -676,11 +672,6 @@ int c2ps_notify_perf_monitor(unsigned int target_id, unsigned int serial_no,
 
 int c2ps_notify_vsync(void)
 {
-	C2PS_LOGD("+\n");
-	if (unlikely(monitor_vsync(c2ps_get_time()))) {
-		C2PS_LOGE("monitor_vsync failed\n");
-		return -1;
-	}
 	return 0;
 }
 
