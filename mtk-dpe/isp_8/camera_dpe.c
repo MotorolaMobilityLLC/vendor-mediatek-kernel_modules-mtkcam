@@ -35,6 +35,7 @@
 #include <linux/suspend.h>
 #include <linux/rtc.h>
 #include <linux/mutex.h>
+#include <linux/limits.h>
 // V4L2
 #include <media/v4l2-device.h>
 #include <media/videobuf2-v4l2.h>
@@ -1769,6 +1770,11 @@ signed int dpe_enque_cb(struct frame *frames, void *req, unsigned int reqcnt)
 		// mutex_lock(&gFDMutex);
 		//LOG_INF("dpe enque star DVS, P4 = %d\n", DPE_P4_EN);
 		// DVS_only_en++;
+		if (DVS_Num >= UINT_MAX) {
+			LOG_ERR("DPE DVS enque times overflow!\n");
+			mutex_unlock(&gFDMutex);
+			return -1;
+		}
 		DVS_Num++;
 		en_idx = reqcnt;
 		if (DPE_debug_log_en == 1)
@@ -2087,6 +2093,11 @@ signed int dpe_enque_cb(struct frame *frames, void *req, unsigned int reqcnt)
 
 		// mutex_lock(&gFDMutex);
 		// DVP_only_en++;
+		if (DVP_Num >= UINT_MAX) {
+			LOG_ERR("DPE DVP enque times overflow!\n");
+			mutex_unlock(&gFDMutex);
+			return -1;
+		}
 		DVP_Num++;
 		en_idx = reqcnt;
 		//mutex_unlock(&gFDMutex);
@@ -2437,6 +2448,11 @@ signed int dpe_enque_cb(struct frame *frames, void *req, unsigned int reqcnt)
 			_req->m_pDpeConfig[ucnt].DPE_DMapSettings.Dpe_OutBuf_WMF_FILT_fd);
 
 		// DVGF_only_en++;
+		if (DVGF_Num >= UINT_MAX) {
+			LOG_ERR("DPE DVGF enque times overflow!\n");
+			mutex_unlock(&gFDMutex);
+			return -1;
+		}
 		DVGF_Num++;
 		en_idx = reqcnt;
 
@@ -2735,6 +2751,11 @@ signed int dpe_deque_cb(struct frame *frames, void *req, unsigned int reqcnt)
 		(pDpeConfig->Dpe_engineSelect == MODE_DVS_DVP_BOTH)) {
 		//LOG_INF("dpe_deque DVS put fd\n");
 		mutex_lock(&gFDMutex);
+		if (DVS_Num == 0) {
+			LOG_ERR("DPE DVS deque times underflow!\n");
+			mutex_unlock(&gFDMutex);
+			return -1;
+		}
 		DPE_P4_EN = (((_req->m_pDpeConfig[0].Dpe_DVSSettings.TuningBuf_ME.DVS_ME_28) &
 							0x400) >> 10);
 		//LOG_INF("dpe_deque DPE_P4_EN = %d\n", DPE_P4_EN);
@@ -2851,6 +2872,12 @@ signed int dpe_deque_cb(struct frame *frames, void *req, unsigned int reqcnt)
 			LOG_INF("dpe_deque DVP put fd\n");
 
 		mutex_lock(&gFDMutex);
+
+		if (DVP_Num == 0) {
+			LOG_ERR("DPE DVP deque times underflow!\n");
+			mutex_unlock(&gFDMutex);
+			return -1;
+		}
 		de_idx = reqcnt;
 		if (get_dvp_iova[SrcImg_Y] >= 1) {
 			get_dvp_iova[SrcImg_Y]--;
@@ -2956,6 +2983,11 @@ signed int dpe_deque_cb(struct frame *frames, void *req, unsigned int reqcnt)
 			LOG_INF("dpe_deque DVGF put fd\n");
 
 		mutex_lock(&gFDMutex);
+		if (DVGF_Num == 0) {
+			LOG_ERR("DPE DVGF deque times underflow!\n");
+			mutex_unlock(&gFDMutex);
+			return -1;
+		}
 		de_idx = reqcnt;
 		if (get_dvgf_iova[DVGF_SrcImg_Y] >= 1) {
 			get_dvgf_iova[DVGF_SrcImg_Y]--;
