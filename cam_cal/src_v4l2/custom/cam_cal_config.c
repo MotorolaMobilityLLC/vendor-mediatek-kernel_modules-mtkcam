@@ -309,6 +309,7 @@ unsigned int mot_lens_id_to_name(uint8_t id,unsigned int block_size,unsigned cha
 	{0xA5,"39800A-400"},
 	{0xA6,"39831A-400"},
 	{0x61,"39668A-400"},
+	{0x04,"39917A-400"},
     };
 
     for (i =0;i <  sizeof(lens_table)/sizeof(struct STRUCT_MOT_LENS__ID);i++)
