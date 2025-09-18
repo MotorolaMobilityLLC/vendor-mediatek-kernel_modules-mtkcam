@@ -579,8 +579,8 @@ static struct subdrv_ops ops = {
 static struct subdrv_pw_seq_entry pw_seq[] = {
 	{HW_ID_RST, 0, 1},
 	{HW_ID_MCLK, 24, 1},
-	{HW_ID_DOVDD, 1800000, 1},
-	{HW_ID_DVDD, 1050000, 9},
+	{HW_ID_DOVDD, 1800000, 3},
+	{HW_ID_DVDD, 1050000, 6},
 	{HW_ID_AVDD, 2800000, 4},
 	{HW_ID_RST, 1, 13},
 
@@ -649,10 +649,13 @@ static void s5kkds_sensor_init(struct subdrv_ctx *ctx)
 	subdrv_i2c_wr_u16(ctx, 0x6218, 0x0000);
 	subdrv_i2c_wr_u16(ctx, 0x6226, 0x0001);
 	subdrv_i2c_wr_u16(ctx, 0x0A02, 0x0078);
-	// mot_subdrv_i2c_wr_burst_p16(ctx, 0x6F12,uTnpArrayInit_busrt,
-	// 	ARRAY_SIZE(uTnpArrayInit_busrt));
-	i2c_table_write(ctx, addr_data_pair_init_s5kkds,
-			ARRAY_SIZE(addr_data_pair_init_s5kkds));
+	subdrv_i2c_wr_u16(ctx, 0xFCFC, 0x2400);
+	mot_subdrv_i2c_wr_swq_p16(ctx, 0x7B1C,addr_data_pair_init_s5kkds_part1,
+	ARRAY_SIZE(addr_data_pair_init_s5kkds_part1));
+	mot_subdrv_i2c_wr_swq_p16(ctx, 0xA3FC,addr_data_pair_init_s5kkds_part2,
+	ARRAY_SIZE(addr_data_pair_init_s5kkds_part2));
+	i2c_table_write(ctx, addr_data_pair_init_s5kkds_part3,
+			ARRAY_SIZE(addr_data_pair_init_s5kkds_part3));
 	DRV_LOG(ctx, "X\n");
 }
 
