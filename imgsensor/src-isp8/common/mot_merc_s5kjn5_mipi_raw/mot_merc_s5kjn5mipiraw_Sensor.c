@@ -163,12 +163,13 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0C00,
 			.is_active_line = TRUE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
 #if ENABLE_S5KJN5_PD
 	{
 		.bus.csi2 = {
-			.channel = 1,
+			.channel = 0,
 			.data_type = 0x30,
 			.hsize = 0x1000,
 			.vsize = 0x0300,
@@ -188,12 +189,13 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0C00,
 			.is_active_line = TRUE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
 #if ENABLE_S5KJN5_PD
 	{
 		.bus.csi2 = {
-			.channel = 1,
+			.channel = 0,
 			.data_type = 0x30,
 			.hsize = 0x1000,
 			.vsize = 0x0300,
@@ -213,12 +215,13 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0C00,
 			.is_active_line = TRUE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
 #if ENABLE_S5KJN5_PD
 	{
 		.bus.csi2 = {
-			.channel = 1,
+			.channel = 0,
 			.data_type = 0x30,
 			.hsize = 0x1000,
 			.vsize = 0x0300,
@@ -238,12 +241,13 @@ static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0C00,
 			.is_active_line = TRUE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
 #if ENABLE_S5KJN5_PD
 	{
 		.bus.csi2 = {
-			.channel = 1,
+			.channel = 0,
 			.data_type = 0x30,
 			.hsize = 0x1000,
 			.vsize = 0x0300,
@@ -263,12 +267,13 @@ static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0C00,
 			.is_active_line = TRUE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
 #if ENABLE_S5KJN5_PD
 	{
 		.bus.csi2 = {
-			.channel = 1,
+			.channel = 0,
 			.data_type = 0x30,
 			.hsize = 0x1000,
 			.vsize = 0x0300,
@@ -288,6 +293,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cust1[] = {
 			.hsize = 0x2000,
 			.vsize = 0x1800,
 			.is_active_line = TRUE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
 };
@@ -300,12 +306,13 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cust2[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0900,
 			.is_active_line = TRUE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
 #if ENABLE_S5KJN5_PD
 	{
 		.bus.csi2 = {
-			.channel = 1,
+			.channel = 0,
 			.data_type = 0x30,
 			.hsize = 0x1000,
 			.vsize = 0x0240,
@@ -325,12 +332,13 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cust3[] = {
 			.hsize = 0x1000,
 			.vsize = 0x0C00,
 			.is_active_line = TRUE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
 #if ENABLE_S5KJN5_PD
 	{
 		.bus.csi2 = {
-			.channel = 1,
+			.channel = 0,
 			.data_type = 0x30,
 			.hsize = 0x0800,
 			.vsize = 0x0180,
