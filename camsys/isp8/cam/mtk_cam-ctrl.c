@@ -2913,7 +2913,8 @@ int mtk_cam_ctrl_ae_workaround(struct mtk_cam_device *cam,
 
 	if (ctx->cam->sw_ver == 0x0001)
 		return 0;
-
+	if (cur_platform->hw->platform_id != 6991)
+		return 0;
 	if (mtk_cam_ctrl_get(ctrl))
 		return 0;
 	for (i = 0; i < ARRAY_SIZE(ctx->hw_raw); i++) {
