@@ -31,6 +31,7 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 static void s5kjns_uw_sensor_init(struct subdrv_ctx *ctx);
 static int s5kjns_uw_open(struct subdrv_ctx *ctx);
 static int s5kjns_uw_set_ctrl_locker(struct subdrv_ctx *ctx, u32 cid, bool *is_lock);
+static int s5kjns_uw_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id);
 static int s5kjns_uw_ops_close(struct subdrv_ctx *ctx);
 static int s5kjns_uw_streaming_off(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int s5kjns_uw_streaming_on(struct subdrv_ctx *ctx, u8 *para, u32 *len);
@@ -731,7 +732,7 @@ static struct subdrv_static_ctx static_ctx = {
 };
 
 static struct subdrv_ops ops = {
-	.get_id = common_get_imgsensor_id,
+	.get_id = s5kjns_uw_get_imgsensor_id,
 	.init_ctx = init_ctx,
 	.open = s5kjns_uw_open,
 	.get_info = common_get_info,
@@ -874,6 +875,41 @@ static int s5kjns_uw_ops_close(struct subdrv_ctx *ctx)
 	return ERROR_NONE;
 }
 
+static int s5kjns_uw_get_imgsensor_id(struct subdrv_ctx *ctx, u32 *sensor_id)
+{
+	u8 i = 0;
+	u8 retry = 2;
+	u32 addr_h = ctx->s_ctx.reg_addr_sensor_id.addr[0];
+	u32 addr_l = ctx->s_ctx.reg_addr_sensor_id.addr[1];
+	DRV_LOG(ctx, "Enter");
+
+	while (ctx->s_ctx.i2c_addr_table[i] != 0xFF) {
+		ctx->i2c_write_id = ctx->s_ctx.i2c_addr_table[i];
+		do {
+			*sensor_id = (subdrv_i2c_rd_u8(ctx, addr_h) << 8) |
+				subdrv_i2c_rd_u8(ctx, addr_l);
+
+			//sensor id +1 for s5kjns only
+			if(*sensor_id == 0x38EE)
+			*sensor_id += 1;
+
+			DRV_LOG_MUST(ctx, "i2c_write_id:0x%x sensor_id(cur/exp):0x%x/0x%x\n",
+				ctx->i2c_write_id, *sensor_id, ctx->s_ctx.sensor_id);
+			if (*sensor_id == ctx->s_ctx.sensor_id)
+				return ERROR_NONE;
+			retry--;
+		} while (retry > 0);
+		i++;
+		retry = 2;
+	}
+	if (*sensor_id != ctx->s_ctx.sensor_id) {
+		*sensor_id = 0xFFFFFFFF;
+		return ERROR_SENSOR_CONNECT_FAIL;
+	}
+	DRV_LOG(ctx, "Exit");
+	return ERROR_NONE;
+}
+
 static void s5kjns_uw_sensor_init(struct subdrv_ctx *ctx)
 {
 	DRV_LOG(ctx, "E\n");
@@ -898,7 +934,7 @@ static int s5kjns_uw_open(struct subdrv_ctx *ctx)
 	u32 sensor_id = 0;
 	u32 scenario_id = 0;
 	/* get sensor id */
-	if (common_get_imgsensor_id(ctx, &sensor_id) != ERROR_NONE)
+	if (s5kjns_uw_get_imgsensor_id(ctx, &sensor_id) != ERROR_NONE)
 		return ERROR_SENSOR_CONNECT_FAIL;
 	/* initail setting */
 	s5kjns_uw_sensor_init(ctx);
