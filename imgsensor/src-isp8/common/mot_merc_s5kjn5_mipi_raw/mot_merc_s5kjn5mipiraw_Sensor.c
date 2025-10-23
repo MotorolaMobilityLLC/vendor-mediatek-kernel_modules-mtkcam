@@ -792,7 +792,7 @@ static struct subdrv_static_ctx static_ctx = {
 	//.eeprom_info = eeprom_info,
 	//.eeprom_num = ARRAY_SIZE(eeprom_info),
 	.resolution = {8192, 6144},
-	.mirror = IMAGE_HV_MIRROR,
+	.mirror = IMAGE_V_MIRROR,
 	.mclk = 24,
 	.isp_driving_current = ISP_DRIVING_6MA,
 	.sensor_interface_type = SENSOR_INTERFACE_TYPE_MIPI,
@@ -800,7 +800,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.mipi_lane_num = SENSOR_MIPI_4_LANE,
 	.ob_pedestal = 0x40,
 
-	.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_Gb,
+	.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_B,
 	.ana_gain_def = BASEGAIN * 4,
 	.ana_gain_min = BASEGAIN * 1,
 	.ana_gain_max = BASEGAIN * 160,
