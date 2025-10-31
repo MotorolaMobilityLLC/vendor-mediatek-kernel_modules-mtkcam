@@ -22,6 +22,7 @@
 #include "cam_cal_config.h"
 #include "cam_cal_list.h"
 #include "eeprom_i2c_common_driver.h"
+#include "mot_cam_cal.h"
 
 #define IDX_MAX_CAM_NUMBER 7 // refer to IHalsensor.h
 #define MAX_EEPROM_LIST_NUMBER 32
@@ -63,6 +64,55 @@ int get_mtk_format_version(struct EEPROM_DRV_FD_DATA *pdata, unsigned int *pGetS
 	}
 
 	return ret;
+}
+
+int crc_reverse_byte(int data)
+{
+	return ((data * 0x0802LU & 0x22110LU) |
+		(data * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16;
+}
+
+int32_t check_crc16(uint8_t  *data, uint32_t size, uint32_t ref_crc)
+{
+	int32_t crc_match = 0;
+	uint16_t crc = 0x0000;
+	uint16_t crc_reverse = 0x0000;
+	uint32_t i, j;
+
+	uint32_t tmp;
+	uint32_t tmp_reverse;
+
+	/* Calculate both methods of CRC since integrators differ on
+	  * how CRC should be calculated. */
+	for (i = 0; i < size; i++) {
+		tmp_reverse = crc_reverse_byte(data[i]);
+		tmp = data[i] & 0xff;
+		for (j = 0; j < 8; j++) {
+			if (((crc & 0x8000) >> 8) ^ (tmp & 0x80))
+				crc = (crc << 1) ^ 0x8005;
+			else
+				crc = crc << 1;
+			tmp <<= 1;
+
+			if (((crc_reverse & 0x8000) >> 8) ^ (tmp_reverse & 0x80))
+				crc_reverse = (crc_reverse << 1) ^ 0x8005;
+			else
+				crc_reverse = crc_reverse << 1;
+
+			tmp_reverse <<= 1;
+		}
+	}
+
+	crc_reverse = (crc_reverse_byte(crc_reverse) << 8) |
+		crc_reverse_byte(crc_reverse >> 8);
+
+	if (crc == ref_crc || crc_reverse == ref_crc)
+		crc_match = 1;
+
+	debug_log("ref_crc 0x%x, crc 0x%x, crc_reverse 0x%x, matches? %d\n",
+		ref_crc, crc, crc_reverse, crc_match);
+
+	return crc_match;
 }
 
 unsigned int layout_check(struct EEPROM_DRV_FD_DATA *pdata,
@@ -146,6 +196,911 @@ unsigned int layout_no_ck(struct EEPROM_DRV_FD_DATA *pdata,
 
 	result = CAM_CAL_ERR_NO_ERR;
 	return result;
+}
+
+unsigned int mot_layout_no_ck(struct EEPROM_DRV_FD_DATA *pdata,
+				unsigned int sensorId, unsigned int *_cfg)
+{
+	unsigned int result = CAM_CAL_ERR_NO_DEVICE;
+	if (cam_cal_config->sensor_id == sensorId) {
+		debug_log("%s sensor_id matched\n", cam_cal_config->name);
+		result = CAM_CAL_ERR_NO_ERR;
+	} else {
+		debug_log("%s sensor_id not matched\n", cam_cal_config->name);
+		return result;
+	}
+
+	return result;
+}
+
+int  mot_check_awb_data(unsigned char* awb_data, int  size)
+{
+	int CalR = 1, CalGr = 1, CalGb = 1, CalB = 1;
+	int FacR = 1, FacGr = 1, FacGb = 1, FacB = 1;
+	int RGBGratioDeviation, checkSum;
+	int rg_ratio_gold = 1, bg_ratio_gold = 1, grgb_ratio_gold = 1;
+	int rg_ratio_unit = 1, bg_ratio_unit = 1, grgb_ratio_unit = 1;
+	if(size != MOT_AWB_DATA_SIZE+2)
+		return NONEXISTENCE;
+
+	checkSum = awb_data[43]<<8 | awb_data[44];
+	RGBGratioDeviation = awb_data[6];
+	if(check_crc16(awb_data, 43, checkSum)) {
+		debug_log("check_crc16 ok");
+	} else {
+		debug_log("check_crc16 err");
+		return CRC_FAILURE;
+	}
+
+	//check ratio limt
+	rg_ratio_unit = (awb_data[32]<<8 | awb_data[33])*1000/16384;
+	bg_ratio_unit = (awb_data[34]<<8 | awb_data[35])*1000/16384;
+	grgb_ratio_unit = (awb_data[36]<<8 | awb_data[37])*1000/16384;
+	rg_ratio_gold = (awb_data[18]<<8 | awb_data[19])*1000/16384;
+	bg_ratio_gold = (awb_data[20]<<8 | awb_data[21])*1000/16384;
+	grgb_ratio_gold = (awb_data[22]<<8 | awb_data[23])*1000/16384;
+
+	if(grgb_ratio_unit<MOT_AWB_GRGB_RATIO_MIN_1000TIMES || grgb_ratio_unit>MOT_AWB_GRGB_RATIO_MAX_1000TIMES
+		|| grgb_ratio_gold<MOT_AWB_GRGB_RATIO_MIN_1000TIMES || grgb_ratio_gold>MOT_AWB_GRGB_RATIO_MAX_1000TIMES
+		|| (ABS(rg_ratio_unit, rg_ratio_gold))>RGBGratioDeviation
+		|| (ABS(bg_ratio_unit, bg_ratio_gold))>RGBGratioDeviation) {
+		debug_log("ratio check err");
+		return LIMIT_FAILURE;
+	}
+
+	CalR  = (awb_data[24]<<8 | awb_data[25])/64;
+	CalGr = (awb_data[26]<<8 | awb_data[27])/64;
+	CalGb = (awb_data[28]<<8 | awb_data[29])/64;
+	CalB  = (awb_data[30]<<8 | awb_data[31])/64;
+
+	if(CalR<MOT_AWB_RB_MIN_VALUE || CalR>MOT_AWB_RBG_MAX_VALUE
+		|| CalGr<MOT_AWB_G_MIN_VALUE ||CalGr>MOT_AWB_RBG_MAX_VALUE
+		|| CalGb<MOT_AWB_G_MIN_VALUE ||CalGb>MOT_AWB_RBG_MAX_VALUE
+		|| CalB<MOT_AWB_RB_MIN_VALUE || CalB>MOT_AWB_RBG_MAX_VALUE) {
+		debug_log("check unit R Gr Gb B limit error");
+		return LIMIT_FAILURE;
+	}
+
+	FacR  = (awb_data[10]<<8 | awb_data[11])/64;
+	FacGr = (awb_data[12]<<8 | awb_data[13])/64;
+	FacGb = (awb_data[14]<<8 | awb_data[15])/64;
+	FacB  = (awb_data[16]<<8 | awb_data[17])/64;
+
+	if(FacR<MOT_AWB_RB_MIN_VALUE || FacR>MOT_AWB_RBG_MAX_VALUE
+		|| FacGr<MOT_AWB_G_MIN_VALUE ||FacGr>MOT_AWB_RBG_MAX_VALUE
+		|| FacGb<MOT_AWB_G_MIN_VALUE ||FacGb>MOT_AWB_RBG_MAX_VALUE
+		|| FacB<MOT_AWB_RB_MIN_VALUE || FacB>MOT_AWB_RBG_MAX_VALUE) {
+		debug_log("check gold R Gr Gb B limit error");
+		return LIMIT_FAILURE;
+	}
+
+	return NO_ERRORS;
+}
+
+unsigned int mot_lens_id_to_name(uint8_t id,unsigned int block_size,unsigned char * lens_id,unsigned int err)
+{
+    int i=0,flag=0,ret=0;
+
+    const struct STRUCT_MOT_LENS__ID lens_table[] =
+    {
+	{0x21,"38134A-400"},
+	{0x66,"38127B-400"},
+	{0x22,"39411A-400"},
+	{0xE0,"ZD0017J1"},
+	{0x23,"39292B-400"},
+	{0xE1,"XA-0216L-H5085"},
+	{0x80,"505265A02"},
+	{0x24,"39374A-400"},
+	{0x25,"39449A-400"},
+	{0x26,"39453A-400"},
+	{0x27,"39454A-400"},
+	{0x81,"505265C01"},
+	{0x2F,"39454A-400"},
+	{0x40,"39397A-400"},
+	{0xE2,"1630A"},
+	{0x41,"39395A-403"},
+	{0x42,"39486A-400"},
+	{0x43,"39374B-400"},
+	{0x44,"39449B-400"},
+	{0x45,"39495A-400"},
+	{0x2E,"39453D-400"},
+	{0x46,"39516A-400"},
+	{0xE3,"ZC0018G1"},
+	{0x82,"1086261A01"},
+	{0x47,"39603A-400"},
+	{0x36,"39453D-402"},
+	{0x83,"506288A01-100"},
+	{0x84,"506373A01-100"},
+	{0x3E,"39453C-400"},
+	{0x60,"39553A-400"},
+	{0xE4,"ZD0017P4"},
+	{0xE7,"OF-1210A"},
+	{0x2B,"39292C-400"},
+	{0x48,"39397B-400"},
+	{0xC0,"OF-5037A"},
+	{0x65,"39449B-400(6P)"},
+	{0xA2,"39799A-400"},
+	{0xA3,"39807A-400"},
+	{0xA5,"39800A-400"},
+	{0xA6,"39831A-400"},
+	{0x61,"39668A-400"},
+	{0x03,"AAC 504220A01-100"},
+    };
+
+    for (i =0;i <  sizeof(lens_table)/sizeof(struct STRUCT_MOT_LENS__ID);i++)
+   {
+      if(id == lens_table[i].lens_id)
+      {
+          ret = snprintf(lens_id, MAX_CALIBRATION_STRING, lens_table[i].lens_name);
+          flag = 1;
+          break;
+      }
+   }
+
+   if (flag == 0)
+   {
+       ret = snprintf(lens_id, MAX_CALIBRATION_STRING, "Unknow");
+   }
+
+   if (ret < 0 || ret >= block_size)
+   {
+	debug_log("snprintf of mnf->lens_id failed");
+	memset(lens_id, 0,MAX_CALIBRATION_STRING);
+	err = CAM_CAL_ERR_NO_PARTNO;
+   }
+   return err;
+}
+EXPORT_SYMBOL(mot_lens_id_to_name);
+
+unsigned int mot_do_manufacture_info(struct EEPROM_DRV_FD_DATA *pdata,
+		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData)
+{
+	struct STRUCT_CAM_CAL_DATA_STRUCT *pCamCalData =
+				(struct STRUCT_CAM_CAL_DATA_STRUCT *)pGetSensorCalData;
+	unsigned int err = CamCalReturnErr[pCamCalData->Command];
+	int read_data_size, checkSum, ret;
+	uint8_t  tempBuf[39] = {0};
+
+	read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID,
+			start_addr, block_size + 2, (unsigned char *)tempBuf);
+	if (read_data_size <= 0) {
+		err = CAM_CAL_ERR_NO_PARTNO;
+		return err;
+	}
+
+	checkSum = (tempBuf[37]<<8) | (tempBuf[38]);
+
+	if(check_crc16(tempBuf, 37, checkSum)) {
+		debug_log("check_crc16 ok");
+		err = CAM_CAL_ERR_NO_ERR;
+	} else {
+		debug_log("check_crc16 err");
+		err = CAM_CAL_ERR_NO_PARTNO;
+		return err;
+	}
+	 //eeprom_table_version
+	ret = snprintf(pCamCalData->ManufactureData.eeprom_table_version, MAX_CALIBRATION_STRING, "0x%x", tempBuf[0]);
+
+	if (ret < 0 || ret >= block_size) {
+		debug_log("snprintf of mnf->eeprom_table_version failed");
+		memset(pCamCalData->ManufactureData.eeprom_table_version, 0,
+			sizeof(pCamCalData->ManufactureData.eeprom_table_version));
+		err = CAM_CAL_ERR_NO_PARTNO;
+	}
+
+	//part_number
+	ret = snprintf(pCamCalData->ManufactureData.part_number, MAX_CALIBRATION_STRING, "%c%c%c%c%c%c%c%c",
+		tempBuf[3], tempBuf[4], tempBuf[5], tempBuf[6],
+		tempBuf[7], tempBuf[8], tempBuf[9], tempBuf[10]);
+
+	if (ret < 0 || ret >= block_size) {
+		debug_log("snprintf of mnf->mot_part_number failed");
+		memset(pCamCalData->ManufactureData.part_number, 0,
+			sizeof(pCamCalData->ManufactureData.part_number));
+		err = CAM_CAL_ERR_NO_PARTNO;
+	}
+
+	//actuator_id
+	ret = snprintf(pCamCalData->ManufactureData.actuator_id, MAX_CALIBRATION_STRING, "0x%x", tempBuf[11]);
+
+	if (ret < 0 || ret >= block_size) {
+		debug_log("snprintf of mnf->actuator_id failed");
+		memset(pCamCalData->ManufactureData.actuator_id, 0,
+			sizeof(pCamCalData->ManufactureData.actuator_id));
+		err = CAM_CAL_ERR_NO_PARTNO;
+	}
+	//lens_id
+        err = mot_lens_id_to_name(tempBuf[12],block_size,pCamCalData->ManufactureData.lens_id,err);
+	//manufacture id
+	if(tempBuf[13] == 'T' && tempBuf[14] == 'S') {
+		ret = snprintf(pCamCalData->ManufactureData.manufacturer_id, MAX_CALIBRATION_STRING, "Tianshi");
+	} else if(tempBuf[13] == 'S' && tempBuf[14] == 'U') {
+		ret = snprintf(pCamCalData->ManufactureData.manufacturer_id, MAX_CALIBRATION_STRING, "Sunny");
+	} else if(tempBuf[13] == 'Q' && tempBuf[14] == 'T') {
+		ret = snprintf(pCamCalData->ManufactureData.manufacturer_id, MAX_CALIBRATION_STRING, "Qtech");
+	} else if(tempBuf[13] == 'S' && tempBuf[14] == 'W') {
+		ret = snprintf(pCamCalData->ManufactureData.manufacturer_id, MAX_CALIBRATION_STRING, "Sunwin");
+	} else if(tempBuf[13] == 'O' && tempBuf[14] == 'F') {
+		ret = snprintf(pCamCalData->ManufactureData.manufacturer_id, MAX_CALIBRATION_STRING, "Ofilm");
+	} else {
+		ret = snprintf(pCamCalData->ManufactureData.manufacturer_id, MAX_CALIBRATION_STRING, "Unknow");
+	}
+
+	if (ret < 0 || ret >= block_size) {
+		debug_log("snprintf of mnf->manufacturer_id failed");
+		memset(pCamCalData->ManufactureData.manufacturer_id, 0,
+			sizeof(pCamCalData->ManufactureData.manufacturer_id));
+		err = CAM_CAL_ERR_NO_PARTNO;
+	}
+
+	//factory_id
+	ret = snprintf(pCamCalData->ManufactureData.factory_id, MAX_CALIBRATION_STRING, "%c%c", tempBuf[15], tempBuf[16]);
+
+	if (ret < 0 || ret >= block_size) {
+		debug_log("snprintf of mnf->factory_id failed");
+		memset(pCamCalData->ManufactureData.factory_id, 0,
+			sizeof(pCamCalData->ManufactureData.factory_id));
+		err = CAM_CAL_ERR_NO_PARTNO;
+	}
+
+	//manufacture_line
+	ret = snprintf(pCamCalData->ManufactureData.manufacture_line, MAX_CALIBRATION_STRING, "0x%x", tempBuf[17]);
+
+	if (ret < 0 || ret >= block_size) {
+		debug_log("snprintf of mnf->manufacture_line failed");
+		memset(pCamCalData->ManufactureData.manufacture_line, 0,
+			sizeof(pCamCalData->ManufactureData.manufacture_line));
+		err = CAM_CAL_ERR_NO_PARTNO;
+	}
+
+	//manufacture_date
+	ret = snprintf(pCamCalData->ManufactureData.manufacture_date, MAX_CALIBRATION_STRING, "20%02u%02u%02u",
+		tempBuf[18], tempBuf[19], tempBuf[20]);
+
+	if (ret < 0 || ret >= block_size) {
+		debug_log("snprintf of mnf->manufacture_date failed");
+		memset(pCamCalData->ManufactureData.manufacture_date, 0,
+			sizeof(pCamCalData->ManufactureData.manufacture_date));
+		err = CAM_CAL_ERR_NO_PARTNO;
+	}
+
+	//serial_number
+	ret = snprintf(pCamCalData->ManufactureData.serial_number, MAX_CALIBRATION_STRING,
+		"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+		tempBuf[21], tempBuf[22], tempBuf[23], tempBuf[24], tempBuf[25], tempBuf[26], tempBuf[27], tempBuf[28],
+		tempBuf[29], tempBuf[30], tempBuf[31], tempBuf[32], tempBuf[33], tempBuf[34], tempBuf[35], tempBuf[36]);
+
+	if (ret < 0 || ret >= block_size) {
+		debug_log("snprintf of mnf->serial_number failed");
+		memset(pCamCalData->ManufactureData.serial_number, 0,
+			sizeof(pCamCalData->ManufactureData.serial_number));
+		err = CAM_CAL_ERR_NO_PARTNO;
+	}
+#ifdef EEPROM_DEBUG
+	debug_log("eeprom_table_version: %s\n", pCamCalData->ManufactureData.eeprom_table_version);
+	debug_log("part_number: %s\n", pCamCalData->ManufactureData.part_number);
+	debug_log("actuator_id: %s\n", pCamCalData->ManufactureData.actuator_id);
+	debug_log("lens_id: %s\n", pCamCalData->ManufactureData.lens_id);
+	debug_log("manufacturer_id: %s\n", pCamCalData->ManufactureData.manufacturer_id);
+	debug_log("factory_id: %s\n", pCamCalData->ManufactureData.factory_id);
+	debug_log("manufacture_line: %s\n", pCamCalData->ManufactureData.manufacture_line);
+	debug_log("manufacture_date: %s\n", pCamCalData->ManufactureData.manufacture_date);
+	debug_log("serial_number: %s\n", pCamCalData->ManufactureData.serial_number);
+#endif
+
+	return err;
+}
+
+/***********************************************************************************
+ * Function : To read 2A information. Please put your AWB+AF data function, here.
+ ***********************************************************************************/
+
+unsigned int mot_do_2a_gain(struct EEPROM_DRV_FD_DATA *pdata,
+		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData)
+		// start_addr can set for MTK_NECESSARY_DATA_ADDR
+{
+	struct STRUCT_CAM_CAL_DATA_STRUCT *pCamCalData =
+				(struct STRUCT_CAM_CAL_DATA_STRUCT *)pGetSensorCalData;
+	int read_data_size, checkSum;
+	unsigned int err = CamCalReturnErr[pCamCalData->Command];
+
+	unsigned char AWBAFConfig = 0x3; //set af awb enable
+	unsigned short AFInf, AFMacro, AFInfDistance, AFMacroDistance;
+	int RGBGratioDeviation, tempMax = 0;
+	int CalR = 1, CalGr = 1, CalGb = 1, CalG = 1, CalB = 1;
+	int FacR = 1, FacGr = 1, FacGb = 1, FacG = 1, FacB = 1;
+	int RawCalR = 1, RawCalGr = 1, RawCalGb = 1, RawCalB = 1;
+	int RawFacR = 1, RawFacGr = 1, RawFacGb = 1, RawFacB = 1;
+	int rg_ratio_gold = 1, bg_ratio_gold = 1, grgb_ratio_gold = 1;
+	int rg_ratio_unit = 1, bg_ratio_unit = 1, grgb_ratio_unit = 1;
+	uint8_t  af_data[26] = {0};
+	uint8_t  awb_data[45] = {0};
+	int af_addr = MOT_AF_ADDR;
+	int af_size = MOT_AF_DATA_SIZE;
+	int awb_addr = MOT_AWB_ADDR;
+	int awb_size = MOT_AWB_DATA_SIZE;
+
+	debug_log("block_size=%d sensor_id=%x\n", block_size, pCamCalData->sensorID);
+
+	memset((void *)&pCamCalData->Single2A, 0, sizeof(struct STRUCT_CAM_CAL_SINGLE_2A_STRUCT));
+
+	if (pCamCalData->DataVer >= CAM_CAL_TYPE_NUM) {
+		err = CAM_CAL_ERR_NO_DEVICE;
+		error_log("Read Failed\n");
+		show_cmd_error_log(pCamCalData->Command);
+		return err;
+	}
+	if (block_size == 0) {
+		error_log("block_size(%d) is not correct\n", block_size);
+		show_cmd_error_log(pCamCalData->Command);
+		return err;
+	}
+
+	pCamCalData->Single2A.S2aVer = 0x01;
+	pCamCalData->Single2A.S2aBitEn = (0x03 & AWBAFConfig);
+	pCamCalData->Single2A.S2aAfBitflagEn = (0x0c & AWBAFConfig);
+
+	/* AWB Calibration Data*/
+	if (0x1 & AWBAFConfig) {
+		read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID,
+				awb_addr, awb_size + 2, (unsigned char *)awb_data);
+		if (read_data_size > 0)
+			err = CAM_CAL_ERR_NO_ERR;
+		else {
+			pCamCalData->Single2A.S2aBitEn = CAM_CAL_NONE_BITEN;
+			error_log("Read Failed\n");
+			show_cmd_error_log(pCamCalData->Command);
+		}
+
+		checkSum = awb_data[43]<<8 | awb_data[44];
+		RGBGratioDeviation = awb_data[6];
+		debug_log("RGBGratioDeviation = %d", RGBGratioDeviation);
+		if(check_crc16(awb_data, 43, checkSum)) {
+			debug_log("check_crc16 ok");
+			err = CAM_CAL_ERR_NO_ERR;
+		} else {
+			debug_log("check_crc16 err");
+			err = CAM_CAL_ERR_NO_3A_GAIN;
+			return err;
+		}
+		//check ratio limt
+		rg_ratio_unit = (awb_data[32]<<8 | awb_data[33])*1000/16384;
+		bg_ratio_unit = (awb_data[34]<<8 | awb_data[35])*1000/16384;
+		grgb_ratio_unit = (awb_data[36]<<8 | awb_data[37])*1000/16384;
+		rg_ratio_gold = (awb_data[18]<<8 | awb_data[19])*1000/16384;
+		bg_ratio_gold = (awb_data[20]<<8 | awb_data[21])*1000/16384;
+		grgb_ratio_gold = (awb_data[22]<<8 | awb_data[23])*1000/16384;
+		debug_log("ratio*1000, Unit R/G = %d, B/G = %d, Gr/Gb = %d, Gold R/G = %d, B/G = %d, Gr/Gb = %d",
+			rg_ratio_unit, bg_ratio_unit, grgb_ratio_unit, rg_ratio_gold, bg_ratio_gold, grgb_ratio_gold);
+		if(grgb_ratio_unit<MOT_AWB_GRGB_RATIO_MIN_1000TIMES || grgb_ratio_unit>MOT_AWB_GRGB_RATIO_MAX_1000TIMES
+			|| grgb_ratio_gold<MOT_AWB_GRGB_RATIO_MIN_1000TIMES || grgb_ratio_gold>MOT_AWB_GRGB_RATIO_MAX_1000TIMES
+			|| (ABS(rg_ratio_unit, rg_ratio_gold))>RGBGratioDeviation
+			|| (ABS(bg_ratio_unit, bg_ratio_gold))>RGBGratioDeviation) {
+			debug_log("ratio check err");
+			err = CAM_CAL_ERR_NO_3A_GAIN;
+			return err;
+		}
+
+		RawCalR  = (awb_data[24]<<8 | awb_data[25]);
+		RawCalGr = (awb_data[26]<<8 | awb_data[27]);
+		RawCalGb = (awb_data[28]<<8 | awb_data[29]);
+		RawCalB  = (awb_data[30]<<8 | awb_data[31]);
+
+		CalR  = RawCalR / MOTO_WB_VALUE_BASE;
+		CalGr = RawCalGr / MOTO_WB_VALUE_BASE;
+		CalGb = RawCalGb / MOTO_WB_VALUE_BASE;
+		CalB  = RawCalB / MOTO_WB_VALUE_BASE;
+
+		if(CalR<MOT_AWB_RB_MIN_VALUE || CalR>MOT_AWB_RBG_MAX_VALUE
+			|| CalGr<MOT_AWB_G_MIN_VALUE ||CalGr>MOT_AWB_RBG_MAX_VALUE
+			|| CalGb<MOT_AWB_G_MIN_VALUE ||CalGb>MOT_AWB_RBG_MAX_VALUE
+			|| CalB<MOT_AWB_RB_MIN_VALUE || CalB>MOT_AWB_RBG_MAX_VALUE) {
+			debug_log("check unit R Gr Gb B limit error");
+			err = CAM_CAL_ERR_NO_3A_GAIN;
+			return err;
+		}
+
+		//Let's use EEPROM programmed values instead actual values to improve accuracy here
+#ifdef MOTO_OB_VALUE
+		CalR  = RawCalR - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+		CalGr = RawCalGr - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+		CalGb = RawCalGb - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+		CalB  = RawCalB - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+#else
+		CalR  = RawCalR;
+		CalGr = RawCalGr;
+		CalGb = RawCalGb;
+		CalB  = RawCalB;
+#endif
+
+		CalG = ((CalGr + CalGb) + 1) >> 1;
+
+		debug_log("Unit R = %d, Gr= %d, Gb = %d, B = %d, G = %d", CalR/MOTO_WB_VALUE_BASE,
+		          CalGr/MOTO_WB_VALUE_BASE, CalGb/MOTO_WB_VALUE_BASE, CalB/MOTO_WB_VALUE_BASE, CalG/MOTO_WB_VALUE_BASE);
+
+		tempMax = MAX_temp(CalR,CalG,CalB);
+
+		pCamCalData->Single2A.S2aAwb.rUnitGainu4R = (u32)((tempMax*512 + (CalR >> 1))/CalR);
+		pCamCalData->Single2A.S2aAwb.rUnitGainu4G = (u32)((tempMax*512 + (CalG >> 1))/CalG);
+		pCamCalData->Single2A.S2aAwb.rUnitGainu4B  = (u32)((tempMax*512 + (CalB >> 1))/CalB);
+
+		RawFacR  = (awb_data[10]<<8 | awb_data[11]);
+		RawFacGr = (awb_data[12]<<8 | awb_data[13]);
+		RawFacGb = (awb_data[14]<<8 | awb_data[15]);
+		RawFacB  = (awb_data[16]<<8 | awb_data[17]);
+
+		FacR  = RawFacR / MOTO_WB_VALUE_BASE;
+		FacGr = RawFacGr / MOTO_WB_VALUE_BASE;
+		FacGb = RawFacGb / MOTO_WB_VALUE_BASE;
+		FacB  = RawFacB / MOTO_WB_VALUE_BASE;
+
+		if(FacR<MOT_AWB_RB_MIN_VALUE || FacR>MOT_AWB_RBG_MAX_VALUE
+			|| FacGr<MOT_AWB_G_MIN_VALUE ||FacGr>MOT_AWB_RBG_MAX_VALUE
+			|| FacGb<MOT_AWB_G_MIN_VALUE ||FacGb>MOT_AWB_RBG_MAX_VALUE
+			|| FacB<MOT_AWB_RB_MIN_VALUE || FacB>MOT_AWB_RBG_MAX_VALUE) {
+			debug_log("check gold R Gr Gb B limit error");
+			err = CAM_CAL_ERR_NO_3A_GAIN;
+			return err;
+		}
+
+		//Let's use EEPROM programmed values instead actual values to improve accuracy here
+#ifdef MOTO_OB_VALUE
+		FacR  = RawFacR - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+		FacGr = RawFacGr - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+		FacGb = RawFacGb - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+		FacB  = RawFacB - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+#else
+		FacR  = RawFacR;
+		FacGr = RawFacGr;
+		FacGb = RawFacGb;
+		FacB  = RawFacB;
+#endif
+
+		FacG = ((FacGr + FacGb) + 1) >> 1;
+
+		debug_log("Gold R = %d, Gr= %d, Gb = %d, B = %d, G = %d", FacR/MOTO_WB_VALUE_BASE,
+		          FacGr/MOTO_WB_VALUE_BASE, FacGb/MOTO_WB_VALUE_BASE, FacB/MOTO_WB_VALUE_BASE, FacG/MOTO_WB_VALUE_BASE);
+
+		tempMax = MAX_temp(FacR,FacG,FacB);
+
+		pCamCalData->Single2A.S2aAwb.rGoldGainu4R = (u32)((tempMax * 512 + (FacR >> 1)) /FacR);
+		pCamCalData->Single2A.S2aAwb.rGoldGainu4G = (u32)((tempMax * 512 + (FacG >> 1)) /FacG);
+		pCamCalData->Single2A.S2aAwb.rGoldGainu4B  = (u32)((tempMax * 512 + (FacB >> 1)) /FacB);
+
+		pCamCalData->Single2A.S2aAwb.rValueR   = CalR/MOTO_WB_VALUE_BASE;
+		pCamCalData->Single2A.S2aAwb.rValueGr  = CalGr/MOTO_WB_VALUE_BASE;
+		pCamCalData->Single2A.S2aAwb.rValueGb  = CalGb/MOTO_WB_VALUE_BASE;
+		pCamCalData->Single2A.S2aAwb.rValueB   = CalB/MOTO_WB_VALUE_BASE;
+		pCamCalData->Single2A.S2aAwb.rGoldenR  = FacR/MOTO_WB_VALUE_BASE;
+		pCamCalData->Single2A.S2aAwb.rGoldenGr = FacGr/MOTO_WB_VALUE_BASE;
+		pCamCalData->Single2A.S2aAwb.rGoldenGb = FacGb/MOTO_WB_VALUE_BASE;
+		pCamCalData->Single2A.S2aAwb.rGoldenB  = FacB/MOTO_WB_VALUE_BASE;
+		debug_log("======================AWB CAM_CAL==================\n");
+		debug_log("[rCalGain.u4R] = %d\n", pCamCalData->Single2A.S2aAwb.rValueR);
+		debug_log("[rCalGain.u4Gr] = %d\n", pCamCalData->Single2A.S2aAwb.rValueGr);
+		debug_log("[rCalGain.u4Gb] = %d\n", pCamCalData->Single2A.S2aAwb.rValueGb);
+		debug_log("[rCalGain.u4B] = %d\n", pCamCalData->Single2A.S2aAwb.rValueB);
+		debug_log("[rFacGain.u4R] = %d\n", pCamCalData->Single2A.S2aAwb.rGoldenR);
+		debug_log("[rFacGain.u4Gr] = %d\n", pCamCalData->Single2A.S2aAwb.rGoldenGr);
+		debug_log("[rFacGain.u4Gb] = %d\n", pCamCalData->Single2A.S2aAwb.rGoldenGb);
+		debug_log("[rFacGain.u4B] = %d\n", pCamCalData->Single2A.S2aAwb.rGoldenB);
+		debug_log("[rCalGain.u4R] = %d\n", pCamCalData->Single2A.S2aAwb.rUnitGainu4R);
+		debug_log("[rCalGain.u4G] = %d\n", pCamCalData->Single2A.S2aAwb.rUnitGainu4G);
+		debug_log("[rCalGain.u4B] = %d\n", pCamCalData->Single2A.S2aAwb.rUnitGainu4B);
+		debug_log("[rFacGain.u4R] = %d\n", pCamCalData->Single2A.S2aAwb.rGoldGainu4R);
+		debug_log("[rFacGain.u4G] = %d\n", pCamCalData->Single2A.S2aAwb.rGoldGainu4G);
+		debug_log("[rFacGain.u4B] = %d\n", pCamCalData->Single2A.S2aAwb.rGoldGainu4B);
+		debug_log("======================AWB CAM_CAL==================\n");
+
+	}
+	/* AF Calibration Data*/
+	if (0x2 & AWBAFConfig) {
+		read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID,
+				af_addr, af_size + 2, (unsigned char *)af_data);
+		if (read_data_size > 0)
+			err = CAM_CAL_ERR_NO_ERR;
+		else {
+			pCamCalData->Single2A.S2aBitEn = CAM_CAL_NONE_BITEN;
+			error_log("Read Failed\n");
+			show_cmd_error_log(pCamCalData->Command);
+		}
+
+		checkSum = af_data[24]<<8 | af_data[25];
+		if(check_crc16(af_data, 24, checkSum)) {
+			debug_log("check_crc16 ok");
+			err = CAM_CAL_ERR_NO_ERR;
+		} else {
+			debug_log("check_crc16 err");
+			err = CAM_CAL_ERR_NO_3A_GAIN;
+			return err;
+		}
+		AFMacro = (af_data[2]<<8 | af_data[3])/64;
+		AFInf = (af_data[6]<<8 | af_data[7])/64;
+		AFInfDistance = af_data[4]<<8 | af_data[5];
+		AFMacroDistance = af_data[0]<<8 | af_data[1];
+		pCamCalData->Single2A.S2aAf[0] = AFInf;
+		pCamCalData->Single2A.S2aAf[1] = AFMacro;
+		pCamCalData->Single2A.S2aAF_t.AF_infinite_pattern_distance = AFInfDistance;
+		pCamCalData->Single2A.S2aAF_t.AF_Macro_pattern_distance = AFMacroDistance;
+
+		debug_log("======================AF CAM_CAL==================\n");
+		debug_log("[AFInfDistance] = %dmm\n", AFInfDistance);
+		debug_log("[AFMacroDistance] = %dmm\n", AFMacroDistance);
+		debug_log("[AFInf] = %d\n", AFInf);
+		debug_log("[AFMacro] = %d\n", AFMacro);
+		debug_log("======================AF CAM_CAL==================\n");
+	}
+
+	if(pCamCalData->sensorID == cam_cal_config->sensor_id) {
+		//af posture calibration data
+		unsigned char AF_POSTURE[20];
+		unsigned int af_posture_data_offset = start_addr;
+		unsigned int af_inf_posture, af_macro_posture, AF_infinite_calibration_temperature;
+		memset(AF_POSTURE, 0, 20);
+		debug_log("af_posture_data_offset = 0x%x\n", af_posture_data_offset);
+
+		read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID,
+				af_posture_data_offset, 20, (unsigned char *) AF_POSTURE);
+		if (read_data_size > 0)
+			err = CAM_CAL_ERR_NO_ERR;
+		else {
+			pCamCalData->Single2A.S2aBitEn = CAM_CAL_NONE_BITEN;
+			error_log("Read Failed\n");
+			show_cmd_error_log(pCamCalData->Command);
+		}
+
+		checkSum = AF_POSTURE[18]<<8 | AF_POSTURE[19];
+		if(check_crc16(AF_POSTURE, 18, checkSum)) {
+			debug_log("check_crc16 ok");
+			err = CAM_CAL_ERR_NO_ERR;
+		} else {
+			debug_log("check_crc16 err");
+			err = CAM_CAL_NONE_BITEN;
+			return err;
+		}
+		af_inf_posture = AF_POSTURE[10]<<8|AF_POSTURE[9];
+		af_macro_posture = AF_POSTURE[12]<<8|AF_POSTURE[11];
+		AF_infinite_calibration_temperature = AF_POSTURE[17];
+		pCamCalData->Single2A.S2aAF_t.Posture_AF_infinite_calibration = af_inf_posture;
+		pCamCalData->Single2A.S2aAF_t.Posture_AF_macro_calibration = af_macro_posture;
+		pCamCalData->Single2A.S2aAF_t.AF_infinite_calibration_temperature = AF_infinite_calibration_temperature;
+
+		debug_log("======================AF POSTURE CAM_CAL==================\n");
+		debug_log("[AFInfPosture] = 0x%x\n", af_inf_posture);
+		debug_log("[AFMacroPosture] = 0x%x\n", af_macro_posture);
+		debug_log("[AFInfiniteCalibrationTemperature] = 0x%x\n", AF_infinite_calibration_temperature);
+		debug_log("======================AF POSTURE CAM_CAL==================\n");
+	}
+	return err;
+}
+
+
+/***********************************************************************************
+ * Function : To read AWB information. Please put your AWB data function, here.
+ ***********************************************************************************/
+
+unsigned int mot_do_awb_gain(struct EEPROM_DRV_FD_DATA *pdata,
+		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData)
+{
+	struct STRUCT_CAM_CAL_DATA_STRUCT *pCamCalData =
+				(struct STRUCT_CAM_CAL_DATA_STRUCT *)pGetSensorCalData;
+	int read_data_size, checkSum;
+	unsigned int err = CamCalReturnErr[pCamCalData->Command];
+
+	unsigned char AWBConfig = 0x1;
+	int RGBGratioDeviation, tempMax = 0;
+	int CalR = 1, CalGr = 1, CalGb = 1, CalG = 1, CalB = 1;
+	int FacR = 1, FacGr = 1, FacGb = 1, FacG = 1, FacB = 1;
+	int RawCalR = 1, RawCalGr = 1, RawCalGb = 1, RawCalB = 1;
+	int RawFacR = 1, RawFacGr = 1, RawFacGb = 1, RawFacB = 1;
+	int rg_ratio_gold = 1, bg_ratio_gold = 1, grgb_ratio_gold = 1;
+	int rg_ratio_unit = 1, bg_ratio_unit = 1, grgb_ratio_unit = 1;
+	uint8_t  awb_data[45] = {0};
+	int awb_addr = MOT_AWB_ADDR;
+	int awb_size = MOT_AWB_DATA_SIZE;
+
+	debug_log("block_size=%d sensor_id=%x\n", block_size, pCamCalData->sensorID);
+
+	memset((void *)&pCamCalData->Single2A, 0, sizeof(struct STRUCT_CAM_CAL_SINGLE_2A_STRUCT));
+
+	if (pCamCalData->DataVer >= CAM_CAL_TYPE_NUM) {
+		err = CAM_CAL_ERR_NO_DEVICE;
+		error_log("Read Failed\n");
+		show_cmd_error_log(pCamCalData->Command);
+		return err;
+	}
+	if (block_size == 0) {
+		error_log("block_size(%d) is not correct\n", block_size);
+		show_cmd_error_log(pCamCalData->Command);
+		return err;
+	}
+
+	pCamCalData->Single2A.S2aVer = 0x01;
+	pCamCalData->Single2A.S2aBitEn = (0x01 & AWBConfig);
+
+	/* AWB Calibration Data*/
+	if (0x1 & AWBConfig) {
+		read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID,
+				awb_addr, awb_size + 2, (unsigned char *)awb_data);
+		if (read_data_size > 0)
+			err = CAM_CAL_ERR_NO_ERR;
+		else {
+			pCamCalData->Single2A.S2aBitEn = CAM_CAL_NONE_BITEN;
+			error_log("Read Failed\n");
+			show_cmd_error_log(pCamCalData->Command);
+		}
+
+		checkSum = awb_data[43]<<8 | awb_data[44];
+		RGBGratioDeviation = awb_data[6];
+		debug_log("RGBGratioDeviation = %d", RGBGratioDeviation);
+		if(check_crc16(awb_data, 43, checkSum)) {
+			debug_log("check_crc16 ok");
+			err = CAM_CAL_ERR_NO_ERR;
+		} else {
+			debug_log("check_crc16 err");
+			err = CAM_CAL_ERR_NO_3A_GAIN;
+			return err;
+		}
+		//check ratio limt
+		rg_ratio_unit = (awb_data[32]<<8 | awb_data[33])*1000/16384;
+		bg_ratio_unit = (awb_data[34]<<8 | awb_data[35])*1000/16384;
+		grgb_ratio_unit = (awb_data[36]<<8 | awb_data[37])*1000/16384;
+		rg_ratio_gold = (awb_data[18]<<8 | awb_data[19])*1000/16384;
+		bg_ratio_gold = (awb_data[20]<<8 | awb_data[21])*1000/16384;
+		grgb_ratio_gold = (awb_data[22]<<8 | awb_data[23])*1000/16384;
+		debug_log("ratio*1000, Unit R/G = %d, B/G = %d, Gr/Gb = %d, Gold R/G = %d, B/G = %d, Gr/Gb = %d",
+			rg_ratio_unit, bg_ratio_unit, grgb_ratio_unit, rg_ratio_gold, bg_ratio_gold, grgb_ratio_gold);
+		if(grgb_ratio_unit<MOT_AWB_GRGB_RATIO_MIN_1000TIMES || grgb_ratio_unit>MOT_AWB_GRGB_RATIO_MAX_1000TIMES
+			|| grgb_ratio_gold<MOT_AWB_GRGB_RATIO_MIN_1000TIMES || grgb_ratio_gold>MOT_AWB_GRGB_RATIO_MAX_1000TIMES
+			|| (ABS(rg_ratio_unit, rg_ratio_gold))>RGBGratioDeviation
+			|| (ABS(bg_ratio_unit, bg_ratio_gold))>RGBGratioDeviation) {
+			debug_log("ratio check err");
+			err = CAM_CAL_ERR_NO_3A_GAIN;
+			return err;
+		}
+
+		RawCalR = (awb_data[24]<<8 | awb_data[25]);
+		RawCalGr = (awb_data[26]<<8 | awb_data[27]);
+		RawCalGb = (awb_data[28]<<8 | awb_data[29]);
+		RawCalB = (awb_data[30]<<8 | awb_data[31]);
+
+		CalR  = RawCalR / MOTO_WB_VALUE_BASE;
+		CalGr = RawCalGr / MOTO_WB_VALUE_BASE;
+		CalGb = RawCalGb / MOTO_WB_VALUE_BASE;
+		CalB  = RawCalB / MOTO_WB_VALUE_BASE;
+
+		if(CalR<MOT_AWB_RB_MIN_VALUE || CalR>MOT_AWB_RBG_MAX_VALUE
+			|| CalGr<MOT_AWB_G_MIN_VALUE ||CalGr>MOT_AWB_RBG_MAX_VALUE
+			|| CalGb<MOT_AWB_G_MIN_VALUE ||CalGb>MOT_AWB_RBG_MAX_VALUE
+			|| CalB<MOT_AWB_RB_MIN_VALUE || CalB>MOT_AWB_RBG_MAX_VALUE) {
+			debug_log("check unit R Gr Gb B limit error");
+			err = CAM_CAL_ERR_NO_3A_GAIN;
+			return err;
+		}
+
+#ifdef MOTO_OB_VALUE
+		CalR  = RawCalR - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+		CalGr = RawCalGr - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+		CalGb = RawCalGb - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+		CalB  = RawCalB - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+#else
+		CalR  = RawCalR;
+		CalGr = RawCalGr;
+		CalGb = RawCalGb;
+		CalB  = RawCalB;
+#endif
+
+		CalG = ((CalGr + CalGb) + 1) >> 1;
+
+		debug_log("Unit R = %d, Gr= %d, Gb = %d, B = %d, G = %d", CalR/MOTO_WB_VALUE_BASE,
+		          CalGr/MOTO_WB_VALUE_BASE, CalGb/MOTO_WB_VALUE_BASE, CalB/MOTO_WB_VALUE_BASE, CalG/MOTO_WB_VALUE_BASE);
+		tempMax = MAX_temp(CalR,CalG,CalB);
+
+		pCamCalData->Single2A.S2aAwb.rUnitGainu4R = (u32)((tempMax*512 + (CalR >> 1))/CalR);
+		pCamCalData->Single2A.S2aAwb.rUnitGainu4G = (u32)((tempMax*512 + (CalG >> 1))/CalG);
+		pCamCalData->Single2A.S2aAwb.rUnitGainu4B  = (u32)((tempMax*512 + (CalB >> 1))/CalB);
+
+		RawFacR  = (awb_data[10]<<8 | awb_data[11]);
+		RawFacGr = (awb_data[12]<<8 | awb_data[13]);
+		RawFacGb = (awb_data[14]<<8 | awb_data[15]);
+		RawFacB  = (awb_data[16]<<8 | awb_data[17]);
+
+		FacR  = RawFacR / MOTO_WB_VALUE_BASE;
+		FacGr = RawFacGr / MOTO_WB_VALUE_BASE;
+		FacGb = RawFacGb / MOTO_WB_VALUE_BASE;
+		FacB  = RawFacB / MOTO_WB_VALUE_BASE;
+
+		if(FacR<MOT_AWB_RB_MIN_VALUE || FacR>MOT_AWB_RBG_MAX_VALUE
+			|| FacGr<MOT_AWB_G_MIN_VALUE ||FacGr>MOT_AWB_RBG_MAX_VALUE
+			|| FacGb<MOT_AWB_G_MIN_VALUE ||FacGb>MOT_AWB_RBG_MAX_VALUE
+			|| FacB<MOT_AWB_RB_MIN_VALUE || FacB>MOT_AWB_RBG_MAX_VALUE) {
+			debug_log("check gold R Gr Gb B limit error");
+			err = CAM_CAL_ERR_NO_3A_GAIN;
+			return err;
+		}
+
+#ifdef MOTO_OB_VALUE
+		FacR  = RawFacR - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+		FacGr = RawFacGr - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+		FacGb = RawFacGb - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+		FacB  = RawFacB - MOTO_OB_VALUE * MOTO_WB_VALUE_BASE;
+#else
+		FacR  = RawFacR;
+		FacGr = RawFacGr;
+		FacGb = RawFacGb;
+		FacB  = RawFacB;
+#endif
+		FacG = ((FacGr + FacGb) + 1) >> 1;
+		debug_log("Gold R = %d, Gr= %d, Gb = %d, B = %d, G = %d", FacR/MOTO_WB_VALUE_BASE,
+		          FacGr/MOTO_WB_VALUE_BASE, FacGb/MOTO_WB_VALUE_BASE, FacB/MOTO_WB_VALUE_BASE, FacG/MOTO_WB_VALUE_BASE);
+		tempMax = MAX_temp(FacR,FacG,FacB);
+
+		pCamCalData->Single2A.S2aAwb.rGoldGainu4R = (u32)((tempMax * 512 + (FacR >> 1)) /FacR);
+		pCamCalData->Single2A.S2aAwb.rGoldGainu4G = (u32)((tempMax * 512 + (FacG >> 1)) /FacG);
+		pCamCalData->Single2A.S2aAwb.rGoldGainu4B  = (u32)((tempMax * 512 + (FacB >> 1)) /FacB);
+
+		pCamCalData->Single2A.S2aAwb.rValueR   = CalR/MOTO_WB_VALUE_BASE;
+		pCamCalData->Single2A.S2aAwb.rValueGr  = CalGr/MOTO_WB_VALUE_BASE;
+		pCamCalData->Single2A.S2aAwb.rValueGb  = CalGb/MOTO_WB_VALUE_BASE;
+		pCamCalData->Single2A.S2aAwb.rValueB   = CalB/MOTO_WB_VALUE_BASE;
+		pCamCalData->Single2A.S2aAwb.rGoldenR  = FacR/MOTO_WB_VALUE_BASE;
+		pCamCalData->Single2A.S2aAwb.rGoldenGr = FacGr/MOTO_WB_VALUE_BASE;
+		pCamCalData->Single2A.S2aAwb.rGoldenGb = FacGb/MOTO_WB_VALUE_BASE;
+		pCamCalData->Single2A.S2aAwb.rGoldenB  = FacB/MOTO_WB_VALUE_BASE;
+		debug_log("======================AWB CAM_CAL==================\n");
+		debug_log("[rCalGain.u4R] = %d\n", pCamCalData->Single2A.S2aAwb.rValueR);
+		debug_log("[rCalGain.u4Gr] = %d\n", pCamCalData->Single2A.S2aAwb.rValueGr);
+		debug_log("[rCalGain.u4Gb] = %d\n", pCamCalData->Single2A.S2aAwb.rValueGb);
+		debug_log("[rCalGain.u4B] = %d\n", pCamCalData->Single2A.S2aAwb.rValueB);
+		debug_log("[rFacGain.u4R] = %d\n", pCamCalData->Single2A.S2aAwb.rGoldenR);
+		debug_log("[rFacGain.u4Gr] = %d\n", pCamCalData->Single2A.S2aAwb.rGoldenGr);
+		debug_log("[rFacGain.u4Gb] = %d\n", pCamCalData->Single2A.S2aAwb.rGoldenGb);
+		debug_log("[rFacGain.u4B] = %d\n", pCamCalData->Single2A.S2aAwb.rGoldenB);
+		debug_log("[rCalGain.u4R] = %d\n", pCamCalData->Single2A.S2aAwb.rUnitGainu4R);
+		debug_log("[rCalGain.u4G] = %d\n", pCamCalData->Single2A.S2aAwb.rUnitGainu4G);
+		debug_log("[rCalGain.u4B] = %d\n", pCamCalData->Single2A.S2aAwb.rUnitGainu4B);
+		debug_log("[rFacGain.u4R] = %d\n", pCamCalData->Single2A.S2aAwb.rGoldGainu4R);
+		debug_log("[rFacGain.u4G] = %d\n", pCamCalData->Single2A.S2aAwb.rGoldGainu4G);
+		debug_log("[rFacGain.u4B] = %d\n", pCamCalData->Single2A.S2aAwb.rGoldGainu4B);
+		debug_log("======================AWB CAM_CAL==================\n");
+
+	}
+	return err;
+}
+
+/***********************************************************************************
+ * Function : To read LSC Table
+ ***********************************************************************************/
+unsigned int mot_do_single_lsc(struct EEPROM_DRV_FD_DATA *pdata,
+		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData)
+{
+	struct STRUCT_CAM_CAL_DATA_STRUCT *pCamCalData =
+				(struct STRUCT_CAM_CAL_DATA_STRUCT *)pGetSensorCalData;
+
+	int read_data_size, checkSum;
+	unsigned int err = CamCalReturnErr[pCamCalData->Command];
+	uint8_t  tempBuf[1870] = {0};
+
+	if (pCamCalData->DataVer >= CAM_CAL_TYPE_NUM) {
+		err = CAM_CAL_ERR_NO_DEVICE;
+		error_log("Read Failed\n");
+		show_cmd_error_log(pCamCalData->Command);
+		return err;
+	}
+	if (block_size != CAM_CAL_SINGLE_LSC_SIZE)
+		error_log("block_size(%d) is not match (%d)\n",
+				block_size, CAM_CAL_SINGLE_LSC_SIZE);
+
+	pCamCalData->SingleLsc.LscTable.MtkLcsData.MtkLscType = 2;//mtk type
+	pCamCalData->SingleLsc.LscTable.MtkLcsData.PixId = 8;
+
+	debug_log("u4Offset=0x%x, u4Length=0x%x", start_addr,  block_size);
+	read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID,
+			start_addr, block_size + 2, (unsigned char *) tempBuf);
+
+	if (read_data_size <= 0) {
+		err = CAM_CAL_ERR_NO_SHADING;
+		return err;
+	}
+
+	checkSum = (tempBuf[1868]<<8) | (tempBuf[1869]);
+
+	if(check_crc16(tempBuf, 1868, checkSum)) {
+		debug_log("check_crc16 ok");
+		err = CAM_CAL_ERR_NO_ERR;
+	} else {
+		debug_log("check_crc16 err");
+		err = CAM_CAL_ERR_NO_SHADING;
+		return err;
+	}
+
+	pCamCalData->SingleLsc.LscTable.MtkLcsData.TableSize = block_size;
+	if (block_size > 0) {
+		pCamCalData->SingleLsc.TableRotation = 0;
+		read_data_size = read_data(pdata,
+			pCamCalData->sensorID, pCamCalData->deviceID,
+			start_addr, block_size, (unsigned char *)
+			&pCamCalData->SingleLsc.LscTable.MtkLcsData.SlimLscType);
+		if (block_size == read_data_size)
+			err = CAM_CAL_ERR_NO_ERR;
+		else {
+			error_log("Read Failed\n");
+			err = CamCalReturnErr[pCamCalData->Command];
+			show_cmd_error_log(pCamCalData->Command);
+		}
+	}
+
+	debug_log("======================SingleLsc Data==================\n");
+	debug_log("[1st] = %x, %x, %x, %x\n",
+		pCamCalData->SingleLsc.LscTable.Data[0],
+		pCamCalData->SingleLsc.LscTable.Data[1],
+		pCamCalData->SingleLsc.LscTable.Data[2],
+		pCamCalData->SingleLsc.LscTable.Data[3]);
+	debug_log("[1st] = SensorLSC(1)?MTKLSC(2)?  %x\n",
+		pCamCalData->SingleLsc.LscTable.MtkLcsData.MtkLscType);
+	debug_log("CapIspReg =0x%x, 0x%x, 0x%x, 0x%x, 0x%x",
+		pCamCalData->SingleLsc.LscTable.MtkLcsData.CapIspReg[0],
+		pCamCalData->SingleLsc.LscTable.MtkLcsData.CapIspReg[1],
+		pCamCalData->SingleLsc.LscTable.MtkLcsData.CapIspReg[2],
+		pCamCalData->SingleLsc.LscTable.MtkLcsData.CapIspReg[3],
+		pCamCalData->SingleLsc.LscTable.MtkLcsData.CapIspReg[4]);
+	debug_log("RETURN = 0x%x\n", err);
+	debug_log("======================SingleLsc Data==================\n");
+
+	return err;
+}
+
+unsigned int mot_do_pdaf(struct EEPROM_DRV_FD_DATA *pdata,
+		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData)
+{
+	struct STRUCT_CAM_CAL_DATA_STRUCT *pCamCalData =
+				(struct STRUCT_CAM_CAL_DATA_STRUCT *)pGetSensorCalData;
+
+	int read_data_size, checkSum1, checkSum2;
+	int err =  CamCalReturnErr[pCamCalData->Command];
+	uint8_t  tempBuf[1504] = {0};
+
+	pCamCalData->PDAF.Size_of_PDAF = block_size;
+	debug_log("PDAF start_addr =%x table_size=%d\n", start_addr, block_size);
+
+	read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID,
+			start_addr, block_size + 4, (unsigned char *)tempBuf);
+	if (read_data_size <= 0) {
+		err = CAM_CAL_ERR_NO_PDAF;
+		return err;
+	}
+	checkSum1 = tempBuf[1500] << 8 | tempBuf[1501];
+	checkSum2 = tempBuf[1502] << 8 | tempBuf[1503];
+	debug_log("checkSum1  = 0x%x, checkSum2 = 0x%x", checkSum1, checkSum2);
+
+	if(check_crc16(tempBuf, 496, checkSum1) && check_crc16(tempBuf +496, 1004, checkSum2)) {
+		debug_log("check_crc16 ok");
+		err = CAM_CAL_ERR_NO_ERR;
+	} else {
+		debug_log("check_crc16 err");
+		err = CAM_CAL_ERR_NO_PDAF;
+		return err;
+	}
+
+	read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID,
+			start_addr, block_size, (unsigned char *)&pCamCalData->PDAF.Data[0]);
+	if (read_data_size <= 0) {
+		err = CAM_CAL_ERR_NO_PDAF;
+		return err;
+	}
+
+	debug_log("======================PDAF Data==================\n");
+	debug_log("First five %x, %x, %x, %x, %x\n",
+		pCamCalData->PDAF.Data[0],
+		pCamCalData->PDAF.Data[1],
+		pCamCalData->PDAF.Data[2],
+		pCamCalData->PDAF.Data[3],
+		pCamCalData->PDAF.Data[4]);
+	debug_log("RETURN = 0x%x\n", err);
+	debug_log("======================PDAF Data==================\n");
+
+	return err;
+
 }
 
 unsigned int do_module_version(struct EEPROM_DRV_FD_DATA *pdata,
@@ -927,6 +1882,48 @@ unsigned int get_is_need_power_on(struct EEPROM_DRV_FD_DATA *pdata, unsigned int
 
 	result = CamCalReturnErr[uint_lsCommand];
 	show_cmd_error_log(lsCommand);
+	return result;
+}
+
+unsigned int mot_get_cal_factory_data(struct EEPROM_DRV_FD_DATA *pdata, unsigned int *pGetSensorCalData)
+{
+	struct STRUCT_MOT_EEPROM_DATA *pCamCalData =
+				(struct STRUCT_MOT_EEPROM_DATA *)pGetSensorCalData;
+
+	enum ENUM_MOT_CAMERA_CAM_CAL_TYPE_ENUM lsCommand = pCamCalData->Command;
+	unsigned int result = CAM_CAL_ERR_NO_DEVICE;
+	unsigned short cam_cal_index;
+
+	must_log("device_id = %d, lsCommand = %d\n", pCamCalData->deviceID, lsCommand);
+
+	if (lsCommand != CAMERA_CAM_CAL_DATA_FACTORY_VERIFY) {
+		error_log("Invalid Command = 0x%x\n", lsCommand);
+		return CAM_CAL_ERR_NO_CMD;
+	}
+
+	must_log("current_sensor_id = 0x%x", pCamCalData->sensorID);
+	debug_log("search %u layouts", cam_cal_number);
+	for (cam_cal_index = 0; cam_cal_index < cam_cal_number; cam_cal_index++) {
+		cam_cal_config = cam_cal_config_list[cam_cal_index];
+		if (cam_cal_config->sensor_id == pCamCalData->sensorID) {
+			break;
+		}
+	}
+
+	if ((cam_cal_index < cam_cal_number) && (cam_cal_index >= 0)) {
+		strcpy(pCamCalData->SensorName, cam_cal_config->name);
+		pCamCalData->sensor_type = (sensor_type_t)cam_cal_config->sensor_type;
+		pCamCalData->data_size = (unsigned int)cam_cal_config->preload_size;
+		pCamCalData->serial_number_bit= (unsigned int)cam_cal_config->serial_number_bit;
+		debug_log("current sensor name : %s, sensor_type = %d, data_size = 0x%x",
+			pCamCalData->SensorName, pCamCalData->sensor_type, pCamCalData->data_size);
+		if (cam_cal_config->mot_do_factory_verify_function != NULL) {
+			result = cam_cal_config->mot_do_factory_verify_function(pdata, pGetSensorCalData);
+			return result;
+		}
+	} else
+		must_log("layout type not found");
+
 	return result;
 }
 
