@@ -33,8 +33,9 @@
 #define CAM_CAL_ERR_DUMP_FAILED     0x00200000
 #define CAM_CAL_ERR_NO_LENS_ID      0x00400000
 #define CAM_CAL_ERR_NO_SHADING_16_9 0x00800000
+#define CAM_CAL_ERR_NO_MOT_MNF_INFO 0x01000000
 
-#define CamCalReturnErr_MAX 8
+#define CamCalReturnErr_MAX 9
 
 /*****************************************************************************
  * Enums
@@ -53,7 +54,13 @@ enum ENUM_CAMERA_CAM_CAL_TYPE_ENUM {
 	CAMERA_CAM_CAL_DATA_DUMP,
 	CAMERA_CAM_CAL_DATA_LENS_ID,
 	CAMERA_CAM_CAL_DATA_SHADING_TABLE_16_9,
+	CAMERA_CAM_CAL_DATA_MANUFACTURE,
 	CAMERA_CAM_CAL_DATA_LIST
+};
+
+enum ENUM_MOT_CAMERA_CAM_CAL_TYPE_ENUM {
+	CAMERA_CAM_CAL_DATA_FACTORY_VERIFY = 0,
+	MOT_CAMERA_CAM_CAL_DATA_LIST
 };
 
 enum ENUM_CAM_CAL_DATA_VER_ENUM {
@@ -183,6 +190,53 @@ struct STRUCT_CAM_CAL_PDAF_STRUCT {
 	unsigned char Data[CAM_CAL_PDAF_SIZE];
 };
 
+#define MAX_CALIBRATION_STRING 40
+/*To avoid "__invalid_size_argument_for_IOC" compile error, here reserved 256 bytes
+  for struct STRUCT_MOT_EEPROM_DATA(except DumpAllEepromData).
+*/
+#define MAX_ALL_EEPROM_DATA_SIZE ((0x01<<_IOC_SIZEBITS)-256)
+
+enum ENUM_CAM_CAL_DATA_CRC_CHECK_STATUS_ENUM{
+	NONEXISTENCE = -1,
+	NO_ERRORS,
+	CRC_FAILURE,
+	LIMIT_FAILURE,
+};
+
+typedef enum {
+	MAIN_CAMERA,
+	FRONT_CAMERA,
+	DEPTH_CAMERA,
+	UW_CAMERA,
+	TELE_CAMERA,
+} sensor_type_t;
+
+struct MOT_MANUFACTURE_DATA {
+	unsigned char eeprom_table_version[MAX_CALIBRATION_STRING];
+	unsigned char cal_hw_ver[MAX_CALIBRATION_STRING];
+	unsigned char cal_sw_ver[MAX_CALIBRATION_STRING];
+	unsigned char part_number[MAX_CALIBRATION_STRING];
+	unsigned char actuator_id[MAX_CALIBRATION_STRING];
+	unsigned char lens_id[MAX_CALIBRATION_STRING];
+	unsigned char manufacturer_id[MAX_CALIBRATION_STRING];
+	unsigned char factory_id[MAX_CALIBRATION_STRING];
+	unsigned char manufacture_line[MAX_CALIBRATION_STRING];
+	unsigned char manufacture_date[MAX_CALIBRATION_STRING];
+	unsigned char serial_number[MAX_CALIBRATION_STRING];
+};
+
+struct STRUCT_MOT_EEPROM_DATA {
+	enum ENUM_MOT_CAMERA_CAM_CAL_TYPE_ENUM Command;
+	unsigned int  sensorID;
+	unsigned int  deviceID;
+	unsigned char SensorName[MAX_CALIBRATION_STRING];
+	unsigned int  data_size;
+	sensor_type_t sensor_type;
+	unsigned char DumpAllEepromData[MAX_ALL_EEPROM_DATA_SIZE];
+	unsigned char serial_number[MAX_CALIBRATION_STRING];
+	unsigned int serial_number_bit;
+};
+
 /** @brief This enum defines the CAM_CAL Table.  */
 
 struct STRUCT_CAM_CAL_DATA_STRUCT {
@@ -196,6 +250,8 @@ struct STRUCT_CAM_CAL_DATA_STRUCT {
 	struct STRUCT_CAM_CAL_PDAF_STRUCT         PDAF;
 	struct STRUCT_CAM_CAL_Stereo_Data_STRUCT  Stereo_Data;
 	unsigned char LensDrvId[10];
+	struct MOT_MANUFACTURE_DATA   ManufactureData;
+	unsigned char *SensorName;
 };
 
 /**
