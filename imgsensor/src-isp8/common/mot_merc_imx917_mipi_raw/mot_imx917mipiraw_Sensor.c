@@ -25,6 +25,7 @@
 
 #define IMX917_EMBEDDED_DATA_EN 0
 #define ENABLE_IMX917_LONG_EXPOSURE 1
+#define ENABLE_IMX917_PD 0
 
 static void set_group_hold(void *arg, u8 en);
 static u16 get_gain2reg(u32 gain);
@@ -69,6 +70,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
+#if ENABLE_IMX917_PD
 	{
 		.bus.csi2 = {
 			.channel = 0,
@@ -80,6 +82,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
 			.is_active_line = TRUE,
 		},
 	},
+#endif
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 	{
@@ -92,6 +95,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
+#if ENABLE_IMX917_PD
 	{
 		.bus.csi2 = {
 			.channel = 0,
@@ -103,6 +107,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cap[] = {
 			.is_active_line = TRUE,
 		},
 	},
+#endif
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 	{
@@ -115,6 +120,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
+#if ENABLE_IMX917_PD
 	{
 		.bus.csi2 = {
 			.channel = 0,
@@ -126,6 +132,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.is_active_line = TRUE,
 		},
 	}
+#endif
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
 	{
@@ -150,6 +157,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
+#if ENABLE_IMX917_PD
 	{
 		.bus.csi2 = {
 			.channel = 0,
@@ -161,6 +169,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 			.is_active_line = TRUE,
 		},
 	},
+#endif
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_cus1[] = {
@@ -174,6 +183,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus1[] = {
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
+#if ENABLE_IMX917_PD
 	{
 		.bus.csi2 = {
 			.channel = 0,
@@ -185,6 +195,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus1[] = {
 			.is_active_line = TRUE,
 		},
 	},
+#endif
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = {
@@ -198,6 +209,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = {
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
+#if ENABLE_IMX917_PD
 	{
 		.bus.csi2 = {
 			.channel = 0,
@@ -209,6 +221,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = {
 			.is_active_line = TRUE,
 		},
 	},
+#endif
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_cus3[] = {
@@ -248,6 +261,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
+#if ENABLE_IMX917_PD
 	{
 		.bus.csi2 = {
 			.channel = 0,
@@ -259,6 +273,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
 			.is_active_line = TRUE,
 		},
 	},
+#endif
 };
 
 
@@ -266,12 +281,14 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
 	{
 		.bus.csi2 = {
 			.channel = 0,
-			.data_type = 0x2b,
+			.data_type = 0x2c,
 			.hsize = 0x1000,
 			.vsize = 0x0c00,
 			.user_data_desc = VC_STAGGER_NE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
+/*
 	{
 		.bus.csi2 = {
 			.channel = 1,
@@ -281,6 +298,8 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
 			.user_data_desc = VC_STAGGER_ME,
 		},
 	},
+*/
+#if ENABLE_IMX917_PD
 	{
 		.bus.csi2 = {
 			.channel = 0,
@@ -292,8 +311,10 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
 			.is_active_line = TRUE,
 		},
 	},
+#endif
 };
 
+#if ENABLE_IMX917_PD
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 0,
@@ -389,7 +410,17 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 		.i4PDOrder = {0,0,1,1,1,1,0,0}, // R = 1, L = 0
 	},
 };
+#endif
 
+static u32 imx917_dcg_ratio_table_12bit[] = {4000};
+
+static struct mtk_sensor_saturation_info imgsensor_saturation_info_12bit = {
+	.gain_ratio = 4000,
+	.OB_pedestal = 64,
+	.saturation_level = 3900,
+	.adc_bit = 10,
+	.ob_bm = 64,
+};
 
 static struct subdrv_mode_struct mode_struct[] = {
 	{
@@ -430,8 +461,13 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
+#if ENABLE_IMX917_PD
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info,
+#else
+		.pdaf_cap = PARAM_UNDEFINED,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+#endif
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -483,8 +519,13 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
+#if ENABLE_IMX917_PD
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info,
+#else
+		.pdaf_cap = PARAM_UNDEFINED,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+#endif
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -536,8 +577,13 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
+#if ENABLE_IMX917_PD
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info,
+#else
+		.pdaf_cap = PARAM_UNDEFINED,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+#endif
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -561,8 +607,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.hdr_mode = HDR_NONE,
 		.pclk = 1360000000,
-		.linelength = 4264,
-		.framelength = 2630,
+		.linelength = 6728,
+		.framelength = 1680,
 		.max_framerate = 1200,
 		.mipi_pixel_rate = 1641600000,
 		.readout_length = 0,
@@ -642,8 +688,13 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
+#if ENABLE_IMX917_PD
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info,
+#else
+		.pdaf_cap = PARAM_UNDEFINED,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+#endif
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -697,8 +748,13 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
+#if ENABLE_IMX917_PD
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_cus1_info,
+#else
+		.pdaf_cap = PARAM_UNDEFINED,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+#endif
 		.ae_binning_ratio = 1000,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -752,8 +808,13 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 2304,
 		},
+#if ENABLE_IMX917_PD
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_cus2_info,
+#else
+		.pdaf_cap = PARAM_UNDEFINED,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+#endif
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -912,8 +973,13 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 2048,
 			.h2_tg_size = 1536,
 		},
+#if ENABLE_IMX917_PD
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_info,
+#else
+		.pdaf_cap = PARAM_UNDEFINED,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+#endif
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -936,18 +1002,18 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.seamless_switch_mode_setting_table = imx917_seamless_custom6,
 		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx917_seamless_custom6),
 		.pclk = 1360000000,
-		.linelength = 7072,
-		.framelength = 3200 * 2,
+		.linelength = 14256,
+		.framelength = 3174,
 		.max_framerate = 300,
-		.hdr_mode = HDR_RAW_STAGGER,
-		.raw_cnt = 2,
+		.hdr_mode = HDR_RAW_DCG_COMPOSE,
+		.raw_cnt = 1,
 		.exp_cnt = 2,
 		.mipi_pixel_rate = 1641600000,
-		.readout_length = 3115 * 2,   //(85+6143+1)/2
-		.read_margin = 24 * 2,         //24*2
-		.framelength_step = 4 * 2,		// multiple of 4 for 2DOL
-		.coarse_integ_step = 2 * 2,		// multiple of 2 for 2DOL
-		.min_exposure_line = 4 * 2,
+		.readout_length = 0,   //(85+6143+1)/2
+		.read_margin = 0,         //24*2
+		.framelength_step = 4,		// multiple of 4 for 2DOL
+		.coarse_integ_step = 2,		// multiple of 2 for 2DOL
+		.min_exposure_line = 4,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4*2,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4*2,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 0x3FFF*2,
@@ -970,8 +1036,13 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
+#if ENABLE_IMX917_PD
 		.pdaf_cap = TRUE,
 		.imgsensor_pd_info = &imgsensor_pd_cus2_info,
+#else
+		.pdaf_cap = PARAM_UNDEFINED,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+#endif
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -982,6 +1053,17 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_step = 4,
 		.csi_param = {
 			.cphy_settle = 73,
+		},
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW12_4CELL_HW_BAYER_B,
+		.saturation_info = &imgsensor_saturation_info_12bit,
+		.dcg_info = {
+			.dcg_mode = IMGSENSOR_DCG_COMPOSE,
+			.dcg_gain_mode = IMGSENSOR_DCG_RATIO_MODE,
+			.dcg_gain_ratio_min = 4000,
+			.dcg_gain_ratio_max = 4000,
+			.dcg_gain_ratio_step = 0,
+			.dcg_gain_table = imx917_dcg_ratio_table_12bit,
+			.dcg_gain_table_size = sizeof(imx917_dcg_ratio_table_12bit),
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -1025,12 +1107,16 @@ static struct subdrv_static_ctx static_ctx = {
 	.frame_length_max = 0xFFFC,
 	.ae_effective_frame = 2,
 	.frame_time_delay_frame = 2,
-	.hdr_type = HDR_SUPPORT_STAGGER_FDOL,
+	.hdr_type = HDR_SUPPORT_STAGGER_FDOL|HDR_SUPPORT_DCG|HDR_SUPPORT_LBMF,
 #ifdef IMGSENSOR_FUSION_TEST_WORKAROUND
 	.start_exposure_offset_custom = 2115600,
 #endif
 	.start_exposure_offset = 2336000,
+#if ENABLE_IMX917_PD
 	.pdaf_type = PDAF_SUPPORT_CAMSV_QPD,
+#else
+	.pdaf_type = PDAF_SUPPORT_NA,
+#endif
 	.g_gain2reg = get_gain2reg,
 	.s_gph = set_group_hold,
 	.s_cali = mot_imx917_apply_qsc_spc_data,
