@@ -31,7 +31,7 @@ static void s5kjn5_sensor_init(struct subdrv_ctx *ctx);
 static int s5kjn5_open(struct subdrv_ctx *ctx);
 static int s5kjn5_set_ctrl_locker(struct subdrv_ctx *ctx, u32 cid, bool *is_lock);
 
-#define ENABLE_S5KJN5_PD FALSE
+#define ENABLE_S5KJN5_PD TRUE
 
 #define ENABLE_S5KJN5_LONG_EXPOSURE TRUE
 #if  ENABLE_S5KJN5_LONG_EXPOSURE
@@ -371,7 +371,7 @@ static struct SET_PD_BLOCK_INFO_T s5kjn5_pd_info = {
 	},
 	.i4FullRawW = 4096,
 	.i4FullRawH = 3072,
-	.iMirrorFlip = IMAGE_HV_MIRROR,
+	.iMirrorFlip = IMAGE_V_MIRROR,
 	.i4ModeIndex = 3,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
 	/* VC's PD pattern description */
@@ -379,6 +379,39 @@ static struct SET_PD_BLOCK_INFO_T s5kjn5_pd_info = {
 		.i4PDPattern = 1, // all PD
 		.i4BinFacX = 2,
 		.i4BinFacY = 4,
+		.i4PDRepetition = 0,
+		.i4PDOrder = {0, 1}, // L = 0, R = 1
+	},
+};
+
+static struct SET_PD_BLOCK_INFO_T s5kjn5_pd_cus3_info = {
+	.i4OffsetX = 0,
+	.i4OffsetY = 0,
+	.i4PitchX = 0,
+	.i4PitchY = 0,
+	.i4PairNum = 0,
+	.i4SubBlkW = 0,
+	.i4SubBlkH = 0,
+	.i4PosL = {{0, 0}},
+	.i4PosR = {{0, 0}},
+	.i4BlockNumX = 0,
+	.i4BlockNumY = 0,
+	.i4Crop = {
+		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
+		{0, 0}, {0, 0}, {2048, 1536}, {0, 0}, {0, 0},
+	},
+	.i4FullRawW = 8192,
+	.i4FullRawH = 6144,
+	.iMirrorFlip = IMAGE_V_MIRROR,
+	.i4ModeIndex = 3,
+	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		.i4PDPattern = 1, // all PD
+		.i4BinFacX = 4,
+		.i4BinFacY = 8,
 		.i4PDRepetition = 0,
 		.i4PDOrder = {0, 1}, // L = 0, R = 1
 	},
@@ -768,7 +801,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 #if ENABLE_S5KJN5_PD
 		.pdaf_cap = ENABLE_S5KJN5_PD,
-		.imgsensor_pd_info = &s5kjn5_pd_info,
+		.imgsensor_pd_info = &s5kjn5_pd_cus3_info,
 #else
 		.pdaf_cap = PARAM_UNDEFINED,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
