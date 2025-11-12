@@ -25,7 +25,7 @@
 
 #define IMX917_EMBEDDED_DATA_EN 0
 #define ENABLE_IMX917_LONG_EXPOSURE 1
-#define ENABLE_IMX917_PD 0
+#define ENABLE_IMX917_PD TRUE
 
 static void set_group_hold(void *arg, u8 en);
 static u16 get_gain2reg(u32 gain);
@@ -113,13 +113,14 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 	{
 		.bus.csi2 = {
 			.channel = 0,
-			.data_type = 0x2b,
+			.data_type = 0x2c,
 			.hsize = 0x1000,
 			.vsize = 0x0c00,
 			.user_data_desc = VC_STAGGER_NE,
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
+/*
 #if ENABLE_IMX917_PD
 	{
 		.bus.csi2 = {
@@ -133,6 +134,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 		},
 	}
 #endif
+*/
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
 	{
@@ -209,6 +211,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = {
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
+/*
 #if ENABLE_IMX917_PD
 	{
 		.bus.csi2 = {
@@ -222,6 +225,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = {
 		},
 	},
 #endif
+*/
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_cus3[] = {
@@ -299,6 +303,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
 		},
 	},
 */
+/*
 #if ENABLE_IMX917_PD
 	{
 		.bus.csi2 = {
@@ -312,6 +317,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
 		},
 	},
 #endif
+*/
 };
 
 #if ENABLE_IMX917_PD
@@ -332,13 +338,17 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 	},
+	.i4FullRawW = 4096,
+	.i4FullRawH = 3072,
+	.iMirrorFlip = IMAGE_HV_MIRROR,
 	.i4ModeIndex = 3,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
-		.sPDMapInfo[0] = {
+	.sPDMapInfo[0] = {
 		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
 		.i4PDPattern = 1,//all-pd
 		.i4BinFacX = 2,
 		.i4BinFacY = 4,
+		.i4PDRepetition = 0,
 		.i4PDOrder = {1}, //R=1, L=0
 	},
 };
@@ -361,7 +371,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus1_info = {
 		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
 		{2048, 1536}, {0, 0}, {0, 0}, {0, }, {0, 0},
 	},
-	.iMirrorFlip = IMAGE_NORMAL,
+	.iMirrorFlip = IMAGE_HV_MIRROR,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
 	.i4FullRawW = 8192,
 	.i4FullRawH = 6144,
@@ -396,7 +406,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 	.i4BlockNumY = 94,
 	.i4VolumeX = 1,
 	.i4VolumeY = 2,
-	.iMirrorFlip = IMAGE_NORMAL,
+	.iMirrorFlip = IMAGE_HV_MIRROR,
 	.i4FullRawW = 4096,
 	.i4FullRawH = 3072,
 	.i4VCPackNum = 1,
@@ -578,8 +588,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.h2_tg_size = 3072,
 		},
 #if ENABLE_IMX917_PD
-		.pdaf_cap = TRUE,
-		.imgsensor_pd_info = &imgsensor_pd_info,
+		.pdaf_cap = PARAM_UNDEFINED,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
 #else
 		.pdaf_cap = PARAM_UNDEFINED,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
@@ -595,6 +605,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_settle = 73,
 		},
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW12_4CELL_HW_BAYER_B,
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
 	{
@@ -1037,8 +1048,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.h2_tg_size = 3072,
 		},
 #if ENABLE_IMX917_PD
-		.pdaf_cap = TRUE,
-		.imgsensor_pd_info = &imgsensor_pd_cus2_info,
+		.pdaf_cap = PARAM_UNDEFINED,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
 #else
 		.pdaf_cap = PARAM_UNDEFINED,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
