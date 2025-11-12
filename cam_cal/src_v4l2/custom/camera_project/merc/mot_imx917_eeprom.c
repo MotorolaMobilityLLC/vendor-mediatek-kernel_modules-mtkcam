@@ -405,8 +405,8 @@ unsigned int mot_imx917_do_2a_gain(struct EEPROM_DRV_FD_DATA *pdata,
 			err = CAM_CAL_ERR_NO_3A_GAIN;
 			return err;
 		}
-		AFMacro = (af_data[2]<<8 | af_data[3])/64;
-		AFInf = (af_data[6]<<8 | af_data[7])/64;
+		AFMacro = (af_data[2]<<8 | af_data[3])/16;
+		AFInf = (af_data[6]<<8 | af_data[7])/16;
 		AFInfDistance = af_data[4]<<8 | af_data[5];
 		AFMacroDistance = af_data[0]<<8 | af_data[1];
 		pCamCalData->Single2A.S2aAf[0] = AFInf;
