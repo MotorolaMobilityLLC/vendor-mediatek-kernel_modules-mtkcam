@@ -100,7 +100,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 	{
 		.bus.csi2 = {
 			.channel = 0,
-			.data_type = 0x2b,
+			.data_type = 0x2c,
 			.hsize = 0x1000,
 			.vsize = 0x0c00,
 			.user_data_desc = VC_STAGGER_NE,
@@ -115,6 +115,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 			.is_active_line = TRUE,
+			.valid_bit = 10,
 		},
 	}
 };
@@ -245,6 +246,18 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus5[] = {
 	},
 };
 
+static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2c,
+			.hsize = 0x1000,
+			.vsize = 0x0c00,
+			.user_data_desc = VC_STAGGER_NE,
+		},
+	},
+};
+
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 0,
@@ -339,6 +352,21 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 		.i4PDRepetition = 8,
 		.i4PDOrder = {0,0,1,1,1,1,0,0}, // R = 1, L = 0
 	},
+};
+
+//1000 base for dcg gain ratio
+static u32 imx917_dcg_ratio_table_12bit[] = {4000};
+
+static struct mtk_sensor_saturation_info imgsensor_saturation_info_10bit = {
+	.gain_ratio = 1000,
+	.OB_pedestal = 64,
+	.saturation_level = 1023,
+};
+
+static struct mtk_sensor_saturation_info imgsensor_saturation_info_12bit = {
+	.gain_ratio = 4000,
+	.OB_pedestal = 64,
+	.saturation_level = 3900,
 };
 
 static struct subdrv_mode_struct mode_struct[] = {
@@ -496,6 +524,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_settle = 73,
 		},
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW12_B,
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
 	{
@@ -507,8 +536,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
 		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
 		.pclk = 1360000000,
-		.linelength = 4264,
-		.framelength = 2630,
+		.linelength = 6728,
+		.framelength = 1680,
 		.max_framerate = 1200,
 		.mipi_pixel_rate = 1645710000,
 		.readout_length = 0,
@@ -720,7 +749,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.pclk = 1360000000,
 		.linelength = 4264,
 		.framelength = 1314,
-		.max_framerate = 2400,
+		.max_framerate = 2403,
 		.mipi_pixel_rate = 1645710000,
 		.readout_length = 0,
 		.read_margin = 0,
@@ -870,7 +899,73 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.cphy_settle = 73,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
-	}
+	},
+	{
+		.frame_desc = frame_desc_cus6,
+		.num_entries = ARRAY_SIZE(frame_desc_cus6),
+		.mode_setting_table = addr_data_pair_custom6,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom6),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_RAW_DCG_COMPOSE,
+		.raw_cnt = 1,
+		.exp_cnt = 2,
+		.pclk = 1360000000,
+		.linelength = 14256,
+		.framelength = 3174,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 1371430000,
+		.readout_length = 0,
+		.read_margin = 0,
+		.framelength_step = 1,
+		.coarse_integ_step = 1,
+		.min_exposure_line = 4,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4,
+		.imgsensor_winsize_info = {
+			.full_w = 8192,
+			.full_h = 6144,
+			.x0_offset = 0,
+			.y0_offset = 0,
+			.w0_size = 8192,
+			.h0_size = 6144,
+			.scale_w = 4096,
+			.scale_h = 3072,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 4096,
+			.h1_size = 3072,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 4096,
+			.h2_tg_size = 3072,
+		},
+		.pdaf_cap = FALSE,
+		.imgsensor_pd_info = NULL,
+		.ae_binning_ratio = 1428,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {
+			.cphy_settle = 73,
+		},
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW12_B,
+		.saturation_info = &imgsensor_saturation_info_12bit,
+		.dcg_info = {
+			.dcg_mode = IMGSENSOR_DCG_COMPOSE,
+			.dcg_gain_mode = IMGSENSOR_DCG_RATIO_MODE,
+			.dcg_gain_ratio_min = 4000,
+			.dcg_gain_ratio_max = 4000,
+			.dcg_gain_ratio_step = 0,
+			.dcg_gain_table = imx917_dcg_ratio_table_12bit,
+			.dcg_gain_table_size = sizeof(imx917_dcg_ratio_table_12bit),
+		},
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 0,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 4,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 64,
+		.dpc_enabled = true, /* reg 0x0b06 */
+	},
 };
 
 static struct subdrv_static_ctx static_ctx = {
@@ -889,7 +984,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.mipi_sensor_type = MIPI_CPHY,
 	.mipi_lane_num = SENSOR_MIPI_3_LANE,
 	.ob_pedestal = 0x40,
-
+	.hdr_type = HDR_SUPPORT_DCG,
 	.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_B,
 	.ana_gain_def = BASEGAIN * 4,
 	.ana_gain_min = BASEGAIN * 1,
@@ -907,6 +1002,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.dig_gain_min = BASE_DGAIN * 1,
 	.dig_gain_max = BASE_DGAIN * 1,
 	.dig_gain_step = 4,
+	.saturation_info = &imgsensor_saturation_info_10bit,
 
 	.frame_length_max = 0xFFFC,
 	.ae_effective_frame = 2,
