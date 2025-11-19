@@ -5823,7 +5823,7 @@ static u16 addr_data_pair_seamless_preview_mot_merc_s5kjn5[] = {
 0x0264, 0x0006,
 0x0266, 0x0700,
 0x0B30, 0x0100,
-0x0104, 0x0001,
+// 0x0104, 0x0001,
 };
 
 /*seamless setting for insensorzoom*/
@@ -5838,7 +5838,7 @@ static u16 addr_data_pair_seamless_custom3_mot_merc_s5kjn5[] = {
 0x0264, 0x0006,
 0x0266, 0x0700,
 0x0B30, 0x0101,
-0x0104, 0x0001,
+// 0x0104, 0x0001,
 };
 
 #endif

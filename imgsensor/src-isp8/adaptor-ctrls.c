@@ -1522,6 +1522,16 @@ static int imgsensor_set_ctrl(struct v4l2_ctrl *ctrl)
 		notify_fsync_mgr_update_auto_flicker_mode(ctx, (u64)ctrl->val);
 		break;
 
+	case V4L2_CID_MTK_SENSOR_SET_LENS_POSITION:
+		{
+			para.u16[0] = ctrl->val;
+			para.u16[1] = 0;
+			subdrv_call(ctx, feature_control,
+				SENSOR_FEATURE_SET_LENS_POSITION,
+				para.u8, &len);
+		}
+		break;
+
 	case V4L2_CID_FRAME_SYNC:
 		adaptor_logi(ctx,
 			"V4L2_CID_FRAME_SYNC (set_sync), idx:%d, value:%d(%#x)\n",
@@ -2073,6 +2083,15 @@ static const struct v4l2_ctrl_config cfg_anti_flicker = {
 	.ops = &ctrl_ops,
 	.id = V4L2_CID_MTK_ANTI_FLICKER,
 	.name = "anti_flicker",
+	.type = V4L2_CTRL_TYPE_INTEGER,
+	.max = 0x7fffffff,
+	.step = 1,
+};
+
+static const struct v4l2_ctrl_config cfg_lens_position = {
+	.ops = &ctrl_ops,
+	.id = V4L2_CID_MTK_SENSOR_SET_LENS_POSITION,
+	.name = "sensor_lens_position",
 	.type = V4L2_CTRL_TYPE_INTEGER,
 	.max = 0x7fffffff,
 	.step = 1,
@@ -2856,6 +2875,10 @@ int adaptor_init_ctrls(struct adaptor_ctx *ctx)
 	/* custom anti-flicker */
 	ctx->anti_flicker = v4l2_ctrl_new_custom(&ctx->ctrls,
 		&cfg_anti_flicker, NULL);
+
+	/* custom lens position */
+	ctx->sensor_lens_position = v4l2_ctrl_new_custom(&ctx->ctrls,
+		&cfg_lens_position, NULL);
 
 	/* custom frame-sync */
 	ctx->frame_sync = v4l2_ctrl_new_custom(&ctx->ctrls,

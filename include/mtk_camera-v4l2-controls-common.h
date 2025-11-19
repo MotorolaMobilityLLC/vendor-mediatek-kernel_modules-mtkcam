@@ -197,6 +197,9 @@
 #define V4L2_CID_MTK_1SOF_VSYNC_TS_INFO \
 	(V4L2_CID_USER_MTK_SENSOR_BASE + 43)
 
+#define V4L2_CID_MTK_SENSOR_SET_LENS_POSITION \
+	(V4L2_CID_USER_MTK_SENSOR_BASE + 100)
+
 /**
  * enum scl for imgsensor gpio aux function.
  */
