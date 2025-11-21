@@ -314,12 +314,14 @@ static unsigned int s5kjns_mot_do_2a_gain(struct EEPROM_DRV_FD_DATA *pdata,
 		pCamCalData->Single2A.S2aAf[1] = AFMacro;
 		pCamCalData->Single2A.S2aAF_t.AF_infinite_pattern_distance = AFInfDistance;
 		pCamCalData->Single2A.S2aAF_t.AF_Macro_pattern_distance = AFMacroDistance;
+		pCamCalData->Single2A.S2aAF_t.AF_dac_code_bit_depth = 10;
 
 		debug_log("======================AF CAM_CAL==================\n");
 		debug_log("[AFInfDistance] = %dmm\n", AFInfDistance);
 		debug_log("[AFMacroDistance] = %dmm\n", AFMacroDistance);
 		debug_log("[AFInf] = %d\n", AFInf);
 		debug_log("[AFMacro] = %d\n", AFMacro);
+		debug_log("[AFBit] = %d\n", pCamCalData->Single2A.S2aAF_t.AF_dac_code_bit_depth);
 		debug_log("======================AF CAM_CAL==================\n");
 	}
 
