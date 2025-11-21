@@ -256,7 +256,7 @@ signed int dpe_enque_request_isp8(struct engine_requests *eng, unsigned int fcnt
 		LOG_ERR("Failed to enque request, check cb");
 		goto ERROR;
 	}
-	LOG_INF("[%s] pid: %d, eqEGNIdx: %d\n", __func__, pid, r);
+	LOG_DBG("[%s] pid: %d, eqEGNIdx: %d\n", __func__, pid, r);
 
 	spin_lock_irqsave(lock, flags);
 
@@ -329,7 +329,7 @@ signed int dpe_request_handler_isp8(struct engine_requests *eng, spinlock_t *loc
 	LOG_DBG("[%s] processing request(%d)\n", __func__, r);
 
 	rstate = eng->reqs[r].state;
-	LOG_INF("[%s] processing request(%d),rstate(%d)\n", __func__,r, rstate);
+	LOG_DBG("[%s] processing request(%d),rstate(%d)\n", __func__,r, rstate);
 #if REQUEST_REGULATION
 	(void) fn;
 	if (rstate != REQUEST_STATE_PENDING) {
@@ -417,7 +417,7 @@ signed int dpe_request_handler_isp8(struct engine_requests *eng, spinlock_t *loc
 
 	fstate = eng->reqs[r].frames[f].state;
 	if (fstate == FRAME_STATUS_ENQUE) {
-		LOG_INF("[%s]Processing request(%d) of frame(%d)\n",
+		LOG_DBG("[%s]Processing request(%d) of frame(%d)\n",
 						__func__,  r, f);
 		write_seqlock(&eng->seqlock);
 		eng->req_running = true;
@@ -504,7 +504,7 @@ int dpe_update_request_isp8(struct engine_requests *eng, pid_t *pid)
 		}
 
 		eng->reqs[_icnt].frames[f].state = FRAME_STATUS_FINISHED;
-		LOG_INF("[%s] pid: %d request %d of frame %d finished.\n",
+		LOG_DBG("[%s] pid: %d request %d of frame %d finished.\n",
 							__func__, eng->reqs[_icnt].pid, _icnt, f);
 		/*TODO: to obtain statistics */
 		if (eng->ops->req_feedback_cb == NULL) {
@@ -569,7 +569,7 @@ signed int dpe_deque_request_isp8(
 		LOG_ERR("[%s]No Request finished", __func__);
 		goto ERROR;
 	}
-	LOG_INF("[%s]pid: %d, dqEGNIdx: %d\n", __func__, pid, _rcnt);
+	LOG_DBG("[%s]pid: %d, dqEGNIdx: %d\n", __func__, pid, _rcnt);
 //#if 0
 //	for (f = 0; f < fcnt; f++)
 //		if (eng->reqs[r].frames[f].state != FRAME_STATUS_FINISHED) {
