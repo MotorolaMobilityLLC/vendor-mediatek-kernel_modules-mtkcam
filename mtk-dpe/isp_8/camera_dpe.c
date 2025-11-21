@@ -1755,8 +1755,8 @@ signed int dpe_enque_cb(struct frame *frames, void *req, unsigned int reqcnt)
 			}
 		}
 		// mutex_unlock(&gFDMutex);
-
-		LOG_INF("YL:%d,YR:%d,OCC:%d,OCC_E:%d,OCC_H:%d,YL_Pre:%d,YR_Pre:%d,P4_L:%d,P4_R:%d\n",
+		if (DPE_debug_log_en == 1)
+			LOG_INF("YL:%d,YR:%d,OCC:%d,OCC_E:%d,OCC_H:%d,YL_Pre:%d,YR_Pre:%d,P4_L:%d,P4_R:%d\n",
 			_req->m_pDpeConfig[ucnt].DPE_DMapSettings.Dpe_InBuf_SrcImg_Y_L_fd,
 			_req->m_pDpeConfig[ucnt].DPE_DMapSettings.Dpe_InBuf_SrcImg_Y_R_fd,
 			_req->m_pDpeConfig[ucnt].DPE_DMapSettings.Dpe_OutBuf_OCC_fd,
@@ -2080,7 +2080,8 @@ signed int dpe_enque_cb(struct frame *frames, void *req, unsigned int reqcnt)
 			}
 		}
 		// mutex_unlock(&gFDMutex);
-		LOG_INF("DVP:Y:%d,C:%d,CRM:%d,OCC:%d,OCC_E:%d,WT_RD:%d,ASF_RD:%d,ASF_HF:%d,WMF_FILT:%d\n",
+		if (DPE_debug_log_en == 1)
+			LOG_INF("DVP:Y:%d,C:%d,CRM:%d,OCC:%d,OCC_E:%d,WT_RD:%d,ASF_RD:%d,ASF_HF:%d,WMF_FILT:%d\n",
 			_req->m_pDpeConfig[ucnt].DPE_DMapSettings.Dpe_InBuf_SrcImg_Y_fd,
 			_req->m_pDpeConfig[ucnt].DPE_DMapSettings.Dpe_InBuf_SrcImg_C_fd,
 			_req->m_pDpeConfig[ucnt].DPE_DMapSettings.Dpe_OutBuf_CRM_fd,
@@ -2437,7 +2438,8 @@ signed int dpe_enque_cb(struct frame *frames, void *req, unsigned int reqcnt)
 				return -1;
 			}
 		}
-		LOG_INF("Yfd:%d,Cfd:%d,Y_P:%d,C_P:%d,OCC_E:%d,WT_Fnl:%d,IIR:%d,FILT:%d\n",
+		if (DPE_debug_log_en == 1)
+			LOG_INF("Yfd:%d,Cfd:%d,Y_P:%d,C_P:%d,OCC_E:%d,WT_Fnl:%d,IIR:%d,FILT:%d\n",
 			_req->m_pDpeConfig[ucnt].DPE_DMapSettings.Dpe_InBuf_SrcImg_Y_fd,
 			_req->m_pDpeConfig[ucnt].DPE_DMapSettings.Dpe_InBuf_SrcImg_C_fd,
 			_req->m_pDpeConfig[ucnt].DPE_DMapSettings.Dpe_InBuf_SrcImg_Y_Pre_fd,
@@ -3085,8 +3087,9 @@ signed int dpe_deque_cb(struct frame *frames, void *req, unsigned int reqcnt)
 		}
 		mutex_unlock(&gFDMutex);
 	}
-	LOG_INF("put end put_dvs = %d put_dvp = %d put_dvgf = %d\n",
-	dvs_cnt, dvp_cnt, dvgf_cnt);
+	if (DPE_debug_log_en == 1)
+		LOG_INF("put end put_dvs = %d put_dvp = %d put_dvgf = %d\n",
+		dvs_cnt, dvp_cnt, dvgf_cnt);
 
 	//!mutex_unlock(&gDpeMutex);
 	_req->m_ReqNum = ucnt;
@@ -5978,7 +5981,8 @@ for (k = 0;k < enq_out_data_size;k++) {
 		}
 	}
 
-	LOG_INF("%s-%p\n", __func__, my_data);
+	if (DPE_debug_log_en == 1)
+		LOG_INF("%s-%p\n", __func__, my_data);
 
 	cmdq_pkt_flush_async(handle, DPE_callback_func, (void *)my_data);
 	//my_wait(my_data);
@@ -9869,7 +9873,7 @@ static void __exit DPE_Exit(void)
 void DVS_ScheduleWork(struct work_struct *data)
 {
 
-	if (DPE_DBG_DBGLOG & DPEInfo.DebugMask)
+	if (DPE_DBG_DBGLOG & DPEInfo.DebugMask && DPE_debug_log_en)
 		LOG_INF("- E.DVS_Schedule");
 
 	if (DPEInfo.UserCount > 0) {
@@ -9885,7 +9889,7 @@ void DVS_ScheduleWork(struct work_struct *data)
 void DVP_ScheduleWork(struct work_struct *data)
 {
 
-	if (DPE_DBG_DBGLOG & DPEInfo.DebugMask)
+	if (DPE_DBG_DBGLOG & DPEInfo.DebugMask && DPE_debug_log_en)
 		LOG_INF("- E.DVP_Schedule");
 
 	if (DPEInfo.UserCount > 0) {
@@ -9901,7 +9905,7 @@ void DVP_ScheduleWork(struct work_struct *data)
 void DVGF_ScheduleWork(struct work_struct *data)
 {
 
-	if (DPE_DBG_DBGLOG & DPEInfo.DebugMask)
+	if (DPE_DBG_DBGLOG & DPEInfo.DebugMask && DPE_debug_log_en)
 		LOG_INF("- E.DVGF_Schedule");
 
 	if (DPEInfo.UserCount > 0) {
