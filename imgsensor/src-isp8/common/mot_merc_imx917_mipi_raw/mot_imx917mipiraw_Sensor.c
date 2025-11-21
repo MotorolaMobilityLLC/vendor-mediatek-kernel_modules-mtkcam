@@ -120,7 +120,6 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
-/*
 #if ENABLE_IMX917_PD
 	{
 		.bus.csi2 = {
@@ -134,7 +133,6 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 		},
 	}
 #endif
-*/
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
 	{
@@ -588,8 +586,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.h2_tg_size = 3072,
 		},
 #if ENABLE_IMX917_PD
-		.pdaf_cap = PARAM_UNDEFINED,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 #else
 		.pdaf_cap = PARAM_UNDEFINED,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
