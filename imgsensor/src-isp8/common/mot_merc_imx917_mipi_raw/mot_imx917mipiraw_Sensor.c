@@ -44,6 +44,7 @@ static int imx917_set_multi_shutter_frame_length(struct subdrv_ctx *ctx, u64 *sh
 static int imx917_set_hdr_tri_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int imx917_set_multi_gain(struct subdrv_ctx *ctx, u32 *gains, u16 exp_cnt);
 static int imx917_set_hdr_tri_gain(struct subdrv_ctx *ctx, u8 *para, u32* len);
+static int imx917_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 
 
 /* STRUCT */
@@ -57,6 +58,7 @@ static struct subdrv_feature_control feature_control_list[] = {
 #endif
 	{SENSOR_FEATURE_SET_HDR_SHUTTER, imx917_set_hdr_tri_shutter},	//for 2exp staggerHDR
 	{SENSOR_FEATURE_SET_DUAL_GAIN, imx917_set_hdr_tri_gain},	//for 2exp staggerHDR
+	{SENSOR_FEATURE_SET_GAIN, imx917_set_gain},
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
@@ -290,17 +292,6 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
-/*
-	{
-		.bus.csi2 = {
-			.channel = 1,
-			.data_type = 0x2b,
-			.hsize = 0x1000,
-			.vsize = 0x0c00,
-			.user_data_desc = VC_STAGGER_ME,
-		},
-	},
-*/
 /*
 #if ENABLE_IMX917_PD
 	{
@@ -1018,15 +1009,17 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.raw_cnt = 1,
 		.exp_cnt = 2,
 		.mipi_pixel_rate = 1371430000,
-		.readout_length = 0,   //(85+6143+1)/2
-		.read_margin = 0,         //24*2
-		.framelength_step = 4,		// multiple of 4 for 2DOL
-		.coarse_integ_step = 2,		// multiple of 2 for 2DOL
+		.readout_length = 0,
+		.read_margin = 0,
+		.framelength_step = 1,
+		.coarse_integ_step = 1,
 		.min_exposure_line = 4,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4*2,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4*2,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].max = 0x3FFF*2,
-		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].max = 0x3FFF*2,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
+		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 15.985,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -1055,11 +1048,6 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
-		.ana_gain_min = 1*BASEGAIN,
-		.ana_gain_max = 64*BASEGAIN,
-		.dig_gain_min = 1*BASEGAIN,
-		.dig_gain_max = 1*BASEGAIN,
-		.dig_gain_step = 4,
 		.csi_param = {
 			.cphy_settle = 73,
 		},
@@ -1392,6 +1380,53 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 	ctx->i2c_client = i2c_client;
 	ctx->i2c_write_id = i2c_write_id;
 	return 0;
+}
+
+static int imx917_set_gain(struct subdrv_ctx *ctx, u8 *para, u32* len)
+{
+	u32 gain = *((u32 *)para);
+	u16 rg_gain;
+	bool gph = !ctx->is_seamless && (ctx->s_ctx.s_gph != NULL);
+
+	/* check boundary of gain */
+	gain = max(gain,
+		ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[0].min);
+	gain = min(gain,
+		ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[0].max);
+	/* dag check boundary of me gain */
+	if(ctx->current_scenario_id == SENSOR_SCENARIO_ID_CUSTOM6){
+		gain = max(gain,
+		ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[1].min);
+		gain = min(gain,
+		ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[1].max);
+	}
+	/* mapping of gain to register value */
+	rg_gain = ctx->s_ctx.g_gain2reg(gain);
+	/* restore gain */
+	memset(ctx->ana_gain, 0, sizeof(ctx->ana_gain));
+	ctx->ana_gain[0] = gain;
+	/* group hold start */
+	if (gph && !ctx->ae_ctrl_gph_en)
+		ctx->s_ctx.s_gph((void *)ctx, 1);
+	/* write gain */
+	set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[0].addr[0],
+		(rg_gain >> 8) & 0xFF);
+	set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[0].addr[1],
+		rg_gain & 0xFF);
+	DRV_LOG(ctx, "gain[0x%x]\n", rg_gain);
+	if(ctx->s_ctx.reg_addr_ana_gain[1].addr[0] && ctx->s_ctx.reg_addr_ana_gain[1].addr[1] && ctx->current_scenario_id == SENSOR_SCENARIO_ID_CUSTOM6){
+		/* write lgain */
+		set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[1].addr[0],
+			(rg_gain >> 8) & 0xFF);
+		set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[1].addr[1],
+			rg_gain & 0xFF);
+		DRV_LOG(ctx, "me gain[0x%x]\n", rg_gain);
+	}
+	if (gph)
+		ctx->s_ctx.s_gph((void *)ctx, 0);
+	commit_i2c_buffer(ctx);
+	/* group hold end */
+	return ERROR_NONE;
 }
 
 static int imx917_set_hdr_tri_gain(struct subdrv_ctx *ctx, u8 *para, u32* len)
