@@ -311,6 +311,33 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cust1[] = {
 #endif
 };
 
+static struct mtk_mbus_frame_desc_entry frame_desc_cust2[] = {
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x2b,
+			.hsize = 0x07F8,
+			.vsize = 0x05F8,
+			.is_active_line = TRUE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST,
+		},
+	},
+#if 0
+	{
+		.bus.csi2 = {
+			.channel = 1,
+			.data_type = 0x30,
+			.hsize = 0x01FC,
+			.vsize = 0x02F8,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
+			.fs_seq = MTK_FRAME_DESC_FS_SEQ_LAST,
+		},
+	}
+#endif
+};
+
 #if ENABLE_S5KJNS_PD
 static struct SET_PD_BLOCK_INFO_T s5kjns_pd_info = {
 	.i4OffsetX = 8,
@@ -346,7 +373,7 @@ static struct SET_PD_BLOCK_INFO_T s5kjns_pd_info = {
 	},
 };
 
-static struct SET_PD_BLOCK_INFO_T s5kjns_60fps_pd_info = {
+static struct SET_PD_BLOCK_INFO_T s5kjns_cust1_pd_info = {
 	.i4OffsetX = 0,
 	.i4OffsetY = 8,
 	.i4PitchX = 8,
@@ -655,7 +682,55 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 #if ENABLE_S5KJNS_PD
 		.pdaf_cap = ENABLE_S5KJNS_PD,
-		.imgsensor_pd_info = &s5kjns_60fps_pd_info,
+		.imgsensor_pd_info = &s5kjns_cust1_pd_info,
+#else
+		.pdaf_cap = PARAM_UNDEFINED,
+		.imgsensor_pd_info = PARAM_UNDEFINED,
+#endif
+		.ae_binning_ratio = 1000,
+		.fine_integ_line = 0,
+		.delay_frame = 2,
+		.csi_param = {0},
+	},
+	{
+		.frame_desc = frame_desc_cust2,
+		.num_entries = ARRAY_SIZE(frame_desc_cust2),
+		.mode_setting_table = addr_data_pair_custom2_mot_merc_s5kjns,
+		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom2_mot_merc_s5kjns),
+		.seamless_switch_group = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
+		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.hdr_mode = HDR_NONE,
+		.raw_cnt = 1,
+		.exp_cnt = 1,
+		.pclk = 600000000,
+		.linelength = 4096,
+		.framelength = 4880,
+		.max_framerate = 300,
+		.mipi_pixel_rate = 792000000,
+		.readout_length = 0,
+		.read_margin = 0,
+		.imgsensor_winsize_info = {
+			.full_w = 8160,
+			.full_h = 6120,
+			.x0_offset = 0,
+			.y0_offset = 4,
+			.w0_size = 8160,
+			.h0_size = 6112,
+			.scale_w = 2040,
+			.scale_h = 1528,
+			.x1_offset = 0,
+			.y1_offset = 0,
+			.w1_size = 2040,
+			.h1_size = 1528,
+			.x2_tg_offset = 0,
+			.y2_tg_offset = 0,
+			.w2_tg_size = 2040,
+			.h2_tg_size = 1528,
+		},
+#if 0
+		.pdaf_cap = ENABLE_S5KJNS_PD,
+		.imgsensor_pd_info = &s5kjns_cust2_pd_info,
 #else
 		.pdaf_cap = PARAM_UNDEFINED,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
