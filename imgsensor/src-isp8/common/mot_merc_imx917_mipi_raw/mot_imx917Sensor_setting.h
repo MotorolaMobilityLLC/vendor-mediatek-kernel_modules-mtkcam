@@ -549,6 +549,7 @@ static u16 imx917_init_setting[] = {
 0xAEF9,0x50,
 0xAF5B,0x50,
 0xAF5D,0x50,
+0x0106,0x01,
 };
 
 static u16 imx917_preview_setting[] = {
