@@ -211,7 +211,6 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = {
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
-/*
 #if ENABLE_IMX917_PD
 	{
 		.bus.csi2 = {
@@ -225,7 +224,6 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus2[] = {
 		},
 	},
 #endif
-*/
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_cus3[] = {
@@ -292,7 +290,6 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_ONLY_ONE,
 		},
 	},
-/*
 #if ENABLE_IMX917_PD
 	{
 		.bus.csi2 = {
@@ -306,7 +303,6 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
 		},
 	},
 #endif
-*/
 };
 
 #if ENABLE_IMX917_PD
@@ -375,7 +371,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus1_info = {
 	},
 };
 
-static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
+static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_6_info = {
 	.i4OffsetX = 16,
 	.i4OffsetY = 32,
 	.i4PitchX = 8,
@@ -383,8 +379,8 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 	.i4PairNum = 4,
 	.i4SubBlkW = 8,
 	.i4SubBlkH = 16,
-	.i4PosL = {{16, 37}, {16, 39}, {23, 60}, {23, 62}},
-	.i4PosR = {{20, 45}, {20, 47}, {19, 52}, {19, 54}},
+	.i4PosL = {{20, 41}, {20, 43}, {19, 48}, {19, 50}},
+	.i4PosR = {{16, 33}, {16, 35}, {23, 56}, {23, 58}},
 	.i4Crop = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
@@ -406,7 +402,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 		.i4PDPattern = 3, //pair PD
 		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
 		.i4PDRepetition = 8,
-		.i4PDOrder = {0,0,1,1,1,1,0,0}, // R = 1, L = 0
+		.i4PDOrder = {1,1,0,0,0,0,1,1}, // R = 1, L = 0
 	},
 };
 #endif
@@ -810,7 +806,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 #if ENABLE_IMX917_PD
 		.pdaf_cap = TRUE,
-		.imgsensor_pd_info = &imgsensor_pd_cus2_info,
+		.imgsensor_pd_info = &imgsensor_pd_cus2_6_info,
 #else
 		.pdaf_cap = PARAM_UNDEFINED,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
@@ -1039,8 +1035,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.h2_tg_size = 3072,
 		},
 #if ENABLE_IMX917_PD
-		.pdaf_cap = PARAM_UNDEFINED,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_cus2_6_info,
 #else
 		.pdaf_cap = PARAM_UNDEFINED,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
