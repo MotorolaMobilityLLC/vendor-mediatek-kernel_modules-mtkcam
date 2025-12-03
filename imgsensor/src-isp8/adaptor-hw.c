@@ -712,6 +712,7 @@ int do_hw_power_off(struct adaptor_ctx *ctx)
 			continue;
 		op->unset(ctx, op->data, &ent->val);
 		//msleep(ent->delay);
+		udelay(ent->delay);
 	}
 	adaptor_pmic_ctrl(ctx, false);
 
