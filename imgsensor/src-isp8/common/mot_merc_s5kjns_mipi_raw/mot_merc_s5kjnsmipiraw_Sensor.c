@@ -322,7 +322,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cust2[] = {
 			.fs_seq = MTK_FRAME_DESC_FS_SEQ_FIRST,
 		},
 	},
-#if 0
+#if ENABLE_S5KJNS_PD
 	{
 		.bus.csi2 = {
 			.channel = 1,
@@ -404,6 +404,40 @@ static struct SET_PD_BLOCK_INFO_T s5kjns_cust1_pd_info = {
 		.i4PDPattern = 3, // sparse PD
 		.i4PDRepetition = 8,
 		.i4PDOrder = {1, 0, 1, 0, 1, 0, 1, 0}, // L = 0, R = 1
+	},
+};
+
+static struct SET_PD_BLOCK_INFO_T s5kjns_cust2_pd_info = {
+	.i4OffsetX = 4,
+	.i4OffsetY = 4,
+	.i4PitchX = 4,
+	.i4PitchY = 4,
+	.i4PairNum = 1,
+	.i4SubBlkW = 4,
+	.i4SubBlkH = 4,
+	.i4PosL = {
+		{5, 4}
+	},
+	.i4PosR = {
+		{4, 4}
+	},
+	.i4BlockNumX = 508,
+	.i4BlockNumY = 380,
+	.i4Crop = {
+		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
+		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
+		{120, 450}, {0, 1}, {0, 0}, {0, 0}, {0, 0},
+	},
+	.i4FullRawW = 2040,
+	.i4FullRawH = 1528,
+	.iMirrorFlip = IMAGE_HV_MIRROR,
+	.PDAF_Support = PDAF_SUPPORT_CAMSV,
+	/* VC's PD pattern description */
+	.sPDMapInfo[0] = {
+		.i4PDPattern = 3, // sparse PD
+		.i4PDRepetition = 2,
+		.i4PDOrder = {1, 0}, // L = 0, R = 1
 	},
 };
 #endif
@@ -728,7 +762,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 2040,
 			.h2_tg_size = 1528,
 		},
-#if 0
+#if ENABLE_S5KJNS_PD
 		.pdaf_cap = ENABLE_S5KJNS_PD,
 		.imgsensor_pd_info = &s5kjns_cust2_pd_info,
 #else
