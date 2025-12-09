@@ -1014,7 +1014,7 @@ static struct subdrv_static_ctx static_ctx = {
 	.pdaf_type = PDAF_SUPPORT_CAMSV_QPD,
 	.g_gain2reg = get_gain2reg,
 	.s_gph = set_group_hold,
-	//.s_cali = mot_imx917_apply_qsc_spc_data,
+	.s_cali = mot_imx917_apply_qsc_spc_data,
 	.seamless_switch_support = TRUE,
 
 	.reg_addr_stream = 0x0100,
