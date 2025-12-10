@@ -438,6 +438,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.coarse_integ_step = 1,
 		.min_exposure_line = 4,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -496,6 +498,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.coarse_integ_step = 1,
 		.min_exposure_line = 4,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -554,6 +558,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.coarse_integ_step = 1,
 		.min_exposure_line = 4,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -613,6 +619,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.coarse_integ_step = 2,
 		.min_exposure_line = 8,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 8,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -666,6 +674,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.coarse_integ_step = 1,
 		.min_exposure_line = 4,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -726,6 +736,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.coarse_integ_step = 1,
 		.min_exposure_line = 1,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -788,6 +800,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.coarse_integ_step = 1,
 		.min_exposure_line = 4,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -843,6 +857,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.coarse_integ_step = 2,
 		.min_exposure_line = 8,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 8,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -898,6 +914,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.coarse_integ_step = 1,
 		.min_exposure_line = 1,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -953,6 +971,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.coarse_integ_step = 2,
 		.min_exposure_line = 8,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 8,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.imgsensor_winsize_info = {
 			.full_w = 8192,
 			.full_h = 6144,
@@ -1015,7 +1035,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_LE].min = 4,
 		.multi_exposure_shutter_range[IMGSENSOR_EXPOSURE_ME].min = 4,
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 4,
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 15.985,
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
 		.imgsensor_winsize_info = {
@@ -1386,17 +1406,18 @@ static int imx917_set_gain(struct subdrv_ctx *ctx, u8 *para, u32* len)
 	u16 rg_gain;
 	bool gph = !ctx->is_seamless && (ctx->s_ctx.s_gph != NULL);
 
-	/* check boundary of gain */
-	gain = max(gain,
-		ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[0].min);
-	gain = min(gain,
-		ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[0].max);
 	/* dag check boundary of me gain */
-	if(ctx->current_scenario_id == SENSOR_SCENARIO_ID_CUSTOM6){
+	if(ctx->current_scenario_id == SENSOR_SCENARIO_ID_CUSTOM6) {
 		gain = max(gain,
-		ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[1].min);
+			ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[1].min);
 		gain = min(gain,
-		ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[1].max);
+			ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[1].max);
+	} else {
+		/* check boundary of gain */
+		gain = max(gain,
+			ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[0].min);
+		gain = min(gain,
+			ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[0].max);
 	}
 	/* mapping of gain to register value */
 	rg_gain = ctx->s_ctx.g_gain2reg(gain);
