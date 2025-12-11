@@ -129,6 +129,17 @@ static struct mtk_mbus_frame_desc_entry frame_desc_hs_vid[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x0800,
+			.vsize = 0x0120,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
+		},
+	},
 };
 static struct mtk_mbus_frame_desc_entry frame_desc_slim_vid[] = {
 	{
@@ -256,6 +267,18 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
+	{
+		.bus.csi2 = {
+			.channel = 0,
+			.data_type = 0x30,
+			.hsize = 0x0200,
+			.vsize = 0x02F0,
+			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+			.is_active_line = TRUE,
+			.valid_bit = 10,
+		},
+	},
 };
 
 static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
@@ -272,9 +295,10 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
 	.i4BlockNumY = 0,
 	.i4LeFirst = 0,
 	.i4Crop = {
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+		{0, 0}, {0, 0}, {0, 0}, {0, 192}, {0, 0},
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}
 	},
+	.iMirrorFlip = IMAGE_HV_MIRROR,
 	.i4ModeIndex = 3,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
 		.sPDMapInfo[0] = {
@@ -304,7 +328,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus1_info = {
 		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
 		{2048, 1536}, {0, 0}, {0, 0}, {0, }, {0, 0},
 	},
-	.iMirrorFlip = IMAGE_NORMAL,
+	.iMirrorFlip = IMAGE_HV_MIRROR,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV_QPD,
 	.i4FullRawW = 8192,
 	.i4FullRawH = 6144,
@@ -326,9 +350,9 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 	.i4PitchY = 32,
 	.i4PairNum = 4,
 	.i4SubBlkW = 8,
-	.i4SubBlkH = 16,
-	.i4PosL = {{16, 37}, {16, 39}, {23, 60}, {23, 62}},
-	.i4PosR = {{20, 45}, {20, 47}, {19, 52}, {19, 54}},
+	.i4SubBlkH = 8,
+	.i4PosL = {{20, 33}, {20, 43}, {19, 48}, {19, 58}},
+	.i4PosR = {{16, 33}, {16, 43}, {23, 48}, {23, 58}},
 	.i4Crop = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
@@ -338,8 +362,8 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 	.i4BlockNumX = 508,
 	.i4BlockNumY = 94,
 	.i4VolumeX = 1,
-	.i4VolumeY = 2,
-	.iMirrorFlip = IMAGE_NORMAL,
+	.i4VolumeY = 1,
+	.iMirrorFlip = IMAGE_HV_MIRROR,
 	.i4FullRawW = 4096,
 	.i4FullRawH = 3072,
 	.i4VCPackNum = 1,
@@ -350,7 +374,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 		.i4PDPattern = 3, //pair PD
 		.i4VCFeature = VC_PDAF_STATS_NE_PIX_1,
 		.i4PDRepetition = 8,
-		.i4PDOrder = {0,0,1,1,1,1,0,0}, // R = 1, L = 0
+		.i4PDOrder = {1,1,0,0,0,0,1,1}, // R = 1, L = 0
 	},
 };
 
@@ -407,8 +431,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -459,8 +483,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -474,7 +498,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
-	{
+	{// SCG
 		.frame_desc = frame_desc_vid,
 		.num_entries = ARRAY_SIZE(frame_desc_vid),
 		.mode_setting_table = imx917_normal_video_setting,
@@ -511,8 +535,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -564,8 +588,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 2048,
 			.h2_tg_size = 1152,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = PARAM_UNDEFINED,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_info,
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
@@ -631,7 +655,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
-	{//custom1  full crop
+	{//IN SENSOR CROP
 		.frame_desc = frame_desc_cus1,
 		.num_entries = ARRAY_SIZE(frame_desc_cus1),
 		.mode_setting_table = addr_data_pair_custom1,
@@ -686,7 +710,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
-	{//custom2  FHD
+	{//60FPS VIDEO
 		.frame_desc = frame_desc_cus2,
 		.num_entries = ARRAY_SIZE(frame_desc_cus2),
 		.mode_setting_table = addr_data_pair_custom2,
@@ -741,7 +765,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
-	{//custom3  240
+	{//240FPF
 		.frame_desc = frame_desc_cus3,
 		.num_entries = ARRAY_SIZE(frame_desc_cus3),
 		.mode_setting_table = addr_data_pair_custom3,
@@ -790,7 +814,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
-	{//custom4  50M@15fps
+	{//HW REMOSAIC
 		.frame_desc = frame_desc_cus4,
 		.num_entries = ARRAY_SIZE(frame_desc_cus4),
 		.mode_setting_table = addr_data_pair_custom4,
@@ -845,7 +869,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
-	{//custom5  2048x1536@30fps
+	{//3RD VIDEO
 		.frame_desc = frame_desc_cus5,
 		.num_entries = ARRAY_SIZE(frame_desc_cus5),
 		.mode_setting_table = addr_data_pair_custom5,
@@ -900,7 +924,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
-	{
+	{//DAG
 		.frame_desc = frame_desc_cus6,
 		.num_entries = ARRAY_SIZE(frame_desc_cus6),
 		.mode_setting_table = addr_data_pair_custom6,
@@ -941,8 +965,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.w2_tg_size = 4096,
 			.h2_tg_size = 3072,
 		},
-		.pdaf_cap = FALSE,
-		.imgsensor_pd_info = NULL,
+		.pdaf_cap = TRUE,
+		.imgsensor_pd_info = &imgsensor_pd_cus2_info,
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
