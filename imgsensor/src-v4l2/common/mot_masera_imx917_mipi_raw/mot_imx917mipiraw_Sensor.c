@@ -340,9 +340,9 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 	.i4PitchY = 32,
 	.i4PairNum = 4,
 	.i4SubBlkW = 8,
-	.i4SubBlkH = 16,
-	.i4PosL = {{20, 41}, {20, 43}, {19, 48}, {19, 50}},
-	.i4PosR = {{16, 33}, {16, 35}, {23, 56}, {23, 58}},
+	.i4SubBlkH = 8,
+	.i4PosL = {{20, 33}, {20, 43}, {19, 48}, {19, 58}},
+	.i4PosR = {{16, 33}, {16, 43}, {23, 48}, {23, 58}},
 	.i4Crop = {
 		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
 		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
@@ -352,7 +352,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_cus2_info = {
 	.i4BlockNumX = 508,
 	.i4BlockNumY = 94,
 	.i4VolumeX = 1,
-	.i4VolumeY = 2,
+	.i4VolumeY = 1,
 	.iMirrorFlip = IMAGE_HV_MIRROR,
 	.i4FullRawW = 4096,
 	.i4FullRawH = 3072,
