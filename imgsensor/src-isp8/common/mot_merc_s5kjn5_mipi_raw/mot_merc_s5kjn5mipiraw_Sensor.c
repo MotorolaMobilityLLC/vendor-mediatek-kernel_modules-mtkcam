@@ -823,6 +823,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.min_exposure_line = 8,
 		.read_margin = 40,
 		.awb_enabled = 1,
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
+		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
 	},
 };
 

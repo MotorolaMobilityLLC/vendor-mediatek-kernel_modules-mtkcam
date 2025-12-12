@@ -762,6 +762,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.csi_param = {
 			.cphy_settle = 73,
 		},
+		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
+		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
 	{//custom2  FHD
