@@ -204,13 +204,16 @@ static void dbg_set_camtg(struct seninf_ctx *ctx, int pad_id, int camtg, int tag
 		num = ctx->dbg_chmux_param->num + 1;
 		if (num < 1) {
 			dev_info(ctx->dev, "error: of dbg setting num %d\n", num);
+			mutex_unlock(&ctx->dbg_chmux_mutex);
 			return;
 		}
 
 		new_settings = kzalloc(sizeof(struct mtk_cam_seninf_mux_setting) * num,
 				       GFP_KERNEL);
-		if (!new_settings)
+		if (!new_settings) {
+			mutex_unlock(&ctx->dbg_chmux_mutex);
 			return;
+		}
 
 		old_settings = ctx->dbg_chmux_param->settings;
 		if (old_settings) {
