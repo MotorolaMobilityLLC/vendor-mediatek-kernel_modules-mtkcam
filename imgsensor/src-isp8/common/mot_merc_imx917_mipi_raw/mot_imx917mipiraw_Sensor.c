@@ -44,7 +44,8 @@ static int imx917_set_multi_shutter_frame_length(struct subdrv_ctx *ctx, u64 *sh
 static int imx917_set_hdr_tri_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 static int imx917_set_multi_gain(struct subdrv_ctx *ctx, u32 *gains, u16 exp_cnt);
 static int imx917_set_hdr_tri_gain(struct subdrv_ctx *ctx, u8 *para, u32* len);
-static int imx917_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static int __imx917_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
+static void imx917_set_gain(struct subdrv_ctx *ctx, u32 gain);
 
 
 /* STRUCT */
@@ -58,7 +59,7 @@ static struct subdrv_feature_control feature_control_list[] = {
 #endif
 	{SENSOR_FEATURE_SET_HDR_SHUTTER, imx917_set_hdr_tri_shutter},	//for 2exp staggerHDR
 	{SENSOR_FEATURE_SET_DUAL_GAIN, imx917_set_hdr_tri_gain},	//for 2exp staggerHDR
-	{SENSOR_FEATURE_SET_GAIN, imx917_set_gain},
+	{SENSOR_FEATURE_SET_GAIN, __imx917_set_gain},
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
@@ -1451,11 +1452,11 @@ static int init_ctx(struct subdrv_ctx *ctx,	struct i2c_client *i2c_client, u8 i2
 	return 0;
 }
 
-static int imx917_set_gain(struct subdrv_ctx *ctx, u8 *para, u32* len)
+static void imx917_set_gain(struct subdrv_ctx *ctx, u32 gain)
 {
-	u32 gain = *((u32 *)para);
 	u16 rg_gain;
 	bool gph = !ctx->is_seamless && (ctx->s_ctx.s_gph != NULL);
+	DRV_LOG(ctx, "gain[%u]\n", gain);
 
 	/* dag check boundary of me gain */
 	if(ctx->current_scenario_id == SENSOR_SCENARIO_ID_CUSTOM6) {
@@ -1496,7 +1497,13 @@ static int imx917_set_gain(struct subdrv_ctx *ctx, u8 *para, u32* len)
 		ctx->s_ctx.s_gph((void *)ctx, 0);
 	commit_i2c_buffer(ctx);
 	/* group hold end */
-	return ERROR_NONE;
+}
+
+static int __imx917_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	u32 gain = *((u64 *)para);
+	imx917_set_gain(ctx, gain);
+	return 0;
 }
 
 static int imx917_set_hdr_tri_gain(struct subdrv_ctx *ctx, u8 *para, u32* len)
@@ -1951,11 +1958,11 @@ static int imx917_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 				== IMGSENSOR_DCG_DIRECT_MODE)
 				set_multi_gain(ctx, (u32 *)&ae_ctrl->gain, exp_cnt);
 			else
-				set_gain(ctx, ae_ctrl->gain.le_gain);
+				imx917_set_gain(ctx, ae_ctrl->gain.le_gain);
 			break;
 		default:
 			imx917_set_shutter(ctx, (u8 *)&ae_ctrl->exposure.le_exposure, 0);
-			set_gain(ctx, ae_ctrl->gain.le_gain);
+			imx917_set_gain(ctx, ae_ctrl->gain.le_gain);
 			break;
 		}
 	}
