@@ -373,40 +373,6 @@ static struct SET_PD_BLOCK_INFO_T s5kjns_pd_info = {
 	},
 };
 
-static struct SET_PD_BLOCK_INFO_T s5kjns_cust1_pd_info = {
-	.i4OffsetX = 0,
-	.i4OffsetY = 8,
-	.i4PitchX = 8,
-	.i4PitchY = 8,
-	.i4PairNum = 4,
-	.i4SubBlkW = 8,
-	.i4SubBlkH = 2,
-	.i4PosL = {
-		{1, 8}, {3, 11}, {7, 12}, {5, 15}
-	},
-	.i4PosR = {
-		{0, 8}, {2, 11}, {6, 12}, {4, 15}
-	},
-	.i4BlockNumX = 480,
-	.i4BlockNumY = 268,
-	.i4Crop = {
-		// <pre> <cap> <normal_video> <hs_video> <<slim_video>>
-		{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
-		// <<cust1>> <<cust2>> <<cust3>> <cust4> <cust5>
-		{120, 450}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
-	},
-	.i4FullRawW = 3840,
-	.i4FullRawH = 2160,
-	.iMirrorFlip = IMAGE_HV_MIRROR,
-	.PDAF_Support = PDAF_SUPPORT_CAMSV,
-	/* VC's PD pattern description */
-	.sPDMapInfo[0] = {
-		.i4PDPattern = 3, // sparse PD
-		.i4PDRepetition = 8,
-		.i4PDOrder = {1, 0, 1, 0, 1, 0, 1, 0}, // L = 0, R = 1
-	},
-};
-
 static struct SET_PD_BLOCK_INFO_T s5kjns_cust2_pd_info = {
 	.i4OffsetX = 4,
 	.i4OffsetY = 4,
@@ -430,7 +396,7 @@ static struct SET_PD_BLOCK_INFO_T s5kjns_cust2_pd_info = {
 		{120, 450}, {0, 1}, {0, 0}, {0, 0}, {0, 0},
 	},
 	.i4FullRawW = 2040,
-	.i4FullRawH = 1528,
+	.i4FullRawH = 1530,
 	.iMirrorFlip = IMAGE_HV_MIRROR,
 	.PDAF_Support = PDAF_SUPPORT_CAMSV,
 	/* VC's PD pattern description */
@@ -746,7 +712,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 #if ENABLE_S5KJNS_PD
 		.pdaf_cap = ENABLE_S5KJNS_PD,
-		.imgsensor_pd_info = &s5kjns_cust1_pd_info,
+		.imgsensor_pd_info = &s5kjns_pd_info,
 #else
 		.pdaf_cap = PARAM_UNDEFINED,
 		.imgsensor_pd_info = PARAM_UNDEFINED,
