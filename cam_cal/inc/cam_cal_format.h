@@ -20,6 +20,8 @@
 #define CAM_CAL_AWB_BITEN (0x01<<0)
 #define CAM_CAL_AF_BITEN (0x01<<1)
 #define CAM_CAL_NONE_BITEN (0x00)
+/* OIS OTP size:2348 , customer need modify according real module size */
+#define CAM_CAL_OIS_SHADING_SIZE (2348)
 
 #define CAM_CAL_ERR_NO_DEVICE       0x8FFFFFFF
 #define CAM_CAL_ERR_NO_CMD          0x1FFFFFFF
@@ -33,7 +35,8 @@
 #define CAM_CAL_ERR_DUMP_FAILED     0x00200000
 #define CAM_CAL_ERR_NO_LENS_ID      0x00400000
 #define CAM_CAL_ERR_NO_SHADING_16_9 0x00800000
-#define CAM_CAL_ERR_NO_MOT_MNF_INFO 0x01000000
+#define CAM_CAL_ERR_NO_OIS_SHADING  0x01000000
+#define CAM_CAL_ERR_NO_MOT_MNF_INFO 0x02000000
 
 #define CamCalReturnErr_MAX 9
 
@@ -54,6 +57,7 @@ enum ENUM_CAMERA_CAM_CAL_TYPE_ENUM {
 	CAMERA_CAM_CAL_DATA_DUMP,
 	CAMERA_CAM_CAL_DATA_LENS_ID,
 	CAMERA_CAM_CAL_DATA_SHADING_TABLE_16_9,
+	CAMERA_CAM_CAL_DATA_OIS_SHADING_DATA,
 	CAMERA_CAM_CAL_DATA_MANUFACTURE,
 	CAMERA_CAM_CAL_DATA_LIST
 };
@@ -237,6 +241,12 @@ struct STRUCT_MOT_EEPROM_DATA {
 	unsigned int serial_number_bit;
 };
 
+/** @brief This structure defines the OIS SHADING Table.  */
+struct STRUCT_CAM_CAL_OIS_SHADING_STRUCT {
+	unsigned int Size_of_OIS_SHADING;
+	unsigned char Data[CAM_CAL_OIS_SHADING_SIZE];
+};
+
 /** @brief This enum defines the CAM_CAL Table.  */
 
 struct STRUCT_CAM_CAL_DATA_STRUCT {
@@ -249,6 +259,7 @@ struct STRUCT_CAM_CAL_DATA_STRUCT {
 	struct STRUCT_CAM_CAL_SINGLE_2A_STRUCT    Single2A;
 	struct STRUCT_CAM_CAL_PDAF_STRUCT         PDAF;
 	struct STRUCT_CAM_CAL_Stereo_Data_STRUCT  Stereo_Data;
+	struct STRUCT_CAM_CAL_OIS_SHADING_STRUCT  Ois_Shading_Data;
 	unsigned char LensDrvId[10];
 	struct MOT_MANUFACTURE_DATA   ManufactureData;
 	unsigned char *SensorName;
@@ -276,6 +287,10 @@ struct STRUCT_CAM_CAL_2A_DATA_STRUCT {
 
 struct STRUCT_CAM_CAL_PDAF_DATA_STRUCT {
 	struct STRUCT_CAM_CAL_PDAF_STRUCT         PDAF;
+};
+
+struct STRUCT_CAM_CAL_OIS_SHADING_DATA_STRUCT {
+	struct STRUCT_CAM_CAL_OIS_SHADING_STRUCT  Ois_Shading_Data;
 };
 
 struct STRUCT_CAM_CAL_STEREO_DATA_STRUCT {
@@ -309,7 +324,8 @@ static const unsigned int CamCalReturnErr[CAMERA_CAM_CAL_DATA_LIST] = {
 	CAM_CAL_ERR_NO_Stereo_Data,
 	CAM_CAL_ERR_DUMP_FAILED,
 	CAM_CAL_ERR_NO_LENS_ID,
-	CAM_CAL_ERR_NO_SHADING_16_9
+	CAM_CAL_ERR_NO_SHADING_16_9,
+	CAM_CAL_ERR_NO_OIS_SHADING
 };
 
 static const char CamCalErrString[CAMERA_CAM_CAL_DATA_LIST][24] = {
@@ -321,7 +337,8 @@ static const char CamCalErrString[CAMERA_CAM_CAL_DATA_LIST][24] = {
 	{"ERR_NO_Stereo_Data"},
 	{"ERR_Dump_Failed"},
 	{"ERR_NO_LENS_ID"},
-	{"ERR_NO_SHADING_16_9"}
+	{"ERR_NO_SHADING_16_9"},
+	{"ERR_NO_OIS_SHADING"}
 };
 
 #endif /* __CAM_CAL_FORMAT_H */
