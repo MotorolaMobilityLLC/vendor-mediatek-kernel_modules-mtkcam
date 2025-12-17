@@ -8303,7 +8303,8 @@ static signed int DPE_probe(struct platform_device *pDev)
 	/* Check platform_device parameters */
 #if IS_ENABLED(CONFIG_OF)
 	if (pDev == NULL) {
-		dev_dbg(&pDev->dev, "pDev is NULL");
+		//fix static code analysis issue
+		pr_debug("pDev is NULL");
 		return -ENXIO;
 	}
 	nr_DPE_devs += 1;

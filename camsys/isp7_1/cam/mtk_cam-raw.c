@@ -4343,6 +4343,8 @@ mtk_cam_get_link_enabled_raw(struct v4l2_subdev *seninf)
 
 	cam = container_of(seninf->v4l2_dev->mdev, struct mtk_cam_device, media_dev);
 	for (i = MTKCAM_SUBDEV_RAW_0; i <= MTKCAM_SUBDEV_RAW_END; i++) {
+		//fix static code analysis issue
+		if (i >= ARRAY_SIZE(cam->raw.pipelines)) break;
 		if (cam->raw.pipelines[i].res_config.seninf == seninf)
 			return &cam->raw.pipelines[i];
 	}

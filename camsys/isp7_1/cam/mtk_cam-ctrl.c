@@ -4349,8 +4349,8 @@ void mtk_camsys_frame_done(struct mtk_cam_ctx *ctx,
 					ctx_2 = &ctx->cam->ctxs[i];
 					break;
 				}
-
-			if (!ctx_2) {
+			//fix static code analysis issue
+			if (ctx_2) {
 				dev_dbg(raw_dev->dev, "%s: time sharing ctx-%d deq_no(%d)\n",
 				 __func__, ctx_2->stream_id, ctx_2->dequeued_frame_seq_no+1);
 				mtk_camsys_ts_raw_try_set(raw_dev, ctx_2,
