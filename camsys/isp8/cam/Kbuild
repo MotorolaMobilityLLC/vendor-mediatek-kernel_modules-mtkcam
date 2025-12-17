@@ -21,8 +21,8 @@ subdir-ccflags-y += \
     -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/slbc/ \
     -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/swpm/modules/debug/v1/ \
     -I$(KO_PATH) \
-    -I$(DEVICE_MODULES_PATH)/include/
-
+    -I$(DEVICE_MODULES_PATH)/include/ \
+    -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/sensor/2.0/core/ \
 
 #ifneq ($(wildcard $(DEVICE_MODULES_PATH)/include/dt-bindings/memory/mt6985-larb-port.h),)
 #  subdir-ccflags-y += -DCAMSYS_TF_DUMP_7SP
@@ -94,6 +94,7 @@ $(CAM_MODULE)-objs := \
     mtk_cam-hsf.o \
     mtk_cam-bwr.o \
     mtk_cam-tuning.o \
+    mtk_cam-ois-info.o \
 
     #mtk_cam-size_assertion.o \
     #mtk_cam-raw_debug.o \

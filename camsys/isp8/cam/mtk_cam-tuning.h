@@ -6,6 +6,8 @@
 #ifndef __MTK_CAM_TUNING_H
 #define __MTK_CAM_TUNING_H
 
+/*#include "mtk_cam-ois-info.h"*/
+
 #define CAM_TUNING_BEGIN_F_RATIO 50
 #define CAM_TUNING_DELAY_NS      0
 #define CAM_TUNING_DEADLINE_NS   2000000
@@ -14,12 +16,16 @@
 
 struct mtk_cam_tuning {
 	/* sensor */
+	int sensor_idx;
 	u32 sensor_mode;
 	u32 width;
 	u32 height;
 	u64 readout_ns;
 	u64 exp_time_ns;
 	u64 sof_boottime_ns;
+	/* current calling time */
+	u64 ois_time_ns;
+
 
 	/* lsc */
 	u32 x_num;
@@ -42,9 +48,8 @@ struct mtk_cam_tuning {
 
 
 void mtk_cam_tuning_probe(void);
-
 void mtk_cam_tuning_init(struct mtk_cam_tuning *param);
-
 void mtk_cam_tuning_update(struct mtk_cam_tuning *param);
+void mtk_cam_tuning_uninit(void);
 
 #endif /*__MTK_CAM_TUNING_H*/

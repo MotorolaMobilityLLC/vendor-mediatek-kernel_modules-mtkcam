@@ -17,10 +17,12 @@ static unsigned int s5kjn5_mot_do_2a_gain(struct EEPROM_DRV_FD_DATA *pdata,
 		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData);
 static unsigned int mot_s5kjn5_do_pdaf(struct EEPROM_DRV_FD_DATA *pdata,
 		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData);
+static unsigned int mot_s5kjn5_do_ois_shading(struct EEPROM_DRV_FD_DATA *pdata,
+		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData);
 
 
 #define S5KJN5_MOT_EEPROM_ADDR 0x00
-#define S5KJN5_MOT_EEPROM_DATA_SIZE 0x1F6B
+#define S5KJN5_MOT_EEPROM_DATA_SIZE 0x2895
 #define S5KJN5_MOT_SERIAL_NUMBER_ADDR 0x15
 #define S5KJN5_MOT_MNF_ADDR 0x00
 #define S5KJN5_MOT_MNF_DATA_SIZE 37
@@ -48,6 +50,10 @@ static unsigned int mot_s5kjn5_do_pdaf(struct EEPROM_DRV_FD_DATA *pdata,
 #define S5KJN5_MOT_MTK_NECESSARY_DATA_SIZE 19
 #define S5KJN5_MOT_MTK_NECESSARY_DATA_CHECKSUM_ADDR 0x13F7
 
+#define S5KJN5_MOT_OIS_SHADING_DATA_ADDR 0x1F6B
+#define S5KJN5_MOT_OIS_SHADING_DATA_SIZE 2344
+#define S5KJN5_MOT_OIS_SHADING_DATA_CHECKSUM_ADDR 0x2893
+
 
 #define MOTO_OB_VALUE 64
 #define MOTO_WB_VALUE_BASE 64
@@ -71,6 +77,7 @@ static struct STRUCT_CALIBRATION_LAYOUT_STRUCT cal_layout_table = {
 		{0x00000000, 0x00000000, 0x00000000, do_dump_all},
 		{0x00000000, 0x0000000C, 0x00000001, do_lens_id},
 		{0x00000000, 0x00000000, 0x00000000, NULL},
+		{0x00000001, S5KJN5_MOT_OIS_SHADING_DATA_ADDR, S5KJN5_MOT_OIS_SHADING_DATA_SIZE, mot_s5kjn5_do_ois_shading},
 		{0x00000001, S5KJN5_MOT_MNF_ADDR, S5KJN5_MOT_MNF_DATA_SIZE, mot_do_manufacture_info}
 	}
 };
@@ -525,5 +532,75 @@ unsigned int s5kjn5_mot_do_factory_verify(struct EEPROM_DRV_FD_DATA *pdata, unsi
 		return CAM_CAL_ERR_NO_PARTNO;
 	}
 
+	//ois shading check
+	checkSum = (pCamCalData->DumpAllEepromData[S5KJN5_MOT_OIS_SHADING_DATA_CHECKSUM_ADDR])<< 8
+		|(pCamCalData->DumpAllEepromData[S5KJN5_MOT_OIS_SHADING_DATA_CHECKSUM_ADDR+1]);
+	debug_log("checkSum  = 0x%x", checkSum);
+
+	if(check_crc16(pCamCalData->DumpAllEepromData+S5KJN5_MOT_OIS_SHADING_DATA_ADDR, S5KJN5_MOT_OIS_SHADING_DATA_SIZE, checkSum)) {
+		debug_log("check ois shading crc16 ok");
+	} else {
+		debug_log("check ois shading crc16 err");
+		return CAM_CAL_ERR_NO_OIS_SHADING;
+	}
+
 	return CAM_CAL_ERR_NO_ERR;
+}
+
+unsigned int mot_s5kjn5_do_ois_shading(struct EEPROM_DRV_FD_DATA *pdata,
+		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData)
+{
+	struct STRUCT_CAM_CAL_DATA_STRUCT *pCamCalData =
+				(struct STRUCT_CAM_CAL_DATA_STRUCT *)pGetSensorCalData;
+
+	int read_data_size, checkSum;
+	int err =  CamCalReturnErr[pCamCalData->Command];
+	uint8_t *tempBuf = kmalloc(S5KJN5_MOT_OIS_SHADING_DATA_SIZE +2, GFP_KERNEL);
+	if (!tempBuf)
+	{
+		return -ENOMEM;
+	}
+
+	pCamCalData->Ois_Shading_Data.Size_of_OIS_SHADING = S5KJN5_MOT_OIS_SHADING_DATA_SIZE;
+	debug_log("OIS shading start_addr =%x table_size=%d\n", S5KJN5_MOT_OIS_SHADING_DATA_ADDR, S5KJN5_MOT_OIS_SHADING_DATA_SIZE);
+
+	read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID,
+			S5KJN5_MOT_OIS_SHADING_DATA_ADDR, S5KJN5_MOT_OIS_SHADING_DATA_SIZE + 2, (unsigned char *)tempBuf);
+	if (read_data_size <= 0) {
+		err = CAM_CAL_ERR_NO_OIS_SHADING;
+		return err;
+	}
+	checkSum = tempBuf[S5KJN5_MOT_OIS_SHADING_DATA_SIZE] << 8 | tempBuf[S5KJN5_MOT_OIS_SHADING_DATA_SIZE +1];
+	debug_log("checkSum  = 0x%x", checkSum);
+
+	if(check_crc16(tempBuf, 2344, checkSum)) {
+		debug_log("check_crc16 ok");
+		err = CAM_CAL_ERR_NO_ERR;
+	} else {
+		debug_log("check_crc16 err");
+		err = CAM_CAL_ERR_NO_OIS_SHADING;
+		return err;
+	}
+
+	kfree(tempBuf);
+
+	read_data_size = read_data(pdata, pCamCalData->sensorID, pCamCalData->deviceID,
+			S5KJN5_MOT_OIS_SHADING_DATA_ADDR, S5KJN5_MOT_OIS_SHADING_DATA_SIZE, (unsigned char *)&pCamCalData->Ois_Shading_Data.Data[0]);
+	if (read_data_size <= 0) {
+		err = CAM_CAL_ERR_NO_OIS_SHADING;
+		return err;
+	}
+
+	debug_log("======================OIS Shading Data==================\n");
+	debug_log("First five %x, %x, %x, %x, %x\n",
+		pCamCalData->Ois_Shading_Data.Data[0],
+		pCamCalData->Ois_Shading_Data.Data[1],
+		pCamCalData->Ois_Shading_Data.Data[2],
+		pCamCalData->Ois_Shading_Data.Data[3],
+		pCamCalData->Ois_Shading_Data.Data[4]);
+	debug_log("RETURN = 0x%x\n", err);
+	debug_log("======================OIS Shading Data==================\n");
+
+	return err;
+
 }
