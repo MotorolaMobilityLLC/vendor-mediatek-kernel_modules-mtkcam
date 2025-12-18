@@ -998,6 +998,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.cphy_settle = 73,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
+		.awb_enabled = 1,
 	},
 	{//custom5  2048x1536@30fps
 		.frame_desc = frame_desc_cus5,
