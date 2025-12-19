@@ -39,7 +39,7 @@ static int imx917_set_awb_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 #if  ENABLE_IMX917_LONG_EXPOSURE
 static int imx917_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 #endif
-
+static int __imx917_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len);
 
 /* STRUCT */
 static struct subdrv_feature_control feature_control_list[] = {
@@ -50,6 +50,7 @@ static struct subdrv_feature_control feature_control_list[] = {
 #if  ENABLE_IMX917_LONG_EXPOSURE
 	{SENSOR_FEATURE_SET_ESHUTTER, imx917_set_shutter},
 #endif
+	{SENSOR_FEATURE_SET_GAIN, __imx917_set_gain},
 };
 
 static struct mtk_mbus_frame_desc_entry frame_desc_prev[] = {
@@ -503,9 +504,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_vid),
 		.mode_setting_table = imx917_normal_video_setting,
 		.mode_setting_len = ARRAY_SIZE(imx917_normal_video_setting),
-		.seamless_switch_group = PARAM_UNDEFINED,
-		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
-		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.seamless_switch_group = 2,
+		.seamless_switch_mode_setting_table = imx917_seamless_normal_video_setting,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx917_seamless_normal_video_setting),
 		.pclk = 1360000000,
 		.linelength = 11904,
 		.framelength = 3791,
@@ -929,9 +930,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.num_entries = ARRAY_SIZE(frame_desc_cus6),
 		.mode_setting_table = addr_data_pair_custom6,
 		.mode_setting_len = ARRAY_SIZE(addr_data_pair_custom6),
-		.seamless_switch_group = PARAM_UNDEFINED,
-		.seamless_switch_mode_setting_table = PARAM_UNDEFINED,
-		.seamless_switch_mode_setting_len = PARAM_UNDEFINED,
+		.seamless_switch_group = 2,
+		.seamless_switch_mode_setting_table = imx917_seamless_custom6,
+		.seamless_switch_mode_setting_len = ARRAY_SIZE(imx917_seamless_custom6),
 		.hdr_mode = HDR_RAW_DCG_COMPOSE,
 		.raw_cnt = 1,
 		.exp_cnt = 2,
@@ -984,10 +985,10 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.dcg_gain_table = imx917_dcg_ratio_table_12bit,
 			.dcg_gain_table_size = sizeof(imx917_dcg_ratio_table_12bit),
 		},
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 0,
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 16,
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 4,
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 64,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 4,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 15.985,
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
 };
@@ -1423,6 +1424,66 @@ static int imx917_set_shutter(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 }
 #endif
 
+static void imx917_set_gain(struct subdrv_ctx *ctx, u32 gain,u32 *len)
+{
+	u16 rg_gain;
+	bool gph = !ctx->is_seamless && (ctx->s_ctx.s_gph != NULL);
+
+	if (ctx->current_scenario_id == SENSOR_SCENARIO_ID_CUSTOM6)
+	{
+			gain = max(gain,
+				ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min);
+			gain = min(gain,
+				ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max);
+
+	}
+	else
+	{
+		/* check boundary of gain */
+			gain = max(gain,
+				ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[0].min);
+			gain = min(gain,
+				ctx->s_ctx.mode[ctx->current_scenario_id].multi_exposure_ana_gain_range[0].max);
+		/* mapping of gain to register value */
+
+	}
+
+	if (ctx->s_ctx.g_gain2reg != NULL)
+		rg_gain = ctx->s_ctx.g_gain2reg(gain);
+	else
+		rg_gain = gain2reg(gain);
+	/* restore gain */
+	memset(ctx->ana_gain, 0, sizeof(ctx->ana_gain));
+	ctx->ana_gain[0] = gain;
+	/* group hold start */
+	if (gph && !ctx->ae_ctrl_gph_en)
+		ctx->s_ctx.s_gph((void *)ctx, 1);
+	/* write gain */
+	set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[0].addr[0],
+		(rg_gain >> 8) & 0xFF);
+	set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[0].addr[1],
+		rg_gain & 0xFF);
+	if(ctx->current_scenario_id == SENSOR_SCENARIO_ID_CUSTOM6)
+	{
+		set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[1].addr[0],
+			(rg_gain >> 8) & 0xFF);
+		set_i2c_buffer(ctx,	ctx->s_ctx.reg_addr_ana_gain[1].addr[1],
+			rg_gain & 0xFF);
+		DRV_LOG(ctx, "stgain[0x%x]\n", rg_gain);
+	}
+	DRV_LOG(ctx, "gain[0x%x]\n", rg_gain);
+	if (gph)
+		ctx->s_ctx.s_gph((void *)ctx, 0);
+	commit_i2c_buffer(ctx);
+}
+
+static int __imx917_set_gain(struct subdrv_ctx *ctx, u8 *para, u32 *len)
+{
+	u32 gain = *((u64 *)para);
+	imx917_set_gain(ctx,gain,0);
+	return 0;
+}
+
 static int imx917_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 {
 	enum SENSOR_SCENARIO_ID_ENUM scenario_id;
@@ -1482,11 +1543,11 @@ static int imx917_seamless_switch(struct subdrv_ctx *ctx, u8 *para, u32 *len)
 				== IMGSENSOR_DCG_DIRECT_MODE)
 				set_multi_gain(ctx, (u32 *)&ae_ctrl->gain, exp_cnt);
 			else
-				set_gain(ctx, ae_ctrl->gain.le_gain);
+				imx917_set_gain(ctx, ae_ctrl->gain.le_gain,0);
 			break;
 		default:
 			set_shutter(ctx, ae_ctrl->exposure.le_exposure);
-			set_gain(ctx, ae_ctrl->gain.le_gain);
+			imx917_set_gain(ctx, ae_ctrl->gain.le_gain,0);
 			break;
 		}
 	}
