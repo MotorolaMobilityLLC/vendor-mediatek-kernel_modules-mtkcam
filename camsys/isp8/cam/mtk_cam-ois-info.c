@@ -7,8 +7,8 @@
 
 struct ois_client_info OisClientInfo[CAM_MAX];
 struct ois_global_data OisTotalData;
-#define IDX_HALL_X 4
-#define IDX_HALL_Y 5
+#define IDX_HALL_X 8
+#define IDX_HALL_Y 9
 
 
 static int Poll_Ois_data(void *arg)
@@ -122,7 +122,7 @@ static int mtk_cam_ois_find_sensor(int camera_id)
 		sensor_type = SENSOR_TYPE_OIS;
 		break;
 	case TELE:
-		sensor_type = SENSOR_TYPE_OIS1;
+		sensor_type = SENSOR_TYPE_OIS;
 		break;
 	case ULTRA_WIDE:
 	case ULTRA_TELE:
@@ -140,7 +140,7 @@ void mtk_cam_ois_info_create(void)
 	int camera_id = 0;
 
 	pr_info("[%s]: E\n", __func__);
-	camera_id = WIDE;
+	camera_id = TELE;
 	memset(OisClientInfo, 0, (CAM_MAX * sizeof(struct ois_client_info)));
 	/*demo code: create a ois client for each camera*/
 
@@ -311,6 +311,7 @@ void mtk_cam_ois_info_uinit(int camera_id)
 struct mtk_cam_ois_info *mtk_cam_ois_info_update(struct
 mtk_cam_tuning *param)
 {
+	static struct mtk_cam_ois_info dummy_ois_data = {0};
 	pr_info("[%s]: E\n", __func__);
 	struct ois_client_info *resource = NULL;
 	struct mtk_cam_ois_info *ois_data = NULL;
@@ -318,18 +319,13 @@ mtk_cam_tuning *param)
 
 	resource = &OisClientInfo[camid];
 	if (resource->task ) {
-		mutex_lock(&OisTotalData.lock);
 		ois_calculate_average(resource, param);
-		mutex_unlock(&OisTotalData.lock);
 		ois_data = &resource->ois_info;
 
 	} else{
 		pr_info("[%s]: OIS not initialized for camera %d\n", __func__, camid);
-		ois_data->timestamp = 0;
-		ois_data->pos_x = 0;
-		ois_data->pos_y = 0;
+		ois_data = &dummy_ois_data;
 	}
-	pr_info("[%s]: OIS not initialized for camera %d\n", __func__, camid);
 	return ois_data;
 }
 
