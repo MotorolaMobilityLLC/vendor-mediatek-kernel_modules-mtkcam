@@ -6,6 +6,7 @@
 #include "mtk_cam.h"
 #include "mtk_cam-ois-info.h"
 
+static int ois_comp_camera_id = -1;
 
 void mtk_cam_tuning_probe(void)
 {
@@ -17,14 +18,14 @@ void mtk_cam_tuning_probe(void)
 void mtk_cam_tuning_init(struct mtk_cam_tuning *param)
 {
   pr_info("%s: E !!\n", __func__);
-  mtk_cam_ois_info_init(WIDE);
-  param->sensor_idx = WIDE;
+  mtk_cam_ois_info_init(TELE);
+  ois_comp_camera_id = TELE;
 }
 
 void mtk_cam_tuning_uninit(void)
 {
   pr_info("%s: E !!\n", __func__);
-  mtk_cam_ois_info_uinit(WIDE);
+  mtk_cam_ois_info_uinit(TELE);
 }
 
 void mtk_cam_tuning_update(struct mtk_cam_tuning *param)
@@ -32,6 +33,7 @@ void mtk_cam_tuning_update(struct mtk_cam_tuning *param)
 
   pr_info("%s: E !!\n", __func__);
   struct mtk_cam_ois_info *ois_data = NULL;
+  param->sensor_idx = ois_comp_camera_id;
   /* perframe get ois data for algo*/
   ois_data = mtk_cam_ois_info_update(param);
 
