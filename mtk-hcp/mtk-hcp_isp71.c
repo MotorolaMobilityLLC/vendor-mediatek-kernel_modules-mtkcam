@@ -462,6 +462,7 @@ static struct mtk_hcp_smvr_reserve_mblock isp71_smvr_mblock[] = {
 		.fd = -1,
 		.pIonHandle = NULL,
 		.attach = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp71_smvr_mblock[0].mtx),
 		.sgt = NULL
 	},
 	{
@@ -622,6 +623,7 @@ struct mtk_hcp_streaming_reserve_mblock isp71_streaming_mblock[] = {
 		.fd = -1,
 		.pIonHandle = NULL,
 		.attach = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp71_streaming_mblock[0].mtx),
 		.sgt = NULL
 	},
 	{
@@ -781,6 +783,7 @@ struct mtk_hcp_capture_reserve_mblock isp71_capture_mblock[] = {
 		.fd = -1,
 		.pIonHandle = NULL,
 		.attach = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp71_streaming_mblock[0].mtx),
 		.sgt = NULL
 	},
 	{

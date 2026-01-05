@@ -462,6 +462,7 @@ static struct mtk_hcp_smvr_reserve_mblock isp7s_smvr_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_smvr_mblock[0].mtx),
 		.smvr = 1
 	},
 	{
@@ -479,6 +480,7 @@ static struct mtk_hcp_smvr_reserve_mblock isp7s_smvr_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_smvr_mblock[1].mtx),
 		.smvr = 1
 	},
 	{
@@ -496,6 +498,7 @@ static struct mtk_hcp_smvr_reserve_mblock isp7s_smvr_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_smvr_mblock[2].mtx),
 		.smvr = 1
 	},
 	{
@@ -513,6 +516,7 @@ static struct mtk_hcp_smvr_reserve_mblock isp7s_smvr_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_smvr_mblock[3].mtx),
 		.smvr = 1
 	},
 	{
@@ -530,6 +534,7 @@ static struct mtk_hcp_smvr_reserve_mblock isp7s_smvr_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_smvr_mblock[4].mtx),
 		.smvr = 1
 	},
 	{
@@ -547,6 +552,7 @@ static struct mtk_hcp_smvr_reserve_mblock isp7s_smvr_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_smvr_mblock[5].mtx),
 		.smvr = 1
 	},
 	{
@@ -564,6 +570,7 @@ static struct mtk_hcp_smvr_reserve_mblock isp7s_smvr_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_smvr_mblock[6].mtx),
 		.smvr = 1
 	},
 	{
@@ -581,6 +588,7 @@ static struct mtk_hcp_smvr_reserve_mblock isp7s_smvr_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_smvr_mblock[7].mtx),
 		.smvr = 1
 	},
 	{
@@ -596,6 +604,7 @@ static struct mtk_hcp_smvr_reserve_mblock isp7s_smvr_mblock[] = {
 		.d_buf = NULL,
 		.fd = -1,
 		.pIonHandle = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_smvr_mblock[8].mtx),
 		.smvr = 1
 	},
 	{
@@ -611,6 +620,7 @@ static struct mtk_hcp_smvr_reserve_mblock isp7s_smvr_mblock[] = {
 		.d_buf = NULL,
 		.fd = -1,
 		.pIonHandle = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_smvr_mblock[9].mtx),
 		.smvr = 1
 	},
 	{
@@ -628,6 +638,7 @@ static struct mtk_hcp_smvr_reserve_mblock isp7s_smvr_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_smvr_mblock[10].mtx),
 		.smvr = 1
 	},
 };
@@ -649,6 +660,7 @@ static struct mtk_hcp_streaming_reserve_mblock isp7s_streaming_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_streaming_mblock[0].mtx),
 		.streaming = 1
 	},
 	{
@@ -666,6 +678,7 @@ static struct mtk_hcp_streaming_reserve_mblock isp7s_streaming_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_streaming_mblock[1].mtx),
 		.streaming = 1
 	},
 	{
@@ -683,6 +696,7 @@ static struct mtk_hcp_streaming_reserve_mblock isp7s_streaming_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_streaming_mblock[2].mtx),
 		.streaming = 1
 	},
 	{
@@ -700,6 +714,7 @@ static struct mtk_hcp_streaming_reserve_mblock isp7s_streaming_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_streaming_mblock[3].mtx),
 		.streaming = 1
 	},
 	{
@@ -717,6 +732,7 @@ static struct mtk_hcp_streaming_reserve_mblock isp7s_streaming_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_streaming_mblock[4].mtx),
 		.streaming = 1
 	},
 	{
@@ -734,6 +750,7 @@ static struct mtk_hcp_streaming_reserve_mblock isp7s_streaming_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_streaming_mblock[5].mtx),
 		.streaming = 1
 	},
 	{
@@ -751,6 +768,7 @@ static struct mtk_hcp_streaming_reserve_mblock isp7s_streaming_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_streaming_mblock[6].mtx),
 		.streaming = 1
 	},
 	{
@@ -768,6 +786,7 @@ static struct mtk_hcp_streaming_reserve_mblock isp7s_streaming_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_streaming_mblock[7].mtx),
 		.streaming = 1
 	},
 	{
@@ -783,6 +802,7 @@ static struct mtk_hcp_streaming_reserve_mblock isp7s_streaming_mblock[] = {
 		.d_buf = NULL,
 		.fd = -1,
 		.pIonHandle = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_streaming_mblock[8].mtx),
 		.streaming = 1
 	},
 	{
@@ -798,6 +818,7 @@ static struct mtk_hcp_streaming_reserve_mblock isp7s_streaming_mblock[] = {
 		.d_buf = NULL,
 		.fd = -1,
 		.pIonHandle = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_streaming_mblock[9].mtx),
 		.streaming = 1
 	},
 	{
@@ -815,6 +836,7 @@ static struct mtk_hcp_streaming_reserve_mblock isp7s_streaming_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_streaming_mblock[10].mtx),
 		.streaming = 1
 	},
 };
@@ -835,6 +857,7 @@ static struct mtk_hcp_capture_reserve_mblock isp7s_capture_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_capture_mblock[0].mtx),
 		.capture = 1
 	},
 	{
@@ -852,6 +875,7 @@ static struct mtk_hcp_capture_reserve_mblock isp7s_capture_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_capture_mblock[1].mtx),
 		.capture = 1
 	},
 	{
@@ -869,6 +893,7 @@ static struct mtk_hcp_capture_reserve_mblock isp7s_capture_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_capture_mblock[2].mtx),
 		.capture = 1
 	},
 	{
@@ -886,6 +911,7 @@ static struct mtk_hcp_capture_reserve_mblock isp7s_capture_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_capture_mblock[3].mtx),
 		.capture = 1
 	},
 	{
@@ -903,6 +929,7 @@ static struct mtk_hcp_capture_reserve_mblock isp7s_capture_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_capture_mblock[4].mtx),
 		.capture = 1
 	},
 	{
@@ -920,6 +947,7 @@ static struct mtk_hcp_capture_reserve_mblock isp7s_capture_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_capture_mblock[5].mtx),
 		.capture = 1
 	},
 	{
@@ -937,6 +965,7 @@ static struct mtk_hcp_capture_reserve_mblock isp7s_capture_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_capture_mblock[6].mtx),
 		.capture = 1
 	},
 	{
@@ -954,6 +983,7 @@ static struct mtk_hcp_capture_reserve_mblock isp7s_capture_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_capture_mblock[7].mtx),
 		.capture = 1
 	},
 	{
@@ -969,6 +999,7 @@ static struct mtk_hcp_capture_reserve_mblock isp7s_capture_mblock[] = {
 		.d_buf = NULL,
 		.fd = -1,
 		.pIonHandle = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_capture_mblock[8].mtx),
 		.capture = 1
 	},
 	{
@@ -984,6 +1015,7 @@ static struct mtk_hcp_capture_reserve_mblock isp7s_capture_mblock[] = {
 		.d_buf = NULL,
 		.fd = -1,
 		.pIonHandle = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_capture_mblock[9].mtx),
 		.capture = 1
 	},
 	{
@@ -1001,6 +1033,7 @@ static struct mtk_hcp_capture_reserve_mblock isp7s_capture_mblock[] = {
 		.pIonHandle = NULL,
 		.attach = NULL,
 		.sgt = NULL,
+		.mtx = __MUTEX_INITIALIZER(isp7s_capture_mblock[10].mtx),
 		.capture = 1
 	},
 };
