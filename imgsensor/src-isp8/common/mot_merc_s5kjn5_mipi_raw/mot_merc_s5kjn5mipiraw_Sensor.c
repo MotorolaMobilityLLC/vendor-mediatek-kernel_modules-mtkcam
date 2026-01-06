@@ -1043,6 +1043,9 @@ static void s5kjn5_sensor_init(struct subdrv_ctx *ctx)
 			ARRAY_SIZE(addr_data_pair_init_2_mot_merc_s5kjn5));
 	i2c_table_write(ctx, addr_data_pair_init_3_mot_merc_s5kjn5,
 			ARRAY_SIZE(addr_data_pair_init_3_mot_merc_s5kjn5));
+	mot_subdrv_i2c_wr_swq_p16(ctx, 0x0000, addr_data_pair_init_3_1_mot_merc_s5kjn5,
+			ARRAY_SIZE(addr_data_pair_init_3_1_mot_merc_s5kjn5));
+	subdrv_i2c_wr_u16(ctx, 0xFCFC, 0x4000);
 	DRV_LOG(ctx, "MOT MERC S5KJN5 init end\n");
 	DRV_LOG(ctx, "X\n");
 }
