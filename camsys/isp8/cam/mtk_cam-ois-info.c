@@ -206,7 +206,7 @@ void mtk_cam_ois_info_init(int camera_id)
 	/*cmd.down_sample = 0;*/
 	cfg_batch = (struct hf_manager_batch *)cmd.data;
 	cfg_batch->delay = 1000000;
-	cfg_batch->latency = 5000000;
+	cfg_batch->latency = 0;
 	ret = hf_client_control_sensor(client, &cmd);
 	if (ret < 0) {
 		pr_err("[%s]CamID:%d hf_client_control_sensor %u %u fail\n", __func__,
