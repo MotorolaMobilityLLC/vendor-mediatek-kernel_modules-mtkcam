@@ -133,6 +133,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_vid[] = {
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 			.is_active_line = TRUE,
+			.valid_bit = 10,
 		},
 	}
 #endif
@@ -314,6 +315,7 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus6[] = {
 			.dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
 			.user_data_desc = VC_PDAF_STATS_NE_PIX_1,
 			.is_active_line = TRUE,
+			.valid_bit = 10,
 		},
 	},
 #endif
@@ -457,8 +459,8 @@ static u32 imx917_dcg_ratio_table_12bit[] = {1000};
 
 static struct mtk_sensor_saturation_info imgsensor_saturation_info_12bit = {
 	.gain_ratio = 1000,
-	.OB_pedestal = 64,
-	.saturation_level = 3900,
+	.OB_pedestal = 256,
+	.saturation_level = 4092,
 	.adc_bit = 10,
 	.ob_bm = 64,
 };
@@ -643,6 +645,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.cphy_settle = 73,
 		},
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW12_4CELL_HW_BAYER_B,
+		.saturation_info = &imgsensor_saturation_info_12bit,
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
 	{
