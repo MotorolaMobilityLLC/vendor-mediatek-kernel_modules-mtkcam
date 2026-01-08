@@ -551,6 +551,7 @@ struct mtk_hcp_streaming_reserve_mblock {
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
 	struct kref kref;
+	struct mutex mtx;
     uint8_t streaming;
 };
 
@@ -572,6 +573,7 @@ struct mtk_hcp_capture_reserve_mblock {
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
 	struct kref kref;
+	struct mutex mtx;
     uint8_t capture;
 };
 
@@ -593,6 +595,7 @@ struct mtk_hcp_smvr_reserve_mblock {
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
 	struct kref kref;
+	struct mutex mtx;
     uint8_t smvr;
 };
 
