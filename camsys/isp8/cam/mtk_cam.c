@@ -3397,6 +3397,12 @@ void mtk_cam_ctx_engine_off(struct mtk_cam_ctx *ctx)
 				dev_info(raw_dev->dev, "time-share: ctx:%d last uninitialize",
 						ctx->stream_id);
 			}
+			/* ois compsation */
+			if (ctx->ois_comp_en) {
+			  ctx->ois_comp_en = false;
+			  mtk_cam_tuning_uninit();
+			}
+
 			if (ctx->enable_hsf_raw)
 				ccu_stream_on(ctx, false);
 			else
