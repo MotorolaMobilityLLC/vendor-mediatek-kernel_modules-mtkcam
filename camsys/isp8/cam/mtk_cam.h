@@ -217,6 +217,9 @@ struct mtk_cam_ctx {
 	struct mtk_cam_exp_shutter last_req_exposue;
 	bool is_sv_mraw_error;
 	bool is_seninf_error_trigger;
+
+	/* ois compsation */
+	bool ois_comp_en;
 };
 
 struct mtk_cam_v4l2_pipelines {
