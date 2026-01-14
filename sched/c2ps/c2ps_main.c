@@ -800,7 +800,7 @@ static int __init c2ps_init(void)
 	c2ps_nr_clusters = get_nr_gears();
 	c2ps_tsk = kthread_create(c2ps_thread_loop, NULL, "c2ps_thread_loop");
 
-	if (unlikely(c2ps_tsk == NULL))
+	if (IS_ERR(c2ps_tsk))
 		return -EFAULT;
 	wake_up_process(c2ps_tsk);
 
