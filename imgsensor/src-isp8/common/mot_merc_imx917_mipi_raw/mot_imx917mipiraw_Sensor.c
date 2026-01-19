@@ -522,7 +522,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 64,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -582,7 +582,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 64,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -642,7 +642,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 64,
 		},
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW12_4CELL_HW_BAYER_B,
 		.saturation_info = &imgsensor_saturation_info_12bit,
@@ -704,7 +704,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 64,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -764,7 +764,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 64,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -826,7 +826,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 64,
 		},
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_B,
 		.sensor_output_dataformat_cell_type = SENSOR_OUTPUT_FORMAT_CELL_2X2,
@@ -890,7 +890,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 64,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -942,7 +942,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 64,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -999,7 +999,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 64,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 		.awb_enabled = 1,
@@ -1062,7 +1062,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 64,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -1122,7 +1122,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 0,
 		.delay_frame = 2,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 64,
 		},
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW12_4CELL_HW_BAYER_B,
 		.saturation_info = &imgsensor_saturation_info_12bit,
