@@ -390,8 +390,8 @@ static struct mtk_sensor_saturation_info imgsensor_saturation_info_10bit = {
 
 static struct mtk_sensor_saturation_info imgsensor_saturation_info_12bit = {
 	.gain_ratio = 4000,
-	.OB_pedestal = 64,
-	.saturation_level = 3900,
+	.OB_pedestal = 256,
+	.saturation_level = 4092,
 };
 
 static struct subdrv_mode_struct mode_struct[] = {
@@ -550,6 +550,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 			.cphy_settle = 73,
 		},
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW12_B,
+		.saturation_info = &imgsensor_saturation_info_12bit,
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
 	{
@@ -979,6 +980,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dcg_info = {
 			.dcg_mode = IMGSENSOR_DCG_COMPOSE,
 			.dcg_gain_mode = IMGSENSOR_DCG_RATIO_MODE,
+			.dcg_gain_base = IMGSENSOR_DCG_GAIN_LCG_BASE,
 			.dcg_gain_ratio_min = 4000,
 			.dcg_gain_ratio_max = 4000,
 			.dcg_gain_ratio_step = 0,
