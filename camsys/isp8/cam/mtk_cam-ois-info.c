@@ -10,13 +10,15 @@ struct ois_global_data OisTotalData;
 #define IDX_HALL_X 8
 #define IDX_HALL_Y 9
 
+#define MAX_POLL_EVENTS 10
 
 static int Poll_Ois_data(void *arg)
 {
 	int data_size = 0;
-	struct hf_manager_event  data[1];
+	struct hf_manager_event  data[MAX_POLL_EVENTS];
 	struct ois_client_info  *resource = NULL;
 	int camera_id = 0;
+	int i =0;
 
 	if ( arg == NULL) {
 		pr_err("[%s]: invalid thread data!\n", __func__);
@@ -29,25 +31,25 @@ static int Poll_Ois_data(void *arg)
 
 	while (!kthread_should_stop()) {
 		data_size = hf_client_poll_sensor_timeout(resource->client,
-					data, ARRAY_SIZE(data), 5000000);
+					data, MAX_POLL_EVENTS, 5000000);
 
 		if (data_size <= 0) {
 			pr_err("[%s]CamID:%d fetch ois data fail %d\n", __func__, camera_id, data_size);
 			break;
-			return 0;
 		}
     /* update ois data to OisTotalData*/
 		mutex_lock(&OisTotalData.lock);
-		int write_index = OisTotalData.head;
+		for (i = 0; i < data_size; i++) {
+			int write_index = OisTotalData.head;
 
-		memcpy(&OisTotalData.buffer[write_index], &data[0], sizeof(struct hf_manager_event));
-		OisTotalData.head = (write_index + 1) % OIS_DATA_BUFFER_SIZE;
+			memcpy(&OisTotalData.buffer[write_index], &data[i], sizeof(struct hf_manager_event));
+			OisTotalData.head = (write_index + 1) % OIS_DATA_BUFFER_SIZE;
 
-		if (OisTotalData.count < OIS_DATA_BUFFER_SIZE)
-			OisTotalData.count++;
-		else
-			OisTotalData.tail = (OisTotalData.tail + 1) % OIS_DATA_BUFFER_SIZE;
-
+			if (OisTotalData.count < OIS_DATA_BUFFER_SIZE)
+				OisTotalData.count++;
+			else
+				OisTotalData.tail = (OisTotalData.tail + 1) % OIS_DATA_BUFFER_SIZE;
+		}
 		mutex_unlock(&OisTotalData.lock);
 	}
 
@@ -66,6 +68,7 @@ struct mtk_cam_tuning *param)
 	int32_t pos_x_sum = 0;
 	int32_t pos_y_sum = 0;
 	int sensorGain = 1;
+	pr_info("[%s] start \n", __func__);
 
 	/*Calculate the valid OIS data timestamp interval for the current frame.*/
 	if ( param->exp_time_ns >= EXP_THRESHOLD ){
@@ -81,34 +84,41 @@ struct mtk_cam_tuning *param)
 			ois_end = ois_start + (param->readout_ns / 2);
 		}
 	}
-
+	pr_info("valid ois timestamp stat:[%llu ~ end%llu] \n", ois_start, ois_end);
 	/*get the average ois data during the valid timestamp*/
 	mutex_lock(&OisTotalData.lock);
 	int index = OisTotalData.tail;
 
+	/*get sensor gain*/
+	sensorGain = data->info.gain;
+	pr_info("sensorGain:%d", sensorGain);
 	for (int i = 0; i < OisTotalData.count; i++) {
 		struct hf_manager_event *event = &OisTotalData.buffer[index];
 
 		if (event->timestamp >= ois_start && event->timestamp <= ois_end) {
-			pos_x_sum += event->word[IDX_HALL_X];
-			pos_y_sum += event->word[IDX_HALL_Y];
+			pos_x_sum += event->word[IDX_HALL_X] / sensorGain;
+			pos_y_sum += event->word[IDX_HALL_Y] / sensorGain;
+			pr_info("[%s] orignal ois data:[%d, %d], timestamp:[%llu], total valid ois data count:%d \n", __func__,
+				event->word[IDX_HALL_X],
+				event->word[IDX_HALL_Y],
+				event->timestamp,
+				count);
 			count++;
 		}
 		index = (index + 1) % OIS_DATA_BUFFER_SIZE;
 	}
 
-	/*get sensor gain*/
-	sensorGain = data->info.gain;
 	/*use OisTotalData latest timestamp for ois_info ts*/
 	int latestIdx = OisTotalData.head % OIS_DATA_BUFFER_SIZE ?
 			(OisTotalData.head % OIS_DATA_BUFFER_SIZE -1) : (OIS_DATA_BUFFER_SIZE-1);
 	struct hf_manager_event *latestEvent = &OisTotalData.buffer[latestIdx];
 	/*update ois info*/
 	data->ois_info.timestamp = latestEvent->timestamp;
-	data->ois_info.pos_x = pos_x_sum /(sensorGain*count);
-	data->ois_info.pos_y = pos_y_sum /(sensorGain*count);
+	data->ois_info.pos_x = pos_x_sum / count;
+	data->ois_info.pos_y = pos_y_sum / count;
 	mutex_unlock(&OisTotalData.lock);
 
+	pr_info("[%s] end !!!\n", __func__);
 	return 0;
 }
 

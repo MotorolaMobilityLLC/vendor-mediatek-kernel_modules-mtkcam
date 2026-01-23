@@ -12,6 +12,7 @@
 #define CAM_TUNING_DELAY_NS      0
 #define CAM_TUNING_DEADLINE_NS   2000000
 
+#define CAM_TUNING_ALGO_DEADLINE_NS   2000000
 #define MTK_CAM_LSCI_TABLE_SIZE 32768
 
 struct mtk_cam_tuning {
