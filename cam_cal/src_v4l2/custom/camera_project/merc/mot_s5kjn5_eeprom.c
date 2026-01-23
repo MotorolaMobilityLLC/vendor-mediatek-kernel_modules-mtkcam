@@ -19,6 +19,7 @@ static unsigned int mot_s5kjn5_do_pdaf(struct EEPROM_DRV_FD_DATA *pdata,
 		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData);
 static unsigned int mot_s5kjn5_do_ois_shading(struct EEPROM_DRV_FD_DATA *pdata,
 		unsigned int start_addr, unsigned int block_size, unsigned int *pGetSensorCalData);
+void ois_shading_flip(unsigned short *ptr);
 
 
 #define S5KJN5_MOT_EEPROM_ADDR 0x00
@@ -53,7 +54,11 @@ static unsigned int mot_s5kjn5_do_ois_shading(struct EEPROM_DRV_FD_DATA *pdata,
 #define S5KJN5_MOT_OIS_SHADING_DATA_ADDR 0x1F6B
 #define S5KJN5_MOT_OIS_SHADING_DATA_SIZE 2344
 #define S5KJN5_MOT_OIS_SHADING_DATA_CHECKSUM_ADDR 0x2893
+#define OTP_SIZE 2340
 
+/* Global variable to store OIS shading data for cross-module access */
+static unsigned char g_ois_shading_data[OTP_SIZE];
+static bool g_ois_shading_valid = false;
 
 #define MOTO_OB_VALUE 64
 #define MOTO_WB_VALUE_BASE 64
@@ -589,6 +594,11 @@ unsigned int mot_s5kjn5_do_ois_shading(struct EEPROM_DRV_FD_DATA *pdata,
 	if (read_data_size <= 0) {
 		err = CAM_CAL_ERR_NO_OIS_SHADING;
 		return err;
+	} else {
+		ois_shading_flip((uint16_t *)pCamCalData->Ois_Shading_Data.Data);
+		/* Save to global variable for cross-module access */
+		memcpy(g_ois_shading_data, pCamCalData->Ois_Shading_Data.Data + 4, OTP_SIZE);
+		g_ois_shading_valid = true;
 	}
 
 	debug_log("======================OIS Shading Data==================\n");
@@ -604,3 +614,40 @@ unsigned int mot_s5kjn5_do_ois_shading(struct EEPROM_DRV_FD_DATA *pdata,
 	return err;
 
 }
+
+/**
+ * custom_eeprom_read - Read OIS shading data for camsys module
+ * @is_valid: pointer to bool to indicate if data is valid
+ * @d_data: pointer to buffer to store the data
+ *
+ * This function is called by camsys module to get OIS shading data.
+ * It copies data from the global variable that was saved during EEPROM reading.
+ */
+void custom_eeprom_read(bool *is_valid, void *d_data)
+{
+	unsigned char *data = (unsigned char *)d_data;
+
+	if (!g_ois_shading_valid) {
+		error_log("OIS shading data not available yet\n");
+		*is_valid = false;
+		return;
+	}
+
+	memcpy(data, g_ois_shading_data, OTP_SIZE);
+	*is_valid = true;
+	debug_log("custom_eeprom_read: success, size=%d\n", OTP_SIZE);
+}
+
+void ois_shading_flip(unsigned short *ptr)
+{
+	for (int i = 0; i < 9; i++) {
+		int base = i * (130) + 3;
+		for (int j = 0; j < 64; j++) {
+			unsigned short temp = ptr[base + j];
+			ptr[base + j] = ptr[base + (128 - j)];
+			ptr[base + (128 - j)] = temp;
+		}
+	}
+}
+
+EXPORT_SYMBOL(custom_eeprom_read);

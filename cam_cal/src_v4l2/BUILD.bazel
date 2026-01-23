@@ -10,6 +10,7 @@ filegroup(
         "common/v2/**",
         "common/v2/*.h",
         "custom/*.h",
+        "custom/**",
     ]),
 )
 
