@@ -990,7 +990,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].min = BASEGAIN * 4,
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_LE].max = BASEGAIN * 64,
 		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].min = BASEGAIN * 1,
-		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 15.9377,
+		.multi_exposure_ana_gain_range[IMGSENSOR_EXPOSURE_ME].max = BASEGAIN * 15.985,
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
 };
@@ -1125,9 +1125,8 @@ static void set_group_hold(void *arg, u8 en)
 }
 
 static u16 get_gain2reg(u32 gain)
-{//Should be multiple of 4
+{
 	u32 regGain = (16384 - (16384 * BASEGAIN) / gain);
-	regGain = (regGain+2)/4*4;
 	return regGain;
 }
 
