@@ -114,8 +114,14 @@ struct mtk_cam_tuning *param)
 	struct hf_manager_event *latestEvent = &OisTotalData.buffer[latestIdx];
 	/*update ois info*/
 	data->ois_info.timestamp = latestEvent->timestamp;
-	data->ois_info.pos_x = pos_x_sum / count;
-	data->ois_info.pos_y = pos_y_sum / count;
+	if (count != 0) {
+		data->ois_info.pos_x = pos_x_sum / count;
+		data->ois_info.pos_y = pos_y_sum / count;
+	} else {
+		data->ois_info.pos_x = latestEvent->word[IDX_HALL_X] / sensorGain;
+		data->ois_info.pos_y = latestEvent->word[IDX_HALL_Y] / sensorGain;
+	}
+
 	mutex_unlock(&OisTotalData.lock);
 
 	pr_info("[%s] end !!!\n", __func__);
