@@ -264,17 +264,17 @@ struct mae_priv_data priv_data_isp8_mt6899 = {
 		}
 	},
 	.fac_v1_config_info = {
-		.size = 428,
-		.rotate_offset = 3184,
-		.rotate_size = 433,
+		.size = 433,
+		.rotate_offset = 3193,
+		.rotate_size = 439,
 	},
 	.fac_v1_coef_info = {
 		.size = 1599,
 	},
 	.fd_v1_fpn_config_info = {
-		.size = 448,
-		.rotate_offset = 6278,
-		.rotate_size = 453,
+		.size = 453,
+		.rotate_offset = 6296,
+		.rotate_size = 458,
 	},
 	.fd_v1_fpn_coef_info = {
 		.size = 2306,
