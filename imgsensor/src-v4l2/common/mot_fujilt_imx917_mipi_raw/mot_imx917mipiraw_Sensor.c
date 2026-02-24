@@ -443,7 +443,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 76,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -495,7 +495,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 76,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -547,7 +547,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 76,
 		},
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW12_B,
 		.saturation_info = &imgsensor_saturation_info_12bit,
@@ -601,7 +601,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 76,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -653,7 +653,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 76,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -708,7 +708,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 76,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -763,7 +763,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 76,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -812,7 +812,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 76,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -867,7 +867,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 76,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -922,7 +922,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.dig_gain_max = 1*BASEGAIN,
 		.dig_gain_step = 4,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 76,
 		},
 		.dpc_enabled = true, /* reg 0x0b06 */
 	},
@@ -973,7 +973,7 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.fine_integ_line = 0,
 		.delay_frame = 2,
 		.csi_param = {
-			.cphy_settle = 73,
+			.cphy_settle = 76,
 		},
 		.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW12_B,
 		.saturation_info = &imgsensor_saturation_info_12bit,
