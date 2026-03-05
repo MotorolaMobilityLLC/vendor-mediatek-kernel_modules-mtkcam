@@ -5346,9 +5346,7 @@ static void mtk_cam_seninf_irq_event_st_init(struct seninf_core *core)
 		SENINF_IRQ_FIFO_LEN * sizeof(struct mtk_cam_seninf_vsync_info));
 
 	if (likely(vsync_detect_seninf_irq_event.msg_buffer == NULL)) {
-		vsync_detect_seninf_irq_event.msg_buffer = devm_kzalloc(core->dev,
-					vsync_detect_seninf_irq_event.fifo_size, GFP_ATOMIC);
-
+		vsync_detect_seninf_irq_event.msg_buffer = vzalloc(vsync_detect_seninf_irq_event.fifo_size);
 		if (unlikely(vsync_detect_seninf_irq_event.msg_buffer == NULL))
 			dev_info(core->dev,
 				"ERROR: irq msg_buffer:%p allocate memory failed, fifo_size:%u\n",
@@ -5384,7 +5382,7 @@ static void mtk_cam_seninf_irq_event_st_uninit(struct seninf_core *core)
 	kfifo_free(&vsync_detect_seninf_irq_event.msg_fifo);
 
 	if (likely(vsync_detect_seninf_irq_event.msg_buffer != NULL)) {
-		devm_kfree(core->dev, vsync_detect_seninf_irq_event.msg_buffer);
+		vfree(vsync_detect_seninf_irq_event.msg_buffer);
 		vsync_detect_seninf_irq_event.msg_buffer = NULL;
 		dev_info(core->dev,
 			"irq msg_buffer:%p is freed\n",
