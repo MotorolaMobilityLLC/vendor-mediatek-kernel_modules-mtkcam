@@ -4012,12 +4012,15 @@ static void mtk_cam_master_unbind(struct device *dev)
 
 	mtk_raw_unregister_entities(cam_dev->pipelines.raw,
 				    cam_dev->pipelines.num_raw);
+	mtk_raw_pipeline_delete(cam_dev->pipelines.raw);
 
 	mtk_camsv_unregister_entities(cam_dev->pipelines.camsv,
 				    cam_dev->pipelines.num_camsv);
+	mtk_camsv_pipeline_delete(cam_dev->pipelines.camsv);
 
 	mtk_mraw_unregister_entities(cam_dev->pipelines.mraw,
 				    cam_dev->pipelines.num_mraw);
+	mtk_mraw_pipeline_delete(cam_dev->pipelines.mraw);
 
 	mtk_cam_dvfs_remove(&cam_dev->dvfs);
 
@@ -4035,7 +4038,11 @@ static int compare_dev(struct device *dev, void *data)
 
 static void mtk_cam_match_remove(struct device *dev)
 {
-	(void) dev;
+	struct mtk_cam_device *cam_dev = dev_get_drvdata(dev);
+	struct mtk_cam_engines *eng = &cam_dev->engines;
+
+	if (eng->raw_devs != NULL)
+		vfree(eng->raw_devs);
 }
 
 static int add_match_by_driver(struct device *dev,
@@ -4069,7 +4076,7 @@ static int mtk_cam_alloc_for_engine(struct device *dev)
 		+ eng->num_mraw_devices
 		+ eng->num_larb_devices;
 
-	dev_arr = devm_kzalloc(dev, sizeof(*dev) * num, GFP_KERNEL);
+	dev_arr = vzalloc(sizeof(*dev) * num);
 	if (!dev_arr)
 		return -ENOMEM;
 
@@ -4938,7 +4945,7 @@ static int mtk_cam_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 	set_platform_data(platform_data);
-	dev_info(dev, "platform = %s\n", platform_data->platform);
+	dev_info(dev, "[%d %s] platform = %s\n", __LINE__, __func__, platform_data->platform);
 
 	camsys_root_dev = dev;
 
@@ -5202,8 +5209,7 @@ SKIP_ADLRD_IRQ:
 
 	/* FIXME: decide max raw stream num by seninf num */
 	cam_dev->max_stream_num = 8; /* TODO: how */
-	cam_dev->ctxs = devm_kcalloc(dev, cam_dev->max_stream_num,
-				     sizeof(*cam_dev->ctxs), GFP_KERNEL);
+	cam_dev->ctxs = vzalloc(cam_dev->max_stream_num * sizeof(*cam_dev->ctxs));
 	if (!cam_dev->ctxs) {
 		dev_err(dev, "%s: kcalloc cam_dev->ctxs failed\n", __func__);
 		WRAP_AEE_EXCEPTION("mtk_cam_probe", "Kcalloc");
@@ -5243,7 +5249,10 @@ SKIP_ADLRD_IRQ:
 	init_waitqueue_head(&cam_dev->shutdown_wq);
 
 	mtk_cam_get_chipid(cam_dev);
+
 	mtk_cam_tuning_probe();
+
+	dev_info(dev, "[%d %s] platform = %s, probe done\n", __LINE__, __func__, platform_data->platform);
 
 	return 0;
 
@@ -5263,6 +5272,8 @@ static int mtk_cam_remove(struct platform_device *pdev)
 
 	component_master_del(dev, &mtk_cam_master_ops);
 	mtk_cam_match_remove(dev);
+	if (cam_dev->ctxs != NULL)
+		vfree(cam_dev->ctxs);
 
 	mtk_cam_debug_deinit(&cam_dev->dbg);
 

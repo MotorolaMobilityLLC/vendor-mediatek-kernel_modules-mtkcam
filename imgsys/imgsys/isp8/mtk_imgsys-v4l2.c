@@ -3442,7 +3442,7 @@ int mtk_imgsys_probe(struct platform_device *pdev)
 	int ret;
 	const char *coherent_status = NULL;
 
-	imgsys_dev = devm_kzalloc(&pdev->dev, sizeof(*imgsys_dev), GFP_KERNEL);
+	imgsys_dev = vzalloc(sizeof(*imgsys_dev));
 	if (!imgsys_dev)
 		return -ENOMEM;
 
@@ -3578,7 +3578,7 @@ int mtk_imgsys_probe(struct platform_device *pdev)
 		goto bypass_larbs;
 	}
 
-	larb_devs = devm_kzalloc(&pdev->dev, sizeof(larb_devs) * larbs_num, GFP_KERNEL);
+	larb_devs = vzalloc(sizeof(larb_devs) * larbs_num);
 	if (!larb_devs)
 		return -ENOMEM;
 
@@ -3696,6 +3696,10 @@ int mtk_imgsys_remove(struct platform_device *pdev)
 	mtk_imgsys_mmdvfs_uninit(imgsys_dev);
 	#endif
 	imgsys_cmdq_release(imgsys_dev);
+
+	if (imgsys_dev->larbs)
+		vfree(imgsys_dev->larbs);
+	vfree(imgsys_dev);
 
 	return 0;
 }
