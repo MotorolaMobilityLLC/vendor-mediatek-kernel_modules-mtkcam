@@ -972,6 +972,8 @@ static struct subdrv_mode_struct mode_struct[] = {
 		.ae_binning_ratio = 1428,
 		.fine_integ_line = 0,
 		.delay_frame = 2,
+		.ana_gain_min = 1*BASEGAIN,
+		.ana_gain_max = 15.985*BASEGAIN,
 		.csi_param = {
 			.cphy_settle = 76,
 		},
