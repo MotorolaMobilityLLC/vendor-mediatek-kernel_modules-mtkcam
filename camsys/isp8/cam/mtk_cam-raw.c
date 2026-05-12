@@ -1725,6 +1725,16 @@ static bool is_sub_sample_sensor_timing(struct mtk_raw_device *dev)
 #define WCNT_BIT_MASK				0xFF00
 #define CNT_BIT_MASK				0xFF0000
 
+
+static bool is_rawi_r5_read_done(struct mtk_raw_device *dev)
+{
+	u32 rawi_r5_line_cnt = raw_readl_relaxed(dev, dev->dmatop_base,
+			REG_CAMRAWDMATOP_DC_DBG_LINE_CNT_RAWI_R5);
+
+	return (READ_FIELD(rawi_r5_line_cnt, CAMRAWDMATOP_DC_DBG_W_LINE_CNT_RAWI_R5) - 1) ==
+		READ_FIELD(rawi_r5_line_cnt, CAMRAWDMATOP_DC_DBG_R_LINE_CNT_RAWI_R5);
+}
+
 #ifdef READ_TG_TIMESTAMP
 static void mtk_raw_log_tg_timestamp(struct mtk_raw_device *raw)
 {
@@ -1886,9 +1896,10 @@ static irqreturn_t mtk_irq_raw_yuv(int irq, void *data)
 		raw->sof_count++;
 		raw->cur_vsync_idx = 0;
 
-		if (frame_status & FBIT(CAMCTL_SW_ENQUE_ERR_ST) ||
-			dcif_status & FBIT(CAMCTL_DCIF_LAST_CQ_START_INT_ST))
+		if (frame_status & FBIT(CAMCTL_SW_ENQUE_ERR_ST))
 			irq_info.fbc_empty = 1;
+		else if (dcif_status & FBIT(CAMCTL_DCIF_LAST_CQ_START_INT_ST))
+			irq_info.fbc_empty = is_rawi_r5_read_done(raw);
 		else
 			irq_info.fbc_empty = 0;
 
