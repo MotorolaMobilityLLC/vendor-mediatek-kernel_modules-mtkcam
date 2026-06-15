@@ -44,8 +44,12 @@
 // #define FLOOR_NEG(X)		((X-(int)(X)) < 0 ? (int)(X-1) : (int)(X))
 // #define FLOOR(X)		( ((X) > 0) ? FLOOR_POS(X) : FLOOR_NEG(X) )
 
+#ifndef MIN
 #define MIN(X,Y)		(((X) > (Y)) ? (Y) : (X))
+#endif
+#ifndef MAX
 #define MAX(X,Y)		(((X) > (Y)) ? (X) : (Y))
+#endif
 #define ABS(X)			(((X) > 0) ? (X) : -(X))
 #define ROUND(X,Y)		((int)((2*(X))+(Y))/(2*(Y)))
 #define BUFFER_NAME_LEN		50
