@@ -22,8 +22,10 @@
 #include <linux/kref.h>
 #include <linux/media.h>
 #include <linux/jiffies.h>
+#include <linux/pm_domain.h>
 
 #include <soc/mediatek/smi.h>
+#include <soc/mediatek/mmdvfs_v3.h>
 #include <mtk-smi-dbg.h>
 
 #include <media/videobuf2-v4l2.h>
@@ -1233,6 +1235,8 @@ static int mtk_cam_initialize(struct mtk_cam_device *cam)
 
 	mtk_cam_dvfs_reset_runtime_info(&cam->dvfs);
 
+	mtk_mmdvfs_enable_vcp(true, VCP_PWR_USR_CAM);
+
 	if (WARN_ON(pm_runtime_resume_and_get(cam->dev)))
 		return -1;
 
@@ -1243,6 +1247,30 @@ static int mtk_cam_initialize(struct mtk_cam_device *cam)
 	mtk_cam_debug_exp_reset(&cam->dbg);
 
 	return ret;
+}
+
+static int mtk_cam_pd_cb(struct notifier_block *nb,
+		unsigned long flags, void *data)
+{
+	struct mtk_cam_device *cam =
+		container_of(nb, struct mtk_cam_device, cam_pd_notifier);
+
+	switch (flags) {
+	case GENPD_NOTIFY_PRE_ON:
+		break;
+	case GENPD_NOTIFY_ON:
+		break;
+	case GENPD_NOTIFY_PRE_OFF:
+		break;
+	case GENPD_NOTIFY_OFF:
+		dev_info(cam->dev, "%s: disable vcp\n", __func__);
+		mtk_mmdvfs_enable_vcp(false, VCP_PWR_USR_CAM);
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
 }
 
 static int mtk_cam_uninitialize(struct mtk_cam_device *cam)
@@ -4128,6 +4156,8 @@ SKIP_ADLRD_IRQ:
 	INIT_LIST_HEAD(&cam_dev->pending_job_list);
 	INIT_LIST_HEAD(&cam_dev->running_job_list);
 
+	cam_dev->cam_pd_notifier.notifier_call = mtk_cam_pd_cb;
+	ret = dev_pm_genpd_add_notifier(dev, &cam_dev->cam_pd_notifier);
 	pm_runtime_enable(dev);
 
 	ret = mtk_cam_of_rproc(cam_dev);

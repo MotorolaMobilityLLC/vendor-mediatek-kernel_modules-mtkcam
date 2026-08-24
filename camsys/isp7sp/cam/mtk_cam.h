@@ -244,6 +244,7 @@ struct mtk_cam_device {
 	struct v4l2_device v4l2_dev;
 	struct v4l2_async_notifier notifier;
 	struct media_device media_dev;
+	struct notifier_block cam_pd_notifier;
 
 	atomic_t initialize_cnt;
 
